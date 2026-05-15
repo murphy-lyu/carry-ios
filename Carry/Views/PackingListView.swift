@@ -22,10 +22,11 @@ struct PackingListView: View {
 
     @State private var showEditSheet = false
     @State private var showDeleteConfirmation = false
-    @State private var openItemId: UUID? = nil
 
     private var bundle: TripBundle? { store.bundle(for: tripId) }
-    private var sections: [PackingSection] { bundle?.safeSections ?? [] }
+    private var sections: [PackingSection] {
+        (bundle?.safeSections ?? []).filter { ($0.items?.isEmpty == false) }
+    }
     private var totalCount: Int  { bundle?.totalCount  ?? 0 }
     private var packedCount: Int { bundle?.packedCount ?? 0 }
     private var progress: Double {
@@ -47,34 +48,32 @@ struct PackingListView: View {
             }
 
             // — Scrollable list
-            ScrollView {
-                LazyVStack(alignment: .leading, spacing: 0) {
-                    ForEach(Array(sections.enumerated()), id: \.element.id) { si, section in
-
-                        sectionTitle(section.title)
-
+            List {
+                ForEach(Array(sections.enumerated()), id: \.element.id) { index, section in
+                    Section {
                         ForEach(section.sortedItems, id: \.id) { item in
-                            if editingItemId == item.id {
-                                editableRow(itemId: item.id, sectionIndex: si)
-                            } else {
-                                PackingItemRow(
-                                    item: item,
-                                    isOpen: openItemId == item.id,
-                                    onTap: { toggleItem(itemId: item.id) },
-                                    onDelete: { deleteItem(itemId: item.id) },
-                                    onOpenChange: { newOpen in
-                                        openItemId = newOpen ? item.id : (openItemId == item.id ? nil : openItemId)
-                                    }
-                                )
-                            }
-                            divider
+                            row(for: item, sectionId: section.id)
+                                .listRowInsets(EdgeInsets(top: 0, leading: 16, bottom: 0, trailing: 16))
+                                .listRowSeparator(.hidden)
+                                .listRowBackground(Color(UIColor.systemBackground))
+                        }
+                        .onMove { source, destination in
+                            moveItems(in: section, source: source, destination: destination)
                         }
 
-                        addItemRow(sectionIndex: si)
+                        addItemRow(sectionId: section.id)
+                            .listRowInsets(EdgeInsets(top: 0, leading: 16, bottom: 0, trailing: 16))
+                            .listRowSeparator(.hidden)
+                            .listRowBackground(Color(UIColor.systemBackground))
+                    } header: {
+                        sectionTitle(section.title, isFirst: index == 0)
                     }
                 }
-                .padding(.bottom, 16)
             }
+            .listStyle(.plain)
+            .scrollContentBackground(.hidden)
+            .environment(\.defaultMinListRowHeight, 0)
+            .listSectionSpacing(0)
         }
         .safeAreaInset(edge: .bottom) {
             if isNewTrip { saveTripButton }
@@ -126,6 +125,28 @@ struct PackingListView: View {
         }
     }
 
+    // MARK: Row dispatch
+
+    @ViewBuilder
+    private func row(for item: PackingItem, sectionId: UUID) -> some View {
+        if editingItemId == item.id {
+            editableRow(itemId: item.id, sectionId: sectionId)
+        } else {
+            PackingItemRow(item: item) {
+                toggleItem(itemId: item.id)
+            }
+            .swipeActions(edge: .trailing, allowsFullSwipe: false) {
+                Button(role: .destructive) {
+                    deleteItem(itemId: item.id)
+                } label: {
+                    Label("Delete", systemImage: "trash")
+                }
+            }
+        }
+    }
+
+    // MARK: Actions
+
     private func toggleItem(itemId: UUID) {
         store.toggleItem(tripId: tripId, itemId: itemId)
         if totalCount > 0, packedCount == totalCount {
@@ -136,8 +157,15 @@ struct PackingListView: View {
     }
 
     private func deleteItem(itemId: UUID) {
-        openItemId = nil
         store.removeItem(tripId: tripId, itemId: itemId)
+    }
+
+    private func moveItems(in section: PackingSection, source: IndexSet, destination: Int) {
+        if let id = editingItemId { commitEdit(itemId: id) }
+        var ids = section.sortedItems.map(\.id)
+        ids.move(fromOffsets: source, toOffset: destination)
+        store.reorderItems(tripId: tripId, sectionId: section.id, newOrder: ids)
+        UIImpactFeedbackGenerator(style: .light).impactOccurred()
     }
 
     // MARK: Subviews
@@ -181,18 +209,27 @@ struct PackingListView: View {
         .background(Color(UIColor.secondarySystemBackground))
     }
 
-    private func sectionTitle(_ title: String) -> some View {
-        Text(title.uppercased())
-            .font(.system(size: 11, weight: .medium))
-            .foregroundStyle(.tertiary)
-            .kerning(1.5)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(.horizontal, 16)
-            .padding(.top, 16)
-            .padding(.bottom, 4)
+    private func sectionTitle(_ title: String, isFirst: Bool) -> some View {
+        VStack(spacing: 0) {
+            Text(LocalizedStringKey(title))
+                .font(.system(size: 11, weight: .medium))
+                .foregroundStyle(.tertiary)
+                .kerning(1.5)
+                .textCase(.uppercase)
+                .padding(.horizontal, 16)
+                .padding(.top, isFirst ? 8 : 20)
+                .padding(.bottom, 8)
+                .frame(maxWidth: .infinity, alignment: .leading)
+        }
+        .background {
+            Rectangle()
+                .fill(Color(UIColor.systemBackground))
+                .ignoresSafeArea(edges: .horizontal)
+        }
+        .listRowInsets(EdgeInsets())
     }
 
-    private func editableRow(itemId: UUID, sectionIndex: Int) -> some View {
+    private func editableRow(itemId: UUID, sectionId: UUID) -> some View {
         HStack(spacing: 12) {
             Circle()
                 .strokeBorder(Color.secondary.opacity(0.3), lineWidth: 1)
@@ -202,7 +239,7 @@ struct PackingListView: View {
                 .font(.subheadline)
                 .focused($focusedItemId, equals: itemId)
                 .submitLabel(.next)
-                .onSubmit { appendNewItem(sectionIndex: sectionIndex) }
+                .onSubmit { appendNewItem(sectionId: sectionId) }
 
             Spacer()
 
@@ -211,12 +248,11 @@ struct PackingListView: View {
                 .frame(width: 5, height: 5)
         }
         .frame(height: 44)
-        .padding(.horizontal, 16)
     }
 
-    private func addItemRow(sectionIndex: Int) -> some View {
+    private func addItemRow(sectionId: UUID) -> some View {
         Button {
-            appendNewItem(sectionIndex: sectionIndex)
+            appendNewItem(sectionId: sectionId)
         } label: {
             HStack(spacing: 12) {
                 Image(systemName: "plus")
@@ -228,7 +264,6 @@ struct PackingListView: View {
             }
             .foregroundStyle(.tertiary)
             .frame(height: 44)
-            .padding(.horizontal, 16)
         }
         .buttonStyle(.plain)
     }
@@ -253,14 +288,7 @@ struct PackingListView: View {
         .background(Color(UIColor.systemBackground))
     }
 
-    private var divider: some View {
-        Rectangle()
-            .fill(Color(UIColor.separator))
-            .frame(height: 0.5)
-            .padding(.horizontal, 16)
-    }
-
-    // MARK: Private
+    // MARK: Editing
 
     private func commitEdit(itemId: UUID) {
         let trimmed = editingText.trimmingCharacters(in: .whitespaces)
@@ -273,7 +301,8 @@ struct PackingListView: View {
         editingText = ""
     }
 
-    private func appendNewItem(sectionIndex: Int) {
+    private func appendNewItem(sectionId: UUID) {
+        guard let sectionIndex = sections.firstIndex(where: { $0.id == sectionId }) else { return }
         isAdvancingEdit = true
         withAnimation(.easeInOut(duration: 0.2)) {
             if let id = editingItemId { commitEdit(itemId: id) }
@@ -293,54 +322,9 @@ struct PackingListView: View {
 struct PackingItemRow: View {
 
     let item: PackingItem
-    let isOpen: Bool
     let onTap: () -> Void
-    let onDelete: () -> Void
-    let onOpenChange: (Bool) -> Void
-
-    private let actionWidth: CGFloat = 80
-    @State private var offset: CGFloat = 0
 
     var body: some View {
-        ZStack(alignment: .trailing) {
-            Button(action: onDelete) {
-                Text("Delete")
-                    .font(.subheadline)
-                    .fontWeight(.medium)
-                    .foregroundColor(.white)
-                    .frame(width: actionWidth, height: 44)
-                    .background(Color.red)
-            }
-            .buttonStyle(.plain)
-
-            rowContent
-                .background(Color(UIColor.systemBackground))
-                .offset(x: offset)
-                .gesture(
-                    DragGesture()
-                        .onChanged { value in
-                            guard abs(value.translation.width) > abs(value.translation.height) else { return }
-                            let base: CGFloat = isOpen ? -actionWidth : 0
-                            offset = min(0, max(-actionWidth - 20, base + value.translation.width))
-                        }
-                        .onEnded { _ in
-                            let shouldOpen = offset < -actionWidth / 2
-                            withAnimation(.spring(response: 0.3, dampingFraction: 0.85)) {
-                                offset = shouldOpen ? -actionWidth : 0
-                            }
-                            onOpenChange(shouldOpen)
-                        }
-                )
-        }
-        .clipped()
-        .onChange(of: isOpen) { _, newValue in
-            withAnimation(.spring(response: 0.3, dampingFraction: 0.85)) {
-                offset = newValue ? -actionWidth : 0
-            }
-        }
-    }
-
-    private var rowContent: some View {
         HStack(spacing: 12) {
 
             // — Checkbox
@@ -373,15 +357,8 @@ struct PackingItemRow: View {
                 .frame(width: 5, height: 5)
         }
         .frame(height: 44)
-        .padding(.horizontal, 16)
         .contentShape(Rectangle())
-        .onTapGesture {
-            if isOpen {
-                onOpenChange(false)
-            } else {
-                onTap()
-            }
-        }
+        .onTapGesture(perform: onTap)
         .animation(.easeInOut(duration: 0.15), value: item.isPacked)
     }
 }
