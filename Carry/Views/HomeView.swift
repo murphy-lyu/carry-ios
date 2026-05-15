@@ -15,13 +15,29 @@ struct HomeView: View {
     @State private var tripToDelete: TripBundle?
     @State private var showDeleteConfirmation = false
 
-    private var sortedTrips: [TripBundle] {
-        store.trips.sorted { a, b in
-            let aComplete = a.packedCount == a.totalCount && a.totalCount > 0
-            let bComplete = b.packedCount == b.totalCount && b.totalCount > 0
-            if aComplete != bComplete { return !aComplete }
-            return a.departureDate < b.departureDate
-        }
+    private static let archiveThresholdDays = 30
+
+    private func isPast(_ trip: TripBundle) -> Bool {
+        let cutoff = Calendar.current.date(byAdding: .day, value: Self.archiveThresholdDays, to: trip.departureDate)
+            ?? trip.departureDate
+        return cutoff < Date()
+    }
+
+    private var upcomingTrips: [TripBundle] {
+        store.trips
+            .filter { !isPast($0) }
+            .sorted { a, b in
+                let aComplete = a.packedCount == a.totalCount && a.totalCount > 0
+                let bComplete = b.packedCount == b.totalCount && b.totalCount > 0
+                if aComplete != bComplete { return !aComplete }
+                return a.departureDate < b.departureDate
+            }
+    }
+
+    private var pastTrips: [TripBundle] {
+        store.trips
+            .filter { isPast($0) }
+            .sorted { $0.departureDate > $1.departureDate }
     }
 
     var body: some View {
@@ -71,32 +87,32 @@ struct HomeView: View {
                 Spacer()
             } else {
                 List {
-                    Text(store.trips.count == 1 ? "1 trip upcoming" : "\(store.trips.count) trips upcoming")
-                        .font(.subheadline)
-                        .foregroundColor(.secondary)
-                        .listRowInsets(EdgeInsets(top: 0, leading: 16, bottom: 12, trailing: 16))
-                        .listRowBackground(Color.clear)
-                        .listRowSeparator(.hidden)
+                    if !upcomingTrips.isEmpty {
+                        Text(upcomingTrips.count == 1 ? "1 trip upcoming" : "\(upcomingTrips.count) trips upcoming")
+                            .font(.subheadline)
+                            .foregroundColor(.secondary)
+                            .listRowInsets(EdgeInsets(top: 0, leading: 16, bottom: 12, trailing: 16))
+                            .listRowBackground(Color.clear)
+                            .listRowSeparator(.hidden)
 
-                    ForEach(sortedTrips) { bundle in
-                        Button {
-                            router.path.append(bundle.id)
-                        } label: {
-                            TripCard(bundle: bundle)
+                        ForEach(upcomingTrips) { bundle in
+                            tripRow(bundle: bundle, isPast: false)
                         }
-                        .buttonStyle(.plain)
-                        .swipeActions(edge: .trailing) {
-                            Button(role: .none) {
-                                tripToDelete = bundle
-                                showDeleteConfirmation = true
-                            } label: {
-                                Label("Delete", systemImage: "trash")
-                            }
-                            .tint(.red)
+                    }
+
+                    if !pastTrips.isEmpty {
+                        Text("home.past")
+                            .font(.system(size: 11, weight: .medium))
+                            .foregroundStyle(.tertiary)
+                            .kerning(1.5)
+                            .textCase(.uppercase)
+                            .listRowInsets(EdgeInsets(top: upcomingTrips.isEmpty ? 0 : 16, leading: 16, bottom: 8, trailing: 16))
+                            .listRowBackground(Color.clear)
+                            .listRowSeparator(.hidden)
+
+                        ForEach(pastTrips) { bundle in
+                            tripRow(bundle: bundle, isPast: true)
                         }
-                        .listRowInsets(EdgeInsets(top: 0, leading: 16, bottom: 8, trailing: 16))
-                        .listRowBackground(Color.clear)
-                        .listRowSeparator(.hidden)
                     }
                 }
                 .listStyle(.plain)
@@ -118,6 +134,28 @@ struct HomeView: View {
         }
     }
 
+    @ViewBuilder
+    private func tripRow(bundle: TripBundle, isPast: Bool) -> some View {
+        Button {
+            router.path.append(bundle.id)
+        } label: {
+            TripCard(bundle: bundle, isPast: isPast)
+        }
+        .buttonStyle(.plain)
+        .swipeActions(edge: .trailing) {
+            Button(role: .none) {
+                tripToDelete = bundle
+                showDeleteConfirmation = true
+            } label: {
+                Label("Delete", systemImage: "trash")
+            }
+            .tint(.red)
+        }
+        .listRowInsets(EdgeInsets(top: 0, leading: 16, bottom: 8, trailing: 16))
+        .listRowBackground(Color.clear)
+        .listRowSeparator(.hidden)
+    }
+
 }
 
 // MARK: - Trip Card
@@ -125,6 +163,7 @@ struct HomeView: View {
 struct TripCard: View {
 
     let bundle: TripBundle
+    var isPast: Bool = false
 
     private var progress: Double {
         bundle.totalCount == 0 ? 0 : Double(bundle.packedCount) / Double(bundle.totalCount)
@@ -142,8 +181,8 @@ struct TripCard: View {
                         Text(bundle.name)
                             .font(.subheadline)
                             .fontWeight(.medium)
-                            .foregroundColor(.primary)
-                        if isComplete {
+                            .foregroundColor(isPast ? .secondary : .primary)
+                        if isComplete && !isPast {
                             Image(systemName: "checkmark.circle.fill")
                                 .font(.caption)
                                 .foregroundColor(.primary)
@@ -157,32 +196,37 @@ struct TripCard: View {
                         .foregroundColor(.secondary)
                 }
                 Spacer()
-                if isComplete {
-                    Text("All packed")
-                        .font(.caption)
-                        .foregroundColor(.primary)
-                } else {
-                    Text("\(bundle.packedCount) / \(bundle.totalCount)")
-                        .font(.caption)
-                        .foregroundColor(.secondary)
+                if !isPast {
+                    if isComplete {
+                        Text("All packed")
+                            .font(.caption)
+                            .foregroundColor(.primary)
+                    } else {
+                        Text("\(bundle.packedCount) / \(bundle.totalCount)")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                    }
                 }
             }
 
-            GeometryReader { geo in
-                ZStack(alignment: .leading) {
-                    RoundedRectangle(cornerRadius: 2)
-                        .fill(Color(UIColor.tertiarySystemFill))
-                        .frame(height: 3)
-                    RoundedRectangle(cornerRadius: 2)
-                        .fill(Color.primary)
-                        .frame(width: max(0, geo.size.width * progress), height: 3)
+            if !isPast {
+                GeometryReader { geo in
+                    ZStack(alignment: .leading) {
+                        RoundedRectangle(cornerRadius: 2)
+                            .fill(Color(UIColor.tertiarySystemFill))
+                            .frame(height: 3)
+                        RoundedRectangle(cornerRadius: 2)
+                            .fill(Color.primary)
+                            .frame(width: max(0, geo.size.width * progress), height: 3)
+                    }
                 }
+                .frame(height: 3)
             }
-            .frame(height: 3)
         }
         .padding(12)
         .background(Color(UIColor.secondarySystemBackground))
         .cornerRadius(12)
+        .opacity(isPast ? 0.65 : 1.0)
     }
 }
 
