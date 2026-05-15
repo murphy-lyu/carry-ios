@@ -9,14 +9,47 @@ import SwiftUI
 
 struct ScenePickerView: View {
 
-    let tripInfo: TripInfo
+    /// Creation mode: build a brand-new trip from the given info.
+    /// Edit mode: regenerate scenes for an existing trip.
+    enum Mode {
+        case create(TripInfo)
+        case edit(tripId: UUID)
+    }
+
+    private let mode: Mode
+
+    init(tripInfo: TripInfo) {
+        self.mode = .create(tripInfo)
+    }
+
+    init(editingTripId: UUID) {
+        self.mode = .edit(tripId: editingTripId)
+    }
 
     @EnvironmentObject var store: TripStore
     @EnvironmentObject var router: NavigationRouter
     @State private var selectedItems: Set<String> = []
+    @State private var didLoadInitialSelection = false
 
     private var hasSelection: Bool { !selectedItems.isEmpty }
     private var selectionCount: Int { selectedItems.count }
+
+    private var isEditing: Bool {
+        if case .edit = mode { return true }
+        return false
+    }
+
+    private var primaryButtonLabelKey: LocalizedStringKey {
+        if isEditing {
+            return hasSelection
+                ? "scenes.update · \(selectionCount) selected"
+                : "scenes.update"
+        } else {
+            return hasSelection
+                ? "Generate my list · \(selectionCount) selected"
+                : "Generate my list"
+        }
+    }
 
     var body: some View {
         ScrollView {
@@ -42,10 +75,8 @@ struct ScenePickerView: View {
             .padding(.bottom, 16)
         }
         .safeAreaInset(edge: .bottom) {
-            Button(action: { generateList() }) {
-                Text(hasSelection
-                     ? "Generate my list · \(selectionCount) selected"
-                     : "Generate my list")
+            Button(action: { primaryAction() }) {
+                Text(primaryButtonLabelKey)
                     .font(.subheadline)
                     .fontWeight(.medium)
                     .foregroundColor(Color(UIColor.systemBackground))
@@ -63,19 +94,43 @@ struct ScenePickerView: View {
         }
         .navigationTitle("")
         .navigationBarTitleDisplayMode(.inline)
+        .onAppear { loadInitialSelectionIfNeeded() }
     }
 
     // MARK: Private
 
-    private func generateList() {
+    private func loadInitialSelectionIfNeeded() {
+        guard !didLoadInitialSelection else { return }
+        didLoadInitialSelection = true
+        guard case .edit(let tripId) = mode,
+              let trip = store.bundle(for: tripId) else { return }
+        let savedKeys = Set(trip.selectedSceneKeys)
+        let labels = sceneLabelToKey.compactMap { (label, key) -> String? in
+            savedKeys.contains(key) ? label : nil
+        }
+        selectedItems = Set(labels)
+    }
+
+    private func primaryAction() {
         let keys = selectedItems.compactMap { sceneLabelToKey[$0] }
+        switch mode {
+        case .create(let info):
+            generateList(info: info, keys: keys)
+        case .edit(let tripId):
+            store.regenerateScenes(tripId: tripId, keys: keys)
+            router.path.removeLast()
+        }
+    }
+
+    private func generateList(info: TripInfo, keys: [String]) {
         let sections = generatePackingSections(selectedScenes: keys)
         let bundle = TripBundle(
-            name: tripInfo.name,
-            destinationCity: tripInfo.destinationCity,
-            days: tripInfo.durationDays,
-            dateRange: tripInfo.dateRangeDisplay,
-            departureDate: tripInfo.departureDate,
+            name: info.name,
+            destinationCity: info.destinationCity,
+            days: info.durationDays,
+            dateRange: info.dateRangeDisplay,
+            departureDate: info.departureDate,
+            selectedSceneKeys: keys,
             sections: sections
         )
         store.addTrip(bundle)

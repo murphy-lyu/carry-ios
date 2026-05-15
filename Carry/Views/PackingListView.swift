@@ -67,6 +67,7 @@ struct PackingListView: View {
                             .listRowBackground(Color(UIColor.systemBackground))
                     } header: {
                         sectionTitle(section.title, isFirst: index == 0)
+                            .listRowInsets(EdgeInsets())
                     }
                 }
             }
@@ -74,6 +75,7 @@ struct PackingListView: View {
             .scrollContentBackground(.hidden)
             .environment(\.defaultMinListRowHeight, 0)
             .listSectionSpacing(0)
+            .contentMargins(.top, 0, for: .scrollContent)
         }
         .safeAreaInset(edge: .bottom) {
             if isNewTrip { saveTripButton }
@@ -87,6 +89,11 @@ struct PackingListView: View {
                         showEditSheet = true
                     } label: {
                         Label("Edit trip", systemImage: "pencil")
+                    }
+                    Button {
+                        router.path.append(CreationRoute.editScenes(tripId))
+                    } label: {
+                        Label("Edit scenes", systemImage: "tag")
                     }
                     Button(role: .destructive) {
                         showDeleteConfirmation = true
@@ -210,23 +217,16 @@ struct PackingListView: View {
     }
 
     private func sectionTitle(_ title: String, isFirst: Bool) -> some View {
-        VStack(spacing: 0) {
-            Text(LocalizedStringKey(title))
-                .font(.system(size: 11, weight: .medium))
-                .foregroundStyle(.tertiary)
-                .kerning(1.5)
-                .textCase(.uppercase)
-                .padding(.horizontal, 16)
-                .padding(.top, isFirst ? 8 : 20)
-                .padding(.bottom, 8)
-                .frame(maxWidth: .infinity, alignment: .leading)
-        }
-        .background {
-            Rectangle()
-                .fill(Color(UIColor.systemBackground))
-                .ignoresSafeArea(edges: .horizontal)
-        }
-        .listRowInsets(EdgeInsets())
+        Text(LocalizedStringKey(title))
+            .font(.system(size: 11, weight: .medium))
+            .foregroundStyle(.tertiary)
+            .kerning(1.5)
+            .textCase(.uppercase)
+            .padding(.horizontal, 16)
+            .padding(.top, isFirst ? 8 : 20)
+            .padding(.bottom, 8)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(Color(UIColor.systemBackground))
     }
 
     private func editableRow(itemId: UUID, sectionId: UUID) -> some View {

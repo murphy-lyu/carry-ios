@@ -18,6 +18,7 @@ final class TripBundle {
     var dateRange: String = ""
     var departureDate: Date = Date()
     var createdAt: Date = Date()
+    var selectedSceneKeys: [String] = []
     @Relationship(deleteRule: .cascade, inverse: \PackingSection.bundle) var sections: [PackingSection]? = []
 
     init(
@@ -28,6 +29,7 @@ final class TripBundle {
         dateRange: String = "",
         departureDate: Date = Date(),
         createdAt: Date = Date(),
+        selectedSceneKeys: [String] = [],
         sections: [PackingSection] = []
     ) {
         self.id = id
@@ -37,6 +39,7 @@ final class TripBundle {
         self.dateRange = dateRange
         self.departureDate = departureDate
         self.createdAt = createdAt
+        self.selectedSceneKeys = selectedSceneKeys
         self.sections = sections
     }
 
@@ -163,6 +166,82 @@ final class TripStore: ObservableObject {
             }
         }
         save()
+    }
+
+    /// Regenerates the trip's packing list based on a new scene selection.
+    /// Strategy:
+    /// - Build a name → isPacked map from the existing sections (case-insensitive)
+    /// - Compute fresh sections from the new scene keys
+    /// - Restore isPacked for any item whose name appears in the old map
+    /// - Preserve user-added items (items whose names are not in the new
+    ///   preset) by appending them to the section that matches their old
+    ///   category title; if no matching section exists, drop them
+    /// - Replace the trip's sections wholesale
+    func regenerateScenes(tripId: UUID, keys: [String]) {
+        guard let trip = trips.first(where: { $0.id == tripId }) else { return }
+
+        // Capture old state
+        var oldPackedByName: [String: Bool] = [:]
+        var customItemsBySection: [String: [(name: String, isPacked: Bool)]] = [:]
+        let presetNames = Set(presetItemNames(forSceneKeys: keys).map { $0.lowercased() })
+
+        for section in trip.safeSections {
+            for item in section.items ?? [] {
+                let key = item.name.lowercased()
+                oldPackedByName[key] = item.isPacked
+                if !presetNames.contains(key) {
+                    customItemsBySection[section.title, default: []].append((item.name, item.isPacked))
+                }
+            }
+        }
+
+        // Build fresh sections
+        let newSections = generatePackingSections(selectedScenes: keys)
+
+        // Restore packed states + append custom items to matching section
+        for section in newSections {
+            for item in section.items ?? [] {
+                if let wasPacked = oldPackedByName[item.name.lowercased()] {
+                    item.isPacked = wasPacked
+                }
+            }
+            if let customs = customItemsBySection[section.title] {
+                let nextOrderStart = ((section.items ?? []).map(\.sortOrder).max() ?? -1) + 1
+                for (offset, custom) in customs.enumerated() {
+                    let item = PackingItem(
+                        name: custom.name,
+                        isPacked: custom.isPacked,
+                        isAlert: false,
+                        sortOrder: nextOrderStart + offset
+                    )
+                    section.items?.append(item)
+                }
+            }
+        }
+
+        // Replace
+        // Delete old sections explicitly (cascade should handle items)
+        for section in trip.safeSections {
+            context.delete(section)
+        }
+        // Insert new sections + their items
+        for section in newSections {
+            context.insert(section)
+            for item in section.items ?? [] {
+                context.insert(item)
+            }
+        }
+        trip.sections = newSections
+        trip.selectedSceneKeys = keys
+        save()
+    }
+
+    /// Returns all unique preset item names for the given scene keys (including base items).
+    private func presetItemNames(forSceneKeys keys: [String]) -> [String] {
+        var names = Set<String>()
+        baseItems.forEach { names.insert($0.name) }
+        keys.compactMap { sceneItemMap[$0] }.flatMap { $0 }.forEach { names.insert($0.name) }
+        return Array(names)
     }
 
     // MARK: - Queries
