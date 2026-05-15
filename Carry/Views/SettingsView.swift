@@ -7,8 +7,6 @@ import SwiftUI
 
 struct SettingsView: View {
 
-    @Environment(\.dismiss) private var dismiss
-
     private var appVersion: String {
         let dict = Bundle.main.infoDictionary
         let version = dict?["CFBundleShortVersionString"] as? String ?? "—"
@@ -17,7 +15,18 @@ struct SettingsView: View {
     }
 
     var body: some View {
-        NavigationStack {
+        VStack(spacing: 0) {
+            HStack(alignment: .center) {
+                Text("Settings")
+                    .font(.largeTitle)
+                    .fontWeight(.bold)
+                    .foregroundColor(.primary)
+                Spacer()
+            }
+            .padding(.horizontal, 16)
+            .padding(.top, 8)
+            .padding(.bottom, 8)
+
             List {
                 Section("About") {
                     LabeledContent("App name", value: "Carry")
@@ -68,14 +77,10 @@ struct SettingsView: View {
                     .foregroundColor(.primary)
                 }
             }
-            .navigationTitle("Settings")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    Button("Done") { dismiss() }
-                }
-            }
+            .scrollContentBackground(.hidden)
         }
+        .background(Color(.systemGroupedBackground).ignoresSafeArea())
+        .navigationBarHidden(true)
     }
 }
 
