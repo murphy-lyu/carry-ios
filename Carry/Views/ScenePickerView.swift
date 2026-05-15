@@ -80,6 +80,7 @@ struct ScenePickerView: View {
         )
         store.addTrip(bundle)
         router.path.append(CreationRoute.packingList(bundle.id))
+        Task { await NotificationManager.requestAuthorizationIfNeeded() }
     }
 }
 
@@ -92,10 +93,11 @@ struct SceneGroupSection: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
-            Text(group.title.uppercased())
+            Text(LocalizedStringKey(group.title))
                 .font(.system(size: 11, weight: .medium))
                 .foregroundStyle(.tertiary)
                 .kerning(1.5)
+                .textCase(.uppercase)
                 .padding(.horizontal, 16)
 
             FlowLayout(horizontalSpacing: 8, verticalSpacing: 8) {
@@ -127,7 +129,7 @@ struct SceneChip: View {
 
     var body: some View {
         Button(action: action) {
-            Text(label)
+            Text(LocalizedStringKey(label))
                 .font(.caption)
                 .foregroundColor(isSelected ? Color(UIColor.systemBackground) : .primary)
                 .padding(.horizontal, 10)

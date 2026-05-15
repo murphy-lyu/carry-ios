@@ -27,7 +27,7 @@ struct HomeView: View {
     var body: some View {
         VStack(spacing: 0) {
             HStack(alignment: .center) {
-                Text("Carry")
+                Text("home.title")
                     .font(.largeTitle)
                     .fontWeight(.bold)
                     .foregroundColor(.primary)

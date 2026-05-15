@@ -104,14 +104,15 @@ struct TripInfoView: View {
     // MARK: Helpers
 
     private func fieldGroup<Content: View>(
-        label: String,
+        label: LocalizedStringKey,
         @ViewBuilder content: () -> Content
     ) -> some View {
         VStack(alignment: .leading, spacing: 6) {
-            Text(label.uppercased())
+            Text(label)
                 .font(.system(size: 11, weight: .medium))
                 .foregroundStyle(.tertiary)
                 .kerning(1.5)
+                .textCase(.uppercase)
                 .padding(.horizontal, 16)
             content()
                 .padding(.horizontal, 16)
