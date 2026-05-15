@@ -35,6 +35,33 @@ struct SettingsView: View {
         UIApplication.shared.open(url)
     }
 
+    private func openFeedbackEmail() {
+        let dict = Bundle.main.infoDictionary
+        let version = dict?["CFBundleShortVersionString"] as? String ?? "—"
+        let build = dict?["CFBundleVersion"] as? String ?? "—"
+        let device = UIDevice.current.model
+        let system = "\(UIDevice.current.systemName) \(UIDevice.current.systemVersion)"
+
+        let to = "murphy.lyu@icloud.com"
+        let subject = "Carry Feedback"
+        let body = """
+
+
+        ---
+        Carry \(version) (\(build))
+        \(device) · \(system)
+        """
+
+        var components = URLComponents(string: "mailto:\(to)")
+        components?.queryItems = [
+            URLQueryItem(name: "subject", value: subject),
+            URLQueryItem(name: "body", value: body),
+        ]
+        if let url = components?.url {
+            UIApplication.shared.open(url)
+        }
+    }
+
     private func refreshNotificationStatus() async {
         notificationStatus = await NotificationManager.authorizationStatus()
     }
@@ -90,6 +117,19 @@ struct SettingsView: View {
                         AboutView()
                     } label: {
                         Text("settings.about.entry")
+                    }
+                    .foregroundColor(.primary)
+
+                    Button {
+                        openFeedbackEmail()
+                    } label: {
+                        HStack {
+                            Text("settings.feedback")
+                            Spacer()
+                            Image(systemName: "chevron.right")
+                                .font(.caption)
+                                .foregroundStyle(.tertiary)
+                        }
                     }
                     .foregroundColor(.primary)
 

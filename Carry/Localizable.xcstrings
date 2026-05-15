@@ -4,6 +4,121 @@
     "" : {
 
     },
+    "legal.updated" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Last updated May 15, 2026"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "最后更新于 2026 年 5 月 15 日"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "最後更新於 2026 年 5 月 15 日"
+          }
+        }
+      }
+    },
+    "legal.viewFull" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "View full version online"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "在线查看完整版"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "在線查看完整版"
+          }
+        }
+      }
+    },
+    "settings.feedback" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Send Feedback"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "反馈意见"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "意見回饋"
+          }
+        }
+      }
+    },
+    "packing.empty.title" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nothing to pack yet"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "还没有物品"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "還沒有物品"
+          }
+        }
+      }
+    },
+    "packing.empty.subtitle" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tap the ⋯ menu and choose Edit scenes to pick what to bring"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "点击右上角 ⋯ → 编辑场景，选择适合本次出行的物品"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "點擊右上角 ⋯ → 編輯場景,選擇適合本次出行的物品"
+          }
+        }
+      }
+    },
     "· %lld days" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -453,19 +568,19 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "For Bing"
+            "value" : "For her~"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "献给 Bing"
+            "value" : "献给她～"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "獻給 Bing"
+            "value" : "獻給她～"
           }
         }
       }
@@ -1189,19 +1304,19 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Privacy Policy\n\nCarry stores all your trip data locally on your device. We do not collect, transmit, or share any of your information with third parties.\n\nWhen you enable iCloud, your trips are synced through Apple's iCloud service to your other devices, governed by Apple's own privacy policy.\n\nLocal notifications are scheduled and delivered entirely on your device.\n\nWe do not use analytics, tracking, or advertising frameworks."
+            "value" : "Carry stores everything on your device. We do not collect, transmit, or share any of your information.\n\nWe operate no servers. We use no analytics, no tracking, no advertising SDKs. We don't know who you are, where you've been, or what you've packed.\n\nWhen you enable iCloud sync (in a future version), your trips travel through Apple's CloudKit into your own iCloud account, governed by Apple's privacy policy. We have no access to that data either.\n\nLocal notifications are scheduled and delivered entirely on your device.\n\nIf you uninstall Carry, your local data goes with it. To clear iCloud data, use iOS → Settings → Apple ID → iCloud → Manage Account Storage → Carry.\n\nFor everything else, see the full version."
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "隐私政策\n\nCarry 将你的所有行程数据保存在本机。我们不收集、不传输、也不与任何第三方共享你的信息。\n\n当你启用 iCloud 时,行程会通过 Apple 的 iCloud 服务同步到你的其他设备,这部分受 Apple 自身的隐私政策约束。\n\n所有本地通知的调度和触发都完全在你的设备上完成。\n\n我们不使用任何数据分析、追踪或广告框架。"
+            "value" : "Carry 将所有数据保存在你的设备上。我们不收集、不传输、也不与任何第三方共享你的信息。\n\n我们没有服务器,也没有任何数据分析、追踪、广告 SDK。我们不知道你是谁、你去过哪里、你打包了什么。\n\n当你启用 iCloud 同步(未来版本),行程会通过 Apple 的 CloudKit 进入你自己的 iCloud 账户,这部分受 Apple 隐私政策约束——我们同样无法访问。\n\n所有本地通知的调度与触发都在你的设备上完成。\n\n卸载 Carry,本地数据会一并被 iOS 删除。如需清空 iCloud 副本,前往「设置 → Apple ID → iCloud → 管理账户存储 → Carry」。\n\n本页未尽事宜以完整版为准。"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "隱私政策\n\nCarry 將你的所有行程資料保存在本機。我們不收集、不傳輸、也不與任何第三方共享你的資訊。\n\n當你啟用 iCloud 時,行程會透過 Apple 的 iCloud 服務同步到你的其他裝置,這部分受 Apple 自身的隱私政策約束。\n\n所有本機通知的排程和觸發都完全在你的裝置上完成。\n\n我們不使用任何資料分析、追蹤或廣告框架。"
+            "value" : "Carry 將所有資料保存在你的裝置上。我們不收集、不傳輸、也不與任何第三方共享你的資訊。\n\n我們沒有伺服器,也沒有任何資料分析、追蹤、廣告 SDK。我們不知道你是誰、你去過哪裡、你打包了什麼。\n\n當你啟用 iCloud 同步(未來版本),行程會透過 Apple 的 CloudKit 進入你自己的 iCloud 帳戶,這部分受 Apple 隱私政策約束——我們同樣無法存取。\n\n所有本機通知的排程與觸發都在你的裝置上完成。\n\n解除安裝 Carry,本機資料會一併被 iOS 刪除。如需清空 iCloud 副本,前往「設定 → Apple ID → iCloud → 管理帳戶儲存空間 → Carry」。\n\n本頁未盡事宜以完整版為準。"
           }
         }
       }
@@ -1212,19 +1327,19 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Terms of Service\n\nComing soon."
+            "value" : "By using Carry, you agree to use it for personal, non-commercial purposes, on devices you own.\n\nCarry is provided \"as is\". We do our best to make it useful and reliable, but we can't guarantee it's bug-free or that every preset suggestion fits your specific trip. For critical items — passports, medication, anything you'd genuinely regret forgetting — please double-check yourself. We're not responsible for losses caused by missing items or notifications that didn't fire as expected.\n\nYour data is yours. Please back up your device regularly and don't treat Carry as the sole storage for important information.\n\nWe may change features, design, or these terms in future versions. Continued use means you accept the changes.\n\nFor anything we missed, the full version covers it."
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "服务条款\n\n即将更新。"
+            "value" : "使用 Carry,即表示你同意将其用于个人、非商业用途,运行在你拥有的设备上。\n\nCarry 按「现状」提供。我们尽力让它好用、可靠,但无法保证它没有 bug,也无法保证每条预设建议都适合你这次出行。涉及证件、药品等关键物品,请务必自行核对——我们不对因物品遗漏或通知未按预期触发造成的损失负责。\n\n你的数据是你自己的。请定期通过 iOS 备份你的设备,也请不要把 Carry 当作重要信息的唯一保存方式。\n\n我们可能在未来版本中调整功能、设计或本条款。继续使用即视为你接受这些变更。\n\n本页未尽事宜以完整版为准。"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "服務條款\n\n即將更新。"
+            "value" : "使用 Carry,即表示你同意將其用於個人、非商業用途,運行在你擁有的裝置上。\n\nCarry 按「現狀」提供。我們盡力讓它好用、可靠,但無法保證它沒有 bug,也無法保證每條預設建議都適合你這次出行。涉及證件、藥品等關鍵物品,請務必自行核對——我們不對因物品遺漏或通知未按預期觸發造成的損失負責。\n\n你的資料是你自己的。請定期透過 iOS 備份你的裝置,也請不要把 Carry 當作重要資訊的唯一保存方式。\n\n我們可能在未來版本中調整功能、設計或本條款。繼續使用即視為你接受這些變更。\n\n本頁未盡事宜以完整版為準。"
           }
         }
       }
