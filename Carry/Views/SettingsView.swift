@@ -10,13 +10,6 @@ struct SettingsView: View {
 
     @State private var notificationStatus: UNAuthorizationStatus = .notDetermined
 
-    private var appVersion: String {
-        let dict = Bundle.main.infoDictionary
-        let version = dict?["CFBundleShortVersionString"] as? String ?? "—"
-        let build = dict?["CFBundleVersion"] as? String ?? ""
-        return build.isEmpty ? version : "\(version) (\(build))"
-    }
-
     private var currentLanguageDisplay: String {
         let preferred = Locale.preferredLanguages.first ?? "en"
         let locale = Locale.current
@@ -60,18 +53,6 @@ struct SettingsView: View {
             .padding(.bottom, 8)
 
             List {
-                Section("settings.section.about") {
-                    LabeledContent(
-                        "settings.about.appName",
-                        value: String(localized: "settings.appName.value")
-                    )
-                    LabeledContent("settings.about.version", value: appVersion)
-                    LabeledContent(
-                        "settings.about.developer",
-                        value: String(localized: "settings.about.developerName")
-                    )
-                }
-
                 Section("settings.section.general") {
                     Button {
                         openSystemSettings()
@@ -104,45 +85,25 @@ struct SettingsView: View {
                     .foregroundColor(.primary)
                 }
 
-                Section("settings.section.connect") {
-                    Button {
-                        // placeholder
+                Section("settings.section.about") {
+                    NavigationLink {
+                        AboutView()
                     } label: {
-                        HStack {
-                            Text("settings.connect.twitter")
-                            Spacer()
-                            Image(systemName: "chevron.right")
-                                .font(.caption)
-                                .foregroundStyle(.tertiary)
-                        }
+                        Text("settings.about.entry")
                     }
                     .foregroundColor(.primary)
 
-                    Button {
-                        // placeholder
+                    NavigationLink {
+                        TermsView()
                     } label: {
-                        HStack {
-                            Text("settings.connect.instagram")
-                            Spacer()
-                            Image(systemName: "chevron.right")
-                                .font(.caption)
-                                .foregroundStyle(.tertiary)
-                        }
+                        Text("settings.legal.terms")
                     }
                     .foregroundColor(.primary)
-                }
 
-                Section("settings.section.legal") {
-                    Button {
-                        // placeholder
+                    NavigationLink {
+                        PrivacyView()
                     } label: {
-                        HStack {
-                            Text("settings.legal.privacy")
-                            Spacer()
-                            Image(systemName: "chevron.right")
-                                .font(.caption)
-                                .foregroundStyle(.tertiary)
-                        }
+                        Text("settings.legal.privacy")
                     }
                     .foregroundColor(.primary)
                 }
