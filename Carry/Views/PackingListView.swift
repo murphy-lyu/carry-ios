@@ -48,34 +48,38 @@ struct PackingListView: View {
             }
 
             // — Scrollable list
-            List {
-                ForEach(Array(sections.enumerated()), id: \.element.id) { index, section in
-                    Section {
-                        ForEach(section.sortedItems, id: \.id) { item in
-                            row(for: item, sectionId: section.id)
+            if sections.isEmpty {
+                emptyState
+            } else {
+                List {
+                    ForEach(Array(sections.enumerated()), id: \.element.id) { index, section in
+                        Section {
+                            ForEach(section.sortedItems, id: \.id) { item in
+                                row(for: item, sectionId: section.id)
+                                    .listRowInsets(EdgeInsets(top: 0, leading: 16, bottom: 0, trailing: 16))
+                                    .listRowSeparator(.hidden)
+                                    .listRowBackground(Color(UIColor.systemBackground))
+                            }
+                            .onMove { source, destination in
+                                moveItems(in: section, source: source, destination: destination)
+                            }
+
+                            addItemRow(sectionId: section.id)
                                 .listRowInsets(EdgeInsets(top: 0, leading: 16, bottom: 0, trailing: 16))
                                 .listRowSeparator(.hidden)
                                 .listRowBackground(Color(UIColor.systemBackground))
+                        } header: {
+                            sectionTitle(section.title, isFirst: index == 0)
+                                .listRowInsets(EdgeInsets())
                         }
-                        .onMove { source, destination in
-                            moveItems(in: section, source: source, destination: destination)
-                        }
-
-                        addItemRow(sectionId: section.id)
-                            .listRowInsets(EdgeInsets(top: 0, leading: 16, bottom: 0, trailing: 16))
-                            .listRowSeparator(.hidden)
-                            .listRowBackground(Color(UIColor.systemBackground))
-                    } header: {
-                        sectionTitle(section.title, isFirst: index == 0)
-                            .listRowInsets(EdgeInsets())
                     }
                 }
+                .listStyle(.plain)
+                .scrollContentBackground(.hidden)
+                .environment(\.defaultMinListRowHeight, 0)
+                .listSectionSpacing(0)
+                .contentMargins(.top, 0, for: .scrollContent)
             }
-            .listStyle(.plain)
-            .scrollContentBackground(.hidden)
-            .environment(\.defaultMinListRowHeight, 0)
-            .listSectionSpacing(0)
-            .contentMargins(.top, 0, for: .scrollContent)
         }
         .safeAreaInset(edge: .bottom) {
             if isNewTrip { saveTripButton }
@@ -214,6 +218,30 @@ struct PackingListView: View {
         .frame(maxWidth: .infinity)
         .padding(.vertical, 10)
         .background(Color(UIColor.secondarySystemBackground))
+    }
+
+    private var emptyState: some View {
+        VStack(spacing: 0) {
+            Spacer()
+            Spacer()
+            Image(systemName: "suitcase")
+                .font(.system(size: 48))
+                .foregroundColor(.secondary)
+            Text("packing.empty.title")
+                .font(.headline)
+                .foregroundColor(.primary)
+                .padding(.top, 12)
+            Text("packing.empty.subtitle")
+                .font(.subheadline)
+                .foregroundColor(.secondary)
+                .multilineTextAlignment(.center)
+                .padding(.top, 6)
+            Spacer()
+            Spacer()
+            Spacer()
+        }
+        .padding(.horizontal, 32)
+        .frame(maxWidth: .infinity)
     }
 
     private func sectionTitle(_ title: String, isFirst: Bool) -> some View {
