@@ -76,10 +76,12 @@ final class TripStore: ObservableObject {
     func addTrip(_ bundle: TripBundle) {
         context.insert(bundle)
         save()
+        NotificationManager.scheduleReminders(for: bundle)
     }
 
     func removeTrip(withId id: UUID) {
         guard let trip = trips.first(where: { $0.id == id }) else { return }
+        NotificationManager.cancelReminders(forTripId: id)
         context.delete(trip)
         save()
     }
@@ -92,6 +94,7 @@ final class TripStore: ObservableObject {
         trip.days = info.durationDays
         trip.dateRange = info.dateRangeDisplay
         save()
+        NotificationManager.scheduleReminders(for: trip)
     }
 
     func toggleItem(tripId: UUID, itemId: UUID) {
@@ -142,6 +145,24 @@ final class TripStore: ObservableObject {
                 return
             }
         }
+    }
+
+    /// Reorders items within a section. `newOrder` is an array of item IDs in
+    /// the desired final order. Items not in `newOrder` are left untouched at
+    /// the end. Sort orders are rewritten as 0, 1, 2, … so subsequent inserts
+    /// continue using `max + 1`.
+    func reorderItems(tripId: UUID, sectionId: UUID, newOrder: [UUID]) {
+        guard let trip = trips.first(where: { $0.id == tripId }),
+              let section = trip.safeSections.first(where: { $0.id == sectionId }) else {
+            return
+        }
+        let items = section.items ?? []
+        for (index, id) in newOrder.enumerated() {
+            if let item = items.first(where: { $0.id == id }) {
+                item.sortOrder = index
+            }
+        }
+        save()
     }
 
     // MARK: - Queries
