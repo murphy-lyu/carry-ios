@@ -2,20 +2,61 @@
 //  ContentView.swift
 //  Carry
 //
-//  Created by shmilvtian5 on 2026/5/14.
-//
 
 import SwiftUI
+import Combine
+
+// MARK: - Creation Route
+
+enum CreationRoute: Hashable {
+    case tripInfo
+    case scenePicker(TripInfo)
+    case packingList(UUID)
+}
+
+// MARK: - Navigation Router
+
+final class NavigationRouter: ObservableObject {
+    @Published var path = NavigationPath()
+}
+
+// MARK: - ContentView
 
 struct ContentView: View {
+    @StateObject private var store = TripStore()
+    @StateObject private var router = NavigationRouter()
+
     var body: some View {
-        VStack {
-            Image(systemName: "globe")
-                .imageScale(.large)
-                .foregroundStyle(.tint)
-            Text("Hello, world!")
+        TabView {
+            NavigationStack(path: $router.path) {
+                HomeView()
+                    .navigationDestination(for: UUID.self) { id in
+                        PackingListView(tripId: id)
+                    }
+                    .navigationDestination(for: CreationRoute.self) { route in
+                        switch route {
+                        case .tripInfo:
+                            TripInfoView()
+                        case .scenePicker(let info):
+                            ScenePickerView(tripInfo: info)
+                        case .packingList(let id):
+                            PackingListView(tripId: id, isNewTrip: true)
+                        }
+                    }
+            }
+            .tabItem {
+                Label("Trips", systemImage: "suitcase")
+            }
+
+            NavigationStack {
+                SettingsView()
+            }
+            .tabItem {
+                Label("Settings", systemImage: "gear")
+            }
         }
-        .padding()
+        .environmentObject(store)
+        .environmentObject(router)
     }
 }
 

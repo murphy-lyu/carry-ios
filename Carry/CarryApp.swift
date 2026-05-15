@@ -6,12 +6,18 @@
 //
 
 import SwiftUI
+import SwiftData
 
 @main
 struct CarryApp: App {
+    static let container: ModelContainer = {
+        try! ModelContainer(for: TripBundle.self)
+    }()
+
     var body: some Scene {
         WindowGroup {
-            ContentView()
+            SplashView()
         }
+        .modelContainer(Self.container)
     }
 }
