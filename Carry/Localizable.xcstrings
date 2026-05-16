@@ -4,121 +4,6 @@
     "" : {
 
     },
-    "legal.updated" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Last updated May 15, 2026"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "最后更新于 2026 年 5 月 15 日"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "最後更新於 2026 年 5 月 15 日"
-          }
-        }
-      }
-    },
-    "legal.viewFull" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "View full version online"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "在线查看完整版"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "在線查看完整版"
-          }
-        }
-      }
-    },
-    "settings.feedback" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Send Feedback"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "反馈意见"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "意見回饋"
-          }
-        }
-      }
-    },
-    "packing.empty.title" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Nothing to pack yet"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "还没有物品"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "還沒有物品"
-          }
-        }
-      }
-    },
-    "packing.empty.subtitle" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Tap the ⋯ menu and choose Edit scenes to pick what to bring"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "点击右上角 ⋯ → 编辑场景，选择适合本次出行的物品"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "點擊右上角 ⋯ → 編輯場景,選擇適合本次出行的物品"
-          }
-        }
-      }
-    },
     "· %lld days" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -138,6 +23,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "· %lld 天"
+          }
+        }
+      }
+    },
+    "%@ · %lld days" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$@ · %2$lld days"
           }
         }
       }
@@ -539,29 +434,6 @@
         }
       }
     },
-    "about.follow" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Follow us"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "关注我们"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "關注我們"
-          }
-        }
-      }
-    },
     "about.dedication" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -581,6 +453,29 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "獻給她～"
+          }
+        }
+      }
+    },
+    "about.follow" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Follow us"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "关注我们"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "關注我們"
           }
         }
       }
@@ -1344,6 +1239,52 @@
         }
       }
     },
+    "legal.updated" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Last updated May 15, 2026"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "最后更新于 2026 年 5 月 15 日"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "最後更新於 2026 年 5 月 15 日"
+          }
+        }
+      }
+    },
+    "legal.viewFull" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "View full version online"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "在线查看完整版"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "在線查看完整版"
+          }
+        }
+      }
+    },
     "New trip" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -1482,6 +1423,52 @@
         }
       }
     },
+    "packing.empty.subtitle" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tap the ⋯ menu and choose Edit scenes to pick what to bring"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "点击右上角 ⋯ → 编辑场景，选择适合本次出行的物品"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "點擊右上角 ⋯ → 編輯場景,選擇適合本次出行的物品"
+          }
+        }
+      }
+    },
+    "packing.empty.title" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nothing to pack yet"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "还没有物品"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "還沒有物品"
+          }
+        }
+      }
+    },
     "Return" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -1550,6 +1537,9 @@
           }
         }
       }
+    },
+    "Saved!" : {
+
     },
     "scenes.update" : {
       "extractionState" : "manual",
@@ -1869,6 +1859,29 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Twitter / X"
+          }
+        }
+      }
+    },
+    "settings.feedback" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Send Feedback"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "反馈意见"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "意見回饋"
           }
         }
       }

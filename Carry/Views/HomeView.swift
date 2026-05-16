@@ -54,8 +54,8 @@ struct HomeView: View {
                     Image(systemName: "plus")
                         .font(.system(size: 16, weight: .semibold))
                         .foregroundColor(.primary)
-                        .frame(width: 32, height: 32)
-                        .background(Color(UIColor.tertiarySystemFill))
+                        .frame(width: 38, height: 38)
+                        .background(Color(UIColor.secondarySystemFill))
                         .clipShape(Circle())
                 }
             }
@@ -151,7 +151,7 @@ struct HomeView: View {
             }
             .tint(.red)
         }
-        .listRowInsets(EdgeInsets(top: 0, leading: 16, bottom: 8, trailing: 16))
+        .listRowInsets(EdgeInsets(top: 0, leading: 16, bottom: 10, trailing: 16))
         .listRowBackground(Color.clear)
         .listRowSeparator(.hidden)
     }
@@ -174,59 +174,68 @@ struct TripCard: View {
     }
 
     var body: some View {
-        VStack(spacing: 6) {
-            HStack {
-                VStack(alignment: .leading, spacing: 2) {
-                    HStack(alignment: .firstTextBaseline, spacing: 4) {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack(alignment: .top, spacing: 8) {
+                VStack(alignment: .leading, spacing: 3) {
+                    HStack(spacing: 5) {
                         Text(bundle.name)
                             .font(.subheadline)
-                            .fontWeight(.medium)
+                            .fontWeight(.semibold)
                             .foregroundColor(isPast ? .secondary : .primary)
                         if isComplete && !isPast {
                             Image(systemName: "checkmark.circle.fill")
                                 .font(.caption)
                                 .foregroundColor(.primary)
                         }
-                        Text("· \(bundle.days) days")
-                            .font(.caption)
-                            .foregroundColor(.secondary)
                     }
-                    Text(bundle.dateRange)
+                    Text(bundle.destinationCity)
                         .font(.caption)
-                        .foregroundColor(.secondary)
+                        .foregroundStyle(.secondary)
+                    Text("\(bundle.dateRange) · \(bundle.days) days")
+                        .font(.caption)
+                        .foregroundStyle(.tertiary)
                 }
                 Spacer()
                 if !isPast {
-                    if isComplete {
-                        Text("All packed")
-                            .font(.caption)
-                            .foregroundColor(.primary)
-                    } else {
-                        Text("\(bundle.packedCount) / \(bundle.totalCount)")
-                            .font(.caption)
-                            .foregroundColor(.secondary)
-                    }
+                    Text(isComplete ? "All packed" : "\(bundle.packedCount) / \(bundle.totalCount)")
+                        .font(.caption)
+                        .foregroundStyle(isComplete ? AnyShapeStyle(.primary) : AnyShapeStyle(.secondary))
+                        .padding(.top, 1)
                 }
             }
 
             if !isPast {
-                GeometryReader { geo in
-                    ZStack(alignment: .leading) {
-                        RoundedRectangle(cornerRadius: 2)
-                            .fill(Color(UIColor.tertiarySystemFill))
-                            .frame(height: 3)
-                        RoundedRectangle(cornerRadius: 2)
-                            .fill(Color.primary)
-                            .frame(width: max(0, geo.size.width * progress), height: 3)
+                VStack(alignment: .leading, spacing: 6) {
+                    GeometryReader { geo in
+                        ZStack(alignment: .leading) {
+                            RoundedRectangle(cornerRadius: 2)
+                                .fill(Color(UIColor.tertiarySystemFill))
+                                .frame(height: 4)
+                            RoundedRectangle(cornerRadius: 2)
+                                .fill(Color.primary)
+                                .frame(width: max(0, geo.size.width * progress), height: 4)
+                        }
                     }
+                    .frame(height: 4)
+
+                    Text(statusText)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
                 }
-                .frame(height: 3)
             }
         }
-        .padding(12)
+        .padding(.horizontal, 16)
+        .padding(.vertical, isPast ? 12 : 16)
         .background(Color(UIColor.secondarySystemBackground))
-        .cornerRadius(12)
-        .opacity(isPast ? 0.65 : 1.0)
+        .cornerRadius(16)
+        .opacity(isPast ? 0.6 : 1.0)
+    }
+
+    private var statusText: String {
+        if isComplete { return "All packed — you're ready to go!" }
+        if bundle.totalCount == 0 { return "No items yet" }
+        let remaining = bundle.totalCount - bundle.packedCount
+        return "\(remaining) item\(remaining == 1 ? "" : "s") left to pack"
     }
 }
 

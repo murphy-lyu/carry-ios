@@ -22,6 +22,7 @@ struct PackingListView: View {
 
     @State private var showEditSheet = false
     @State private var showDeleteConfirmation = false
+    @State private var isSaved = false
 
     private var bundle: TripBundle? { store.bundle(for: tripId) }
     private var sections: [PackingSection] {
@@ -298,21 +299,37 @@ struct PackingListView: View {
 
     private var saveTripButton: some View {
         Button {
+            guard !isSaved else { return }
             if let id = editingItemId { commitEdit(itemId: id) }
-            router.path = NavigationPath()
+            isSaved = true
+            UINotificationFeedbackGenerator().notificationOccurred(.success)
+            Task {
+                try? await Task.sleep(for: .milliseconds(700))
+                router.path = NavigationPath()
+                await NotificationManager.requestAuthorizationIfNeeded()
+            }
         } label: {
-            Text("Save trip")
-                .font(.subheadline)
-                .fontWeight(.medium)
-                .foregroundColor(Color(UIColor.systemBackground))
-                .frame(maxWidth: .infinity)
-                .frame(height: 44)
-                .background(Color.primary)
-                .cornerRadius(12)
+            HStack(spacing: 8) {
+                if isSaved {
+                    Image(systemName: "checkmark")
+                        .fontWeight(.medium)
+                        .transition(.scale.combined(with: .opacity))
+                }
+                Text(isSaved ? "Saved!" : "Save trip")
+                    .font(.subheadline)
+                    .fontWeight(.medium)
+                    .transition(.opacity)
+            }
+            .foregroundColor(Color(UIColor.systemBackground))
+            .frame(maxWidth: .infinity)
+            .frame(height: 52)
+            .background(Color.primary)
+            .cornerRadius(14)
+            .animation(.easeInOut(duration: 0.2), value: isSaved)
         }
         .padding(.horizontal, 16)
         .padding(.top, 12)
-        .padding(.bottom, 8)
+        .padding(.bottom, 20)
         .background(Color(UIColor.systemBackground))
     }
 

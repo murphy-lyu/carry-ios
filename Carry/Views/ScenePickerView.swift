@@ -81,15 +81,15 @@ struct ScenePickerView: View {
                     .fontWeight(.medium)
                     .foregroundColor(Color(UIColor.systemBackground))
                     .frame(maxWidth: .infinity)
-                    .frame(height: 44)
+                    .frame(height: 52)
                     .background(Color.primary)
-                    .cornerRadius(12)
+                    .cornerRadius(14)
             }
             .disabled(!hasSelection)
             .opacity(hasSelection ? 1.0 : 0.3)
             .padding(.horizontal, 16)
             .padding(.top, 12)
-            .padding(.bottom, 8)
+            .padding(.bottom, 20)
             .background(Color(UIColor.systemBackground))
         }
         .navigationTitle("")
@@ -135,7 +135,6 @@ struct ScenePickerView: View {
         )
         store.addTrip(bundle)
         router.path.append(CreationRoute.packingList(bundle.id))
-        Task { await NotificationManager.requestAuthorizationIfNeeded() }
     }
 }
 

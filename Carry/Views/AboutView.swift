@@ -27,17 +27,6 @@ struct AboutView: View {
                     .padding(.top, 24)
                     .padding(.bottom, 28)
 
-                // — Made with
-                HStack(spacing: 6) {
-                    Text("about.madeWith")
-                        .font(.footnote)
-                        .foregroundStyle(.tertiary)
-                    Text("❤️")
-                        .font(.footnote)
-                }
-                .padding(.horizontal, 20)
-                .padding(.bottom, 24)
-
                 // — Author card
                 Divider()
                     .padding(.horizontal, 16)
@@ -96,14 +85,28 @@ struct AboutView: View {
                     infoRow(label: "settings.about.version", value: appVersion)
                 }
 
-                // — Dedication (last line of the page, like a book's final page)
-                Text("about.dedication")
-                    .font(.footnote)
-                    .italic()
-                    .foregroundStyle(.tertiary)
-                    .frame(maxWidth: .infinity, alignment: .center)
-                    .padding(.top, 80)
-                    .padding(.bottom, 8)
+                // — Footer: made with + (dedication hidden for now)
+                VStack(spacing: 12) {
+                    HStack(spacing: 6) {
+                        Text("about.madeWith")
+                            .font(.footnote)
+                            .foregroundStyle(.tertiary)
+                        Text("❤️")
+                            .font(.footnote)
+                    }
+
+                    // Hidden by request — keep this block ready for when we want
+                    // to bring the dedication back. Translation strings remain
+                    // in the catalog under `about.dedication`.
+                    //
+                    // Text("about.dedication")
+                    //     .font(.footnote)
+                    //     .italic()
+                    //     .foregroundStyle(.tertiary)
+                }
+                .frame(maxWidth: .infinity, alignment: .center)
+                .padding(.top, 80)
+                .padding(.bottom, 8)
             }
             .padding(.bottom, 32)
         }
