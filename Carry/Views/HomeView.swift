@@ -54,20 +54,10 @@ struct HomeView: View {
                     router.path.append(CreationRoute.tripInfo)
                 } label: {
                     Image(systemName: "plus")
-                        .font(.system(size: 18, weight: .bold))
-                        .foregroundColor(.primary)
+                        .font(.system(size: 17, weight: .semibold))
                         .frame(width: 44, height: 44)
-                        .background(
-                            Circle()
-                                .fill(colorScheme == .dark ? Color.white.opacity(0.12) : Color.black.opacity(0.06))
-                        )
-                        .overlay(
-                            Circle()
-                                .strokeBorder(colorScheme == .dark ? Color.white.opacity(0.14) : Color.black.opacity(0.08), lineWidth: 0.6)
-                        )
-                        .shadow(color: .black.opacity(colorScheme == .dark ? 0.26 : 0.12), radius: 14, x: 0, y: 8)
+                        .glassEffect(.regular.interactive(), in: .circle)
                 }
-                .buttonStyle(PressableScaleButtonStyle(scale: 0.94))
             }
             .padding(.horizontal, 16)
             .padding(.top, 8)
@@ -307,11 +297,13 @@ struct TripCard: View {
 
 struct PressableScaleButtonStyle: ButtonStyle {
     var scale: CGFloat = 0.96
+    var pressedBrightness: Double = 0
 
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
             .scaleEffect(configuration.isPressed ? scale : 1.0)
-            .animation(.spring(response: 0.25, dampingFraction: 0.78), value: configuration.isPressed)
+            .brightness(configuration.isPressed ? pressedBrightness : 0)
+            .animation(.spring(response: 0.22, dampingFraction: 0.72), value: configuration.isPressed)
     }
 }
 

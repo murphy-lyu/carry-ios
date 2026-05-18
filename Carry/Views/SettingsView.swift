@@ -9,13 +9,11 @@ import UserNotifications
 struct SettingsView: View {
 
     @State private var notificationStatus: UNAuthorizationStatus = .notDetermined
+    @State private var showAppearancePicker = false
     @AppStorage("appearance_mode") private var appearanceModeRaw = AppearanceMode.system.rawValue
 
-    private var appearanceModeBinding: Binding<AppearanceMode> {
-        Binding(
-            get: { AppearanceMode(rawValue: appearanceModeRaw) ?? .system },
-            set: { appearanceModeRaw = $0.rawValue }
-        )
+    private var currentAppearance: AppearanceMode {
+        AppearanceMode(rawValue: appearanceModeRaw) ?? .system
     }
 
     private var currentLanguageDisplay: String {
@@ -62,9 +60,25 @@ struct SettingsView: View {
 
             List {
                 Section("settings.section.general") {
-                    Picker("Appearance", selection: appearanceModeBinding) {
+                    Button {
+                        showAppearancePicker = true
+                    } label: {
+                        HStack {
+                            Text("Appearance")
+                            Spacer()
+                            Text(currentAppearance.title)
+                                .foregroundStyle(.secondary)
+                            Image(systemName: "chevron.right")
+                                .font(.caption)
+                                .foregroundStyle(.tertiary)
+                        }
+                    }
+                    .foregroundColor(.primary)
+                    .confirmationDialog("Appearance", isPresented: $showAppearancePicker, titleVisibility: .visible) {
                         ForEach(AppearanceMode.allCases) { mode in
-                            Text(mode.title).tag(mode)
+                            Button(mode.title) {
+                                appearanceModeRaw = mode.rawValue
+                            }
                         }
                     }
 
