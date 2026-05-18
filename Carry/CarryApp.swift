@@ -17,6 +17,7 @@ struct CarryApp: App {
     var body: some Scene {
         WindowGroup {
             SplashView()
+                .tint(.primary)
         }
         .modelContainer(Self.container)
     }

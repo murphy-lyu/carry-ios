@@ -81,6 +81,7 @@ struct EditTripView: View {
                 .padding(.top, 8)
                 .padding(.bottom, 16)
             }
+            .background(Color(.systemGroupedBackground).ignoresSafeArea())
             .navigationTitle("Edit trip")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {

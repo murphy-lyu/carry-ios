@@ -75,22 +75,24 @@ struct ScenePickerView: View {
             .padding(.bottom, 16)
         }
         .safeAreaInset(edge: .bottom) {
-            Button(action: { primaryAction() }) {
-                Text(primaryButtonLabelKey)
-                    .font(.subheadline)
-                    .fontWeight(.medium)
-                    .foregroundColor(Color(UIColor.systemBackground))
-                    .frame(maxWidth: .infinity)
-                    .frame(height: 52)
-                    .background(Color.primary)
-                    .cornerRadius(14)
+            VStack(spacing: 0) {
+                Button(action: { primaryAction() }) {
+                    Text(primaryButtonLabelKey)
+                        .font(.subheadline)
+                        .fontWeight(.medium)
+                        .foregroundColor(Color(UIColor.systemBackground))
+                        .frame(maxWidth: .infinity)
+                        .frame(height: 52)
+                        .background(Color.primary)
+                        .cornerRadius(14)
+                }
+                .disabled(!hasSelection)
+                .opacity(hasSelection ? 1.0 : 0.3)
+                .padding(.horizontal, 20)
             }
-            .disabled(!hasSelection)
-            .opacity(hasSelection ? 1.0 : 0.3)
-            .padding(.horizontal, 16)
             .padding(.top, 12)
-            .padding(.bottom, 20)
             .background(Color(UIColor.systemBackground))
+            .padding(.bottom, 16)
         }
         .navigationTitle("")
         .navigationBarTitleDisplayMode(.inline)
@@ -175,25 +177,51 @@ struct SceneGroupSection: View {
 
 // MARK: - Scene Chip
 
+private let sceneSymbols: [String: String] = [
+    "🚗 Road trip":            "car.fill",
+    "✈️ Long-haul flight":     "airplane",
+    "🚢 Cruise":               "ferry.fill",
+    "☀️ Tropical / beach":     "sun.max.fill",
+    "🌧 Rainy city":           "cloud.rain.fill",
+    "⛰ High altitude":        "mountain.2.fill",
+    "❄️ Winter / cold":        "snowflake",
+    "💼 Business":             "briefcase.fill",
+    "👶 Travelling with kids": "figure.and.child.holdinghands",
+    "🥾 Hiking / camping":     "tent.fill",
+    "💍 Honeymoon":            "heart.fill"
+]
+
 struct SceneChip: View {
 
     let label: String
     let isSelected: Bool
     let action: () -> Void
 
+    private var displayText: String {
+        guard let idx = label.firstIndex(of: " ") else { return label }
+        return String(label[label.index(after: idx)...])
+    }
+
     var body: some View {
         Button(action: action) {
-            Text(LocalizedStringKey(label))
-                .font(.caption)
-                .foregroundColor(isSelected ? Color(UIColor.systemBackground) : .primary)
-                .padding(.horizontal, 10)
-                .padding(.vertical, 6)
-                .background(isSelected ? Color.primary : Color.clear)
-                .clipShape(Capsule())
-                .overlay(
-                    Capsule()
-                        .stroke(Color.secondary.opacity(isSelected ? 0 : 0.5), lineWidth: 0.5)
-                )
+            HStack(spacing: 6) {
+                if let symbol = sceneSymbols[label] {
+                    Image(systemName: symbol)
+                        .font(.system(size: 14))
+                        .foregroundStyle(isSelected ? .white : .primary)
+                }
+                Text(displayText)
+                    .font(.caption)
+                    .foregroundStyle(isSelected ? .white : .primary)
+            }
+            .padding(.horizontal, 10)
+            .padding(.vertical, 6)
+            .background(isSelected ? Color.primary : Color.clear)
+            .clipShape(Capsule())
+            .overlay(
+                Capsule()
+                    .stroke(Color.secondary.opacity(isSelected ? 0 : 0.5), lineWidth: 0.5)
+            )
         }
         .buttonStyle(.plain)
         .animation(.easeInOut(duration: 0.15), value: isSelected)

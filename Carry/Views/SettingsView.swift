@@ -35,33 +35,6 @@ struct SettingsView: View {
         UIApplication.shared.open(url)
     }
 
-    private func openFeedbackEmail() {
-        let dict = Bundle.main.infoDictionary
-        let version = dict?["CFBundleShortVersionString"] as? String ?? "—"
-        let build = dict?["CFBundleVersion"] as? String ?? "—"
-        let device = UIDevice.current.model
-        let system = "\(UIDevice.current.systemName) \(UIDevice.current.systemVersion)"
-
-        let to = "murphy.lyu@icloud.com"
-        let subject = "Carry Feedback"
-        let body = """
-
-
-        ---
-        Carry \(version) (\(build))
-        \(device) · \(system)
-        """
-
-        var components = URLComponents(string: "mailto:\(to)")
-        components?.queryItems = [
-            URLQueryItem(name: "subject", value: subject),
-            URLQueryItem(name: "body", value: body),
-        ]
-        if let url = components?.url {
-            UIApplication.shared.open(url)
-        }
-    }
-
     private func refreshNotificationStatus() async {
         notificationStatus = await NotificationManager.authorizationStatus()
     }
@@ -112,24 +85,43 @@ struct SettingsView: View {
                     .foregroundColor(.primary)
                 }
 
+                Section("Support") {
+                    Button {
+                        let url = URL(string: "https://apps.apple.com/app/carry")!
+                        let activityVC = UIActivityViewController(
+                            activityItems: ["Check out Carry – a minimal packing list app!", url],
+                            applicationActivities: nil
+                        )
+                        if let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
+                           let window = windowScene.windows.first,
+                           let rootVC = window.rootViewController {
+                            rootVC.present(activityVC, animated: true)
+                        }
+                    } label: {
+                        HStack {
+                            Text("Share with Friends")
+                                .foregroundColor(.primary)
+                            Spacer()
+                            Image(systemName: "chevron.right")
+                                .foregroundColor(Color(.tertiaryLabel))
+                                .font(.system(size: 14, weight: .semibold))
+                        }
+                    }
+                    .buttonStyle(.plain)
+
+                    NavigationLink {
+                        FeedbackView()
+                    } label: {
+                        Text("settings.feedback")
+                    }
+                    .foregroundColor(.primary)
+                }
+
                 Section("settings.section.about") {
                     NavigationLink {
                         AboutView()
                     } label: {
                         Text("settings.about.entry")
-                    }
-                    .foregroundColor(.primary)
-
-                    Button {
-                        openFeedbackEmail()
-                    } label: {
-                        HStack {
-                            Text("settings.feedback")
-                            Spacer()
-                            Image(systemName: "chevron.right")
-                                .font(.caption)
-                                .foregroundStyle(.tertiary)
-                        }
                     }
                     .foregroundColor(.primary)
 
@@ -157,6 +149,46 @@ struct SettingsView: View {
             NotificationCenter.default.publisher(for: UIApplication.willEnterForegroundNotification)
         ) { _ in
             Task { await refreshNotificationStatus() }
+        }
+    }
+}
+
+// MARK: - Feedback View
+
+struct FeedbackView: View {
+
+    var body: some View {
+        Color(.systemGroupedBackground)
+            .ignoresSafeArea()
+            .navigationTitle("settings.feedback")
+            .navigationBarTitleDisplayMode(.inline)
+            .onAppear { openMail() }
+    }
+
+    private func openMail() {
+        let dict = Bundle.main.infoDictionary
+        let version = dict?["CFBundleShortVersionString"] as? String ?? "—"
+        let build = dict?["CFBundleVersion"] as? String ?? "—"
+        let device = UIDevice.current.model
+        let system = "\(UIDevice.current.systemName) \(UIDevice.current.systemVersion)"
+
+        let to = "murphy.lyu@icloud.com"
+        let subject = "Carry Feedback"
+        let body = """
+
+
+        ---
+        Carry \(version) (\(build))
+        \(device) · \(system)
+        """
+
+        var components = URLComponents(string: "mailto:\(to)")
+        components?.queryItems = [
+            URLQueryItem(name: "subject", value: subject),
+            URLQueryItem(name: "body", value: body),
+        ]
+        if let url = components?.url {
+            UIApplication.shared.open(url)
         }
     }
 }

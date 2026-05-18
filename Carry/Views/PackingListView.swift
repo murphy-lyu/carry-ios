@@ -55,7 +55,7 @@ struct PackingListView: View {
                 List {
                     ForEach(Array(sections.enumerated()), id: \.element.id) { index, section in
                         Section {
-                            ForEach(section.sortedItems, id: \.id) { item in
+                            ForEach(section.sortedItems.filter { !$0.name.isEmpty || $0.id == editingItemId }, id: \.id) { item in
                                 row(for: item, sectionId: section.id)
                                     .listRowInsets(EdgeInsets(top: 0, leading: 16, bottom: 0, trailing: 16))
                                     .listRowSeparator(.hidden)
@@ -66,25 +66,33 @@ struct PackingListView: View {
                             }
 
                             addItemRow(sectionId: section.id)
-                                .listRowInsets(EdgeInsets(top: 0, leading: 16, bottom: 0, trailing: 16))
+                                .listRowInsets(EdgeInsets(top: 0, leading: 16, bottom: 16, trailing: 16))
                                 .listRowSeparator(.hidden)
                                 .listRowBackground(Color(UIColor.systemBackground))
                         } header: {
                             sectionTitle(section.title, isFirst: index == 0)
                                 .listRowInsets(EdgeInsets())
                         }
+                        .listSectionSeparator(.hidden)
                     }
+
                 }
                 .listStyle(.plain)
                 .scrollContentBackground(.hidden)
                 .environment(\.defaultMinListRowHeight, 0)
                 .listSectionSpacing(0)
                 .contentMargins(.top, 0, for: .scrollContent)
+                .scrollIndicators(.hidden)
+                .safeAreaInset(edge: .bottom) { Color.clear.frame(height: 83) }
             }
         }
         .safeAreaInset(edge: .bottom) {
-            if isNewTrip { saveTripButton }
+            if isNewTrip {
+                saveTripButton
+                    .padding(.bottom, 16)
+            }
         }
+        .toolbarBackground(.visible, for: .tabBar)
         .navigationTitle(bundle?.name ?? "")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
@@ -183,7 +191,7 @@ struct PackingListView: View {
     // MARK: Subviews
 
     private var progressHeader: some View {
-        VStack(alignment: .leading, spacing: 6) {
+        VStack(alignment: .leading, spacing: 0) {
             GeometryReader { geo in
                 ZStack(alignment: .leading) {
                     RoundedRectangle(cornerRadius: 1)
@@ -196,16 +204,26 @@ struct PackingListView: View {
             }
             .frame(height: 2)
 
-            HStack {
+            HStack(alignment: .firstTextBaseline) {
+                Text(tripInfoLine)
+                    .font(.caption)
+                    .foregroundColor(.secondary)
                 Spacer()
                 Text("\(packedCount) / \(totalCount) packed")
                     .font(.caption)
                     .foregroundColor(.secondary)
             }
+            .padding(.top, 8)
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 12)
         .animation(.easeInOut(duration: 0.2), value: progress)
+    }
+
+    private var tripInfoLine: String {
+        [bundle?.destinationCity, bundle?.dateRange]
+            .compactMap { str in (str?.isEmpty == false) ? str : nil }
+            .joined(separator: " · ")
     }
 
     private var completionBanner: some View {
@@ -252,7 +270,7 @@ struct PackingListView: View {
             .kerning(1.5)
             .textCase(.uppercase)
             .padding(.horizontal, 16)
-            .padding(.top, isFirst ? 8 : 20)
+            .padding(.top, isFirst ? 8 : 24)
             .padding(.bottom, 8)
             .frame(maxWidth: .infinity, alignment: .leading)
             .background(Color(UIColor.systemBackground))
@@ -261,10 +279,10 @@ struct PackingListView: View {
     private func editableRow(itemId: UUID, sectionId: UUID) -> some View {
         HStack(spacing: 12) {
             Circle()
-                .strokeBorder(Color.secondary.opacity(0.3), lineWidth: 1)
-                .frame(width: 16, height: 16)
+                .strokeBorder(Color.secondary.opacity(0.3), lineWidth: 1.5)
+                .frame(width: 24, height: 24)
 
-            TextField("Item name", text: $editingText)
+            TextField("", text: $editingText)
                 .font(.subheadline)
                 .focused($focusedItemId, equals: itemId)
                 .submitLabel(.next)
@@ -298,38 +316,39 @@ struct PackingListView: View {
     }
 
     private var saveTripButton: some View {
-        Button {
-            guard !isSaved else { return }
-            if let id = editingItemId { commitEdit(itemId: id) }
-            isSaved = true
-            UINotificationFeedbackGenerator().notificationOccurred(.success)
-            Task {
-                try? await Task.sleep(for: .milliseconds(700))
-                router.path = NavigationPath()
-                await NotificationManager.requestAuthorizationIfNeeded()
-            }
-        } label: {
-            HStack(spacing: 8) {
-                if isSaved {
-                    Image(systemName: "checkmark")
-                        .fontWeight(.medium)
-                        .transition(.scale.combined(with: .opacity))
+        VStack(spacing: 0) {
+            Button {
+                guard !isSaved else { return }
+                if let id = editingItemId { commitEdit(itemId: id) }
+                isSaved = true
+                UINotificationFeedbackGenerator().notificationOccurred(.success)
+                Task {
+                    try? await Task.sleep(for: .milliseconds(700))
+                    router.path = NavigationPath([tripId])
+                    await NotificationManager.requestAuthorizationIfNeeded()
                 }
-                Text(isSaved ? "Saved!" : "Save trip")
-                    .font(.subheadline)
-                    .fontWeight(.medium)
-                    .transition(.opacity)
+            } label: {
+                HStack(spacing: 8) {
+                    if isSaved {
+                        Image(systemName: "checkmark")
+                            .fontWeight(.medium)
+                            .transition(.scale.combined(with: .opacity))
+                    }
+                    Text(isSaved ? "Saved!" : "Save trip")
+                        .font(.subheadline)
+                        .fontWeight(.medium)
+                        .transition(.opacity)
+                }
+                .foregroundColor(Color(UIColor.systemBackground))
+                .frame(maxWidth: .infinity)
+                .frame(height: 52)
+                .background(Color.primary)
+                .cornerRadius(14)
+                .animation(.easeInOut(duration: 0.2), value: isSaved)
             }
-            .foregroundColor(Color(UIColor.systemBackground))
-            .frame(maxWidth: .infinity)
-            .frame(height: 52)
-            .background(Color.primary)
-            .cornerRadius(14)
-            .animation(.easeInOut(duration: 0.2), value: isSaved)
+            .padding(.horizontal, 16)
+            .padding(.top, 12)
         }
-        .padding(.horizontal, 16)
-        .padding(.top, 12)
-        .padding(.bottom, 20)
         .background(Color(UIColor.systemBackground))
     }
 
@@ -375,23 +394,23 @@ struct PackingItemRow: View {
             // — Checkbox
             ZStack {
                 Circle()
-                    .strokeBorder(Color.secondary, lineWidth: 1)
+                    .strokeBorder(item.isPacked ? Color(.systemGray2) : Color(.systemGray3), lineWidth: 1.5)
                     .background(
-                        Circle().fill(item.isPacked ? Color.primary : Color.clear)
+                        Circle().fill(item.isPacked ? Color(.systemGray2) : Color.clear)
                     )
-                    .frame(width: 16, height: 16)
+                    .frame(width: 24, height: 24)
 
                 if item.isPacked {
                     Image(systemName: "checkmark")
-                        .font(.system(size: 9, weight: .bold))
-                        .foregroundColor(Color(UIColor.systemBackground))
+                        .font(.system(size: 11, weight: .bold))
+                        .foregroundColor(.white)
                 }
             }
 
             // — Name
             Text(item.name)
                 .font(.subheadline)
-                .foregroundColor(item.isPacked ? .secondary : .primary)
+                .foregroundColor(item.isPacked ? Color(.tertiaryLabel) : .primary)
                 .strikethrough(item.isPacked)
 
             Spacer()
@@ -401,7 +420,8 @@ struct PackingItemRow: View {
                 .fill(item.isAlert ? Color.alertOrange : Color.secondary.opacity(0.35))
                 .frame(width: 5, height: 5)
         }
-        .frame(height: 44)
+        .frame(minHeight: 44)
+        .opacity(item.isPacked ? 0.6 : 1.0)
         .contentShape(Rectangle())
         .onTapGesture(perform: onTap)
         .animation(.easeInOut(duration: 0.15), value: item.isPacked)

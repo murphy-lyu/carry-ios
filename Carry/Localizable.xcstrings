@@ -37,9 +37,6 @@
         }
       }
     },
-    "%lld / %lld" : {
-
-    },
     "%lld / %lld packed" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -62,6 +59,9 @@
           }
         }
       }
+    },
+    "%lld left" : {
+
     },
     "%lld trips upcoming" : {
       "extractionState" : "manual",
@@ -2138,6 +2138,12 @@
           }
         }
       }
+    },
+    "Share with Friends" : {
+
+    },
+    "Support" : {
+
     },
     "Tap + to start packing for your next trip" : {
       "extractionState" : "manual",

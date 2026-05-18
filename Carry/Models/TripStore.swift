@@ -123,7 +123,7 @@ final class TripStore: ObservableObject {
         context.insert(newItem)
         if section.items == nil { section.items = [] }
         section.items?.append(newItem)
-        save()
+        fetchTrips()  // refresh UI without persisting the empty item to disk
         return newItem.id
     }
 

@@ -80,21 +80,23 @@ struct TripInfoView: View {
             .padding(.bottom, 16)
         }
         .safeAreaInset(edge: .bottom) {
-            Button(action: { router.path.append(CreationRoute.scenePicker(info)) }) {
-                Text("Continue")
-                    .font(.subheadline)
-                    .fontWeight(.medium)
-                    .foregroundColor(Color(UIColor.systemBackground))
-                    .frame(maxWidth: .infinity)
-                    .frame(height: 52)
-                    .background(Color.primary)
-                    .cornerRadius(14)
+            VStack(spacing: 0) {
+                Button(action: { router.path.append(CreationRoute.scenePicker(info)) }) {
+                    Text("Continue")
+                        .font(.subheadline)
+                        .fontWeight(.medium)
+                        .foregroundColor(Color(UIColor.systemBackground))
+                        .frame(maxWidth: .infinity)
+                        .frame(height: 52)
+                        .background(Color.primary)
+                        .cornerRadius(14)
+                }
+                .disabled(!canContinue)
+                .opacity(canContinue ? 1 : 0.3)
+                .padding(.horizontal, 16)
             }
-            .disabled(!canContinue)
-            .opacity(canContinue ? 1 : 0.3)
-            .padding(.horizontal, 16)
             .padding(.top, 12)
-            .padding(.bottom, 20)
+            .padding(.bottom, 16)
             .background(Color(UIColor.systemBackground))
         }
         .navigationTitle("New trip")

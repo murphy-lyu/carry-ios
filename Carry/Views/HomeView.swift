@@ -116,8 +116,11 @@ struct HomeView: View {
                     }
                 }
                 .listStyle(.plain)
+                .scrollContentBackground(.hidden)
+                .background(Color(.systemGroupedBackground))
             }
         }
+        .background(Color(.systemGroupedBackground).ignoresSafeArea())
         .navigationBarHidden(true)
         .alert(
             "Delete \(tripToDelete?.name ?? "")?",
@@ -174,68 +177,61 @@ struct TripCard: View {
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            HStack(alignment: .top, spacing: 8) {
-                VStack(alignment: .leading, spacing: 3) {
-                    HStack(spacing: 5) {
-                        Text(bundle.name)
-                            .font(.subheadline)
-                            .fontWeight(.semibold)
-                            .foregroundColor(isPast ? .secondary : .primary)
-                        if isComplete && !isPast {
-                            Image(systemName: "checkmark.circle.fill")
-                                .font(.caption)
-                                .foregroundColor(.primary)
-                        }
-                    }
-                    Text(bundle.destinationCity)
+        VStack(alignment: .leading, spacing: 0) {
+            HStack(spacing: 5) {
+                Text(bundle.name)
+                    .font(.headline)
+                    .fontWeight(.semibold)
+                    .foregroundColor(.primary)
+                if isComplete && !isPast {
+                    Image(systemName: "checkmark.circle.fill")
                         .font(.caption)
-                        .foregroundStyle(.secondary)
-                    Text("\(bundle.dateRange) · \(bundle.days) days")
-                        .font(.caption)
-                        .foregroundStyle(.tertiary)
-                }
-                Spacer()
-                if !isPast {
-                    Text(isComplete ? "All packed" : "\(bundle.packedCount) / \(bundle.totalCount)")
-                        .font(.caption)
-                        .foregroundStyle(isComplete ? AnyShapeStyle(.primary) : AnyShapeStyle(.secondary))
-                        .padding(.top, 1)
+                        .foregroundColor(.primary)
                 }
             }
+            .padding(.bottom, 2)
+
+            Text(bundle.destinationCity)
+                .font(.subheadline)
+                .foregroundStyle(.secondary)
+                .padding(.bottom, 1)
+
+            Text("\(bundle.dateRange) · \(bundle.days) days")
+                .font(.caption)
+                .foregroundColor(Color(.tertiaryLabel))
 
             if !isPast {
-                VStack(alignment: .leading, spacing: 6) {
+                Color.clear.frame(height: 10)
+                HStack(spacing: 8) {
                     GeometryReader { geo in
                         ZStack(alignment: .leading) {
-                            RoundedRectangle(cornerRadius: 2)
-                                .fill(Color(UIColor.tertiarySystemFill))
-                                .frame(height: 4)
-                            RoundedRectangle(cornerRadius: 2)
+                            RoundedRectangle(cornerRadius: 1)
+                                .fill(Color(.systemGray5))
+                                .frame(height: 2)
+                            RoundedRectangle(cornerRadius: 1)
                                 .fill(Color.primary)
-                                .frame(width: max(0, geo.size.width * progress), height: 4)
+                                .frame(width: max(0, geo.size.width * progress), height: 2)
                         }
                     }
-                    .frame(height: 4)
-
-                    Text(statusText)
+                    .frame(height: 2)
+                    Text(isComplete ? "All packed" : "\(bundle.totalCount - bundle.packedCount) left")
                         .font(.caption)
-                        .foregroundStyle(.secondary)
+                        .foregroundColor(Color(.secondaryLabel))
+                        .frame(width: 52, alignment: .trailing)
                 }
             }
         }
-        .padding(.horizontal, 16)
-        .padding(.vertical, isPast ? 12 : 16)
-        .background(Color(UIColor.secondarySystemBackground))
-        .cornerRadius(16)
+        .frame(maxWidth: .infinity, alignment: .leading)
         .opacity(isPast ? 0.6 : 1.0)
-    }
-
-    private var statusText: String {
-        if isComplete { return "All packed — you're ready to go!" }
-        if bundle.totalCount == 0 { return "No items yet" }
-        let remaining = bundle.totalCount - bundle.packedCount
-        return "\(remaining) item\(remaining == 1 ? "" : "s") left to pack"
+        .padding(.top, 16)
+        .padding(.bottom, 12)
+        .padding(.horizontal, 16)
+        .background(Color(.systemBackground))
+        .clipShape(RoundedRectangle(cornerRadius: 14))
+        .overlay(
+            RoundedRectangle(cornerRadius: 14)
+                .strokeBorder(Color(.separator).opacity(0.4), lineWidth: 0.5)
+        )
     }
 }
 
