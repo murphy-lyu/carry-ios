@@ -189,14 +189,18 @@ func generatePackingSections(selectedScenes: [String]) -> [PackingSection] {
     baseItems.forEach { insert($0) }
     selectedScenes.compactMap { sceneItemMap[$0] }.flatMap { $0 }.forEach { insert($0) }
 
-    // Group by category in a fixed display order
+    // Group by category in a fixed display order, assigning section sortOrder by position
     let order: [ItemCategory] = [.clothing, .essentials, .documents, .electronics, .health, .toiletries]
-    return order.compactMap { category in
+    var sectionIndex = 0
+    var result: [PackingSection] = []
+    for category in order {
         let items = merged
             .filter { $0.category == category }
             .enumerated()
             .map { idx, t in PackingItem(name: t.name, isAlert: t.isAlert, sortOrder: idx) }
-        guard !items.isEmpty else { return nil }
-        return PackingSection(title: category.rawValue, items: items)
+        guard !items.isEmpty else { continue }
+        result.append(PackingSection(title: category.rawValue, items: items, sortOrder: sectionIndex))
+        sectionIndex += 1
     }
+    return result
 }

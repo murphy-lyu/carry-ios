@@ -14,6 +14,7 @@ struct PackingListView: View {
 
     @EnvironmentObject var store: TripStore
     @EnvironmentObject var router: NavigationRouter
+    @Environment(\.colorScheme) private var colorScheme
 
     @State private var editingItemId: UUID? = nil
     @State private var editingText: String = ""
@@ -21,6 +22,7 @@ struct PackingListView: View {
     @FocusState private var focusedItemId: UUID?
 
     @State private var showEditSheet = false
+    @State private var showReorderSheet = false
     @State private var showDeleteConfirmation = false
     @State private var isSaved = false
 
@@ -108,6 +110,16 @@ struct PackingListView: View {
                     } label: {
                         Label("Edit scenes", systemImage: "tag")
                     }
+                    Button {
+                        showReorderSheet = true
+                    } label: {
+                        Label("Reorder sections", systemImage: "arrow.up.arrow.down")
+                    }
+                    .disabled(sections.count < 2)
+                    ShareLink(item: shareText, subject: Text(bundle?.name ?? "")) {
+                        Label("Share list", systemImage: "square.and.arrow.up")
+                    }
+                    Divider()
                     Button(role: .destructive) {
                         showDeleteConfirmation = true
                     } label: {
@@ -129,6 +141,11 @@ struct PackingListView: View {
         .sheet(isPresented: $showEditSheet) {
             if let bundle {
                 EditTripView(trip: bundle)
+            }
+        }
+        .sheet(isPresented: $showReorderSheet) {
+            ReorderSectionsView(tripId: tripId) { newOrder in
+                store.reorderSections(tripId: tripId, newOrder: newOrder)
             }
         }
         .alert(
@@ -188,6 +205,51 @@ struct PackingListView: View {
         UIImpactFeedbackGenerator(style: .light).impactOccurred()
     }
 
+    // MARK: Share
+
+    private var shareText: String {
+        guard let bundle = bundle else { return "" }
+        let sep = String(repeating: "━", count: 32)
+        var lines: [String] = []
+
+        // — Header
+        let heading = [bundle.name, bundle.destinationCity]
+            .filter { !$0.isEmpty }.joined(separator: " · ")
+        lines.append("🧳 \(heading)")
+        lines.append("")
+        lines.append("📅 \(bundle.dateRange) · \(bundle.days) days")
+        if packedCount == totalCount && totalCount > 0 {
+            lines.append("📊 All packed! (\(totalCount))")
+        } else {
+            lines.append("📊 \(packedCount) / \(totalCount) packed")
+        }
+
+        // — Sections
+        lines.append("")
+        lines.append(sep)
+        lines.append("🧳 Packing List")
+        lines.append(sep)
+
+        for section in sections {
+            let items = section.sortedItems.filter { !$0.name.isEmpty }
+            let sectionPacked = items.filter { $0.isPacked }.count
+            lines.append("")
+            lines.append("📂 \(section.title) (\(sectionPacked)/\(items.count))")
+            for item in items {
+                let box = item.isPacked ? "  ✅" : "  ⭕"
+                let flag = item.isAlert ? " ⚠️" : ""
+                lines.append("\(box) \(item.name)\(flag)")
+            }
+        }
+
+        // — Footer
+        lines.append("")
+        lines.append(sep)
+        lines.append("Shared via Carry 🧳")
+        lines.append(sep)
+        return lines.joined(separator: "\n")
+    }
+
     // MARK: Subviews
 
     private var progressHeader: some View {
@@ -195,7 +257,7 @@ struct PackingListView: View {
             GeometryReader { geo in
                 ZStack(alignment: .leading) {
                     RoundedRectangle(cornerRadius: 1)
-                        .fill(Color(UIColor.secondarySystemBackground))
+                        .fill(colorScheme == .dark ? Color.white.opacity(0.18) : Color(UIColor.systemGray5))
                         .frame(height: 2)
                     RoundedRectangle(cornerRadius: 1)
                         .fill(Color.primary)
@@ -388,15 +450,17 @@ struct PackingItemRow: View {
     let item: PackingItem
     let onTap: () -> Void
 
+    @Environment(\.colorScheme) private var colorScheme
+
     var body: some View {
         HStack(spacing: 12) {
 
             // — Checkbox
             ZStack {
                 Circle()
-                    .strokeBorder(item.isPacked ? Color(.systemGray2) : Color(.systemGray3), lineWidth: 1.5)
+                    .strokeBorder(item.isPacked ? Color(.systemGray) : Color(.systemGray3), lineWidth: 1.5)
                     .background(
-                        Circle().fill(item.isPacked ? Color(.systemGray2) : Color.clear)
+                        Circle().fill(item.isPacked ? Color(.systemGray) : Color.clear)
                     )
                     .frame(width: 24, height: 24)
 
@@ -410,7 +474,7 @@ struct PackingItemRow: View {
             // — Name
             Text(item.name)
                 .font(.subheadline)
-                .foregroundColor(item.isPacked ? Color(.tertiaryLabel) : .primary)
+                .foregroundColor(item.isPacked ? Color(.secondaryLabel) : .primary)
                 .strikethrough(item.isPacked)
 
             Spacer()
@@ -421,10 +485,59 @@ struct PackingItemRow: View {
                 .frame(width: 5, height: 5)
         }
         .frame(minHeight: 44)
-        .opacity(item.isPacked ? 0.6 : 1.0)
+        .opacity(item.isPacked ? (colorScheme == .dark ? 0.75 : 0.6) : 1.0)
         .contentShape(Rectangle())
         .onTapGesture(perform: onTap)
         .animation(.easeInOut(duration: 0.15), value: item.isPacked)
+    }
+}
+
+// MARK: - Reorder Sections Sheet
+
+struct ReorderSectionsView: View {
+
+    let tripId: UUID
+    let onDone: ([UUID]) -> Void
+
+    @EnvironmentObject var store: TripStore
+    @Environment(\.dismiss) private var dismiss
+
+    @State private var ordered: [PackingSection] = []
+
+    var body: some View {
+        NavigationStack {
+            List {
+                ForEach(ordered, id: \.id) { section in
+                    Text(LocalizedStringKey(section.title))
+                        .font(.subheadline)
+                        .frame(height: 44)
+                }
+                .onMove { source, destination in
+                    ordered.move(fromOffsets: source, toOffset: destination)
+                }
+            }
+            .listStyle(.plain)
+            .environment(\.editMode, .constant(.active))
+            .scrollContentBackground(.hidden)
+            .navigationTitle("Reorder sections")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .navigationBarLeading) {
+                    Button("Cancel") { dismiss() }
+                }
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button("Done") {
+                        onDone(ordered.map(\.id))
+                        dismiss()
+                    }
+                    .fontWeight(.semibold)
+                }
+            }
+        }
+        .onAppear {
+            ordered = store.bundle(for: tripId)?.safeSections
+                .filter { $0.items?.isEmpty == false } ?? []
+        }
     }
 }
 

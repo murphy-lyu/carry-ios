@@ -7,11 +7,19 @@ import SwiftUI
 
 struct AboutView: View {
 
+    @Environment(\.colorScheme) private var colorScheme
+
     private var appVersion: String {
         let dict = Bundle.main.infoDictionary
         let version = dict?["CFBundleShortVersionString"] as? String ?? "—"
         let build = dict?["CFBundleVersion"] as? String ?? ""
         return build.isEmpty ? version : "\(version) (\(build))"
+    }
+
+    private var dividerColor: Color {
+        colorScheme == .dark
+            ? Color.white.opacity(0.18)
+            : Color.black.opacity(0.10)
     }
 
     var body: some View {
@@ -28,7 +36,9 @@ struct AboutView: View {
                     .padding(.bottom, 28)
 
                 // — Author card
-                Divider()
+                Rectangle()
+                    .fill(dividerColor)
+                    .frame(height: 0.67)
                     .padding(.horizontal, 16)
 
                 HStack(spacing: 12) {
@@ -52,7 +62,9 @@ struct AboutView: View {
                 .padding(.horizontal, 20)
                 .padding(.vertical, 16)
 
-                Divider()
+                Rectangle()
+                    .fill(dividerColor)
+                    .frame(height: 0.67)
                     .padding(.horizontal, 16)
 
                 // — Follow us
@@ -139,8 +151,8 @@ struct AboutView: View {
         .buttonStyle(.plain)
         .overlay(alignment: .bottom) {
             Rectangle()
-                .fill(Color(UIColor.separator))
-                .frame(height: 0.5)
+                .fill(dividerColor)
+                .frame(height: 0.67)
                 .padding(.leading, 16)
         }
     }
@@ -159,8 +171,8 @@ struct AboutView: View {
         .frame(height: 44)
         .overlay(alignment: .bottom) {
             Rectangle()
-                .fill(Color(UIColor.separator))
-                .frame(height: 0.5)
+                .fill(dividerColor)
+                .frame(height: 0.67)
                 .padding(.leading, 16)
         }
     }

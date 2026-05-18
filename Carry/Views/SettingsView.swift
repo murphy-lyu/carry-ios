@@ -9,6 +9,14 @@ import UserNotifications
 struct SettingsView: View {
 
     @State private var notificationStatus: UNAuthorizationStatus = .notDetermined
+    @AppStorage("appearance_mode") private var appearanceModeRaw = AppearanceMode.system.rawValue
+
+    private var appearanceModeBinding: Binding<AppearanceMode> {
+        Binding(
+            get: { AppearanceMode(rawValue: appearanceModeRaw) ?? .system },
+            set: { appearanceModeRaw = $0.rawValue }
+        )
+    }
 
     private var currentLanguageDisplay: String {
         let preferred = Locale.preferredLanguages.first ?? "en"
@@ -54,6 +62,12 @@ struct SettingsView: View {
 
             List {
                 Section("settings.section.general") {
+                    Picker("Appearance", selection: appearanceModeBinding) {
+                        ForEach(AppearanceMode.allCases) { mode in
+                            Text(mode.title).tag(mode)
+                        }
+                    }
+
                     Button {
                         openSystemSettings()
                     } label: {

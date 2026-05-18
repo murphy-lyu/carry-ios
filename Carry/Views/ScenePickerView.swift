@@ -30,6 +30,7 @@ struct ScenePickerView: View {
     @EnvironmentObject var router: NavigationRouter
     @State private var selectedItems: Set<String> = []
     @State private var didLoadInitialSelection = false
+    @State private var isSaved = false
 
     private var hasSelection: Bool { !selectedItems.isEmpty }
     private var selectionCount: Int { selectedItems.count }
@@ -40,6 +41,7 @@ struct ScenePickerView: View {
     }
 
     private var primaryButtonLabelKey: LocalizedStringKey {
+        if isSaved { return "scenes.updated" }
         if isEditing {
             return hasSelection
                 ? "scenes.update · \(selectionCount) selected"
@@ -75,9 +77,18 @@ struct ScenePickerView: View {
             .padding(.bottom, 16)
         }
         .safeAreaInset(edge: .bottom) {
-            VStack(spacing: 0) {
-                Button(action: { primaryAction() }) {
-                    Text(primaryButtonLabelKey)
+            Group {
+                VStack(spacing: 0) {
+                    Button(action: { primaryAction() }) {
+                        HStack(spacing: 8) {
+                            if isSaved {
+                                Image(systemName: "checkmark")
+                                    .fontWeight(.medium)
+                                    .transition(.scale.combined(with: .opacity))
+                            }
+                            Text(primaryButtonLabelKey)
+                                .transition(.opacity)
+                        }
                         .font(.subheadline)
                         .fontWeight(.medium)
                         .foregroundColor(Color(UIColor.systemBackground))
@@ -85,13 +96,15 @@ struct ScenePickerView: View {
                         .frame(height: 52)
                         .background(Color.primary)
                         .cornerRadius(14)
+                        .animation(.easeInOut(duration: 0.2), value: isSaved)
+                    }
+                    .disabled(!hasSelection || isSaved)
+                    .opacity(hasSelection ? 1.0 : 0.3)
+                    .padding(.horizontal, 20)
                 }
-                .disabled(!hasSelection)
-                .opacity(hasSelection ? 1.0 : 0.3)
-                .padding(.horizontal, 20)
+                .padding(.top, 12)
+                .background(Color(UIColor.systemBackground))
             }
-            .padding(.top, 12)
-            .background(Color(UIColor.systemBackground))
             .padding(.bottom, 16)
         }
         .navigationTitle("")
@@ -119,8 +132,14 @@ struct ScenePickerView: View {
         case .create(let info):
             generateList(info: info, keys: keys)
         case .edit(let tripId):
+            guard !isSaved else { return }
             store.regenerateScenes(tripId: tripId, keys: keys)
-            router.path.removeLast()
+            UINotificationFeedbackGenerator().notificationOccurred(.success)
+            withAnimation(.easeInOut(duration: 0.2)) { isSaved = true }
+            Task {
+                try? await Task.sleep(for: .milliseconds(600))
+                router.path.removeLast()
+            }
         }
     }
 
@@ -208,11 +227,11 @@ struct SceneChip: View {
                 if let symbol = sceneSymbols[label] {
                     Image(systemName: symbol)
                         .font(.system(size: 14))
-                        .foregroundStyle(isSelected ? .white : .primary)
+                        .foregroundStyle(isSelected ? Color(UIColor.systemBackground) : .primary)
                 }
                 Text(displayText)
                     .font(.caption)
-                    .foregroundStyle(isSelected ? .white : .primary)
+                    .foregroundStyle(isSelected ? Color(UIColor.systemBackground) : .primary)
             }
             .padding(.horizontal, 10)
             .padding(.vertical, 6)

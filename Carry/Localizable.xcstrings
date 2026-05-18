@@ -641,6 +641,9 @@
         }
       }
     },
+    "Appearance" : {
+
+    },
     "Cancel" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -893,6 +896,9 @@
           }
         }
       }
+    },
+    "Done" : {
+
     },
     "e.g. Japan · Hokkaido" : {
       "extractionState" : "manual",
@@ -1469,6 +1475,9 @@
         }
       }
     },
+    "Reorder sections" : {
+
+    },
     "Return" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -1538,6 +1547,9 @@
         }
       }
     },
+    "Saved" : {
+
+    },
     "Saved!" : {
 
     },
@@ -1583,6 +1595,29 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "更新清單 · 已選 %lld"
+          }
+        }
+      }
+    },
+    "scenes.updated" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Updated"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "已更新"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "已更新"
           }
         }
       }
@@ -2138,6 +2173,9 @@
           }
         }
       }
+    },
+    "Share list" : {
+
     },
     "Share with Friends" : {
 

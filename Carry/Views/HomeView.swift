@@ -9,6 +9,7 @@ import SwiftUI
 
 struct HomeView: View {
 
+    @Environment(\.colorScheme) private var colorScheme
     @EnvironmentObject var store: TripStore
     @EnvironmentObject var router: NavigationRouter
 
@@ -49,15 +50,24 @@ struct HomeView: View {
                     .foregroundColor(.primary)
                 Spacer()
                 Button {
+                    UIImpactFeedbackGenerator(style: .light).impactOccurred()
                     router.path.append(CreationRoute.tripInfo)
                 } label: {
                     Image(systemName: "plus")
-                        .font(.system(size: 16, weight: .semibold))
+                        .font(.system(size: 18, weight: .bold))
                         .foregroundColor(.primary)
-                        .frame(width: 38, height: 38)
-                        .background(Color(UIColor.secondarySystemFill))
-                        .clipShape(Circle())
+                        .frame(width: 44, height: 44)
+                        .background(
+                            Circle()
+                                .fill(colorScheme == .dark ? Color.white.opacity(0.12) : Color.black.opacity(0.06))
+                        )
+                        .overlay(
+                            Circle()
+                                .strokeBorder(colorScheme == .dark ? Color.white.opacity(0.14) : Color.black.opacity(0.08), lineWidth: 0.6)
+                        )
+                        .shadow(color: .black.opacity(colorScheme == .dark ? 0.26 : 0.12), radius: 14, x: 0, y: 8)
                 }
+                .buttonStyle(PressableScaleButtonStyle(scale: 0.94))
             }
             .padding(.horizontal, 16)
             .padding(.top, 8)
@@ -103,7 +113,7 @@ struct HomeView: View {
                     if !pastTrips.isEmpty {
                         Text("home.past")
                             .font(.system(size: 11, weight: .medium))
-                            .foregroundStyle(.tertiary)
+                            .foregroundStyle(colorScheme == .dark ? .secondary : .tertiary)
                             .kerning(1.5)
                             .textCase(.uppercase)
                             .listRowInsets(EdgeInsets(top: upcomingTrips.isEmpty ? 0 : 16, leading: 16, bottom: 8, trailing: 16))
@@ -117,10 +127,10 @@ struct HomeView: View {
                 }
                 .listStyle(.plain)
                 .scrollContentBackground(.hidden)
-                .background(Color(.systemGroupedBackground))
+                .background(Color.clear)
             }
         }
-        .background(Color(.systemGroupedBackground).ignoresSafeArea())
+        .background(Color(UIColor.systemGroupedBackground).ignoresSafeArea())
         .navigationBarHidden(true)
         .alert(
             "Delete \(tripToDelete?.name ?? "")?",
@@ -140,11 +150,12 @@ struct HomeView: View {
     @ViewBuilder
     private func tripRow(bundle: TripBundle, isPast: Bool) -> some View {
         Button {
+            UIImpactFeedbackGenerator(style: .soft).impactOccurred()
             router.path.append(bundle.id)
         } label: {
             TripCard(bundle: bundle, isPast: isPast)
         }
-        .buttonStyle(.plain)
+        .buttonStyle(PressableScaleButtonStyle(scale: 0.985))
         .swipeActions(edge: .trailing) {
             Button(role: .none) {
                 tripToDelete = bundle
@@ -165,6 +176,8 @@ struct HomeView: View {
 
 struct TripCard: View {
 
+    @Environment(\.colorScheme) private var colorScheme
+
     let bundle: TripBundle
     var isPast: Bool = false
 
@@ -174,6 +187,50 @@ struct TripCard: View {
 
     private var isComplete: Bool {
         bundle.totalCount > 0 && bundle.packedCount == bundle.totalCount
+    }
+
+    private var cardBackgroundColor: Color {
+        colorScheme == .dark
+            ? Color.white.opacity(0.09)
+            : Color(uiColor: .systemBackground)
+    }
+
+    private var cardBorderColor: Color {
+        colorScheme == .dark
+            ? Color.white.opacity(0.18)
+            : Color(uiColor: .separator).opacity(0.4)
+    }
+
+    private var destinationTextColor: Color {
+        if isPast {
+            return colorScheme == .dark ? Color.white.opacity(0.62) : Color(uiColor: .secondaryLabel)
+        }
+        return Color(uiColor: .secondaryLabel)
+    }
+
+    private var dateTextColor: Color {
+        if isPast {
+            return colorScheme == .dark ? Color.white.opacity(0.45) : Color(uiColor: .tertiaryLabel)
+        }
+        return colorScheme == .dark ? Color.white.opacity(0.44) : Color(uiColor: .tertiaryLabel)
+    }
+
+    private var progressMetaTextColor: Color {
+        colorScheme == .dark ? Color.white.opacity(0.62) : Color(uiColor: .secondaryLabel)
+    }
+
+    private var progressTrackColor: Color {
+        colorScheme == .dark
+            ? Color.white.opacity(0.18)
+            : Color(uiColor: .systemGray5)
+    }
+
+    private var cardHighlightColor: Color {
+        colorScheme == .dark ? Color.white.opacity(0.14) : Color.white.opacity(0.55)
+    }
+
+    private var cardShadowColor: Color {
+        colorScheme == .dark ? Color.black.opacity(0.24) : Color.black.opacity(0.08)
     }
 
     var body: some View {
@@ -193,47 +250,71 @@ struct TripCard: View {
 
             Text(bundle.destinationCity)
                 .font(.subheadline)
-                .foregroundStyle(.secondary)
+                .foregroundColor(destinationTextColor)
                 .padding(.bottom, 1)
 
             Text("\(bundle.dateRange) · \(bundle.days) days")
                 .font(.caption)
-                .foregroundColor(Color(.tertiaryLabel))
+                .foregroundColor(dateTextColor)
 
             if !isPast {
                 Color.clear.frame(height: 10)
                 HStack(spacing: 8) {
                     GeometryReader { geo in
                         ZStack(alignment: .leading) {
-                            RoundedRectangle(cornerRadius: 1)
-                                .fill(Color(.systemGray5))
-                                .frame(height: 2)
-                            RoundedRectangle(cornerRadius: 1)
+                            RoundedRectangle(cornerRadius: 1.5)
+                                .fill(progressTrackColor)
+                                .frame(height: 3)
+                            RoundedRectangle(cornerRadius: 1.5)
                                 .fill(Color.primary)
-                                .frame(width: max(0, geo.size.width * progress), height: 2)
+                                .frame(width: max(0, geo.size.width * progress), height: 3)
+                                .animation(.spring(response: 0.42, dampingFraction: 0.82), value: progress)
                         }
                     }
-                    .frame(height: 2)
+                    .frame(height: 3)
                     Text(isComplete ? "All packed" : "\(bundle.totalCount - bundle.packedCount) left")
                         .font(.caption)
-                        .foregroundColor(Color(.secondaryLabel))
+                        .foregroundColor(progressMetaTextColor)
                         .frame(width: 52, alignment: .trailing)
                 }
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
-        .opacity(isPast ? 0.6 : 1.0)
         .padding(.top, 16)
         .padding(.bottom, 12)
         .padding(.horizontal, 16)
-        .background(Color(.systemBackground))
-        .clipShape(RoundedRectangle(cornerRadius: 14))
+        .background(
+            RoundedRectangle(cornerRadius: 14)
+                .fill(cardBackgroundColor)
+                .overlay(
+                    LinearGradient(
+                        colors: [cardHighlightColor, .clear],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    )
+                    .opacity(0.34)
+                    .clipShape(RoundedRectangle(cornerRadius: 14))
+                )
+        )
         .overlay(
             RoundedRectangle(cornerRadius: 14)
-                .strokeBorder(Color(.separator).opacity(0.4), lineWidth: 0.5)
+                .strokeBorder(cardBorderColor, lineWidth: 0.6)
         )
+        .shadow(color: cardShadowColor, radius: 14, x: 0, y: 8)
+        .contentShape(RoundedRectangle(cornerRadius: 14))
     }
 }
+
+struct PressableScaleButtonStyle: ButtonStyle {
+    var scale: CGFloat = 0.96
+
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .scaleEffect(configuration.isPressed ? scale : 1.0)
+            .animation(.spring(response: 0.25, dampingFraction: 0.78), value: configuration.isPressed)
+    }
+}
+
 
 // MARK: - Preview
 

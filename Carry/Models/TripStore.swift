@@ -43,7 +43,7 @@ final class TripBundle {
         self.sections = sections
     }
 
-    var safeSections: [PackingSection] { sections ?? [] }
+    var safeSections: [PackingSection] { (sections ?? []).sorted { $0.sortOrder < $1.sortOrder } }
     var packedCount: Int { safeSections.flatMap { $0.items ?? [] }.filter(\.isPacked).count }
     var totalCount:  Int { safeSections.flatMap { $0.items ?? [] }.count }
 }
@@ -195,8 +195,9 @@ final class TripStore: ObservableObject {
             }
         }
 
-        // Build fresh sections
+        // Build fresh sections (sortOrder assigned by generatePackingSections position)
         let newSections = generatePackingSections(selectedScenes: keys)
+        for (index, section) in newSections.enumerated() { section.sortOrder = index }
 
         // Restore packed states + append custom items to matching section
         for section in newSections {
@@ -242,6 +243,16 @@ final class TripStore: ObservableObject {
         baseItems.forEach { names.insert($0.name) }
         keys.compactMap { sceneItemMap[$0] }.flatMap { $0 }.forEach { names.insert($0.name) }
         return Array(names)
+    }
+
+    func reorderSections(tripId: UUID, newOrder: [UUID]) {
+        guard let trip = trips.first(where: { $0.id == tripId }) else { return }
+        for (index, id) in newOrder.enumerated() {
+            if let section = trip.safeSections.first(where: { $0.id == id }) {
+                section.sortOrder = index
+            }
+        }
+        save()
     }
 
     // MARK: - Queries

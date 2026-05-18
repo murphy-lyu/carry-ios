@@ -13,6 +13,7 @@ struct EditTripView: View {
     @Environment(\.dismiss) private var dismiss
 
     @State private var info: TripInfo
+    @State private var isSaved = false
 
     init(trip: TripBundle) {
         self.tripId = trip.id
@@ -36,19 +37,11 @@ struct EditTripView: View {
                 VStack(alignment: .leading, spacing: 24) {
 
                     fieldGroup(label: "Trip Name") {
-                        TextField("e.g. Japan · Hokkaido", text: $info.name)
-                            .font(.subheadline)
-                            .padding(12)
-                            .background(Color(UIColor.secondarySystemBackground))
-                            .cornerRadius(12)
+                        stableField("e.g. Japan · Hokkaido", text: $info.name)
                     }
 
                     fieldGroup(label: "Destination City") {
-                        TextField("e.g. Sapporo", text: $info.destinationCity)
-                            .font(.subheadline)
-                            .padding(12)
-                            .background(Color(UIColor.secondarySystemBackground))
-                            .cornerRadius(12)
+                        stableField("e.g. Sapporo", text: $info.destinationCity)
                     }
 
                     fieldGroup(label: "Dates") {
@@ -57,10 +50,9 @@ struct EditTripView: View {
                                        displayedComponents: .date)
                                 .font(.subheadline)
                                 .padding(12)
-                                .onChange(of: info.departureDate) { _, newVal in
-                                    if info.returnDate < newVal {
-                                        info.returnDate = Calendar.current.date(byAdding: .day, value: 1, to: newVal) ?? newVal
-                                    }
+                                .onChange(of: info.departureDate) { oldVal, newVal in
+                                    let days = Calendar.current.dateComponents([.day], from: oldVal, to: info.returnDate).day ?? 7
+                                    info.returnDate = Calendar.current.date(byAdding: .day, value: max(1, days), to: newVal) ?? newVal
                                 }
 
                             Rectangle()
@@ -81,7 +73,6 @@ struct EditTripView: View {
                 .padding(.top, 8)
                 .padding(.bottom, 16)
             }
-            .background(Color(.systemGroupedBackground).ignoresSafeArea())
             .navigationTitle("Edit trip")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -89,15 +80,49 @@ struct EditTripView: View {
                     Button("Cancel") { dismiss() }
                 }
                 ToolbarItem(placement: .navigationBarTrailing) {
-                    Button("Save") {
+                    Button {
+                        guard !isSaved else { return }
                         store.updateTripInfo(tripId: tripId, info: info)
-                        dismiss()
+                        UINotificationFeedbackGenerator().notificationOccurred(.success)
+                        withAnimation(.easeInOut(duration: 0.2)) { isSaved = true }
+                        Task {
+                            try? await Task.sleep(for: .milliseconds(600))
+                            dismiss()
+                        }
+                    } label: {
+                        HStack(spacing: 4) {
+                            if isSaved {
+                                Image(systemName: "checkmark")
+                                    .font(.system(size: 13, weight: .semibold))
+                                    .transition(.scale.combined(with: .opacity))
+                            }
+                            Text(isSaved ? "Saved" : "Save")
+                                .transition(.opacity)
+                        }
+                        .animation(.easeInOut(duration: 0.2), value: isSaved)
                     }
                     .fontWeight(.semibold)
-                    .disabled(!canSave)
+                    .disabled(!canSave || isSaved)
                 }
             }
         }
+    }
+
+    private func stableField(_ placeholder: String, text: Binding<String>) -> some View {
+        ZStack(alignment: .leading) {
+            if text.wrappedValue.isEmpty {
+                Text(placeholder)
+                    .font(.subheadline)
+                    .foregroundColor(Color(UIColor.placeholderText))
+                    .allowsHitTesting(false)
+            }
+            TextField("", text: text)
+                .font(.subheadline)
+        }
+        .frame(height: 44)
+        .padding(.horizontal, 12)
+        .background(Color(UIColor.secondarySystemBackground))
+        .cornerRadius(12)
     }
 
     private func fieldGroup<Content: View>(

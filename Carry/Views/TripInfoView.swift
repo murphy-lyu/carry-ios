@@ -33,20 +33,12 @@ struct TripInfoView: View {
 
                 // — Trip name
                 fieldGroup(label: "Trip Name") {
-                    TextField("e.g. Japan · Hokkaido", text: $info.name)
-                        .font(.subheadline)
-                        .padding(12)
-                        .background(Color(UIColor.secondarySystemBackground))
-                        .cornerRadius(12)
+                    stableField("e.g. Japan · Hokkaido", text: $info.name)
                 }
 
                 // — Destination city
                 fieldGroup(label: "Destination City") {
-                    TextField("e.g. Sapporo", text: $info.destinationCity)
-                        .font(.subheadline)
-                        .padding(12)
-                        .background(Color(UIColor.secondarySystemBackground))
-                        .cornerRadius(12)
+                    stableField("e.g. Sapporo", text: $info.destinationCity)
                 }
 
                 // — Dates
@@ -57,9 +49,7 @@ struct TripInfoView: View {
                             .font(.subheadline)
                             .padding(12)
                             .onChange(of: info.departureDate) { _, newVal in
-                                if info.returnDate < newVal {
-                                    info.returnDate = Calendar.current.date(byAdding: .day, value: 1, to: newVal) ?? newVal
-                                }
+                                info.returnDate = Calendar.current.date(byAdding: .day, value: 7, to: newVal) ?? newVal
                             }
 
                         Rectangle()
@@ -104,6 +94,23 @@ struct TripInfoView: View {
     }
 
     // MARK: Helpers
+
+    private func stableField(_ placeholder: String, text: Binding<String>) -> some View {
+        ZStack(alignment: .leading) {
+            if text.wrappedValue.isEmpty {
+                Text(placeholder)
+                    .font(.subheadline)
+                    .foregroundColor(Color(UIColor.placeholderText))
+                    .allowsHitTesting(false)
+            }
+            TextField("", text: text)
+                .font(.subheadline)
+        }
+        .frame(height: 44)
+        .padding(.horizontal, 12)
+        .background(Color(UIColor.secondarySystemBackground))
+        .cornerRadius(12)
+    }
 
     private func fieldGroup<Content: View>(
         label: LocalizedStringKey,

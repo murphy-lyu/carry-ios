@@ -32,13 +32,15 @@ final class PackingItem {
 final class PackingSection {
     var id: UUID = UUID()
     var title: String = ""
+    var sortOrder: Int = 0
     @Relationship(deleteRule: .cascade, inverse: \PackingItem.section) var items: [PackingItem]? = []
     var bundle: TripBundle?
 
-    init(title: String = "", items: [PackingItem] = []) {
+    init(title: String = "", items: [PackingItem] = [], sortOrder: Int = 0) {
         self.id = UUID()
         self.title = title
         self.items = items
+        self.sortOrder = sortOrder
     }
 
     var sortedItems: [PackingItem] {
