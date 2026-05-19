@@ -369,15 +369,16 @@ struct ItemPickerView: View {
             HStack(spacing: 12) {
                 ZStack {
                     Circle()
+                        .fill(isSelected ? Color.primary : Color.clear)
+                    Circle()
                         .strokeBorder(isSelected ? Color.primary : Color.secondary.opacity(0.4), lineWidth: 1.5)
-                        .background(Circle().fill(isSelected ? Color.primary : Color.clear))
-                        .frame(width: 24, height: 24)
                     if isSelected {
                         Image(systemName: "checkmark")
                             .font(.system(size: 11, weight: .bold))
-                            .foregroundColor(.white)
+                            .foregroundColor(Color(UIColor.systemBackground))
                     }
                 }
+                .frame(width: 24, height: 24)
                 Text(LocalizedStringKey(item))
                     .font(.body)
                     .foregroundColor(.primary)
