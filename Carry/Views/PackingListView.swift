@@ -32,7 +32,6 @@ struct PackingListView: View {
     @State private var showCompletionBanner = false
     @State private var hasTriggeredCompletion = false
     @State private var shimmerPhase: CGFloat = -1
-    @State private var surpriseSectionExpanded = true
     @State private var showNudgeBanner = false
     @State private var hasTriggeredNudge = false
     @State private var surpriseBatchOffset: Int = 0
@@ -110,13 +109,11 @@ struct PackingListView: View {
                     // — Surprise / "Worth considering" section
                     if !surpriseItems.isEmpty && isNewTrip {
                         Section {
-                            if surpriseSectionExpanded {
-                                ForEach(visibleSurpriseItems) { item in
-                                    surpriseRow(for: item)
-                                        .listRowInsets(EdgeInsets(top: 0, leading: 16, bottom: 0, trailing: 16))
-                                        .listRowSeparator(.hidden)
-                                        .listRowBackground(Color(UIColor.systemBackground))
-                                }
+                            ForEach(visibleSurpriseItems) { item in
+                                surpriseRow(for: item)
+                                    .listRowInsets(EdgeInsets(top: 0, leading: 16, bottom: 0, trailing: 16))
+                                    .listRowSeparator(.hidden)
+                                    .listRowBackground(Color(UIColor.systemBackground))
                             }
                         } header: {
                             surpriseSectionHeader
@@ -209,7 +206,7 @@ struct PackingListView: View {
                         }
                     }
                     Button {
-                        if !hasScenes { showSuggestSheet = true } else { showEditScenesSheet = true }
+                        showSuggestSheet = true
                     } label: {
                         Label("Edit scenes", systemImage: "tag")
                     }
@@ -293,7 +290,6 @@ struct PackingListView: View {
             store.markNudgeShown(tripId: tripId)
             withAnimation(.spring(response: 0.4, dampingFraction: 0.8)) {
                 showNudgeBanner = true
-                surpriseSectionExpanded = true
             }
             Task {
                 try? await Task.sleep(for: .milliseconds(3500))
@@ -556,33 +552,21 @@ struct PackingListView: View {
     }
 
     private var surpriseSectionHeader: some View {
-        HStack(spacing: 0) {
-            Button {
-                withAnimation(.easeInOut(duration: 0.2)) {
-                    surpriseSectionExpanded.toggle()
-                }
-            } label: {
-                HStack(spacing: 6) {
-                    Image(systemName: "sparkles")
-                        .font(.system(size: 10, weight: .semibold))
-                        .foregroundStyle(.secondary)
-                    Text("Worth considering")
-                        .font(.caption.bold())
-                        .foregroundStyle(Color(.systemGray))
-                        .kerning(1.5)
-                        .textCase(.uppercase)
-                    Image(systemName: surpriseSectionExpanded ? "chevron.up" : "chevron.down")
-                        .font(.system(size: 10, weight: .semibold))
-                        .foregroundStyle(.secondary)
-                }
-            }
-            .buttonStyle(.plain)
-
+        HStack(spacing: 6) {
+            Image(systemName: "sparkles")
+                .font(.system(size: 10, weight: .semibold))
+                .foregroundStyle(.secondary)
+            Text("Worth considering")
+                .font(.caption.bold())
+                .foregroundStyle(Color(.systemGray))
+                .kerning(1.5)
+                .textCase(.uppercase)
             Spacer()
-
-            if canShuffle && surpriseSectionExpanded {
+            if canShuffle {
                 Button {
-                    withAnimation(.easeInOut(duration: 0.2)) {
+                    var t = Transaction()
+                    t.disablesAnimations = true
+                    withTransaction(t) {
                         surpriseBatchOffset = (surpriseBatchOffset + surpriseBatchSize) % surpriseItems.count
                     }
                     UIImpactFeedbackGenerator(style: .light).impactOccurred()
@@ -592,7 +576,6 @@ struct PackingListView: View {
                         .foregroundStyle(.secondary)
                 }
                 .buttonStyle(.plain)
-                .transition(.opacity)
             }
         }
         .padding(.horizontal, 16)
@@ -600,7 +583,6 @@ struct PackingListView: View {
         .padding(.bottom, 8)
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(Color(UIColor.systemBackground))
-        .animation(.easeInOut(duration: 0.15), value: canShuffle && surpriseSectionExpanded)
     }
 
     private func surpriseRow(for item: SurpriseItem) -> some View {

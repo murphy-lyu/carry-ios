@@ -26,24 +26,7 @@ struct SuggestionPreviewView: View {
     var body: some View {
         VStack(spacing: 0) {
 
-            // — Custom header (matches ScenePickerView style)
-            HStack(spacing: 0) {
-                Text("Suggested items")
-                    .font(.title2)
-                    .bold()
-                Spacer()
-                Button { dismiss() } label: {
-                    Image(systemName: "xmark")
-                        .font(.system(size: 13, weight: .semibold))
-                        .foregroundStyle(.primary)
-                        .frame(width: 36, height: 36)
-                        .glassCircleButton()
-                }
-                .buttonStyle(.plain)
-            }
-            .padding(.horizontal, 16)
-            .padding(.top, 24)
-            .padding(.bottom, 8)
+            headerBlock
 
             if hasContent {
                 list
@@ -63,39 +46,26 @@ struct SuggestionPreviewView: View {
 
     private var list: some View {
         ScrollView {
-            LazyVStack(alignment: .leading, spacing: 0) {
-
+            LazyVStack(alignment: .leading, spacing: 0, pinnedViews: [.sectionHeaders]) {
                 if !sections.isEmpty {
-                    Text("suggestions.subtitle")
-                        .font(.subheadline)
-                        .foregroundStyle(.secondary)
-                        .padding(.horizontal, 16)
-                        .padding(.top, 8)
-                        .padding(.bottom, 20)
-
                     ForEach(sections, id: \.title) { section in
-                        sectionBlock(section)
+                        Section {
+                            ForEach(section.items, id: \.self) { item in
+                                itemRow(item)
+                            }
+                        } header: {
+                            sectionHeader(section.title)
+                        }
                     }
                 }
 
                 if !surpriseItems.isEmpty {
-                    HStack(spacing: 6) {
-                        Image(systemName: "sparkles")
-                            .font(.system(size: 10, weight: .semibold))
-                            .foregroundStyle(.secondary)
-                        Text("Worth considering")
-                            .font(.caption.bold())
-                            .foregroundStyle(Color(.systemGray))
-                            .kerning(1.5)
-                            .textCase(.uppercase)
-                    }
-                    .padding(.horizontal, 16)
-                    .padding(.top, 28)
-                    .padding(.bottom, 6)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-
-                    ForEach(surpriseItems) { item in
-                        surpriseItemRow(item)
+                    Section {
+                        ForEach(surpriseItems) { item in
+                            surpriseItemRow(item)
+                        }
+                    } header: {
+                        surpriseHeader
                     }
                 }
             }
@@ -103,9 +73,35 @@ struct SuggestionPreviewView: View {
         }
     }
 
-    @ViewBuilder
-    private func sectionBlock(_ section: (title: String, items: [String])) -> some View {
-        Text(LocalizedStringKey(section.title))
+    private var headerBlock: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack(spacing: 0) {
+                Text("Suggested items")
+                    .font(.title2)
+                    .bold()
+                Spacer()
+                Button { dismiss() } label: {
+                    Image(systemName: "xmark")
+                        .font(.system(size: 13, weight: .semibold))
+                        .foregroundStyle(.primary)
+                        .frame(width: 36, height: 36)
+                        .glassCircleButton()
+                }
+                .buttonStyle(.plain)
+            }
+
+            Text("suggestions.subtitle")
+                .font(.subheadline)
+                .foregroundStyle(.secondary)
+                .padding(.bottom, 8)
+        }
+        .padding(.horizontal, 16)
+        .padding(.top, 24)
+        .background(Color(UIColor.systemBackground))
+    }
+
+    private func sectionHeader(_ title: String) -> some View {
+        Text(LocalizedStringKey(title))
             .font(.caption.bold())
             .foregroundStyle(Color(.systemGray))
             .kerning(1.5)
@@ -114,10 +110,25 @@ struct SuggestionPreviewView: View {
             .padding(.top, 20)
             .padding(.bottom, 6)
             .frame(maxWidth: .infinity, alignment: .leading)
+            .background(Color(UIColor.systemBackground))
+    }
 
-        ForEach(section.items, id: \.self) { item in
-            itemRow(item)
+    private var surpriseHeader: some View {
+        HStack(spacing: 6) {
+            Image(systemName: "sparkles")
+                .font(.system(size: 10, weight: .semibold))
+                .foregroundStyle(.secondary)
+            Text("Worth considering")
+                .font(.caption.bold())
+                .foregroundStyle(Color(.systemGray))
+                .kerning(1.5)
+                .textCase(.uppercase)
         }
+        .padding(.horizontal, 16)
+        .padding(.top, 20)
+        .padding(.bottom, 6)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(Color(UIColor.systemBackground))
     }
 
     private func itemRow(_ name: String) -> some View {

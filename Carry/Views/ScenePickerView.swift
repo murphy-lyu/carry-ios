@@ -166,8 +166,13 @@ struct ScenePickerView: View {
     private func loadInitialSelectionIfNeeded() {
         guard !didLoadInitialSelection else { return }
         didLoadInitialSelection = true
-        guard case .edit(let tripId) = mode,
-              let trip = store.bundle(for: tripId) else { return }
+        let tripId: UUID
+        switch mode {
+        case .edit(let id):    tripId = id
+        case .suggest(let id): tripId = id
+        default: return
+        }
+        guard let trip = store.bundle(for: tripId) else { return }
         let savedKeys = Set(trip.selectedSceneKeys)
         let labels = sceneLabelToKey.compactMap { (label, key) -> String? in
             savedKeys.contains(key) ? label : nil
