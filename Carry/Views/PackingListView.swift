@@ -25,6 +25,9 @@ struct PackingListView: View {
     @State private var showReorderSheet = false
     @State private var showDeleteConfirmation = false
     @State private var isSaved = false
+    @State private var showConfetti = false
+    @State private var showCompletionBanner = false
+    @State private var hasTriggeredCompletion = false
 
     private var bundle: TripBundle? { store.bundle(for: tripId) }
     private var sections: [PackingSection] {
@@ -44,11 +47,6 @@ struct PackingListView: View {
 
             // — Progress header (fixed, does not scroll)
             progressHeader
-
-            if isComplete {
-                completionBanner
-                    .transition(.move(edge: .top).combined(with: .opacity))
-            }
 
             // — Scrollable list
             if sections.isEmpty {
@@ -86,6 +84,12 @@ struct PackingListView: View {
                 .contentMargins(.top, 0, for: .scrollContent)
                 .scrollIndicators(.hidden)
                 .safeAreaInset(edge: .bottom) { Color.clear.frame(height: 83) }
+                .safeAreaInset(edge: .top, spacing: 0) {
+                    if showCompletionBanner {
+                        completionBanner
+                            .transition(.move(edge: .top).combined(with: .opacity))
+                    }
+                }
             }
         }
         .safeAreaInset(edge: .bottom) {
@@ -100,6 +104,14 @@ struct PackingListView: View {
         .toolbar {
             ToolbarItem(placement: .navigationBarTrailing) {
                 Menu {
+                    if isNewTrip {
+                        Button {
+                            router.path.append(CreationRoute.addItems(tripId))
+                        } label: {
+                            Label("Add items", systemImage: "plus.circle")
+                        }
+                        Divider()
+                    }
                     Button {
                         showEditSheet = true
                     } label: {
@@ -129,6 +141,27 @@ struct PackingListView: View {
                     Image(systemName: "ellipsis")
                         .font(.system(size: 14, weight: .medium))
                         .foregroundColor(.primary)
+                }
+            }
+        }
+        .overlay {
+            if showConfetti {
+                ConfettiView()
+                    .ignoresSafeArea()
+            }
+        }
+        .onChange(of: isComplete) { _, complete in
+            guard complete, !hasTriggeredCompletion else { return }
+            hasTriggeredCompletion = true
+            UINotificationFeedbackGenerator().notificationOccurred(.success)
+            showConfetti = true
+            withAnimation(.spring(response: 0.4, dampingFraction: 0.8)) {
+                showCompletionBanner = true
+            }
+            Task {
+                try? await Task.sleep(for: .milliseconds(2500))
+                withAnimation(.easeIn(duration: 0.3)) {
+                    showCompletionBanner = false
                 }
             }
         }
@@ -271,9 +304,10 @@ struct PackingListView: View {
                     .font(.caption)
                     .foregroundColor(.secondary)
                 Spacer()
-                Text("\(packedCount) / \(totalCount) packed")
+                Text(isComplete ? "All packed ✓" : "\(packedCount) / \(totalCount) packed")
                     .font(.caption)
                     .foregroundColor(.secondary)
+                    .animation(.easeInOut(duration: 0.3), value: isComplete)
             }
             .padding(.top, 8)
         }
@@ -291,14 +325,15 @@ struct PackingListView: View {
     private var completionBanner: some View {
         HStack(spacing: 8) {
             Image(systemName: "checkmark.circle.fill")
-                .foregroundColor(.primary)
-            Text("All packed. You're ready to go!")
-                .foregroundColor(.primary)
+                .foregroundStyle(.white)
+            Text("All packed — you're ready to go! 🎉")
+                .foregroundStyle(.white)
         }
-        .font(.subheadline)
+        .font(.subheadline.weight(.medium))
         .frame(maxWidth: .infinity)
-        .padding(.vertical, 10)
-        .background(Color(UIColor.secondarySystemBackground))
+        .padding(.vertical, 12)
+        .padding(.horizontal, 16)
+        .background(Color.black)
     }
 
     private var emptyState: some View {
@@ -327,8 +362,8 @@ struct PackingListView: View {
 
     private func sectionTitle(_ title: String, isFirst: Bool) -> some View {
         Text(LocalizedStringKey(title))
-            .font(.system(size: 11, weight: .medium))
-            .foregroundStyle(.tertiary)
+            .font(.caption.bold())
+            .foregroundStyle(Color(.systemGray))
             .kerning(1.5)
             .textCase(.uppercase)
             .padding(.horizontal, 16)
@@ -443,6 +478,59 @@ struct PackingListView: View {
     }
 }
 
+// MARK: - Confetti
+
+private struct ConfettiParticle: Identifiable {
+    let id = UUID()
+    let xFraction: CGFloat   // 0…1 of screen width
+    let drift: CGFloat
+    let size: CGFloat
+    let color: Color
+    let delay: Double
+}
+
+private struct ConfettiView: View {
+
+    private let particles: [ConfettiParticle] = (0..<35).map { _ in
+        ConfettiParticle(
+            xFraction: CGFloat.random(in: 0...1),
+            drift: CGFloat.random(in: -50...50),
+            size: CGFloat.random(in: 4...9),
+            color: [Color(.systemGray4), Color(.systemGray5)].randomElement()!,
+            delay: Double.random(in: 0...0.5)
+        )
+    }
+
+    @State private var animate = false
+
+    var body: some View {
+        GeometryReader { geo in
+            ZStack {
+                ForEach(particles) { p in
+                    Circle()
+                        .fill(p.color)
+                        .frame(width: p.size, height: p.size)
+                        .position(
+                            x: p.xFraction * geo.size.width + (animate ? p.drift : 0),
+                            y: animate ? geo.size.height + 20 : -10
+                        )
+                        .opacity(animate ? 0 : 1)
+                        .animation(
+                            .easeOut(duration: 1.8).delay(p.delay),
+                            value: animate
+                        )
+                }
+            }
+        }
+        .allowsHitTesting(false)
+        .onAppear {
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
+                animate = true
+            }
+        }
+    }
+}
+
 // MARK: - Packing Item Row
 
 struct PackingItemRow: View {
@@ -451,6 +539,16 @@ struct PackingItemRow: View {
     let onTap: () -> Void
 
     @Environment(\.colorScheme) private var colorScheme
+    @State private var checkScale: CGFloat = 1.0
+    @State private var checkmarkOpacity: Double
+    @State private var checkmarkScale: CGFloat
+
+    init(item: PackingItem, onTap: @escaping () -> Void) {
+        self.item = item
+        self.onTap = onTap
+        _checkmarkOpacity = State(initialValue: item.isPacked ? 1.0 : 0)
+        _checkmarkScale = State(initialValue: item.isPacked ? 1.0 : 0.5)
+    }
 
     var body: some View {
         HStack(spacing: 12) {
@@ -458,37 +556,62 @@ struct PackingItemRow: View {
             // — Checkbox
             ZStack {
                 Circle()
-                    .strokeBorder(item.isPacked ? Color(.systemGray) : Color(.systemGray3), lineWidth: 1.5)
+                    .strokeBorder(item.isPacked ? Color.primary : Color(.systemGray3), lineWidth: 1.5)
                     .background(
-                        Circle().fill(item.isPacked ? Color(.systemGray) : Color.clear)
+                        Circle().fill(item.isPacked ? Color.primary : Color.clear)
                     )
                     .frame(width: 24, height: 24)
 
-                if item.isPacked {
-                    Image(systemName: "checkmark")
-                        .font(.system(size: 11, weight: .bold))
-                        .foregroundColor(.white)
-                }
+                Image(systemName: "checkmark")
+                    .font(.system(size: 11, weight: .bold))
+                    .foregroundColor(Color(UIColor.systemBackground))
+                    .scaleEffect(checkmarkScale)
+                    .opacity(checkmarkOpacity)
             }
+            .scaleEffect(checkScale)
 
             // — Name
             Text(item.name)
                 .font(.subheadline)
                 .foregroundColor(item.isPacked ? Color(.secondaryLabel) : .primary)
                 .strikethrough(item.isPacked)
+                .opacity(item.isPacked ? (colorScheme == .dark ? 0.75 : 0.6) : 1.0)
 
             Spacer()
-
-            // — Alert dot
-            Circle()
-                .fill(item.isAlert ? Color.alertOrange : Color.secondary.opacity(0.35))
-                .frame(width: 5, height: 5)
         }
         .frame(minHeight: 44)
-        .opacity(item.isPacked ? (colorScheme == .dark ? 0.75 : 0.6) : 1.0)
         .contentShape(Rectangle())
         .onTapGesture(perform: onTap)
-        .animation(.easeInOut(duration: 0.15), value: item.isPacked)
+        .animation(.spring(response: 0.3, dampingFraction: 0.6), value: item.isPacked)
+        .onChange(of: item.isPacked) { _, isPacked in
+            if isPacked {
+                withAnimation(.spring(response: 0.3, dampingFraction: 0.6)) {
+                    checkmarkOpacity = 1.0
+                    checkmarkScale = 1.0
+                }
+                withAnimation(.spring(response: 0.15, dampingFraction: 0.3)) {
+                    checkScale = 1.15
+                }
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
+                    withAnimation(.spring(response: 0.25, dampingFraction: 0.6)) {
+                        checkScale = 1.0
+                    }
+                }
+            } else {
+                withAnimation(.easeOut(duration: 0.2)) {
+                    checkmarkOpacity = 0
+                    checkmarkScale = 0.5
+                }
+                withAnimation(.easeOut(duration: 0.1)) {
+                    checkScale = 0.85
+                }
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                    withAnimation(.easeOut(duration: 0.15)) {
+                        checkScale = 1.0
+                    }
+                }
+            }
+        }
     }
 }
 
@@ -503,37 +626,88 @@ struct ReorderSectionsView: View {
     @Environment(\.dismiss) private var dismiss
 
     @State private var ordered: [PackingSection] = []
+    @State private var draggingId: UUID? = nil
+    @State private var dragStartIndex: Int? = nil
+
+    private let rowHeight: CGFloat = 52  // 14pt top + ~24pt text + 14pt bottom
 
     var body: some View {
-        NavigationStack {
-            List {
-                ForEach(ordered, id: \.id) { section in
-                    Text(LocalizedStringKey(section.title))
-                        .font(.subheadline)
-                        .frame(height: 44)
+        VStack(spacing: 0) {
+            HStack {
+                Button("Cancel") { dismiss() }
+                    .font(.body)
+                    .foregroundStyle(.primary)
+                Spacer()
+                Text("Reorder sections")
+                    .font(.headline)
+                Spacer()
+                Button("Done") {
+                    onDone(ordered.map(\.id))
+                    dismiss()
                 }
-                .onMove { source, destination in
-                    ordered.move(fromOffsets: source, toOffset: destination)
-                }
+                .font(.body.bold())
+                .foregroundStyle(.primary)
             }
-            .listStyle(.plain)
-            .environment(\.editMode, .constant(.active))
-            .scrollContentBackground(.hidden)
-            .navigationTitle("Reorder sections")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .navigationBarLeading) {
-                    Button("Cancel") { dismiss() }
-                }
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    Button("Done") {
-                        onDone(ordered.map(\.id))
-                        dismiss()
+            .padding(.horizontal, 20)
+            .padding(.vertical, 16)
+            Divider()
+
+            ScrollView {
+                VStack(spacing: 8) {
+                    ForEach(ordered, id: \.id) { section in
+                        HStack(spacing: 12) {
+                            Text(LocalizedStringKey(section.title))
+                                .font(.body.weight(.semibold))
+                                .foregroundStyle(.primary)
+                            Spacer()
+                            Image(systemName: "line.3.horizontal")
+                                .font(.system(size: 16))
+                                .foregroundStyle(Color(.systemGray2))
+                        }
+                        .padding(.horizontal, 16)
+                        .padding(.vertical, 14)
+                        .background(Color.white)
+                        .cornerRadius(12)
+                        .scaleEffect(draggingId == section.id ? 1.03 : 1.0)
+                        .shadow(
+                            color: draggingId == section.id ? Color.black.opacity(0.10) : Color.clear,
+                            radius: 8, x: 0, y: 4
+                        )
+                        .zIndex(draggingId == section.id ? 1 : 0)
+                        .gesture(
+                            DragGesture(minimumDistance: 5)
+                                .onChanged { value in
+                                    if draggingId != section.id {
+                                        draggingId = section.id
+                                        dragStartIndex = ordered.firstIndex(where: { $0.id == section.id })
+                                        UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+                                    }
+                                    guard let startIdx = dragStartIndex else { return }
+                                    let steps = Int((value.translation.height / rowHeight).rounded())
+                                    let targetIdx = max(0, min(ordered.count - 1, startIdx + steps))
+                                    let currentIdx = ordered.firstIndex(where: { $0.id == section.id }) ?? startIdx
+                                    guard targetIdx != currentIdx else { return }
+                                    withAnimation(.interactiveSpring(response: 0.3, dampingFraction: 0.7)) {
+                                        ordered.move(
+                                            fromOffsets: IndexSet(integer: currentIdx),
+                                            toOffset: targetIdx > currentIdx ? targetIdx + 1 : targetIdx
+                                        )
+                                    }
+                                }
+                                .onEnded { _ in
+                                    withAnimation(.spring(response: 0.3)) { draggingId = nil }
+                                    dragStartIndex = nil
+                                }
+                        )
+                        .animation(.spring(response: 0.3, dampingFraction: 0.7), value: draggingId)
                     }
-                    .fontWeight(.semibold)
                 }
+                .padding(.horizontal, 16)
+                .padding(.top, 8)
+                .padding(.bottom, 24)
             }
         }
+        .background(Color(.systemGroupedBackground))
         .onAppear {
             ordered = store.bundle(for: tripId)?.safeSections
                 .filter { $0.items?.isEmpty == false } ?? []

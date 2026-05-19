@@ -9,11 +9,10 @@ import SwiftUI
 
 struct ScenePickerView: View {
 
-    /// Creation mode: build a brand-new trip from the given info.
-    /// Edit mode: regenerate scenes for an existing trip.
     enum Mode {
         case create(TripInfo)
         case edit(tripId: UUID)
+        case autoPack(tripInfo: TripInfo, seedSections: [PackingSection])
     }
 
     private let mode: Mode
@@ -26,8 +25,13 @@ struct ScenePickerView: View {
         self.mode = .edit(tripId: editingTripId)
     }
 
+    init(autoPackTripInfo: TripInfo, seedSections: [PackingSection]) {
+        self.mode = .autoPack(tripInfo: autoPackTripInfo, seedSections: seedSections)
+    }
+
     @EnvironmentObject var store: TripStore
     @EnvironmentObject var router: NavigationRouter
+    @Environment(\.dismiss) private var dismiss
     @State private var selectedItems: Set<String> = []
     @State private var didLoadInitialSelection = false
     @State private var isSaved = false
@@ -40,12 +44,21 @@ struct ScenePickerView: View {
         return false
     }
 
+    private var isAutoPack: Bool {
+        if case .autoPack = mode { return true }
+        return false
+    }
+
     private var primaryButtonLabelKey: LocalizedStringKey {
         if isSaved { return "scenes.updated" }
         if isEditing {
             return hasSelection
                 ? "scenes.update · \(selectionCount) selected"
                 : "scenes.update"
+        } else if isAutoPack {
+            return hasSelection
+                ? "Auto Pack · \(selectionCount) selected"
+                : "Auto Pack"
         } else {
             return hasSelection
                 ? "Generate my list · \(selectionCount) selected"
@@ -58,16 +71,24 @@ struct ScenePickerView: View {
             VStack(alignment: .leading, spacing: 28) {
 
                 // — Header
-                VStack(alignment: .leading, spacing: 4) {
+                HStack(spacing: 0) {
                     Text("What's your trip like?")
-                        .font(.headline)
-                        .fontWeight(.medium)
-                    Text("Select all that apply")
-                        .font(.caption)
-                        .foregroundColor(.secondary)
+                        .font(.title2)
+                        .bold()
+                    Spacer()
+                    if isAutoPack {
+                        Button { dismiss() } label: {
+                            Image(systemName: "xmark")
+                                .font(.system(size: 12, weight: .semibold))
+                                .foregroundStyle(.primary)
+                                .frame(width: 32, height: 32)
+                                .glassEffect(.regular.interactive(), in: .circle)
+                        }
+                        .buttonStyle(.plain)
+                    }
                 }
                 .padding(.horizontal, 16)
-                .padding(.top, 8)
+                .padding(.top, isAutoPack ? 24 : 8)
 
                 // — Scene groups
                 ForEach(defaultSceneGroups) { group in
@@ -77,35 +98,33 @@ struct ScenePickerView: View {
             .padding(.bottom, 16)
         }
         .safeAreaInset(edge: .bottom) {
-            Group {
-                VStack(spacing: 0) {
-                    Button(action: { primaryAction() }) {
-                        HStack(spacing: 8) {
-                            if isSaved {
-                                Image(systemName: "checkmark")
-                                    .fontWeight(.medium)
-                                    .transition(.scale.combined(with: .opacity))
-                            }
-                            Text(primaryButtonLabelKey)
-                                .transition(.opacity)
+            VStack(spacing: 0) {
+                Button(action: { primaryAction() }) {
+                    HStack(spacing: 8) {
+                        if isSaved {
+                            Image(systemName: "checkmark")
+                                .fontWeight(.medium)
+                                .transition(.scale.combined(with: .opacity))
                         }
-                        .font(.subheadline)
-                        .fontWeight(.medium)
-                        .foregroundColor(Color(UIColor.systemBackground))
-                        .frame(maxWidth: .infinity)
-                        .frame(height: 52)
-                        .background(Color.primary)
-                        .cornerRadius(14)
-                        .animation(.easeInOut(duration: 0.2), value: isSaved)
+                        Text(primaryButtonLabelKey)
+                            .transition(.opacity)
                     }
-                    .disabled(!hasSelection || isSaved)
-                    .opacity(hasSelection ? 1.0 : 0.3)
-                    .padding(.horizontal, 20)
+                    .font(.subheadline)
+                    .fontWeight(.medium)
+                    .foregroundColor(hasSelection ? Color(UIColor.systemBackground) : Color(UIColor.secondaryLabel))
+                    .frame(maxWidth: .infinity)
+                    .frame(height: 52)
+                    .background(hasSelection ? Color.primary : Color(UIColor.secondarySystemFill))
+                    .cornerRadius(14)
+                    .animation(.easeInOut(duration: 0.2), value: isSaved)
+                    .animation(.easeInOut(duration: 0.15), value: hasSelection)
                 }
-                .padding(.top, 12)
-                .background(Color(UIColor.systemBackground))
+                .disabled(!hasSelection || isSaved)
+                .padding(.horizontal, 20)
             }
+            .padding(.top, 12)
             .padding(.bottom, 16)
+            .background(.regularMaterial)
         }
         .navigationTitle("")
         .navigationBarTitleDisplayMode(.inline)
@@ -140,11 +159,21 @@ struct ScenePickerView: View {
                 try? await Task.sleep(for: .milliseconds(600))
                 router.path.removeLast()
             }
+        case .autoPack(let info, let seedSections):
+            UINotificationFeedbackGenerator().notificationOccurred(.success)
+            let id = buildTrip(info: info, keys: keys, seedSections: seedSections)
+            router.path = NavigationPath()
+            router.path.append(CreationRoute.packingList(id))
+            dismiss()
         }
     }
 
-    private func generateList(info: TripInfo, keys: [String]) {
-        let sections = generatePackingSections(selectedScenes: keys)
+    @discardableResult
+    private func buildTrip(info: TripInfo, keys: [String], seedSections: [PackingSection] = []) -> UUID {
+        var sections = generatePackingSections(selectedScenes: keys)
+        if !seedSections.isEmpty {
+            mergeSeedSections(seedSections, into: &sections)
+        }
         let bundle = TripBundle(
             name: info.name,
             destinationCity: info.destinationCity,
@@ -155,7 +184,37 @@ struct ScenePickerView: View {
             sections: sections
         )
         store.addTrip(bundle)
-        router.path.append(CreationRoute.packingList(bundle.id))
+        return bundle.id
+    }
+
+    private func generateList(info: TripInfo, keys: [String]) {
+        let id = buildTrip(info: info, keys: keys)
+        router.path.append(CreationRoute.packingList(id))
+    }
+
+    private func mergeSeedSections(_ seedSections: [PackingSection], into sections: inout [PackingSection]) {
+        for seedSection in seedSections {
+            if let targetIndex = sections.firstIndex(where: { $0.title == seedSection.title }) {
+                guard let targetItems = sections[targetIndex].items else { continue }
+                let existingNames = Set(targetItems.map { $0.name.lowercased() })
+                var nextOrder = (targetItems.map(\.sortOrder).max() ?? -1) + 1
+                for seedItem in seedSection.sortedItems where !existingNames.contains(seedItem.name.lowercased()) {
+                    let newItem = PackingItem(name: seedItem.name, isAlert: seedItem.isAlert, sortOrder: nextOrder)
+                    nextOrder += 1
+                    sections[targetIndex].items?.append(newItem)
+                }
+            } else {
+                let copiedItems = seedSection.sortedItems.enumerated().map { index, item in
+                    PackingItem(name: item.name, isAlert: item.isAlert, sortOrder: index)
+                }
+                let newSection = PackingSection(
+                    title: seedSection.title,
+                    items: copiedItems,
+                    sortOrder: sections.count
+                )
+                sections.append(newSection)
+            }
+        }
     }
 }
 

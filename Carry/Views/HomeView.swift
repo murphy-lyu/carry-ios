@@ -106,7 +106,7 @@ struct HomeView: View {
                             .foregroundStyle(colorScheme == .dark ? .secondary : .tertiary)
                             .kerning(1.5)
                             .textCase(.uppercase)
-                            .listRowInsets(EdgeInsets(top: upcomingTrips.isEmpty ? 0 : 16, leading: 16, bottom: 8, trailing: 16))
+                            .listRowInsets(EdgeInsets(top: upcomingTrips.isEmpty ? 0 : 24, leading: 16, bottom: 8, trailing: 16))
                             .listRowBackground(Color.clear)
                             .listRowSeparator(.hidden)
 
@@ -155,7 +155,7 @@ struct HomeView: View {
             }
             .tint(.red)
         }
-        .listRowInsets(EdgeInsets(top: 0, leading: 16, bottom: 10, trailing: 16))
+        .listRowInsets(EdgeInsets(top: 0, leading: 16, bottom: 12, trailing: 16))
         .listRowBackground(Color.clear)
         .listRowSeparator(.hidden)
     }
@@ -225,14 +225,14 @@ struct TripCard: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            HStack(spacing: 5) {
+            HStack(spacing: 6) {
                 Text(bundle.name)
-                    .font(.headline)
-                    .fontWeight(.semibold)
+                    .font(.title3)
+                    .fontWeight(.bold)
                     .foregroundColor(.primary)
                 if isComplete && !isPast {
                     Image(systemName: "checkmark.circle.fill")
-                        .font(.caption)
+                        .font(.subheadline)
                         .foregroundColor(.primary)
                 }
             }
@@ -240,41 +240,43 @@ struct TripCard: View {
 
             Text(bundle.destinationCity)
                 .font(.subheadline)
-                .foregroundColor(destinationTextColor)
-                .padding(.bottom, 1)
+                .foregroundColor(Color(.systemGray))
+                .padding(.bottom, 2)
 
             Text("\(bundle.dateRange) · \(bundle.days) days")
                 .font(.caption)
-                .foregroundColor(dateTextColor)
+                .foregroundColor(Color(.systemGray2))
 
             if !isPast {
                 Color.clear.frame(height: 10)
                 HStack(spacing: 8) {
                     GeometryReader { geo in
                         ZStack(alignment: .leading) {
-                            RoundedRectangle(cornerRadius: 1.5)
-                                .fill(progressTrackColor)
+                            Capsule()
+                                .fill(Color(.systemGray5))
                                 .frame(height: 3)
-                            RoundedRectangle(cornerRadius: 1.5)
+                            Capsule()
                                 .fill(Color.primary)
-                                .frame(width: max(0, geo.size.width * progress), height: 3)
+                                .frame(width: max(0, geo.size.width * (isComplete ? 1.0 : progress)), height: 3)
                                 .animation(.spring(response: 0.42, dampingFraction: 0.82), value: progress)
                         }
                     }
                     .frame(height: 3)
-                    Text(isComplete ? "All packed" : "\(bundle.totalCount - bundle.packedCount) left")
-                        .font(.caption)
-                        .foregroundColor(progressMetaTextColor)
-                        .frame(width: 52, alignment: .trailing)
+                    Text(isComplete ? "All packed ✓" : "\(bundle.totalCount - bundle.packedCount) left")
+                        .font(.subheadline)
+                        .fontWeight(.medium)
+                        .foregroundColor(.primary)
+                        .lineLimit(1)
+                        .fixedSize()
                 }
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(.top, 16)
-        .padding(.bottom, 12)
-        .padding(.horizontal, 16)
+        .padding(.bottom, 16)
+        .padding(.horizontal, 20)
         .background(
-            RoundedRectangle(cornerRadius: 14)
+            RoundedRectangle(cornerRadius: 16)
                 .fill(cardBackgroundColor)
                 .overlay(
                     LinearGradient(
@@ -283,15 +285,15 @@ struct TripCard: View {
                         endPoint: .bottomTrailing
                     )
                     .opacity(0.34)
-                    .clipShape(RoundedRectangle(cornerRadius: 14))
+                    .clipShape(RoundedRectangle(cornerRadius: 16))
                 )
         )
         .overlay(
-            RoundedRectangle(cornerRadius: 14)
+            RoundedRectangle(cornerRadius: 16)
                 .strokeBorder(cardBorderColor, lineWidth: 0.6)
         )
         .shadow(color: cardShadowColor, radius: 14, x: 0, y: 8)
-        .contentShape(RoundedRectangle(cornerRadius: 14))
+        .contentShape(RoundedRectangle(cornerRadius: 16))
     }
 }
 

@@ -8,8 +8,25 @@ import Foundation
 struct TripInfo: Hashable {
     var name: String = ""
     var destinationCity: String = ""
-    var departureDate: Date = Date()
-    var returnDate: Date = Calendar.current.date(byAdding: .day, value: 7, to: Date()) ?? Date()
+    var departureDate: Date
+    var returnDate: Date
+
+    init(
+        name: String = "",
+        destinationCity: String = "",
+        departureDate: Date? = nil,
+        returnDate: Date? = nil
+    ) {
+        self.name = name
+        self.destinationCity = destinationCity
+
+        let calendar = Calendar.current
+        let base = calendar.startOfDay(for: departureDate ?? Date())
+        let computedReturn = calendar.date(byAdding: .day, value: 7, to: base) ?? base
+
+        self.departureDate = base
+        self.returnDate = calendar.startOfDay(for: returnDate ?? computedReturn)
+    }
 
     var durationDays: Int {
         max(1, Calendar.current.dateComponents([.day], from: departureDate, to: returnDate).day ?? 1)

@@ -44,8 +44,8 @@ final class TripBundle {
     }
 
     var safeSections: [PackingSection] { (sections ?? []).sorted { $0.sortOrder < $1.sortOrder } }
-    var packedCount: Int { safeSections.flatMap { $0.items ?? [] }.filter(\.isPacked).count }
-    var totalCount:  Int { safeSections.flatMap { $0.items ?? [] }.count }
+    var packedCount: Int { safeSections.flatMap { $0.items ?? [] }.filter { $0.isPacked && !$0.name.isEmpty }.count }
+    var totalCount:  Int { safeSections.flatMap { $0.items ?? [] }.filter { !$0.name.isEmpty }.count }
 }
 
 // MARK: - TripStore
@@ -250,6 +250,40 @@ final class TripStore: ObservableObject {
         for (index, id) in newOrder.enumerated() {
             if let section = trip.safeSections.first(where: { $0.id == id }) {
                 section.sortOrder = index
+            }
+        }
+        save()
+    }
+
+    /// Merges additional items into an existing trip.
+    /// Sections with a matching title have items appended (skipping name duplicates).
+    /// Sections with no matching title are appended as new sections.
+    func mergeItems(tripId: UUID, sections newSections: [PackingSection]) {
+        guard let trip = trips.first(where: { $0.id == tripId }) else { return }
+        let existing = trip.safeSections
+        var nextSectionOrder = (existing.map(\.sortOrder).max() ?? -1) + 1
+
+        for newSection in newSections {
+            if let existingSection = existing.first(where: { $0.title == newSection.title }) {
+                let existingNames = Set((existingSection.items ?? []).map { $0.name.lowercased() })
+                let maxOrder = ((existingSection.items ?? []).map(\.sortOrder).max() ?? -1)
+                var offset = 0
+                for item in (newSection.items ?? []) {
+                    guard !existingNames.contains(item.name.lowercased()) else { continue }
+                    item.sortOrder = maxOrder + 1 + offset
+                    offset += 1
+                    context.insert(item)
+                    existingSection.items?.append(item)
+                }
+            } else {
+                newSection.sortOrder = nextSectionOrder
+                nextSectionOrder += 1
+                context.insert(newSection)
+                for item in newSection.items ?? [] {
+                    context.insert(item)
+                }
+                if trip.sections == nil { trip.sections = [] }
+                trip.sections?.append(newSection)
             }
         }
         save()

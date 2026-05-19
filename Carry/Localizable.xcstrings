@@ -86,6 +86,16 @@
         }
       }
     },
+    "%lld/%lld" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$lld/%2$lld"
+          }
+        }
+      }
+    },
     "☀️ Tropical / beach" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -595,6 +605,9 @@
         }
       }
     },
+    "Add items" : {
+
+    },
     "All packed" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -617,6 +630,12 @@
           }
         }
       }
+    },
+    "All packed — you're ready to go! 🎉" : {
+
+    },
+    "All packed ✓" : {
+
     },
     "All packed. You're ready to go!" : {
       "extractionState" : "manual",
@@ -642,6 +661,12 @@
       }
     },
     "Appearance" : {
+
+    },
+    "Auto Pack" : {
+
+    },
+    "Auto Pack · %lld selected" : {
 
     },
     "Cancel" : {
@@ -850,6 +875,9 @@
           }
         }
       }
+    },
+    "Deselect all" : {
+
     },
     "Destination City" : {
       "extractionState" : "manual",
@@ -1314,6 +1342,9 @@
         }
       }
     },
+    "No results" : {
+
+    },
     "No trips yet" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -1621,6 +1652,12 @@
           }
         }
       }
+    },
+    "Search items..." : {
+
+    },
+    "Select all" : {
+
     },
     "Select all that apply" : {
       "extractionState" : "manual",
@@ -2415,6 +2452,9 @@
           }
         }
       }
+    },
+    "Where are you headed?" : {
+
     }
   },
   "version" : "1.0"

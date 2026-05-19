@@ -7,61 +7,78 @@ import SwiftUI
 
 struct TripInfoView: View {
 
-    @State private var info = TripInfo()
+    @State private var tripName: String
+    @State private var destinationCity: String
+    @State private var departureDate: Date
+    @State private var returnDate: Date
+    @State private var activePicker: ActiveDatePicker?
     @EnvironmentObject var router: NavigationRouter
 
+    private enum ActiveDatePicker: String, Identifiable {
+        case departure
+        case `return`
+
+        var id: String { rawValue }
+    }
+
+    init() {
+        let initial = TripInfo()
+        _tripName = State(initialValue: initial.name)
+        _destinationCity = State(initialValue: initial.destinationCity)
+        _departureDate = State(initialValue: initial.departureDate)
+        _returnDate = State(initialValue: initial.returnDate)
+    }
+
     private var canContinue: Bool {
-        !info.name.trimmingCharacters(in: .whitespaces).isEmpty &&
-        !info.destinationCity.trimmingCharacters(in: .whitespaces).isEmpty
+        !tripName.trimmingCharacters(in: .whitespaces).isEmpty &&
+        !destinationCity.trimmingCharacters(in: .whitespaces).isEmpty
+    }
+
+    private var info: TripInfo {
+        TripInfo(
+            name: tripName,
+            destinationCity: destinationCity,
+            departureDate: departureDate,
+            returnDate: returnDate
+        )
     }
 
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 24) {
 
-                // — Header
-                VStack(alignment: .leading, spacing: 4) {
-                    Text("Tell us about your trip")
-                        .font(.headline)
-                        .fontWeight(.medium)
-                    Text("We'll use this to build your list")
-                        .font(.caption)
-                        .foregroundColor(.secondary)
-                }
-                .padding(.horizontal, 16)
-                .padding(.top, 8)
+                Text("Where are you headed?")
+                    .font(.headline)
+                    .fontWeight(.medium)
+                    .padding(.horizontal, 16)
+                    .padding(.top, 8)
 
-                // — Trip name
                 fieldGroup(label: "Trip Name") {
-                    stableField("e.g. Japan · Hokkaido", text: $info.name)
+                    stableField("e.g. Japan · Hokkaido", text: $tripName)
                 }
 
-                // — Destination city
                 fieldGroup(label: "Destination City") {
-                    stableField("e.g. Sapporo", text: $info.destinationCity)
+                    stableField("e.g. Sapporo", text: $destinationCity)
                 }
 
-                // — Dates
                 fieldGroup(label: "Dates") {
                     VStack(spacing: 0) {
-                        DatePicker("Departure", selection: $info.departureDate,
-                                   displayedComponents: .date)
-                            .font(.subheadline)
-                            .padding(12)
-                            .onChange(of: info.departureDate) { _, newVal in
-                                info.returnDate = Calendar.current.date(byAdding: .day, value: 7, to: newVal) ?? newVal
-                            }
+                        dateRow(
+                            title: "Departure",
+                            value: departureDate,
+                            action: { activePicker = .departure }
+                        )
 
                         Rectangle()
                             .fill(Color(UIColor.separator))
                             .frame(height: 0.5)
                             .padding(.horizontal, 12)
 
-                        DatePicker("Return", selection: $info.returnDate,
-                                   in: info.departureDate...,
-                                   displayedComponents: .date)
-                            .font(.subheadline)
-                            .padding(12)
+                        dateRow(
+                            title: "Return",
+                            value: returnDate,
+                            action: { activePicker = .return }
+                        )
                     }
                     .background(Color(UIColor.secondarySystemBackground))
                     .cornerRadius(12)
@@ -71,7 +88,7 @@ struct TripInfoView: View {
         }
         .safeAreaInset(edge: .bottom) {
             VStack(spacing: 0) {
-                Button(action: { router.path.append(CreationRoute.scenePicker(info)) }) {
+                Button(action: { router.path.append(CreationRoute.itemPicker(info)) }) {
                     Text("Continue")
                         .font(.subheadline)
                         .fontWeight(.medium)
@@ -91,9 +108,48 @@ struct TripInfoView: View {
         }
         .navigationTitle("New trip")
         .navigationBarTitleDisplayMode(.inline)
+        .sheet(item: $activePicker) { picker in
+            NavigationStack {
+                VStack(spacing: 0) {
+                    if picker == .departure {
+                        DatePicker(
+                            "Departure",
+                            selection: $departureDate,
+                            displayedComponents: .date
+                        )
+                        .datePickerStyle(.graphical)
+                        .padding(16)
+                    } else {
+                        DatePicker(
+                            "Return",
+                            selection: $returnDate,
+                            in: departureDate...,
+                            displayedComponents: .date
+                        )
+                        .datePickerStyle(.graphical)
+                        .padding(16)
+                    }
+                }
+                .navigationTitle(picker == .departure ? "Departure" : "Return")
+                .navigationBarTitleDisplayMode(.inline)
+                .toolbar {
+                    ToolbarItem(placement: .topBarTrailing) {
+                        Button("Done") { activePicker = nil }
+                    }
+                }
+            }
+            .presentationDetents([.medium])
+            .presentationDragIndicator(.visible)
+        }
+        .onChange(of: departureDate, initial: false) { _, newVal in
+            returnDate = Calendar.current.date(byAdding: .day, value: 7, to: newVal) ?? newVal
+        }
+        .onChange(of: returnDate, initial: false) { _, newVal in
+            if newVal < departureDate {
+                returnDate = departureDate
+            }
+        }
     }
-
-    // MARK: Helpers
 
     private func stableField(_ placeholder: String, text: Binding<String>) -> some View {
         ZStack(alignment: .leading) {
@@ -110,6 +166,25 @@ struct TripInfoView: View {
         .padding(.horizontal, 12)
         .background(Color(UIColor.secondarySystemBackground))
         .cornerRadius(12)
+    }
+
+    private func dateRow(title: String, value: Date, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            HStack {
+                Text(title)
+                    .foregroundStyle(.primary)
+                Spacer()
+                Text(value.formatted(date: .abbreviated, time: .omitted))
+                    .foregroundStyle(.primary)
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 6)
+                    .background(Color(UIColor.systemGray5))
+                    .clipShape(Capsule())
+            }
+            .font(.subheadline)
+            .padding(12)
+        }
+        .buttonStyle(.plain)
     }
 
     private func fieldGroup<Content: View>(

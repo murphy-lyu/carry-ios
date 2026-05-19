@@ -10,6 +10,8 @@ import Combine
 
 enum CreationRoute: Hashable {
     case tripInfo
+    case itemPicker(TripInfo)
+    case addItems(UUID)
     case scenePicker(TripInfo)
     case packingList(UUID)
     case editScenes(UUID)
@@ -38,6 +40,10 @@ struct ContentView: View {
                         switch route {
                         case .tripInfo:
                             TripInfoView()
+                        case .itemPicker(let info):
+                            ItemPickerView(tripInfo: info)
+                        case .addItems(let tripId):
+                            ItemPickerView(tripId: tripId)
                         case .scenePicker(let info):
                             ScenePickerView(tripInfo: info)
                         case .packingList(let id):
