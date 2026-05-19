@@ -147,6 +147,13 @@ struct SettingsView: View {
 
                 Section("settings.section.about") {
                     NavigationLink {
+                        RoadmapView()
+                    } label: {
+                        Text("Roadmap")
+                    }
+                    .foregroundColor(.primary)
+
+                    NavigationLink {
                         AboutView()
                     } label: {
                         Text("settings.about.entry")
