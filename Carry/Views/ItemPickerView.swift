@@ -18,6 +18,24 @@ private struct PickerItemID: Hashable {
 }
 
 private let itemPickerCatalog: [ItemPickerCategory] = [
+    ItemPickerCategory(name: "Documents", items: [
+        "Passport", "Flight tickets", "Visa", "Hotel booking",
+        "Travel insurance", "ID card", "Driver's license", "Itinerary"
+    ]),
+    ItemPickerCategory(name: "Travel Accessories", items: [
+        "Luggage lock", "Travel pillow", "Eye mask", "Earplugs",
+        "Packing cubes", "Laundry bag", "Umbrella", "Travel towel"
+    ]),
+    ItemPickerCategory(name: "Health & Safety", items: [
+        "Painkillers", "Antihistamines", "Motion sickness tablets",
+        "Hand sanitiser", "Face masks", "First aid kit",
+        "Prescription medication", "Vitamins"
+    ]),
+    ItemPickerCategory(name: "Electronics", items: [
+        "Phone charger", "Laptop", "Laptop charger", "Earphones",
+        "Noise-cancelling headphones", "Portable charger", "Camera",
+        "Camera charger", "Travel adapter", "E-reader"
+    ]),
     ItemPickerCategory(name: "Clothing", items: [
         "T-shirt", "Jeans", "Shorts", "Underwear", "Socks", "Pajamas", "Dress",
         "Formal wear", "Sweater", "Hoodie", "Belt", "Rain jacket"
@@ -27,27 +45,9 @@ private let itemPickerCatalog: [ItemPickerCategory] = [
         "Body wash", "Face wash", "Moisturiser", "Lip balm", "Razor",
         "Sunscreen", "Feminine hygiene products", "Cotton swabs", "Nail clippers"
     ]),
-    ItemPickerCategory(name: "Electronics", items: [
-        "Phone charger", "Laptop", "Laptop charger", "Earphones",
-        "Noise-cancelling headphones", "Portable charger", "Camera",
-        "Camera charger", "Travel adapter", "E-reader"
-    ]),
-    ItemPickerCategory(name: "Documents", items: [
-        "Passport", "Flight tickets", "Visa", "Hotel booking",
-        "Travel insurance", "ID card", "Driver's license", "Itinerary"
-    ]),
-    ItemPickerCategory(name: "Health & Safety", items: [
-        "Painkillers", "Antihistamines", "Motion sickness tablets",
-        "Hand sanitiser", "Face masks", "First aid kit",
-        "Prescription medication", "Vitamins"
-    ]),
     ItemPickerCategory(name: "Food & Snacks", items: [
         "Snack bars", "Instant noodles", "Nuts", "Dried fruit",
         "Candy", "Gum", "Protein powder"
-    ]),
-    ItemPickerCategory(name: "Travel Accessories", items: [
-        "Luggage lock", "Travel pillow", "Eye mask", "Earplugs",
-        "Packing cubes", "Laundry bag", "Umbrella", "Travel towel"
     ]),
     ItemPickerCategory(name: "Entertainment", items: [
         "Book", "Playing cards", "Portable speaker", "Headphones",
