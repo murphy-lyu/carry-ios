@@ -44,6 +44,7 @@ struct PackingListView: View {
         (bundle?.safeSections ?? []).filter { ($0.items?.isEmpty == false) }
     }
     private var hasScenes: Bool { !(bundle?.selectedSceneKeys.isEmpty ?? true) }
+    private var sceneCardDismissed: Bool { bundle?.sceneCardDismissed ?? false }
     private var totalCount: Int  { bundle?.totalCount  ?? 0 }
     private var packedCount: Int { bundle?.packedCount ?? 0 }
     private var progress: Double {
@@ -125,7 +126,7 @@ struct PackingListView: View {
                     }
 
                     // — Scene entry nudge (manual trips with no scenes selected)
-                    if !hasScenes {
+                    if !hasScenes && !sceneCardDismissed {
                         Section {
                             sceneEntryCard
                                 .listRowInsets(EdgeInsets(top: 8, leading: 16, bottom: 16, trailing: 16))
@@ -208,7 +209,7 @@ struct PackingListView: View {
                         }
                     }
                     Button {
-                        if isNewTrip { showSuggestSheet = true } else { showEditScenesSheet = true }
+                        if !hasScenes { showSuggestSheet = true } else { showEditScenesSheet = true }
                     } label: {
                         Label("Edit scenes", systemImage: "tag")
                     }
@@ -217,7 +218,6 @@ struct PackingListView: View {
                     } label: {
                         Label("Edit sections", systemImage: "arrow.up.arrow.down")
                     }
-                    .disabled(sections.count < 2)
                     if !isNewTrip {
                         Button {
                             let activityVC = UIActivityViewController(
@@ -512,14 +512,11 @@ struct PackingListView: View {
                     Text("Get personalised suggestions")
                         .font(.subheadline.weight(.medium))
                         .foregroundStyle(.primary)
-                    Text("Tell us about your trip for thoughtful extras")
+                    Text("Pick your trip type for a smarter packing list")
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 }
                 Spacer(minLength: 8)
-                Image(systemName: "chevron.right")
-                    .font(.system(size: 12, weight: .medium))
-                    .foregroundStyle(Color(UIColor.tertiaryLabel))
             }
             .padding(.horizontal, 14)
             .padding(.vertical, 12)
@@ -527,6 +524,20 @@ struct PackingListView: View {
             .cornerRadius(14)
         }
         .buttonStyle(.plain)
+        .overlay(alignment: .trailing) {
+            Button {
+                store.dismissSceneCard(tripId: tripId)
+                UIImpactFeedbackGenerator(style: .light).impactOccurred()
+            } label: {
+                Image(systemName: "xmark")
+                    .font(.system(size: 10, weight: .semibold))
+                    .foregroundStyle(Color(UIColor.tertiaryLabel))
+                    .frame(width: 36, height: 36)
+                    .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .padding(.trailing, 6)
+        }
     }
 
     private var nudgeBanner: some View {
@@ -645,7 +656,7 @@ struct PackingListView: View {
                 .multilineTextAlignment(.center)
                 .padding(.top, 6)
             Spacer()
-            if !hasScenes {
+            if !hasScenes && !sceneCardDismissed {
                 sceneEntryCard
                     .padding(.horizontal, 16)
                     .padding(.bottom, 24)

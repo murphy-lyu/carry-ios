@@ -21,6 +21,7 @@ final class TripBundle {
     var selectedSceneKeys: [String] = []
     var dismissedSurpriseNames: [String] = []
     var nudgeShown: Bool = false
+    var sceneCardDismissed: Bool = false
     @Relationship(deleteRule: .cascade, inverse: \PackingSection.bundle) var sections: [PackingSection]? = []
 
     init(
@@ -362,6 +363,12 @@ final class TripStore: ObservableObject {
     func markNudgeShown(tripId: UUID) {
         guard let trip = trips.first(where: { $0.id == tripId }) else { return }
         trip.nudgeShown = true
+        save()
+    }
+
+    func dismissSceneCard(tripId: UUID) {
+        guard let trip = trips.first(where: { $0.id == tripId }) else { return }
+        trip.sceneCardDismissed = true
         save()
     }
 

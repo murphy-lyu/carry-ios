@@ -650,25 +650,25 @@
         }
       }
     },
-    "Tell us about your trip for thoughtful extras" : {
+    "Pick your trip type for a smarter packing list" : {
       "extractionState" : "manual",
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Tell us about your trip for thoughtful extras"
+            "value" : "Pick your trip type for a smarter packing list"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "告诉我们行程类型，获取贴心推荐"
+            "value" : "选择行程类型，获取更精准的打包清单"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "告訴我們行程類型，獲取貼心推薦"
+            "value" : "選擇行程類型，獲取更精準的打包清單"
           }
         }
       }

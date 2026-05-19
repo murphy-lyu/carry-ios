@@ -4,6 +4,7 @@
 //
 
 import SwiftUI
+import UIKit
 
 // MARK: - ScenePickerView
 
@@ -266,22 +267,72 @@ struct SceneGroupSection: View {
                 .textCase(.uppercase)
                 .padding(.horizontal, 16)
 
-            FlowLayout(horizontalSpacing: 8, verticalSpacing: 8) {
-                ForEach(group.items, id: \.self) { item in
-                    SceneChip(
-                        label: item,
-                        isSelected: selectedItems.contains(item)
-                    ) {
-                        if selectedItems.contains(item) {
-                            selectedItems.remove(item)
-                        } else {
-                            selectedItems.insert(item)
+            GeometryReader { geo in
+                let rows = chipRows(for: group.items, maxWidth: max(1, geo.size.width))
+                VStack(alignment: .leading, spacing: 8) {
+                    ForEach(Array(rows.enumerated()), id: \.offset) { _, row in
+                        HStack(spacing: 8) {
+                            ForEach(row, id: \.self) { item in
+                                SceneChip(
+                                    label: item,
+                                    isSelected: selectedItems.contains(item)
+                                ) {
+                                    if selectedItems.contains(item) {
+                                        selectedItems.remove(item)
+                                    } else {
+                                        selectedItems.insert(item)
+                                    }
+                                }
+                            }
                         }
                     }
                 }
             }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .frame(height: chipsHeight(for: group.items))
             .padding(.horizontal, 16)
+            .padding(.bottom, 6)
         }
+    }
+
+    private func chipRows(for items: [String], maxWidth: CGFloat) -> [[String]] {
+        var rows: [[String]] = [[]]
+        var currentRowWidth: CGFloat = 0
+        let spacing: CGFloat = 8
+
+        for item in items {
+            let chipWidth = estimatedChipWidth(for: item)
+            let nextWidth = rows[rows.count - 1].isEmpty
+                ? chipWidth
+                : currentRowWidth + spacing + chipWidth
+
+            if nextWidth > maxWidth, !rows[rows.count - 1].isEmpty {
+                rows.append([item])
+                currentRowWidth = chipWidth
+            } else {
+                rows[rows.count - 1].append(item)
+                currentRowWidth = nextWidth
+            }
+        }
+        return rows
+    }
+
+    private func chipsHeight(for items: [String]) -> CGFloat {
+        let available = max(1, UIScreen.main.bounds.width - 32) // section has 16 + 16 padding
+        let rowCount = chipRows(for: items, maxWidth: available).count
+        let rowH: CGFloat = 30
+        let spacing: CGFloat = 8
+        return CGFloat(rowCount) * rowH + CGFloat(max(0, rowCount - 1)) * spacing
+    }
+
+    private func estimatedChipWidth(for item: String) -> CGFloat {
+        let text = NSLocalizedString(item, comment: "") as NSString
+        let font = UIFont.preferredFont(forTextStyle: .caption1)
+        let textW = ceil(text.size(withAttributes: [.font: font]).width)
+        let iconW: CGFloat = 16
+        let innerSpacing: CGFloat = 6
+        let horizontalPadding: CGFloat = 20
+        return textW + iconW + innerSpacing + horizontalPadding
     }
 }
 
@@ -341,75 +392,6 @@ struct SceneChip: View {
         }
         .buttonStyle(.plain)
         .animation(.easeInOut(duration: 0.15), value: isSelected)
-    }
-}
-
-// MARK: - Flow Layout
-
-struct FlowLayout: Layout {
-
-    var horizontalSpacing: CGFloat = 8
-    var verticalSpacing: CGFloat = 8
-
-    struct Cache {
-        var maxWidth: CGFloat = 0
-        var result: LayoutResult = LayoutResult()
-    }
-
-    func makeCache(subviews: Subviews) -> Cache { Cache() }
-
-    func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout Cache) -> CGSize {
-        let width = proposal.width ?? 0
-        cache.maxWidth = width
-        cache.result = computeLayout(subviews: subviews, in: width)
-        return cache.result.size
-    }
-
-    func placeSubviews(in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache: inout Cache) {
-        let result = bounds.width == cache.maxWidth
-            ? cache.result
-            : computeLayout(subviews: subviews, in: bounds.width)
-        for (index, placement) in result.placements.enumerated() {
-            subviews[index].place(
-                at: CGPoint(x: bounds.minX + placement.x, y: bounds.minY + placement.y),
-                proposal: .unspecified
-            )
-        }
-    }
-
-    // MARK: Private
-
-    struct LayoutResult {
-        var placements: [(x: CGFloat, y: CGFloat)] = []
-        var size: CGSize = .zero
-    }
-
-    private func computeLayout(subviews: Subviews, in maxWidth: CGFloat) -> LayoutResult {
-        guard maxWidth > 0 else {
-            return LayoutResult(
-                placements: Array(repeating: (x: 0, y: 0), count: subviews.count),
-                size: .zero
-            )
-        }
-        var result = LayoutResult()
-        var x: CGFloat = 0
-        var y: CGFloat = 0
-        var lineHeight: CGFloat = 0
-
-        for subview in subviews {
-            let size = subview.sizeThatFits(.unspecified)
-            if x > 0 && x + size.width > maxWidth {
-                y += lineHeight + verticalSpacing
-                x = 0
-                lineHeight = 0
-            }
-            result.placements.append((x: x, y: y))
-            lineHeight = max(lineHeight, size.height)
-            x += size.width + horizontalSpacing
-            result.size.width = max(result.size.width, x - horizontalSpacing)
-        }
-        result.size.height = y + lineHeight
-        return result
     }
 }
 
