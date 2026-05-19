@@ -155,8 +155,13 @@ struct PackingListView: View {
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .principal) {
-                Color.clear
-                    .frame(width: 220, height: 36)
+                Text(bundle?.name ?? "")
+                    .font(.headline)
+                    .foregroundStyle(.primary)
+                    .lineLimit(1)
+                    .truncationMode(.tail)
+                    .frame(maxWidth: 220)
+                    .frame(height: 36)
                     .contentShape(Rectangle())
                     .onTapGesture {
                         dismissInlineEditing()

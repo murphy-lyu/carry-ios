@@ -4,6 +4,7 @@
 //
 
 import SwiftUI
+import UIKit
 
 struct EditTripView: View {
 
@@ -14,6 +15,12 @@ struct EditTripView: View {
 
     @State private var info: TripInfo
     @State private var isSaved = false
+    @FocusState private var focusedField: FocusField?
+
+    private enum FocusField: Hashable {
+        case tripName
+        case destinationCity
+    }
 
     init(trip: TripBundle) {
         self.tripId = trip.id
@@ -31,17 +38,27 @@ struct EditTripView: View {
         !info.destinationCity.trimmingCharacters(in: .whitespaces).isEmpty
     }
 
+    private func hideKeyboard() {
+        focusedField = nil
+        UIApplication.shared.sendAction(
+            #selector(UIResponder.resignFirstResponder),
+            to: nil,
+            from: nil,
+            for: nil
+        )
+    }
+
     var body: some View {
         NavigationStack {
             ScrollView {
                 VStack(alignment: .leading, spacing: 24) {
 
                     fieldGroup(label: "Trip Name") {
-                        stableField("e.g. Italy · Tuscany", text: $info.name)
+                        stableField("e.g. Italy · Tuscany", text: $info.name, focus: .tripName)
                     }
 
                     fieldGroup(label: "Destination City") {
-                        stableField("e.g. Florence", text: $info.destinationCity)
+                        stableField("e.g. Florence", text: $info.destinationCity, focus: .destinationCity)
                     }
 
                     fieldGroup(label: "Dates") {
@@ -75,6 +92,12 @@ struct EditTripView: View {
                 .padding(.top, 8)
                 .padding(.bottom, 16)
             }
+            .scrollDismissesKeyboard(.interactively)
+            .simultaneousGesture(
+                TapGesture().onEnded {
+                    hideKeyboard()
+                }
+            )
             .navigationTitle("Edit trip")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -84,6 +107,7 @@ struct EditTripView: View {
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button {
                         guard !isSaved else { return }
+                        hideKeyboard()
                         store.updateTripInfo(tripId: tripId, info: info)
                         UINotificationFeedbackGenerator().notificationOccurred(.success)
                         withAnimation(.easeInOut(duration: 0.2)) { isSaved = true }
@@ -110,7 +134,11 @@ struct EditTripView: View {
         }
     }
 
-    private func stableField(_ placeholder: LocalizedStringKey, text: Binding<String>) -> some View {
+    private func stableField(
+        _ placeholder: LocalizedStringKey,
+        text: Binding<String>,
+        focus: FocusField
+    ) -> some View {
         ZStack(alignment: .leading) {
             if text.wrappedValue.isEmpty {
                 Text(placeholder)
@@ -121,6 +149,7 @@ struct EditTripView: View {
             TextField("", text: text)
                 .font(.subheadline)
                 .tint(.primary)
+                .focused($focusedField, equals: focus)
         }
         .frame(height: 44)
         .padding(.horizontal, 12)
