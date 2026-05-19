@@ -126,19 +126,19 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "☕ Coffee lover"
+            "value" : "Coffee lover"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "☕ 咖啡爱好者"
+            "value" : "咖啡爱好者"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "☕ 咖啡愛好者"
+            "value" : "咖啡愛好者"
           }
         }
       }
@@ -244,19 +244,19 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "🍵 Tea lover"
+            "value" : "Tea lover"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "🍵 茶饮爱好者"
+            "value" : "茶饮爱好者"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "🍵 茶飲愛好者"
+            "value" : "茶飲愛好者"
           }
         }
       }
@@ -290,19 +290,19 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "💊 Daily medication"
+            "value" : "Daily medication"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "💊 日常用药"
+            "value" : "日常用药"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "💊 日常用藥"
+            "value" : "日常用藥"
           }
         }
       }
@@ -382,19 +382,19 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "🩸 Near period"
+            "value" : "Near period"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "🩸 临近经期"
+            "value" : "临近经期"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "🩸 臨近經期"
+            "value" : "臨近經期"
           }
         }
       }

@@ -114,10 +114,12 @@ struct ScenePickerView: View {
                     .foregroundColor(hasSelection ? Color(UIColor.systemBackground) : Color(UIColor.secondaryLabel))
                     .frame(maxWidth: .infinity)
                     .frame(height: 52)
-                    .background(hasSelection ? Color.primary : Color(UIColor.secondarySystemFill))
-                    .cornerRadius(14)
+                    .background {
+                        RoundedRectangle(cornerRadius: 14, style: .continuous)
+                            .fill(hasSelection ? Color(UIColor.label) : Color(UIColor.secondarySystemFill))
+                            .animation(.easeInOut(duration: 0.15), value: hasSelection)
+                    }
                     .animation(.easeInOut(duration: 0.2), value: isSaved)
-                    .animation(.easeInOut(duration: 0.15), value: hasSelection)
                 }
                 .disabled(!hasSelection || isSaved)
                 .padding(.horizontal, 20)
