@@ -4,6 +4,7 @@
 //
 
 import SwiftUI
+import UIKit
 
 struct TripInfoView: View {
 
@@ -11,8 +12,14 @@ struct TripInfoView: View {
     @State private var destinationCity: String
     @State private var departureDate: Date
     @State private var returnDate: Date
+    @FocusState private var focusedField: FocusField?
     @State private var activePicker: ActiveDatePicker?
     @EnvironmentObject var router: NavigationRouter
+
+    private enum FocusField: Hashable {
+        case tripName
+        case destinationCity
+    }
 
     private enum ActiveDatePicker: String, Identifiable {
         case departure
@@ -43,6 +50,16 @@ struct TripInfoView: View {
         )
     }
 
+    private func hideKeyboard() {
+        focusedField = nil
+        UIApplication.shared.sendAction(
+            #selector(UIResponder.resignFirstResponder),
+            to: nil,
+            from: nil,
+            for: nil
+        )
+    }
+
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 24) {
@@ -54,11 +71,11 @@ struct TripInfoView: View {
                     .padding(.top, 8)
 
                 fieldGroup(label: "Trip Name") {
-                    stableField("e.g. Italy · Tuscany", text: $tripName)
+                    stableField("e.g. Italy · Tuscany", text: $tripName, focus: .tripName)
                 }
 
                 fieldGroup(label: "Destination City") {
-                    stableField("e.g. Florence", text: $destinationCity)
+                    stableField("e.g. Florence", text: $destinationCity, focus: .destinationCity)
                 }
 
                 fieldGroup(label: "Dates") {
@@ -86,9 +103,18 @@ struct TripInfoView: View {
             }
             .padding(.bottom, 16)
         }
+        .scrollDismissesKeyboard(.interactively)
+        .simultaneousGesture(
+            TapGesture().onEnded {
+                hideKeyboard()
+            }
+        )
         .safeAreaInset(edge: .bottom) {
             VStack(spacing: 0) {
-                Button(action: { router.path.append(CreationRoute.itemPicker(info)) }) {
+                Button(action: {
+                    hideKeyboard()
+                    router.path.append(CreationRoute.itemPicker(info))
+                }) {
                     Text("Continue")
                         .font(.subheadline)
                         .fontWeight(.medium)
@@ -153,7 +179,11 @@ struct TripInfoView: View {
         }
     }
 
-    private func stableField(_ placeholder: LocalizedStringKey, text: Binding<String>) -> some View {
+    private func stableField(
+        _ placeholder: LocalizedStringKey,
+        text: Binding<String>,
+        focus: FocusField
+    ) -> some View {
         ZStack(alignment: .leading) {
             if text.wrappedValue.isEmpty {
                 Text(placeholder)
@@ -164,6 +194,7 @@ struct TripInfoView: View {
             TextField("", text: text)
                 .font(.subheadline)
                 .tint(.primary)
+                .focused($focusedField, equals: focus)
         }
         .frame(height: 44)
         .padding(.horizontal, 12)

@@ -857,8 +857,9 @@ struct ReorderSectionsView: View {
     @State private var pendingDeleteIds: Set<UUID> = []
 
     @State private var draggingId: UUID? = nil
-    @State private var dragOffset: CGFloat = 0
-    @State private var dragBaseOffset: CGFloat = 0
+    @State private var dragTranslation: CGFloat = 0
+    @State private var dragStartGlobalY: CGFloat = 0
+    @State private var dragStartIndex: Int = 0
     @State private var dragCurrentIndex: Int = 0
 
     private let rowH: CGFloat = 52
@@ -963,26 +964,34 @@ struct ReorderSectionsView: View {
         )
         .scaleEffect(isDragging ? 1.02 : 1.0)
         .zIndex(isDragging ? 10 : 0)
-        .offset(y: isDragging ? dragOffset : 0)
+        .offset(y: isDragging ? displayedDragOffset : 0)
     }
 
     private func dragGesture(for section: PackingSection) -> some Gesture {
-        DragGesture(minimumDistance: 1)
+        DragGesture(minimumDistance: 1, coordinateSpace: .global)
             .onChanged { value in
                 if draggingId == nil {
                     withAnimation(.spring(response: 0.2, dampingFraction: 0.8)) {
                         draggingId = section.id
                     }
-                    dragCurrentIndex = ordered.firstIndex { $0.id == section.id } ?? 0
-                    dragBaseOffset = 0
+                    let idx = ordered.firstIndex { $0.id == section.id } ?? 0
+                    dragStartIndex = idx
+                    dragCurrentIndex = idx
+                    dragStartGlobalY = value.startLocation.y
+                    dragTranslation = 0
                     UIImpactFeedbackGenerator(style: .medium).impactOccurred()
                 }
                 guard draggingId == section.id else { return }
 
-                let cumulative = value.translation.height + dragBaseOffset
-                dragOffset = cumulative
+                dragTranslation = value.location.y - dragStartGlobalY
 
-                let tentative = dragCurrentIndex + Int((cumulative / slotH).rounded())
+                let deltaSlots: Int
+                if dragTranslation >= 0 {
+                    deltaSlots = Int((dragTranslation + slotH * 0.5) / slotH)
+                } else {
+                    deltaSlots = Int((dragTranslation - slotH * 0.5) / slotH)
+                }
+                let tentative = dragStartIndex + deltaSlots
                 let target = max(0, min(ordered.count - 1, tentative))
 
                 if target != dragCurrentIndex {
@@ -995,8 +1004,6 @@ struct ReorderSectionsView: View {
                             toOffset: target > from ? target + 1 : target
                         )
                     }
-                    dragBaseOffset += CGFloat(from - target) * slotH
-                    dragOffset = value.translation.height + dragBaseOffset
                     dragCurrentIndex = target
                     UIImpactFeedbackGenerator(style: .light).impactOccurred()
                 }
@@ -1004,10 +1011,14 @@ struct ReorderSectionsView: View {
             .onEnded { _ in
                 withAnimation(.spring(response: 0.25, dampingFraction: 0.8)) {
                     draggingId = nil
-                    dragOffset = 0
+                    dragTranslation = 0
                 }
-                dragBaseOffset = 0
+                dragStartGlobalY = 0
             }
+    }
+
+    private var displayedDragOffset: CGFloat {
+        dragTranslation - CGFloat(dragCurrentIndex - dragStartIndex) * slotH
     }
 
     // MARK: - Actions

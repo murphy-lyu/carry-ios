@@ -4,6 +4,7 @@
 //
 
 import SwiftUI
+import UIKit
 
 // MARK: - Data
 
@@ -86,6 +87,7 @@ struct ItemPickerView: View {
     @EnvironmentObject var router: NavigationRouter
 
     @State private var searchText = ""
+    @FocusState private var isSearchFocused: Bool
     @State private var selectedItems: Set<PickerItemID> = []
     @State private var expandedCategories: Set<String> = []
     @State private var showAutoPackSheet = false
@@ -106,12 +108,33 @@ struct ItemPickerView: View {
 
     private var filteredResults: [PickerItemID] {
         guard !searchText.isEmpty else { return [] }
-        let query = searchText.lowercased()
+        let query = normalizedForSearch(searchText)
         return itemPickerCatalog.flatMap { cat in
             cat.items
-                .filter { $0.lowercased().contains(query) }
+                .filter { itemMatchesQuery($0, query: query) }
                 .map { PickerItemID(category: cat.name, item: $0) }
         }
+    }
+
+    private func itemMatchesQuery(_ itemKey: String, query: String) -> Bool {
+        let localized = NSLocalizedString(itemKey, comment: "")
+        let raw = itemKey
+        return normalizedForSearch(localized).contains(query) ||
+               normalizedForSearch(raw).contains(query)
+    }
+
+    private func normalizedForSearch(_ text: String) -> String {
+        text.folding(options: [.diacriticInsensitive, .caseInsensitive], locale: .current)
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    private func hideKeyboard() {
+        UIApplication.shared.sendAction(
+            #selector(UIResponder.resignFirstResponder),
+            to: nil,
+            from: nil,
+            for: nil
+        )
     }
 
     var body: some View {
@@ -163,7 +186,22 @@ struct ItemPickerView: View {
                 }
                 .padding(.bottom, isCreateMode ? 96 : 24)
             }
+            .scrollDismissesKeyboard(.interactively)
+            .simultaneousGesture(
+                TapGesture().onEnded {
+                    isSearchFocused = false
+                    hideKeyboard()
+                }
+            )
         }
+        .contentShape(Rectangle())
+        .background(Color.clear.contentShape(Rectangle()))
+        .simultaneousGesture(
+            TapGesture().onEnded {
+                isSearchFocused = false
+                hideKeyboard()
+            }
+        )
         .navigationTitle("")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
@@ -261,6 +299,7 @@ struct ItemPickerView: View {
                 TextField("", text: $searchText)
                     .font(.subheadline)
                     .tint(.primary)
+                    .focused($isSearchFocused)
             }
             if !searchText.isEmpty {
                 Button { searchText = "" } label: {
@@ -307,6 +346,8 @@ struct ItemPickerView: View {
             }
             .padding(.horizontal, 16)
             .frame(height: 52)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
         .frame(maxWidth: .infinity)
