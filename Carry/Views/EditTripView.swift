@@ -37,11 +37,11 @@ struct EditTripView: View {
                 VStack(alignment: .leading, spacing: 24) {
 
                     fieldGroup(label: "Trip Name") {
-                        stableField("e.g. Japan · Hokkaido", text: $info.name)
+                        stableField("e.g. Italy · Tuscany", text: $info.name)
                     }
 
                     fieldGroup(label: "Destination City") {
-                        stableField("e.g. Sapporo", text: $info.destinationCity)
+                        stableField("e.g. Florence", text: $info.destinationCity)
                     }
 
                     fieldGroup(label: "Dates") {
@@ -49,6 +49,7 @@ struct EditTripView: View {
                             DatePicker("Departure", selection: $info.departureDate,
                                        displayedComponents: .date)
                                 .font(.subheadline)
+                                .tint(.primary)
                                 .padding(12)
                                 .onChange(of: info.departureDate) { oldVal, newVal in
                                     let days = Calendar.current.dateComponents([.day], from: oldVal, to: info.returnDate).day ?? 7
@@ -64,6 +65,7 @@ struct EditTripView: View {
                                        in: info.departureDate...,
                                        displayedComponents: .date)
                                 .font(.subheadline)
+                                .tint(.primary)
                                 .padding(12)
                         }
                         .background(Color(UIColor.secondarySystemBackground))
@@ -108,7 +110,7 @@ struct EditTripView: View {
         }
     }
 
-    private func stableField(_ placeholder: String, text: Binding<String>) -> some View {
+    private func stableField(_ placeholder: LocalizedStringKey, text: Binding<String>) -> some View {
         ZStack(alignment: .leading) {
             if text.wrappedValue.isEmpty {
                 Text(placeholder)
@@ -118,6 +120,7 @@ struct EditTripView: View {
             }
             TextField("", text: text)
                 .font(.subheadline)
+                .tint(.primary)
         }
         .frame(height: 44)
         .padding(.horizontal, 12)

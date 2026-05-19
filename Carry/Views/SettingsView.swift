@@ -66,7 +66,7 @@ struct SettingsView: View {
                         HStack {
                             Text("Appearance")
                             Spacer()
-                            Text(currentAppearance.title)
+                            Text(currentAppearance.titleKey)
                                 .foregroundStyle(.secondary)
                             Image(systemName: "chevron.right")
                                 .font(.caption)
@@ -76,7 +76,7 @@ struct SettingsView: View {
                     .foregroundColor(.primary)
                     .confirmationDialog("Appearance", isPresented: $showAppearancePicker, titleVisibility: .visible) {
                         ForEach(AppearanceMode.allCases) { mode in
-                            Button(mode.title) {
+                            Button(mode.titleKey) {
                                 appearanceModeRaw = mode.rawValue
                             }
                         }

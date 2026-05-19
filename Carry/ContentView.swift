@@ -64,6 +64,7 @@ struct ContentView: View {
                 Label("Settings", systemImage: "gear")
             }
         }
+        .tint(.primary)
         .environmentObject(store)
         .environmentObject(router)
     }

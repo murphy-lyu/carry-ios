@@ -23,7 +23,6 @@ struct CarryApp: App {
     var body: some Scene {
         WindowGroup {
             SplashView()
-                .tint(.primary)
                 .preferredColorScheme(appearanceMode.colorScheme)
         }
         .modelContainer(Self.container)

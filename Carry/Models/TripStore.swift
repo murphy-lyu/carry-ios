@@ -257,6 +257,48 @@ final class TripStore: ObservableObject {
         save()
     }
 
+    @discardableResult
+    func addSection(tripId: UUID, name: String) -> PackingSection? {
+        guard let trip = trips.first(where: { $0.id == tripId }) else { return nil }
+        let nextOrder = (trip.safeSections.map(\.sortOrder).max() ?? -1) + 1
+        let blankItem = PackingItem(name: "", isAlert: false, sortOrder: 0)
+        let section = PackingSection(title: name, items: [blankItem], sortOrder: nextOrder)
+        context.insert(blankItem)
+        context.insert(section)
+        if trip.sections == nil { trip.sections = [] }
+        trip.sections?.append(section)
+        save()
+        return section
+    }
+
+    func removeSection(tripId: UUID, sectionId: UUID) {
+        guard let trip = trips.first(where: { $0.id == tripId }),
+              let section = trip.safeSections.first(where: { $0.id == sectionId }) else { return }
+        context.delete(section)
+        trip.sections?.removeAll { $0.id == sectionId }
+        save()
+    }
+
+    func renameSection(tripId: UUID, sectionId: UUID, newName: String) {
+        guard let trip = trips.first(where: { $0.id == tripId }),
+              let section = trip.safeSections.first(where: { $0.id == sectionId }) else { return }
+        section.title = newName
+        save()
+    }
+
+    func insertPendingSections(tripId: UUID, sections: [PackingSection]) {
+        guard let trip = trips.first(where: { $0.id == tripId }) else { return }
+        for section in sections {
+            context.insert(section)
+            for item in section.items ?? [] {
+                context.insert(item)
+            }
+            if trip.sections == nil { trip.sections = [] }
+            trip.sections?.append(section)
+        }
+        save()
+    }
+
     /// Merges additional items into an existing trip.
     /// Sections with a matching title have items appended (skipping name duplicates).
     /// Sections with no matching title are appended as new sections.

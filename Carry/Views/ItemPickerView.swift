@@ -124,15 +124,16 @@ struct ItemPickerView: View {
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .padding(.horizontal, 16)
                 .padding(.top, 12)
+                .padding(.bottom, 8)
+
+            // Search bar — fixed, always accessible
+            searchBar
+                .padding(.horizontal, 16)
                 .padding(.bottom, 12)
 
             // Scrollable content
             ScrollView {
                 LazyVStack(alignment: .leading, spacing: 0, pinnedViews: [.sectionHeaders]) {
-                    searchBar
-                        .padding(.horizontal, 16)
-
-                    Color.clear.frame(height: 12)
 
                     if searchText.isEmpty {
                         ForEach(itemPickerCatalog, id: \.name) { category in
@@ -172,7 +173,7 @@ struct ItemPickerView: View {
                         .font(.system(size: 12, weight: .semibold))
                         .foregroundColor(hasSelection ? .primary : Color(UIColor.tertiaryLabel))
                         .frame(width: 32, height: 32)
-                        .glassEffect(.regular.interactive(), in: .circle)
+                        .glassCircleButton()
                 }
                 .buttonStyle(.plain)
                 .disabled(!hasSelection)
@@ -259,6 +260,7 @@ struct ItemPickerView: View {
                 }
                 TextField("", text: $searchText)
                     .font(.subheadline)
+                    .tint(.primary)
             }
             if !searchText.isEmpty {
                 Button { searchText = "" } label: {
@@ -292,7 +294,7 @@ struct ItemPickerView: View {
             }
         } label: {
             HStack(spacing: 12) {
-                Text(category.name)
+                Text(LocalizedStringKey(category.name))
                     .font(.headline)
                     .foregroundColor(.primary)
                 Spacer()
@@ -376,7 +378,7 @@ struct ItemPickerView: View {
                             .foregroundColor(.white)
                     }
                 }
-                Text(item)
+                Text(LocalizedStringKey(item))
                     .font(.body)
                     .foregroundColor(.primary)
                 Spacer()

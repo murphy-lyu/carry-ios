@@ -54,11 +54,11 @@ struct TripInfoView: View {
                     .padding(.top, 8)
 
                 fieldGroup(label: "Trip Name") {
-                    stableField("e.g. Japan · Hokkaido", text: $tripName)
+                    stableField("e.g. Italy · Tuscany", text: $tripName)
                 }
 
                 fieldGroup(label: "Destination City") {
-                    stableField("e.g. Sapporo", text: $destinationCity)
+                    stableField("e.g. Florence", text: $destinationCity)
                 }
 
                 fieldGroup(label: "Dates") {
@@ -118,6 +118,7 @@ struct TripInfoView: View {
                             displayedComponents: .date
                         )
                         .datePickerStyle(.graphical)
+                        .tint(.primary)
                         .padding(16)
                     } else {
                         DatePicker(
@@ -127,6 +128,7 @@ struct TripInfoView: View {
                             displayedComponents: .date
                         )
                         .datePickerStyle(.graphical)
+                        .tint(.primary)
                         .padding(16)
                     }
                 }
@@ -151,7 +153,7 @@ struct TripInfoView: View {
         }
     }
 
-    private func stableField(_ placeholder: String, text: Binding<String>) -> some View {
+    private func stableField(_ placeholder: LocalizedStringKey, text: Binding<String>) -> some View {
         ZStack(alignment: .leading) {
             if text.wrappedValue.isEmpty {
                 Text(placeholder)
@@ -161,6 +163,7 @@ struct TripInfoView: View {
             }
             TextField("", text: text)
                 .font(.subheadline)
+                .tint(.primary)
         }
         .frame(height: 44)
         .padding(.horizontal, 12)
@@ -168,7 +171,7 @@ struct TripInfoView: View {
         .cornerRadius(12)
     }
 
-    private func dateRow(title: String, value: Date, action: @escaping () -> Void) -> some View {
+    private func dateRow(title: LocalizedStringKey, value: Date, action: @escaping () -> Void) -> some View {
         Button(action: action) {
             HStack {
                 Text(title)

@@ -55,8 +55,9 @@ struct HomeView: View {
                 } label: {
                     Image(systemName: "plus")
                         .font(.system(size: 17, weight: .semibold))
+                        .foregroundStyle(.primary)
                         .frame(width: 44, height: 44)
-                        .glassEffect(.regular.interactive(), in: .circle)
+                        .glassCircleButton()
                 }
             }
             .padding(.horizontal, 16)
@@ -102,10 +103,8 @@ struct HomeView: View {
 
                     if !pastTrips.isEmpty {
                         Text("home.past")
-                            .font(.system(size: 11, weight: .medium))
-                            .foregroundStyle(colorScheme == .dark ? .secondary : .tertiary)
-                            .kerning(1.5)
-                            .textCase(.uppercase)
+                            .font(.subheadline)
+                            .foregroundColor(.secondary)
                             .listRowInsets(EdgeInsets(top: upcomingTrips.isEmpty ? 0 : 24, leading: 16, bottom: 8, trailing: 16))
                             .listRowBackground(Color.clear)
                             .listRowSeparator(.hidden)
@@ -244,32 +243,34 @@ struct TripCard: View {
                 .foregroundColor(Color(.systemGray))
                 .padding(.bottom, 2)
 
-            Text("\(bundle.dateRange) · \(bundle.days) days")
-                .font(.caption)
-                .foregroundColor(Color(.systemGray2))
+            HStack {
+                Text("\(bundle.dateRange) · \(bundle.days) days")
+                    .font(.caption)
+                    .foregroundColor(Color(.systemGray2))
+                if !isPast {
+                    Spacer()
+                    Text(isComplete ? "All packed" : "\(bundle.totalCount - bundle.packedCount) left")
+                        .font(.caption)
+                        .foregroundColor(Color(.systemGray2))
+                        .transition(.opacity)
+                }
+            }
+            .animation(.easeInOut(duration: 0.3), value: isComplete)
 
             if !isPast {
-                Color.clear.frame(height: 10)
-                HStack(spacing: 8) {
-                    GeometryReader { geo in
-                        ZStack(alignment: .leading) {
-                            Capsule()
-                                .fill(Color(.systemGray5))
-                                .frame(height: 3)
-                            Capsule()
-                                .fill(Color.primary)
-                                .frame(width: max(0, geo.size.width * (isComplete ? 1.0 : progress)), height: 3)
-                                .animation(.spring(response: 0.42, dampingFraction: 0.82), value: progress)
-                        }
+                Color.clear.frame(height: 8)
+                GeometryReader { geo in
+                    ZStack(alignment: .leading) {
+                        Capsule()
+                            .fill(Color(.systemGray5))
+                            .frame(height: 3)
+                        Capsule()
+                            .fill(Color.primary)
+                            .frame(width: max(0, geo.size.width * progress), height: 3)
+                            .animation(.spring(response: 0.42, dampingFraction: 0.82), value: progress)
                     }
-                    .frame(height: 3)
-                    Text(isComplete ? "All packed ✓" : "\(bundle.totalCount - bundle.packedCount) left")
-                        .font(.subheadline)
-                        .fontWeight(.medium)
-                        .foregroundColor(.primary)
-                        .lineLimit(1)
-                        .fixedSize()
                 }
+                .frame(height: 3)
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)

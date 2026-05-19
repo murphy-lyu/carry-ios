@@ -76,19 +76,19 @@ struct ScenePickerView: View {
                         .font(.title2)
                         .bold()
                     Spacer()
-                    if isAutoPack {
+                    if isAutoPack || isEditing {
                         Button { dismiss() } label: {
                             Image(systemName: "xmark")
-                                .font(.system(size: 12, weight: .semibold))
+                                .font(.system(size: 13, weight: .semibold))
                                 .foregroundStyle(.primary)
-                                .frame(width: 32, height: 32)
-                                .glassEffect(.regular.interactive(), in: .circle)
+                                .frame(width: 36, height: 36)
+                                .glassCircleButton()
                         }
                         .buttonStyle(.plain)
                     }
                 }
                 .padding(.horizontal, 16)
-                .padding(.top, isAutoPack ? 24 : 8)
+                .padding(.top, (isAutoPack || isEditing) ? 24 : 8)
 
                 // — Scene groups
                 ForEach(defaultSceneGroups) { group in
@@ -157,7 +157,7 @@ struct ScenePickerView: View {
             withAnimation(.easeInOut(duration: 0.2)) { isSaved = true }
             Task {
                 try? await Task.sleep(for: .milliseconds(600))
-                router.path.removeLast()
+                dismiss()
             }
         case .autoPack(let info, let seedSections):
             UINotificationFeedbackGenerator().notificationOccurred(.success)
@@ -275,9 +275,8 @@ struct SceneChip: View {
     let isSelected: Bool
     let action: () -> Void
 
-    private var displayText: String {
-        guard let idx = label.firstIndex(of: " ") else { return label }
-        return String(label[label.index(after: idx)...])
+    private var displayKey: LocalizedStringKey {
+        LocalizedStringKey(label)
     }
 
     var body: some View {
@@ -288,7 +287,7 @@ struct SceneChip: View {
                         .font(.system(size: 14))
                         .foregroundStyle(isSelected ? Color(UIColor.systemBackground) : .primary)
                 }
-                Text(displayText)
+                Text(displayKey)
                     .font(.caption)
                     .foregroundStyle(isSelected ? Color(UIColor.systemBackground) : .primary)
             }

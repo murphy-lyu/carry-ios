@@ -41,14 +41,15 @@ let sceneLabelToKey: [String: String] = [
 // MARK: - Base items (every trip)
 
 let baseItems: [SceneItem] = [
+    SceneItem(name: "Passport",             category: .documents,   isAlert: true),
+    SceneItem(name: "Wallet",               category: .essentials,  isAlert: false),
+    SceneItem(name: "Cash (local currency)", category: .essentials, isAlert: false),
     SceneItem(name: "Phone charger",        category: .electronics, isAlert: false),
+    SceneItem(name: "Underwear",            category: .clothing,    isAlert: false),
+    SceneItem(name: "Socks",                category: .clothing,    isAlert: false),
     SceneItem(name: "Toothbrush",           category: .toiletries,  isAlert: false),
     SceneItem(name: "Toothpaste",           category: .toiletries,  isAlert: false),
     SceneItem(name: "Deodorant",            category: .toiletries,  isAlert: false),
-    SceneItem(name: "Underwear",            category: .clothing,    isAlert: false),
-    SceneItem(name: "Socks",                category: .clothing,    isAlert: false),
-    SceneItem(name: "Wallet",               category: .essentials,  isAlert: false),
-    SceneItem(name: "Cash (local currency)", category: .essentials, isAlert: false),
 ]
 
 // MARK: - Scene → item map
@@ -91,8 +92,8 @@ let sceneItemMap: [String: [SceneItem]] = [
         SceneItem(name: "Sunglasses",               category: .health,      isAlert: true),
         SceneItem(name: "Sun hat",                  category: .clothing,    isAlert: true),
         SceneItem(name: "Insect repellent",         category: .health,      isAlert: true),
-        SceneItem(name: "Swimwear",                 category: .clothing,    isAlert: false),
         SceneItem(name: "Light rain jacket",        category: .clothing,    isAlert: true),
+        SceneItem(name: "Swimwear",                 category: .clothing,    isAlert: false),
         SceneItem(name: "After-sun lotion",         category: .health,      isAlert: false),
         SceneItem(name: "Waterproof sandals",       category: .clothing,    isAlert: false),
         SceneItem(name: "Reusable water bottle",    category: .essentials,  isAlert: false),
@@ -190,7 +191,7 @@ func generatePackingSections(selectedScenes: [String]) -> [PackingSection] {
     selectedScenes.compactMap { sceneItemMap[$0] }.flatMap { $0 }.forEach { insert($0) }
 
     // Group by category in a fixed display order, assigning section sortOrder by position
-    let order: [ItemCategory] = [.clothing, .essentials, .documents, .electronics, .health, .toiletries]
+    let order: [ItemCategory] = [.documents, .essentials, .health, .electronics, .clothing, .toiletries]
     var sectionIndex = 0
     var result: [PackingSection] = []
     for category in order {

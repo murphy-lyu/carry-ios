@@ -22,12 +22,14 @@ struct PackingListView: View {
     @FocusState private var focusedItemId: UUID?
 
     @State private var showEditSheet = false
+    @State private var showEditScenesSheet = false
     @State private var showReorderSheet = false
     @State private var showDeleteConfirmation = false
     @State private var isSaved = false
     @State private var showConfetti = false
     @State private var showCompletionBanner = false
     @State private var hasTriggeredCompletion = false
+    @State private var shimmerPhase: CGFloat = -1
 
     private var bundle: TripBundle? { store.bundle(for: tripId) }
     private var sections: [PackingSection] {
@@ -118,17 +120,27 @@ struct PackingListView: View {
                         Label("Edit trip", systemImage: "pencil")
                     }
                     Button {
-                        router.path.append(CreationRoute.editScenes(tripId))
+                        showEditScenesSheet = true
                     } label: {
                         Label("Edit scenes", systemImage: "tag")
                     }
                     Button {
                         showReorderSheet = true
                     } label: {
-                        Label("Reorder sections", systemImage: "arrow.up.arrow.down")
+                        Label("Edit sections", systemImage: "arrow.up.arrow.down")
                     }
                     .disabled(sections.count < 2)
-                    ShareLink(item: shareText, subject: Text(bundle?.name ?? "")) {
+                    Button {
+                        let activityVC = UIActivityViewController(
+                            activityItems: [shareText],
+                            applicationActivities: nil
+                        )
+                        if let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
+                           let window = windowScene.windows.first,
+                           let rootVC = window.rootViewController {
+                            rootVC.present(activityVC, animated: true)
+                        }
+                    } label: {
                         Label("Share list", systemImage: "square.and.arrow.up")
                     }
                     Divider()
@@ -148,6 +160,17 @@ struct PackingListView: View {
             if showConfetti {
                 ConfettiView()
                     .ignoresSafeArea()
+            }
+        }
+        .onAppear {
+            guard isComplete else { return }
+            Task {
+                try? await Task.sleep(for: .milliseconds(450))
+                guard !hasTriggeredCompletion else { return }
+                shimmerPhase = -1
+                withAnimation(.linear(duration: 0.75)) {
+                    shimmerPhase = 1
+                }
             }
         }
         .onChange(of: isComplete) { _, complete in
@@ -176,9 +199,15 @@ struct PackingListView: View {
                 EditTripView(trip: bundle)
             }
         }
+        .sheet(isPresented: $showEditScenesSheet) {
+            ScenePickerView(editingTripId: tripId)
+                .presentationDragIndicator(.visible)
+        }
         .sheet(isPresented: $showReorderSheet) {
-            ReorderSectionsView(tripId: tripId) { newOrder in
-                store.reorderSections(tripId: tripId, newOrder: newOrder)
+            NavigationStack {
+                ReorderSectionsView(tripId: tripId) { newOrder in
+                    store.reorderSections(tripId: tripId, newOrder: newOrder)
+                }
             }
         }
         .alert(
@@ -211,6 +240,7 @@ struct PackingListView: View {
                 } label: {
                     Label("Delete", systemImage: "trash")
                 }
+                .tint(.red)
             }
         }
     }
@@ -295,6 +325,16 @@ struct PackingListView: View {
                     RoundedRectangle(cornerRadius: 1)
                         .fill(Color.primary)
                         .frame(width: max(0, geo.size.width * progress), height: 2)
+                        .overlay {
+                            LinearGradient(
+                                colors: [.clear, Color(UIColor.systemBackground).opacity(0.65), .clear],
+                                startPoint: .leading,
+                                endPoint: .trailing
+                            )
+                            .frame(width: geo.size.width * 0.35)
+                            .offset(x: shimmerPhase * geo.size.width * 0.675)
+                        }
+                        .clipShape(RoundedRectangle(cornerRadius: 1))
                 }
             }
             .frame(height: 2)
@@ -381,9 +421,10 @@ struct PackingListView: View {
 
             TextField("", text: $editingText)
                 .font(.subheadline)
+                .tint(.primary)
                 .focused($focusedItemId, equals: itemId)
-                .submitLabel(.next)
-                .onSubmit { appendNewItem(sectionId: sectionId) }
+                .submitLabel(.done)
+                .onSubmit { focusedItemId = nil }
 
             Spacer()
 
@@ -431,7 +472,7 @@ struct PackingListView: View {
                             .fontWeight(.medium)
                             .transition(.scale.combined(with: .opacity))
                     }
-                    Text(isSaved ? "Saved!" : "Save trip")
+                    Text(isSaved ? "Saved" : "Save trip")
                         .font(.subheadline)
                         .fontWeight(.medium)
                         .transition(.opacity)
@@ -571,7 +612,7 @@ struct PackingItemRow: View {
             .scaleEffect(checkScale)
 
             // — Name
-            Text(item.name)
+            Text(LocalizedStringKey(item.name))
                 .font(.subheadline)
                 .foregroundColor(item.isPacked ? Color(.secondaryLabel) : .primary)
                 .strikethrough(item.isPacked)
@@ -626,92 +667,200 @@ struct ReorderSectionsView: View {
     @Environment(\.dismiss) private var dismiss
 
     @State private var ordered: [PackingSection] = []
-    @State private var draggingId: UUID? = nil
-    @State private var dragStartIndex: Int? = nil
+    @State private var dragSource: Int? = nil
+    @State private var dragOffset: CGFloat = 0
+    @State private var dropTarget: Int? = nil
+    @State private var showAddAlert = false
+    @State private var newSectionName = ""
+    @State private var renamingSection: PackingSection? = nil
+    @State private var renameName = ""
+    @State private var pendingNewIds: Set<UUID> = []
+    @State private var pendingRenames: [UUID: String] = [:]
+    @State private var pendingDeleteIds: Set<UUID> = []
 
-    private let rowHeight: CGFloat = 52  // 14pt top + ~24pt text + 14pt bottom
+    private let rowHeight: CGFloat = 52
+    private let rowSpacing: CGFloat = 8
+    private var step: CGFloat { rowHeight + rowSpacing }
+
+    private var showRenameAlert: Binding<Bool> {
+        Binding(get: { renamingSection != nil }, set: { if !$0 { renamingSection = nil } })
+    }
 
     var body: some View {
-        VStack(spacing: 0) {
-            HStack {
-                Button("Cancel") { dismiss() }
-                    .font(.body)
-                    .foregroundStyle(.primary)
-                Spacer()
-                Text("Reorder sections")
-                    .font(.headline)
-                Spacer()
-                Button("Done") {
-                    onDone(ordered.map(\.id))
-                    dismiss()
+        ScrollView {
+            VStack(spacing: rowSpacing) {
+                ForEach(Array(ordered.enumerated()), id: \.element.id) { index, section in
+                    rowView(index: index, section: section)
                 }
-                .font(.body.bold())
-                .foregroundStyle(.primary)
             }
-            .padding(.horizontal, 20)
-            .padding(.vertical, 16)
-            Divider()
-
-            ScrollView {
-                VStack(spacing: 8) {
-                    ForEach(ordered, id: \.id) { section in
-                        HStack(spacing: 12) {
-                            Text(LocalizedStringKey(section.title))
-                                .font(.body.weight(.semibold))
-                                .foregroundStyle(.primary)
-                            Spacer()
-                            Image(systemName: "line.3.horizontal")
-                                .font(.system(size: 16))
-                                .foregroundStyle(Color(.systemGray2))
-                        }
-                        .padding(.horizontal, 16)
-                        .padding(.vertical, 14)
-                        .background(Color.white)
-                        .cornerRadius(12)
-                        .scaleEffect(draggingId == section.id ? 1.03 : 1.0)
-                        .shadow(
-                            color: draggingId == section.id ? Color.black.opacity(0.10) : Color.clear,
-                            radius: 8, x: 0, y: 4
-                        )
-                        .zIndex(draggingId == section.id ? 1 : 0)
-                        .gesture(
-                            DragGesture(minimumDistance: 5)
-                                .onChanged { value in
-                                    if draggingId != section.id {
-                                        draggingId = section.id
-                                        dragStartIndex = ordered.firstIndex(where: { $0.id == section.id })
-                                        UIImpactFeedbackGenerator(style: .medium).impactOccurred()
-                                    }
-                                    guard let startIdx = dragStartIndex else { return }
-                                    let steps = Int((value.translation.height / rowHeight).rounded())
-                                    let targetIdx = max(0, min(ordered.count - 1, startIdx + steps))
-                                    let currentIdx = ordered.firstIndex(where: { $0.id == section.id }) ?? startIdx
-                                    guard targetIdx != currentIdx else { return }
-                                    withAnimation(.interactiveSpring(response: 0.3, dampingFraction: 0.7)) {
-                                        ordered.move(
-                                            fromOffsets: IndexSet(integer: currentIdx),
-                                            toOffset: targetIdx > currentIdx ? targetIdx + 1 : targetIdx
-                                        )
-                                    }
-                                }
-                                .onEnded { _ in
-                                    withAnimation(.spring(response: 0.3)) { draggingId = nil }
-                                    dragStartIndex = nil
-                                }
-                        )
-                        .animation(.spring(response: 0.3, dampingFraction: 0.7), value: draggingId)
-                    }
-                }
-                .padding(.horizontal, 16)
-                .padding(.top, 8)
-                .padding(.bottom, 24)
-            }
+            .padding(.horizontal, 16)
+            .padding(.top, 8)
+            .padding(.bottom, 24)
         }
         .background(Color(.systemGroupedBackground))
+        .navigationTitle("Edit sections")
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            ToolbarItem(placement: .cancellationAction) {
+                Button("Cancel") { dismiss() }
+            }
+            ToolbarItem(placement: .confirmationAction) {
+                Button("Done") { commitDone() }
+            }
+            ToolbarItem(placement: .bottomBar) {
+                Button {
+                    newSectionName = ""
+                    showAddAlert = true
+                } label: {
+                    Label("New section", systemImage: "plus")
+                }
+            }
+        }
+        .alert("New section", isPresented: $showAddAlert) {
+            TextField("Section name", text: $newSectionName)
+            Button("Add") { commitAdd() }
+            Button("Cancel", role: .cancel) { newSectionName = "" }
+        }
+        .alert("Rename", isPresented: showRenameAlert) {
+            TextField("Section name", text: $renameName)
+            Button("Save") { commitRename() }
+            Button("Cancel", role: .cancel) { renamingSection = nil }
+        }
         .onAppear {
             ordered = store.bundle(for: tripId)?.safeSections
                 .filter { $0.items?.isEmpty == false } ?? []
         }
+    }
+
+    // MARK: - Actions
+
+    private func commitAdd() {
+        let name = newSectionName.trimmingCharacters(in: .whitespaces)
+        guard !name.isEmpty else { return }
+        let nextOrder = (ordered.map(\.sortOrder).max() ?? -1) + 1
+        let blankItem = PackingItem(name: "", isAlert: false, sortOrder: 0)
+        let section = PackingSection(title: name, items: [blankItem], sortOrder: nextOrder)
+        ordered.append(section)
+        pendingNewIds.insert(section.id)
+        newSectionName = ""
+    }
+
+    private func commitRename() {
+        guard let section = renamingSection else { return }
+        let name = renameName.trimmingCharacters(in: .whitespaces)
+        guard !name.isEmpty else { renamingSection = nil; return }
+        pendingRenames[section.id] = name
+        renamingSection = nil
+    }
+
+    private func deleteSection(_ section: PackingSection) {
+        ordered.removeAll { $0.id == section.id }
+        if pendingNewIds.contains(section.id) {
+            pendingNewIds.remove(section.id)
+        } else {
+            pendingDeleteIds.insert(section.id)
+        }
+    }
+
+    private func commitDone() {
+        for sectionId in pendingDeleteIds {
+            store.removeSection(tripId: tripId, sectionId: sectionId)
+        }
+        for (sectionId, newName) in pendingRenames where !pendingNewIds.contains(sectionId) {
+            store.renameSection(tripId: tripId, sectionId: sectionId, newName: newName)
+        }
+        let newSections = ordered.filter { pendingNewIds.contains($0.id) }
+        for section in newSections {
+            if let rename = pendingRenames[section.id] { section.title = rename }
+        }
+        if !newSections.isEmpty {
+            store.insertPendingSections(tripId: tripId, sections: newSections)
+        }
+        onDone(ordered.map(\.id))
+        dismiss()
+    }
+
+    // MARK: - Row
+
+    @ViewBuilder
+    private func rowView(index: Int, section: PackingSection) -> some View {
+        let isDragging = dragSource == index
+        HStack(spacing: 12) {
+            Button {
+                withAnimation(.spring(response: 0.28)) { deleteSection(section) }
+            } label: {
+                Image(systemName: "minus.circle.fill")
+                    .font(.system(size: 22))
+                    .foregroundStyle(.red)
+            }
+            .buttonStyle(.plain)
+            Button {
+                let current = pendingRenames[section.id] ?? NSLocalizedString(section.title, comment: "")
+                renameName = current
+                renamingSection = section
+            } label: {
+                Text(LocalizedStringKey(pendingRenames[section.id] ?? section.title))
+                    .font(.body.weight(.semibold))
+                    .foregroundStyle(.primary)
+            }
+            .buttonStyle(.plain)
+            Spacer()
+            Image(systemName: "line.3.horizontal")
+                .font(.system(size: 16))
+                .foregroundStyle(Color(.systemGray2))
+                .frame(width: 44, height: 44)
+                .contentShape(Rectangle())
+                .gesture(
+                    DragGesture(minimumDistance: 5)
+                        .onChanged { value in
+                            if dragSource == nil {
+                                dragSource = index
+                                UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+                            }
+                            dragOffset = value.translation.height
+                            let src = dragSource ?? index
+                            let newTarget = max(0, min(ordered.count - 1, src + Int((dragOffset / step).rounded())))
+                            if newTarget != dropTarget {
+                                withAnimation(.interactiveSpring(response: 0.3, dampingFraction: 0.8)) {
+                                    dropTarget = newTarget
+                                }
+                            }
+                        }
+                        .onEnded { _ in
+                            if let src = dragSource, let dst = dropTarget, src != dst {
+                                withAnimation(.spring(response: 0.3)) {
+                                    ordered.move(
+                                        fromOffsets: IndexSet(integer: src),
+                                        toOffset: dst > src ? dst + 1 : dst
+                                    )
+                                }
+                            }
+                            withAnimation(.spring(response: 0.25)) {
+                                dragSource = nil
+                                dragOffset = 0
+                                dropTarget = nil
+                            }
+                        }
+                )
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 14)
+        .background(Color(.secondarySystemGroupedBackground))
+        .cornerRadius(12)
+        .scaleEffect(isDragging ? 1.03 : 1.0)
+        .shadow(
+            color: isDragging ? Color.black.opacity(0.10) : Color.clear,
+            radius: 8, x: 0, y: 4
+        )
+        .zIndex(isDragging ? 1 : 0)
+        .offset(y: isDragging ? dragOffset : displacement(for: index))
+    }
+
+    private func displacement(for index: Int) -> CGFloat {
+        guard let src = dragSource, let dst = dropTarget, src != dst else { return 0 }
+        if src < dst, index > src && index <= dst { return -step }
+        if src > dst, index >= dst && index < src { return step }
+        return 0
     }
 }
 

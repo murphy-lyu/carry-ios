@@ -23,14 +23,11 @@ enum AppearanceMode: String, CaseIterable, Identifiable {
         }
     }
 
-    var title: String {
+    var titleKey: LocalizedStringKey {
         switch self {
-        case .system:
-            return "Follow System"
-        case .light:
-            return "Light"
-        case .dark:
-            return "Dark"
+        case .system: return "appearance.system"
+        case .light:  return "appearance.light"
+        case .dark:   return "appearance.dark"
         }
     }
 }
