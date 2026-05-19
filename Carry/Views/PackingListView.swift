@@ -4,6 +4,7 @@
 //
 
 import SwiftUI
+import UIKit
 
 // MARK: - PackingListView
 
@@ -153,6 +154,14 @@ struct PackingListView: View {
         .navigationTitle(bundle?.name ?? "")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
+            ToolbarItem(placement: .principal) {
+                Color.clear
+                    .frame(width: 220, height: 36)
+                    .contentShape(Rectangle())
+                    .onTapGesture {
+                        dismissInlineEditing()
+                    }
+            }
             ToolbarItem(placement: .navigationBarTrailing) {
                 Menu {
                     if isNewTrip {
@@ -682,6 +691,19 @@ struct PackingListView: View {
         }
         editingItemId = nil
         editingText = ""
+    }
+
+    private func dismissInlineEditing() {
+        focusedItemId = nil
+        UIApplication.shared.sendAction(
+            #selector(UIResponder.resignFirstResponder),
+            to: nil,
+            from: nil,
+            for: nil
+        )
+        if let id = editingItemId {
+            commitEdit(itemId: id)
+        }
     }
 
     private func appendNewItem(sectionId: UUID) {
