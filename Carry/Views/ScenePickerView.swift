@@ -13,6 +13,7 @@ struct ScenePickerView: View {
         case create(TripInfo)
         case edit(tripId: UUID)
         case autoPack(tripInfo: TripInfo, seedSections: [PackingSection])
+        case suggest(tripId: UUID)
     }
 
     private let mode: Mode
@@ -29,12 +30,18 @@ struct ScenePickerView: View {
         self.mode = .autoPack(tripInfo: autoPackTripInfo, seedSections: seedSections)
     }
 
+    init(suggestForTripId: UUID) {
+        self.mode = .suggest(tripId: suggestForTripId)
+    }
+
     @EnvironmentObject var store: TripStore
     @EnvironmentObject var router: NavigationRouter
     @Environment(\.dismiss) private var dismiss
     @State private var selectedItems: Set<String> = []
     @State private var didLoadInitialSelection = false
     @State private var isSaved = false
+    @State private var confirmedSuggestKeys: [String]? = nil
+    @State private var didFinishSuggest = false
 
     private var hasSelection: Bool { !selectedItems.isEmpty }
     private var selectionCount: Int { selectedItems.count }
@@ -49,6 +56,11 @@ struct ScenePickerView: View {
         return false
     }
 
+    private var isSuggest: Bool {
+        if case .suggest = mode { return true }
+        return false
+    }
+
     private var primaryButtonLabelKey: LocalizedStringKey {
         if isSaved { return "scenes.updated" }
         if isEditing {
@@ -59,6 +71,10 @@ struct ScenePickerView: View {
             return hasSelection
                 ? "Auto Pack · \(selectionCount) selected"
                 : "Auto Pack"
+        } else if isSuggest {
+            return hasSelection
+                ? "See suggestions · \(selectionCount) selected"
+                : "See suggestions"
         } else {
             return hasSelection
                 ? "Generate my list · \(selectionCount) selected"
@@ -76,7 +92,7 @@ struct ScenePickerView: View {
                         .font(.title2)
                         .bold()
                     Spacer()
-                    if isAutoPack || isEditing {
+                    if isAutoPack || isEditing || isSuggest {
                         Button { dismiss() } label: {
                             Image(systemName: "xmark")
                                 .font(.system(size: 13, weight: .semibold))
@@ -88,7 +104,7 @@ struct ScenePickerView: View {
                     }
                 }
                 .padding(.horizontal, 16)
-                .padding(.top, (isAutoPack || isEditing) ? 24 : 8)
+                .padding(.top, (isAutoPack || isEditing || isSuggest) ? 24 : 8)
 
                 // — Scene groups
                 ForEach(defaultSceneGroups) { group in
@@ -131,6 +147,17 @@ struct ScenePickerView: View {
         .navigationTitle("")
         .navigationBarTitleDisplayMode(.inline)
         .onAppear { loadInitialSelectionIfNeeded() }
+        .sheet(isPresented: Binding(
+            get: { confirmedSuggestKeys != nil },
+            set: { if !$0 { confirmedSuggestKeys = nil } }
+        )) {
+            if case .suggest(let tripId) = mode, let keys = confirmedSuggestKeys {
+                SuggestionPreviewView(tripId: tripId, sceneKeys: keys, didFinish: $didFinishSuggest)
+            }
+        }
+        .onChange(of: didFinishSuggest) { _, finished in
+            if finished { dismiss() }
+        }
     }
 
     // MARK: Private
@@ -167,6 +194,9 @@ struct ScenePickerView: View {
             router.path = NavigationPath()
             router.path.append(CreationRoute.packingList(id))
             dismiss()
+        case .suggest:
+            UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+            confirmedSuggestKeys = keys
         }
     }
 
@@ -269,6 +299,9 @@ private let sceneSymbols: [String: String] = [
     "👶 Travelling with kids": "figure.and.child.holdinghands",
     "🥾 Hiking / camping":     "tent.fill",
     "💍 Honeymoon":            "heart.fill",
+    "🎒 Backpacking":          "backpack.fill",
+    "🏨 City break":           "building.2.fill",
+    "🏝 Resort holiday":       "beach.umbrella.fill",
     "🩸 Near period":          "drop.fill",
     "☕ Coffee lover":          "cup.and.saucer.fill",
     "🍵 Tea lover":            "cup.and.saucer.fill",
@@ -319,12 +352,24 @@ struct FlowLayout: Layout {
     var horizontalSpacing: CGFloat = 8
     var verticalSpacing: CGFloat = 8
 
-    func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout Void) -> CGSize {
-        computeLayout(subviews: subviews, in: proposal.replacingUnspecifiedDimensions().width).size
+    struct Cache {
+        var maxWidth: CGFloat = 0
+        var result: LayoutResult = LayoutResult()
     }
 
-    func placeSubviews(in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache: inout Void) {
-        let result = computeLayout(subviews: subviews, in: bounds.width)
+    func makeCache(subviews: Subviews) -> Cache { Cache() }
+
+    func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout Cache) -> CGSize {
+        let width = proposal.width ?? 0
+        cache.maxWidth = width
+        cache.result = computeLayout(subviews: subviews, in: width)
+        return cache.result.size
+    }
+
+    func placeSubviews(in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache: inout Cache) {
+        let result = bounds.width == cache.maxWidth
+            ? cache.result
+            : computeLayout(subviews: subviews, in: bounds.width)
         for (index, placement) in result.placements.enumerated() {
             subviews[index].place(
                 at: CGPoint(x: bounds.minX + placement.x, y: bounds.minY + placement.y),
@@ -335,12 +380,18 @@ struct FlowLayout: Layout {
 
     // MARK: Private
 
-    private struct LayoutResult {
+    struct LayoutResult {
         var placements: [(x: CGFloat, y: CGFloat)] = []
         var size: CGSize = .zero
     }
 
     private func computeLayout(subviews: Subviews, in maxWidth: CGFloat) -> LayoutResult {
+        guard maxWidth > 0 else {
+            return LayoutResult(
+                placements: Array(repeating: (x: 0, y: 0), count: subviews.count),
+                size: .zero
+            )
+        }
         var result = LayoutResult()
         var x: CGFloat = 0
         var y: CGFloat = 0

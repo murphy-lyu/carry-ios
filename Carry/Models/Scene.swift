@@ -19,7 +19,8 @@ let defaultSceneGroups: [SceneGroup] = [
         "☀️ Tropical / beach", "🌧 Rainy city", "⛰ High altitude", "❄️ Winter / cold"
     ]),
     SceneGroup(title: "Trip type", items: [
-        "💼 Business", "👶 Travelling with kids", "🥾 Hiking / camping", "💍 Honeymoon"
+        "💼 Business", "👶 Travelling with kids", "🥾 Hiking / camping",
+        "💍 Honeymoon", "🎒 Backpacking", "🏨 City break", "🏝 Resort holiday"
     ]),
     SceneGroup(title: "About you", items: [
         "🩸 Near period", "☕ Coffee lover", "🍵 Tea lover", "💊 Daily medication"
