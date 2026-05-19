@@ -38,7 +38,6 @@ let sceneLabelToKey: [String: String] = [
     "💍 Honeymoon":             "honeymoon",
     "🎒 Backpacking":           "backpacking",
     "🏨 City break":            "city_break",
-    "🏝 Resort holiday":        "resort_holiday",
     "🩸 Near period":           "personal_period",
     "☕ Coffee lover":           "personal_coffee",
     "🍵 Tea lover":             "personal_tea",
@@ -190,14 +189,6 @@ let sceneItemMap: [String: [SceneItem]] = [
         SceneItem(name: "Portable charger",          category: .electronics, isAlert: false),
         SceneItem(name: "Umbrella",                  category: .essentials, isAlert: false),
         SceneItem(name: "Photo ID copy",             category: .documents,  isAlert: true),
-    ],
-    "resort_holiday": [
-        SceneItem(name: "Swimwear",                 category: .clothing,    isAlert: true),
-        SceneItem(name: "Flip flops",               category: .clothing,    isAlert: false),
-        SceneItem(name: "Sunscreen SPF 50+",        category: .health,      isAlert: true),
-        SceneItem(name: "Sunglasses",               category: .health,      isAlert: true),
-        SceneItem(name: "Beach bag",                category: .essentials,  isAlert: false),
-        SceneItem(name: "After-sun lotion",         category: .toiletries,  isAlert: false),
     ],
     "personal_period": [
         SceneItem(name: "Sanitary pads / tampons",  category: .health,      isAlert: true),
