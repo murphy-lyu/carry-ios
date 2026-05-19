@@ -108,7 +108,7 @@ struct PackingListView: View {
                     }
 
                     // — Surprise / "Worth considering" section
-                    if !surpriseItems.isEmpty {
+                    if !surpriseItems.isEmpty && isNewTrip {
                         Section {
                             if surpriseSectionExpanded {
                                 ForEach(visibleSurpriseItems) { item in
@@ -285,6 +285,7 @@ struct PackingListView: View {
         }
         .onChange(of: progress) { _, newProgress in
             guard newProgress >= 0.85,
+                  isNewTrip,
                   !hasTriggeredNudge,
                   !(bundle?.nudgeShown ?? true),
                   !surpriseItems.isEmpty else { return }
@@ -1039,17 +1040,24 @@ struct ReorderSectionsView: View {
                 renameName = current
                 renamingSection = section
             } label: {
-                Text(LocalizedStringKey(pendingRenames[section.id] ?? section.title))
-                    .font(.body.weight(.semibold))
-                    .foregroundStyle(.primary)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .frame(height: rowH)
+                HStack(spacing: 8) {
+                    Text(LocalizedStringKey(pendingRenames[section.id] ?? section.title))
+                        .font(.body.weight(.semibold))
+                        .foregroundStyle(.primary)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                    Image(systemName: "pencil")
+                        .font(.system(size: 12, weight: .semibold))
+                        .foregroundStyle(.secondary)
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .frame(height: rowH)
+                .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
 
             Image(systemName: "line.3.horizontal")
                 .font(.system(size: 15, weight: .medium))
-                .foregroundStyle(.tertiary)
+                .foregroundStyle(.secondary)
                 .frame(width: 48, height: rowH)
                 .contentShape(Rectangle())
                 .highPriorityGesture(dragGesture(for: section))
