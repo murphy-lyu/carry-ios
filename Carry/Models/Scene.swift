@@ -20,5 +20,8 @@ let defaultSceneGroups: [SceneGroup] = [
     ]),
     SceneGroup(title: "Trip type", items: [
         "💼 Business", "👶 Travelling with kids", "🥾 Hiking / camping", "💍 Honeymoon"
-    ])
+    ]),
+    SceneGroup(title: "About you", items: [
+        "🩸 Near period", "☕ Coffee lover", "🍵 Tea lover", "💊 Daily medication"
+    ]),
 ]

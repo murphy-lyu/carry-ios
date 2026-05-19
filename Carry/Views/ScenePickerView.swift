@@ -266,7 +266,11 @@ private let sceneSymbols: [String: String] = [
     "💼 Business":             "briefcase.fill",
     "👶 Travelling with kids": "figure.and.child.holdinghands",
     "🥾 Hiking / camping":     "tent.fill",
-    "💍 Honeymoon":            "heart.fill"
+    "💍 Honeymoon":            "heart.fill",
+    "🩸 Near period":          "drop.fill",
+    "☕ Coffee lover":          "cup.and.saucer.fill",
+    "🍵 Tea lover":            "cup.and.saucer.fill",
+    "💊 Daily medication":     "pill.fill",
 ]
 
 struct SceneChip: View {

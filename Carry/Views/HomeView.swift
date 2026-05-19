@@ -89,9 +89,10 @@ struct HomeView: View {
             } else {
                 List {
                     if !upcomingTrips.isEmpty {
-                        Text(upcomingTrips.count == 1 ? "1 trip upcoming" : "\(upcomingTrips.count) trips upcoming")
-                            .font(.subheadline)
-                            .foregroundColor(.secondary)
+                        Text("home.upcoming")
+                            .font(.system(size: 11, weight: .medium))
+                            .foregroundStyle(colorScheme == .dark ? .secondary : .tertiary)
+                            .tracking(2)
                             .listRowInsets(EdgeInsets(top: 0, leading: 16, bottom: 12, trailing: 16))
                             .listRowBackground(Color.clear)
                             .listRowSeparator(.hidden)
@@ -103,8 +104,9 @@ struct HomeView: View {
 
                     if !pastTrips.isEmpty {
                         Text("home.past")
-                            .font(.subheadline)
-                            .foregroundColor(.secondary)
+                            .font(.system(size: 11, weight: .medium))
+                            .foregroundStyle(colorScheme == .dark ? .secondary : .tertiary)
+                            .tracking(2)
                             .listRowInsets(EdgeInsets(top: upcomingTrips.isEmpty ? 0 : 24, leading: 16, bottom: 8, trailing: 16))
                             .listRowBackground(Color.clear)
                             .listRowSeparator(.hidden)
@@ -173,6 +175,18 @@ struct TripCard: View {
 
     private var progress: Double {
         bundle.totalCount == 0 ? 0 : Double(bundle.packedCount) / Double(bundle.totalCount)
+    }
+    
+    private var dateAndDurationText: String {
+        let format = NSLocalizedString("%@ · %lld days", comment: "Trip date range and duration")
+        return String(format: format, locale: Locale.current, bundle.localizedDateRange, Int64(bundle.days))
+    }
+
+    private var remainingText: String {
+        if isComplete { return NSLocalizedString("All packed", comment: "All items packed") }
+        let left = bundle.totalCount - bundle.packedCount
+        let format = NSLocalizedString("%lld left", comment: "Remaining item count")
+        return String(format: format, locale: Locale.current, Int64(left))
     }
 
     private var isComplete: Bool {
@@ -244,12 +258,12 @@ struct TripCard: View {
                 .padding(.bottom, 2)
 
             HStack {
-                Text("\(bundle.dateRange) · \(bundle.days) days")
+                Text(dateAndDurationText)
                     .font(.caption)
                     .foregroundColor(Color(.systemGray2))
                 if !isPast {
                     Spacer()
-                    Text(isComplete ? "All packed" : "\(bundle.totalCount - bundle.packedCount) left")
+                    Text(remainingText)
                         .font(.caption)
                         .foregroundColor(Color(.systemGray2))
                         .transition(.opacity)

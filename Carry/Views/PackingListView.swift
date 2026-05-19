@@ -30,6 +30,9 @@ struct PackingListView: View {
     @State private var showCompletionBanner = false
     @State private var hasTriggeredCompletion = false
     @State private var shimmerPhase: CGFloat = -1
+    @State private var surpriseSectionExpanded = true
+    @State private var showNudgeBanner = false
+    @State private var hasTriggeredNudge = false
 
     private var bundle: TripBundle? { store.bundle(for: tripId) }
     private var sections: [PackingSection] {
@@ -42,6 +45,16 @@ struct PackingListView: View {
     }
     private var isComplete: Bool {
         totalCount > 0 && packedCount == totalCount
+    }
+
+    private var surpriseItems: [SurpriseItem] {
+        guard let bundle else { return [] }
+        let existingNames = Set(
+            bundle.safeSections.flatMap { $0.items ?? [] }.map { $0.name.lowercased() }
+        )
+        let dismissed = Set(bundle.dismissedSurpriseNames.map { $0.lowercased() })
+        return computeSurpriseItems(for: bundle.selectedSceneKeys, existingNames: existingNames)
+            .filter { !dismissed.contains($0.name.lowercased()) }
     }
 
     var body: some View {
@@ -78,6 +91,24 @@ struct PackingListView: View {
                         .listSectionSeparator(.hidden)
                     }
 
+                    // — Surprise / "Worth considering" section
+                    if !surpriseItems.isEmpty {
+                        Section {
+                            if surpriseSectionExpanded {
+                                ForEach(surpriseItems) { item in
+                                    surpriseRow(for: item)
+                                        .listRowInsets(EdgeInsets(top: 0, leading: 16, bottom: 0, trailing: 16))
+                                        .listRowSeparator(.hidden)
+                                        .listRowBackground(Color(UIColor.systemBackground))
+                                }
+                            }
+                        } header: {
+                            surpriseSectionHeader
+                                .listRowInsets(EdgeInsets())
+                        }
+                        .listSectionSeparator(.hidden)
+                    }
+
                 }
                 .listStyle(.plain)
                 .scrollContentBackground(.hidden)
@@ -87,9 +118,15 @@ struct PackingListView: View {
                 .scrollIndicators(.hidden)
                 .safeAreaInset(edge: .bottom) { Color.clear.frame(height: 83) }
                 .safeAreaInset(edge: .top, spacing: 0) {
-                    if showCompletionBanner {
-                        completionBanner
-                            .transition(.move(edge: .top).combined(with: .opacity))
+                    VStack(spacing: 0) {
+                        if showCompletionBanner {
+                            completionBanner
+                                .transition(.move(edge: .top).combined(with: .opacity))
+                        }
+                        if showNudgeBanner {
+                            nudgeBanner
+                                .transition(.move(edge: .top).combined(with: .opacity))
+                        }
                     }
                 }
             }
@@ -193,6 +230,22 @@ struct PackingListView: View {
                 commitEdit(itemId: id)
             }
         }
+        .onChange(of: progress) { _, newProgress in
+            guard newProgress >= 0.85,
+                  !hasTriggeredNudge,
+                  !(bundle?.nudgeShown ?? true),
+                  !surpriseItems.isEmpty else { return }
+            hasTriggeredNudge = true
+            store.markNudgeShown(tripId: tripId)
+            withAnimation(.spring(response: 0.4, dampingFraction: 0.8)) {
+                showNudgeBanner = true
+                surpriseSectionExpanded = true
+            }
+            Task {
+                try? await Task.sleep(for: .milliseconds(3500))
+                withAnimation(.easeIn(duration: 0.3)) { showNudgeBanner = false }
+            }
+        }
         .animation(.easeInOut(duration: 0.25), value: isComplete)
         .sheet(isPresented: $showEditSheet) {
             if let bundle {
@@ -274,17 +327,19 @@ struct PackingListView: View {
         guard let bundle = bundle else { return "" }
         let sep = String(repeating: "━", count: 32)
         var lines: [String] = []
+        let daysFormat = NSLocalizedString("%@ · %lld days", comment: "Trip date range and duration")
+        let packedFormat = NSLocalizedString("%lld / %lld packed", comment: "Packed count over total count")
 
         // — Header
         let heading = [bundle.name, bundle.destinationCity]
             .filter { !$0.isEmpty }.joined(separator: " · ")
         lines.append("🧳 \(heading)")
         lines.append("")
-        lines.append("📅 \(bundle.dateRange) · \(bundle.days) days")
+        lines.append("📅 \(String(format: daysFormat, locale: Locale.current, bundle.localizedDateRange, Int64(bundle.days)))")
         if packedCount == totalCount && totalCount > 0 {
             lines.append("📊 All packed! (\(totalCount))")
         } else {
-            lines.append("📊 \(packedCount) / \(totalCount) packed")
+            lines.append("📊 \(String(format: packedFormat, locale: Locale.current, Int64(packedCount), Int64(totalCount)))")
         }
 
         // — Sections
@@ -357,7 +412,7 @@ struct PackingListView: View {
     }
 
     private var tripInfoLine: String {
-        [bundle?.destinationCity, bundle?.dateRange]
+        [bundle?.destinationCity, bundle?.localizedDateRange]
             .compactMap { str in (str?.isEmpty == false) ? str : nil }
             .joined(separator: " · ")
     }
@@ -374,6 +429,86 @@ struct PackingListView: View {
         .padding(.vertical, 12)
         .padding(.horizontal, 16)
         .background(Color.black)
+    }
+
+    private var nudgeBanner: some View {
+        HStack(spacing: 8) {
+            Image(systemName: "sparkles")
+                .foregroundStyle(.white)
+            Text("Almost there! A few things worth a second thought ↓")
+                .foregroundStyle(.white)
+        }
+        .font(.subheadline.weight(.medium))
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, 12)
+        .padding(.horizontal, 16)
+        .background(Color(UIColor.systemIndigo))
+    }
+
+    private var surpriseSectionHeader: some View {
+        Button {
+            withAnimation(.easeInOut(duration: 0.2)) {
+                surpriseSectionExpanded.toggle()
+            }
+        } label: {
+            HStack(spacing: 6) {
+                Image(systemName: "sparkles")
+                    .font(.system(size: 10, weight: .semibold))
+                    .foregroundStyle(.secondary)
+                Text("Worth considering")
+                    .font(.caption.bold())
+                    .foregroundStyle(Color(.systemGray))
+                    .kerning(1.5)
+                    .textCase(.uppercase)
+                Spacer()
+                Image(systemName: surpriseSectionExpanded ? "chevron.up" : "chevron.down")
+                    .font(.system(size: 10, weight: .semibold))
+                    .foregroundStyle(.secondary)
+            }
+            .padding(.horizontal, 16)
+            .padding(.top, 24)
+            .padding(.bottom, 8)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(Color(UIColor.systemBackground))
+        }
+        .buttonStyle(.plain)
+    }
+
+    private func surpriseRow(for item: SurpriseItem) -> some View {
+        HStack(alignment: .top, spacing: 12) {
+            VStack(alignment: .leading, spacing: 3) {
+                Text(item.name)
+                    .font(.subheadline)
+                    .foregroundStyle(.primary)
+                Text(item.note)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            Spacer(minLength: 8)
+            Button {
+                store.addSurpriseItem(tripId: tripId, item: item)
+                UIImpactFeedbackGenerator(style: .light).impactOccurred()
+            } label: {
+                Text("Add")
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(.primary)
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 6)
+                    .background(Color(UIColor.secondarySystemFill))
+                    .clipShape(Capsule())
+            }
+            .buttonStyle(.plain)
+        }
+        .padding(.vertical, 10)
+        .swipeActions(edge: .trailing, allowsFullSwipe: true) {
+            Button {
+                store.dismissSurpriseItem(tripId: tripId, itemName: item.name)
+            } label: {
+                Label("Dismiss", systemImage: "xmark")
+            }
+            .tint(Color(UIColor.systemGray3))
+        }
     }
 
     private var emptyState: some View {
@@ -667,9 +802,6 @@ struct ReorderSectionsView: View {
     @Environment(\.dismiss) private var dismiss
 
     @State private var ordered: [PackingSection] = []
-    @State private var dragSource: Int? = nil
-    @State private var dragOffset: CGFloat = 0
-    @State private var dropTarget: Int? = nil
     @State private var showAddAlert = false
     @State private var newSectionName = ""
     @State private var renamingSection: PackingSection? = nil
@@ -678,9 +810,14 @@ struct ReorderSectionsView: View {
     @State private var pendingRenames: [UUID: String] = [:]
     @State private var pendingDeleteIds: Set<UUID> = []
 
-    private let rowHeight: CGFloat = 52
-    private let rowSpacing: CGFloat = 8
-    private var step: CGFloat { rowHeight + rowSpacing }
+    @State private var draggingId: UUID? = nil
+    @State private var dragOffset: CGFloat = 0
+    @State private var dragBaseOffset: CGFloat = 0
+    @State private var dragCurrentIndex: Int = 0
+
+    private let rowH: CGFloat = 52
+    private let rowGap: CGFloat = 8
+    private var slotH: CGFloat { rowH + rowGap }
 
     private var showRenameAlert: Binding<Bool> {
         Binding(get: { renamingSection != nil }, set: { if !$0 { renamingSection = nil } })
@@ -688,15 +825,16 @@ struct ReorderSectionsView: View {
 
     var body: some View {
         ScrollView {
-            VStack(spacing: rowSpacing) {
-                ForEach(Array(ordered.enumerated()), id: \.element.id) { index, section in
-                    rowView(index: index, section: section)
+            VStack(spacing: rowGap) {
+                ForEach(ordered) { section in
+                    rowView(section: section)
                 }
             }
             .padding(.horizontal, 16)
-            .padding(.top, 8)
-            .padding(.bottom, 24)
+            .padding(.top, 16)
+            .padding(.bottom, 80)
         }
+        .scrollDisabled(draggingId != nil)
         .background(Color(.systemGroupedBackground))
         .navigationTitle("Edit sections")
         .navigationBarTitleDisplayMode(.inline)
@@ -730,6 +868,100 @@ struct ReorderSectionsView: View {
             ordered = store.bundle(for: tripId)?.safeSections
                 .filter { $0.items?.isEmpty == false } ?? []
         }
+    }
+
+    // MARK: - Row
+
+    @ViewBuilder
+    private func rowView(section: PackingSection) -> some View {
+        let isDragging = draggingId == section.id
+        HStack(spacing: 0) {
+            Button {
+                withAnimation(.spring(response: 0.28)) { deleteSection(section) }
+            } label: {
+                Image(systemName: "minus.circle.fill")
+                    .font(.system(size: 22))
+                    .foregroundStyle(.red)
+                    .frame(width: 48, height: rowH)
+            }
+            .buttonStyle(.plain)
+
+            Button {
+                let current = pendingRenames[section.id] ?? NSLocalizedString(section.title, comment: "")
+                renameName = current
+                renamingSection = section
+            } label: {
+                Text(LocalizedStringKey(pendingRenames[section.id] ?? section.title))
+                    .font(.body.weight(.semibold))
+                    .foregroundStyle(.primary)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .frame(height: rowH)
+            }
+            .buttonStyle(.plain)
+
+            Image(systemName: "line.3.horizontal")
+                .font(.system(size: 15, weight: .medium))
+                .foregroundStyle(.tertiary)
+                .frame(width: 48, height: rowH)
+                .contentShape(Rectangle())
+                .highPriorityGesture(dragGesture(for: section))
+        }
+        .padding(.horizontal, 4)
+        .background(Color(.secondarySystemGroupedBackground))
+        .cornerRadius(12)
+        .shadow(
+            color: isDragging ? Color.black.opacity(0.13) : Color.black.opacity(0.06),
+            radius: isDragging ? 14 : 8,
+            x: 0,
+            y: isDragging ? 6 : 3
+        )
+        .scaleEffect(isDragging ? 1.02 : 1.0)
+        .zIndex(isDragging ? 10 : 0)
+        .offset(y: isDragging ? dragOffset : 0)
+    }
+
+    private func dragGesture(for section: PackingSection) -> some Gesture {
+        DragGesture(minimumDistance: 1)
+            .onChanged { value in
+                if draggingId == nil {
+                    withAnimation(.spring(response: 0.2, dampingFraction: 0.8)) {
+                        draggingId = section.id
+                    }
+                    dragCurrentIndex = ordered.firstIndex { $0.id == section.id } ?? 0
+                    dragBaseOffset = 0
+                    UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+                }
+                guard draggingId == section.id else { return }
+
+                let cumulative = value.translation.height + dragBaseOffset
+                dragOffset = cumulative
+
+                let tentative = dragCurrentIndex + Int((cumulative / slotH).rounded())
+                let target = max(0, min(ordered.count - 1, tentative))
+
+                if target != dragCurrentIndex {
+                    let from = dragCurrentIndex
+                    var t = Transaction()
+                    t.disablesAnimations = true
+                    withTransaction(t) {
+                        ordered.move(
+                            fromOffsets: IndexSet(integer: from),
+                            toOffset: target > from ? target + 1 : target
+                        )
+                    }
+                    dragBaseOffset += CGFloat(from - target) * slotH
+                    dragOffset = value.translation.height + dragBaseOffset
+                    dragCurrentIndex = target
+                    UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                }
+            }
+            .onEnded { _ in
+                withAnimation(.spring(response: 0.25, dampingFraction: 0.8)) {
+                    draggingId = nil
+                    dragOffset = 0
+                }
+                dragBaseOffset = 0
+            }
     }
 
     // MARK: - Actions
@@ -778,89 +1010,6 @@ struct ReorderSectionsView: View {
         }
         onDone(ordered.map(\.id))
         dismiss()
-    }
-
-    // MARK: - Row
-
-    @ViewBuilder
-    private func rowView(index: Int, section: PackingSection) -> some View {
-        let isDragging = dragSource == index
-        HStack(spacing: 12) {
-            Button {
-                withAnimation(.spring(response: 0.28)) { deleteSection(section) }
-            } label: {
-                Image(systemName: "minus.circle.fill")
-                    .font(.system(size: 22))
-                    .foregroundStyle(.red)
-            }
-            .buttonStyle(.plain)
-            Button {
-                let current = pendingRenames[section.id] ?? NSLocalizedString(section.title, comment: "")
-                renameName = current
-                renamingSection = section
-            } label: {
-                Text(LocalizedStringKey(pendingRenames[section.id] ?? section.title))
-                    .font(.body.weight(.semibold))
-                    .foregroundStyle(.primary)
-            }
-            .buttonStyle(.plain)
-            Spacer()
-            Image(systemName: "line.3.horizontal")
-                .font(.system(size: 16))
-                .foregroundStyle(Color(.systemGray2))
-                .frame(width: 44, height: 44)
-                .contentShape(Rectangle())
-                .gesture(
-                    DragGesture(minimumDistance: 5)
-                        .onChanged { value in
-                            if dragSource == nil {
-                                dragSource = index
-                                UIImpactFeedbackGenerator(style: .medium).impactOccurred()
-                            }
-                            dragOffset = value.translation.height
-                            let src = dragSource ?? index
-                            let newTarget = max(0, min(ordered.count - 1, src + Int((dragOffset / step).rounded())))
-                            if newTarget != dropTarget {
-                                withAnimation(.interactiveSpring(response: 0.3, dampingFraction: 0.8)) {
-                                    dropTarget = newTarget
-                                }
-                            }
-                        }
-                        .onEnded { _ in
-                            if let src = dragSource, let dst = dropTarget, src != dst {
-                                withAnimation(.spring(response: 0.3)) {
-                                    ordered.move(
-                                        fromOffsets: IndexSet(integer: src),
-                                        toOffset: dst > src ? dst + 1 : dst
-                                    )
-                                }
-                            }
-                            withAnimation(.spring(response: 0.25)) {
-                                dragSource = nil
-                                dragOffset = 0
-                                dropTarget = nil
-                            }
-                        }
-                )
-        }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 14)
-        .background(Color(.secondarySystemGroupedBackground))
-        .cornerRadius(12)
-        .scaleEffect(isDragging ? 1.03 : 1.0)
-        .shadow(
-            color: isDragging ? Color.black.opacity(0.10) : Color.clear,
-            radius: 8, x: 0, y: 4
-        )
-        .zIndex(isDragging ? 1 : 0)
-        .offset(y: isDragging ? dragOffset : displacement(for: index))
-    }
-
-    private func displacement(for index: Int) -> CGFloat {
-        guard let src = dragSource, let dst = dropTarget, src != dst else { return 0 }
-        if src < dst, index > src && index <= dst { return -step }
-        if src > dst, index >= dst && index < src { return step }
-        return 0
     }
 }
 

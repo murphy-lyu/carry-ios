@@ -19,6 +19,8 @@ final class TripBundle {
     var departureDate: Date = Date()
     var createdAt: Date = Date()
     var selectedSceneKeys: [String] = []
+    var dismissedSurpriseNames: [String] = []
+    var nudgeShown: Bool = false
     @Relationship(deleteRule: .cascade, inverse: \PackingSection.bundle) var sections: [PackingSection]? = []
 
     init(
@@ -46,6 +48,14 @@ final class TripBundle {
     var safeSections: [PackingSection] { (sections ?? []).sorted { $0.sortOrder < $1.sortOrder } }
     var packedCount: Int { safeSections.flatMap { $0.items ?? [] }.filter { $0.isPacked && !$0.name.isEmpty }.count }
     var totalCount:  Int { safeSections.flatMap { $0.items ?? [] }.filter { !$0.name.isEmpty }.count }
+
+    /// Locale-aware date range, computed at display time so it follows the current app language.
+    var localizedDateRange: String {
+        let returnDate = Calendar.current.date(byAdding: .day, value: days, to: departureDate) ?? departureDate
+        let fmt = DateFormatter()
+        fmt.setLocalizedDateFormatFromTemplate("MMMd")
+        return "\(fmt.string(from: departureDate)) – \(fmt.string(from: returnDate))"
+    }
 }
 
 // MARK: - TripStore
@@ -330,6 +340,42 @@ final class TripStore: ObservableObject {
                 trip.sections?.append(newSection)
             }
         }
+        save()
+    }
+
+    func dismissSurpriseItem(tripId: UUID, itemName: String) {
+        guard let trip = trips.first(where: { $0.id == tripId }),
+              !trip.dismissedSurpriseNames.contains(itemName) else { return }
+        trip.dismissedSurpriseNames.append(itemName)
+        save()
+    }
+
+    func markNudgeShown(tripId: UUID) {
+        guard let trip = trips.first(where: { $0.id == tripId }) else { return }
+        trip.nudgeShown = true
+        save()
+    }
+
+    /// Adds a surprise item to the most relevant existing section, or creates a new one.
+    func addSurpriseItem(tripId: UUID, item: SurpriseItem) {
+        guard let trip = trips.first(where: { $0.id == tripId }) else { return }
+        let categoryTitle = item.category.rawValue
+        if let section = trip.safeSections.first(where: { $0.title == categoryTitle }) {
+            let existing = section.items ?? []
+            let nextOrder = (existing.map(\.sortOrder).max() ?? -1) + 1
+            let newItem = PackingItem(name: item.name, isAlert: false, sortOrder: nextOrder)
+            context.insert(newItem)
+            section.items?.append(newItem)
+        } else {
+            let nextSectionOrder = (trip.safeSections.map(\.sortOrder).max() ?? -1) + 1
+            let newItem = PackingItem(name: item.name, isAlert: false, sortOrder: 0)
+            let newSection = PackingSection(title: categoryTitle, items: [newItem], sortOrder: nextSectionOrder)
+            context.insert(newItem)
+            context.insert(newSection)
+            if trip.sections == nil { trip.sections = [] }
+            trip.sections?.append(newSection)
+        }
+        dismissSurpriseItem(tripId: tripId, itemName: item.name)
         save()
     }
 
