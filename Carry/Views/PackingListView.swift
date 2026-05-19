@@ -24,6 +24,7 @@ struct PackingListView: View {
 
     @State private var showEditSheet = false
     @State private var showEditScenesSheet = false
+    @State private var showSuggestSheet = false
     @State private var showReorderSheet = false
     @State private var showDeleteConfirmation = false
     @State private var isSaved = false
@@ -34,6 +35,9 @@ struct PackingListView: View {
     @State private var surpriseSectionExpanded = true
     @State private var showNudgeBanner = false
     @State private var hasTriggeredNudge = false
+    @State private var surpriseBatchOffset: Int = 0
+
+    private let surpriseBatchSize = 4
 
     private var bundle: TripBundle? { store.bundle(for: tripId) }
     private var sections: [PackingSection] {
@@ -58,6 +62,15 @@ struct PackingListView: View {
         return computeSurpriseItems(for: bundle.selectedSceneKeys, existingNames: existingNames)
             .filter { !dismissed.contains($0.name.lowercased()) }
     }
+
+    private var visibleSurpriseItems: [SurpriseItem] {
+        guard !surpriseItems.isEmpty else { return [] }
+        let total = surpriseItems.count
+        guard total > surpriseBatchSize else { return surpriseItems }
+        return (0..<surpriseBatchSize).map { i in surpriseItems[(surpriseBatchOffset + i) % total] }
+    }
+
+    private var canShuffle: Bool { surpriseItems.count > surpriseBatchSize }
 
     var body: some View {
         VStack(spacing: 0) {
@@ -97,7 +110,7 @@ struct PackingListView: View {
                     if !surpriseItems.isEmpty {
                         Section {
                             if surpriseSectionExpanded {
-                                ForEach(surpriseItems) { item in
+                                ForEach(visibleSurpriseItems) { item in
                                     surpriseRow(for: item)
                                         .listRowInsets(EdgeInsets(top: 0, leading: 16, bottom: 0, trailing: 16))
                                         .listRowSeparator(.hidden)
@@ -123,6 +136,13 @@ struct PackingListView: View {
                     }
 
                 }
+                .simultaneousGesture(
+                    TapGesture().onEnded {
+                        if editingItemId != nil {
+                            dismissInlineEditing()
+                        }
+                    }
+                )
                 .listStyle(.plain)
                 .scrollContentBackground(.hidden)
                 .environment(\.defaultMinListRowHeight, 0)
@@ -144,6 +164,14 @@ struct PackingListView: View {
                 }
             }
         }
+        .contentShape(Rectangle())
+        .simultaneousGesture(
+            TapGesture().onEnded {
+                if editingItemId != nil {
+                    dismissInlineEditing()
+                }
+            }
+        )
         .safeAreaInset(edge: .bottom) {
             if isNewTrip {
                 saveTripButton
@@ -155,35 +183,32 @@ struct PackingListView: View {
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .principal) {
-                Text(bundle?.name ?? "")
-                    .font(.headline)
-                    .foregroundStyle(.primary)
-                    .lineLimit(1)
-                    .truncationMode(.tail)
-                    .frame(maxWidth: 220)
-                    .frame(height: 36)
-                    .contentShape(Rectangle())
-                    .onTapGesture {
-                        dismissInlineEditing()
-                    }
+                ZStack {
+                    Text(bundle?.name ?? "")
+                        .font(.headline)
+                        .foregroundStyle(.primary)
+                        .lineLimit(1)
+                        .truncationMode(.tail)
+                        .padding(.horizontal, 8)
+                }
+                .frame(maxWidth: .infinity)
+                .frame(height: 36)
+                .contentShape(Rectangle())
+                .onTapGesture {
+                    dismissInlineEditing()
+                }
             }
             ToolbarItem(placement: .navigationBarTrailing) {
                 Menu {
-                    if isNewTrip {
+                    if !isNewTrip {
                         Button {
-                            router.path.append(CreationRoute.addItems(tripId))
+                            showEditSheet = true
                         } label: {
-                            Label("Add items", systemImage: "plus.circle")
+                            Label("Edit trip", systemImage: "pencil")
                         }
-                        Divider()
                     }
                     Button {
-                        showEditSheet = true
-                    } label: {
-                        Label("Edit trip", systemImage: "pencil")
-                    }
-                    Button {
-                        showEditScenesSheet = true
+                        if isNewTrip { showSuggestSheet = true } else { showEditScenesSheet = true }
                     } label: {
                         Label("Edit scenes", systemImage: "tag")
                     }
@@ -193,24 +218,26 @@ struct PackingListView: View {
                         Label("Edit sections", systemImage: "arrow.up.arrow.down")
                     }
                     .disabled(sections.count < 2)
-                    Button {
-                        let activityVC = UIActivityViewController(
-                            activityItems: [shareText],
-                            applicationActivities: nil
-                        )
-                        if let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
-                           let window = windowScene.windows.first,
-                           let rootVC = window.rootViewController {
-                            rootVC.present(activityVC, animated: true)
+                    if !isNewTrip {
+                        Button {
+                            let activityVC = UIActivityViewController(
+                                activityItems: [shareText],
+                                applicationActivities: nil
+                            )
+                            if let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
+                               let window = windowScene.windows.first,
+                               let rootVC = window.rootViewController {
+                                rootVC.present(activityVC, animated: true)
+                            }
+                        } label: {
+                            Label("Share list", systemImage: "square.and.arrow.up")
                         }
-                    } label: {
-                        Label("Share list", systemImage: "square.and.arrow.up")
-                    }
-                    Divider()
-                    Button(role: .destructive) {
-                        showDeleteConfirmation = true
-                    } label: {
-                        Label("Delete trip", systemImage: "trash")
+                        Divider()
+                        Button(role: .destructive) {
+                            showDeleteConfirmation = true
+                        } label: {
+                            Label("Delete trip", systemImage: "trash")
+                        }
                     }
                 } label: {
                     Image(systemName: "ellipsis")
@@ -282,6 +309,10 @@ struct PackingListView: View {
             ScenePickerView(editingTripId: tripId)
                 .presentationDragIndicator(.visible)
         }
+        .sheet(isPresented: $showSuggestSheet) {
+            ScenePickerView(suggestForTripId: tripId)
+                .presentationDragIndicator(.visible)
+        }
         .sheet(isPresented: $showReorderSheet) {
             NavigationStack {
                 ReorderSectionsView(tripId: tripId) { newOrder in
@@ -327,6 +358,7 @@ struct PackingListView: View {
     // MARK: Actions
 
     private func toggleItem(itemId: UUID) {
+        guard !isNewTrip else { return }
         store.toggleItem(tripId: tripId, itemId: itemId)
         if totalCount > 0, packedCount == totalCount {
             UINotificationFeedbackGenerator().notificationOccurred(.success)
@@ -398,39 +430,49 @@ struct PackingListView: View {
 
     private var progressHeader: some View {
         VStack(alignment: .leading, spacing: 0) {
-            GeometryReader { geo in
-                ZStack(alignment: .leading) {
-                    RoundedRectangle(cornerRadius: 1)
-                        .fill(colorScheme == .dark ? Color.white.opacity(0.18) : Color(UIColor.systemGray5))
-                        .frame(height: 2)
-                    RoundedRectangle(cornerRadius: 1)
-                        .fill(Color.primary)
-                        .frame(width: max(0, geo.size.width * progress), height: 2)
-                        .overlay {
-                            LinearGradient(
-                                colors: [.clear, Color(UIColor.systemBackground).opacity(0.65), .clear],
-                                startPoint: .leading,
-                                endPoint: .trailing
-                            )
-                            .frame(width: geo.size.width * 0.35)
-                            .offset(x: shimmerPhase * geo.size.width * 0.675)
-                        }
-                        .clipShape(RoundedRectangle(cornerRadius: 1))
+            if !isNewTrip {
+                GeometryReader { geo in
+                    ZStack(alignment: .leading) {
+                        RoundedRectangle(cornerRadius: 1)
+                            .fill(colorScheme == .dark ? Color.white.opacity(0.18) : Color(UIColor.systemGray5))
+                            .frame(height: 2)
+                        RoundedRectangle(cornerRadius: 1)
+                            .fill(Color.primary)
+                            .frame(width: max(0, geo.size.width * progress), height: 2)
+                            .overlay {
+                                LinearGradient(
+                                    colors: [.clear, Color(UIColor.systemBackground).opacity(0.65), .clear],
+                                    startPoint: .leading,
+                                    endPoint: .trailing
+                                )
+                                .frame(width: geo.size.width * 0.35)
+                                .offset(x: shimmerPhase * geo.size.width * 0.675)
+                            }
+                            .clipShape(RoundedRectangle(cornerRadius: 1))
+                    }
                 }
+                .frame(height: 2)
             }
-            .frame(height: 2)
 
             HStack(alignment: .firstTextBaseline) {
                 Text(tripInfoLine)
                     .font(.caption)
                     .foregroundColor(.secondary)
                 Spacer()
-                Text(isComplete ? "All packed ✓" : "\(packedCount) / \(totalCount) packed")
-                    .font(.caption)
-                    .foregroundColor(.secondary)
-                    .animation(.easeInOut(duration: 0.3), value: isComplete)
+                Group {
+                    if isNewTrip {
+                        Text("\(totalCount) items")
+                    } else if isComplete {
+                        Text("All packed ✓")
+                    } else {
+                        Text("\(totalCount - packedCount) left")
+                    }
+                }
+                .font(.caption)
+                .foregroundColor(.secondary)
+                .animation(.easeInOut(duration: 0.3), value: isComplete)
             }
-            .padding(.top, 8)
+            .padding(.top, isNewTrip ? 0 : 8)
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 12)
@@ -458,7 +500,7 @@ struct PackingListView: View {
     }
 
     private var sceneEntryCard: some View {
-        Button { showEditScenesSheet = true } label: {
+        Button { showSuggestSheet = true } label: {
             HStack(spacing: 12) {
                 Image(systemName: "sparkles")
                     .font(.system(size: 15))
@@ -502,32 +544,51 @@ struct PackingListView: View {
     }
 
     private var surpriseSectionHeader: some View {
-        Button {
-            withAnimation(.easeInOut(duration: 0.2)) {
-                surpriseSectionExpanded.toggle()
+        HStack(spacing: 0) {
+            Button {
+                withAnimation(.easeInOut(duration: 0.2)) {
+                    surpriseSectionExpanded.toggle()
+                }
+            } label: {
+                HStack(spacing: 6) {
+                    Image(systemName: "sparkles")
+                        .font(.system(size: 10, weight: .semibold))
+                        .foregroundStyle(.secondary)
+                    Text("Worth considering")
+                        .font(.caption.bold())
+                        .foregroundStyle(Color(.systemGray))
+                        .kerning(1.5)
+                        .textCase(.uppercase)
+                    Image(systemName: surpriseSectionExpanded ? "chevron.up" : "chevron.down")
+                        .font(.system(size: 10, weight: .semibold))
+                        .foregroundStyle(.secondary)
+                }
             }
-        } label: {
-            HStack(spacing: 6) {
-                Image(systemName: "sparkles")
-                    .font(.system(size: 10, weight: .semibold))
-                    .foregroundStyle(.secondary)
-                Text("Worth considering")
-                    .font(.caption.bold())
-                    .foregroundStyle(Color(.systemGray))
-                    .kerning(1.5)
-                    .textCase(.uppercase)
-                Spacer()
-                Image(systemName: surpriseSectionExpanded ? "chevron.up" : "chevron.down")
-                    .font(.system(size: 10, weight: .semibold))
-                    .foregroundStyle(.secondary)
+            .buttonStyle(.plain)
+
+            Spacer()
+
+            if canShuffle && surpriseSectionExpanded {
+                Button {
+                    withAnimation(.easeInOut(duration: 0.2)) {
+                        surpriseBatchOffset = (surpriseBatchOffset + surpriseBatchSize) % surpriseItems.count
+                    }
+                    UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                } label: {
+                    Text("surprise.shuffle")
+                        .font(.caption.weight(.medium))
+                        .foregroundStyle(.secondary)
+                }
+                .buttonStyle(.plain)
+                .transition(.opacity)
             }
-            .padding(.horizontal, 16)
-            .padding(.top, 24)
-            .padding(.bottom, 8)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .background(Color(UIColor.systemBackground))
         }
-        .buttonStyle(.plain)
+        .padding(.horizontal, 16)
+        .padding(.top, 24)
+        .padding(.bottom, 8)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(Color(UIColor.systemBackground))
+        .animation(.easeInOut(duration: 0.15), value: canShuffle && surpriseSectionExpanded)
     }
 
     private func surpriseRow(for item: SurpriseItem) -> some View {
@@ -667,7 +728,7 @@ struct PackingListView: View {
                             .fontWeight(.medium)
                             .transition(.scale.combined(with: .opacity))
                     }
-                    Text(isSaved ? "Saved" : "Save trip")
+                    Text(isSaved ? "packing.start.saved" : "packing.start.action")
                         .font(.subheadline)
                         .fontWeight(.medium)
                         .transition(.opacity)
@@ -675,8 +736,10 @@ struct PackingListView: View {
                 .foregroundColor(Color(UIColor.systemBackground))
                 .frame(maxWidth: .infinity)
                 .frame(height: 52)
-                .background(Color.primary)
-                .cornerRadius(14)
+                .background {
+                    RoundedRectangle(cornerRadius: 14, style: .continuous)
+                        .fill(Color(UIColor.label))
+                }
                 .animation(.easeInOut(duration: 0.2), value: isSaved)
             }
             .padding(.horizontal, 16)

@@ -301,7 +301,6 @@ private let sceneSymbols: [String: String] = [
     "💍 Honeymoon":            "heart.fill",
     "🎒 Backpacking":          "backpack.fill",
     "🏨 City break":           "building.2.fill",
-    "🏝 Resort holiday":       "beach.umbrella.fill",
     "🩸 Near period":          "drop.fill",
     "☕ Coffee lover":          "cup.and.saucer.fill",
     "🍵 Tea lover":            "cup.and.saucer.fill",

@@ -309,6 +309,15 @@ final class TripStore: ObservableObject {
         save()
     }
 
+    /// Adds scene keys to a trip and merges the supplied sections.
+    /// Used by the suggestion preview flow so scene context is saved alongside the items.
+    func addScenesAndMerge(tripId: UUID, keys: [String], sections: [PackingSection]) {
+        guard let trip = trips.first(where: { $0.id == tripId }) else { return }
+        let existing = Set(trip.selectedSceneKeys)
+        trip.selectedSceneKeys.append(contentsOf: keys.filter { !existing.contains($0) })
+        mergeItems(tripId: tripId, sections: sections)
+    }
+
     /// Merges additional items into an existing trip.
     /// Sections with a matching title have items appended (skipping name duplicates).
     /// Sections with no matching title are appended as new sections.
