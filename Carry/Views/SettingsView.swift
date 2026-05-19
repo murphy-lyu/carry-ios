@@ -23,6 +23,14 @@ struct SettingsView: View {
             ?? preferred
     }
 
+    private var roadmapTitle: String {
+        let lang = Locale.preferredLanguages.first?.lowercased() ?? "en"
+        if lang.hasPrefix("zh") {
+            return lang.contains("hant") ? "路線圖" : "路线图"
+        }
+        return "Roadmap"
+    }
+
     private var notificationStatusText: LocalizedStringKey {
         switch notificationStatus {
         case .authorized, .provisional, .ephemeral:
@@ -147,16 +155,16 @@ struct SettingsView: View {
 
                 Section("settings.section.about") {
                     NavigationLink {
-                        RoadmapView()
+                        AboutView()
                     } label: {
-                        Text("Roadmap")
+                        Text("settings.about.entry")
                     }
                     .foregroundColor(.primary)
 
                     NavigationLink {
-                        AboutView()
+                        RoadmapView()
                     } label: {
-                        Text("settings.about.entry")
+                        Text(roadmapTitle)
                     }
                     .foregroundColor(.primary)
 

@@ -4,10 +4,29 @@
 //
 
 import SwiftUI
+import Combine
 
 private enum RoadmapRemote {
     // Default remote URL. You can override this inside the app UI.
     static let urlString = "https://raw.githubusercontent.com/your-user/your-repo/main/roadmap.json"
+}
+
+private enum RoadmapL10n {
+    private static var languageCode: String {
+        Locale.preferredLanguages.first?.lowercased() ?? "en"
+    }
+
+    static var isChinese: Bool {
+        languageCode.hasPrefix("zh")
+    }
+
+    static func text(en: String, zhHans: String, zhHant: String? = nil) -> String {
+        guard isChinese else { return en }
+        if languageCode.contains("hant") {
+            return zhHant ?? zhHans
+        }
+        return zhHans
+    }
 }
 
 private enum RoadmapStatus: String, Codable {
@@ -36,106 +55,67 @@ private struct RoadmapPayload: Codable {
 
     static let embeddedDefault = RoadmapPayload(
         updatedAt: "2026-05-20",
-        banner: "🚀 App Store 上线，2026年7月",
+        banner: RoadmapL10n.text(
+            en: "🚀 App Store launch, July 2026",
+            zhHans: "🚀 App Store 上线，2026年7月",
+            zhHant: "🚀 App Store 上線，2026年7月"
+        ),
         sections: [
             RoadmapSection(
                 id: "upcoming",
-                title: "即将推出的更新",
+                title: RoadmapL10n.text(
+                    en: "Upcoming updates",
+                    zhHans: "即将推出的更新",
+                    zhHant: "即將推出的更新"
+                ),
                 items: [
-                    RoadmapItem(id: "ai-pack", title: "AI 打包建议", status: .inProgress, note: "部分功能需要 Luggage+"),
-                    RoadmapItem(id: "collab", title: "协作旅行", status: .planned, note: nil),
-                    RoadmapItem(id: "flight-hotel", title: "航班与酒店集成", status: .planned, note: nil),
-                    RoadmapItem(id: "stats", title: "旅行统计", status: .planned, note: nil),
+                    RoadmapItem(
+                        id: "ai-pack",
+                        title: RoadmapL10n.text(en: "AI packing suggestions", zhHans: "AI 打包建议", zhHant: "AI 打包建議"),
+                        status: .inProgress,
+                        note: RoadmapL10n.text(
+                            en: "Some features require Luggage+",
+                            zhHans: "部分功能需要 Luggage+",
+                            zhHant: "部分功能需要 Luggage+"
+                        )
+                    ),
+                    RoadmapItem(id: "collab", title: RoadmapL10n.text(en: "Collaborative trips", zhHans: "协作旅行", zhHant: "協作旅行"), status: .planned, note: nil),
+                    RoadmapItem(id: "flight-hotel", title: RoadmapL10n.text(en: "Flight & hotel integration", zhHans: "航班与酒店集成", zhHant: "航班與酒店整合"), status: .planned, note: nil),
+                    RoadmapItem(id: "stats", title: RoadmapL10n.text(en: "Travel insights", zhHans: "旅行统计", zhHant: "旅行統計"), status: .planned, note: nil)
                 ]
             ),
             RoadmapSection(
                 id: "done",
-                title: "已完成",
+                title: RoadmapL10n.text(en: "Completed", zhHans: "已完成", zhHant: "已完成"),
                 items: [
-                    RoadmapItem(id: "currency", title: "货币换算", status: .done, note: nil),
-                    RoadmapItem(id: "todo", title: "旅行待办事项", status: .done, note: nil),
-                    RoadmapItem(id: "notes", title: "旅行笔记", status: .done, note: nil),
-                    RoadmapItem(id: "reminders", title: "旅行提醒", status: .done, note: nil),
-                    RoadmapItem(id: "weather", title: "天气预报", status: .done, note: nil),
-                    RoadmapItem(id: "plug", title: "插头类型信息", status: .done, note: nil),
-                    RoadmapItem(id: "custom", title: "自定义打包清单", status: .done, note: nil),
-                    RoadmapItem(id: "sorting", title: "物品与分类排序", status: .done, note: nil),
+                    RoadmapItem(id: "currency", title: RoadmapL10n.text(en: "Currency conversion", zhHans: "货币换算", zhHant: "貨幣換算"), status: .done, note: nil),
+                    RoadmapItem(id: "todo", title: RoadmapL10n.text(en: "Travel todos", zhHans: "旅行待办事项", zhHant: "旅行待辦事項"), status: .done, note: nil),
+                    RoadmapItem(id: "notes", title: RoadmapL10n.text(en: "Travel notes", zhHans: "旅行笔记", zhHant: "旅行筆記"), status: .done, note: nil),
+                    RoadmapItem(id: "reminders", title: RoadmapL10n.text(en: "Trip reminders", zhHans: "旅行提醒", zhHant: "旅行提醒"), status: .done, note: nil),
+                    RoadmapItem(id: "weather", title: RoadmapL10n.text(en: "Weather forecast", zhHans: "天气预报", zhHant: "天氣預報"), status: .done, note: nil),
+                    RoadmapItem(id: "plug", title: RoadmapL10n.text(en: "Plug type info", zhHans: "插头类型信息", zhHant: "插頭類型資訊"), status: .done, note: nil),
+                    RoadmapItem(id: "custom", title: RoadmapL10n.text(en: "Custom packing list", zhHans: "自定义打包清单", zhHant: "自定義打包清單"), status: .done, note: nil),
+                    RoadmapItem(id: "sorting", title: RoadmapL10n.text(en: "Item & section sorting", zhHans: "物品与分类排序", zhHant: "物品與分類排序"), status: .done, note: nil)
                 ]
-            ),
+            )
         ]
     )
 }
 
-@MainActor
-private final class RoadmapViewModel: ObservableObject {
-    @Published var payload: RoadmapPayload?
-    @Published var isLoading = false
-    @Published var errorMessage: String?
+struct RoadmapView: View {
+    @Environment(\.colorScheme) private var colorScheme
+    @AppStorage("roadmap_remote_url") private var remoteURL = ""
+    @State private var showSourceSheet = false
+    @State private var draftURL = ""
+
+    @State private var payload: RoadmapPayload?
+    @State private var isLoading = false
+    @State private var errorMessage: String?
 
     private var cacheURL: URL {
         FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask)[0]
             .appendingPathComponent("carry_roadmap_cache.json")
     }
-
-    func load(from overrideURLString: String?) async {
-        isLoading = true
-        errorMessage = nil
-
-        let remoteCandidates = [overrideURLString?.trimmingCharacters(in: .whitespacesAndNewlines), RoadmapRemote.urlString]
-            .compactMap { $0 }
-            .filter { !$0.isEmpty && !$0.contains("your-user/your-repo") }
-
-        for candidate in remoteCandidates {
-            if let remote = URL(string: candidate),
-               let fetched = await fetch(remote: remote) {
-                payload = fetched
-                saveCache(fetched)
-                isLoading = false
-                return
-            }
-        }
-
-        if let cached = loadCache() {
-            payload = cached
-            isLoading = false
-            return
-        }
-
-        // Always have a usable fallback so the page is never blank.
-        payload = .embeddedDefault
-        isLoading = false
-        errorMessage = "Using built-in roadmap data."
-    }
-
-    private func fetch(remote: URL) async -> RoadmapPayload? {
-        do {
-            let (data, response) = try await URLSession.shared.data(from: remote)
-            guard let http = response as? HTTPURLResponse, (200...299).contains(http.statusCode) else {
-                return nil
-            }
-            return try JSONDecoder().decode(RoadmapPayload.self, from: data)
-        } catch {
-            return nil
-        }
-    }
-
-    private func saveCache(_ payload: RoadmapPayload) {
-        guard let data = try? JSONEncoder().encode(payload) else { return }
-        try? data.write(to: cacheURL, options: .atomic)
-    }
-
-    private func loadCache() -> RoadmapPayload? {
-        guard let data = try? Data(contentsOf: cacheURL) else { return nil }
-        return try? JSONDecoder().decode(RoadmapPayload.self, from: data)
-    }
-}
-
-struct RoadmapView: View {
-    @StateObject private var vm = RoadmapViewModel()
-    @Environment(\.colorScheme) private var colorScheme
-    @AppStorage("roadmap_remote_url") private var remoteURL = ""
-    @State private var showSourceSheet = false
-    @State private var draftURL = ""
 
     var body: some View {
         ScrollView {
@@ -143,11 +123,12 @@ struct RoadmapView: View {
                 header
                 content
             }
+            .frame(maxWidth: .infinity, alignment: .leading)
             .padding(16)
             .padding(.bottom, 24)
         }
         .background(background.ignoresSafeArea())
-        .navigationTitle("Roadmap")
+        .navigationTitle(RoadmapL10n.text(en: "Roadmap", zhHans: "路线图", zhHant: "路線圖"))
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
@@ -162,42 +143,46 @@ struct RoadmapView: View {
         .sheet(isPresented: $showSourceSheet) {
             NavigationStack {
                 Form {
-                    Section("Remote JSON URL") {
+                    Section(RoadmapL10n.text(en: "Remote JSON URL", zhHans: "远程 JSON 地址", zhHant: "遠端 JSON 位址")) {
                         TextField("https://raw.githubusercontent.com/...", text: $draftURL)
                             .textInputAutocapitalization(.never)
                             .autocorrectionDisabled()
                             .keyboardType(.URL)
-                        Text("留空将使用内置默认数据；填入后会优先拉取远程。")
+                        Text(RoadmapL10n.text(
+                            en: "Leave empty to use built-in defaults; fill in URL to prioritize remote data.",
+                            zhHans: "留空将使用内置默认数据；填入后会优先拉取远程。",
+                            zhHant: "留空將使用內建預設資料；填入後會優先拉取遠端。"
+                        ))
                             .font(.caption)
                             .foregroundStyle(.secondary)
                     }
                 }
-                .navigationTitle("Roadmap Source")
+                .navigationTitle(RoadmapL10n.text(en: "Roadmap Source", zhHans: "路线图数据源", zhHant: "路線圖資料來源"))
                 .navigationBarTitleDisplayMode(.inline)
                 .toolbar {
                     ToolbarItem(placement: .cancellationAction) {
-                        Button("Cancel") { showSourceSheet = false }
+                        Button(RoadmapL10n.text(en: "Cancel", zhHans: "取消", zhHant: "取消")) { showSourceSheet = false }
                     }
                     ToolbarItem(placement: .confirmationAction) {
-                        Button("Save") {
+                        Button(RoadmapL10n.text(en: "Save", zhHans: "保存", zhHant: "儲存")) {
                             remoteURL = draftURL.trimmingCharacters(in: .whitespacesAndNewlines)
                             showSourceSheet = false
-                            Task { await vm.load(from: remoteURL) }
+                            Task { await load() }
                         }
                     }
                 }
             }
         }
-        .task { await vm.load(from: remoteURL) }
-        .refreshable { await vm.load(from: remoteURL) }
+        .task { await load() }
+        .refreshable { await load() }
     }
 
     private var header: some View {
         VStack(alignment: .leading, spacing: 8) {
-            Text("Product Roadmap")
+            Text(RoadmapL10n.text(en: "Product Roadmap", zhHans: "产品路线图", zhHant: "產品路線圖"))
                 .font(.title2.bold())
                 .foregroundStyle(.primary)
-            if let banner = vm.payload?.banner, !banner.isEmpty {
+            if let banner = payload?.banner, !banner.isEmpty {
                 Text(banner)
                     .font(.subheadline.weight(.medium))
                     .padding(.horizontal, 12)
@@ -212,8 +197,8 @@ struct RoadmapView: View {
                     .foregroundStyle(.white)
                     .clipShape(Capsule())
             }
-            if let updatedAt = vm.payload?.updatedAt, !updatedAt.isEmpty {
-                Text("Updated: \(updatedAt)")
+            if let updatedAt = payload?.updatedAt, !updatedAt.isEmpty {
+                Text(RoadmapL10n.text(en: "Updated: \(updatedAt)", zhHans: "更新于：\(updatedAt)", zhHant: "更新於：\(updatedAt)"))
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
@@ -222,18 +207,22 @@ struct RoadmapView: View {
 
     @ViewBuilder
     private var content: some View {
-        if vm.isLoading && vm.payload == nil {
+        if isLoading && payload == nil {
             ProgressView().frame(maxWidth: .infinity, alignment: .center).padding(.top, 40)
-        } else if let payload = vm.payload {
+        } else if let payload {
             ForEach(payload.sections) { section in
                 sectionBlock(section)
             }
         } else {
             VStack(alignment: .leading, spacing: 10) {
-                Text(vm.errorMessage ?? "Roadmap unavailable")
+                Text(errorMessage ?? RoadmapL10n.text(en: "Roadmap unavailable", zhHans: "路线图暂不可用", zhHant: "路線圖暫不可用"))
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
-                Text("Tap top-right link icon to configure your GitHub raw JSON URL.")
+                Text(RoadmapL10n.text(
+                    en: "Tap the top-right link icon to configure your GitHub raw JSON URL.",
+                    zhHans: "点击右上角链接图标，配置你的 GitHub Raw JSON 地址。",
+                    zhHant: "點擊右上角連結圖示，設定你的 GitHub Raw JSON 位址。"
+                ))
                     .font(.caption)
                     .foregroundStyle(.tertiary)
             }
@@ -256,6 +245,7 @@ struct RoadmapView: View {
                 }
             }
         }
+        .frame(maxWidth: .infinity, alignment: .leading)
         .padding(16)
         .background(cardBackground)
         .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
@@ -311,6 +301,60 @@ struct RoadmapView: View {
 
     private var background: Color {
         colorScheme == .dark ? Color.black : Color(.systemGroupedBackground)
+    }
+
+    private func load() async {
+        isLoading = true
+        errorMessage = nil
+
+        let remoteCandidates = [remoteURL.trimmingCharacters(in: .whitespacesAndNewlines), RoadmapRemote.urlString]
+            .filter { !$0.isEmpty && !$0.contains("your-user/your-repo") }
+
+        for candidate in remoteCandidates {
+            if let remote = URL(string: candidate),
+               let fetched = await fetch(remote: remote) {
+                payload = fetched
+                saveCache(fetched)
+                isLoading = false
+                return
+            }
+        }
+
+        if let cached = loadCache() {
+            payload = cached
+            isLoading = false
+            return
+        }
+
+        payload = .embeddedDefault
+        isLoading = false
+        errorMessage = RoadmapL10n.text(
+            en: "Using built-in roadmap data.",
+            zhHans: "当前使用内置路线图数据。",
+            zhHant: "目前使用內建路線圖資料。"
+        )
+    }
+
+    private func fetch(remote: URL) async -> RoadmapPayload? {
+        do {
+            let (data, response) = try await URLSession.shared.data(from: remote)
+            guard let http = response as? HTTPURLResponse, (200...299).contains(http.statusCode) else {
+                return nil
+            }
+            return try JSONDecoder().decode(RoadmapPayload.self, from: data)
+        } catch {
+            return nil
+        }
+    }
+
+    private func saveCache(_ payload: RoadmapPayload) {
+        guard let data = try? JSONEncoder().encode(payload) else { return }
+        try? data.write(to: cacheURL, options: .atomic)
+    }
+
+    private func loadCache() -> RoadmapPayload? {
+        guard let data = try? Data(contentsOf: cacheURL) else { return nil }
+        return try? JSONDecoder().decode(RoadmapPayload.self, from: data)
     }
 }
 
