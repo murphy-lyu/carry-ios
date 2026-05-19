@@ -477,10 +477,10 @@ struct PackingListView: View {
     private func surpriseRow(for item: SurpriseItem) -> some View {
         HStack(alignment: .top, spacing: 12) {
             VStack(alignment: .leading, spacing: 3) {
-                Text(item.name)
+                Text(LocalizedStringKey(item.name))
                     .font(.subheadline)
                     .foregroundStyle(.primary)
-                Text(item.note)
+                Text(LocalizedStringKey(item.note))
                     .font(.caption)
                     .foregroundStyle(.secondary)
                     .fixedSize(horizontal: false, vertical: true)
