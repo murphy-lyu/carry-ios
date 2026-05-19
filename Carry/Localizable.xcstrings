@@ -514,6 +514,52 @@
         }
       }
     },
+    "Get personalised suggestions" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Get personalised suggestions"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "获取个性化推荐"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "獲取個性化推薦"
+          }
+        }
+      }
+    },
+    "Tell us about your trip for thoughtful extras" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tell us about your trip for thoughtful extras"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "告诉我们行程类型，获取贴心推荐"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "告訴我們行程類型，獲取貼心推薦"
+          }
+        }
+      }
+    },
     "About you" : {
       "extractionState" : "manual",
       "localizations" : {

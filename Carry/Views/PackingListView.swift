@@ -38,6 +38,7 @@ struct PackingListView: View {
     private var sections: [PackingSection] {
         (bundle?.safeSections ?? []).filter { ($0.items?.isEmpty == false) }
     }
+    private var hasScenes: Bool { !(bundle?.selectedSceneKeys.isEmpty ?? true) }
     private var totalCount: Int  { bundle?.totalCount  ?? 0 }
     private var packedCount: Int { bundle?.packedCount ?? 0 }
     private var progress: Double {
@@ -105,6 +106,17 @@ struct PackingListView: View {
                         } header: {
                             surpriseSectionHeader
                                 .listRowInsets(EdgeInsets())
+                        }
+                        .listSectionSeparator(.hidden)
+                    }
+
+                    // — Scene entry nudge (manual trips with no scenes selected)
+                    if !hasScenes {
+                        Section {
+                            sceneEntryCard
+                                .listRowInsets(EdgeInsets(top: 8, leading: 16, bottom: 16, trailing: 16))
+                                .listRowSeparator(.hidden)
+                                .listRowBackground(Color(UIColor.systemBackground))
                         }
                         .listSectionSeparator(.hidden)
                     }
@@ -431,6 +443,36 @@ struct PackingListView: View {
         .background(Color.black)
     }
 
+    private var sceneEntryCard: some View {
+        Button { showEditScenesSheet = true } label: {
+            HStack(spacing: 12) {
+                Image(systemName: "sparkles")
+                    .font(.system(size: 15))
+                    .foregroundStyle(Color(UIColor.systemPurple))
+                    .frame(width: 32, height: 32)
+                    .background(Color(UIColor.systemPurple).opacity(0.1))
+                    .clipShape(Circle())
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Get personalised suggestions")
+                        .font(.subheadline.weight(.medium))
+                        .foregroundStyle(.primary)
+                    Text("Tell us about your trip for thoughtful extras")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+                Spacer(minLength: 8)
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 12, weight: .medium))
+                    .foregroundStyle(Color(UIColor.tertiaryLabel))
+            }
+            .padding(.horizontal, 14)
+            .padding(.vertical, 12)
+            .background(Color(UIColor.secondarySystemBackground))
+            .cornerRadius(14)
+        }
+        .buttonStyle(.plain)
+    }
+
     private var nudgeBanner: some View {
         HStack(spacing: 8) {
             Image(systemName: "sparkles")
@@ -528,7 +570,11 @@ struct PackingListView: View {
                 .multilineTextAlignment(.center)
                 .padding(.top, 6)
             Spacer()
-            Spacer()
+            if !hasScenes {
+                sceneEntryCard
+                    .padding(.horizontal, 16)
+                    .padding(.bottom, 24)
+            }
             Spacer()
         }
         .padding(.horizontal, 32)
