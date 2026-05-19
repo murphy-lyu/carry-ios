@@ -290,7 +290,8 @@ struct SceneChip: View {
             HStack(spacing: 6) {
                 if let symbol = sceneSymbols[label] {
                     Image(systemName: symbol)
-                        .font(.system(size: 14))
+                        .font(.system(size: 13))
+                        .frame(width: 16, height: 16)
                         .foregroundStyle(isSelected ? Color(UIColor.systemBackground) : .primary)
                 }
                 Text(displayKey)
