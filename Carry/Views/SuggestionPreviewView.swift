@@ -297,8 +297,12 @@ struct SuggestionPreviewView: View {
         }
         store.addScenesAndMerge(tripId: tripId, keys: sceneKeys, sections: newSections)
 
-        for item in surpriseItems where selectedSurpriseNames.contains(item.name) {
-            store.addSurpriseItem(tripId: tripId, item: item)
+        for item in surpriseItems {
+            if selectedSurpriseNames.contains(item.name) {
+                store.addSurpriseItem(tripId: tripId, item: item)
+            } else {
+                store.dismissSurpriseItem(tripId: tripId, itemName: item.name)
+            }
         }
 
         UINotificationFeedbackGenerator().notificationOccurred(.success)
