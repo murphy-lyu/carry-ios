@@ -206,14 +206,13 @@ struct ItemPickerView: View {
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
-                Button { confirmSelection() } label: {
-                    Image(systemName: "checkmark")
-                        .font(.system(size: 12, weight: .semibold))
-                        .foregroundColor(hasSelection ? .primary : Color(UIColor.tertiaryLabel))
-                        .frame(width: 32, height: 32)
-                        .glassCircleButton()
+                Button {
+                    confirmSelection()
+                } label: {
+                    Label("Save", systemImage: "checkmark")
+                        .labelStyle(.titleAndIcon)
                 }
-                .buttonStyle(.plain)
+                .fontWeight(.semibold)
                 .disabled(!hasSelection)
                 .animation(.easeInOut(duration: 0.15), value: hasSelection)
             }
