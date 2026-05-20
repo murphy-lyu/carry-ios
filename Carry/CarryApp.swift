@@ -10,8 +10,23 @@ import SwiftData
 
 @main
 struct CarryApp: App {
+    @UIApplicationDelegateAdaptor(AppDelegate.self) private var appDelegate
+
     static let container: ModelContainer = {
-        try! ModelContainer(for: TripBundle.self)
+        let schema = Schema(versionedSchema: CarrySchemaV1.self)
+        let configuration = ModelConfiguration(schema: schema, isStoredInMemoryOnly: false)
+
+        do {
+            return try ModelContainer(for: schema, configurations: [configuration])
+        } catch {
+            // Never auto-delete user data. Fallback to in-memory store for this launch only.
+            let memoryConfiguration = ModelConfiguration(schema: schema, isStoredInMemoryOnly: true)
+            do {
+                return try ModelContainer(for: schema, configurations: [memoryConfiguration])
+            } catch {
+                fatalError("Failed to initialize SwiftData container: \(error)")
+            }
+        }
     }()
 
     @StateObject private var store = TripStore()
@@ -31,5 +46,15 @@ struct CarryApp: App {
                 .preferredColorScheme(appearanceMode.colorScheme)
         }
         .modelContainer(Self.container)
+    }
+}
+
+final class AppDelegate: NSObject, UIApplicationDelegate {
+    func application(_ application: UIApplication, shouldSaveSecureApplicationState coder: NSCoder) -> Bool {
+        false
+    }
+
+    func application(_ application: UIApplication, shouldRestoreSecureApplicationState coder: NSCoder) -> Bool {
+        false
     }
 }
