@@ -97,6 +97,8 @@ private struct RoadmapPayload: Codable {
 }
 
 struct RoadmapView: View {
+    var onClose: (() -> Void)? = nil
+
     @Environment(\.colorScheme) private var colorScheme
     @AppStorage("roadmap_remote_url") private var remoteURL = ""
     @State private var showSourceSheet = false
@@ -112,30 +114,25 @@ struct RoadmapView: View {
     }
 
     var body: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 20) {
-                header
-                content
+        VStack(spacing: 0) {
+            topBar
+                .padding(.horizontal, 16)
+                .padding(.top, 24)
+                .padding(.bottom, 10)
+                .background(background)
+
+            ScrollView {
+                VStack(alignment: .leading, spacing: 20) {
+                    header
+                    content
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.horizontal, 16)
+                .padding(.bottom, 24)
             }
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(16)
-            .padding(.bottom, 24)
         }
         .background(background.ignoresSafeArea())
-        .navigationTitle(RoadmapL10n.text(en: "Roadmap", zhHans: "路线图", zhHant: "路線圖"))
-        .navigationBarTitleDisplayMode(.inline)
-#if DEBUG
-        .toolbar {
-            ToolbarItem(placement: .topBarTrailing) {
-                Button {
-                    draftURL = remoteURL
-                    showSourceSheet = true
-                } label: {
-                    Image(systemName: "link")
-                }
-            }
-        }
-#endif
+        .navigationBarHidden(true)
         .sheet(isPresented: $showSourceSheet) {
             NavigationStack {
                 Form {
@@ -173,30 +170,55 @@ struct RoadmapView: View {
         .refreshable { await load() }
     }
 
-    private var header: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text(RoadmapL10n.text(en: "Product Roadmap", zhHans: "产品路线图", zhHant: "產品路線圖"))
-                .font(.title2.bold())
+    private var topBar: some View {
+        HStack(spacing: 12) {
+            Text(RoadmapL10n.text(en: "Roadmap", zhHans: "路线图", zhHant: "路線圖"))
+                .font(.system(size: 34, weight: .bold))
                 .foregroundStyle(.primary)
+                .frame(maxWidth: .infinity, alignment: .leading)
+
+            HStack(spacing: 8) {
+#if DEBUG
+                Button {
+                    draftURL = remoteURL
+                    showSourceSheet = true
+                } label: {
+                    Image(systemName: "link")
+                        .font(.system(size: 13, weight: .semibold))
+                        .foregroundStyle(.primary)
+                        .frame(width: 36, height: 36)
+                        .glassCircleButton()
+                }
+                .buttonStyle(.plain)
+#endif
+
+                if let onClose {
+                Button {
+                    onClose()
+                } label: {
+                    Image(systemName: "xmark")
+                        .font(.system(size: 13, weight: .semibold))
+                        .foregroundStyle(.primary)
+                        .frame(width: 36, height: 36)
+                        .glassCircleButton()
+                }
+                .buttonStyle(.plain)
+            }
+            }
+        }
+    }
+
+    private var header: some View {
+        VStack(alignment: .leading, spacing: 6) {
             if let banner = payload?.banner, !banner.isEmpty {
                 Text(banner)
-                    .font(.subheadline.weight(.medium))
-                    .padding(.horizontal, 12)
-                    .padding(.vertical, 8)
-                    .background(
-                        LinearGradient(
-                            colors: [Color.blue.opacity(0.7), Color.indigo.opacity(0.7)],
-                            startPoint: .leading,
-                            endPoint: .trailing
-                        )
-                    )
-                    .foregroundStyle(.white)
-                    .clipShape(Capsule())
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(.secondary)
             }
             if let updatedAt = payload?.updatedAt, !updatedAt.isEmpty {
                 Text(RoadmapL10n.text(en: "Updated: \(updatedAt)", zhHans: "更新于：\(updatedAt)", zhHant: "更新於：\(updatedAt)"))
                     .font(.caption)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(.tertiary)
             }
         }
     }

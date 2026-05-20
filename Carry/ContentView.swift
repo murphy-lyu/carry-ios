@@ -26,11 +26,14 @@ final class NavigationRouter: ObservableObject {
 // MARK: - ContentView
 
 struct ContentView: View {
-    @StateObject private var store = TripStore()
-    @StateObject private var router = NavigationRouter()
+    @EnvironmentObject private var store: TripStore
+    @EnvironmentObject private var router: NavigationRouter
+    @Environment(\.scenePhase) private var scenePhase
+    @State private var selectedTab = 0
+    @State private var didApplyStartupReset = false
 
     var body: some View {
-        TabView {
+        TabView(selection: $selectedTab) {
             NavigationStack(path: $router.path) {
                 HomeView()
                     .navigationDestination(for: UUID.self) { id in
@@ -56,6 +59,7 @@ struct ContentView: View {
             .tabItem {
                 Label("Trips", systemImage: "suitcase")
             }
+            .tag(0)
 
             NavigationStack {
                 SettingsView()
@@ -63,10 +67,27 @@ struct ContentView: View {
             .tabItem {
                 Label("Settings", systemImage: "gear")
             }
+            .tag(1)
         }
         .tint(.primary)
         .environmentObject(store)
         .environmentObject(router)
+        .onAppear {
+            applyStartupResetIfNeeded()
+        }
+        .onChange(of: scenePhase) { _, phase in
+            if phase == .active {
+                applyStartupResetIfNeeded()
+            }
+        }
+    }
+
+    private func applyStartupResetIfNeeded() {
+        guard !didApplyStartupReset else { return }
+        // Prevent iOS state restoration from reopening stale navigation/sheet routes.
+        selectedTab = 0
+        router.path = NavigationPath()
+        didApplyStartupReset = true
     }
 }
 

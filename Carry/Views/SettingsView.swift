@@ -10,6 +10,9 @@ struct SettingsView: View {
 
     @State private var notificationStatus: UNAuthorizationStatus = .notDetermined
     @State private var showAppearancePicker = false
+    @State private var showRoadmapSheet = false
+    @State private var didApplyLaunchSheetReset = false
+    @Environment(\.scenePhase) private var scenePhase
     @AppStorage("appearance_mode") private var appearanceModeRaw = AppearanceMode.system.rawValue
 
     private var currentAppearance: AppearanceMode {
@@ -161,10 +164,16 @@ struct SettingsView: View {
                     }
                     .foregroundColor(.primary)
 
-                    NavigationLink {
-                        RoadmapView()
+                    Button {
+                        showRoadmapSheet = true
                     } label: {
-                        Text(roadmapTitle)
+                        HStack {
+                            Text(roadmapTitle)
+                            Spacer()
+                            Image(systemName: "chevron.right")
+                                .font(.caption)
+                                .foregroundStyle(.tertiary)
+                        }
                     }
                     .foregroundColor(.primary)
 
@@ -188,10 +197,31 @@ struct SettingsView: View {
         .background(Color(.systemGroupedBackground).ignoresSafeArea())
         .navigationBarHidden(true)
         .task { await refreshNotificationStatus() }
+        .onAppear {
+            // Guard against stale state restoration reopening this sheet on fresh launches.
+            if !didApplyLaunchSheetReset {
+                showRoadmapSheet = false
+                didApplyLaunchSheetReset = true
+            }
+        }
+        .onChange(of: scenePhase) { _, phase in
+            // If iOS restores transient sheet state when app re-enters foreground, close it.
+            if phase == .active && !didApplyLaunchSheetReset {
+                showRoadmapSheet = false
+                didApplyLaunchSheetReset = true
+            }
+        }
         .onReceive(
             NotificationCenter.default.publisher(for: UIApplication.willEnterForegroundNotification)
         ) { _ in
             Task { await refreshNotificationStatus() }
+        }
+        .sheet(isPresented: $showRoadmapSheet) {
+            NavigationStack {
+                RoadmapView {
+                    showRoadmapSheet = false
+                }
+            }
         }
     }
 }

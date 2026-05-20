@@ -10,13 +10,18 @@ struct SplashView: View {
     @State private var isActive = false
     @State private var scale: CGFloat = 0.82
     @State private var opacity: Double = 0
+    @State private var didStart = false
 
     var body: some View {
         if isActive {
             ContentView()
         } else {
             splashContent
-                .onAppear { animateIn() }
+                .onAppear {
+                    guard !didStart else { return }
+                    didStart = true
+                    animateIn()
+                }
         }
     }
 
