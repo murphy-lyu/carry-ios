@@ -15,6 +15,7 @@ struct HomeView: View {
 
     @State private var tripToDelete: TripBundle?
     @State private var showDeleteConfirmation = false
+    @State private var listIdentity = UUID()
 
     private static let archiveThresholdDays = 30
 
@@ -25,14 +26,26 @@ struct HomeView: View {
     }
 
     private var upcomingTrips: [TripBundle] {
-        store.trips
+        struct Decorated {
+            let trip: TripBundle
+            let isComplete: Bool
+        }
+
+        let decorated = store.trips
             .filter { !isPast($0) }
-            .sorted { a, b in
-                let aComplete = a.packedCount == a.totalCount && a.totalCount > 0
-                let bComplete = b.packedCount == b.totalCount && b.totalCount > 0
-                if aComplete != bComplete { return !aComplete }
-                return a.departureDate < b.departureDate
+            .map { trip in
+                let complete = trip.totalCount > 0 && trip.packedCount == trip.totalCount
+                return Decorated(trip: trip, isComplete: complete)
             }
+
+        return decorated
+            .sorted { a, b in
+                if a.isComplete != b.isComplete { return !a.isComplete }
+                if a.trip.departureDate != b.trip.departureDate { return a.trip.departureDate < b.trip.departureDate }
+                if a.trip.createdAt != b.trip.createdAt { return a.trip.createdAt > b.trip.createdAt }
+                return a.trip.id.uuidString < b.trip.id.uuidString
+            }
+            .map(\.trip)
     }
 
     private var pastTrips: [TripBundle] {
@@ -116,6 +129,7 @@ struct HomeView: View {
                         }
                     }
                 }
+                .id(listIdentity)
                 .listStyle(.plain)
                 .scrollContentBackground(.hidden)
                 .background(Color.clear)
@@ -148,7 +162,7 @@ struct HomeView: View {
             TripCard(bundle: bundle, isPast: isPast)
         }
         .buttonStyle(PressableScaleButtonStyle(scale: 0.985))
-        .swipeActions(edge: .trailing) {
+        .swipeActions(edge: .trailing, allowsFullSwipe: false) {
             Button(role: .none) {
                 tripToDelete = bundle
                 showDeleteConfirmation = true
@@ -158,9 +172,12 @@ struct HomeView: View {
             .tint(.red)
             Button {
                 UIImpactFeedbackGenerator(style: .light).impactOccurred()
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.38) {
-                    withAnimation(.spring(response: 0.4, dampingFraction: 0.82)) {
-                        store.duplicateTrip(withId: bundle.id)
+                // Force-close any active swipe row state before mutating data to avoid
+                // temporary blank placeholder gaps in List.
+                listIdentity = UUID()
+                DispatchQueue.main.async {
+                    withAnimation(.easeInOut(duration: 0.24)) {
+                        _ = store.duplicateTrip(withId: bundle.id)
                     }
                 }
             } label: {

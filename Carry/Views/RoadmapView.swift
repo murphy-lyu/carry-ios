@@ -64,7 +64,7 @@ private struct RoadmapPayload: Codable {
             RoadmapSection(
                 id: "upcoming",
                 title: RoadmapL10n.text(
-                    en: "Upcoming updates",
+                    en: "Upcoming",
                     zhHans: "即将推出的更新",
                     zhHant: "即將推出的更新"
                 ),
@@ -125,6 +125,7 @@ struct RoadmapView: View {
                 VStack(alignment: .leading, spacing: 20) {
                     header
                     content
+                    footerNote
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .padding(.horizontal, 16)
@@ -254,8 +255,10 @@ struct RoadmapView: View {
     private func sectionBlock(_ section: RoadmapSection) -> some View {
         VStack(alignment: .leading, spacing: 14) {
             Text(section.title)
-                .font(.headline)
-                .foregroundStyle(.primary)
+                .font(.system(size: 11, weight: .medium))
+                .foregroundStyle(.tertiary)
+                .kerning(1.4)
+                .textCase(.uppercase)
 
             VStack(alignment: .leading, spacing: 0) {
                 ForEach(Array(section.items.enumerated()), id: \.element.id) { index, item in
@@ -269,19 +272,21 @@ struct RoadmapView: View {
         .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
     }
 
+    private var footerNote: some View {
+        HStack {
+            Spacer()
+            Text("Made with ❤️")
+                .font(.footnote)
+                .foregroundStyle(.secondary)
+            Spacer()
+        }
+        .padding(.top, 8)
+    }
+
     private func roadmapRow(item: RoadmapItem, isLast: Bool) -> some View {
         HStack(alignment: .top, spacing: 12) {
             VStack(spacing: 0) {
-                Circle()
-                    .fill(dotColor(item.status))
-                    .frame(width: 16, height: 16)
-                    .overlay {
-                        if item.status == .done {
-                            Image(systemName: "checkmark")
-                                .font(.system(size: 9, weight: .bold))
-                                .foregroundStyle(.white)
-                        }
-                    }
+                statusDot(for: item.status)
 
                 if !isLast {
                     Rectangle()
@@ -302,6 +307,24 @@ struct RoadmapView: View {
                 }
             }
             .padding(.bottom, isLast ? 0 : 8)
+        }
+    }
+
+    @ViewBuilder
+    private func statusDot(for status: RoadmapStatus) -> some View {
+        if status == .inProgress {
+            RippleDot(color: dotColor(status))
+        } else {
+            Circle()
+                .fill(dotColor(status))
+                .frame(width: 16, height: 16)
+                .overlay {
+                    if status == .done {
+                        Image(systemName: "checkmark")
+                            .font(.system(size: 9, weight: .bold))
+                            .foregroundStyle(.white)
+                    }
+                }
         }
     }
 
@@ -373,6 +396,39 @@ struct RoadmapView: View {
     private func loadCache() -> RoadmapPayload? {
         guard let data = try? Data(contentsOf: cacheURL) else { return nil }
         return try? JSONDecoder().decode(RoadmapPayload.self, from: data)
+    }
+}
+
+private struct RippleDot: View {
+    let color: Color
+    @State private var pulse1 = false
+    @State private var pulse2 = false
+
+    var body: some View {
+        ZStack {
+            Circle()
+                .stroke(color.opacity(pulse1 ? 0.0 : 0.42), lineWidth: 1.8)
+                .frame(width: 16, height: 16)
+                .scaleEffect(pulse1 ? 1.9 : 1.0)
+
+            Circle()
+                .stroke(color.opacity(pulse2 ? 0.0 : 0.28), lineWidth: 1.6)
+                .frame(width: 16, height: 16)
+                .scaleEffect(pulse2 ? 2.3 : 1.0)
+
+            Circle()
+                .fill(color)
+                .frame(width: 16, height: 16)
+        }
+        .frame(width: 16, height: 16)
+        .onAppear {
+            withAnimation(.easeOut(duration: 1.5).repeatForever(autoreverses: false)) {
+                pulse1 = true
+            }
+            withAnimation(.easeOut(duration: 1.5).delay(0.55).repeatForever(autoreverses: false)) {
+                pulse2 = true
+            }
+        }
     }
 }
 

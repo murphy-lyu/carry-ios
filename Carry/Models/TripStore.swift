@@ -104,8 +104,10 @@ final class TripStore: ObservableObject {
         save()
     }
 
-    func duplicateTrip(withId id: UUID) {
-        guard let original = trips.first(where: { $0.id == id }) else { return }
+    @discardableResult
+    func duplicateTrip(withId id: UUID) -> UUID? {
+        guard let originalIndex = trips.firstIndex(where: { $0.id == id }) else { return nil }
+        let original = trips[originalIndex]
         let copySuffix = NSLocalizedString("trip.copy_suffix", comment: "")
         let newSections = original.safeSections.map { section -> PackingSection in
             let items = section.sortedItems
@@ -126,7 +128,14 @@ final class TripStore: ObservableObject {
             selectedSceneKeys: original.selectedSceneKeys,
             sections: newSections
         )
-        addTrip(newBundle)
+        context.insert(newBundle)
+        // Insert in-memory first to avoid full-list refetch jumpiness in UI.
+        let insertIndex = min(originalIndex + 1, trips.count)
+        trips.insert(newBundle, at: insertIndex)
+        DispatchQueue.main.async {
+            try? self.context.save()
+        }
+        return newBundle.id
     }
 
     func updateTripInfo(tripId: UUID, info: TripInfo) {
