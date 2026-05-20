@@ -156,6 +156,13 @@ struct HomeView: View {
                 Label("Delete", systemImage: "trash")
             }
             .tint(.red)
+            Button {
+                UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                Task { @MainActor in store.duplicateTrip(withId: bundle.id) }
+            } label: {
+                Label("trip.swipe.duplicate", systemImage: "doc.on.doc")
+            }
+            .tint(.blue)
         }
         .listRowInsets(EdgeInsets(top: 0, leading: 16, bottom: 12, trailing: 16))
         .listRowBackground(Color.clear)

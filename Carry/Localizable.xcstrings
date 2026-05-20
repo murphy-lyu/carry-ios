@@ -4347,61 +4347,61 @@
         }
       }
     },
-    "Cabin humidity drops to under 20% — your skin will beg for this mid-flight": {
+    "Cabin humidity drops to under 20 percent — your skin will beg for this mid-flight": {
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Cabin humidity drops to under 20% — your skin will beg for this mid-flight"
+            "value": "Cabin humidity drops to under 20 percent — your skin will beg for this mid-flight"
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "机舱湿度低于20%——飞到一半你的皮肤会求你用它"
+            "value": "机舱湿度低于20％——飞到一半你的皮肤会求你用它"
           }
         },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "機艙濕度低於20%——飛到一半你的皮膚會求你用它"
+            "value": "機艙濕度低於20％——飛到一半你的皮膚會求你用它"
           }
         },
         "ja": {
           "stringUnit": {
             "state": "needs_review",
-            "value": "Cabin humidity drops to under 20% — your skin will beg for this mid-flight"
+            "value": "Cabin humidity drops to under 20 percent — your skin will beg for this mid-flight"
           }
         },
         "de": {
           "stringUnit": {
             "state": "needs_review",
-            "value": "Cabin humidity drops to under 20% — your skin will beg for this mid-flight"
+            "value": "Cabin humidity drops to under 20 percent — your skin will beg for this mid-flight"
           }
         },
         "fr": {
           "stringUnit": {
             "state": "needs_review",
-            "value": "Cabin humidity drops to under 20% — your skin will beg for this mid-flight"
+            "value": "Cabin humidity drops to under 20 percent — your skin will beg for this mid-flight"
           }
         },
         "es": {
           "stringUnit": {
             "state": "needs_review",
-            "value": "Cabin humidity drops to under 20% — your skin will beg for this mid-flight"
+            "value": "Cabin humidity drops to under 20 percent — your skin will beg for this mid-flight"
           }
         },
         "ko": {
           "stringUnit": {
             "state": "needs_review",
-            "value": "Cabin humidity drops to under 20% — your skin will beg for this mid-flight"
+            "value": "Cabin humidity drops to under 20 percent — your skin will beg for this mid-flight"
           }
         },
         "pt-BR": {
           "stringUnit": {
             "state": "needs_review",
-            "value": "Cabin humidity drops to under 20% — your skin will beg for this mid-flight"
+            "value": "Cabin humidity drops to under 20 percent — your skin will beg for this mid-flight"
           }
         }
       }
@@ -20687,6 +20687,40 @@
           "stringUnit": {
             "state": "needs_review",
             "value": "Trip type"
+          }
+        }
+      }
+    },
+    "trip.copy_suffix": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": " (Copy)"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "（副本）"
+          }
+        }
+      }
+    },
+    "trip.swipe.duplicate": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Duplicate"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "复制"
           }
         }
       }

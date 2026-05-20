@@ -102,6 +102,31 @@ final class TripStore: ObservableObject {
         save()
     }
 
+    func duplicateTrip(withId id: UUID) {
+        guard let original = trips.first(where: { $0.id == id }) else { return }
+        let copySuffix = NSLocalizedString("trip.copy_suffix", comment: "")
+        let newSections = original.safeSections.map { section -> PackingSection in
+            let items = section.sortedItems
+                .filter { !$0.name.isEmpty }
+                .enumerated()
+                .map { idx, item in
+                    PackingItem(name: item.name, isPacked: false, isAlert: item.isAlert, sortOrder: idx)
+                }
+            return PackingSection(title: section.title, items: items, sortOrder: section.sortOrder)
+        }
+        let newBundle = TripBundle(
+            name: original.name + copySuffix,
+            destinationCity: original.destinationCity,
+            days: original.days,
+            dateRange: original.dateRange,
+            departureDate: original.departureDate,
+            createdAt: Date(),
+            selectedSceneKeys: original.selectedSceneKeys,
+            sections: newSections
+        )
+        addTrip(newBundle)
+    }
+
     func updateTripInfo(tripId: UUID, info: TripInfo) {
         guard let trip = trips.first(where: { $0.id == tripId }) else { return }
         trip.name = info.name

@@ -14,6 +14,9 @@ struct CarryApp: App {
         try! ModelContainer(for: TripBundle.self)
     }()
 
+    @StateObject private var store = TripStore()
+    @StateObject private var router = NavigationRouter()
+
     @AppStorage("appearance_mode") private var appearanceModeRaw = AppearanceMode.system.rawValue
 
     private var appearanceMode: AppearanceMode {
@@ -23,6 +26,8 @@ struct CarryApp: App {
     var body: some Scene {
         WindowGroup {
             SplashView()
+                .environmentObject(store)
+                .environmentObject(router)
                 .preferredColorScheme(appearanceMode.colorScheme)
         }
         .modelContainer(Self.container)

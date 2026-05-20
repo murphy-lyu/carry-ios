@@ -36,7 +36,7 @@ struct PackingListView: View {
     @State private var hasTriggeredNudge = false
     @State private var surpriseBatchOffset: Int = 0
 
-    private let surpriseBatchSize = 4
+    private let surpriseBatchSize = 6
 
     private var bundle: TripBundle? { store.bundle(for: tripId) }
     private var sections: [PackingSection] {
