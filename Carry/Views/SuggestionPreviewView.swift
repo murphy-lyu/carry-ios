@@ -107,10 +107,10 @@ struct SuggestionPreviewView: View {
             .kerning(1.5)
             .textCase(.uppercase)
             .padding(.horizontal, 16)
-            .padding(.top, 20)
-            .padding(.bottom, 6)
+            .padding(.vertical, 10)
             .frame(maxWidth: .infinity, alignment: .leading)
             .background(Color(UIColor.systemBackground))
+            .zIndex(1)
     }
 
     private var surpriseHeader: some View {
@@ -125,10 +125,10 @@ struct SuggestionPreviewView: View {
                 .textCase(.uppercase)
         }
         .padding(.horizontal, 16)
-        .padding(.top, 20)
-        .padding(.bottom, 6)
+        .padding(.vertical, 10)
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(Color(UIColor.systemBackground))
+        .zIndex(1)
     }
 
     private func itemRow(_ name: String) -> some View {
