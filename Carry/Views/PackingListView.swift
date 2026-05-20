@@ -82,57 +82,48 @@ struct PackingListView: View {
             if sections.isEmpty {
                 emptyState
             } else {
-                List {
-                    ForEach(Array(sections.enumerated()), id: \.element.id) { index, section in
-                        Section {
-                            ForEach(section.sortedItems.filter { !$0.name.isEmpty || $0.id == editingItemId }, id: \.id) { item in
-                                row(for: item, sectionId: section.id)
-                                    .listRowInsets(EdgeInsets(top: 0, leading: 16, bottom: 0, trailing: 16))
-                                    .listRowSeparator(.hidden)
-                                    .listRowBackground(Color(UIColor.systemBackground))
+                ScrollView {
+                    LazyVStack(spacing: 0, pinnedViews: [.sectionHeaders]) {
+                        ForEach(Array(sections.enumerated()), id: \.element.id) { index, section in
+                            Section {
+                                VStack(spacing: 0) {
+                                    ForEach(section.sortedItems.filter { !$0.name.isEmpty || $0.id == editingItemId }, id: \.id) { item in
+                                        row(for: item, sectionId: section.id)
+                                            .padding(.horizontal, 16)
+                                            .frame(maxWidth: .infinity, alignment: .leading)
+                                            .background(Color(UIColor.systemBackground))
+                                    }
+                                    addItemRow(sectionId: section.id)
+                                        .padding(.horizontal, 16)
+                                        .padding(.bottom, 16)
+                                        .background(Color(UIColor.systemBackground))
+                                }
+                            } header: {
+                                sectionTitle(section.title, isFirst: index == 0)
                             }
-                            .onMove { source, destination in
-                                moveItems(in: section, source: source, destination: destination)
-                            }
-
-                            addItemRow(sectionId: section.id)
-                                .listRowInsets(EdgeInsets(top: 0, leading: 16, bottom: 16, trailing: 16))
-                                .listRowSeparator(.hidden)
-                                .listRowBackground(Color(UIColor.systemBackground))
-                        } header: {
-                            sectionTitle(section.title, isFirst: index == 0)
-                                .listRowInsets(EdgeInsets())
                         }
-                        .listSectionSeparator(.hidden)
-                    }
 
-                    // — Surprise / "Worth considering" section
-                    if !surpriseItems.isEmpty && isNewTrip {
-                        Section {
-                            ForEach(visibleSurpriseItems) { item in
-                                surpriseRow(for: item)
-                                    .listRowInsets(EdgeInsets(top: 0, leading: 16, bottom: 0, trailing: 16))
-                                    .listRowSeparator(.hidden)
-                                    .listRowBackground(Color(UIColor.systemBackground))
+                        if !surpriseItems.isEmpty && isNewTrip {
+                            Section {
+                                VStack(spacing: 0) {
+                                    ForEach(visibleSurpriseItems) { item in
+                                        surpriseRow(for: item)
+                                            .padding(.horizontal, 16)
+                                            .background(Color(UIColor.systemBackground))
+                                    }
+                                }
+                            } header: {
+                                surpriseSectionHeader
                             }
-                        } header: {
-                            surpriseSectionHeader
-                                .listRowInsets(EdgeInsets())
                         }
-                        .listSectionSeparator(.hidden)
-                    }
 
-                    // — Scene entry nudge (manual trips with no scenes selected)
-                    if !hasScenes && !sceneCardDismissed {
-                        Section {
+                        if !hasScenes && !sceneCardDismissed {
                             sceneEntryCard
-                                .listRowInsets(EdgeInsets(top: 8, leading: 16, bottom: 16, trailing: 16))
-                                .listRowSeparator(.hidden)
-                                .listRowBackground(Color(UIColor.systemBackground))
+                                .padding(.top, 8)
+                                .padding(.horizontal, 16)
+                                .padding(.bottom, 16)
                         }
-                        .listSectionSeparator(.hidden)
                     }
-
                 }
                 .simultaneousGesture(
                     TapGesture().onEnded {
@@ -147,11 +138,7 @@ struct PackingListView: View {
                         )
                     }
                 )
-                .listStyle(.plain)
-                .scrollContentBackground(.hidden)
-                .environment(\.defaultMinListRowHeight, 0)
-                .listSectionSpacing(0)
-                .contentMargins(.top, 0, for: .scrollContent)
+                .background(Color(UIColor.systemBackground))
                 .scrollIndicators(.hidden)
                 .safeAreaInset(edge: .bottom) { Color.clear.frame(height: 83) }
                 .safeAreaInset(edge: .top, spacing: 0) {
@@ -402,7 +389,7 @@ struct PackingListView: View {
     }
 
     private func incrementItemQuantity(itemId: UUID, current: Int) {
-        let next = min(current + 1, 99_999)
+        let next = min(current + 1, 9_999)
         store.updateItemQuantity(tripId: tripId, itemId: itemId, quantity: next)
         UIImpactFeedbackGenerator(style: .light).impactOccurred()
     }
@@ -518,6 +505,8 @@ struct PackingListView: View {
             }
             .padding(.top, isNewTrip ? 0 : 8)
         }
+        .background(Color(UIColor.systemBackground))
+        .zIndex(2)
         .padding(.horizontal, 16)
         .padding(.vertical, 12)
         .animation(.easeInOut(duration: 0.2), value: progress)
@@ -704,10 +693,12 @@ struct PackingListView: View {
             .kerning(1.5)
             .textCase(.uppercase)
             .padding(.horizontal, 16)
-            .padding(.top, isFirst ? 8 : 24)
+            .padding(.top, 8)
             .padding(.bottom, 8)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .background(Color(UIColor.systemBackground))
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(Color(UIColor.systemBackground))
+        .compositingGroup()
+        .zIndex(1)
     }
 
     private func editableRow(itemId: UUID, sectionId: UUID) -> some View {
@@ -900,6 +891,7 @@ struct PackingItemRow: View {
     @State private var checkmarkScale: CGFloat
     @State private var isEditingQuantity = false
     @State private var quantityText = ""
+    @State private var quantityPressing = false
     @FocusState private var focusedQuantityField: Bool
 
     init(
@@ -919,19 +911,32 @@ struct PackingItemRow: View {
     }
 
     private var displayedQuantity: Int {
-        max(1, min(99_999, item.quantity))
+        max(1, min(9_999, item.quantity))
     }
 
     var body: some View {
-        HStack(spacing: 12) {
+        HStack(spacing: 14) {
+            quantityControl
             Button(action: onTap) {
                 HStack(spacing: 12) {
-                    // — Checkbox
+                    Text(LocalizedStringKey(item.name))
+                        .font(.subheadline)
+                        .foregroundColor(item.isPacked ? Color(.secondaryLabel) : .primary)
+                        .strikethrough(item.isPacked)
+                        .opacity(item.isPacked ? (colorScheme == .dark ? 0.75 : 0.6) : 1.0)
+
+                    Spacer()
+
                     ZStack {
                         Circle()
-                            .strokeBorder(item.isPacked ? Color.primary : Color(.systemGray3), lineWidth: 1.5)
+                            .strokeBorder(
+                                item.isPacked
+                                    ? Color.primary.opacity(colorScheme == .dark ? 0.78 : 0.74)
+                                    : Color(.systemGray3).opacity(colorScheme == .dark ? 0.85 : 0.72),
+                                lineWidth: 1.4
+                            )
                             .background(
-                                Circle().fill(item.isPacked ? Color.primary : Color.clear)
+                                Circle().fill(item.isPacked ? Color.primary.opacity(colorScheme == .dark ? 0.9 : 0.84) : Color.clear)
                             )
                             .frame(width: 24, height: 24)
 
@@ -942,86 +947,10 @@ struct PackingItemRow: View {
                             .opacity(checkmarkOpacity)
                     }
                     .scaleEffect(checkScale)
-
-                    // — Name
-                    Text(LocalizedStringKey(item.name))
-                        .font(.subheadline)
-                        .foregroundColor(item.isPacked ? Color(.secondaryLabel) : .primary)
-                        .strikethrough(item.isPacked)
-                        .opacity(item.isPacked ? (colorScheme == .dark ? 0.75 : 0.6) : 1.0)
-
-                    Spacer()
                 }
                 .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
-
-            HStack(spacing: 8) {
-                Button {
-                    if isEditingQuantity { commitQuantityEdit() }
-                    onDecrement?()
-                } label: {
-                    Image(systemName: "minus")
-                        .font(.system(size: 10, weight: .semibold))
-                        .frame(width: 18, height: 24)
-                        .contentShape(Rectangle())
-                }
-                .buttonStyle(.plain)
-                .foregroundStyle(.secondary)
-
-                Group {
-                    if isEditingQuantity {
-                        TextField("", text: $quantityText)
-                            .font(.caption.weight(.semibold))
-                            .monospacedDigit()
-                            .foregroundStyle(.secondary)
-                            .keyboardType(.numberPad)
-                            .multilineTextAlignment(.center)
-                            .focused($focusedQuantityField)
-                            .lineLimit(1)
-                            .frame(width: 62, alignment: .center)
-                            .onChange(of: quantityText) { _, newValue in
-                                quantityText = String(newValue.filter(\.isNumber).prefix(5))
-                            }
-                            .toolbar {
-                                ToolbarItemGroup(placement: .keyboard) {
-                                    Spacer()
-                                    Button("Done") {
-                                        commitQuantityEdit()
-                                    }
-                                }
-                            }
-                    } else {
-                        Text("×\(displayedQuantity)")
-                            .font(.caption.weight(.semibold))
-                            .monospacedDigit()
-                            .foregroundStyle(.secondary)
-                            .lineLimit(1)
-                            .minimumScaleFactor(0.85)
-                            .frame(width: 62, alignment: .center)
-                            .contentShape(Rectangle())
-                            .onTapGesture {
-                                beginQuantityEdit()
-                            }
-                    }
-                }
-
-                Button {
-                    if isEditingQuantity { commitQuantityEdit() }
-                    onIncrement?()
-                } label: {
-                    Image(systemName: "plus")
-                        .font(.system(size: 10, weight: .semibold))
-                        .frame(width: 18, height: 24)
-                        .contentShape(Rectangle())
-                }
-                .buttonStyle(.plain)
-                .foregroundStyle(.secondary)
-            }
-            .padding(.horizontal, 4)
-            .padding(.vertical, 3)
-            .background(Color(.secondarySystemFill))
-            .clipShape(Capsule())
         }
         .frame(minHeight: 44)
         .animation(.spring(response: 0.3, dampingFraction: 0.6), value: item.isPacked)
@@ -1061,6 +990,79 @@ struct PackingItemRow: View {
         }
     }
 
+    private var quantityControl: some View {
+        HStack(spacing: 0) {
+            Group {
+                if isEditingQuantity {
+                    TextField("", text: $quantityText)
+                        .font(.subheadline.weight(.semibold))
+                        .monospacedDigit()
+                        .foregroundStyle(.primary)
+                        .keyboardType(.numberPad)
+                        .multilineTextAlignment(.center)
+                        .focused($focusedQuantityField)
+                        .lineLimit(1)
+                        .frame(width: 40, height: 24, alignment: .center)
+                        .onChange(of: quantityText) { _, newValue in
+                            quantityText = String(newValue.filter(\.isNumber).prefix(4))
+                        }
+                        .toolbar {
+                            ToolbarItemGroup(placement: .keyboard) {
+                                Spacer()
+                                Button("Done") {
+                                    commitQuantityEdit()
+                                }
+                            }
+                        }
+                } else {
+                    Text("\(displayedQuantity)")
+                        .font(.subheadline.weight(.semibold))
+                        .monospacedDigit()
+                        .tracking(displayedQuantity >= 1000 ? -0.2 : 0)
+                        .foregroundStyle(.secondary)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.58)
+                        .frame(width: 40, height: 24, alignment: .center)
+                        .contentShape(Rectangle())
+                        .onTapGesture {
+                            beginQuantityEdit()
+                        }
+                }
+            }
+        }
+        .padding(.horizontal, 8)
+        .padding(.vertical, 8)
+        .background(
+            RoundedRectangle(cornerRadius: 12, style: .continuous)
+                .fill(
+                    isEditingQuantity
+                        ? Color(.secondarySystemFill).opacity(colorScheme == .dark ? 0.95 : 0.78)
+                        : Color(.secondarySystemFill).opacity(colorScheme == .dark ? 0.86 : 0.62)
+                )
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 12, style: .continuous)
+                .strokeBorder(
+                    isEditingQuantity
+                        ? Color.primary.opacity(colorScheme == .dark ? 0.30 : 0.20)
+                        : Color.primary.opacity(colorScheme == .dark ? 0.14 : 0.10),
+                    lineWidth: isEditingQuantity ? 1.1 : 0.9
+                )
+        )
+        .opacity(item.isPacked ? 0.82 : 1.0)
+        .scaleEffect(quantityPressing ? 0.96 : 1.0)
+        .animation(.spring(response: 0.16, dampingFraction: 0.72), value: quantityPressing)
+        .simultaneousGesture(
+            DragGesture(minimumDistance: 0)
+                .onChanged { _ in
+                    if !quantityPressing { quantityPressing = true }
+                }
+                .onEnded { _ in
+                    quantityPressing = false
+                }
+        )
+    }
+
     private func beginQuantityEdit() {
         guard !isEditingQuantity else { return }
         isEditingQuantity = true
@@ -1073,7 +1075,7 @@ struct PackingItemRow: View {
     private func commitQuantityEdit() {
         let trimmed = quantityText.trimmingCharacters(in: .whitespacesAndNewlines)
         let value = Int(trimmed) ?? displayedQuantity
-        let clamped = max(1, min(99_999, value))
+        let clamped = max(1, min(9_999, value))
         onSetQuantity?(clamped)
         isEditingQuantity = false
         focusedQuantityField = false

@@ -240,7 +240,7 @@ final class TripStore: ObservableObject {
 
     func updateItemQuantity(tripId: UUID, itemId: UUID, quantity: Int) {
         guard let trip = trips.first(where: { $0.id == tripId }) else { return }
-        let clamped = max(1, quantity)
+        let clamped = min(9_999, max(1, quantity))
         for section in trip.safeSections {
             if let item = (section.items ?? []).first(where: { $0.id == itemId }) {
                 guard item.quantity != clamped else { return }
