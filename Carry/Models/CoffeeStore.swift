@@ -12,20 +12,31 @@ final class CoffeeStore: ObservableObject {
         "com.lumastudio.carry.water",
         "com.lumastudio.carry.americano",
         "com.lumastudio.carry.latte",
-        "com.lumastudio.carry.cappuccino"
+        "com.lumastudio.carry.cappuccino",
+        "com.lumastudio.carry.beer"
     ]
 
     @Published var products: [Product] = []
     @Published var isPurchasing = false
     @Published var lastPurchasedID: String?
+    @Published var lastFetchErrorMessage: String?
 
     init() {
         Task { await fetchProducts() }
     }
 
     func fetchProducts() async {
-        guard let loaded = try? await Product.products(for: Self.productIDs) else { return }
-        products = loaded.sorted { $0.price < $1.price }
+        do {
+            let loaded = try await Product.products(for: Self.productIDs)
+            products = loaded.sorted { $0.price < $1.price }
+            lastFetchErrorMessage = nil
+        } catch {
+            lastFetchErrorMessage = error.localizedDescription
+        }
+    }
+
+    func hasProduct(_ productID: String) -> Bool {
+        products.contains { $0.id == productID }
     }
 
     func displayPrice(for productID: String, fallback: String) -> String {
@@ -53,4 +64,10 @@ final class CoffeeStore: ObservableObject {
             // Purchase failed silently — StoreKit surfaces its own error UI
         }
     }
+
+#if DEBUG
+    func debugMockPurchase(productID: String) {
+        lastPurchasedID = productID
+    }
+#endif
 }

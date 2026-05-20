@@ -139,6 +139,12 @@ struct PackingListView: View {
                         if editingItemId != nil {
                             dismissInlineEditing()
                         }
+                        UIApplication.shared.sendAction(
+                            #selector(UIResponder.resignFirstResponder),
+                            to: nil,
+                            from: nil,
+                            for: nil
+                        )
                     }
                 )
                 .listStyle(.plain)
@@ -168,6 +174,12 @@ struct PackingListView: View {
                 if editingItemId != nil {
                     dismissInlineEditing()
                 }
+                UIApplication.shared.sendAction(
+                    #selector(UIResponder.resignFirstResponder),
+                    to: nil,
+                    from: nil,
+                    for: nil
+                )
             }
         )
         .safeAreaInset(edge: .bottom) {
@@ -176,6 +188,7 @@ struct PackingListView: View {
                     .padding(.bottom, 16)
             }
         }
+        .coordinateSpace(name: "packingRoot")
         .toolbarBackground(.visible, for: .tabBar)
         .navigationTitle(bundle?.name ?? "")
         .navigationBarTitleDisplayMode(.inline)
@@ -346,9 +359,21 @@ struct PackingListView: View {
         if editingItemId == item.id {
             editableRow(itemId: item.id, sectionId: sectionId)
         } else {
-            PackingItemRow(item: item) {
-                toggleItem(itemId: item.id)
-            }
+            PackingItemRow(
+                item: item,
+                onTap: {
+                    toggleItem(itemId: item.id)
+                },
+                onDecrement: {
+                    decrementItemQuantity(itemId: item.id, current: item.quantity)
+                },
+                onIncrement: {
+                    incrementItemQuantity(itemId: item.id, current: item.quantity)
+                },
+                onSetQuantity: { newValue in
+                    store.updateItemQuantity(tripId: tripId, itemId: item.id, quantity: newValue)
+                }
+            )
             .swipeActions(edge: .trailing, allowsFullSwipe: false) {
                 Button(role: .destructive) {
                     deleteItem(itemId: item.id)
@@ -374,6 +399,19 @@ struct PackingListView: View {
 
     private func deleteItem(itemId: UUID) {
         store.removeItem(tripId: tripId, itemId: itemId)
+    }
+
+    private func incrementItemQuantity(itemId: UUID, current: Int) {
+        let next = min(current + 1, 99_999)
+        store.updateItemQuantity(tripId: tripId, itemId: itemId, quantity: next)
+        UIImpactFeedbackGenerator(style: .light).impactOccurred()
+    }
+
+    private func decrementItemQuantity(itemId: UUID, current: Int) {
+        let next = max(current - 1, 1)
+        guard next != current else { return }
+        store.updateItemQuantity(tripId: tripId, itemId: itemId, quantity: next)
+        UIImpactFeedbackGenerator(style: .light).impactOccurred()
     }
 
     private func moveItems(in section: PackingSection, source: IndexSet, destination: Int) {
@@ -419,7 +457,8 @@ struct PackingListView: View {
             for item in items {
                 let box = item.isPacked ? "  ✅" : "  ⭕"
                 let flag = item.isAlert ? " ⚠️" : ""
-                lines.append("\(box) \(item.name)\(flag)")
+                let qty = item.quantity > 1 ? " ×\(item.quantity)" : ""
+                lines.append("\(box) \(item.name)\(qty)\(flag)")
             }
         }
 
@@ -851,52 +890,146 @@ struct PackingItemRow: View {
 
     let item: PackingItem
     let onTap: () -> Void
+    var onDecrement: (() -> Void)? = nil
+    var onIncrement: (() -> Void)? = nil
+    var onSetQuantity: ((Int) -> Void)? = nil
 
     @Environment(\.colorScheme) private var colorScheme
     @State private var checkScale: CGFloat = 1.0
     @State private var checkmarkOpacity: Double
     @State private var checkmarkScale: CGFloat
+    @State private var isEditingQuantity = false
+    @State private var quantityText = ""
+    @FocusState private var focusedQuantityField: Bool
 
-    init(item: PackingItem, onTap: @escaping () -> Void) {
+    init(
+        item: PackingItem,
+        onTap: @escaping () -> Void,
+        onDecrement: (() -> Void)? = nil,
+        onIncrement: (() -> Void)? = nil,
+        onSetQuantity: ((Int) -> Void)? = nil,
+    ) {
         self.item = item
         self.onTap = onTap
+        self.onDecrement = onDecrement
+        self.onIncrement = onIncrement
+        self.onSetQuantity = onSetQuantity
         _checkmarkOpacity = State(initialValue: item.isPacked ? 1.0 : 0)
         _checkmarkScale = State(initialValue: item.isPacked ? 1.0 : 0.5)
     }
 
+    private var displayedQuantity: Int {
+        max(1, min(99_999, item.quantity))
+    }
+
     var body: some View {
         HStack(spacing: 12) {
+            Button(action: onTap) {
+                HStack(spacing: 12) {
+                    // — Checkbox
+                    ZStack {
+                        Circle()
+                            .strokeBorder(item.isPacked ? Color.primary : Color(.systemGray3), lineWidth: 1.5)
+                            .background(
+                                Circle().fill(item.isPacked ? Color.primary : Color.clear)
+                            )
+                            .frame(width: 24, height: 24)
 
-            // — Checkbox
-            ZStack {
-                Circle()
-                    .strokeBorder(item.isPacked ? Color.primary : Color(.systemGray3), lineWidth: 1.5)
-                    .background(
-                        Circle().fill(item.isPacked ? Color.primary : Color.clear)
-                    )
-                    .frame(width: 24, height: 24)
+                        Image(systemName: "checkmark")
+                            .font(.system(size: 11, weight: .bold))
+                            .foregroundColor(Color(UIColor.systemBackground))
+                            .scaleEffect(checkmarkScale)
+                            .opacity(checkmarkOpacity)
+                    }
+                    .scaleEffect(checkScale)
 
-                Image(systemName: "checkmark")
-                    .font(.system(size: 11, weight: .bold))
-                    .foregroundColor(Color(UIColor.systemBackground))
-                    .scaleEffect(checkmarkScale)
-                    .opacity(checkmarkOpacity)
+                    // — Name
+                    Text(LocalizedStringKey(item.name))
+                        .font(.subheadline)
+                        .foregroundColor(item.isPacked ? Color(.secondaryLabel) : .primary)
+                        .strikethrough(item.isPacked)
+                        .opacity(item.isPacked ? (colorScheme == .dark ? 0.75 : 0.6) : 1.0)
+
+                    Spacer()
+                }
+                .contentShape(Rectangle())
             }
-            .scaleEffect(checkScale)
+            .buttonStyle(.plain)
 
-            // — Name
-            Text(LocalizedStringKey(item.name))
-                .font(.subheadline)
-                .foregroundColor(item.isPacked ? Color(.secondaryLabel) : .primary)
-                .strikethrough(item.isPacked)
-                .opacity(item.isPacked ? (colorScheme == .dark ? 0.75 : 0.6) : 1.0)
+            HStack(spacing: 8) {
+                Button {
+                    if isEditingQuantity { commitQuantityEdit() }
+                    onDecrement?()
+                } label: {
+                    Image(systemName: "minus")
+                        .font(.system(size: 10, weight: .semibold))
+                        .frame(width: 18, height: 24)
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .foregroundStyle(.secondary)
 
-            Spacer()
+                Group {
+                    if isEditingQuantity {
+                        TextField("", text: $quantityText)
+                            .font(.caption.weight(.semibold))
+                            .monospacedDigit()
+                            .foregroundStyle(.secondary)
+                            .keyboardType(.numberPad)
+                            .multilineTextAlignment(.center)
+                            .focused($focusedQuantityField)
+                            .lineLimit(1)
+                            .frame(width: 62, alignment: .center)
+                            .onChange(of: quantityText) { _, newValue in
+                                quantityText = String(newValue.filter(\.isNumber).prefix(5))
+                            }
+                            .toolbar {
+                                ToolbarItemGroup(placement: .keyboard) {
+                                    Spacer()
+                                    Button("Done") {
+                                        commitQuantityEdit()
+                                    }
+                                }
+                            }
+                    } else {
+                        Text("×\(displayedQuantity)")
+                            .font(.caption.weight(.semibold))
+                            .monospacedDigit()
+                            .foregroundStyle(.secondary)
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.85)
+                            .frame(width: 62, alignment: .center)
+                            .contentShape(Rectangle())
+                            .onTapGesture {
+                                beginQuantityEdit()
+                            }
+                    }
+                }
+
+                Button {
+                    if isEditingQuantity { commitQuantityEdit() }
+                    onIncrement?()
+                } label: {
+                    Image(systemName: "plus")
+                        .font(.system(size: 10, weight: .semibold))
+                        .frame(width: 18, height: 24)
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .foregroundStyle(.secondary)
+            }
+            .padding(.horizontal, 4)
+            .padding(.vertical, 3)
+            .background(Color(.secondarySystemFill))
+            .clipShape(Capsule())
         }
         .frame(minHeight: 44)
-        .contentShape(Rectangle())
-        .onTapGesture(perform: onTap)
         .animation(.spring(response: 0.3, dampingFraction: 0.6), value: item.isPacked)
+        .onChange(of: focusedQuantityField) { _, focused in
+            if !focused, isEditingQuantity {
+                commitQuantityEdit()
+            }
+        }
         .onChange(of: item.isPacked) { _, isPacked in
             if isPacked {
                 withAnimation(.spring(response: 0.3, dampingFraction: 0.6)) {
@@ -926,6 +1059,25 @@ struct PackingItemRow: View {
                 }
             }
         }
+    }
+
+    private func beginQuantityEdit() {
+        guard !isEditingQuantity else { return }
+        isEditingQuantity = true
+        quantityText = String(displayedQuantity)
+        DispatchQueue.main.async {
+            focusedQuantityField = true
+        }
+    }
+
+    private func commitQuantityEdit() {
+        let trimmed = quantityText.trimmingCharacters(in: .whitespacesAndNewlines)
+        let value = Int(trimmed) ?? displayedQuantity
+        let clamped = max(1, min(99_999, value))
+        onSetQuantity?(clamped)
+        isEditingQuantity = false
+        focusedQuantityField = false
+        quantityText = ""
     }
 }
 

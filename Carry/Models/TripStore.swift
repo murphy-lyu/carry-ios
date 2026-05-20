@@ -144,7 +144,7 @@ final class TripStore: ObservableObject {
                 .filter { !$0.name.isEmpty }
                 .enumerated()
                 .map { idx, item in
-                    PackingItem(name: item.name, isPacked: false, isAlert: item.isAlert, sortOrder: idx)
+                    PackingItem(name: item.name, quantity: item.quantity, isPacked: false, isAlert: item.isAlert, sortOrder: idx)
                 }
             return PackingSection(title: section.title, items: items, sortOrder: section.sortOrder)
         }
@@ -238,6 +238,19 @@ final class TripStore: ObservableObject {
         }
     }
 
+    func updateItemQuantity(tripId: UUID, itemId: UUID, quantity: Int) {
+        guard let trip = trips.first(where: { $0.id == tripId }) else { return }
+        let clamped = max(1, quantity)
+        for section in trip.safeSections {
+            if let item = (section.items ?? []).first(where: { $0.id == itemId }) {
+                guard item.quantity != clamped else { return }
+                item.quantity = clamped
+                save()
+                return
+            }
+        }
+    }
+
     func removeItem(tripId: UUID, itemId: UUID) {
         guard let trip = trips.first(where: { $0.id == tripId }) else { return }
         for section in trip.safeSections {
@@ -298,7 +311,7 @@ final class TripStore: ObservableObject {
 
         // Capture old state
         var oldPackedByName: [String: Bool] = [:]
-        var customItemsBySection: [String: [(name: String, isPacked: Bool)]] = [:]
+        var customItemsBySection: [String: [(name: String, quantity: Int, isPacked: Bool)]] = [:]
         let presetNames = Set(presetItemNames(forSceneKeys: keys).map { $0.lowercased() })
 
         for section in trip.safeSections {
@@ -306,13 +319,13 @@ final class TripStore: ObservableObject {
                 let key = item.name.lowercased()
                 oldPackedByName[key] = item.isPacked
                 if !presetNames.contains(key) {
-                    customItemsBySection[section.title, default: []].append((item.name, item.isPacked))
+                    customItemsBySection[section.title, default: []].append((item.name, item.quantity, item.isPacked))
                 }
             }
         }
 
         // Build fresh sections (sortOrder assigned by generatePackingSections position)
-        let newSections = generatePackingSections(selectedScenes: keys)
+        let newSections = generatePackingSections(selectedScenes: keys, tripDays: trip.days)
         for (index, section) in newSections.enumerated() { section.sortOrder = index }
 
         // Restore packed states + append custom items to matching section
@@ -327,6 +340,7 @@ final class TripStore: ObservableObject {
                 for (offset, custom) in customs.enumerated() {
                     let item = PackingItem(
                         name: custom.name,
+                        quantity: custom.quantity,
                         isPacked: custom.isPacked,
                         isAlert: false,
                         sortOrder: nextOrderStart + offset

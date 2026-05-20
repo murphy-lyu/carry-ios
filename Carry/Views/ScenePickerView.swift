@@ -212,7 +212,7 @@ struct ScenePickerView: View {
 
     @discardableResult
     private func buildTrip(info: TripInfo, keys: [String], seedSections: [PackingSection] = []) -> UUID {
-        var sections = generatePackingSections(selectedScenes: keys)
+        var sections = generatePackingSections(selectedScenes: keys, tripDays: info.durationDays)
         if !seedSections.isEmpty {
             mergeSeedSections(seedSections, into: &sections)
         }
@@ -241,13 +241,23 @@ struct ScenePickerView: View {
                 let existingNames = Set(targetItems.map { $0.name.lowercased() })
                 var nextOrder = (targetItems.map(\.sortOrder).max() ?? -1) + 1
                 for seedItem in seedSection.sortedItems where !existingNames.contains(seedItem.name.lowercased()) {
-                    let newItem = PackingItem(name: seedItem.name, isAlert: seedItem.isAlert, sortOrder: nextOrder)
+                    let newItem = PackingItem(
+                        name: seedItem.name,
+                        quantity: seedItem.quantity,
+                        isAlert: seedItem.isAlert,
+                        sortOrder: nextOrder
+                    )
                     nextOrder += 1
                     sections[targetIndex].items?.append(newItem)
                 }
             } else {
                 let copiedItems = seedSection.sortedItems.enumerated().map { index, item in
-                    PackingItem(name: item.name, isAlert: item.isAlert, sortOrder: index)
+                    PackingItem(
+                        name: item.name,
+                        quantity: item.quantity,
+                        isAlert: item.isAlert,
+                        sortOrder: index
+                    )
                 }
                 let newSection = PackingSection(
                     title: seedSection.title,

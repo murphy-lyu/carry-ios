@@ -262,7 +262,7 @@ struct SuggestionPreviewView: View {
         )
 
         // Regular suggestions (pre-selected)
-        let generated = generatePackingSections(selectedScenes: sceneKeys)
+        let generated = generatePackingSections(selectedScenes: sceneKeys, tripDays: bundle.days)
         var result: [(title: String, items: [String])] = []
         var allNames = Set<String>()
         for section in generated {
@@ -284,13 +284,14 @@ struct SuggestionPreviewView: View {
     }
 
     private func confirm() {
+        guard let tripBundle = store.bundle(for: tripId) else { return }
         var sectionIndex = 0
         var newSections: [PackingSection] = []
         for section in sections {
             let chosen = section.items.filter { selectedNames.contains($0) }
             guard !chosen.isEmpty else { continue }
             let items = chosen.enumerated().map { idx, name in
-                PackingItem(name: name, isAlert: false, sortOrder: idx)
+                PackingItem(name: name, quantity: defaultQuantity(for: name, tripDays: tripBundle.days), isAlert: false, sortOrder: idx)
             }
             newSections.append(PackingSection(title: section.title, items: items, sortOrder: sectionIndex))
             sectionIndex += 1

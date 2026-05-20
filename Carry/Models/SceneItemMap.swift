@@ -22,6 +22,25 @@ struct SceneItem {
     let isAlert: Bool
 }
 
+func defaultQuantity(for itemName: String, tripDays: Int) -> Int {
+    let days = max(1, tripDays)
+    let lower = itemName.lowercased()
+    let maxQuantity = 99_999
+
+    if lower.contains("spare") || lower.contains("extra") {
+        return 1
+    }
+    if lower == "underwear" || lower == "socks" || lower == "face masks"
+        || lower == "instant coffee packets" || lower == "tea bags" {
+        return min(days, maxQuantity)
+    }
+    if lower == "daily medication"
+        || lower == "children's medication" {
+        return min(days, maxQuantity)
+    }
+    return 1
+}
+
 // MARK: - Chip label → scene key
 
 let sceneLabelToKey: [String: String] = [
@@ -209,7 +228,7 @@ let sceneItemMap: [String: [SceneItem]] = [
 
 /// Merges base items + selected scene items, deduplicates by name (alert wins),
 /// then groups by category in a fixed order.
-func generatePackingSections(selectedScenes: [String]) -> [PackingSection] {
+func generatePackingSections(selectedScenes: [String], tripDays: Int = 1) -> [PackingSection] {
     // name → (category, isAlert)
     var merged: [(name: String, category: ItemCategory, isAlert: Bool)] = []
     var nameIndex: [String: Int] = [:]
@@ -234,7 +253,14 @@ func generatePackingSections(selectedScenes: [String]) -> [PackingSection] {
         let items = merged
             .filter { $0.category == category }
             .enumerated()
-            .map { idx, t in PackingItem(name: t.name, isAlert: t.isAlert, sortOrder: idx) }
+            .map { idx, t in
+                PackingItem(
+                    name: t.name,
+                    quantity: defaultQuantity(for: t.name, tripDays: tripDays),
+                    isAlert: t.isAlert,
+                    sortOrder: idx
+                )
+            }
         guard !items.isEmpty else { continue }
         result.append(PackingSection(title: category.rawValue, items: items, sortOrder: sectionIndex))
         sectionIndex += 1

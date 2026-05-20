@@ -12,14 +12,16 @@ import SwiftData
 final class PackingItem {
     var id: UUID = UUID()
     var name: String = ""
+    var quantity: Int = 1
     var isPacked: Bool = false
     var isAlert: Bool = false
     var sortOrder: Int = 0
     var section: PackingSection?
 
-    init(name: String = "", isPacked: Bool = false, isAlert: Bool = false, sortOrder: Int = 0) {
+    init(name: String = "", quantity: Int = 1, isPacked: Bool = false, isAlert: Bool = false, sortOrder: Int = 0) {
         self.id = UUID()
         self.name = name
+        self.quantity = max(1, quantity)
         self.isPacked = isPacked
         self.isAlert = isAlert
         self.sortOrder = sortOrder

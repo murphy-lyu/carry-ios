@@ -70,12 +70,11 @@ private struct RoadmapPayload: Codable {
                 ),
                 items: [
                     RoadmapItem(
-                        id: "ai-pack",
-                        title: RoadmapL10n.text(en: "Trip duplication", zhHans: "复制行程", zhHant: "複製行程"),
+                        id: "plug-adapter",
+                        title: RoadmapL10n.text(en: "International plug & adapter guide", zhHans: "出国旅行充电插头及转换器", zhHant: "出國旅行充電插頭及轉換器"),
                         status: .inProgress,
                         note: nil
                     ),
-                    RoadmapItem(id: "plug-adapter", title: RoadmapL10n.text(en: "International plug & adapter guide", zhHans: "出国旅行充电插头及转换器", zhHant: "出國旅行充電插頭及轉換器"), status: .planned, note: nil),
                     RoadmapItem(id: "exchange-rate", title: RoadmapL10n.text(en: "Exchange rate info", zhHans: "汇率信息", zhHant: "匯率資訊"), status: .planned, note: nil),
                     RoadmapItem(id: "weather", title: RoadmapL10n.text(en: "Weather forecast", zhHans: "天气预报", zhHant: "天氣預報"), status: .planned, note: nil),
                     RoadmapItem(id: "trip-stats", title: RoadmapL10n.text(en: "Trip insights", zhHans: "行程统计", zhHant: "行程統計"), status: .planned, note: nil)
@@ -85,6 +84,7 @@ private struct RoadmapPayload: Codable {
                 id: "done",
                 title: RoadmapL10n.text(en: "Completed", zhHans: "已完成", zhHant: "已完成"),
                 items: [
+                    RoadmapItem(id: "trip-duplication", title: RoadmapL10n.text(en: "Trip duplication", zhHans: "复制行程", zhHant: "複製行程"), status: .done, note: nil),
                     RoadmapItem(id: "worth-considering", title: RoadmapL10n.text(en: "Worth considering", zhHans: "顺手考虑一下", zhHant: "順手考慮一下"), status: .done, note: nil),
                     RoadmapItem(id: "smart-suggestion", title: RoadmapL10n.text(en: "Smart suggestions", zhHans: "智能推荐清单", zhHant: "智能推薦清單"), status: .done, note: nil),
                     RoadmapItem(id: "custom-section", title: RoadmapL10n.text(en: "Custom sections", zhHans: "自定义分类", zhHant: "自定義分類"), status: .done, note: nil),
@@ -275,9 +275,11 @@ struct RoadmapView: View {
     private var footerNote: some View {
         HStack {
             Spacer()
-            Text("Made with ❤️")
+            Text("about.madeWith")
                 .font(.footnote)
                 .foregroundStyle(.secondary)
+            Text("❤️")
+                .font(.footnote)
             Spacer()
         }
         .padding(.top, 8)

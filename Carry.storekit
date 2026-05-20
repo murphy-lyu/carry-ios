@@ -50,7 +50,7 @@
       "type" : "Consumable"
     },
     {
-      "displayPrice" : "4.99",
+      "displayPrice" : "3.99",
       "familySharable" : false,
       "internalID" : "A1B2C3D4-E5F6-7890-ABCD-EF1234560040",
       "localizations" : [
@@ -62,6 +62,21 @@
       ],
       "productID" : "com.lumastudio.carry.cappuccino",
       "referenceName" : "Cappuccino",
+      "type" : "Consumable"
+    },
+    {
+      "displayPrice" : "4.99",
+      "familySharable" : false,
+      "internalID" : "A1B2C3D4-E5F6-7890-ABCD-EF1234560050",
+      "localizations" : [
+        {
+          "description" : "Buy the developer a Beer",
+          "displayName" : "Beer",
+          "locale" : "en_US"
+        }
+      ],
+      "productID" : "com.lumastudio.carry.beer",
+      "referenceName" : "Beer",
       "type" : "Consumable"
     }
   ],

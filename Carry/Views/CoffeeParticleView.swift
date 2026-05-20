@@ -47,19 +47,19 @@ private struct CoffeeParticle: View {
         .opacity(opacity)
         .position(
             x: startX + offsetX,
-            y: screenSize.height + 30 + offsetY
+            y: -30 + offsetY
         )
         .onAppear {
-            withAnimation(.easeOut(duration: data.duration).delay(data.delay)) {
-                offsetY = -(screenSize.height + 120)
+            withAnimation(.easeIn(duration: data.duration).delay(data.delay)) {
+                offsetY = screenSize.height + 120
                 offsetX = data.drift * screenSize.width
                 rotation = data.endRotation
                 opacity = 0.92
             }
-            // Fade out over the last ~45% of the flight
+            // Fade out over the last ~40% of the fall
             withAnimation(
-                .easeIn(duration: data.duration * 0.45)
-                .delay(data.delay + data.duration * 0.55)
+                .easeIn(duration: data.duration * 0.40)
+                .delay(data.delay + data.duration * 0.60)
             ) {
                 opacity = 0
             }
@@ -114,7 +114,7 @@ struct CoffeeParticleOverlay: View {
                 size: CGFloat.random(in: 6...20),
                 color: warmColors.randomElement()!,
                 normalizedX: CGFloat.random(in: 0.04...0.96),
-                drift: CGFloat.random(in: -0.13...0.13),
+                drift: CGFloat.random(in: -0.08...0.08),
                 delay: Double.random(in: 0...1.4),
                 duration: Double.random(in: 1.0...2.1),
                 endRotation: Double.random(in: -540...540)
