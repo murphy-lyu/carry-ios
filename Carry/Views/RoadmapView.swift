@@ -71,29 +71,23 @@ private struct RoadmapPayload: Codable {
                 items: [
                     RoadmapItem(
                         id: "ai-pack",
-                        title: RoadmapL10n.text(en: "AI packing suggestions", zhHans: "AI 打包建议", zhHant: "AI 打包建議"),
+                        title: RoadmapL10n.text(en: "Trip duplication", zhHans: "复制行程", zhHant: "複製行程"),
                         status: .inProgress,
-                        note: RoadmapL10n.text(
-                            en: "Some features require Luggage+",
-                            zhHans: "部分功能需要 Luggage+",
-                            zhHant: "部分功能需要 Luggage+"
-                        )
+                        note: nil
                     ),
-                    RoadmapItem(id: "collab", title: RoadmapL10n.text(en: "Collaborative trips", zhHans: "协作旅行", zhHant: "協作旅行"), status: .planned, note: nil),
-                    RoadmapItem(id: "flight-hotel", title: RoadmapL10n.text(en: "Flight & hotel integration", zhHans: "航班与酒店集成", zhHant: "航班與酒店整合"), status: .planned, note: nil),
-                    RoadmapItem(id: "stats", title: RoadmapL10n.text(en: "Travel insights", zhHans: "旅行统计", zhHant: "旅行統計"), status: .planned, note: nil)
+                    RoadmapItem(id: "plug-adapter", title: RoadmapL10n.text(en: "International plug & adapter guide", zhHans: "出国旅行充电插头及转换器", zhHant: "出國旅行充電插頭及轉換器"), status: .planned, note: nil),
+                    RoadmapItem(id: "exchange-rate", title: RoadmapL10n.text(en: "Exchange rate info", zhHans: "汇率信息", zhHant: "匯率資訊"), status: .planned, note: nil),
+                    RoadmapItem(id: "weather", title: RoadmapL10n.text(en: "Weather forecast", zhHans: "天气预报", zhHant: "天氣預報"), status: .planned, note: nil),
+                    RoadmapItem(id: "trip-stats", title: RoadmapL10n.text(en: "Trip insights", zhHans: "行程统计", zhHant: "行程統計"), status: .planned, note: nil)
                 ]
             ),
             RoadmapSection(
                 id: "done",
                 title: RoadmapL10n.text(en: "Completed", zhHans: "已完成", zhHant: "已完成"),
                 items: [
-                    RoadmapItem(id: "currency", title: RoadmapL10n.text(en: "Currency conversion", zhHans: "货币换算", zhHant: "貨幣換算"), status: .done, note: nil),
-                    RoadmapItem(id: "todo", title: RoadmapL10n.text(en: "Travel todos", zhHans: "旅行待办事项", zhHant: "旅行待辦事項"), status: .done, note: nil),
-                    RoadmapItem(id: "notes", title: RoadmapL10n.text(en: "Travel notes", zhHans: "旅行笔记", zhHant: "旅行筆記"), status: .done, note: nil),
-                    RoadmapItem(id: "reminders", title: RoadmapL10n.text(en: "Trip reminders", zhHans: "旅行提醒", zhHant: "旅行提醒"), status: .done, note: nil),
-                    RoadmapItem(id: "weather", title: RoadmapL10n.text(en: "Weather forecast", zhHans: "天气预报", zhHant: "天氣預報"), status: .done, note: nil),
-                    RoadmapItem(id: "plug", title: RoadmapL10n.text(en: "Plug type info", zhHans: "插头类型信息", zhHant: "插頭類型資訊"), status: .done, note: nil),
+                    RoadmapItem(id: "worth-considering", title: RoadmapL10n.text(en: "Worth considering", zhHans: "顺手考虑一下", zhHant: "順手考慮一下"), status: .done, note: nil),
+                    RoadmapItem(id: "smart-suggestion", title: RoadmapL10n.text(en: "Smart suggestions", zhHans: "智能推荐清单", zhHant: "智能推薦清單"), status: .done, note: nil),
+                    RoadmapItem(id: "custom-section", title: RoadmapL10n.text(en: "Custom sections", zhHans: "自定义分类", zhHant: "自定義分類"), status: .done, note: nil),
                     RoadmapItem(id: "custom", title: RoadmapL10n.text(en: "Custom packing list", zhHans: "自定义打包清单", zhHant: "自定義打包清單"), status: .done, note: nil),
                     RoadmapItem(id: "sorting", title: RoadmapL10n.text(en: "Item & section sorting", zhHans: "物品与分类排序", zhHant: "物品與分類排序"), status: .done, note: nil)
                 ]
@@ -130,6 +124,7 @@ struct RoadmapView: View {
         .background(background.ignoresSafeArea())
         .navigationTitle(RoadmapL10n.text(en: "Roadmap", zhHans: "路线图", zhHant: "路線圖"))
         .navigationBarTitleDisplayMode(.inline)
+#if DEBUG
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
                 Button {
@@ -140,6 +135,7 @@ struct RoadmapView: View {
                 }
             }
         }
+#endif
         .sheet(isPresented: $showSourceSheet) {
             NavigationStack {
                 Form {

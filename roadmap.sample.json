@@ -1,26 +1,25 @@
 {
   "updatedAt": "2026-05-20",
-  "banner": "🚀 App Store 上线，2026年7月",
+  "banner": "🚀 App Store 上线，2026年5月",
   "sections": [
     {
       "id": "upcoming",
       "title": "即将推出的更新",
       "items": [
-        { "id": "ai-pack", "title": "AI 打包建议", "status": "in_progress", "note": "部分能力将纳入 Luggage+" },
-        { "id": "collab", "title": "协作旅行", "status": "planned" },
-        { "id": "travel-stats", "title": "旅行统计", "status": "planned" }
+        { "id": "trip-duplicate", "title": "复制行程", "status": "in_progress" },
+        { "id": "plug-adapter", "title": "出国旅行充电插头及转换器", "status": "planned" },
+        { "id": "exchange-rate", "title": "汇率信息", "status": "planned" },
+        { "id": "weather", "title": "天气预报", "status": "planned" },
+        { "id": "trip-stats", "title": "行程统计", "status": "planned" }
       ]
     },
     {
       "id": "done",
       "title": "已完成",
       "items": [
-        { "id": "currency", "title": "货币换算", "status": "done" },
-        { "id": "todos", "title": "旅行待办事项", "status": "done" },
-        { "id": "notes", "title": "旅行笔记", "status": "done" },
-        { "id": "alerts", "title": "旅行提醒", "status": "done" },
-        { "id": "weather", "title": "天气预报", "status": "done" },
-        { "id": "plug-types", "title": "插头类型信息", "status": "done" },
+        { "id": "worth-considering", "title": "顺手考虑一下", "status": "done" },
+        { "id": "smart-suggestions", "title": "智能推荐清单", "status": "done" },
+        { "id": "custom-section", "title": "自定义分类", "status": "done" },
         { "id": "custom-list", "title": "自定义打包清单", "status": "done" },
         { "id": "sorting", "title": "物品与分类排序", "status": "done" }
       ]
