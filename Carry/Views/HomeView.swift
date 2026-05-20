@@ -158,7 +158,11 @@ struct HomeView: View {
             .tint(.red)
             Button {
                 UIImpactFeedbackGenerator(style: .light).impactOccurred()
-                Task { @MainActor in store.duplicateTrip(withId: bundle.id) }
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.38) {
+                    withAnimation(.spring(response: 0.4, dampingFraction: 0.82)) {
+                        store.duplicateTrip(withId: bundle.id)
+                    }
+                }
             } label: {
                 Label("trip.swipe.duplicate", systemImage: "doc.on.doc")
             }

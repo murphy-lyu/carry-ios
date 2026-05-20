@@ -68,7 +68,9 @@ final class TripStore: ObservableObject {
 
     init() {
         self.context = ModelContext(CarryApp.container)
-        fetchTrips()
+        Task { @MainActor in
+            fetchTrips()
+        }
     }
 
     // MARK: - Persistence
