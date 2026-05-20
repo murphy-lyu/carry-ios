@@ -23,19 +23,19 @@ struct CoffeeSheetView: View {
 
                     // — Big emoji
                     Text("☕️")
-                        .font(.system(size: 60))
-                        .padding(.top, 12)
-                        .padding(.bottom, 10)
+                        .font(.system(size: 50))
+                        .padding(.top, 8)
+                        .padding(.bottom, 6)
 
                     VStack(spacing: 0) {
                         // — Title
                         Text(hasPurchasedInSession ? LocalizedStringKey("support.thanks.title") : LocalizedStringKey("support.sheet.heading"))
-                            .font(.system(size: 36, weight: .semibold))
+                            .font(.system(size: 32, weight: .semibold))
                             .lineLimit(2)
                             .minimumScaleFactor(0.85)
                             .multilineTextAlignment(.center)
                             .padding(.horizontal, 24)
-                            .padding(.bottom, 8)
+                            .padding(.bottom, 6)
 
                         // — Subtitle
                         Text(hasPurchasedInSession ? LocalizedStringKey("support.thanks.message") : LocalizedStringKey("support.sheet.subtitle"))
@@ -44,11 +44,11 @@ struct CoffeeSheetView: View {
                             .multilineTextAlignment(.center)
                             .padding(.horizontal, 28)
                     }
-                    .frame(minHeight: 100, alignment: .top)
-                    .padding(.bottom, 8)
+                    .frame(minHeight: 86, alignment: .top)
+                    .padding(.bottom, 6)
 
                     // — Coffee cards
-                    VStack(spacing: 12) {
+                    VStack(spacing: 10) {
                         coffeeCard(emoji: "🥤", nameKey: "support.drink.water",
                                    id: "com.lumastudio.carry.water",      fallback: "$0.99")
                         coffeeCard(emoji: "☕️", nameKey: "support.drink.americano",
@@ -61,7 +61,7 @@ struct CoffeeSheetView: View {
                                    id: "com.lumastudio.carry.beer",       fallback: "$4.99")
                     }
                     .padding(.horizontal, 20)
-                    .padding(.bottom, 2)
+                    .padding(.bottom, 6)
 
                     // — Secondary actions
                     VStack(alignment: .leading, spacing: 6) {
@@ -105,8 +105,8 @@ struct CoffeeSheetView: View {
                         )
                     }
                     .padding(.horizontal, 20)
-                    .padding(.top, 8)
-                    .padding(.bottom, 8)
+                    .padding(.top, 6)
+                    .padding(.bottom, 6)
 
                     Text("support.sheet.footer")
                         .font(.system(size: 12))
@@ -114,8 +114,8 @@ struct CoffeeSheetView: View {
                         .multilineTextAlignment(.center)
                         .frame(maxWidth: 280)
                         .frame(maxWidth: .infinity, alignment: .center)
-                        .padding(.top, 12)
-                        .padding(.bottom, 26)
+                        .padding(.top, 8)
+                        .padding(.bottom, 18)
                 }
             }
             .overlay {
@@ -284,16 +284,22 @@ struct CoffeeSheetView: View {
     }
 
     private func requestReview() {
+        UIImpactFeedbackGenerator(style: .light).impactOccurred()
+
+        // Prefer opening App Store review page directly so users always get visible feedback.
+        let deepLink = URL(string: "itms-apps://apps.apple.com/app/carry?action=write-review")
+        let webLink = URL(string: "https://apps.apple.com/app/carry?action=write-review")
+        let appStoreURL = deepLink ?? webLink
+        if let appStoreURL, UIApplication.shared.canOpenURL(appStoreURL) {
+            UIApplication.shared.open(appStoreURL)
+            return
+        }
+
+        // Fallback to in-app rating prompt.
         if let scene = UIApplication.shared.connectedScenes
             .compactMap({ $0 as? UIWindowScene })
             .first(where: { $0.activationState == .foregroundActive }) {
             SKStoreReviewController.requestReview(in: scene)
-            return
-        }
-
-        // Fallback: open App Store review page if in-app prompt is unavailable.
-        if let url = URL(string: "https://apps.apple.com/app/id0000000000?action=write-review") {
-            UIApplication.shared.open(url)
         }
     }
 
