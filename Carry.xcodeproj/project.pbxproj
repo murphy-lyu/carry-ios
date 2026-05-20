@@ -6,8 +6,13 @@
 	objectVersion = 77;
 	objects = {
 
+/* Begin PBXBuildFile section */
+		1183E3AD2FBD8D980039DC34 /* Carry.storekit in Resources */ = {isa = PBXBuildFile; fileRef = 1183E3AC2FBD8D980039DC34 /* Carry.storekit */; };
+/* End PBXBuildFile section */
+
 /* Begin PBXFileReference section */
 		115B30532FB56F4F006FD636 /* Carry.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Carry.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		1183E3AC2FBD8D980039DC34 /* Carry.storekit */ = {isa = PBXFileReference; lastKnownFileType = text; path = Carry.storekit; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
@@ -34,6 +39,7 @@
 			children = (
 				115B30552FB56F4F006FD636 /* Carry */,
 				115B30542FB56F4F006FD636 /* Products */,
+				1183E3AC2FBD8D980039DC34 /* Carry.storekit */,
 			);
 			sourceTree = "<group>";
 		};
@@ -117,6 +123,7 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				1183E3AD2FBD8D980039DC34 /* Carry.storekit in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

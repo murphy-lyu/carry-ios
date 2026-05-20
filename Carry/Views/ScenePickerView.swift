@@ -197,6 +197,10 @@ struct ScenePickerView: View {
         case .autoPack(let info, let seedSections):
             UINotificationFeedbackGenerator().notificationOccurred(.success)
             let id = buildTrip(info: info, keys: keys, seedSections: seedSections)
+            guard store.bundle(for: id) != nil else {
+                CarryLogger.shared.log(.autoPackNavigationFailed, context: "context=trip_not_persisted")
+                return
+            }
             router.path = NavigationPath()
             router.path.append(CreationRoute.packingList(id))
             dismiss()
