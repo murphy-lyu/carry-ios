@@ -1,0 +1,7 @@
+# Xcode user-specific state
+Carry.xcodeproj/xcuserdata/
+*.xcuserstate
+
+# Local debugger artifacts
+Carry.xcodeproj/xcuserdata/**/xcdebugger/
+
