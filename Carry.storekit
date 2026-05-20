@@ -1,0 +1,89 @@
+{
+  "identifier" : "A1B2C3D4-E5F6-7890-ABCD-EF1234560001",
+  "nonRenewingSubscriptions" : [
+
+  ],
+  "products" : [
+    {
+      "displayPrice" : "0.99",
+      "familySharable" : false,
+      "internalID" : "A1B2C3D4-E5F6-7890-ABCD-EF1234560010",
+      "localizations" : [
+        {
+          "description" : "Buy the developer a water",
+          "displayName" : "Water",
+          "locale" : "en_US"
+        }
+      ],
+      "productID" : "com.lumastudio.carry.water",
+      "referenceName" : "Water",
+      "type" : "Consumable"
+    },
+    {
+      "displayPrice" : "1.99",
+      "familySharable" : false,
+      "internalID" : "A1B2C3D4-E5F6-7890-ABCD-EF1234560020",
+      "localizations" : [
+        {
+          "description" : "Buy the developer an Americano",
+          "displayName" : "Americano",
+          "locale" : "en_US"
+        }
+      ],
+      "productID" : "com.lumastudio.carry.americano",
+      "referenceName" : "Americano",
+      "type" : "Consumable"
+    },
+    {
+      "displayPrice" : "2.99",
+      "familySharable" : false,
+      "internalID" : "A1B2C3D4-E5F6-7890-ABCD-EF1234560030",
+      "localizations" : [
+        {
+          "description" : "Buy the developer a Latte",
+          "displayName" : "Latte",
+          "locale" : "en_US"
+        }
+      ],
+      "productID" : "com.lumastudio.carry.latte",
+      "referenceName" : "Latte",
+      "type" : "Consumable"
+    },
+    {
+      "displayPrice" : "4.99",
+      "familySharable" : false,
+      "internalID" : "A1B2C3D4-E5F6-7890-ABCD-EF1234560040",
+      "localizations" : [
+        {
+          "description" : "Buy the developer a Cappuccino",
+          "displayName" : "Cappuccino",
+          "locale" : "en_US"
+        }
+      ],
+      "productID" : "com.lumastudio.carry.cappuccino",
+      "referenceName" : "Cappuccino",
+      "type" : "Consumable"
+    }
+  ],
+  "settings" : {
+    "_applicationInternalID" : "00000001",
+    "_developerTeamID" : "TEAMIDHERE",
+    "_lastSynchronizedDate" : "2026-05-20T00:00:00Z",
+    "askToBuyEnabled" : false,
+    "defaultLocale" : "en_US",
+    "defaultStorefront" : "USA",
+    "defaultSubscriptionRenewalRate" : 1.0986301369863014,
+    "failTransactionsEnabled" : false,
+    "interruptedPurchasesEnabled" : false,
+    "locale" : "en_US",
+    "storefront" : "USA",
+    "transactionReceiptLastIdentifier" : 0
+  },
+  "subscriptionGroups" : [
+
+  ],
+  "version" : {
+    "major" : 2,
+    "minor" : 0
+  }
+}

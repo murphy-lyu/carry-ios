@@ -138,6 +138,11 @@ struct HomeView: View {
         .background(Color(UIColor.systemGroupedBackground).ignoresSafeArea())
         .navigationBarHidden(true)
         .onAppear { store.refresh() }
+        .onReceive(router.$path) { path in
+            if path.isEmpty {
+                store.refresh()
+            }
+        }
         .alert(
             "Delete \(tripToDelete?.name ?? "")?",
             isPresented: $showDeleteConfirmation
@@ -292,9 +297,11 @@ struct TripCard: View {
                 if !isPast {
                     Spacer()
                     Text(remainingText)
-                        .font(.caption)
+                        .font(.subheadline)
+                        .fontWeight(.bold)
                         .foregroundColor(Color(.systemGray2))
                         .transition(.opacity)
+                        .frame(width: 90, alignment: .trailing)
                 }
             }
             .animation(.easeInOut(duration: 0.3), value: isComplete)

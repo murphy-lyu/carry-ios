@@ -74,10 +74,12 @@ struct ContentView: View {
         .environmentObject(router)
         .onAppear {
             applyStartupResetIfNeeded()
+            store.refresh()
         }
         .onChange(of: scenePhase) { _, phase in
             if phase == .active {
                 applyStartupResetIfNeeded()
+                store.refresh()
             }
         }
     }

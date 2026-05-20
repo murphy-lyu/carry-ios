@@ -81,11 +81,31 @@ final class TripStore: ObservableObject {
         let descriptor = FetchDescriptor<TripBundle>(
             sortBy: [SortDescriptor(\.createdAt, order: .reverse)]
         )
-        trips = (try? context.fetch(descriptor)) ?? []
+        do {
+            trips = try context.fetch(descriptor)
+            for trip in trips {
+                if trip.sections == nil {
+                    CarryLogger.shared.log(.dataCorrupted, context: "context=fetchTrips_nil_sections")
+                } else if trip.sections?.isEmpty == true {
+                    CarryLogger.shared.log(.orphanTrip)
+                } else {
+                    for section in trip.safeSections where (section.items ?? []).isEmpty {
+                        CarryLogger.shared.log(.orphanSection)
+                    }
+                }
+            }
+        } catch {
+            CarryLogger.shared.log(.loadFailed, context: "context=fetchTrips")
+            trips = []
+        }
     }
 
     private func save() {
-        try? context.save()
+        do {
+            try context.save()
+        } catch {
+            CarryLogger.shared.log(.persistFailed, context: "context=save")
+        }
         fetchTrips()
     }
 
@@ -93,8 +113,14 @@ final class TripStore: ObservableObject {
 
     func addTrip(_ bundle: TripBundle) {
         context.insert(bundle)
-        save()
+        do {
+            try context.save()
+        } catch {
+            CarryLogger.shared.log(.tripSaveFailed)
+        }
+        fetchTrips()
         NotificationManager.scheduleReminders(for: bundle)
+        CarryLogger.shared.log(.tripCreated)
     }
 
     func removeTrip(withId id: UUID) {
@@ -102,11 +128,15 @@ final class TripStore: ObservableObject {
         NotificationManager.cancelReminders(forTripId: id)
         context.delete(trip)
         save()
+        CarryLogger.shared.log(.tripDeleted)
     }
 
     @discardableResult
     func duplicateTrip(withId id: UUID) -> UUID? {
-        guard let originalIndex = trips.firstIndex(where: { $0.id == id }) else { return nil }
+        guard let originalIndex = trips.firstIndex(where: { $0.id == id }) else {
+            CarryLogger.shared.log(.duplicateFailed, context: "context=trip_not_found")
+            return nil
+        }
         let original = trips[originalIndex]
         let copySuffix = NSLocalizedString("trip.copy_suffix", comment: "")
         let newSections = original.safeSections.map { section -> PackingSection in
@@ -133,8 +163,13 @@ final class TripStore: ObservableObject {
         let insertIndex = min(originalIndex + 1, trips.count)
         trips.insert(newBundle, at: insertIndex)
         DispatchQueue.main.async {
-            try? self.context.save()
+            do {
+                try self.context.save()
+            } catch {
+                CarryLogger.shared.log(.duplicateFailed, context: "context=save_failed")
+            }
         }
+        CarryLogger.shared.log(.tripDuplicated)
         return newBundle.id
     }
 
@@ -145,7 +180,12 @@ final class TripStore: ObservableObject {
         trip.departureDate = info.departureDate
         trip.days = info.durationDays
         trip.dateRange = info.dateRangeDisplay
-        save()
+        do {
+            try context.save()
+        } catch {
+            CarryLogger.shared.log(.tripEditSaveFailed)
+        }
+        fetchTrips()
         NotificationManager.scheduleReminders(for: trip)
     }
 
@@ -154,6 +194,7 @@ final class TripStore: ObservableObject {
         for section in trip.safeSections {
             if let item = (section.items ?? []).first(where: { $0.id == itemId }) {
                 item.isPacked.toggle()
+                CarryLogger.shared.log(item.isPacked ? .itemChecked : .itemUnchecked)
                 save()
                 return
             }
@@ -180,8 +221,18 @@ final class TripStore: ObservableObject {
         guard let trip = trips.first(where: { $0.id == tripId }) else { return }
         for section in trip.safeSections {
             if let item = (section.items ?? []).first(where: { $0.id == itemId }) {
+                let wasNew = item.name.isEmpty
                 item.name = name
-                save()
+                do {
+                    try context.save()
+                } catch {
+                    CarryLogger.shared.log(wasNew ? .itemAddFailed : .persistFailed,
+                                           context: "context=updateItemName")
+                }
+                fetchTrips()
+                if wasNew && !name.isEmpty {
+                    CarryLogger.shared.log(.itemAdded)
+                }
                 return
             }
         }
@@ -191,9 +242,16 @@ final class TripStore: ObservableObject {
         guard let trip = trips.first(where: { $0.id == tripId }) else { return }
         for section in trip.safeSections {
             if let item = (section.items ?? []).first(where: { $0.id == itemId }) {
+                let wasNamed = !item.name.isEmpty
                 context.delete(item)
                 section.items?.removeAll { $0.id == itemId }
-                save()
+                do {
+                    try context.save()
+                } catch {
+                    CarryLogger.shared.log(.itemDeleteFailed, context: "context=removeItem")
+                }
+                fetchTrips()
+                if wasNamed { CarryLogger.shared.log(.itemDeleted) }
                 return
             }
         }
@@ -209,12 +267,21 @@ final class TripStore: ObservableObject {
             return
         }
         let items = section.items ?? []
+        if newOrder.count > items.count {
+            CarryLogger.shared.log(.sortIndexOutOfBounds,
+                                   context: "index=\(newOrder.count) count=\(items.count)")
+        }
         for (index, id) in newOrder.enumerated() {
             if let item = items.first(where: { $0.id == id }) {
                 item.sortOrder = index
             }
         }
-        save()
+        do {
+            try context.save()
+        } catch {
+            CarryLogger.shared.log(.reorderSaveFailed, context: "context=reorderItems")
+        }
+        fetchTrips()
     }
 
     /// Regenerates the trip's packing list based on a new scene selection.
@@ -284,6 +351,7 @@ final class TripStore: ObservableObject {
         trip.sections = newSections
         trip.selectedSceneKeys = keys
         save()
+        CarryLogger.shared.log(.autoPackTriggered, context: "scenes=\(keys.count)")
     }
 
     /// Returns all unique preset item names for the given scene keys (including base items).
@@ -296,12 +364,23 @@ final class TripStore: ObservableObject {
 
     func reorderSections(tripId: UUID, newOrder: [UUID]) {
         guard let trip = trips.first(where: { $0.id == tripId }) else { return }
+        let sectionCount = trip.safeSections.count
+        if newOrder.count > sectionCount {
+            CarryLogger.shared.log(.sortIndexOutOfBounds,
+                                   context: "index=\(newOrder.count) count=\(sectionCount)")
+        }
         for (index, id) in newOrder.enumerated() {
             if let section = trip.safeSections.first(where: { $0.id == id }) {
                 section.sortOrder = index
             }
         }
-        save()
+        do {
+            try context.save()
+        } catch {
+            CarryLogger.shared.log(.reorderSaveFailed, context: "context=reorderSections")
+        }
+        fetchTrips()
+        CarryLogger.shared.log(.sectionReordered)
     }
 
     @discardableResult

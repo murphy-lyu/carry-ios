@@ -250,6 +250,10 @@ struct PackingListView: View {
             }
         }
         .onAppear {
+            CarryLogger.shared.log(.tripOpened)
+            if let b = bundle, b.sections == nil {
+                CarryLogger.shared.log(.tripDataEmpty, context: "context=onAppear")
+            }
             guard isComplete else { return }
             Task {
                 try? await Task.sleep(for: .milliseconds(450))
@@ -297,12 +301,16 @@ struct PackingListView: View {
             }
         }
         .animation(.easeInOut(duration: 0.25), value: isComplete)
-        .sheet(isPresented: $showEditSheet) {
+        .sheet(isPresented: $showEditSheet, onDismiss: {
+            store.refresh()
+        }) {
             if let bundle {
                 EditTripView(trip: bundle)
             }
         }
-        .sheet(isPresented: $showEditScenesSheet) {
+        .sheet(isPresented: $showEditScenesSheet, onDismiss: {
+            store.refresh()
+        }) {
             ScenePickerView(editingTripId: tripId)
                 .presentationDragIndicator(.visible)
         }

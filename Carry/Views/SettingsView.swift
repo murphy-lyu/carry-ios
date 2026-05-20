@@ -4,6 +4,7 @@
 //
 
 import SwiftUI
+import UIKit
 import UserNotifications
 
 struct SettingsView: View {
@@ -11,6 +12,7 @@ struct SettingsView: View {
     @State private var notificationStatus: UNAuthorizationStatus = .notDetermined
     @State private var showAppearancePicker = false
     @State private var showRoadmapSheet = false
+    @State private var showCoffeeSheet = false
     @State private var didApplyLaunchSheetReset = false
     @Environment(\.scenePhase) private var scenePhase
     @AppStorage("appearance_mode") private var appearanceModeRaw = AppearanceMode.system.rawValue
@@ -148,6 +150,21 @@ struct SettingsView: View {
                     }
                     .buttonStyle(.plain)
 
+                    Button {
+                        showCoffeeSheet = true
+                    } label: {
+                        HStack {
+                            Text("settings.section.support")
+                                .foregroundColor(.primary)
+                            Spacer()
+                            Text("☕️")
+                            Image(systemName: "chevron.right")
+                                .foregroundColor(Color(.tertiaryLabel))
+                                .font(.system(size: 14, weight: .semibold))
+                        }
+                    }
+                    .buttonStyle(.plain)
+
                     NavigationLink {
                         FeedbackView()
                     } label: {
@@ -190,6 +207,7 @@ struct SettingsView: View {
                         Text("settings.legal.privacy")
                     }
                     .foregroundColor(.primary)
+
                 }
             }
             .scrollContentBackground(.hidden)
@@ -222,6 +240,9 @@ struct SettingsView: View {
                     showRoadmapSheet = false
                 }
             }
+        }
+        .sheet(isPresented: $showCoffeeSheet) {
+            CoffeeSheetView()
         }
     }
 }
@@ -268,4 +289,5 @@ struct FeedbackView: View {
 
 #Preview {
     SettingsView()
+        .environmentObject(TripStore())
 }

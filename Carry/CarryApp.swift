@@ -11,7 +11,16 @@ import SwiftData
 @main
 struct CarryApp: App {
     static let container: ModelContainer = {
-        try! ModelContainer(for: TripBundle.self)
+        do {
+            return try ModelContainer(for: TripBundle.self)
+        } catch {
+            CarryLogger.shared.log(.dbInitFailed, context: "error=\(error.localizedDescription)")
+            // Fall back to an in-memory store so the app stays alive
+            return try! ModelContainer(
+                for: TripBundle.self,
+                configurations: ModelConfiguration(isStoredInMemoryOnly: true)
+            )
+        }
     }()
 
     @StateObject private var store = TripStore()
@@ -29,6 +38,16 @@ struct CarryApp: App {
                 .environmentObject(store)
                 .environmentObject(router)
                 .preferredColorScheme(appearanceMode.colorScheme)
+                .onAppear {
+                    CarryLogger.shared.log(.appLaunched)
+                }
+                .onReceive(
+                    NotificationCenter.default.publisher(
+                        for: UIApplication.didReceiveMemoryWarningNotification
+                    )
+                ) { _ in
+                    CarryLogger.shared.log(.memoryWarning)
+                }
         }
         .modelContainer(Self.container)
     }

@@ -4,10 +4,18 @@
 //
 
 import SwiftUI
+import UIKit
 
 struct AboutView: View {
 
     @Environment(\.colorScheme) private var colorScheme
+    @EnvironmentObject private var store: TripStore
+    @State private var versionTapCount = 0
+    @State private var versionTapTimer: Timer?
+
+    private var isChineseLanguage: Bool {
+        (Locale.preferredLanguages.first ?? "en").lowercased().hasPrefix("zh")
+    }
 
     private var appVersion: String {
         let dict = Bundle.main.infoDictionary
@@ -78,8 +86,10 @@ struct AboutView: View {
                         .padding(.top, 24)
                         .padding(.bottom, 8)
 
-                    socialRow(label: "Twitter / X", handle: "@lumastudio", url: "https://twitter.com/lumastudio")
-                    socialRow(label: "about.social.xiaohongshu", handle: "Luma Studio", url: "https://xiaohongshu.com")
+                    socialRow(label: "Twitter / X", handle: "@murphy_lyu", url: "https://twitter.com/murphy_lyu")
+                    if isChineseLanguage {
+                        socialRow(label: "about.social.xiaohongshu", handle: "@murphy_lyu", url: "https://xiaohongshu.com")
+                    }
                 }
 
                 // — App info
@@ -94,7 +104,11 @@ struct AboutView: View {
                         .padding(.bottom, 8)
 
                     infoRow(label: "settings.about.appName", value: "Carry")
-                    infoRow(label: "settings.about.version", value: appVersion)
+                    infoRow(
+                        label: "settings.about.version",
+                        value: appVersion,
+                        onTap: handleVersionTap
+                    )
                 }
 
                 // — Footer: made with + (dedication hidden for now)
@@ -157,23 +171,67 @@ struct AboutView: View {
         }
     }
 
-    private func infoRow(label: LocalizedStringKey, value: String) -> some View {
-        HStack {
-            Text(label)
-                .font(.subheadline)
-                .foregroundColor(.primary)
-            Spacer()
-            Text(value)
-                .font(.subheadline)
-                .foregroundStyle(.secondary)
+    private func infoRow(
+        label: LocalizedStringKey,
+        value: String,
+        onTap: (() -> Void)? = nil
+    ) -> some View {
+        Button {
+            onTap?()
+        } label: {
+            HStack {
+                Text(label)
+                    .font(.subheadline)
+                    .foregroundColor(.primary)
+                Spacer()
+                Text(value)
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+            }
+            .padding(.horizontal, 16)
+            .frame(height: 44)
+            .overlay(alignment: .bottom) {
+                Rectangle()
+                    .fill(dividerColor)
+                    .frame(height: 0.67)
+                    .padding(.leading, 16)
+            }
         }
-        .padding(.horizontal, 16)
-        .frame(height: 44)
-        .overlay(alignment: .bottom) {
-            Rectangle()
-                .fill(dividerColor)
-                .frame(height: 0.67)
-                .padding(.leading, 16)
+        .buttonStyle(.plain)
+        .contentShape(Rectangle())
+        .disabled(onTap == nil)
+    }
+
+    private func handleVersionTap() {
+        versionTapCount += 1
+        versionTapTimer?.invalidate()
+        if versionTapCount >= 5 {
+            versionTapCount = 0
+            exportDebugLog()
+        } else {
+            versionTapTimer = Timer.scheduledTimer(withTimeInterval: 2.0, repeats: false) { _ in
+                versionTapCount = 0
+            }
+        }
+    }
+
+    private func exportDebugLog() {
+        UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+        let totalItems = store.trips.reduce(0) { $0 + $1.totalCount }
+        let logText = CarryLogger.shared.exportLog(
+            tripCount: store.trips.count,
+            totalItemCount: totalItems
+        )
+        let fmt = DateFormatter()
+        fmt.dateFormat = "yyyyMMdd-HHmmss"
+        let filename = "carry-log-\(fmt.string(from: Date())).txt"
+        let url = FileManager.default.temporaryDirectory.appendingPathComponent(filename)
+        try? logText.write(to: url, atomically: true, encoding: .utf8)
+        let activityVC = UIActivityViewController(activityItems: [url], applicationActivities: nil)
+        if let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
+           let window = windowScene.windows.first,
+           let rootVC = window.rootViewController {
+            rootVC.present(activityVC, animated: true)
         }
     }
 }
