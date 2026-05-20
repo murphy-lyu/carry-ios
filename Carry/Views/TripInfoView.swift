@@ -13,19 +13,11 @@ struct TripInfoView: View {
     @State private var departureDate: Date
     @State private var returnDate: Date
     @FocusState private var focusedField: FocusField?
-    @State private var activePicker: ActiveDatePicker?
     @EnvironmentObject var router: NavigationRouter
 
     private enum FocusField: Hashable {
         case tripName
         case destinationCity
-    }
-
-    private enum ActiveDatePicker: String, Identifiable {
-        case departure
-        case `return`
-
-        var id: String { rawValue }
     }
 
     init() {
@@ -80,22 +72,24 @@ struct TripInfoView: View {
 
                 fieldGroup(label: "Dates") {
                     VStack(spacing: 0) {
-                        dateRow(
-                            title: "Departure",
-                            value: departureDate,
-                            action: { activePicker = .departure }
-                        )
+                        DatePicker("Departure", selection: $departureDate, displayedComponents: .date)
+                            .font(.subheadline)
+                            .tint(.primary)
+                            .padding(12)
+                            .onChange(of: departureDate) { oldVal, newVal in
+                                let days = Calendar.current.dateComponents([.day], from: oldVal, to: returnDate).day ?? 7
+                                returnDate = Calendar.current.date(byAdding: .day, value: max(1, days), to: newVal) ?? newVal
+                            }
 
                         Rectangle()
                             .fill(Color(UIColor.separator))
                             .frame(height: 0.5)
                             .padding(.horizontal, 12)
 
-                        dateRow(
-                            title: "Return",
-                            value: returnDate,
-                            action: { activePicker = .return }
-                        )
+                        DatePicker("Return", selection: $returnDate, in: departureDate..., displayedComponents: .date)
+                            .font(.subheadline)
+                            .tint(.primary)
+                            .padding(12)
                     }
                     .background(Color(UIColor.secondarySystemBackground))
                     .cornerRadius(12)
@@ -134,44 +128,6 @@ struct TripInfoView: View {
         }
         .navigationTitle("New trip")
         .navigationBarTitleDisplayMode(.inline)
-        .sheet(item: $activePicker) { picker in
-            NavigationStack {
-                VStack(spacing: 0) {
-                    if picker == .departure {
-                        DatePicker(
-                            "Departure",
-                            selection: $departureDate,
-                            displayedComponents: .date
-                        )
-                        .datePickerStyle(.graphical)
-                        .tint(.primary)
-                        .padding(16)
-                    } else {
-                        DatePicker(
-                            "Return",
-                            selection: $returnDate,
-                            in: departureDate...,
-                            displayedComponents: .date
-                        )
-                        .datePickerStyle(.graphical)
-                        .tint(.primary)
-                        .padding(16)
-                    }
-                }
-                .navigationTitle(picker == .departure ? "Departure" : "Return")
-                .navigationBarTitleDisplayMode(.inline)
-                .toolbar {
-                    ToolbarItem(placement: .topBarTrailing) {
-                        Button("Done") { activePicker = nil }
-                    }
-                }
-            }
-            .presentationDetents([.medium])
-            .presentationDragIndicator(.visible)
-        }
-        .onChange(of: departureDate, initial: false) { _, newVal in
-            returnDate = Calendar.current.date(byAdding: .day, value: 7, to: newVal) ?? newVal
-        }
         .onChange(of: returnDate, initial: false) { _, newVal in
             if newVal < departureDate {
                 returnDate = departureDate
@@ -200,25 +156,6 @@ struct TripInfoView: View {
         .padding(.horizontal, 12)
         .background(Color(UIColor.secondarySystemBackground))
         .cornerRadius(12)
-    }
-
-    private func dateRow(title: LocalizedStringKey, value: Date, action: @escaping () -> Void) -> some View {
-        Button(action: action) {
-            HStack {
-                Text(title)
-                    .foregroundStyle(.primary)
-                Spacer()
-                Text(value.formatted(date: .abbreviated, time: .omitted))
-                    .foregroundStyle(.primary)
-                    .padding(.horizontal, 12)
-                    .padding(.vertical, 6)
-                    .background(Color(UIColor.systemGray5))
-                    .clipShape(Capsule())
-            }
-            .font(.subheadline)
-            .padding(12)
-        }
-        .buttonStyle(.plain)
     }
 
     private func fieldGroup<Content: View>(
