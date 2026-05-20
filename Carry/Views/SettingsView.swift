@@ -128,29 +128,6 @@ struct SettingsView: View {
 
                 Section("Support") {
                     Button {
-                        let url = URL(string: "https://apps.apple.com/app/carry")!
-                        let activityVC = UIActivityViewController(
-                            activityItems: ["Check out Carry – a minimal packing list app!", url],
-                            applicationActivities: nil
-                        )
-                        if let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
-                           let window = windowScene.windows.first,
-                           let rootVC = window.rootViewController {
-                            rootVC.present(activityVC, animated: true)
-                        }
-                    } label: {
-                        HStack {
-                            Text("Share with Friends")
-                                .foregroundColor(.primary)
-                            Spacer()
-                            Image(systemName: "chevron.right")
-                                .foregroundColor(Color(.tertiaryLabel))
-                                .font(.system(size: 14, weight: .semibold))
-                        }
-                    }
-                    .buttonStyle(.plain)
-
-                    Button {
                         showCoffeeSheet = true
                     } label: {
                         HStack {

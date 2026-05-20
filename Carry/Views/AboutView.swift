@@ -103,7 +103,10 @@ struct AboutView: View {
                         .padding(.top, 24)
                         .padding(.bottom, 8)
 
-                    infoRow(label: "settings.about.appName", value: "Carry")
+                    infoRow(
+                        label: "settings.about.appName",
+                        value: "Carry"
+                    )
                     infoRow(
                         label: "settings.about.version",
                         value: appVersion,
@@ -174,6 +177,7 @@ struct AboutView: View {
     private func infoRow(
         label: LocalizedStringKey,
         value: String,
+        valueColor: Color = .secondary,
         onTap: (() -> Void)? = nil
     ) -> some View {
         Button {
@@ -186,7 +190,7 @@ struct AboutView: View {
                 Spacer()
                 Text(value)
                     .font(.subheadline)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(valueColor)
             }
             .padding(.horizontal, 16)
             .frame(height: 44)
@@ -199,7 +203,6 @@ struct AboutView: View {
         }
         .buttonStyle(.plain)
         .contentShape(Rectangle())
-        .disabled(onTap == nil)
     }
 
     private func handleVersionTap() {
