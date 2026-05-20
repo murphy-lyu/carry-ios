@@ -62,6 +62,8 @@ final class TripStore: ObservableObject {
 
     // MARK: - Persistence
 
+    func refresh() { fetchTrips() }
+
     private func fetchTrips() {
         let descriptor = FetchDescriptor<TripBundle>(
             sortBy: [SortDescriptor(\.createdAt, order: .reverse)]

@@ -122,6 +122,7 @@ struct HomeView: View {
         }
         .background(Color(UIColor.systemGroupedBackground).ignoresSafeArea())
         .navigationBarHidden(true)
+        .onAppear { store.refresh() }
         .alert(
             "Delete \(tripToDelete?.name ?? "")?",
             isPresented: $showDeleteConfirmation
