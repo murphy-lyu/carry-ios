@@ -17372,13 +17372,13 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "按分类快速添加"
+            "value" : "按分类快速筛选"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "按分類快速加入"
+            "value" : "按分類快速篩選"
           }
         }
       }
@@ -17418,13 +17418,13 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "从我的物品库中快速挑选"
+            "value" : "从我的物品库中挑选"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "從我的物品庫中快速挑選"
+            "value" : "從我的物品庫中挑選"
           }
         }
       }

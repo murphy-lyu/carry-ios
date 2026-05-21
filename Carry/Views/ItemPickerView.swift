@@ -163,6 +163,17 @@ struct ItemPickerView: View {
 
     private var myItemsCount: Int { store.myItems.count }
 
+    private var presetCategoryOrder: [String: Int] {
+        Dictionary(uniqueKeysWithValues: itemPickerCatalog.enumerated().map { ($1.name, $0) })
+    }
+
+    private var presetItemOrderByCategory: [String: [String: Int]] {
+        Dictionary(uniqueKeysWithValues: itemPickerCatalog.map { category in
+            let itemOrder = Dictionary(uniqueKeysWithValues: category.items.enumerated().map { ($1, $0) })
+            return (category.name, itemOrder)
+        })
+    }
+
     private enum SourceMode: String, CaseIterable {
         case preset
         case myItems
@@ -242,12 +253,7 @@ struct ItemPickerView: View {
             // Scrollable content
             if sourceMode == .myItems {
                 List {
-                    let myItems = myItemsSearchResults().sorted { lhs, rhs in
-                        if lhs.sortOrder != rhs.sortOrder {
-                            return lhs.sortOrder < rhs.sortOrder
-                        }
-                        return lhs.name.localizedCaseInsensitiveCompare(rhs.name) == .orderedAscending
-                    }
+                    let myItems = myItemsSearchResults().sorted(by: compareMyItems(_:_:))
                     if myItems.isEmpty {
                         VStack(spacing: 10) {
                             Image(systemName: searchText.isEmpty ? "shippingbox" : "magnifyingglass")
@@ -277,12 +283,12 @@ struct ItemPickerView: View {
                                 .listRowBackground(Color(UIColor.systemBackground))
                                 .listRowSeparator(.hidden)
                                 .swipeActions(edge: .trailing, allowsFullSwipe: false) {
-                                    Button(role: .destructive) {
+                                    Button {
                                         store.removeMyItem(id: item.id)
                                     } label: {
                                         Label("Delete", systemImage: "trash")
                                     }
-                                    .tint(.red)
+                                    .tint(Color(UIColor.label))
                                 }
                         }
                     }
@@ -290,7 +296,7 @@ struct ItemPickerView: View {
                 .listStyle(.plain)
                 .scrollContentBackground(.hidden)
                 .background(Color(UIColor.systemBackground))
-                .padding(.bottom, isCreateMode ? 96 : 24)
+                .padding(.bottom, 0)
             } else {
                 ScrollView {
                     LazyVStack(alignment: .leading, spacing: 0, pinnedViews: [.sectionHeaders]) {
@@ -517,25 +523,22 @@ struct ItemPickerView: View {
             HStack(spacing: 12) {
                 ZStack {
                     Circle()
-                        .fill(isSelected ? Color.primary.opacity(0.12) : Color.clear)
+                        .fill(isSelected ? Color.primary : Color.clear)
                     Circle()
-                        .strokeBorder(
-                            isSelected ? Color.primary : Color.secondary.opacity(0.4),
-                            lineWidth: 1.5
-                        )
+                        .strokeBorder(isSelected ? Color.primary : Color.secondary.opacity(0.4), lineWidth: 1.5)
                     if isSelected {
                         Image(systemName: "checkmark")
                             .font(.system(size: 11, weight: .bold))
-                            .foregroundStyle(.primary)
+                            .foregroundColor(Color(UIColor.systemBackground))
                     }
                 }
                 .frame(width: 24, height: 24)
                 VStack(alignment: .leading, spacing: 2) {
-                    Text(item.name)
+                    Text(LocalizedStringKey(item.name))
                         .font(.body)
                         .foregroundStyle(.primary)
                     if !item.category.isEmpty {
-                        Text(item.category)
+                        Text(LocalizedStringKey(item.category))
                             .font(.caption)
                             .foregroundStyle(.secondary)
                     }
@@ -546,6 +549,30 @@ struct ItemPickerView: View {
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
+    }
+
+    private func compareMyItems(_ lhs: MyItem, _ rhs: MyItem) -> Bool {
+        let lhsCategoryRank = presetCategoryOrder[lhs.category] ?? Int.max
+        let rhsCategoryRank = presetCategoryOrder[rhs.category] ?? Int.max
+        if lhsCategoryRank != rhsCategoryRank {
+            return lhsCategoryRank < rhsCategoryRank
+        }
+
+        if lhs.category.localizedCaseInsensitiveCompare(rhs.category) != .orderedSame {
+            return lhs.category.localizedCaseInsensitiveCompare(rhs.category) == .orderedAscending
+        }
+
+        let lhsItemRank = presetItemOrderByCategory[lhs.category]?[lhs.name] ?? Int.max
+        let rhsItemRank = presetItemOrderByCategory[rhs.category]?[rhs.name] ?? Int.max
+        if lhsItemRank != rhsItemRank {
+            return lhsItemRank < rhsItemRank
+        }
+
+        if lhs.name.localizedCaseInsensitiveCompare(rhs.name) != .orderedSame {
+            return lhs.name.localizedCaseInsensitiveCompare(rhs.name) == .orderedAscending
+        }
+
+        return lhs.sortOrder < rhs.sortOrder
     }
 
     // MARK: - Search bar
