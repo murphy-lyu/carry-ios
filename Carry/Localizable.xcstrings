@@ -6387,6 +6387,23 @@
         }
       }
     },
+    "common.done" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Done"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "完成"
+          }
+        }
+      }
+    },
     "Compact microfibre towel" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -6701,6 +6718,29 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "繼續"
+          }
+        }
+      }
+    },
+    "Cotton pads" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Cotton pads"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "化妆棉"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "化妝棉"
           }
         }
       }
@@ -9653,6 +9693,29 @@
         }
       }
     },
+    "Face cream" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Face cream"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "面霜"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "面霜"
+          }
+        }
+      }
+    },
     "Face masks" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -11279,6 +11342,29 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "口香糖"
+          }
+        }
+      }
+    },
+    "Hair ties" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hair ties"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "发圈"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "髮圈"
           }
         }
       }
@@ -16671,6 +16757,29 @@
         }
       }
     },
+    "Overseas SIM / portable WiFi" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Overseas SIM / portable WiFi"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "境外SIM卡 / 随身WiFi"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "境外SIM卡 / 隨身WiFi"
+          }
+        }
+      }
+    },
     "Pack better than you normally would — you'll be glad you did" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -18277,6 +18386,29 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "便攜白噪音機"
+          }
+        }
+      }
+    },
+    "Portable WiFi device" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Portable WiFi device"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "随身WiFi"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "隨身WiFi"
           }
         }
       }
@@ -20710,6 +20842,23 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "版本"
+          }
+        }
+      }
+    },
+    "settings.appearance.title" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Appearance"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "外观"
           }
         }
       }
@@ -25546,6 +25695,29 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "收費站、偏遠加油站和路邊攤常常不收卡"
+          }
+        }
+      }
+    },
+    "Toner" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Toner"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "爽肤水"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "化妝水"
           }
         }
       }

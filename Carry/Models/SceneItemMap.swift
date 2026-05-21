@@ -25,20 +25,28 @@ struct SceneItem {
 func defaultQuantity(for itemName: String, tripDays: Int) -> Int {
     let days = max(1, tripDays)
     let lower = itemName.lowercased()
-    let maxQuantity = 99_999
 
     if lower.contains("spare") || lower.contains("extra") {
         return 1
     }
     if lower == "underwear" || lower == "socks" || lower == "face masks"
         || lower == "instant coffee packets" || lower == "tea bags" {
-        return min(days, maxQuantity)
+        return min(days, 99)
     }
     if lower == "daily medication"
         || lower == "children's medication" {
-        return min(days, maxQuantity)
+        return min(days, 99)
     }
     return 1
+}
+
+// MARK: - Locale detection
+
+var isChineseLocale: Bool {
+    let lang = Locale.preferredLanguages.first ?? ""
+    if lang.hasPrefix("zh") { return true }
+    let region = Locale.current.region?.identifier ?? ""
+    return ["CN", "TW", "HK", "MO"].contains(region)
 }
 
 // MARK: - Chip label → scene key
@@ -85,10 +93,8 @@ let sceneItemMap: [String: [SceneItem]] = [
         SceneItem(name: "Car insurance docs",       category: .documents,   isAlert: true),
         SceneItem(name: "Car charger",              category: .electronics, isAlert: true),
         SceneItem(name: "Sunglasses",               category: .health,      isAlert: true),
-        SceneItem(name: "Portable power bank",      category: .electronics, isAlert: false),
         SceneItem(name: "Reusable water bottle",    category: .essentials,  isAlert: false),
         SceneItem(name: "Snacks",                   category: .essentials,  isAlert: false),
-        SceneItem(name: "Paper map / offline map",  category: .essentials,  isAlert: false),
     ],
     "long_haul_flight": [
         SceneItem(name: "Passport",                 category: .documents,   isAlert: true),
@@ -98,9 +104,6 @@ let sceneItemMap: [String: [SceneItem]] = [
         SceneItem(name: "Eye mask",                 category: .essentials,  isAlert: false),
         SceneItem(name: "Earplugs",                 category: .essentials,  isAlert: false),
         SceneItem(name: "Compression socks",        category: .clothing,    isAlert: false),
-        SceneItem(name: "Lip balm",                 category: .toiletries,  isAlert: false),
-        SceneItem(name: "Hand sanitiser",           category: .health,      isAlert: false),
-        SceneItem(name: "Portable charger",         category: .electronics, isAlert: false),
     ],
     "cruise": [
         SceneItem(name: "Passport",                 category: .documents,   isAlert: true),
@@ -109,19 +112,14 @@ let sceneItemMap: [String: [SceneItem]] = [
         SceneItem(name: "Formal dinner outfit",     category: .clothing,    isAlert: true),
         SceneItem(name: "Swimwear",                 category: .clothing,    isAlert: false),
         SceneItem(name: "Sunscreen SPF 50+",        category: .health,      isAlert: false),
-        SceneItem(name: "Waterproof sandals",       category: .clothing,    isAlert: false),
-        SceneItem(name: "Power strip",              category: .electronics, isAlert: false),
     ],
     "tropical": [
         SceneItem(name: "Sunscreen SPF 50+",        category: .health,      isAlert: true),
         SceneItem(name: "Sunglasses",               category: .health,      isAlert: true),
         SceneItem(name: "Sun hat",                  category: .clothing,    isAlert: true),
         SceneItem(name: "Insect repellent",         category: .health,      isAlert: true),
-        SceneItem(name: "Light rain jacket",        category: .clothing,    isAlert: true),
         SceneItem(name: "Swimwear",                 category: .clothing,    isAlert: false),
-        SceneItem(name: "After-sun lotion",         category: .health,      isAlert: false),
-        SceneItem(name: "Waterproof sandals",       category: .clothing,    isAlert: false),
-        SceneItem(name: "Reusable water bottle",    category: .essentials,  isAlert: false),
+        SceneItem(name: "Light rain jacket",        category: .clothing,    isAlert: false),
     ],
     "rainy_city": [
         SceneItem(name: "Compact umbrella",         category: .essentials,  isAlert: true),
@@ -133,12 +131,10 @@ let sceneItemMap: [String: [SceneItem]] = [
     "high_altitude": [
         SceneItem(name: "Altitude sickness pills",  category: .health,      isAlert: true),
         SceneItem(name: "Warm base layer",          category: .clothing,    isAlert: true),
-        SceneItem(name: "Lip balm with SPF",        category: .toiletries,  isAlert: true),
         SceneItem(name: "Sunscreen SPF 50+",        category: .health,      isAlert: true),
         SceneItem(name: "Sunglasses",               category: .health,      isAlert: true),
         SceneItem(name: "Thermal socks",            category: .clothing,    isAlert: false),
         SceneItem(name: "Windproof jacket",         category: .clothing,    isAlert: false),
-        SceneItem(name: "Reusable water bottle",    category: .essentials,  isAlert: false),
     ],
     "winter": [
         SceneItem(name: "Thermal underwear",        category: .clothing,    isAlert: true),
@@ -147,8 +143,6 @@ let sceneItemMap: [String: [SceneItem]] = [
         SceneItem(name: "Beanie / hat",             category: .clothing,    isAlert: true),
         SceneItem(name: "Scarf",                    category: .clothing,    isAlert: false),
         SceneItem(name: "Thermal socks",            category: .clothing,    isAlert: false),
-        SceneItem(name: "Lip balm",                 category: .toiletries,  isAlert: false),
-        SceneItem(name: "Hand cream",               category: .toiletries,  isAlert: false),
         SceneItem(name: "Snow boots",               category: .clothing,    isAlert: false),
     ],
     "business": [
@@ -157,9 +151,7 @@ let sceneItemMap: [String: [SceneItem]] = [
         SceneItem(name: "Laptop charger",           category: .electronics, isAlert: true),
         SceneItem(name: "Formal shirt / blouse",    category: .clothing,    isAlert: true),
         SceneItem(name: "Dress shoes",              category: .clothing,    isAlert: true),
-        SceneItem(name: "Notebook & pen",           category: .essentials,  isAlert: false),
         SceneItem(name: "Universal adapter",        category: .electronics, isAlert: false),
-        SceneItem(name: "Portable charger",         category: .electronics, isAlert: false),
     ],
     "kids": [
         SceneItem(name: "Children's passport / ID", category: .documents,   isAlert: true),
@@ -169,20 +161,15 @@ let sceneItemMap: [String: [SceneItem]] = [
         SceneItem(name: "Favourite toy / comfort item", category: .essentials, isAlert: true),
         SceneItem(name: "Change of clothes (extra)", category: .clothing,   isAlert: false),
         SceneItem(name: "Sunscreen for kids",       category: .health,      isAlert: false),
-        SceneItem(name: "Portable white noise device", category: .electronics, isAlert: false),
     ],
     "hiking": [
         SceneItem(name: "Hiking boots",             category: .clothing,    isAlert: true),
         SceneItem(name: "First aid kit",            category: .health,      isAlert: true),
         SceneItem(name: "Headlamp + batteries",     category: .essentials,  isAlert: true),
         SceneItem(name: "Sunscreen SPF 50+",        category: .health,      isAlert: true),
-        SceneItem(name: "Insect repellent",         category: .health,      isAlert: true),
         SceneItem(name: "Reusable water bottle",    category: .essentials,  isAlert: true),
-        SceneItem(name: "Offline maps downloaded",  category: .essentials,  isAlert: true),
         SceneItem(name: "Trekking poles",           category: .essentials,  isAlert: false),
         SceneItem(name: "Trail snacks / energy bars", category: .essentials, isAlert: false),
-        SceneItem(name: "Moisture-wicking socks",   category: .clothing,    isAlert: false),
-        SceneItem(name: "Rain poncho",              category: .clothing,    isAlert: false),
     ],
     "honeymoon": [
         SceneItem(name: "Passport",                 category: .documents,   isAlert: true),
@@ -190,22 +177,18 @@ let sceneItemMap: [String: [SceneItem]] = [
         SceneItem(name: "Camera / extra memory card", category: .electronics, isAlert: false),
         SceneItem(name: "Portable Bluetooth speaker", category: .electronics, isAlert: false),
         SceneItem(name: "Perfume / cologne",        category: .toiletries,  isAlert: false),
-        SceneItem(name: "Marriage certificate (if needed)", category: .documents, isAlert: false),
     ],
     "backpacking": [
         SceneItem(name: "Backpack rain cover",      category: .clothing,    isAlert: true),
         SceneItem(name: "Microfibre towel",         category: .essentials,  isAlert: true),
-        SceneItem(name: "Packing cubes",            category: .essentials,  isAlert: false),
         SceneItem(name: "Quick-dry clothing",       category: .clothing,    isAlert: true),
         SceneItem(name: "Padlock",                  category: .essentials,  isAlert: true),
-        SceneItem(name: "Power bank",               category: .electronics, isAlert: false),
         SceneItem(name: "Reusable water bottle",    category: .essentials,  isAlert: false),
     ],
     "city_break": [
         SceneItem(name: "Comfortable walking shoes", category: .clothing,   isAlert: true),
         SceneItem(name: "Crossbody bag",             category: .essentials, isAlert: true),
         SceneItem(name: "Transit card / app",        category: .essentials, isAlert: false),
-        SceneItem(name: "Portable charger",          category: .electronics, isAlert: false),
         SceneItem(name: "Umbrella",                  category: .essentials, isAlert: false),
         SceneItem(name: "Photo ID copy",             category: .documents,  isAlert: true),
     ],
@@ -224,12 +207,25 @@ let sceneItemMap: [String: [SceneItem]] = [
     ],
 ]
 
+// MARK: - Scene item accessor (with locale supplements)
+
+func sceneItems(for key: String) -> [SceneItem] {
+    var items = sceneItemMap[key] ?? []
+    guard isChineseLocale else { return items }
+    switch key {
+    case "long_haul_flight", "business":
+        items.append(SceneItem(name: "Overseas SIM / portable WiFi", category: .electronics, isAlert: false))
+    default:
+        break
+    }
+    return items
+}
+
 // MARK: - Generation logic
 
 /// Merges base items + selected scene items, deduplicates by name (alert wins),
 /// then groups by category in a fixed order.
 func generatePackingSections(selectedScenes: [String], tripDays: Int = 1) -> [PackingSection] {
-    // name → (category, isAlert)
     var merged: [(name: String, category: ItemCategory, isAlert: Bool)] = []
     var nameIndex: [String: Int] = [:]
 
@@ -243,9 +239,8 @@ func generatePackingSections(selectedScenes: [String], tripDays: Int = 1) -> [Pa
     }
 
     baseItems.forEach { insert($0) }
-    selectedScenes.compactMap { sceneItemMap[$0] }.flatMap { $0 }.forEach { insert($0) }
+    selectedScenes.flatMap { sceneItems(for: $0) }.forEach { insert($0) }
 
-    // Group by category in a fixed display order, assigning section sortOrder by position
     let order: [ItemCategory] = [.documents, .essentials, .health, .electronics, .clothing, .toiletries]
     var sectionIndex = 0
     var result: [PackingSection] = []

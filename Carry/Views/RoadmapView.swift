@@ -69,26 +69,19 @@ private struct RoadmapPayload: Codable {
                     zhHant: "即將推出的更新"
                 ),
                 items: [
-                    RoadmapItem(
-                        id: "plug-adapter",
-                        title: RoadmapL10n.text(en: "International plug & adapter guide", zhHans: "出国旅行充电插头及转换器", zhHant: "出國旅行充電插頭及轉換器"),
-                        status: .inProgress,
-                        note: nil
-                    ),
-                    RoadmapItem(id: "exchange-rate", title: RoadmapL10n.text(en: "Exchange rate info", zhHans: "汇率信息", zhHant: "匯率資訊"), status: .planned, note: nil),
-                    RoadmapItem(id: "weather", title: RoadmapL10n.text(en: "Weather forecast", zhHans: "天气预报", zhHant: "天氣預報"), status: .planned, note: nil),
+                    RoadmapItem(id: "weather", title: RoadmapL10n.text(en: "Weather forecast", zhHans: "天气预报", zhHant: "天氣預報"), status: .inProgress, note: nil),
                     RoadmapItem(id: "trip-stats", title: RoadmapL10n.text(en: "Trip insights", zhHans: "行程统计", zhHant: "行程統計"), status: .planned, note: nil)
                 ]
             ),
             RoadmapSection(
                 id: "done",
-                title: RoadmapL10n.text(en: "Completed", zhHans: "已完成", zhHant: "已完成"),
+                title: RoadmapL10n.text(en: "Shipped", zhHans: "已上线", zhHant: "已上線"),
                 items: [
+                    RoadmapItem(id: "item-quantity", title: RoadmapL10n.text(en: "Item quantity", zhHans: "物品数量", zhHant: "物品數量"), status: .done, note: nil),
                     RoadmapItem(id: "trip-duplication", title: RoadmapL10n.text(en: "Trip duplication", zhHans: "复制行程", zhHant: "複製行程"), status: .done, note: nil),
                     RoadmapItem(id: "worth-considering", title: RoadmapL10n.text(en: "Worth considering", zhHans: "顺手考虑一下", zhHant: "順手考慮一下"), status: .done, note: nil),
                     RoadmapItem(id: "smart-suggestion", title: RoadmapL10n.text(en: "Smart suggestions", zhHans: "智能推荐清单", zhHant: "智能推薦清單"), status: .done, note: nil),
                     RoadmapItem(id: "custom-section", title: RoadmapL10n.text(en: "Custom sections", zhHans: "自定义分类", zhHant: "自定義分類"), status: .done, note: nil),
-                    RoadmapItem(id: "custom", title: RoadmapL10n.text(en: "Custom packing list", zhHans: "自定义打包清单", zhHant: "自定義打包清單"), status: .done, note: nil),
                     RoadmapItem(id: "sorting", title: RoadmapL10n.text(en: "Item & section sorting", zhHans: "物品与分类排序", zhHant: "物品與分類排序"), status: .done, note: nil)
                 ]
             )
@@ -262,7 +255,11 @@ struct RoadmapView: View {
 
             VStack(alignment: .leading, spacing: 0) {
                 ForEach(Array(section.items.enumerated()), id: \.element.id) { index, item in
-                    roadmapRow(item: item, isLast: index == section.items.count - 1)
+                    roadmapRow(
+                        item: item,
+                        isLast: index == section.items.count - 1,
+                        showLatestBadge: section.id == "done" && index == 0
+                    )
                 }
             }
         }
@@ -285,7 +282,7 @@ struct RoadmapView: View {
         .padding(.top, 8)
     }
 
-    private func roadmapRow(item: RoadmapItem, isLast: Bool) -> some View {
+    private func roadmapRow(item: RoadmapItem, isLast: Bool, showLatestBadge: Bool) -> some View {
         HStack(alignment: .top, spacing: 12) {
             VStack(spacing: 0) {
                 statusDot(for: item.status)
@@ -299,9 +296,23 @@ struct RoadmapView: View {
             }
 
             VStack(alignment: .leading, spacing: 3) {
-                Text(item.title)
-                    .font(.body.weight(.semibold))
-                    .foregroundStyle(.primary)
+                HStack(spacing: 6) {
+                    Text(item.title)
+                        .font(.body.weight(.semibold))
+                        .foregroundStyle(.primary)
+
+                    if showLatestBadge {
+                        Text(RoadmapL10n.text(en: "Latest", zhHans: "最新", zhHant: "最新"))
+                            .font(.system(size: 10, weight: .semibold))
+                            .foregroundStyle(.blue)
+                            .padding(.horizontal, 6)
+                            .padding(.vertical, 2)
+                            .background(
+                                Capsule(style: .continuous)
+                                    .fill(Color.blue.opacity(colorScheme == .dark ? 0.18 : 0.10))
+                            )
+                    }
+                }
                 if let note = item.note, !note.isEmpty {
                     Text(note)
                         .font(.caption)

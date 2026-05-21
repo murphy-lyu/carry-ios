@@ -86,9 +86,14 @@ struct AboutView: View {
                         .padding(.top, 24)
                         .padding(.bottom, 8)
 
-                    socialRow(label: "Twitter / X", handle: "@murphy_lyu", url: "https://twitter.com/murphy_lyu")
+                    socialRow(label: "Twitter / X", handle: "@murphy_lyu", url: "https://x.com/murphy_Iyu")
                     if isChineseLanguage {
-                        socialRow(label: "about.social.xiaohongshu", handle: "@murphy_lyu", url: "https://xiaohongshu.com")
+                        socialRow(
+                            label: "about.social.xiaohongshu",
+                            handle: "@murphy_lyu",
+                            url: "xhsdiscover://user/5484e470d6e4a9281353f172",
+                            fallbackURL: "https://www.xiaohongshu.com/user/profile/5484e470d6e4a9281353f172"
+                        )
                     }
                 }
 
@@ -146,9 +151,9 @@ struct AboutView: View {
 
     // MARK: Subviews
 
-    private func socialRow(label: LocalizedStringKey, handle: String, url: String) -> some View {
+    private func socialRow(label: LocalizedStringKey, handle: String, url: String, fallbackURL: String? = nil) -> some View {
         Button {
-            if let u = URL(string: url) { UIApplication.shared.open(u) }
+            openSocialURL(url, fallbackURL: fallbackURL)
         } label: {
             HStack {
                 Text(label)
@@ -171,6 +176,14 @@ struct AboutView: View {
                 .fill(dividerColor)
                 .frame(height: 0.67)
                 .padding(.leading, 16)
+        }
+    }
+
+    private func openSocialURL(_ urlString: String, fallbackURL: String? = nil) {
+        guard let url = URL(string: urlString) else { return }
+        UIApplication.shared.open(url, options: [:]) { success in
+            guard !success, let fallbackURL, let fallback = URL(string: fallbackURL) else { return }
+            UIApplication.shared.open(fallback)
         }
     }
 

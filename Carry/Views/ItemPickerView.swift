@@ -35,7 +35,7 @@ private let itemPickerCatalog: [ItemPickerCategory] = [
     ItemPickerCategory(name: "Electronics", items: [
         "Phone charger", "Laptop", "Laptop charger", "Earphones",
         "Noise-cancelling headphones", "Portable charger", "Camera",
-        "Camera charger", "Travel adapter", "E-reader"
+        "Camera charger", "Travel adapter", "Portable WiFi device"
     ]),
     ItemPickerCategory(name: "Clothing", items: [
         "T-shirt", "Jeans", "Shorts", "Underwear", "Socks", "Pajamas", "Dress",
@@ -43,24 +43,25 @@ private let itemPickerCatalog: [ItemPickerCategory] = [
     ]),
     ItemPickerCategory(name: "Toiletries", items: [
         "Toothbrush", "Toothpaste", "Deodorant", "Shampoo", "Conditioner",
-        "Body wash", "Face wash", "Moisturiser", "Lip balm", "Razor",
-        "Sunscreen", "Feminine hygiene products", "Cotton swabs", "Nail clippers"
+        "Body wash", "Face wash", "Moisturiser", "Toner", "Face cream",
+        "Cotton pads", "Lip balm", "Razor", "Sunscreen",
+        "Feminine hygiene products", "Cotton swabs", "Nail clippers", "Hair ties"
     ]),
     ItemPickerCategory(name: "Food & Snacks", items: [
         "Snack bars", "Instant noodles", "Nuts", "Dried fruit",
-        "Candy", "Gum", "Protein powder"
+        "Candy", "Gum"
     ]),
     ItemPickerCategory(name: "Entertainment", items: [
-        "Book", "Playing cards", "Portable speaker", "Headphones",
+        "Book", "Portable speaker", "Headphones",
         "Journal", "Pen"
     ]),
     ItemPickerCategory(name: "Beach & Outdoor", items: [
         "Sunglasses", "Swimsuit", "Flip flops", "Beach towel",
-        "Snorkel", "Insect repellent", "Hiking boots", "Trekking poles"
+        "Insect repellent", "Hiking boots", "Trekking poles"
     ]),
     ItemPickerCategory(name: "Winter Travel", items: [
         "Wool coat", "Thermal underwear", "Gloves", "Scarf",
-        "Beanie", "Snow boots", "Hand warmers", "Ski goggles"
+        "Beanie", "Snow boots", "Hand warmers"
     ]),
 ]
 
@@ -104,6 +105,15 @@ struct ItemPickerView: View {
     private var tripInfoForAutoPack: TripInfo? {
         if case .create(let info) = mode { return info }
         return nil
+    }
+
+    private var tripDays: Int {
+        switch mode {
+        case .create(let info):
+            return info.durationDays
+        case .merge(let tripId):
+            return store.bundle(for: tripId)?.days ?? 1
+        }
     }
 
     private var filteredResults: [PickerItemID] {
@@ -489,7 +499,14 @@ struct ItemPickerView: View {
             let items = category.items
                 .filter { selectedItems.contains(PickerItemID(category: category.name, item: $0)) }
                 .enumerated()
-                .map { idx, name in PackingItem(name: name, isAlert: false, sortOrder: idx) }
+                .map { idx, name in
+                    PackingItem(
+                        name: name,
+                        quantity: defaultQuantity(for: name, tripDays: tripDays),
+                        isAlert: false,
+                        sortOrder: idx
+                    )
+                }
             guard !items.isEmpty else { continue }
             result.append(PackingSection(title: category.name, items: items, sortOrder: sectionIndex))
             sectionIndex += 1
