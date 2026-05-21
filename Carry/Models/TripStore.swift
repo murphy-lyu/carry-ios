@@ -658,9 +658,12 @@ final class TripStore: ObservableObject {
         return myItems.filter { normalizedCollectionName($0.collectionName) == target }
     }
 
-    func addMyItem(name: String, category: String = "", defaultQuantity: Int = 1, collectionName: String = "Default") {
+    @discardableResult
+    func addMyItem(name: String, category: String = "", defaultQuantity: Int = 1, collectionName: String = "Default") -> MyItem {
         let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !trimmed.isEmpty else { return }
+        guard !trimmed.isEmpty else {
+            return MyItem(name: "", collectionName: normalizedCollectionName(collectionName), category: "", defaultQuantity: 1)
+        }
         let targetCollection = normalizedCollectionName(collectionName)
         if let existing = myItems.first(where: {
             $0.name.trimmingCharacters(in: .whitespacesAndNewlines).localizedCaseInsensitiveCompare(trimmed) == .orderedSame
@@ -670,7 +673,7 @@ final class TripStore: ObservableObject {
             existing.defaultQuantity = max(1, defaultQuantity)
             existing.updatedAt = Date()
             save()
-            return
+            return existing
         }
         let nextOrder = (myItems.map(\.sortOrder).max() ?? -1) + 1
         let item = MyItem(
@@ -682,6 +685,7 @@ final class TripStore: ObservableObject {
         )
         context.insert(item)
         save()
+        return item
     }
 
     func copyMyItem(_ item: MyItem) {

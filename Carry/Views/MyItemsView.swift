@@ -69,7 +69,8 @@ struct MyItemsView: View {
         .sheet(isPresented: $showAddSheet) {
             NavigationStack {
                 MyItemEditorView(titleKey: "myitems.add.title") { name, category, quantity in
-                    store.addMyItem(name: name, category: category, defaultQuantity: quantity)
+                    let normalizedCategory = category.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? NSLocalizedString("myitems.custom_category", comment: "") : category
+                    _ = store.addMyItem(name: name, category: normalizedCategory, defaultQuantity: quantity)
                 }
             }
         }

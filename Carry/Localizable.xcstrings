@@ -17107,6 +17107,29 @@
         }
       }
     },
+    "myitems.custom_category" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Custom"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "自定义"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "自定義"
+          }
+        }
+      }
+    },
     "myitems.edit.title" : {
       "extractionState" : "manual",
       "localizations" : {
