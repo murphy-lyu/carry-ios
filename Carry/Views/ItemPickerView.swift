@@ -146,6 +146,7 @@ struct ItemPickerView: View {
     @State private var toastVisible = false
     @State private var toastText = ""
     @State private var didApplyInitialSource = false
+    @State private var showMyItemAddSheet = false
 
     private var hasSelection: Bool {
         !selectedItems.isEmpty || !selectedMyItemIDs.isEmpty
@@ -253,6 +254,9 @@ struct ItemPickerView: View {
             // Scrollable content
             if sourceMode == .myItems {
                 List {
+                    myItemsHeader
+                        .listRowBackground(Color.clear)
+                        .listRowSeparator(.hidden)
                     let myItems = myItemsSearchResults().sorted(by: compareMyItems(_:_:))
                     if myItems.isEmpty {
                         VStack(spacing: 10) {
@@ -297,6 +301,16 @@ struct ItemPickerView: View {
                 .scrollContentBackground(.hidden)
                 .background(Color(UIColor.systemBackground))
                 .padding(.bottom, 0)
+                .sheet(isPresented: $showMyItemAddSheet) {
+                    NavigationStack {
+                        MyItemEditorView(titleKey: "myitems.add.title") { name, category, quantity in
+                            let normalizedCategory = category.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? NSLocalizedString("myitems.custom_category", comment: "") : category
+                            let item = store.addMyItem(name: name, category: normalizedCategory, defaultQuantity: quantity)
+                            selectedMyItemIDs.insert(item.id)
+                            showToast("myitems.saved")
+                        }
+                    }
+                }
             } else {
                 ScrollView {
                     LazyVStack(alignment: .leading, spacing: 0, pinnedViews: [.sectionHeaders]) {
@@ -453,6 +467,16 @@ struct ItemPickerView: View {
                     .font(.caption.weight(.semibold))
                     .foregroundStyle(.secondary)
             }
+            Button {
+                showMyItemAddSheet = true
+            } label: {
+                Image(systemName: "plus")
+                    .font(.system(size: 12, weight: .semibold))
+                    .foregroundStyle(.primary)
+                    .frame(width: 24, height: 24)
+                    .background(Circle().fill(Color(UIColor.secondarySystemBackground)))
+            }
+            .buttonStyle(.plain)
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 10)

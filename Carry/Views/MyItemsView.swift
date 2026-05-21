@@ -144,7 +144,7 @@ struct MyItemsView: View {
     }
 }
 
-private struct MyItemEditorView: View {
+struct MyItemEditorView: View {
 
     let titleKey: LocalizedStringKey
     var initialName: String = ""

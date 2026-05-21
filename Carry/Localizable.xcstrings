@@ -23656,13 +23656,13 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "辅助"
+            "value" : "开发者模式"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "輔助"
+            "value" : "開發者模式"
           }
         }
       }
@@ -23673,19 +23673,19 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Developer Mode"
+            "value" : "Auxiliary"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "开发者模式"
+            "value" : "辅助"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "開發者模式"
+            "value" : "輔助"
           }
         }
       }
