@@ -76,7 +76,7 @@ struct SuggestionPreviewView: View {
     private var headerBlock: some View {
         VStack(alignment: .leading, spacing: 8) {
             HStack(spacing: 0) {
-                Text("Suggested items")
+                Text("suggestions.title")
                     .font(.title2)
                     .bold()
                 Spacer()
@@ -212,20 +212,19 @@ struct SuggestionPreviewView: View {
                     if hasSelection {
                         Text("Add \(selectedCount) items")
                     } else {
-                        Text("suggestions.none_selected")
+                        Text("suggestions.none_needed")
                     }
                 }
                 .font(.subheadline.weight(.medium))
-                .foregroundColor(hasSelection ? Color(UIColor.systemBackground) : Color(UIColor.secondaryLabel))
+                .foregroundColor(Color(UIColor.systemBackground))
                 .frame(maxWidth: .infinity)
                 .frame(height: 52)
                 .background {
                     RoundedRectangle(cornerRadius: 14, style: .continuous)
-                        .fill(hasSelection ? Color(UIColor.label) : Color(UIColor.secondarySystemFill))
+                        .fill(hasSelection ? Color(UIColor.label) : Color(UIColor.label).opacity(0.78))
                         .animation(.easeInOut(duration: 0.15), value: hasSelection)
                 }
             }
-            .disabled(!hasSelection)
             .padding(.horizontal, 20)
             .padding(.top, 12)
             .padding(.bottom, 16)
@@ -261,7 +260,7 @@ struct SuggestionPreviewView: View {
             bundle.safeSections.flatMap { $0.items ?? [] }.map { $0.name.lowercased() }
         )
 
-        // Regular suggestions (pre-selected)
+        // Regular suggestions (default unselected)
         let generated = generatePackingSections(selectedScenes: sceneKeys, tripDays: bundle.days)
         var result: [(title: String, items: [String])] = []
         var allNames = Set<String>()
@@ -274,7 +273,8 @@ struct SuggestionPreviewView: View {
             newItems.forEach { allNames.insert($0) }
         }
         sections = result
-        selectedNames = allNames
+        selectedNames.removeAll()
+        selectedSurpriseNames.removeAll()
 
         // Surprise items (not pre-selected) — also exclude names already in regular suggestions
         let dismissed = Set(bundle.dismissedSurpriseNames.map { $0.lowercased() })

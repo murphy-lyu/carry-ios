@@ -29,8 +29,16 @@ func defaultQuantity(for itemName: String, tripDays: Int) -> Int {
     if lower.contains("spare") || lower.contains("extra") {
         return 1
     }
-    if lower == "underwear" || lower == "socks" || lower == "face masks"
-        || lower == "instant coffee packets" || lower == "tea bags" {
+    if lower == "underwear"
+        || lower == "socks"
+        || lower == "disposable underwear"
+        || lower == "disposable face masks"
+        || lower == "heat patches"
+        || lower == "instant coffee"
+        || lower == "tea bags"
+        || lower == "condoms"
+        || lower == "cotton pads"
+        || lower == "face mask" {
         return min(days, 99)
     }
     if lower == "daily medication"
@@ -65,9 +73,7 @@ let sceneLabelToKey: [String: String] = [
     "💍 Honeymoon":             "honeymoon",
     "🎒 Backpacking":           "backpacking",
     "🏨 City break":            "city_break",
-    "🩸 Near period":           "personal_period",
-    "☕ Coffee lover":           "personal_coffee",
-    "🍵 Tea lover":             "personal_tea",
+    "🌸 On / near period":      "personal_period",
     "💊 Daily medication":      "personal_medication",
 ]
 
@@ -95,6 +101,7 @@ let sceneItemMap: [String: [SceneItem]] = [
         SceneItem(name: "Sunglasses",               category: .health,      isAlert: true),
         SceneItem(name: "Reusable water bottle",    category: .essentials,  isAlert: false),
         SceneItem(name: "Snacks",                   category: .essentials,  isAlert: false),
+        SceneItem(name: "Nuts",                     category: .essentials,  isAlert: false),
     ],
     "long_haul_flight": [
         SceneItem(name: "Passport",                 category: .documents,   isAlert: true),
@@ -195,12 +202,6 @@ let sceneItemMap: [String: [SceneItem]] = [
     "personal_period": [
         SceneItem(name: "Sanitary pads / tampons",  category: .health,      isAlert: true),
         SceneItem(name: "Pain relievers",           category: .health,      isAlert: true),
-    ],
-    "personal_coffee": [
-        SceneItem(name: "Instant coffee packets",   category: .essentials,  isAlert: false),
-    ],
-    "personal_tea": [
-        SceneItem(name: "Tea bags",                 category: .essentials,  isAlert: false),
     ],
     "personal_medication": [
         SceneItem(name: "Daily medication",         category: .health,      isAlert: true),

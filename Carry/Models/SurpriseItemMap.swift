@@ -33,6 +33,9 @@ let surpriseItemMap: [String: [SurpriseItem]] = [
         SurpriseItem(name: "Wet wipes",
                      note: "Gas station stops, sticky snacks, impromptu cleanups",
                      category: .essentials),
+        SurpriseItem(name: "Flat shoes",
+                     note: "Driving in heels reduces pedal feel and reaction time — a pair of flats to swap into before getting behind the wheel is a small thing that makes a real difference on long stretches",
+                     category: .clothing),
     ],
     "long_haul_flight": [
         SurpriseItem(name: "Empty water bottle",

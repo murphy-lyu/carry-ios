@@ -63,11 +63,16 @@ final class TripBundle {
 
 final class TripStore: ObservableObject {
     @Published var trips: [TripBundle] = []
+    @Published var myItems: [MyItem] = []
+    @Published var isSceneCardDismissedGlobally: Bool
 
     private let context: ModelContext
+    private let defaults = UserDefaults.standard
+    private static let sceneCardDismissedGlobalKey = "scene_card_dismissed_global"
 
     init() {
         self.context = ModelContext(CarryApp.container)
+        self.isSceneCardDismissedGlobally = defaults.bool(forKey: Self.sceneCardDismissedGlobalKey)
         Task { @MainActor in
             fetchTrips()
         }
@@ -81,8 +86,12 @@ final class TripStore: ObservableObject {
         let descriptor = FetchDescriptor<TripBundle>(
             sortBy: [SortDescriptor(\.createdAt, order: .reverse)]
         )
+        let myItemDescriptor = FetchDescriptor<MyItem>(
+            sortBy: [SortDescriptor(\.sortOrder, order: .forward), SortDescriptor(\.createdAt, order: .forward)]
+        )
         do {
             trips = try context.fetch(descriptor)
+            myItems = try context.fetch(myItemDescriptor)
             for trip in trips {
                 if trip.sections == nil {
                     CarryLogger.shared.log(.dataCorrupted, context: "context=fetchTrips_nil_sections")
@@ -97,6 +106,7 @@ final class TripStore: ObservableObject {
         } catch {
             CarryLogger.shared.log(.loadFailed, context: "context=fetchTrips")
             trips = []
+            myItems = []
         }
     }
 
@@ -107,6 +117,13 @@ final class TripStore: ObservableObject {
             CarryLogger.shared.log(.persistFailed, context: "context=save")
         }
         fetchTrips()
+    }
+
+    private let defaultMyItemCollection = "Default"
+
+    private func normalizedCollectionName(_ name: String) -> String {
+        let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        return trimmed.isEmpty ? defaultMyItemCollection : trimmed
     }
 
     // MARK: - Mutations
@@ -498,8 +515,23 @@ final class TripStore: ObservableObject {
     func dismissSceneCard(tripId: UUID) {
         guard let trip = trips.first(where: { $0.id == tripId }) else { return }
         trip.sceneCardDismissed = true
+        if !isSceneCardDismissedGlobally {
+            isSceneCardDismissedGlobally = true
+            defaults.set(true, forKey: Self.sceneCardDismissedGlobalKey)
+        }
         save()
     }
+
+#if DEBUG
+    func debugResetSceneCardDismissState() {
+        isSceneCardDismissedGlobally = false
+        defaults.set(false, forKey: Self.sceneCardDismissedGlobalKey)
+        for trip in trips {
+            trip.sceneCardDismissed = false
+        }
+        save()
+    }
+#endif
 
     /// Adds a surprise item to the most relevant existing section, or creates a new one.
     func addSurpriseItem(tripId: UUID, item: SurpriseItem) {
@@ -521,6 +553,127 @@ final class TripStore: ObservableObject {
             trip.sections?.append(newSection)
         }
         dismissSurpriseItem(tripId: tripId, itemName: item.name)
+        save()
+    }
+
+    // MARK: - My Items
+
+    func myItemCollections() -> [String] {
+        let names = Set(myItems.map { normalizedCollectionName($0.collectionName) })
+        return [defaultMyItemCollection] + names.filter { $0 != defaultMyItemCollection }.sorted()
+    }
+
+    func myItems(in collectionName: String? = nil) -> [MyItem] {
+        let target = normalizedCollectionName(collectionName ?? defaultMyItemCollection)
+        return myItems.filter { normalizedCollectionName($0.collectionName) == target }
+    }
+
+    func addMyItem(name: String, category: String = "", defaultQuantity: Int = 1, collectionName: String = "Default") {
+        let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return }
+        let targetCollection = normalizedCollectionName(collectionName)
+        if let existing = myItems.first(where: {
+            $0.name.trimmingCharacters(in: .whitespacesAndNewlines).localizedCaseInsensitiveCompare(trimmed) == .orderedSame
+            && $0.category.trimmingCharacters(in: .whitespacesAndNewlines).localizedCaseInsensitiveCompare(category.trimmingCharacters(in: .whitespacesAndNewlines)) == .orderedSame
+            && normalizedCollectionName($0.collectionName) == targetCollection
+        }) {
+            existing.defaultQuantity = max(1, defaultQuantity)
+            existing.updatedAt = Date()
+            save()
+            return
+        }
+        let nextOrder = (myItems.map(\.sortOrder).max() ?? -1) + 1
+        let item = MyItem(
+            name: trimmed,
+            collectionName: targetCollection,
+            category: category,
+            defaultQuantity: defaultQuantity,
+            sortOrder: nextOrder
+        )
+        context.insert(item)
+        save()
+    }
+
+    func copyMyItem(_ item: MyItem) {
+        let baseName = item.name.trimmingCharacters(in: .whitespacesAndNewlines)
+        let suffix = NSLocalizedString("trip.copy_suffix", comment: "")
+        let nextOrder = (myItems.map(\.sortOrder).max() ?? -1) + 1
+        let copy = MyItem(
+            name: baseName + suffix,
+            collectionName: normalizedCollectionName(item.collectionName),
+            category: item.category,
+            defaultQuantity: item.defaultQuantity,
+            sortOrder: nextOrder
+        )
+        context.insert(copy)
+        save()
+    }
+
+    func updateMyItem(_ item: MyItem, name: String, category: String, defaultQuantity: Int, collectionName: String? = nil) {
+        item.name = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        item.category = category
+        item.defaultQuantity = max(1, defaultQuantity)
+        if let collectionName {
+            item.collectionName = normalizedCollectionName(collectionName)
+        }
+        item.updatedAt = Date()
+        save()
+    }
+
+    func removeMyItem(id: UUID) {
+        guard let item = myItems.first(where: { $0.id == id }) else { return }
+        context.delete(item)
+        save()
+    }
+
+    func reorderMyItems(newOrder: [UUID]) {
+        let orderedItems = newOrder.compactMap { id in myItems.first(where: { $0.id == id }) }
+        let remainingItems = myItems
+            .filter { !newOrder.contains($0.id) }
+            .sorted { lhs, rhs in
+                if lhs.sortOrder != rhs.sortOrder { return lhs.sortOrder < rhs.sortOrder }
+                return lhs.createdAt < rhs.createdAt
+            }
+        let finalOrder = orderedItems + remainingItems
+        for (index, item) in finalOrder.enumerated() {
+            item.sortOrder = index
+        }
+        save()
+    }
+
+    func addMyItemsToTrip(tripId: UUID, items: [MyItem]) {
+        guard let trip = trips.first(where: { $0.id == tripId }) else { return }
+        var sectionsByTitle: [String: PackingSection] = Dictionary(
+            uniqueKeysWithValues: trip.safeSections.map { ($0.title, $0) }
+        )
+        var nextSectionOrder = (trip.safeSections.map(\.sortOrder).max() ?? -1) + 1
+
+        for source in items {
+            let sectionTitle = source.category.isEmpty ? "Essentials" : source.category
+            let section: PackingSection
+            if let existing = sectionsByTitle[sectionTitle] {
+                section = existing
+            } else {
+                section = PackingSection(title: sectionTitle, items: [], sortOrder: nextSectionOrder)
+                nextSectionOrder += 1
+                sectionsByTitle[sectionTitle] = section
+                context.insert(section)
+                if trip.sections == nil { trip.sections = [] }
+                trip.sections?.append(section)
+            }
+
+            let existingNames = Set((section.items ?? []).map { $0.name.lowercased() })
+            guard !existingNames.contains(source.name.lowercased()) else { continue }
+            let nextOrder = ((section.items ?? []).map(\.sortOrder).max() ?? -1) + 1
+            let item = PackingItem(
+                name: source.name,
+                quantity: source.defaultQuantity,
+                isAlert: false,
+                sortOrder: nextOrder
+            )
+            context.insert(item)
+            section.items?.append(item)
+        }
         save()
     }
 

@@ -35,6 +35,7 @@ struct PackingListView: View {
     @State private var showNudgeBanner = false
     @State private var hasTriggeredNudge = false
     @State private var surpriseBatchOffset: Int = 0
+    @State private var showSceneCardDismissHintBanner = false
 
     private let surpriseBatchSize = 5
 
@@ -43,7 +44,9 @@ struct PackingListView: View {
         (bundle?.safeSections ?? []).filter { ($0.items?.isEmpty == false) }
     }
     private var hasScenes: Bool { !(bundle?.selectedSceneKeys.isEmpty ?? true) }
-    private var sceneCardDismissed: Bool { bundle?.sceneCardDismissed ?? false }
+    private var sceneCardDismissed: Bool {
+        store.isSceneCardDismissedGlobally || (bundle?.sceneCardDismissed ?? false)
+    }
     private var totalCount: Int  { bundle?.totalCount  ?? 0 }
     private var packedCount: Int { bundle?.packedCount ?? 0 }
     private var progress: Double {
@@ -117,7 +120,7 @@ struct PackingListView: View {
                             }
                         }
 
-                        if !hasScenes && !sceneCardDismissed {
+                        if !sceneCardDismissed {
                             sceneEntryCard
                                 .padding(.top, 8)
                                 .padding(.horizontal, 16)
@@ -150,6 +153,11 @@ struct PackingListView: View {
                         if showNudgeBanner {
                             nudgeBanner
                                 .transition(.move(edge: .top).combined(with: .opacity))
+                        }
+                        if showSceneCardDismissHintBanner {
+                            sceneCardDismissHintBanner
+                                .transition(.opacity.combined(with: .scale(scale: 0.98, anchor: .top)))
+                                .padding(.top, 4)
                         }
                     }
                 }
@@ -206,11 +214,6 @@ struct PackingListView: View {
                         }
                     }
                     Button {
-                        showSuggestSheet = true
-                    } label: {
-                        Label("Edit scenes", systemImage: "tag")
-                    }
-                    Button {
                         showReorderSheet = true
                     } label: {
                         Label("Edit sections", systemImage: "arrow.up.arrow.down")
@@ -229,11 +232,22 @@ struct PackingListView: View {
                         } label: {
                             Label("Share list", systemImage: "square.and.arrow.up")
                         }
+                        Button {
+                            showSuggestSheet = true
+                        } label: {
+                            Label("Add recommended items", systemImage: "tag")
+                        }
                         Divider()
                         Button(role: .destructive) {
                             showDeleteConfirmation = true
                         } label: {
                             Label("Delete trip", systemImage: "trash")
+                        }
+                    } else {
+                        Button {
+                            showSuggestSheet = true
+                        } label: {
+                            Label("Add recommended items", systemImage: "tag")
                         }
                     }
                 } label: {
@@ -362,6 +376,12 @@ struct PackingListView: View {
                 }
             )
             .swipeActions(edge: .trailing, allowsFullSwipe: false) {
+                Button {
+                    saveToMyItems(item: item)
+                } label: {
+                    Label("Save", systemImage: "bookmark")
+                }
+                .tint(.indigo)
                 Button(role: .destructive) {
                     deleteItem(itemId: item.id)
                 } label: {
@@ -386,6 +406,23 @@ struct PackingListView: View {
 
     private func deleteItem(itemId: UUID) {
         store.removeItem(tripId: tripId, itemId: itemId)
+    }
+
+    private func saveToMyItems(item: PackingItem) {
+        store.addMyItem(
+            name: item.name,
+            category: sectionTitle(for: item.id) ?? "",
+            defaultQuantity: item.quantity
+        )
+    }
+
+    private func sectionTitle(for itemId: UUID) -> String? {
+        for section in sections {
+            if (section.items ?? []).contains(where: { $0.id == itemId }) {
+                return section.title
+            }
+        }
+        return nil
     }
 
     private func incrementItemQuantity(itemId: UUID, current: Int) {
@@ -542,10 +579,10 @@ struct PackingListView: View {
                     .background(Color(UIColor.systemPurple).opacity(0.1))
                     .clipShape(Circle())
                 VStack(alignment: .leading, spacing: 2) {
-                    Text("Get personalised suggestions")
+                    Text("Add recommended items")
                         .font(.subheadline.weight(.medium))
                         .foregroundStyle(.primary)
-                    Text("Pick your trip type for a smarter packing list")
+                    Text("Fill gaps with smart suggestions for this trip")
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 }
@@ -560,6 +597,15 @@ struct PackingListView: View {
         .overlay(alignment: .trailing) {
             Button {
                 store.dismissSceneCard(tripId: tripId)
+                withAnimation(.easeInOut(duration: 0.25)) {
+                    showSceneCardDismissHintBanner = true
+                }
+                Task {
+                    try? await Task.sleep(for: .milliseconds(3200))
+                    withAnimation(.easeIn(duration: 0.2)) {
+                        showSceneCardDismissHintBanner = false
+                    }
+                }
                 UIImpactFeedbackGenerator(style: .light).impactOccurred()
             } label: {
                 Image(systemName: "xmark")
@@ -585,6 +631,21 @@ struct PackingListView: View {
         .padding(.vertical, 12)
         .padding(.horizontal, 16)
         .background(Color(UIColor.systemIndigo))
+    }
+
+    private var sceneCardDismissHintBanner: some View {
+        HStack(spacing: 8) {
+            Image(systemName: "info.circle.fill")
+                .foregroundStyle(.white)
+            Text("scene_card.dismissed.message")
+                .foregroundStyle(.white)
+                .lineLimit(2)
+        }
+        .font(.subheadline.weight(.medium))
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, 12)
+        .padding(.horizontal, 16)
+        .background(Color(UIColor.systemGray))
     }
 
     private var surpriseSectionHeader: some View {
@@ -675,7 +736,7 @@ struct PackingListView: View {
                 .multilineTextAlignment(.center)
                 .padding(.top, 6)
             Spacer()
-            if !hasScenes && !sceneCardDismissed {
+            if !sceneCardDismissed {
                 sceneEntryCard
                     .padding(.horizontal, 16)
                     .padding(.bottom, 24)

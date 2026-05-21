@@ -65,22 +65,26 @@ struct ScenePickerView: View {
     private var primaryButtonLabelKey: LocalizedStringKey {
         if isSaved { return "scenes.updated" }
         if isEditing {
-            return hasSelection
-                ? "scenes.update · \(selectionCount) selected"
-                : "scenes.update"
+            return hasSelection ? "scenes.update" : "scenes.select_one"
         } else if isAutoPack {
-            return hasSelection
-                ? "Auto Pack · \(selectionCount) selected"
-                : "Auto Pack"
+            return hasSelection ? "Auto Pack" : "scenes.select_one"
         } else if isSuggest {
-            return hasSelection
-                ? "See suggestions · \(selectionCount) selected"
-                : "See suggestions"
+            return hasSelection ? "See suggestions" : "scenes.skip_recommendations"
         } else {
-            return hasSelection
-                ? "Generate my list · \(selectionCount) selected"
-                : "Generate my list"
+            return hasSelection ? "Generate my list" : "scenes.select_one"
         }
+    }
+
+    private var isPrimaryButtonEnabled: Bool {
+        if isSaved { return false }
+        if isSuggest { return true }
+        return hasSelection
+    }
+
+    private var isPrimaryButtonHighlighted: Bool {
+        if isSaved { return false }
+        if isSuggest { return true }
+        return hasSelection
     }
 
     var body: some View {
@@ -128,17 +132,25 @@ struct ScenePickerView: View {
                     }
                     .font(.subheadline)
                     .fontWeight(.medium)
-                    .foregroundColor(hasSelection ? Color(UIColor.systemBackground) : Color(UIColor.secondaryLabel))
+                    .foregroundColor(
+                        isPrimaryButtonHighlighted
+                        ? Color(UIColor.systemBackground)
+                        : Color(UIColor.secondaryLabel)
+                    )
                     .frame(maxWidth: .infinity)
                     .frame(height: 52)
                     .background {
                         RoundedRectangle(cornerRadius: 14, style: .continuous)
-                            .fill(hasSelection ? Color(UIColor.label) : Color(UIColor.secondarySystemFill))
-                            .animation(.easeInOut(duration: 0.15), value: hasSelection)
+                            .fill(
+                                isPrimaryButtonHighlighted
+                                ? Color(UIColor.label)
+                                : Color(UIColor.secondarySystemFill)
+                            )
+                            .animation(.easeInOut(duration: 0.15), value: isPrimaryButtonHighlighted)
                     }
                     .animation(.easeInOut(duration: 0.2), value: isSaved)
                 }
-                .disabled(!hasSelection || isSaved)
+                .disabled(!isPrimaryButtonEnabled)
                 .padding(.horizontal, 20)
             }
             .padding(.top, 12)
@@ -206,6 +218,10 @@ struct ScenePickerView: View {
             dismiss()
         case .suggest:
             UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+            guard !keys.isEmpty else {
+                dismiss()
+                return
+            }
             confirmedSuggestKeys = keys
         }
     }
@@ -371,7 +387,7 @@ private let sceneSymbols: [String: String] = [
     "💍 Honeymoon":            "heart.fill",
     "🎒 Backpacking":          "backpack.fill",
     "🏨 City break":           "building.2.fill",
-    "🩸 Near period":          "drop.fill",
+    "🌸 On / near period":     "leaf.fill",
     "☕ Coffee lover":          "cup.and.saucer.fill",
     "🍵 Tea lover":            "cup.and.saucer.fill",
     "💊 Daily medication":     "pill.fill",

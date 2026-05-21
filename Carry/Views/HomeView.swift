@@ -54,6 +54,11 @@ struct HomeView: View {
             .sorted { $0.departureDate > $1.departureDate }
     }
 
+    private func startNewTrip() {
+        UIImpactFeedbackGenerator(style: .light).impactOccurred()
+        router.path.append(CreationRoute.tripInfo(UUID(), startInMyItems: false))
+    }
+
     var body: some View {
         VStack(spacing: 0) {
             HStack(alignment: .center) {
@@ -63,14 +68,9 @@ struct HomeView: View {
                     .foregroundColor(.primary)
                 Spacer()
                 Button {
-                    UIImpactFeedbackGenerator(style: .light).impactOccurred()
-                    router.path.append(CreationRoute.tripInfo(UUID()))
+                    startNewTrip()
                 } label: {
-                    Image(systemName: "plus")
-                        .font(.system(size: 17, weight: .semibold))
-                        .foregroundStyle(.primary)
-                        .frame(width: 44, height: 44)
-                        .glassCircleButton()
+                    plusButton
                 }
             }
             .padding(.horizontal, 16)
@@ -156,6 +156,14 @@ struct HomeView: View {
         } message: {
             Text("This will permanently delete your packing list and all progress.")
         }
+    }
+
+    private var plusButton: some View {
+        Image(systemName: "plus")
+            .font(.system(size: 17, weight: .semibold))
+            .foregroundStyle(.primary)
+            .frame(width: 44, height: 44)
+            .glassCircleButton()
     }
 
     @ViewBuilder

@@ -9,6 +9,7 @@ import UIKit
 struct TripInfoView: View {
 
     let routeID: UUID?
+    let startInMyItems: Bool
     @State private var tripName: String
     @State private var destinationCity: String
     @State private var departureDate: Date
@@ -28,8 +29,9 @@ struct TripInfoView: View {
         var id: String { rawValue }
     }
 
-    init(routeID: UUID? = nil) {
+    init(routeID: UUID? = nil, startInMyItems: Bool = false) {
         self.routeID = routeID
+        self.startInMyItems = startInMyItems
         let initial = TripInfo()
         _tripName = State(initialValue: initial.name)
         _destinationCity = State(initialValue: initial.destinationCity)
@@ -114,7 +116,7 @@ struct TripInfoView: View {
             VStack(spacing: 0) {
                 Button(action: {
                     hideKeyboard()
-                    router.path.append(CreationRoute.itemPicker(info))
+                    router.path.append(CreationRoute.itemPicker(info, startInMyItems: startInMyItems))
                 }) {
                     Text("Continue")
                         .font(.subheadline)

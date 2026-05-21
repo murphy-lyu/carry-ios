@@ -13,16 +13,16 @@ struct SceneGroup: Identifiable {
 
 let defaultSceneGroups: [SceneGroup] = [
     SceneGroup(title: "How you're getting there", items: [
-        "🚗 Road trip", "✈️ Long-haul flight", "🚢 Cruise"
+        "✈️ Long-haul flight", "🚗 Road trip", "🚢 Cruise"
     ]),
     SceneGroup(title: "Weather & terrain", items: [
-        "☀️ Tropical / beach", "🌧 Rainy city", "⛰ High altitude", "❄️ Winter / cold"
+        "☀️ Tropical / beach", "❄️ Winter / cold", "🌧 Rainy city", "⛰ High altitude"
     ]),
     SceneGroup(title: "Trip type", items: [
-        "💼 Business", "👶 Travelling with kids", "🥾 Hiking / camping",
-        "💍 Honeymoon", "🎒 Backpacking", "🏨 City break"
+        "🏨 City break", "💍 Honeymoon", "🎒 Backpacking", "🥾 Hiking / camping",
+        "💼 Business", "👶 Travelling with kids"
     ]),
     SceneGroup(title: "About you", items: [
-        "🩸 Near period", "☕ Coffee lover", "🍵 Tea lover", "💊 Daily medication"
+        "💊 Daily medication", "🌸 On / near period"
     ]),
 ]

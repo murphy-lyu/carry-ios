@@ -10,11 +10,36 @@ struct CoffeeSheetView: View {
 
     @StateObject private var coffeeStore = CoffeeStore()
     @State private var showCelebration = false
-    @State private var hasPurchasedInSession = false
     @State private var showStoreKitNotReadyAlert = false
     @State private var storeKitDebugMessage = ""
     @State private var pendingMockProductID: String?
     @Environment(\.dismiss) private var dismiss
+
+    private var supportToneTitleKey: LocalizedStringKey {
+        switch coffeeStore.supportCount {
+        case ..<1:
+            return "support.sheet.heading"
+        case 1...2:
+            return "support.tone.1.title"
+        case 3...5:
+            return "support.tone.2.title"
+        default:
+            return "support.tone.3.title"
+        }
+    }
+
+    private var supportToneSubtitleKey: LocalizedStringKey {
+        switch coffeeStore.supportCount {
+        case ..<1:
+            return "support.sheet.subtitle"
+        case 1...2:
+            return "support.tone.1.subtitle"
+        case 3...5:
+            return "support.tone.2.subtitle"
+        default:
+            return "support.tone.3.subtitle"
+        }
+    }
 
     var body: some View {
         NavigationStack {
@@ -29,7 +54,7 @@ struct CoffeeSheetView: View {
 
                     VStack(spacing: 0) {
                         // — Title
-                        Text(hasPurchasedInSession ? LocalizedStringKey("support.thanks.title") : LocalizedStringKey("support.sheet.heading"))
+                        Text(supportToneTitleKey)
                             .font(.system(size: 32, weight: .semibold))
                             .lineLimit(2)
                             .minimumScaleFactor(0.85)
@@ -38,7 +63,7 @@ struct CoffeeSheetView: View {
                             .padding(.bottom, 6)
 
                         // — Subtitle
-                        Text(hasPurchasedInSession ? LocalizedStringKey("support.thanks.message") : LocalizedStringKey("support.sheet.subtitle"))
+                        Text(supportToneSubtitleKey)
                             .font(.subheadline)
                             .foregroundStyle(.secondary)
                             .multilineTextAlignment(.center)
@@ -124,14 +149,6 @@ struct CoffeeSheetView: View {
                 }
             }
             .alert("StoreKit not ready", isPresented: $showStoreKitNotReadyAlert) {
-#if DEBUG
-                if let pendingMockProductID {
-                    Button("Mock success") {
-                        coffeeStore.debugMockPurchase(productID: pendingMockProductID)
-                        self.pendingMockProductID = nil
-                    }
-                }
-#endif
                 Button("OK", role: .cancel) {
                     pendingMockProductID = nil
                 }
@@ -140,7 +157,6 @@ struct CoffeeSheetView: View {
             }
             .onChange(of: coffeeStore.lastPurchasedID) { _, id in
                 guard id != nil else { return }
-                hasPurchasedInSession = true
                 showCelebration = true
             }
             .navigationTitle("settings.section.support")
@@ -148,7 +164,6 @@ struct CoffeeSheetView: View {
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
                     Button {
-                        hasPurchasedInSession = false
                         dismiss()
                     } label: {
                         Image(systemName: "xmark")

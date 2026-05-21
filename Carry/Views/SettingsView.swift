@@ -15,6 +15,7 @@ struct SettingsView: View {
     @State private var showCoffeeSheet = false
     @State private var didApplyLaunchSheetReset = false
     @Environment(\.scenePhase) private var scenePhase
+    @EnvironmentObject private var store: TripStore
     @AppStorage("appearance_mode") private var appearanceModeRaw = AppearanceMode.system.rawValue
 
     private var currentAppearance: AppearanceMode {
@@ -91,12 +92,14 @@ struct SettingsView: View {
                 VStack(alignment: .leading, spacing: 18) {
                     HStack {
                         Text("settings.title")
-                            .font(.system(size: 40, weight: .bold, design: .default))
+                            .font(.largeTitle)
+                            .fontWeight(.bold)
                             .foregroundStyle(.primary)
                         Spacer()
                     }
-                    .padding(.horizontal, 20)
-                    .padding(.top, 12)
+                    .padding(.horizontal, 16)
+                    .padding(.top, 8)
+                    .padding(.bottom, 8)
 
                     settingsGroup(title: "settings.section.general") {
                         Button {
@@ -134,7 +137,7 @@ struct SettingsView: View {
                         }
                     }
 
-                    settingsGroup(title: "settings.section.support") {
+                    settingsGroup(title: "settings.group.support") {
                         settingsRow(title: "settings.section.support", valueText: "☕️") {
                             showCoffeeSheet = true
                         }
@@ -161,6 +164,14 @@ struct SettingsView: View {
                         }
                     }
                     .padding(.bottom, 10)
+
+#if DEBUG
+                    settingsGroup(title: "settings.developer.title") {
+                        settingsNavigationRow(title: "settings.developer.entry") {
+                            DeveloperModeView()
+                        }
+                    }
+#endif
                 }
                 .padding(.bottom, 20)
             }
@@ -196,7 +207,7 @@ struct SettingsView: View {
             Text(title)
                 .font(.system(size: 13, weight: .semibold))
                 .foregroundStyle(.secondary)
-                .padding(.horizontal, 20)
+                .padding(.horizontal, 16)
 
             VStack(spacing: 0) {
                 content()
@@ -210,7 +221,7 @@ struct SettingsView: View {
                     )
             )
             .shadow(color: Color.black.opacity(0.03), radius: 12, x: 0, y: 4)
-            .padding(.horizontal, 20)
+            .padding(.horizontal, 16)
         }
     }
 
@@ -325,3 +336,73 @@ struct SettingsView: View {
     SettingsView()
         .environmentObject(TripStore())
 }
+
+#if DEBUG
+private struct DeveloperModeView: View {
+    @EnvironmentObject private var store: TripStore
+    @StateObject private var coffeeStore = CoffeeStore()
+    @State private var toastMessage: LocalizedStringKey?
+
+    var body: some View {
+        List {
+            Section {
+                actionRow(title: "settings.debug.reset_support_tone") {
+                    coffeeStore.debugResetSupportCount()
+                    UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                    showToast("settings.debug.reset_support_tone.success")
+                }
+                actionRow(title: "settings.debug.reset_recommendation_entry") {
+                    store.debugResetSceneCardDismissState()
+                    UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                    showToast("settings.debug.reset_recommendation_entry.success")
+                }
+            }
+        }
+        .listStyle(.insetGrouped)
+        .navigationTitle("settings.developer.entry")
+        .navigationBarTitleDisplayMode(.inline)
+        .overlay(alignment: .bottom) {
+            if let toastMessage {
+                Text(toastMessage)
+                    .font(.subheadline.weight(.medium))
+                    .foregroundStyle(.white)
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 10)
+                    .background(Color.black.opacity(0.88))
+                    .clipShape(Capsule())
+                    .padding(.bottom, 18)
+                    .transition(.move(edge: .bottom).combined(with: .opacity))
+            }
+        }
+        .animation(.easeInOut(duration: 0.2), value: toastMessage != nil)
+    }
+
+    private func actionRow(title: LocalizedStringKey, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            HStack {
+                Text(title)
+                    .foregroundStyle(.primary)
+                Spacer()
+            }
+            .frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .listRowSeparator(.hidden)
+    }
+
+    private func showToast(_ message: LocalizedStringKey) {
+        withAnimation(.easeInOut(duration: 0.2)) {
+            toastMessage = message
+        }
+        Task {
+            try? await Task.sleep(for: .milliseconds(1300))
+            await MainActor.run {
+                withAnimation(.easeIn(duration: 0.2)) {
+                    toastMessage = nil
+                }
+            }
+        }
+    }
+}
+#endif

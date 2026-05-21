@@ -20,8 +20,12 @@ final class CoffeeStore: ObservableObject {
     @Published var isPurchasing = false
     @Published var lastPurchasedID: String?
     @Published var lastFetchErrorMessage: String?
+    @Published var supportCount: Int = 0
+    private let supportCountKey = "support_count"
+    private let defaults = UserDefaults.standard
 
     init() {
+        supportCount = defaults.integer(forKey: supportCountKey)
         Task { await fetchProducts() }
     }
 
@@ -54,6 +58,8 @@ final class CoffeeStore: ObservableObject {
                 if case .verified(let transaction) = verification {
                     await transaction.finish()
                     lastPurchasedID = productID
+                    supportCount += 1
+                    defaults.set(supportCount, forKey: supportCountKey)
                 }
             case .userCancelled, .pending:
                 break
@@ -68,6 +74,14 @@ final class CoffeeStore: ObservableObject {
 #if DEBUG
     func debugMockPurchase(productID: String) {
         lastPurchasedID = productID
+        supportCount += 1
+        defaults.set(supportCount, forKey: supportCountKey)
+    }
+
+    func debugResetSupportCount() {
+        supportCount = 0
+        defaults.set(0, forKey: supportCountKey)
+        lastPurchasedID = nil
     }
 #endif
 }

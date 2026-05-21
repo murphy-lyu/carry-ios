@@ -9,8 +9,8 @@ import Combine
 // MARK: - Creation Route
 
 enum CreationRoute: Hashable {
-    case tripInfo(UUID)
-    case itemPicker(TripInfo)
+    case tripInfo(UUID, startInMyItems: Bool)
+    case itemPicker(TripInfo, startInMyItems: Bool)
     case addItems(UUID)
     case scenePicker(TripInfo)
     case packingList(UUID)
@@ -41,10 +41,10 @@ struct ContentView: View {
                     }
                     .navigationDestination(for: CreationRoute.self) { route in
                         switch route {
-                        case .tripInfo(let routeID):
-                            TripInfoView(routeID: routeID)
-                        case .itemPicker(let info):
-                            ItemPickerView(tripInfo: info)
+                        case .tripInfo(let routeID, let startInMyItems):
+                            TripInfoView(routeID: routeID, startInMyItems: startInMyItems)
+                        case .itemPicker(let info, let startInMyItems):
+                            ItemPickerView(tripInfo: info, startInMyItems: startInMyItems)
                         case .addItems(let tripId):
                             ItemPickerView(tripId: tripId)
                         case .scenePicker(let info):

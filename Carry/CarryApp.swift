@@ -12,12 +12,12 @@ import SwiftData
 struct CarryApp: App {
     static let container: ModelContainer = {
         do {
-            return try ModelContainer(for: TripBundle.self)
+            return try ModelContainer(for: TripBundle.self, MyItem.self)
         } catch {
             CarryLogger.shared.log(.dbInitFailed, context: "error=\(error.localizedDescription)")
             // Fall back to an in-memory store so the app stays alive
             return try! ModelContainer(
-                for: TripBundle.self,
+                for: TripBundle.self, MyItem.self,
                 configurations: ModelConfiguration(isStoredInMemoryOnly: true)
             )
         }
