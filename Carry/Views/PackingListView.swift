@@ -585,10 +585,13 @@ struct PackingListView: View {
                     Text("Fill gaps with smart suggestions for this trip")
                         .font(.caption)
                         .foregroundStyle(.secondary)
+                        .lineLimit(2)
+                        .frame(maxWidth: 220, alignment: .leading)
                 }
                 Spacer(minLength: 8)
             }
             .padding(.horizontal, 14)
+            .padding(.trailing, 30)
             .padding(.vertical, 12)
             .background(Color(UIColor.secondarySystemBackground))
             .cornerRadius(14)

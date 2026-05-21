@@ -10873,19 +10873,19 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Choose trip scenes and we will help you check for missing items"
+            "value": "Choose your trip scenes and we will try to suggest extra items you might have missed."
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "选择本次出行场景，我们为你查缺补漏"
+            "value": "选择本次出行场景，我们会尝试补充一些可能遗漏的物品供你参考。"
           }
         },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "選擇本次出行場景，我們為你查缺補漏"
+            "value": "選擇本次出行場景，我們會嘗試補充一些可能遺漏的物品供你參考。"
           }
         }
       }
@@ -31475,19 +31475,19 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Continue without adding"
+            "value": "No extra items needed"
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "暂不补充继续"
+            "value": "不需要补充了"
           }
         },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "暫不補充繼續"
+            "value": "不需要補充了"
           }
         }
       }
@@ -31741,6 +31741,52 @@
           "stringUnit": {
             "state": "translated",
             "value": "暫不補充繼續"
+          }
+        }
+      }
+    },
+    "scenes.skip": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Skip for now"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "先跳过"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "先跳過"
+          }
+        }
+      }
+    },
+    "scenes.suggest.subtitle": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Select your trip scenes and we will try to suggest extra items you might have missed."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "选择本次出行场景，我们会尝试补充一些可能遗漏的物品供你参考。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "選擇本次出行場景，我們會嘗試補充一些可能遺漏的物品供你參考。"
           }
         }
       }

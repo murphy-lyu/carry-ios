@@ -69,7 +69,7 @@ struct ScenePickerView: View {
         } else if isAutoPack {
             return hasSelection ? "Auto Pack" : "scenes.select_one"
         } else if isSuggest {
-            return hasSelection ? "See suggestions" : "scenes.skip_recommendations"
+            return hasSelection ? "See suggestions" : "scenes.skip"
         } else {
             return hasSelection ? "Generate my list" : "scenes.select_one"
         }
@@ -110,6 +110,14 @@ struct ScenePickerView: View {
                 }
                 .padding(.horizontal, 16)
                 .padding(.top, (isAutoPack || isEditing || isSuggest) ? 24 : 8)
+
+                if isSuggest {
+                    Text("scenes.suggest.subtitle")
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                        .padding(.horizontal, 16)
+                        .padding(.top, -10)
+                }
 
                 // — Scene groups
                 ForEach(defaultSceneGroups) { group in
@@ -219,6 +227,9 @@ struct ScenePickerView: View {
         case .suggest:
             UIImpactFeedbackGenerator(style: .medium).impactOccurred()
             guard !keys.isEmpty else {
+                if case .suggest(let tripId) = mode {
+                    store.setSelectedSceneKeys(tripId: tripId, keys: [])
+                }
                 dismiss()
                 return
             }

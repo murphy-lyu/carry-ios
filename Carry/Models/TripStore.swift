@@ -522,6 +522,12 @@ final class TripStore: ObservableObject {
         save()
     }
 
+    func setSelectedSceneKeys(tripId: UUID, keys: [String]) {
+        guard let trip = trips.first(where: { $0.id == tripId }) else { return }
+        trip.selectedSceneKeys = keys
+        save()
+    }
+
 #if DEBUG
     func debugResetSceneCardDismissState() {
         isSceneCardDismissedGlobally = false
