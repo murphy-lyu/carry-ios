@@ -252,7 +252,7 @@ struct ScenePickerView: View {
             selectedSceneKeys: keys,
             sections: sections
         )
-        store.addTrip(bundle)
+        store.setDraftTrip(bundle)
         return bundle.id
     }
 

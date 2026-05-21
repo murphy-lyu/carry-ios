@@ -28,16 +28,14 @@ private let itemPickerCatalog: [ItemPickerCategory] = [
         "Vaccination certificate",
     ]),
     ItemPickerCategory(name: "Clothing", items: [
-        // 人人必带基础 → 日常上下装 → 中间层 → 女性专属 → 特定场景
+        // 按必须性与广泛性排序
         "Underwear", "Socks",
-        "T-shirt", "Jeans", "Pajamas",
-        "Shorts", "Sweater", "Hoodie", "Cardigan", "Shirt",
-        "Dress", "Skirt", "Bra", "Sports bra", "Tights", "Leggings", "Nipple covers",
-        "Disposable underwear", "Swimsuit", "Formal wear", "Rain jacket", "Hat", "Belt",
-    ]),
-    ItemPickerCategory(name: "Jewellery", items: [
-        // 日常高频 → 叠搭配件
-        "Earrings", "Necklace", "Ring", "Bracelet", "Watch", "Hair clip",
+        "T-shirt", "Jeans", "Long pants", "Pajamas",
+        "Shirt", "Cardigan", "Hoodie",
+        "Bra", "Sports bra", "Leggings", "Tights", "Disposable underwear",
+        "Shorts",
+        "Dress", "Skirt", "Hat", "Belt",
+        "Formal wear", "Sweater", "Rain jacket", "Swimsuit", "Nipple covers",
     ]),
     ItemPickerCategory(name: "Electronics", items: [
         // 充电/供电（全员必备）→ 音频 → 电脑/平板 → 摄影 → 配件
@@ -45,14 +43,7 @@ private let itemPickerCatalog: [ItemPickerCategory] = [
         "Earphones", "Noise-cancelling headphones",
         "Tablet", "Laptop", "Laptop charger", "E-reader",
         "Camera", "Camera charger", "Pocket camera", "Action camera", "Drone", "Memory card",
-        "Selfie stick", "Tripod", "Power strip", "Portable WiFi device", "Bluetooth speaker",
-    ]),
-    ItemPickerCategory(name: "Travel Accessories", items: [
-        // 钱/证件载体 → 日常随身 → 飞机/长途舒适 → 整理辅助
-        "Wallet", "Cash", "Card holder",
-        "Sunglasses", "Umbrella", "Water bottle",
-        "Travel pillow", "Eye mask", "Earplugs",
-        "Pen", "Packing cubes", "Laundry bag", "Travel towel",
+        "Selfie stick", "Tripod", "Power strip", "Bluetooth speaker", "Portable WiFi device",
     ]),
     ItemPickerCategory(name: "Toiletries", items: [
         // 按固定护肤顺序优先，其余放后
@@ -65,25 +56,26 @@ private let itemPickerCatalog: [ItemPickerCategory] = [
         "Razor", "Nail clippers",
         "Acne patches", "Deodorant",
     ]),
+    ItemPickerCategory(name: "Travel Accessories", items: [
+        // 钱/证件载体 → 日常随身 → 飞机/长途舒适 → 整理辅助
+        "Card holder", "Wallet", "Cash",
+        "Sunglasses", "Umbrella", "Water bottle",
+        "Travel pillow", "Eye mask", "Earplugs",
+        "Pen", "Packing cubes", "Laundry bag", "Travel towel",
+    ]),
     ItemPickerCategory(name: "Makeup", items: [
-        // 功能性（隐形眼镜）→ 高频基础妆 → 眼妆 → 修容 → 定妆 → 工具
-        "Contact lenses",
-        "Concealer", "Foundation", "Mascara", "Eyebrow pencil", "Lipstick / Lip gloss",
-        "Eyeliner", "Blush", "Highlighter",
-        "Primer", "Setting powder", "Eyeshadow",
-        "Eyelash curler", "False eyelashes",
+        // 基础底妆 → 眼妆 → 唇颊 → 妆前/定妆 → 工具/特殊项
+        "Primer", "Foundation", "Concealer",
+        "Eyebrow pencil", "Mascara", "Lipstick / Lip gloss", "Eyeliner", "Eyeshadow",
+        "Blush", "Highlighter",
+        "Setting powder",
         "Makeup brushes", "Makeup sponge",
+        "Eyelash curler", "False eyelashes",
         "Colored contacts",
     ]),
-    ItemPickerCategory(name: "Health & Wellness", items: [
-        // 处方药优先 → 常备OTC → 旅行高发症状 → 卫生防护 → 女性用品 → 保健品
-        "Prescription medication",
-        "Painkillers", "Cold & flu medicine", "Stomach medicine", "Anti-diarrhea",
-        "Motion sickness tablets", "Antihistamines",
-        "Hand sanitiser", "Disposable face masks", "First aid kit",
-        "Eye drops", "Throat lozenges",
-        "Feminine hygiene products", "Birth control pills", "Condoms",
-        "Melatonin", "Multivitamins", "Vitamin C", "Vitamin D", "Probiotics",
+    ItemPickerCategory(name: "Jewellery", items: [
+        // 日常高频 → 叠搭配件
+        "Earrings", "Necklace", "Ring", "Bracelet", "Watch", "Hair clip",
     ]),
     ItemPickerCategory(name: "Leisure", items: [
         // 阅读 → 零食/即食 → 社交/娱乐
@@ -91,17 +83,31 @@ private let itemPickerCatalog: [ItemPickerCategory] = [
         "Gum", "Instant coffee", "Tea bags",
         "Travel board game",
     ]),
+    ItemPickerCategory(name: "Health & Wellness", items: [
+        // 处方药优先 → 眼部护理 → 常备OTC → 旅行高发症状 → 卫生防护 → 女性用品 → 保健品
+        "Painkillers", "Cold & flu medicine", "Stomach medicine",
+        "Motion sickness tablets", "Antihistamines",
+        "Prescription medication",
+        "Contact lenses",
+        "Disposable face masks", "Hand sanitiser", "First aid kit",
+        "Eye drops", "Throat lozenges",
+        "Feminine hygiene products",
+        "Vitamin C", "Vitamin D", "Multivitamins", "Probiotics", "Melatonin",
+        "Birth control pills", "Condoms", "Anti-diarrhea",
+    ]),
     ItemPickerCategory(name: "Winter Travel", items: [
         // 外层保暖 → 基础层 → 四肢保暖 → 辅助保暖
-        "Wool coat", "Thermal underwear",
-        "Gloves", "Beanie", "Scarf",
+        "Thermal underwear",
+        "Wool coat",
         "Snow boots",
+        "Gloves", "Beanie", "Scarf",
         "Hand warmers", "Heat patches",
     ]),
     ItemPickerCategory(name: "Beach & Outdoor", items: [
         // 沙滩必带 → 水上活动 → 户外/徒步
-        "Flip flops", "Beach towel", "Rash guard", "Swimming goggles", "Waterproof bag",
-        "Insect repellent", "Hiking boots", "Trekking poles",
+        "Flip flops", "Beach towel", "Waterproof bag", "Insect repellent",
+        "Rash guard", "Swimming goggles",
+        "Hiking boots", "Trekking poles",
     ]),
 ]
 
@@ -142,7 +148,7 @@ struct ItemPickerView: View {
     @State private var didApplyInitialSource = false
 
     private var hasSelection: Bool {
-        sourceMode == .preset ? !selectedItems.isEmpty : !selectedMyItemIDs.isEmpty
+        !selectedItems.isEmpty || !selectedMyItemIDs.isEmpty
     }
 
     private var isCreateMode: Bool {
@@ -233,17 +239,61 @@ struct ItemPickerView: View {
                 .padding(.horizontal, 16)
                 .padding(.bottom, 12)
 
-            if sourceMode == .myItems {
-                myItemsHeader
-                    .padding(.horizontal, 16)
-                    .padding(.bottom, 12)
-            }
-
             // Scrollable content
-            ScrollView {
-                LazyVStack(alignment: .leading, spacing: 0, pinnedViews: [.sectionHeaders]) {
-
-                    if sourceMode == .preset {
+            if sourceMode == .myItems {
+                List {
+                    let myItems = myItemsSearchResults().sorted { lhs, rhs in
+                        if lhs.sortOrder != rhs.sortOrder {
+                            return lhs.sortOrder < rhs.sortOrder
+                        }
+                        return lhs.name.localizedCaseInsensitiveCompare(rhs.name) == .orderedAscending
+                    }
+                    if myItems.isEmpty {
+                        VStack(spacing: 10) {
+                            Image(systemName: searchText.isEmpty ? "shippingbox" : "magnifyingglass")
+                                .font(.system(size: 22, weight: .semibold))
+                                .foregroundStyle(.secondary)
+                            Text(searchText.isEmpty ? "myitems.empty.title" : "No results")
+                                .font(.headline)
+                                .foregroundStyle(.primary)
+                                .multilineTextAlignment(.center)
+                            if searchText.isEmpty {
+                                Text("myitems.empty.subtitle")
+                                    .font(.subheadline)
+                                    .foregroundStyle(.secondary)
+                                    .multilineTextAlignment(.center)
+                                    .lineSpacing(2)
+                            }
+                        }
+                        .frame(maxWidth: .infinity)
+                        .padding(.top, 88)
+                        .padding(.horizontal, 24)
+                        .listRowBackground(Color.clear)
+                        .listRowSeparator(.hidden)
+                    } else {
+                        ForEach(myItems) { item in
+                            myItemRow(item)
+                                .listRowInsets(EdgeInsets(top: 0, leading: 16, bottom: 0, trailing: 16))
+                                .listRowBackground(Color(UIColor.systemBackground))
+                                .listRowSeparator(.hidden)
+                                .swipeActions(edge: .trailing, allowsFullSwipe: false) {
+                                    Button(role: .destructive) {
+                                        store.removeMyItem(id: item.id)
+                                    } label: {
+                                        Label("Delete", systemImage: "trash")
+                                    }
+                                    .tint(.red)
+                                }
+                        }
+                    }
+                }
+                .listStyle(.plain)
+                .scrollContentBackground(.hidden)
+                .background(Color(UIColor.systemBackground))
+                .padding(.bottom, isCreateMode ? 96 : 24)
+            } else {
+                ScrollView {
+                    LazyVStack(alignment: .leading, spacing: 0, pinnedViews: [.sectionHeaders]) {
                         if searchText.isEmpty {
                             ForEach(itemPickerCatalog, id: \.name) { category in
                                 Section {
@@ -269,36 +319,17 @@ struct ItemPickerView: View {
                                 .padding(.top, 4)
                             }
                         }
-                    } else {
-                        let myItems = myItemsSearchResults().sorted { lhs, rhs in
-                            if lhs.sortOrder != rhs.sortOrder {
-                                return lhs.sortOrder < rhs.sortOrder
-                            }
-                            return lhs.name.localizedCaseInsensitiveCompare(rhs.name) == .orderedAscending
-                        }
-                        if myItems.isEmpty {
-                            Text(searchText.isEmpty ? "myitems.empty.title" : "No results")
-                                .font(.subheadline)
-                                .foregroundColor(.secondary)
-                                .frame(maxWidth: .infinity, alignment: .center)
-                                .padding(.top, 48)
-                        } else {
-                            ForEach(myItems) { item in
-                                myItemRow(item)
-                                    .padding(.horizontal, 16)
-                            }
-                        }
                     }
+                    .padding(.bottom, isCreateMode ? 96 : 24)
                 }
-                .padding(.bottom, isCreateMode ? 96 : 24)
-            }
-            .scrollDismissesKeyboard(.interactively)
+                .scrollDismissesKeyboard(.interactively)
                 .simultaneousGesture(
                     TapGesture().onEnded {
                         isSearchFocused = false
                         hideKeyboard()
                     }
                 )
+            }
         }
         .contentShape(Rectangle())
         .background(Color.clear.contentShape(Rectangle()))
@@ -356,34 +387,45 @@ struct ItemPickerView: View {
     }
 
     private var sourcePicker: some View {
-        HStack(spacing: 8) {
-            ForEach(SourceMode.allCases, id: \.self) { mode in
-                Button {
+        ZStack {
+            RoundedRectangle(cornerRadius: 20, style: .continuous)
+                .fill(Color(UIColor.secondarySystemBackground))
+
+            GeometryReader { geo in
+                let segmentWidth = max((geo.size.width - 8) / 2, 0)
+                RoundedRectangle(cornerRadius: 16, style: .continuous)
+                    .fill(Color(UIColor.systemBackground))
+                    .frame(width: segmentWidth, height: geo.size.height - 8)
+                    .offset(x: sourceMode == .preset ? 4 : segmentWidth + 4, y: 4)
+                    .animation(.easeInOut(duration: 0.22), value: sourceMode)
+            }
+
+            HStack(spacing: 0) {
+                ForEach(SourceMode.allCases, id: \.self) { mode in
+                    Button {
                     sourceMode = mode
                     searchText = ""
                     expandedCategories.removeAll()
-                    selectedItems.removeAll()
                     isSearchFocused = false
                     hideKeyboard()
                 } label: {
-                    Text(mode == .preset ? LocalizedStringKey("myitems.source.preset") : LocalizedStringKey("myitems.source.mine"))
-                        .font(.subheadline.weight(.semibold))
+                        VStack(spacing: 2) {
+                            Text(mode == .preset ? "myitems.source.base" : "myitems.source.mine")
+                                .font(.subheadline.weight(.semibold))
+                            Text(mode == .preset ? "myitems.source.base.subtitle" : "myitems.source.mine.subtitle")
+                                .font(.caption2)
+                                .foregroundStyle(.secondary)
+                        }
                         .foregroundStyle(sourceMode == mode ? .primary : .secondary)
                         .frame(maxWidth: .infinity)
-                        .frame(height: 36)
-                        .background(
-                            RoundedRectangle(cornerRadius: 10, style: .continuous)
-                                .fill(sourceMode == mode ? Color(UIColor.secondarySystemBackground) : Color.clear)
-                        )
+                        .frame(height: 44)
+                    }
+                    .buttonStyle(.plain)
                 }
-                .buttonStyle(.plain)
             }
+            .padding(4)
         }
-        .padding(4)
-        .background(
-            RoundedRectangle(cornerRadius: 12, style: .continuous)
-                .fill(Color(UIColor.secondarySystemBackground))
-        )
+        .frame(height: 52)
     }
 
     private var myItemsHeader: some View {
@@ -391,7 +433,7 @@ struct ItemPickerView: View {
             VStack(alignment: .leading, spacing: 2) {
                 Text("myitems.title")
                     .font(.headline)
-                Text("\(myItemsCount) items")
+                Text("myitems.source.mine.subtitle")
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
@@ -428,8 +470,8 @@ struct ItemPickerView: View {
 
     private var autoPackFAB: some View {
         Button { showAutoPackSheet = true } label: {
-            Image(systemName: "wand.and.stars")
-                .font(.system(size: 20))
+            Image(systemName: "sparkles")
+                .font(.system(size: 22))
                 .foregroundColor(.primary)
                 .frame(width: 56, height: 56)
                 .background {
@@ -447,7 +489,7 @@ struct ItemPickerView: View {
                         .strokeBorder(autoPackGradient, lineWidth: 1.5)
                 }
         }
-        .buttonStyle(.plain)
+        .buttonStyle(AutoPackFABButtonStyle())
     }
 
     private func categoryHeaderText(_ title: String) -> some View {
@@ -473,12 +515,21 @@ struct ItemPickerView: View {
             }
         } label: {
             HStack(spacing: 12) {
-                Circle()
-                    .fill(isSelected ? Color.primary : Color.clear)
-                    .overlay(
-                        Circle().strokeBorder(isSelected ? Color.primary : Color.secondary.opacity(0.4), lineWidth: 1.5)
-                    )
-                    .frame(width: 24, height: 24)
+                ZStack {
+                    Circle()
+                        .fill(isSelected ? Color.primary.opacity(0.12) : Color.clear)
+                    Circle()
+                        .strokeBorder(
+                            isSelected ? Color.primary : Color.secondary.opacity(0.4),
+                            lineWidth: 1.5
+                        )
+                    if isSelected {
+                        Image(systemName: "checkmark")
+                            .font(.system(size: 11, weight: .bold))
+                            .foregroundStyle(.primary)
+                    }
+                }
+                .frame(width: 24, height: 24)
                 VStack(alignment: .leading, spacing: 2) {
                     Text(item.name)
                         .font(.body)
@@ -490,16 +541,8 @@ struct ItemPickerView: View {
                     }
                 }
                 Spacer()
-                if selectedMyItemIDs.contains(item.id) {
-                    Text("✓")
-                        .font(.subheadline.weight(.semibold))
-                        .foregroundStyle(.primary)
-                }
-                Text("\(item.defaultQuantity)")
-                    .font(.subheadline.weight(.semibold))
-                    .foregroundStyle(.secondary)
             }
-            .frame(height: 44)
+            .frame(height: 48)
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
@@ -561,8 +604,14 @@ struct ItemPickerView: View {
                     .foregroundColor(.primary)
                 Spacer()
                 Text("\(selectedCount)/\(category.items.count)")
-                    .font(.subheadline)
-                    .foregroundColor(.secondary)
+                    .font(.caption2.weight(.medium))
+                    .foregroundStyle(.tertiary)
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 3)
+                    .background(
+                        Capsule(style: .continuous)
+                            .fill(Color(UIColor.tertiarySystemFill))
+                    )
                 Image(systemName: isExpanded ? "chevron.up" : "chevron.down")
                     .font(.system(size: 12, weight: .medium))
                     .foregroundColor(.secondary)
@@ -683,7 +732,7 @@ struct ItemPickerView: View {
     // MARK: - Actions
 
     private func confirmSelection() {
-        let sections = sourceMode == .preset ? buildSections() : buildMyItemSections()
+        let sections = combinedSelectedSections()
         guard !sections.isEmpty else { return }
 
         switch mode {
@@ -697,7 +746,7 @@ struct ItemPickerView: View {
                 selectedSceneKeys: [],
                 sections: sections
             )
-            store.addTrip(bundle)
+            store.setDraftTrip(bundle)
             router.path.append(CreationRoute.packingList(bundle.id))
 
         case .merge(let tripId):
@@ -729,6 +778,33 @@ struct ItemPickerView: View {
         return result
     }
 
+    private func combinedSelectedSections() -> [PackingSection] {
+        mergeSectionsByTitle(buildSections() + buildMyItemSections())
+    }
+
+    private func mergeSectionsByTitle(_ sections: [PackingSection]) -> [PackingSection] {
+        var result: [PackingSection] = []
+        var indexByTitle: [String: Int] = [:]
+
+        for section in sections {
+            if let existingIndex = indexByTitle[section.title] {
+                let existing = result[existingIndex]
+                let nextStartOrder = (existing.items?.map(\.sortOrder).max() ?? -1) + 1
+                let items = (section.items ?? []).enumerated().map { offset, item in
+                    item.sortOrder = nextStartOrder + offset
+                    return item
+                }
+                existing.items = (existing.items ?? []) + items
+            } else {
+                section.sortOrder = result.count
+                indexByTitle[section.title] = result.count
+                result.append(section)
+            }
+        }
+
+        return result
+    }
+
     private func selectedCurrentCount() -> Int {
         sourceMode == .preset ? selectedItems.count : selectedMyItemIDs.count
     }
@@ -753,6 +829,14 @@ struct ItemPickerView: View {
             sectionIndex += 1
         }
         return result
+    }
+}
+
+private struct AutoPackFABButtonStyle: ButtonStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .scaleEffect(configuration.isPressed ? 0.96 : 1)
+            .animation(.easeInOut(duration: 0.12), value: configuration.isPressed)
     }
 }
 

@@ -36,6 +36,12 @@ struct PackingListView: View {
     @State private var hasTriggeredNudge = false
     @State private var surpriseBatchOffset: Int = 0
     @State private var showSceneCardDismissHintBanner = false
+    @State private var draggingItemId: UUID? = nil
+    @State private var dragStartIds: [UUID] = []
+    @State private var dragStartIndex: Int = 0
+    @State private var currentDragIndex: Int = 0
+    @State private var toastVisible = false
+    @State private var toastText = ""
 
     private let surpriseBatchSize = 5
 
@@ -77,6 +83,9 @@ struct PackingListView: View {
 
     var body: some View {
         VStack(spacing: 0) {
+            if toastVisible {
+                toastBanner
+            }
 
             // — Progress header (fixed, does not scroll)
             progressHeader
@@ -85,63 +94,56 @@ struct PackingListView: View {
             if sections.isEmpty {
                 emptyState
             } else {
-                ScrollView {
-                    LazyVStack(spacing: 0, pinnedViews: [.sectionHeaders]) {
-                        ForEach(Array(sections.enumerated()), id: \.element.id) { index, section in
-                            Section {
-                                VStack(spacing: 0) {
-                                    ForEach(section.sortedItems.filter { !$0.name.isEmpty || $0.id == editingItemId }, id: \.id) { item in
-                                        row(for: item, sectionId: section.id)
-                                            .padding(.horizontal, 16)
-                                            .frame(maxWidth: .infinity, alignment: .leading)
-                                            .background(Color(UIColor.systemBackground))
-                                    }
-                                    addItemRow(sectionId: section.id)
-                                        .padding(.horizontal, 16)
-                                        .padding(.bottom, 16)
-                                        .background(Color(UIColor.systemBackground))
-                                }
-                            } header: {
-                                sectionTitle(section.title, isFirst: index == 0)
+                List {
+                    ForEach(Array(sections.enumerated()), id: \.element.id) { index, section in
+                        Section {
+                            ForEach(section.sortedItems.filter { !$0.name.isEmpty || $0.id == editingItemId }, id: \.id) { item in
+                                row(for: item, sectionId: section.id)
+                                    .listRowInsets(EdgeInsets(top: 0, leading: 16, bottom: 0, trailing: 16))
+                                    .listRowSeparator(.hidden)
+                                    .listRowBackground(Color(UIColor.systemBackground))
                             }
-                        }
 
-                        if !surpriseItems.isEmpty && isNewTrip {
-                            Section {
-                                VStack(spacing: 0) {
-                                    ForEach(visibleSurpriseItems) { item in
-                                        surpriseRow(for: item)
-                                            .padding(.horizontal, 16)
-                                            .background(Color(UIColor.systemBackground))
-                                    }
-                                }
-                            } header: {
-                                surpriseSectionHeader
+                            addItemRow(sectionId: section.id)
+                                .listRowInsets(EdgeInsets(top: 0, leading: 16, bottom: 16, trailing: 16))
+                                .listRowSeparator(.hidden)
+                                .listRowBackground(Color(UIColor.systemBackground))
+                        } header: {
+                            sectionTitle(section.title, isFirst: index == 0)
+                                .listRowInsets(EdgeInsets())
+                        }
+                        .listSectionSeparator(.hidden)
+                    }
+
+                    if !surpriseItems.isEmpty && isNewTrip {
+                        Section {
+                            ForEach(visibleSurpriseItems) { item in
+                                surpriseRow(for: item)
+                                    .listRowInsets(EdgeInsets(top: 0, leading: 16, bottom: 0, trailing: 16))
+                                    .listRowSeparator(.hidden)
+                                    .listRowBackground(Color(UIColor.systemBackground))
                             }
+                        } header: {
+                            surpriseSectionHeader
+                                .listRowInsets(EdgeInsets())
                         }
+                        .listSectionSeparator(.hidden)
+                    }
 
-                        if !sceneCardDismissed {
+                    if isNewTrip && !sceneCardDismissed {
+                        Section {
                             sceneEntryCard
-                                .padding(.top, 8)
-                                .padding(.horizontal, 16)
-                                .padding(.bottom, 16)
+                                .listRowInsets(EdgeInsets(top: 8, leading: 16, bottom: 16, trailing: 16))
+                                .listRowSeparator(.hidden)
+                                .listRowBackground(Color(UIColor.systemBackground))
                         }
+                        .listSectionSeparator(.hidden)
                     }
                 }
-                .simultaneousGesture(
-                    TapGesture().onEnded {
-                        if editingItemId != nil {
-                            dismissInlineEditing()
-                        }
-                        UIApplication.shared.sendAction(
-                            #selector(UIResponder.resignFirstResponder),
-                            to: nil,
-                            from: nil,
-                            for: nil
-                        )
-                    }
-                )
-                .background(Color(UIColor.systemBackground))
+                .listStyle(.plain)
+                .scrollContentBackground(.hidden)
+                .environment(\.defaultMinListRowHeight, 0)
+                .listSectionSpacing(0)
                 .scrollIndicators(.hidden)
                 .safeAreaInset(edge: .bottom) { Color.clear.frame(height: 83) }
                 .safeAreaInset(edge: .top, spacing: 0) {
@@ -232,12 +234,16 @@ struct PackingListView: View {
                         } label: {
                             Label("Share list", systemImage: "square.and.arrow.up")
                         }
-                        Button {
-                            showSuggestSheet = true
-                        } label: {
-                            Label("Add recommended items", systemImage: "tag")
-                        }
                         Divider()
+                        Button {
+                            if isComplete {
+                                markTripUncompleted()
+                            } else {
+                                markTripCompleted()
+                            }
+                        } label: {
+                            Label(isComplete ? "packing.mark_uncomplete" : "packing.mark_complete", systemImage: isComplete ? "arrow.uturn.left.circle" : "checkmark.circle")
+                        }
                         Button(role: .destructive) {
                             showDeleteConfirmation = true
                         } label: {
@@ -314,6 +320,9 @@ struct PackingListView: View {
                 withAnimation(.easeIn(duration: 0.3)) { showNudgeBanner = false }
             }
         }
+        .onDisappear {
+            store.refresh()
+        }
         .animation(.easeInOut(duration: 0.25), value: isComplete)
         .sheet(isPresented: $showEditSheet, onDismiss: {
             store.refresh()
@@ -362,32 +371,75 @@ struct PackingListView: View {
         } else {
             PackingItemRow(
                 item: item,
-                onTap: {
-                    toggleItem(itemId: item.id)
-                },
-                onDecrement: {
-                    decrementItemQuantity(itemId: item.id, current: item.quantity)
-                },
-                onIncrement: {
-                    incrementItemQuantity(itemId: item.id, current: item.quantity)
-                },
+                showCheckmark: draggingItemId == nil && !isNewTrip,
+                onTap: { toggleItem(itemId: item.id) },
+                onDecrement: { decrementItemQuantity(itemId: item.id, current: item.quantity) },
+                onIncrement: { incrementItemQuantity(itemId: item.id, current: item.quantity) },
                 onSetQuantity: { newValue in
                     store.updateItemQuantity(tripId: tripId, itemId: item.id, quantity: newValue)
                 }
             )
+            .allowsHitTesting(draggingItemId == nil)
+            .opacity(draggingItemId != nil && draggingItemId != item.id ? 0.55 : 1.0)
+            .overlay {
+                RoundedRectangle(cornerRadius: 10)
+                    .strokeBorder(Color.indigo.opacity(draggingItemId == item.id ? 0.55 : 0), lineWidth: 2.5)
+                    .background(
+                        RoundedRectangle(cornerRadius: 10)
+                            .fill(Color.indigo.opacity(draggingItemId == item.id ? 0.08 : 0))
+                    )
+                    .padding(.vertical, 2)
+            }
+            .scaleEffect(draggingItemId == item.id ? 1.04 : 1.0)
+            .shadow(
+                color: draggingItemId == item.id ? .black.opacity(0.18) : .clear,
+                radius: 10, x: 0, y: 5
+            )
+            .animation(.easeInOut(duration: 0.18), value: draggingItemId == item.id)
+            .animation(.easeInOut(duration: 0.18), value: draggingItemId != nil)
+            .background(
+                LongPressDragBridge(
+                    onBegan: {
+                        guard let section = sections.first(where: { $0.id == sectionId }) else { return }
+                        let sectionItems = section.sortedItems.filter { !$0.name.isEmpty }
+                        dragStartIds = sectionItems.map(\.id)
+                        dragStartIndex = sectionItems.firstIndex(where: { $0.id == item.id }) ?? 0
+                        currentDragIndex = dragStartIndex
+                        draggingItemId = item.id
+                    },
+                    onChanged: { translation in
+                        guard draggingItemId == item.id else { return }
+                        let delta = Int((translation / 44).rounded())
+                        let newIndex = max(0, min(dragStartIds.count - 1, dragStartIndex + delta))
+                        guard newIndex != currentDragIndex else { return }
+                        currentDragIndex = newIndex
+                        UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                        var ids = dragStartIds
+                        guard let fromIdx = ids.firstIndex(of: item.id) else { return }
+                        ids.remove(at: fromIdx)
+                        ids.insert(item.id, at: min(newIndex, ids.count))
+                        store.reorderItems(tripId: tripId, sectionId: sectionId, newOrder: ids)
+                    },
+                    onEnded: {
+                        draggingItemId = nil
+                        dragStartIds = []
+                        dragStartIndex = 0
+                        currentDragIndex = 0
+                    }
+                )
+            )
             .swipeActions(edge: .trailing, allowsFullSwipe: false) {
-                Button {
-                    saveToMyItems(item: item)
-                } label: {
-                    Label("Save", systemImage: "bookmark")
-                }
-                .tint(.indigo)
                 Button(role: .destructive) {
                     deleteItem(itemId: item.id)
                 } label: {
                     Label("Delete", systemImage: "trash")
                 }
-                .tint(.red)
+                Button {
+                    saveToMyItems(item: item)
+                } label: {
+                    Label("myitems.saveToLibrary", systemImage: "bookmark")
+                }
+                .tint(Color.indigo)
             }
         }
     }
@@ -409,11 +461,43 @@ struct PackingListView: View {
     }
 
     private func saveToMyItems(item: PackingItem) {
+        let category = sectionTitle(for: item.id) ?? ""
+        let existed = store.myItems.contains {
+            $0.name.trimmingCharacters(in: .whitespacesAndNewlines)
+                .localizedCaseInsensitiveCompare(item.name.trimmingCharacters(in: .whitespacesAndNewlines)) == .orderedSame
+            && $0.category.trimmingCharacters(in: .whitespacesAndNewlines)
+                .localizedCaseInsensitiveCompare(category.trimmingCharacters(in: .whitespacesAndNewlines)) == .orderedSame
+        }
         store.addMyItem(
             name: item.name,
-            category: sectionTitle(for: item.id) ?? "",
+            category: category,
             defaultQuantity: item.quantity
         )
+        showToast(existed ? "myitems.exists" : "myitems.saved")
+        UINotificationFeedbackGenerator().notificationOccurred(.success)
+    }
+    private func markTripCompleted() {
+        store.markTripCompleted(tripId: tripId)
+        hasTriggeredCompletion = true
+        UINotificationFeedbackGenerator().notificationOccurred(.success)
+        showConfetti = true
+        withAnimation(.spring(response: 0.4, dampingFraction: 0.8)) {
+            showCompletionBanner = true
+        }
+        Task {
+            try? await Task.sleep(for: .milliseconds(2500))
+            withAnimation(.easeIn(duration: 0.3)) {
+                showCompletionBanner = false
+            }
+        }
+    }
+
+    private func markTripUncompleted() {
+        store.markTripUncompleted(tripId: tripId)
+        hasTriggeredCompletion = false
+        showConfetti = false
+        showCompletionBanner = false
+        UINotificationFeedbackGenerator().notificationOccurred(.success)
     }
 
     private func sectionTitle(for itemId: UUID) -> String? {
@@ -531,7 +615,7 @@ struct PackingListView: View {
                     if isNewTrip {
                         Text("\(totalCount) items")
                     } else if isComplete {
-                        Text("All packed ✓")
+                        Text("packing.complete.short")
                     } else {
                         Text("\(totalCount - packedCount) left")
                     }
@@ -559,7 +643,7 @@ struct PackingListView: View {
         HStack(spacing: 8) {
             Image(systemName: "checkmark.circle.fill")
                 .foregroundStyle(.white)
-            Text("All packed — you're ready to go! 🎉")
+            Text("packing.complete.banner")
                 .foregroundStyle(.white)
         }
         .font(.subheadline.weight(.medium))
@@ -739,7 +823,7 @@ struct PackingListView: View {
                 .multilineTextAlignment(.center)
                 .padding(.top, 6)
             Spacer()
-            if !sceneCardDismissed {
+            if isNewTrip && !sceneCardDismissed {
                 sceneEntryCard
                     .padding(.horizontal, 16)
                     .padding(.bottom, 24)
@@ -814,6 +898,9 @@ struct PackingListView: View {
                 UINotificationFeedbackGenerator().notificationOccurred(.success)
                 Task {
                     try? await Task.sleep(for: .milliseconds(700))
+                    if isNewTrip {
+                        store.commitDraftTrip()
+                    }
                     router.path = NavigationPath([tripId])
                     await NotificationManager.requestAuthorizationIfNeeded()
                 }
@@ -842,6 +929,36 @@ struct PackingListView: View {
             .padding(.top, 12)
         }
         .background(Color(UIColor.systemBackground))
+    }
+
+    private var toastBanner: some View {
+        Text(toastText)
+            .font(.subheadline.weight(.semibold))
+            .foregroundStyle(.primary)
+            .padding(.horizontal, 14)
+            .padding(.vertical, 10)
+            .background(
+                Capsule(style: .continuous)
+                    .fill(Color(UIColor.secondarySystemBackground))
+                    .shadow(color: .black.opacity(0.08), radius: 10, x: 0, y: 4)
+            )
+            .padding(.top, 10)
+            .transition(.move(edge: .top).combined(with: .opacity))
+    }
+
+    private func showToast(_ messageKey: String) {
+        toastText = NSLocalizedString(messageKey, comment: "")
+        withAnimation(.easeInOut(duration: 0.2)) {
+            toastVisible = true
+        }
+        Task {
+            try? await Task.sleep(for: .milliseconds(1600))
+            await MainActor.run {
+                withAnimation(.easeInOut(duration: 0.2)) {
+                    toastVisible = false
+                }
+            }
+        }
     }
 
     // MARK: Editing
@@ -944,6 +1061,7 @@ private struct ConfettiView: View {
 struct PackingItemRow: View {
 
     let item: PackingItem
+    var showCheckmark: Bool = true
     let onTap: () -> Void
     var onDecrement: (() -> Void)? = nil
     var onIncrement: (() -> Void)? = nil
@@ -955,17 +1073,18 @@ struct PackingItemRow: View {
     @State private var checkmarkScale: CGFloat
     @State private var isEditingQuantity = false
     @State private var quantityText = ""
-    @State private var quantityPressing = false
     @FocusState private var focusedQuantityField: Bool
 
     init(
         item: PackingItem,
+        showCheckmark: Bool = true,
         onTap: @escaping () -> Void,
         onDecrement: (() -> Void)? = nil,
         onIncrement: (() -> Void)? = nil,
         onSetQuantity: ((Int) -> Void)? = nil,
     ) {
         self.item = item
+        self.showCheckmark = showCheckmark
         self.onTap = onTap
         self.onDecrement = onDecrement
         self.onIncrement = onIncrement
@@ -981,43 +1100,47 @@ struct PackingItemRow: View {
     var body: some View {
         HStack(spacing: 14) {
             quantityControl
-            Button(action: onTap) {
-                HStack(spacing: 12) {
-                    Text(LocalizedStringKey(item.name))
-                        .font(.subheadline)
-                        .foregroundColor(item.isPacked ? Color(.secondaryLabel) : .primary)
-                        .strikethrough(item.isPacked)
-                        .opacity(item.isPacked ? (colorScheme == .dark ? 0.75 : 0.6) : 1.0)
+            HStack(spacing: 18) {
+                Text(LocalizedStringKey(item.name))
+                    .font(.callout)
+                    .foregroundColor(item.isPacked ? Color(.secondaryLabel) : .primary)
+                    .strikethrough(item.isPacked)
+                    .opacity(item.isPacked ? (colorScheme == .dark ? 0.75 : 0.6) : 1.0)
 
-                    Spacer()
+                Spacer()
 
+                if showCheckmark {
+                    Spacer(minLength: 10)
                     ZStack {
                         Circle()
                             .strokeBorder(
                                 item.isPacked
-                                    ? Color.primary.opacity(colorScheme == .dark ? 0.78 : 0.74)
-                                    : Color(.systemGray3).opacity(colorScheme == .dark ? 0.85 : 0.72),
+                                    ? Color(.systemGray2).opacity(colorScheme == .dark ? 0.9 : 1.0)
+                                    : Color.primary.opacity(colorScheme == .dark ? 0.7 : 0.6),
                                 lineWidth: 1.4
                             )
                             .background(
-                                Circle().fill(item.isPacked ? Color.primary.opacity(colorScheme == .dark ? 0.9 : 0.84) : Color.clear)
+                                Circle().fill(item.isPacked ? Color(.systemGray2).opacity(colorScheme == .dark ? 0.85 : 1.0) : Color.clear)
                             )
                             .frame(width: 24, height: 24)
 
                         Image(systemName: "checkmark")
-                            .font(.system(size: 11, weight: .bold))
+                            .font(.system(size: 10, weight: .bold))
                             .foregroundColor(Color(UIColor.systemBackground))
                             .scaleEffect(checkmarkScale)
                             .opacity(checkmarkOpacity)
                     }
+                    .transition(.opacity)
                     .scaleEffect(checkScale)
                 }
-                .contentShape(Rectangle())
             }
-            .buttonStyle(.plain)
         }
         .frame(minHeight: 44)
         .animation(.spring(response: 0.3, dampingFraction: 0.6), value: item.isPacked)
+        .contentShape(Rectangle())
+        .onTapGesture {
+            onTap()
+        }
         .onChange(of: focusedQuantityField) { _, focused in
             if !focused, isEditingQuantity {
                 commitQuantityEdit()
@@ -1100,31 +1223,20 @@ struct PackingItemRow: View {
             RoundedRectangle(cornerRadius: 12, style: .continuous)
                 .fill(
                     isEditingQuantity
-                        ? Color(.secondarySystemFill).opacity(colorScheme == .dark ? 0.95 : 0.78)
-                        : Color(.secondarySystemFill).opacity(colorScheme == .dark ? 0.86 : 0.62)
+                        ? Color(.secondarySystemFill).opacity(colorScheme == .dark ? 0.90 : 0.70)
+                        : Color(.secondarySystemFill).opacity(colorScheme == .dark ? 0.78 : 0.52)
                 )
         )
         .overlay(
             RoundedRectangle(cornerRadius: 12, style: .continuous)
                 .strokeBorder(
                     isEditingQuantity
-                        ? Color.primary.opacity(colorScheme == .dark ? 0.30 : 0.20)
-                        : Color.primary.opacity(colorScheme == .dark ? 0.14 : 0.10),
-                    lineWidth: isEditingQuantity ? 1.1 : 0.9
+                        ? Color.primary.opacity(colorScheme == .dark ? 0.22 : 0.16)
+                        : Color.primary.opacity(colorScheme == .dark ? 0.10 : 0.08),
+                    lineWidth: isEditingQuantity ? 1.0 : 0.8
                 )
         )
-        .opacity(item.isPacked ? 0.82 : 1.0)
-        .scaleEffect(quantityPressing ? 0.96 : 1.0)
-        .animation(.spring(response: 0.16, dampingFraction: 0.72), value: quantityPressing)
-        .simultaneousGesture(
-            DragGesture(minimumDistance: 0)
-                .onChanged { _ in
-                    if !quantityPressing { quantityPressing = true }
-                }
-                .onEnded { _ in
-                    quantityPressing = false
-                }
-        )
+        .opacity(item.isPacked ? 0.72 : 1.0)
     }
 
     private func beginQuantityEdit() {
@@ -1384,6 +1496,75 @@ struct ReorderSectionsView: View {
         }
         onDone(ordered.map(\.id))
         dismiss()
+    }
+}
+
+// MARK: - LongPressDragBridge
+
+private struct LongPressDragBridge: UIViewRepresentable {
+    let onBegan: () -> Void
+    let onChanged: (CGFloat) -> Void
+    let onEnded: () -> Void
+
+    func makeUIView(context: Context) -> UIView { UIView() }
+
+    func updateUIView(_ uiView: UIView, context: Context) {
+        context.coordinator.onBegan = onBegan
+        context.coordinator.onChanged = onChanged
+        context.coordinator.onEnded = onEnded
+        DispatchQueue.main.async {
+            var v: UIView? = uiView
+            while let current = v {
+                if let cell = current as? UICollectionViewCell {
+                    let alreadyAttached = (cell.gestureRecognizers ?? []).contains {
+                        ($0 as? UILongPressGestureRecognizer)?.delegate === context.coordinator
+                    }
+                    if !alreadyAttached {
+                        let r = UILongPressGestureRecognizer(
+                            target: context.coordinator,
+                            action: #selector(Coordinator.handle(_:))
+                        )
+                        r.minimumPressDuration = 0.4
+                        r.allowableMovement = 10
+                        r.delegate = context.coordinator
+                        cell.addGestureRecognizer(r)
+                        context.coordinator.attachedRecognizer = r
+                    }
+                    break
+                }
+                v = current.superview
+            }
+        }
+    }
+
+    func makeCoordinator() -> Coordinator { Coordinator() }
+
+    class Coordinator: NSObject, UIGestureRecognizerDelegate {
+        var onBegan: (() -> Void)?
+        var onChanged: ((CGFloat) -> Void)?
+        var onEnded: (() -> Void)?
+        weak var attachedRecognizer: UILongPressGestureRecognizer?
+        private var startY: CGFloat = 0
+
+        @objc func handle(_ r: UILongPressGestureRecognizer) {
+            guard let view = r.view?.superview else { return }
+            let y = r.location(in: view).y
+            switch r.state {
+            case .began:
+                startY = y
+                DispatchQueue.main.async { self.onBegan?() }
+                UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+            case .changed:
+                DispatchQueue.main.async { self.onChanged?(y - self.startY) }
+            case .ended, .cancelled, .failed:
+                DispatchQueue.main.async { self.onEnded?() }
+            default: break
+            }
+        }
+
+        func gestureRecognizer(_ gr: UIGestureRecognizer, shouldRecognizeSimultaneouslyWith other: UIGestureRecognizer) -> Bool {
+            false
+        }
     }
 }
 

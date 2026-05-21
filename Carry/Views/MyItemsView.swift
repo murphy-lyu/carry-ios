@@ -119,6 +119,12 @@ struct MyItemsView: View {
             editingItem = item
         } label: {
             HStack(spacing: 12) {
+                Circle()
+                    .fill(Color.clear)
+                    .overlay(
+                        Circle().strokeBorder(Color.secondary.opacity(0.35), lineWidth: 1.5)
+                    )
+                    .frame(width: 22, height: 22)
                 VStack(alignment: .leading, spacing: 4) {
                     Text(item.name)
                         .foregroundStyle(.primary)
@@ -129,9 +135,9 @@ struct MyItemsView: View {
                     }
                 }
                 Spacer()
-                Text("\(item.defaultQuantity)")
-                    .foregroundStyle(.secondary)
             }
+            .frame(height: 44)
+            .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
     }

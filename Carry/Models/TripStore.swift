@@ -65,10 +65,12 @@ final class TripStore: ObservableObject {
     @Published var trips: [TripBundle] = []
     @Published var myItems: [MyItem] = []
     @Published var isSceneCardDismissedGlobally: Bool
+    @Published private(set) var draftTrip: TripBundle?
 
     private let context: ModelContext
     private let defaults = UserDefaults.standard
     private static let sceneCardDismissedGlobalKey = "scene_card_dismissed_global"
+    private var didCleanupCorruptedData = false
 
     init() {
         self.context = ModelContext(CarryApp.container)
@@ -82,6 +84,25 @@ final class TripStore: ObservableObject {
 
     func refresh() { fetchTrips() }
 
+    func setDraftTrip(_ trip: TripBundle?) {
+        draftTrip = trip
+    }
+
+    func commitDraftTrip() {
+        guard let trip = draftTrip else { return }
+        trip.createdAt = Date()
+        context.insert(trip)
+        do {
+            try context.save()
+        } catch {
+            CarryLogger.shared.log(.tripSaveFailed)
+        }
+        draftTrip = nil
+        fetchTrips()
+        NotificationManager.scheduleReminders(for: trip)
+        CarryLogger.shared.log(.tripCreated)
+    }
+
     private func fetchTrips() {
         let descriptor = FetchDescriptor<TripBundle>(
             sortBy: [SortDescriptor(\.createdAt, order: .reverse)]
@@ -90,8 +111,18 @@ final class TripStore: ObservableObject {
             sortBy: [SortDescriptor(\.sortOrder, order: .forward), SortDescriptor(\.createdAt, order: .forward)]
         )
         do {
-            trips = try context.fetch(descriptor)
-            myItems = try context.fetch(myItemDescriptor)
+            var fetchedTrips = try context.fetch(descriptor)
+            var fetchedMyItems = try context.fetch(myItemDescriptor)
+
+            if !didCleanupCorruptedData && cleanupCorruptedData(trips: fetchedTrips, myItems: fetchedMyItems) {
+                didCleanupCorruptedData = true
+                try context.save()
+                fetchedTrips = try context.fetch(descriptor)
+                fetchedMyItems = try context.fetch(myItemDescriptor)
+            }
+
+            trips = fetchedTrips
+            myItems = fetchedMyItems
             for trip in trips {
                 if trip.sections == nil {
                     CarryLogger.shared.log(.dataCorrupted, context: "context=fetchTrips_nil_sections")
@@ -108,6 +139,37 @@ final class TripStore: ObservableObject {
             trips = []
             myItems = []
         }
+    }
+
+    private func cleanupCorruptedData(trips: [TripBundle], myItems: [MyItem]) -> Bool {
+        var didDelete = false
+
+        for item in myItems where item.name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            context.delete(item)
+            didDelete = true
+        }
+
+        for trip in trips {
+            for section in trip.safeSections {
+                let invalidItems = (section.items ?? []).filter {
+                    $0.name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+                }
+                if !invalidItems.isEmpty {
+                    invalidItems.forEach { context.delete($0) }
+                    didDelete = true
+                }
+
+                let remainingItems = (section.items ?? []).filter {
+                    !$0.name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+                }
+                if remainingItems.isEmpty {
+                    context.delete(section)
+                    didDelete = true
+                }
+            }
+        }
+
+        return didDelete
     }
 
     private func save() {
@@ -216,6 +278,28 @@ final class TripStore: ObservableObject {
                 return
             }
         }
+    }
+
+    func markTripCompleted(tripId: UUID) {
+        guard let trip = trips.first(where: { $0.id == tripId }) else { return }
+        for section in trip.safeSections {
+            for item in section.items ?? [] {
+                item.isPacked = true
+            }
+        }
+        save()
+        CarryLogger.shared.log(.itemChecked, context: "bulk=all")
+    }
+
+    func markTripUncompleted(tripId: UUID) {
+        guard let trip = trips.first(where: { $0.id == tripId }) else { return }
+        for section in trip.safeSections {
+            for item in section.items ?? [] {
+                item.isPacked = false
+            }
+        }
+        save()
+        CarryLogger.shared.log(.itemUnchecked, context: "bulk=all")
     }
 
     @discardableResult
@@ -686,6 +770,9 @@ final class TripStore: ObservableObject {
     // MARK: - Queries
 
     func bundle(for id: UUID) -> TripBundle? {
-        trips.first(where: { $0.id == id })
+        if let draftTrip, draftTrip.id == id {
+            return draftTrip
+        }
+        return trips.first(where: { $0.id == id })
     }
 }

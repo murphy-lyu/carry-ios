@@ -17,12 +17,15 @@ struct HomeView: View {
     @State private var showDeleteConfirmation = false
     @State private var listIdentity = UUID()
 
-    private static let archiveThresholdDays = 30
-
     private func isPast(_ trip: TripBundle) -> Bool {
-        let cutoff = Calendar.current.date(byAdding: .day, value: Self.archiveThresholdDays, to: trip.departureDate)
-            ?? trip.departureDate
-        return cutoff < Date()
+        let calendar = Calendar.current
+        let returnDayStart = calendar.startOfDay(for: returnDate(for: trip))
+        let todayStart = calendar.startOfDay(for: Date())
+        return todayStart > returnDayStart
+    }
+
+    private func returnDate(for trip: TripBundle) -> Date {
+        Calendar.current.date(byAdding: .day, value: trip.days, to: trip.departureDate) ?? trip.departureDate
     }
 
     private var upcomingTrips: [TripBundle] {
@@ -48,10 +51,23 @@ struct HomeView: View {
             .map(\.trip)
     }
 
-    private var pastTrips: [TripBundle] {
-        store.trips
-            .filter { isPast($0) }
-            .sorted { $0.departureDate > $1.departureDate }
+    private var pastTripsByYear: [(year: Int, trips: [TripBundle])] {
+        let calendar = Calendar.current
+        let grouped = Dictionary(grouping: store.trips.filter { isPast($0) }) { trip in
+            calendar.component(.year, from: returnDate(for: trip))
+        }
+
+        return grouped.keys.sorted(by: >).map { year in
+            let trips = grouped[year, default: []].sorted { lhs, rhs in
+                let lhsReturn = returnDate(for: lhs)
+                let rhsReturn = returnDate(for: rhs)
+                if lhsReturn != rhsReturn { return lhsReturn > rhsReturn }
+                if lhs.departureDate != rhs.departureDate { return lhs.departureDate > rhs.departureDate }
+                if lhs.createdAt != rhs.createdAt { return lhs.createdAt > rhs.createdAt }
+                return lhs.id.uuidString < rhs.id.uuidString
+            }
+            return (year: year, trips: trips)
+        }
     }
 
     private func startNewTrip() {
@@ -115,16 +131,16 @@ struct HomeView: View {
                         }
                     }
 
-                    if !pastTrips.isEmpty {
-                        Text("home.past")
+                    ForEach(Array(pastTripsByYear.enumerated()), id: \.element.year) { index, section in
+                        Text(verbatim: "\(section.year)")
                             .font(.system(size: 11, weight: .medium))
                             .foregroundStyle(colorScheme == .dark ? .secondary : .tertiary)
                             .tracking(2)
-                            .listRowInsets(EdgeInsets(top: upcomingTrips.isEmpty ? 0 : 24, leading: 16, bottom: 8, trailing: 16))
+                            .listRowInsets(EdgeInsets(top: upcomingTrips.isEmpty && index == 0 ? 0 : 24, leading: 16, bottom: 8, trailing: 16))
                             .listRowBackground(Color.clear)
                             .listRowSeparator(.hidden)
 
-                        ForEach(pastTrips) { bundle in
+                        ForEach(section.trips) { bundle in
                             tripRow(bundle: bundle, isPast: true)
                         }
                     }
@@ -175,6 +191,7 @@ struct HomeView: View {
             TripCard(bundle: bundle, isPast: isPast)
         }
         .buttonStyle(PressableScaleButtonStyle(scale: 0.985))
+        .id("\(bundle.id.uuidString)-\(bundle.packedCount)-\(bundle.totalCount)")
         .swipeActions(edge: .trailing, allowsFullSwipe: false) {
             Button(role: .none) {
                 tripToDelete = bundle
@@ -224,7 +241,7 @@ struct TripCard: View {
     }
 
     private var remainingText: String {
-        if isComplete { return NSLocalizedString("All packed", comment: "All items packed") }
+        if isComplete { return NSLocalizedString("packing.complete.status", comment: "All items packed") }
         let left = bundle.totalCount - bundle.packedCount
         let format = NSLocalizedString("%lld left", comment: "Remaining item count")
         return String(format: format, locale: Locale.current, Int64(left))
@@ -305,8 +322,7 @@ struct TripCard: View {
                 if !isPast {
                     Spacer()
                     Text(remainingText)
-                        .font(.subheadline)
-                        .fontWeight(.bold)
+                        .font(.caption.weight(.medium))
                         .foregroundColor(Color(.systemGray2))
                         .transition(.opacity)
                         .frame(width: 90, alignment: .trailing)

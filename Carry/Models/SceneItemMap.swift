@@ -36,9 +36,10 @@ func defaultQuantity(for itemName: String, tripDays: Int) -> Int {
         || lower == "heat patches"
         || lower == "instant coffee"
         || lower == "tea bags"
-        || lower == "condoms"
         || lower == "cotton pads"
-        || lower == "face mask" {
+        || lower == "face mask"
+        || lower == "dental floss"
+        || lower == "probiotics" {
         return min(days, 99)
     }
     if lower == "daily medication"

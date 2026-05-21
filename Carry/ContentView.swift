@@ -31,6 +31,7 @@ struct ContentView: View {
     @Environment(\.scenePhase) private var scenePhase
     @State private var selectedTab = 0
     @State private var didApplyStartupReset = false
+    @State private var didRefreshOnLaunch = false
 
     var body: some View {
         TabView(selection: $selectedTab) {
@@ -74,7 +75,10 @@ struct ContentView: View {
         .environmentObject(router)
         .onAppear {
             applyStartupResetIfNeeded()
-            store.refresh()
+            if !didRefreshOnLaunch {
+                didRefreshOnLaunch = true
+                store.refresh()
+            }
         }
         .onChange(of: scenePhase) { _, phase in
             if phase == .active {
