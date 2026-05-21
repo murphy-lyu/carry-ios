@@ -19,6 +19,7 @@ final class CarryLogger {
         case tripDeleted            = "trip_deleted"
         case tripDuplicated         = "trip_duplicated"
         case tripOpened             = "trip_opened"
+        case tripInfoOpened         = "trip_info_opened"
         // 物品
         case itemChecked            = "item_checked"
         case itemUnchecked          = "item_unchecked"

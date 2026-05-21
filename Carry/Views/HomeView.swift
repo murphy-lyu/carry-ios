@@ -64,7 +64,7 @@ struct HomeView: View {
                 Spacer()
                 Button {
                     UIImpactFeedbackGenerator(style: .light).impactOccurred()
-                    router.path.append(CreationRoute.tripInfo)
+                    router.path.append(CreationRoute.tripInfo(UUID()))
                 } label: {
                     Image(systemName: "plus")
                         .font(.system(size: 17, weight: .semibold))
