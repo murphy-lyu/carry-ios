@@ -89,20 +89,38 @@ struct HomeView: View {
     }
 
     @State private var sheetOffset: CGFloat = 0
-    @GestureState private var sheetDrag: CGFloat = 0
+    @State private var sheetDrag: CGFloat = 0
 
-    private var visitedCities: [VisitedCity] {
-        store.trips
-            .filter { isPast($0) && $0.latitude != 0 }
-            .map { VisitedCity(id: $0.id, name: $0.destinationCity,
-                               coordinate: .init(latitude: $0.latitude, longitude: $0.longitude),
-                               countryCode: $0.countryCode) }
+    private var expandedSheetHeight: CGFloat {
+        UIScreen.main.bounds.height * 0.90
+    }
+
+    private var collapsedSheetOffset: CGFloat {
+        max(0, expandedSheetHeight - 130)
+    }
+
+    private var visitedCountries: [VisitedCountry] {
+        let past = store.trips.filter { isPast($0) && !$0.countryCode.isEmpty && $0.latitude != 0 }
+        var grouped: [String: [TripBundle]] = [:]
+        for trip in past {
+            grouped[trip.countryCode.uppercased(), default: []].append(trip)
+        }
+        return grouped.map { code, trips in
+            let lat = trips.map(\.latitude).reduce(0, +) / Double(trips.count)
+            let lon = trips.map(\.longitude).reduce(0, +) / Double(trips.count)
+            let name = Locale.current.localizedString(forRegionCode: code) ?? code
+            return VisitedCountry(
+                countryCode: code,
+                name: name,
+                coordinate: CLLocationCoordinate2D(latitude: lat, longitude: lon)
+            )
+        }
     }
 
     var body: some View {
         ZStack(alignment: .bottom) {
             // Globe background
-            GlobeMapView(visitedCities: visitedCities)
+            GlobeMapView(visitedCountries: visitedCountries)
                 .ignoresSafeArea()
 
             // Trip list sheet
@@ -112,181 +130,263 @@ struct HomeView: View {
                     .fill(Color.primary.opacity(0.18))
                     .frame(width: 36, height: 5)
                     .padding(.top, 10)
-                .padding(.bottom, 6)
-                .frame(maxWidth: .infinity)
-                .contentShape(Rectangle())
-                .gesture(
-                    DragGesture()
-                            .updating($sheetDrag) { v, state, _ in state = v.translation.height }
+                    .padding(.bottom, 6)
+                    .frame(maxWidth: .infinity)
+                    .contentShape(Rectangle())
+                    .gesture(
+                        DragGesture()
+                            .onChanged { v in
+                                guard v.translation.height > 0 else { return }
+                                sheetDrag = v.translation.height
+                            }
                             .onEnded { v in
-                                let end = max(0, sheetOffset + v.translation.height)
-                                let snap = UIScreen.main.bounds.height - 110
+                                let end = min(max(0, sheetOffset + v.translation.height), collapsedSheetOffset)
                                 withAnimation(.spring(response: 0.38, dampingFraction: 0.82)) {
-                                    sheetOffset = end > snap * 0.35 ? snap : 0
+                                    sheetOffset = end > collapsedSheetOffset * 0.35 ? collapsedSheetOffset : 0
+                                    sheetDrag = 0
                                 }
                             }
                     )
+
                 ZStack {
                     List {
-                heroSection
-                    .opacity(initialRevealPhase >= 1 ? 1 : 0)
-                    .offset(y: initialRevealPhase >= 1 ? 0 : 18)
-                    .scaleEffect(initialRevealPhase >= 1 ? 1 : 0.985)
-                    .blur(radius: initialRevealPhase >= 1 ? 0 : 6)
-                    .animation(.spring(response: 0.48, dampingFraction: 0.86).delay(0.02), value: initialRevealPhase)
-                    .listRowInsets(EdgeInsets(top: 2, leading: 12, bottom: 4, trailing: 12))
-                    .listRowBackground(Color.clear)
-                    .listRowSeparator(.hidden)
-
-                if store.trips.isEmpty {
-                    emptyState
-                        .listRowInsets(EdgeInsets(top: 6, leading: 12, bottom: 10, trailing: 12))
-                        .listRowBackground(Color.clear)
-                        .listRowSeparator(.hidden)
-                } else {
-                    if !upcomingTrips.isEmpty {
-                        sectionLabel("home.upcoming", uppercase: true)
-                            .opacity(initialRevealPhase >= 2 ? 1 : 0)
-                            .offset(y: initialRevealPhase >= 2 ? 0 : 10)
-                            .blur(radius: initialRevealPhase >= 2 ? 0 : 4)
-                            .animation(.easeOut(duration: 0.24).delay(0.16), value: initialRevealPhase)
-                            .listRowInsets(EdgeInsets(top: 2, leading: 16, bottom: 4, trailing: 16))
+                        heroSection
+                            .opacity(initialRevealPhase >= 1 ? 1 : 0)
+                            .offset(y: initialRevealPhase >= 1 ? 0 : 18)
+                            .scaleEffect(initialRevealPhase >= 1 ? 1 : 0.985)
+                            .blur(radius: initialRevealPhase >= 1 ? 0 : 6)
+                            .animation(.spring(response: 0.48, dampingFraction: 0.86).delay(0.02), value: initialRevealPhase)
+                            .listRowInsets(EdgeInsets(top: 2, leading: 12, bottom: 4, trailing: 12))
                             .listRowBackground(Color.clear)
                             .listRowSeparator(.hidden)
 
-                        ForEach(Array(upcomingTrips.enumerated()), id: \.element.id) { index, bundle in
-                            tripRow(bundle: bundle, isPast: false)
-                                .opacity(initialRevealPhase >= 2 ? 1 : 0)
-                                .offset(y: initialRevealPhase >= 2 ? 0 : 14)
-                                .scaleEffect(initialRevealPhase >= 2 ? 1 : 0.97)
-                                .blur(radius: initialRevealPhase >= 2 ? 0 : 5)
-                                .animation(.spring(response: 0.42, dampingFraction: 0.84).delay(0.20 + Double(index) * 0.05), value: initialRevealPhase)
-                        }
-                    }
+                        if store.trips.isEmpty {
+                            emptyState
+                                .listRowInsets(EdgeInsets(top: 6, leading: 12, bottom: 10, trailing: 12))
+                                .listRowBackground(Color.clear)
+                                .listRowSeparator(.hidden)
+                        } else {
+                            if !upcomingTrips.isEmpty {
+                                sectionLabel("home.upcoming", uppercase: true)
+                                    .opacity(initialRevealPhase >= 2 ? 1 : 0)
+                                    .offset(y: initialRevealPhase >= 2 ? 0 : 10)
+                                    .blur(radius: initialRevealPhase >= 2 ? 0 : 4)
+                                    .animation(.easeOut(duration: 0.24).delay(0.16), value: initialRevealPhase)
+                                    .listRowInsets(EdgeInsets(top: 2, leading: 16, bottom: 4, trailing: 16))
+                                    .listRowBackground(Color.clear)
+                                    .listRowSeparator(.hidden)
 
-                    ForEach(Array(pastTripsByYear.enumerated()), id: \.element.year) { index, section in
-                        sectionLabel(verbatim: "\(section.year)")
-                            .opacity(initialRevealPhase >= 3 ? 1 : 0)
-                            .offset(y: initialRevealPhase >= 3 ? 0 : 10)
-                            .blur(radius: initialRevealPhase >= 3 ? 0 : 4)
-                            .animation(.easeOut(duration: 0.24).delay(0.34 + Double(index) * 0.06), value: initialRevealPhase)
-                            .listRowInsets(EdgeInsets(top: upcomingTrips.isEmpty && index == 0 ? 0 : 14, leading: 16, bottom: 6, trailing: 16))
-                            .listRowBackground(Color.clear)
-                            .listRowSeparator(.hidden)
+                                ForEach(Array(upcomingTrips.enumerated()), id: \.element.id) { index, bundle in
+                                    tripRow(bundle: bundle, isPast: false)
+                                        .opacity(initialRevealPhase >= 2 ? 1 : 0)
+                                        .offset(y: initialRevealPhase >= 2 ? 0 : 14)
+                                        .scaleEffect(initialRevealPhase >= 2 ? 1 : 0.97)
+                                        .blur(radius: initialRevealPhase >= 2 ? 0 : 5)
+                                        .animation(.spring(response: 0.42, dampingFraction: 0.84).delay(0.20 + Double(index) * 0.05), value: initialRevealPhase)
+                                }
+                            }
 
-                        ForEach(Array(section.trips.enumerated()), id: \.element.id) { tripIndex, bundle in
-                            tripRow(bundle: bundle, isPast: true)
+                            ForEach(Array(pastTripsByYear.enumerated()), id: \.element.year) { index, section in
+                                pastSectionLabel(year: section.year, isFirst: upcomingTrips.isEmpty && index == 0, delay: 0.34 + Double(index) * 0.06)
+
+                                ForEach(Array(section.trips.enumerated()), id: \.element.id) { tripIndex, bundle in
+                                    pastTripRow(
+                                        bundle: bundle,
+                                        delay: 0.38 + Double(index) * 0.06 + Double(tripIndex) * 0.03
+                                    )
+                                }
+                            }
+
+                            listFooter
                                 .opacity(initialRevealPhase >= 3 ? 1 : 0)
-                                .offset(y: initialRevealPhase >= 3 ? 0 : 14)
-                                .scaleEffect(initialRevealPhase >= 3 ? 1 : 0.97)
-                                .blur(radius: initialRevealPhase >= 3 ? 0 : 5)
-                                .animation(.spring(response: 0.42, dampingFraction: 0.84).delay(0.38 + Double(index) * 0.06 + Double(tripIndex) * 0.03), value: initialRevealPhase)
+                                .offset(y: initialRevealPhase >= 3 ? 0 : 8)
+                                .blur(radius: initialRevealPhase >= 3 ? 0 : 3)
+                                .animation(.easeOut(duration: 0.24).delay(0.56), value: initialRevealPhase)
+                                .listRowInsets(EdgeInsets(top: 14, leading: 16, bottom: 4, trailing: 16))
+                                .listRowBackground(Color.clear)
+                                .listRowSeparator(.hidden)
+
+                            Color.clear
+                                .frame(height: 72)
+                                .listRowBackground(Color.clear)
+                                .listRowSeparator(.hidden)
                         }
                     }
-
-                    listFooter
-                        .opacity(initialRevealPhase >= 3 ? 1 : 0)
-                        .offset(y: initialRevealPhase >= 3 ? 0 : 8)
-                        .blur(radius: initialRevealPhase >= 3 ? 0 : 3)
-                        .animation(.easeOut(duration: 0.24).delay(0.56), value: initialRevealPhase)
-                        .listRowInsets(EdgeInsets(top: 14, leading: 16, bottom: 4, trailing: 16))
-                        .listRowBackground(Color.clear)
-                        .listRowSeparator(.hidden)
+                    .id(listIdentity)
+                    .listStyle(.plain)
+                    .scrollContentBackground(.hidden)
+                    .scrollIndicators(.hidden)
+                    .background(Color.clear)
+                    .background(
+                        SheetDragBridge(
+                            sheetOffset: $sheetOffset,
+                            sheetDrag: $sheetDrag,
+                            collapsedSheetOffset: collapsedSheetOffset
+                        )
+                    )
                 }
-            }
-            .id(listIdentity)
-            .listStyle(.plain)
-            .scrollContentBackground(.hidden)
-            .scrollIndicators(.hidden)
-            .background(Color.clear)
-        }
-        .contentShape(Rectangle())
-        .simultaneousGesture(sheetDragGesture, including: .subviews)
-        .overlay {
-            if revealCurtainOpacity > 0 {
-                LinearGradient(
-                    colors: [
-                        Color(UIColor.systemBackground).opacity(revealCurtainOpacity),
-                        Color(UIColor.systemBackground).opacity(revealCurtainOpacity * 0.5),
-                        Color.clear
-                    ],
-                    startPoint: .top,
-                    endPoint: .bottom
-                )
-                .ignoresSafeArea()
-                .allowsHitTesting(false)
-            }
-        }
-        .navigationBarHidden(true)
-        .onAppear {
-            store.refresh()
-            if !didPlayInitialReveal {
-                didPlayInitialReveal = true
-                initialRevealPhase = 0
-                revealCurtainOpacity = 1
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.04) {
-                    withAnimation(.easeOut(duration: 0.38)) {
-                        revealCurtainOpacity = 0
+                .overlay {
+                    if revealCurtainOpacity > 0 {
+                        LinearGradient(
+                            colors: [
+                                Color(UIColor.systemBackground).opacity(revealCurtainOpacity),
+                                Color(UIColor.systemBackground).opacity(revealCurtainOpacity * 0.5),
+                                Color.clear
+                            ],
+                            startPoint: .top,
+                            endPoint: .bottom
+                        )
+                        .ignoresSafeArea()
+                        .allowsHitTesting(false)
                     }
                 }
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.08) {
-                    withAnimation(.spring(response: 0.48, dampingFraction: 0.88)) {
-                        initialRevealPhase = 1
+                .navigationBarHidden(true)
+                .onAppear {
+                    store.refresh()
+                    store.geocodeMissingTrips()
+                    if !didPlayInitialReveal {
+                        didPlayInitialReveal = true
+                        initialRevealPhase = 0
+                        revealCurtainOpacity = 1
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.04) {
+                            withAnimation(.easeOut(duration: 0.38)) {
+                                revealCurtainOpacity = 0
+                            }
+                        }
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.08) {
+                            withAnimation(.spring(response: 0.48, dampingFraction: 0.88)) {
+                                initialRevealPhase = 1
+                            }
+                        }
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.18) {
+                            withAnimation(.spring(response: 0.44, dampingFraction: 0.84)) {
+                                initialRevealPhase = 2
+                            }
+                        }
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.30) {
+                            withAnimation(.spring(response: 0.44, dampingFraction: 0.84)) {
+                                initialRevealPhase = 3
+                            }
+                        }
                     }
                 }
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.18) {
-                    withAnimation(.spring(response: 0.44, dampingFraction: 0.84)) {
-                        initialRevealPhase = 2
+                .onReceive(router.$path) { path in
+                    if path.isEmpty {
+                        store.refresh()
                     }
                 }
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.30) {
-                    withAnimation(.spring(response: 0.44, dampingFraction: 0.84)) {
-                        initialRevealPhase = 3
+                .alert(
+                    "Delete \(tripToDelete?.name ?? "")?",
+                    isPresented: $showDeleteConfirmation
+                ) {
+                    Button("Delete", role: .destructive) {
+                        if let trip = tripToDelete {
+                            store.removeTrip(withId: trip.id)
+                        }
                     }
+                    Button("Cancel", role: .cancel) { }
+                } message: {
+                    Text("This will permanently delete your packing list and all progress.")
                 }
             }
+            .frame(maxWidth: .infinity)
+            .frame(height: expandedSheetHeight)
+            .background(CarryAtmosphereBackground())
+            .compositingGroup()
+            .clipShape(UnevenRoundedRectangle(topLeadingRadius: 36, bottomLeadingRadius: 0, bottomTrailingRadius: 0, topTrailingRadius: 36, style: .continuous))
+            .offset(y: min(max(0, sheetOffset + sheetDrag), collapsedSheetOffset))
         }
-        .onReceive(router.$path) { path in
-            if path.isEmpty {
-                store.refresh()
-            }
-        }
-        .alert(
-            "Delete \(tripToDelete?.name ?? "")?",
-            isPresented: $showDeleteConfirmation
-        ) {
-            Button("Delete", role: .destructive) {
-                if let trip = tripToDelete {
-                    store.removeTrip(withId: trip.id)
-                }
-            }
-            Button("Cancel", role: .cancel) { }
-        } message: {
-            Text("This will permanently delete your packing list and all progress.")
-        }
-        }
-        .frame(maxWidth: .infinity, maxHeight: UIScreen.main.bounds.height - 120)
-        .background(CarryAtmosphereBackground())
-        .compositingGroup()
-        .clipShape(UnevenRoundedRectangle(topLeadingRadius: 36, bottomLeadingRadius: 0, bottomTrailingRadius: 0, topTrailingRadius: 36, style: .continuous))
-        .offset(y: max(0, sheetOffset + sheetDrag))
-    }
         .ignoresSafeArea(edges: .bottom)
     }
 
-    private var sheetDragGesture: some Gesture {
-        DragGesture()
-            .updating($sheetDrag) { v, state, _ in
-                guard v.translation.height > 0 else { return }
-                state = v.translation.height
-            }
-            .onEnded { v in
-                let end = max(0, sheetOffset + v.translation.height)
-                let snap = UIScreen.main.bounds.height - 110
-                withAnimation(.spring(response: 0.38, dampingFraction: 0.82)) {
-                    sheetOffset = end > snap * 0.35 ? snap : 0
+    private struct SheetDragBridge: UIViewRepresentable {
+        @Binding var sheetOffset: CGFloat
+        @Binding var sheetDrag: CGFloat
+        let collapsedSheetOffset: CGFloat
+
+        func makeUIView(context: Context) -> UIView {
+            UIView(frame: .zero)
+        }
+
+        func updateUIView(_ uiView: UIView, context: Context) {
+            context.coordinator.sheetOffset = $sheetOffset
+            context.coordinator.sheetDrag = $sheetDrag
+            context.coordinator.collapsedSheetOffset = collapsedSheetOffset
+            context.coordinator.attachIfNeeded(from: uiView)
+        }
+
+        func makeCoordinator() -> Coordinator {
+            Coordinator()
+        }
+
+        final class Coordinator: NSObject, UIGestureRecognizerDelegate {
+            var sheetOffset: Binding<CGFloat>?
+            var sheetDrag: Binding<CGFloat>?
+            var collapsedSheetOffset: CGFloat = 0
+            private weak var attachedScrollView: UIScrollView?
+            private lazy var panRecognizer: UIPanGestureRecognizer = {
+                let recognizer = UIPanGestureRecognizer(target: self, action: #selector(handlePan(_:)))
+                recognizer.delegate = self
+                recognizer.cancelsTouchesInView = false
+                recognizer.delaysTouchesBegan = false
+                recognizer.delaysTouchesEnded = false
+                return recognizer
+            }()
+
+            func attachIfNeeded(from view: UIView) {
+                DispatchQueue.main.async {
+                    guard let scrollView = self.findScrollView(from: view) else { return }
+                    guard self.attachedScrollView !== scrollView else { return }
+                    self.attachedScrollView = scrollView
+                    if self.panRecognizer.view == nil {
+                        scrollView.addGestureRecognizer(self.panRecognizer)
+                    }
                 }
             }
+
+            private func findScrollView(from view: UIView) -> UIScrollView? {
+                var current: UIView? = view
+                while let candidate = current {
+                    if let scrollView = candidate as? UIScrollView {
+                        return scrollView
+                    }
+                    current = candidate.superview
+                }
+                return nil
+            }
+
+            func gestureRecognizerShouldBegin(_ gestureRecognizer: UIGestureRecognizer) -> Bool {
+                guard let scrollView = attachedScrollView,
+                      let pan = gestureRecognizer as? UIPanGestureRecognizer
+                else { return false }
+                let velocity = pan.velocity(in: scrollView)
+                let topY = -scrollView.adjustedContentInset.top
+                let isAtTop = scrollView.contentOffset.y <= topY + 1
+                return isAtTop && velocity.y > abs(velocity.x) && velocity.y > 0
+            }
+
+            func gestureRecognizer(_ gestureRecognizer: UIGestureRecognizer, shouldRecognizeSimultaneouslyWith otherGestureRecognizer: UIGestureRecognizer) -> Bool {
+                false
+            }
+
+            @objc private func handlePan(_ recognizer: UIPanGestureRecognizer) {
+                guard let scrollView = attachedScrollView else { return }
+                let translation = max(0, recognizer.translation(in: scrollView).y)
+
+                switch recognizer.state {
+                case .began, .changed:
+                    sheetDrag?.wrappedValue = translation
+                case .ended, .cancelled, .failed:
+                    let end = min(max(0, (sheetOffset?.wrappedValue ?? 0) + translation), collapsedSheetOffset)
+                    withAnimation(.spring(response: 0.38, dampingFraction: 0.82)) {
+                        sheetOffset?.wrappedValue = end > collapsedSheetOffset * 0.35 ? collapsedSheetOffset : 0
+                        sheetDrag?.wrappedValue = 0
+                    }
+                default:
+                    break
+                }
+            }
+        }
     }
 
     private var heroSection: some View {
@@ -378,6 +478,26 @@ struct HomeView: View {
             .font(.system(size: 11, weight: .medium))
             .foregroundStyle(colorScheme == .dark ? .secondary : .tertiary)
             .tracking(2)
+    }
+
+    private func pastSectionLabel(year: Int, isFirst: Bool, delay: Double) -> some View {
+        sectionLabel(verbatim: "\(year)")
+            .opacity(initialRevealPhase >= 3 ? 1 : 0)
+            .offset(y: initialRevealPhase >= 3 ? 0 : 10)
+            .blur(radius: initialRevealPhase >= 3 ? 0 : 4)
+            .animation(.easeOut(duration: 0.24).delay(delay), value: initialRevealPhase)
+            .listRowInsets(EdgeInsets(top: isFirst ? 0 : 14, leading: 16, bottom: 6, trailing: 16))
+            .listRowBackground(Color.clear)
+            .listRowSeparator(.hidden)
+    }
+
+    private func pastTripRow(bundle: TripBundle, delay: Double) -> some View {
+        tripRow(bundle: bundle, isPast: true)
+            .opacity(initialRevealPhase >= 3 ? 1 : 0)
+            .offset(y: initialRevealPhase >= 3 ? 0 : 14)
+            .scaleEffect(initialRevealPhase >= 3 ? 1 : 0.97)
+            .blur(radius: initialRevealPhase >= 3 ? 0 : 5)
+            .animation(.spring(response: 0.42, dampingFraction: 0.84).delay(delay), value: initialRevealPhase)
     }
 
     private func statPill(value: String, label: LocalizedStringKey) -> some View {

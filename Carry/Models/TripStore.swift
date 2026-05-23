@@ -6,6 +6,7 @@
 import Foundation
 import Combine
 import SwiftData
+import CoreLocation
 
 // MARK: - TripBundle
 
@@ -24,6 +25,9 @@ final class TripBundle {
     var sceneCardDismissed: Bool = false
     var remindersEnabled: Bool = true
     var reminderConfigData: Data = Data()
+    var countryCode: String = ""
+    var latitude: Double = 0
+    var longitude: Double = 0
     @Relationship(deleteRule: .cascade, inverse: \PackingSection.bundle) var sections: [PackingSection]? = []
 
     var reminderConfigs: [TripReminderConfig] {
@@ -861,5 +865,45 @@ final class TripStore: ObservableObject {
             return draftTrip
         }
         return trips.first(where: { $0.id == id })
+    }
+
+    // MARK: - Geocoding
+
+    func updateCountryCode(for tripId: UUID, city: String) {
+        Task {
+            let geocoder = CLGeocoder()
+            guard let placemark = try? await geocoder.geocodeAddressString(city).first else { return }
+            let code = placemark.isoCountryCode ?? ""
+            let lat  = placemark.location?.coordinate.latitude  ?? 0
+            let lon  = placemark.location?.coordinate.longitude ?? 0
+            await MainActor.run {
+                guard let bundle = bundle(for: tripId) else { return }
+                bundle.countryCode = code
+                bundle.latitude = lat
+                bundle.longitude = lon
+                try? context.save()
+            }
+        }
+    }
+
+    func geocodeMissingTrips() {
+        let missing = trips.filter { $0.countryCode.isEmpty && !$0.destinationCity.isEmpty }
+        guard !missing.isEmpty else { return }
+        Task {
+            let geocoder = CLGeocoder()
+            for trip in missing {
+                guard let placemark = try? await geocoder.geocodeAddressString(trip.destinationCity).first else { continue }
+                let code = placemark.isoCountryCode ?? ""
+                let lat  = placemark.location?.coordinate.latitude  ?? 0
+                let lon  = placemark.location?.coordinate.longitude ?? 0
+                await MainActor.run {
+                    guard let bundle = self.bundle(for: trip.id) else { return }
+                    bundle.countryCode = code
+                    bundle.latitude    = lat
+                    bundle.longitude   = lon
+                    try? self.context.save()
+                }
+            }
+        }
     }
 }
