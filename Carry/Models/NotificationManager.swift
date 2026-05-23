@@ -1,20 +1,14 @@
 //
 //  NotificationManager.swift
 //  Carry
-//
 
 import Foundation
 import UserNotifications
 
-/// Manages local notification scheduling for trips.
-/// Strategy: 2 fixed reminders per trip — 3 days before at 09:00,
-/// and on departure day at 07:00.
 enum NotificationManager {
 
-    private enum Kind: String {
-        case threeDaysBefore = "t-3d"
-        case departureDay = "t-0d"
-    }
+    private static let tripPrefix = "carry.trip."
+    private static let reminderInfix = ".reminder."
 
     // MARK: - Permission
 
@@ -33,50 +27,133 @@ enum NotificationManager {
 
     static func scheduleReminders(for trip: TripBundle) {
         cancelReminders(forTripId: trip.id)
-
-        let now = Date()
-        let calendar = Calendar.current
-
-        if let threeDaysBefore = calendar.date(byAdding: .day, value: -3, to: trip.departureDate) {
-            var comps = calendar.dateComponents([.year, .month, .day], from: threeDaysBefore)
-            comps.hour = 9
-            comps.minute = 0
-            if let fireDate = calendar.date(from: comps), fireDate > now {
-                schedule(
-                    id: identifier(tripId: trip.id, kind: .threeDaysBefore),
-                    title: String(format: String(localized: "notif.threeDays.title"), trip.name),
-                    body: String(localized: "notif.threeDays.body"),
-                    components: comps
-                )
-            }
+        for config in trip.reminderConfigs {
+            scheduleReminder(for: trip, config: config)
         }
+    }
 
-        var dayComps = calendar.dateComponents([.year, .month, .day], from: trip.departureDate)
-        dayComps.hour = 7
-        dayComps.minute = 0
-        if let fireDate = calendar.date(from: dayComps), fireDate > now {
-            let destination = trip.destinationCity.isEmpty ? trip.name : trip.destinationCity
-            schedule(
-                id: identifier(tripId: trip.id, kind: .departureDay),
-                title: String(format: String(localized: "notif.departureDay.title"), destination),
-                body: String(localized: "notif.departureDay.body"),
-                components: dayComps
+    static func scheduleReminder(for trip: TripBundle, config: TripReminderConfig) {
+        let now = Date()
+        guard let fireDate = config.fireDate(relativeTo: trip.departureDate),
+              fireDate > now else { return }
+
+        let calendar = Calendar.current
+        let comps = calendar.dateComponents([.year, .month, .day, .hour, .minute], from: fireDate)
+        let destination = trip.destinationCity.isEmpty ? trip.name : trip.destinationCity
+        let (title, body) = notificationContent(
+            daysBeforeDeparture: config.daysBeforeDeparture,
+            tripName: trip.name,
+            destination: destination
+        )
+
+        schedule(
+            id: identifier(tripId: trip.id, configId: config.id),
+            title: title,
+            body: body,
+            components: comps
+        )
+    }
+
+    private static func notificationContent(
+        daysBeforeDeparture: Int,
+        tripName: String,
+        destination: String
+    ) -> (title: String, body: String) {
+        switch daysBeforeDeparture {
+        case 0:
+            return (
+                String(format: String(localized: "notif.departureDay.title"), destination),
+                String(localized: "notif.departureDay.body")
+            )
+        case 1:
+            return (
+                String(format: String(localized: "notif.1day.title"), tripName),
+                String(localized: "notif.1day.body")
+            )
+        case 2:
+            return (
+                String(format: String(localized: "notif.2days.title"), tripName),
+                String(localized: "notif.2days.body")
+            )
+        case 3:
+            return (
+                String(format: String(localized: "notif.3days.title"), tripName),
+                String(localized: "notif.3days.body")
+            )
+        case 7:
+            return (
+                String(format: String(localized: "notif.1week.title"), tripName),
+                String(localized: "notif.1week.body")
+            )
+        case 14:
+            return (
+                String(format: String(localized: "notif.2weeks.title"), tripName),
+                String(localized: "notif.2weeks.body")
+            )
+        default:
+            return (
+                String(format: String(localized: "notif.ndays.title"), tripName, daysBeforeDeparture),
+                String(localized: "notif.ndays.body")
             )
         }
     }
 
     static func cancelReminders(forTripId id: UUID) {
-        let ids = [
-            identifier(tripId: id, kind: .threeDaysBefore),
-            identifier(tripId: id, kind: .departureDay)
-        ]
-        UNUserNotificationCenter.current().removePendingNotificationRequests(withIdentifiers: ids)
+        let prefix = tripPrefix + id.uuidString
+        let center = UNUserNotificationCenter.current()
+        center.getPendingNotificationRequests { requests in
+            let ids = requests
+                .map(\.identifier)
+                .filter { $0.hasPrefix(prefix) }
+            center.removePendingNotificationRequests(withIdentifiers: ids)
+        }
     }
+
+    static func cancelReminder(tripId: UUID, configId: UUID) {
+        let id = identifier(tripId: tripId, configId: configId)
+        UNUserNotificationCenter.current().removePendingNotificationRequests(withIdentifiers: [id])
+    }
+
+#if DEBUG
+    static func scheduleTestNotifications() {
+        let center = UNUserNotificationCenter.current()
+        let debugPrefix = "carry.debug.notif."
+        center.getPendingNotificationRequests { pending in
+            let ids = pending.map(\.identifier).filter { $0.hasPrefix(debugPrefix) }
+            center.removePendingNotificationRequests(withIdentifiers: ids)
+        }
+
+        let cases: [(days: Int, delay: TimeInterval)] = [
+            (0, 4), (1, 9), (2, 14), (3, 19), (7, 24), (14, 29), (5, 34)
+        ]
+        let tripName = isChineseLocale ? "东京之旅" : "Tokyo Trip"
+        let destination = isChineseLocale ? "东京" : "Tokyo"
+
+        for (days, delay) in cases {
+            let (title, body) = notificationContent(
+                daysBeforeDeparture: days,
+                tripName: tripName,
+                destination: destination
+            )
+            let content = UNMutableNotificationContent()
+            content.title = title
+            content.body = body
+            content.sound = .default
+            let trigger = UNTimeIntervalNotificationTrigger(timeInterval: delay, repeats: false)
+            let request = UNNotificationRequest(
+                identifier: "\(debugPrefix)\(days)d",
+                content: content,
+                trigger: trigger
+            )
+            center.add(request)
+        }
+    }
+#endif
 
     // MARK: - Private
 
-    private static func identifier(tripId: UUID, kind: Kind) -> String {
-        "carry.trip.\(tripId.uuidString).\(kind.rawValue)"
+    private static func identifier(tripId: UUID, configId: UUID) -> String {
+        tripPrefix + tripId.uuidString + reminderInfix + configId.uuidString
     }
 
     private static func schedule(

@@ -29,22 +29,7 @@ struct SplashView: View {
 
     private var splashContent: some View {
         ZStack {
-            LinearGradient(
-                colors: [
-                    Color(UIColor.systemBackground),
-                    Color.accentColor.opacity(0.08),
-                    Color(UIColor.systemBackground)
-                ],
-                startPoint: .topLeading,
-                endPoint: .bottomTrailing
-            )
-                .ignoresSafeArea()
-
-            Circle()
-                .fill(Color.accentColor.opacity(0.08))
-                .frame(width: 240, height: 240)
-                .blur(radius: 28)
-                .offset(x: -36, y: -72)
+            CarryAtmosphereBackground()
 
             VStack(spacing: 14) {
                 Image("LaunchIcon")
@@ -52,11 +37,16 @@ struct SplashView: View {
                     .interpolation(.high)
                     .frame(width: 96, height: 96)
                     .clipShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
+                    .shadow(color: .black.opacity(0.08), radius: 14, x: 0, y: 8)
 
-                Text("Carry")
-                    .font(.title3)
-                    .fontWeight(.semibold)
-                    .foregroundColor(.primary)
+                VStack(spacing: 6) {
+                    Text("Carry")
+                        .font(.system(size: 30, weight: .bold, design: .rounded))
+                        .foregroundColor(.primary)
+                    Text(isChineseLocale ? "出发前，把一切备好" : "Everything ready. Let's go.")
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                }
             }
         }
     }
@@ -79,3 +69,4 @@ struct SplashView: View {
 #Preview {
     SplashView()
 }
+

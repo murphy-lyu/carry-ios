@@ -96,7 +96,3 @@ struct ContentView: View {
         didApplyStartupReset = true
     }
 }
-
-#Preview {
-    ContentView()
-}

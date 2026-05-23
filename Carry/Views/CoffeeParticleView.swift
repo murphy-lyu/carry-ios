@@ -122,3 +122,8 @@ struct CoffeeParticleOverlay: View {
         }
     }
 }
+
+#Preview {
+    @Previewable @State var visible = true
+    CoffeeParticleOverlay(isVisible: $visible) { }
+}

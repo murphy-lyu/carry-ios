@@ -6,7 +6,7 @@
       "id": "upcoming",
       "title": "即将推出的更新",
       "items": [
-        { "id": "weather", "title": "天气预报", "status": "in_progress" },
+        { "id": "weather", "title": "天气预报", "status": "planned", "note": "TODO: 暂缓，近期继续开发" },
         { "id": "trip-stats", "title": "行程统计", "status": "planned" }
       ]
     },

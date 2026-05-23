@@ -35,6 +35,10 @@ struct PackingListView: View {
     @State private var showNudgeBanner = false
     @State private var hasTriggeredNudge = false
     @State private var surpriseBatchOffset: Int = 0
+    @State private var showReminderSheet = false
+    @State private var showMyItemsCollectionPicker = false
+    @State private var myItemsCollectionDraft: String = "Default"
+    @State private var pendingSaveToMyItems: PackingItem?
     @State private var showSceneCardDismissHintBanner = false
     @State private var draggingItemId: UUID? = nil
     @State private var dragStartIds: [UUID] = []
@@ -82,84 +86,92 @@ struct PackingListView: View {
     private var canShuffle: Bool { surpriseItems.count > surpriseBatchSize }
 
     var body: some View {
-        VStack(spacing: 0) {
-            if toastVisible {
-                toastBanner
-            }
+        ZStack {
+            CarrySubtleBackground()
 
-            // — Progress header (fixed, does not scroll)
-            progressHeader
-
-            // — Scrollable list
-            if sections.isEmpty {
-                emptyState
-            } else {
-                List {
-                    ForEach(Array(sections.enumerated()), id: \.element.id) { index, section in
-                        Section {
-                            ForEach(section.sortedItems.filter { !$0.name.isEmpty || $0.id == editingItemId }, id: \.id) { item in
-                                row(for: item, sectionId: section.id)
-                                    .listRowInsets(EdgeInsets(top: 0, leading: 16, bottom: 0, trailing: 16))
-                                    .listRowSeparator(.hidden)
-                                    .listRowBackground(Color(UIColor.systemBackground))
-                            }
-
-                            addItemRow(sectionId: section.id)
-                                .listRowInsets(EdgeInsets(top: 0, leading: 16, bottom: 16, trailing: 16))
-                                .listRowSeparator(.hidden)
-                                .listRowBackground(Color(UIColor.systemBackground))
-                        } header: {
-                            sectionTitle(section.title, isFirst: index == 0)
-                                .listRowInsets(EdgeInsets())
-                        }
-                        .listSectionSeparator(.hidden)
-                    }
-
-                    if !surpriseItems.isEmpty && isNewTrip {
-                        Section {
-                            ForEach(visibleSurpriseItems) { item in
-                                surpriseRow(for: item)
-                                    .listRowInsets(EdgeInsets(top: 0, leading: 16, bottom: 0, trailing: 16))
-                                    .listRowSeparator(.hidden)
-                                    .listRowBackground(Color(UIColor.systemBackground))
-                            }
-                        } header: {
-                            surpriseSectionHeader
-                                .listRowInsets(EdgeInsets())
-                        }
-                        .listSectionSeparator(.hidden)
-                    }
-
-                    if isNewTrip && !sceneCardDismissed {
-                        Section {
-                            sceneEntryCard
-                                .listRowInsets(EdgeInsets(top: 8, leading: 16, bottom: 16, trailing: 16))
-                                .listRowSeparator(.hidden)
-                                .listRowBackground(Color(UIColor.systemBackground))
-                        }
-                        .listSectionSeparator(.hidden)
-                    }
+            VStack(spacing: 0) {
+                if toastVisible {
+                    toastBanner
                 }
-                .listStyle(.plain)
-                .scrollContentBackground(.hidden)
-                .environment(\.defaultMinListRowHeight, 0)
-                .listSectionSpacing(0)
-                .scrollIndicators(.hidden)
-                .safeAreaInset(edge: .bottom) { Color.clear.frame(height: 83) }
-                .safeAreaInset(edge: .top, spacing: 0) {
-                    VStack(spacing: 0) {
-                        if showCompletionBanner {
-                            completionBanner
-                                .transition(.move(edge: .top).combined(with: .opacity))
+
+                progressHeader
+
+                if sections.isEmpty {
+                    emptyState
+                } else {
+                    List {
+                        ForEach(Array(sections.enumerated()), id: \.element.id) { index, section in
+                            Section {
+                                if isNewTrip {
+                                    previewChipsRow(items: section.sortedItems.filter { !$0.name.isEmpty })
+                                        .listRowInsets(EdgeInsets(top: 4, leading: 16, bottom: 16, trailing: 16))
+                                        .listRowSeparator(.hidden)
+                                        .listRowBackground(Color.clear)
+                                } else {
+                                    ForEach(section.sortedItems.filter { !$0.name.isEmpty || $0.id == editingItemId }, id: \.id) { item in
+                                        row(for: item, sectionId: section.id)
+                                            .listRowInsets(EdgeInsets(top: 4, leading: 16, bottom: 4, trailing: 16))
+                                            .listRowSeparator(.hidden)
+                                            .listRowBackground(Color.clear)
+                                    }
+                                    addItemRow(sectionId: section.id)
+                                        .listRowInsets(EdgeInsets(top: 4, leading: 16, bottom: 16, trailing: 16))
+                                        .listRowSeparator(.hidden)
+                                        .listRowBackground(Color.clear)
+                                }
+                            } header: {
+                                sectionTitle(section.title, isFirst: index == 0)
+                                    .listRowInsets(EdgeInsets())
+                            }
+                            .listSectionSeparator(.hidden)
                         }
-                        if showNudgeBanner {
-                            nudgeBanner
-                                .transition(.move(edge: .top).combined(with: .opacity))
+
+                        if !surpriseItems.isEmpty && isNewTrip {
+                            Section {
+                                ForEach(visibleSurpriseItems) { item in
+                                    surpriseRow(for: item)
+                                        .listRowInsets(EdgeInsets(top: 0, leading: 16, bottom: 0, trailing: 16))
+                                        .listRowSeparator(.hidden)
+                                        .listRowBackground(Color.clear)
+                                }
+                            } header: {
+                                surpriseSectionHeader
+                                    .listRowInsets(EdgeInsets())
+                            }
+                            .listSectionSeparator(.hidden)
                         }
-                        if showSceneCardDismissHintBanner {
-                            sceneCardDismissHintBanner
-                                .transition(.opacity.combined(with: .scale(scale: 0.98, anchor: .top)))
-                                .padding(.top, 4)
+
+                        if isNewTrip && !sceneCardDismissed {
+                            Section {
+                                sceneEntryCard
+                                    .listRowInsets(EdgeInsets(top: 8, leading: 16, bottom: 16, trailing: 16))
+                                    .listRowSeparator(.hidden)
+                                    .listRowBackground(Color.clear)
+                            }
+                            .listSectionSeparator(.hidden)
+                        }
+                    }
+                    .listStyle(.plain)
+                    .scrollContentBackground(.hidden)
+                    .environment(\.defaultMinListRowHeight, 0)
+                    .listSectionSpacing(0)
+                    .scrollIndicators(.hidden)
+                    .safeAreaInset(edge: .bottom) { Color.clear.frame(height: 83) }
+                    .safeAreaInset(edge: .top, spacing: 0) {
+                        VStack(spacing: 0) {
+                            if showCompletionBanner {
+                                completionBanner
+                                    .transition(.move(edge: .top).combined(with: .opacity))
+                            }
+                            if showNudgeBanner {
+                                nudgeBanner
+                                    .transition(.move(edge: .top).combined(with: .opacity))
+                            }
+                            if showSceneCardDismissHintBanner {
+                                sceneCardDismissHintBanner
+                                    .transition(.opacity.combined(with: .scale(scale: 0.98, anchor: .top)))
+                                    .padding(.top, 4)
+                            }
                         }
                     }
                 }
@@ -219,6 +231,13 @@ struct PackingListView: View {
                         showReorderSheet = true
                     } label: {
                         Label("Edit sections", systemImage: "arrow.up.arrow.down")
+                    }
+                    if !isNewTrip {
+                        Button {
+                            showReminderSheet = true
+                        } label: {
+                            Label("reminder.menu.item", systemImage: bundle?.remindersEnabled == true ? "bell" : "bell.slash")
+                        }
                     }
                     if !isNewTrip {
                         Button {
@@ -348,6 +367,29 @@ struct PackingListView: View {
                 }
             }
         }
+        .sheet(isPresented: $showReminderSheet) {
+            if let bundle = bundle {
+                TripReminderSheet(bundle: bundle)
+                    .environmentObject(store)
+            }
+        }
+        .sheet(isPresented: $showMyItemsCollectionPicker, onDismiss: {
+            pendingSaveToMyItems = nil
+        }) {
+            NavigationStack {
+                MyItemsCollectionPickerView(
+                    selectedCollection: $myItemsCollectionDraft,
+                    collections: store.myItemCollections()
+                ) {
+                    if let item = pendingSaveToMyItems {
+                        saveToMyItems(item: item)
+                    }
+                    showMyItemsCollectionPicker = false
+                }
+            }
+            .presentationDetents([.medium])
+            .presentationDragIndicator(.visible)
+        }
         .alert(
             "Delete \(bundle?.name ?? "")?",
             isPresented: $showDeleteConfirmation
@@ -368,10 +410,13 @@ struct PackingListView: View {
     private func row(for item: PackingItem, sectionId: UUID) -> some View {
         if editingItemId == item.id {
             editableRow(itemId: item.id, sectionId: sectionId)
+                .padding(.horizontal, 6)
+                .padding(.vertical, 4)
         } else {
             PackingItemRow(
                 item: item,
                 showCheckmark: draggingItemId == nil && !isNewTrip,
+                showQuantity: !isNewTrip,
                 onTap: { toggleItem(itemId: item.id) },
                 onDecrement: { decrementItemQuantity(itemId: item.id, current: item.quantity) },
                 onIncrement: { incrementItemQuantity(itemId: item.id, current: item.quantity) },
@@ -379,14 +424,16 @@ struct PackingListView: View {
                     store.updateItemQuantity(tripId: tripId, itemId: item.id, quantity: newValue)
                 }
             )
+            .padding(.horizontal, 6)
+            .padding(.vertical, 4)
             .allowsHitTesting(draggingItemId == nil)
             .opacity(draggingItemId != nil && draggingItemId != item.id ? 0.55 : 1.0)
             .overlay {
                 RoundedRectangle(cornerRadius: 10)
-                    .strokeBorder(Color.indigo.opacity(draggingItemId == item.id ? 0.55 : 0), lineWidth: 2.5)
+                    .strokeBorder(Color.primary.opacity(draggingItemId == item.id ? 0.45 : 0), lineWidth: 2.5)
                     .background(
                         RoundedRectangle(cornerRadius: 10)
-                            .fill(Color.indigo.opacity(draggingItemId == item.id ? 0.08 : 0))
+                            .fill(Color.primary.opacity(draggingItemId == item.id ? 0.05 : 0))
                     )
                     .padding(.vertical, 2)
             }
@@ -400,6 +447,7 @@ struct PackingListView: View {
             .background(
                 LongPressDragBridge(
                     onBegan: {
+                        guard !isNewTrip else { return }
                         guard let section = sections.first(where: { $0.id == sectionId }) else { return }
                         let sectionItems = section.sortedItems.filter { !$0.name.isEmpty }
                         dragStartIds = sectionItems.map(\.id)
@@ -434,12 +482,16 @@ struct PackingListView: View {
                 } label: {
                     Label("Delete", systemImage: "trash")
                 }
-                Button {
-                    saveToMyItems(item: item)
-                } label: {
-                    Label("myitems.saveToLibrary", systemImage: "bookmark")
+                if !isNewTrip {
+                    Button {
+                        pendingSaveToMyItems = item
+                        myItemsCollectionDraft = store.myItemCollections().first ?? "Default"
+                        showMyItemsCollectionPicker = true
+                    } label: {
+                        Label("Save to My Items", systemImage: "bookmark")
+                    }
+                    .tint(Color.indigo)
                 }
-                .tint(Color.indigo)
             }
         }
     }
@@ -471,9 +523,10 @@ struct PackingListView: View {
         store.addMyItem(
             name: item.name,
             category: category,
-            defaultQuantity: item.quantity
+            defaultQuantity: item.quantity,
+            collectionName: myItemsCollectionDraft
         )
-        showToast(existed ? "myitems.exists" : "myitems.saved")
+        showToast(existed ? "Already in My Items" : "Saved to My Items")
         UINotificationFeedbackGenerator().notificationOccurred(.success)
     }
     private func markTripCompleted() {
@@ -624,12 +677,11 @@ struct PackingListView: View {
                 .foregroundColor(.secondary)
                 .animation(.easeInOut(duration: 0.3), value: isComplete)
             }
-            .padding(.top, isNewTrip ? 0 : 8)
+            .padding(.top, isNewTrip ? 0 : 6)
         }
-        .background(Color(UIColor.systemBackground))
         .zIndex(2)
         .padding(.horizontal, 16)
-        .padding(.vertical, 12)
+        .padding(.vertical, 10)
         .animation(.easeInOut(duration: 0.2), value: progress)
     }
 
@@ -640,28 +692,41 @@ struct PackingListView: View {
     }
 
     private var completionBanner: some View {
-        HStack(spacing: 8) {
+        HStack(spacing: 10) {
             Image(systemName: "checkmark.circle.fill")
-                .foregroundStyle(.white)
+                .font(.system(size: 14, weight: .semibold))
+                .foregroundStyle(Color.primary.opacity(0.82))
+                .frame(width: 22, height: 22)
+                .background(Circle().fill(Color.primary.opacity(0.045)))
             Text("packing.complete.banner")
-                .foregroundStyle(.white)
+                .foregroundStyle(.primary)
         }
         .font(.subheadline.weight(.medium))
-        .frame(maxWidth: .infinity)
-        .padding(.vertical, 12)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(.vertical, 8)
         .padding(.horizontal, 16)
-        .background(Color.black)
+        .overlay(alignment: .top) {
+            Rectangle()
+                .fill(Color.primary.opacity(0.04))
+                .frame(height: 1)
+                .padding(.horizontal, 0)
+        }
+        .overlay(alignment: .bottom) {
+            Rectangle()
+                .fill(Color.primary.opacity(0.04))
+                .frame(height: 1)
+                .padding(.horizontal, 0)
+        }
     }
 
     private var sceneEntryCard: some View {
         Button { showSuggestSheet = true } label: {
             HStack(spacing: 12) {
                 Image(systemName: "sparkles")
-                    .font(.system(size: 15))
-                    .foregroundStyle(Color(UIColor.systemPurple))
-                    .frame(width: 32, height: 32)
-                    .background(Color(UIColor.systemPurple).opacity(0.1))
-                    .clipShape(Circle())
+                    .font(.system(size: 15, weight: .semibold))
+                    .foregroundStyle(Color.orange)
+                    .frame(width: 34, height: 34)
+                    .background(Circle().fill(Color.orange.opacity(0.12)))
                 VStack(alignment: .leading, spacing: 2) {
                     Text("Add recommended items")
                         .font(.subheadline.weight(.medium))
@@ -677,10 +742,17 @@ struct PackingListView: View {
             .padding(.horizontal, 14)
             .padding(.trailing, 30)
             .padding(.vertical, 12)
-            .background(Color(UIColor.secondarySystemBackground))
-            .cornerRadius(14)
         }
         .buttonStyle(.plain)
+        .background(
+            RoundedRectangle(cornerRadius: 18, style: .continuous)
+                .fill(Color(UIColor.systemBackground).opacity(0.72))
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 18, style: .continuous)
+                .strokeBorder(Color.primary.opacity(0.05), lineWidth: 1)
+        )
+        .padding(.vertical, 2)
         .overlay(alignment: .trailing) {
             Button {
                 store.dismissSceneCard(tripId: tripId)
@@ -707,32 +779,52 @@ struct PackingListView: View {
     }
 
     private var nudgeBanner: some View {
-        HStack(spacing: 8) {
+        HStack(spacing: 10) {
             Image(systemName: "sparkles")
-                .foregroundStyle(.white)
+                .font(.system(size: 14, weight: .semibold))
+                .foregroundStyle(Color.indigo)
+                .frame(width: 28, height: 28)
+                .background(Circle().fill(Color.indigo.opacity(0.12)))
             Text("Almost there! A few things worth a second thought ↓")
-                .foregroundStyle(.white)
+                .foregroundStyle(.primary)
         }
         .font(.subheadline.weight(.medium))
         .frame(maxWidth: .infinity)
         .padding(.vertical, 12)
         .padding(.horizontal, 16)
-        .background(Color(UIColor.systemIndigo))
+        .background(
+            RoundedRectangle(cornerRadius: 18, style: .continuous)
+                .fill(Color(UIColor.systemBackground).opacity(0.78))
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 18, style: .continuous)
+                .strokeBorder(Color.primary.opacity(0.05), lineWidth: 1)
+        )
     }
 
     private var sceneCardDismissHintBanner: some View {
-        HStack(spacing: 8) {
+        HStack(spacing: 10) {
             Image(systemName: "info.circle.fill")
-                .foregroundStyle(.white)
+                .font(.system(size: 14, weight: .semibold))
+                .foregroundStyle(Color.secondary)
+                .frame(width: 28, height: 28)
+                .background(Circle().fill(Color.secondary.opacity(0.12)))
             Text("scene_card.dismissed.message")
-                .foregroundStyle(.white)
+                .foregroundStyle(.primary)
                 .lineLimit(2)
         }
         .font(.subheadline.weight(.medium))
         .frame(maxWidth: .infinity)
         .padding(.vertical, 12)
         .padding(.horizontal, 16)
-        .background(Color(UIColor.systemGray))
+        .background(
+            RoundedRectangle(cornerRadius: 18, style: .continuous)
+                .fill(Color(UIColor.systemBackground).opacity(0.78))
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 18, style: .continuous)
+                .strokeBorder(Color.primary.opacity(0.05), lineWidth: 1)
+        )
     }
 
     private var surpriseSectionHeader: some View {
@@ -763,10 +855,9 @@ struct PackingListView: View {
             }
         }
         .padding(.horizontal, 16)
-        .padding(.top, 24)
+        .padding(.top, 16)
         .padding(.bottom, 8)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(Color(UIColor.systemBackground))
     }
 
     private func surpriseRow(for item: SurpriseItem) -> some View {
@@ -836,17 +927,27 @@ struct PackingListView: View {
 
     private func sectionTitle(_ title: String, isFirst: Bool) -> some View {
         Text(LocalizedStringKey(title))
-            .font(.caption.bold())
+            .font(.caption.weight(.medium))
             .foregroundStyle(Color(.systemGray))
-            .kerning(1.5)
+            .kerning(1.2)
             .textCase(.uppercase)
+            .frame(maxWidth: .infinity, alignment: .leading)
             .padding(.horizontal, 16)
-            .padding(.top, 8)
-            .padding(.bottom, 8)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background(Color(UIColor.systemBackground))
-        .compositingGroup()
-        .zIndex(1)
+            .padding(.top, isFirst ? 10 : 16)
+            .padding(.bottom, 4)
+            .background(
+                Rectangle()
+                    .fill(
+                        Color(UIColor.systemBackground).opacity(0.92)
+                    )
+                    .overlay(alignment: .bottom) {
+                        Rectangle()
+                            .fill(Color.primary.opacity(0.03))
+                            .frame(height: 1)
+                    }
+                    .shadow(color: Color.black.opacity(0.012), radius: 4, x: 0, y: 1)
+            )
+            .padding(.horizontal, 10)
     }
 
     private func editableRow(itemId: UUID, sectionId: UUID) -> some View {
@@ -861,6 +962,7 @@ struct PackingListView: View {
                 .focused($focusedItemId, equals: itemId)
                 .submitLabel(.done)
                 .onSubmit { focusedItemId = nil }
+                .textFieldStyle(.plain)
 
             Spacer()
 
@@ -871,22 +973,45 @@ struct PackingListView: View {
         .frame(height: 44)
     }
 
+    private func previewChipsRow(items: [PackingItem]) -> some View {
+        FlowLayout(spacing: 8, lineSpacing: 8) {
+            ForEach(items) { item in
+                Text(LocalizedStringKey(item.name))
+                    .font(.subheadline)
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 7)
+                    .background(Capsule().fill(Color(.secondarySystemFill)))
+                    .foregroundStyle(.primary)
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(.horizontal, 2)
+        .padding(.vertical, 6)
+    }
+
     private func addItemRow(sectionId: UUID) -> some View {
         Button {
             appendNewItem(sectionId: sectionId)
         } label: {
             HStack(spacing: 12) {
                 Image(systemName: "plus")
-                    .font(.system(size: 11, weight: .medium))
-                    .frame(width: 16, height: 16)
+                    .font(.system(size: 11, weight: .semibold))
+                    .foregroundStyle(Color.primary.opacity(0.72))
+                    .frame(width: 18, height: 18)
+                    .background(
+                        Circle()
+                            .fill(Color.primary.opacity(0.05))
+                    )
                 Text("Add item")
-                    .font(.subheadline)
+                    .font(.subheadline.weight(.medium))
+                    .foregroundStyle(Color.primary.opacity(0.78))
                 Spacer()
             }
-            .foregroundStyle(.tertiary)
             .frame(height: 44)
+            .padding(.horizontal, 4)
         }
         .buttonStyle(.plain)
+        .padding(.vertical, 1)
     }
 
     private var saveTripButton: some View {
@@ -928,7 +1053,7 @@ struct PackingListView: View {
             .padding(.horizontal, 16)
             .padding(.top, 12)
         }
-        .background(Color(UIColor.systemBackground))
+        .padding(.bottom, 4)
     }
 
     private var toastBanner: some View {
@@ -937,10 +1062,10 @@ struct PackingListView: View {
             .foregroundStyle(.primary)
             .padding(.horizontal, 14)
             .padding(.vertical, 10)
-            .background(
+            .background(.ultraThinMaterial, in: Capsule(style: .continuous))
+            .overlay(
                 Capsule(style: .continuous)
-                    .fill(Color(UIColor.secondarySystemBackground))
-                    .shadow(color: .black.opacity(0.08), radius: 10, x: 0, y: 4)
+                    .strokeBorder(Color.primary.opacity(0.06), lineWidth: 1)
             )
             .padding(.top, 10)
             .transition(.move(edge: .top).combined(with: .opacity))
@@ -1062,6 +1187,7 @@ struct PackingItemRow: View {
 
     let item: PackingItem
     var showCheckmark: Bool = true
+    var showQuantity: Bool = true
     let onTap: () -> Void
     var onDecrement: (() -> Void)? = nil
     var onIncrement: (() -> Void)? = nil
@@ -1078,6 +1204,7 @@ struct PackingItemRow: View {
     init(
         item: PackingItem,
         showCheckmark: Bool = true,
+        showQuantity: Bool = true,
         onTap: @escaping () -> Void,
         onDecrement: (() -> Void)? = nil,
         onIncrement: (() -> Void)? = nil,
@@ -1085,6 +1212,7 @@ struct PackingItemRow: View {
     ) {
         self.item = item
         self.showCheckmark = showCheckmark
+        self.showQuantity = showQuantity
         self.onTap = onTap
         self.onDecrement = onDecrement
         self.onIncrement = onIncrement
@@ -1099,13 +1227,15 @@ struct PackingItemRow: View {
 
     var body: some View {
         HStack(spacing: 14) {
-            quantityControl
+            if showQuantity {
+                quantityControl
+            }
             HStack(spacing: 18) {
                 Text(LocalizedStringKey(item.name))
                     .font(.callout)
                     .foregroundColor(item.isPacked ? Color(.secondaryLabel) : .primary)
                     .strikethrough(item.isPacked)
-                    .opacity(item.isPacked ? (colorScheme == .dark ? 0.75 : 0.6) : 1.0)
+                    .opacity(item.isPacked ? (colorScheme == .dark ? 0.72 : 0.58) : 1.0)
 
                 Spacer()
 
@@ -1190,6 +1320,7 @@ struct PackingItemRow: View {
                         .focused($focusedQuantityField)
                         .lineLimit(1)
                         .frame(width: 40, height: 24, alignment: .center)
+                        .textFieldStyle(.plain)
                         .onChange(of: quantityText) { _, newValue in
                             quantityText = String(newValue.filter(\.isNumber).prefix(4))
                         }
@@ -1223,19 +1354,20 @@ struct PackingItemRow: View {
             RoundedRectangle(cornerRadius: 12, style: .continuous)
                 .fill(
                     isEditingQuantity
-                        ? Color(.secondarySystemFill).opacity(colorScheme == .dark ? 0.90 : 0.70)
-                        : Color(.secondarySystemFill).opacity(colorScheme == .dark ? 0.78 : 0.52)
+                        ? Color.primary.opacity(colorScheme == .dark ? 0.08 : 0.06)
+                        : Color.primary.opacity(colorScheme == .dark ? 0.04 : 0.03)
                 )
         )
         .overlay(
             RoundedRectangle(cornerRadius: 12, style: .continuous)
                 .strokeBorder(
                     isEditingQuantity
-                        ? Color.primary.opacity(colorScheme == .dark ? 0.22 : 0.16)
-                        : Color.primary.opacity(colorScheme == .dark ? 0.10 : 0.08),
-                    lineWidth: isEditingQuantity ? 1.0 : 0.8
+                        ? Color.primary.opacity(colorScheme == .dark ? 0.14 : 0.11)
+                        : Color.primary.opacity(colorScheme == .dark ? 0.06 : 0.05),
+                    lineWidth: isEditingQuantity ? 0.9 : 0.75
                 )
         )
+        .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
         .opacity(item.isPacked ? 0.72 : 1.0)
     }
 
@@ -1304,7 +1436,7 @@ struct ReorderSectionsView: View {
             .padding(.bottom, 80)
         }
         .scrollDisabled(draggingId != nil)
-        .background(Color(.systemGroupedBackground))
+        .background(CarrySubtleBackground())
         .navigationTitle("Edit sections")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
@@ -1382,9 +1514,16 @@ struct ReorderSectionsView: View {
                 .contentShape(Rectangle())
                 .highPriorityGesture(dragGesture(for: section))
         }
-        .padding(.horizontal, 4)
-        .background(Color(.secondarySystemGroupedBackground))
-        .cornerRadius(12)
+        .padding(.horizontal, 6)
+        .padding(.vertical, 2)
+        .background(
+            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                .fill(Color(UIColor.systemBackground).opacity(0.72))
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                .strokeBorder(Color.primary.opacity(0.05), lineWidth: 1)
+        )
         .shadow(
             color: isDragging ? Color.black.opacity(0.13) : Color.black.opacity(0.06),
             radius: isDragging ? 14 : 8,
@@ -1499,6 +1638,62 @@ struct ReorderSectionsView: View {
     }
 }
 
+// MARK: - My Items Collection Picker
+
+private struct MyItemsCollectionPickerView: View {
+    @Binding var selectedCollection: String
+    let collections: [String]
+    let onConfirm: () -> Void
+
+    @Environment(\.dismiss) private var dismiss
+
+    private var visibleCollections: [String] {
+        collections.isEmpty ? ["Default"] : collections
+    }
+
+    var body: some View {
+        Form {
+            Section {
+                ForEach(visibleCollections, id: \.self) { collection in
+                    Button {
+                        selectedCollection = collection
+                    } label: {
+                        HStack {
+                            Text(collection)
+                            if collection == "Default" {
+                                Text("Default collection")
+                                    .font(.caption2)
+                                    .foregroundStyle(.secondary)
+                            }
+                            Spacer()
+                            if selectedCollection == collection {
+                                Image(systemName: "checkmark")
+                                    .foregroundStyle(.primary)
+                            }
+                        }
+                    }
+                    .buttonStyle(.plain)
+                }
+            } footer: {
+                Text("Choose where this item should be saved.")
+            }
+        }
+        .navigationTitle("Save to Collection")
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            ToolbarItem(placement: .cancellationAction) {
+                Button("Cancel") { dismiss() }
+            }
+            ToolbarItem(placement: .confirmationAction) {
+                Button("Save") {
+                    onConfirm()
+                    dismiss()
+                }
+            }
+        }
+    }
+}
+
 // MARK: - LongPressDragBridge
 
 private struct LongPressDragBridge: UIViewRepresentable {
@@ -1571,9 +1766,7 @@ private struct LongPressDragBridge: UIViewRepresentable {
 // MARK: - Preview
 
 #Preview {
-    NavigationStack {
-        PackingListView(tripId: TripStore().trips.first!.id)
-    }
-    .environmentObject(TripStore())
-    .environmentObject(NavigationRouter())
+    PackingListView(tripId: UUID())
+        .environmentObject(TripStore())
+        .environmentObject(NavigationRouter())
 }

@@ -24,14 +24,17 @@ struct SuggestionPreviewView: View {
     private var hasContent: Bool { !sections.isEmpty || !surpriseItems.isEmpty }
 
     var body: some View {
-        VStack(spacing: 0) {
+        ZStack {
+            CarrySubtleBackground()
 
-            headerBlock
+            VStack(spacing: 0) {
+                headerBlock
 
-            if hasContent {
-                list
-            } else {
-                emptyState
+                if hasContent {
+                    list
+                } else {
+                    emptyState
+                }
             }
         }
         .safeAreaInset(edge: .bottom) {
@@ -96,20 +99,32 @@ struct SuggestionPreviewView: View {
                 .padding(.bottom, 8)
         }
         .padding(.horizontal, 16)
-        .padding(.top, 24)
-        .background(Color(UIColor.systemBackground))
+        .padding(.top, 20)
     }
 
     private func sectionHeader(_ title: String) -> some View {
         Text(LocalizedStringKey(title))
-            .font(.caption.bold())
+            .font(.caption.weight(.medium))
             .foregroundStyle(Color(.systemGray))
-            .kerning(1.5)
+            .kerning(1.1)
             .textCase(.uppercase)
-            .padding(.horizontal, 16)
-            .padding(.vertical, 10)
             .frame(maxWidth: .infinity, alignment: .leading)
-            .background(Color(UIColor.systemBackground))
+            .padding(.horizontal, 16)
+            .padding(.top, 8)
+            .padding(.bottom, 3)
+            .background(
+                Rectangle()
+                    .fill(
+                        Color(UIColor.systemBackground).opacity(0.92)
+                    )
+                    .overlay(alignment: .bottom) {
+                        Rectangle()
+                            .fill(Color.primary.opacity(0.03))
+                            .frame(height: 1)
+                    }
+                    .shadow(color: Color.black.opacity(0.012), radius: 4, x: 0, y: 1)
+            )
+            .padding(.horizontal, 10)
             .zIndex(1)
     }
 
@@ -119,15 +134,28 @@ struct SuggestionPreviewView: View {
                 .font(.system(size: 10, weight: .semibold))
                 .foregroundStyle(.secondary)
             Text("Worth considering")
-                .font(.caption.bold())
+                .font(.caption.weight(.medium))
                 .foregroundStyle(Color(.systemGray))
-                .kerning(1.5)
+                .kerning(1.1)
                 .textCase(.uppercase)
         }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 10)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(Color(UIColor.systemBackground))
+        .padding(.horizontal, 16)
+        .padding(.top, 8)
+        .padding(.bottom, 3)
+        .background(
+            Rectangle()
+                .fill(
+                    Color(UIColor.systemBackground).opacity(0.92)
+                )
+                .overlay(alignment: .bottom) {
+                    Rectangle()
+                        .fill(Color.primary.opacity(0.03))
+                        .frame(height: 1)
+                }
+                .shadow(color: Color.black.opacity(0.012), radius: 4, x: 0, y: 1)
+        )
+        .padding(.horizontal, 10)
         .zIndex(1)
     }
 
@@ -229,7 +257,16 @@ struct SuggestionPreviewView: View {
             .padding(.top, 12)
             .padding(.bottom, 16)
         }
-        .background(.regularMaterial)
+        .background(
+            LinearGradient(
+                colors: [
+                    Color(UIColor.systemBackground).opacity(0.92),
+                    Color(UIColor.systemBackground).opacity(0.82)
+                ],
+                startPoint: .top,
+                endPoint: .bottom
+            )
+        )
     }
 
     // MARK: Empty state
@@ -310,4 +347,10 @@ struct SuggestionPreviewView: View {
         didFinish = true
         dismiss()
     }
+}
+
+#Preview {
+    @Previewable @State var didFinish = false
+    SuggestionPreviewView(tripId: UUID(), sceneKeys: [], didFinish: $didFinish)
+        .environmentObject(TripStore())
 }

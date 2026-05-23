@@ -76,53 +76,24 @@ struct HomeView: View {
     }
 
     var body: some View {
-        VStack(spacing: 0) {
-            HStack(alignment: .center) {
-                Text("home.title")
-                    .font(.largeTitle)
-                    .fontWeight(.bold)
-                    .foregroundColor(.primary)
-                Spacer()
-                Button {
-                    startNewTrip()
-                } label: {
-                    plusButton
-                }
-            }
-            .padding(.horizontal, 16)
-            .padding(.top, 8)
-            .padding(.bottom, 8)
+        ZStack {
+            CarryAtmosphereBackground()
 
-            if store.trips.isEmpty {
-                Spacer()
-                Spacer()
-                VStack(spacing: 0) {
-                    Image(systemName: "suitcase")
-                        .font(.system(size: 48))
-                        .foregroundColor(.secondary)
-                    Text("No trips yet")
-                        .font(.headline)
-                        .foregroundColor(.primary)
-                        .padding(.top, 12)
-                    Text("Tap + to start packing for your next trip")
-                        .font(.subheadline)
-                        .foregroundColor(.secondary)
-                        .multilineTextAlignment(.center)
-                        .padding(.top, 6)
-                }
-                .padding(.horizontal, 32)
-                .frame(maxWidth: .infinity)
-                Spacer()
-                Spacer()
-                Spacer()
-            } else {
-                List {
+            List {
+                heroSection
+                    .listRowInsets(EdgeInsets(top: 2, leading: 12, bottom: 4, trailing: 12))
+                    .listRowBackground(Color.clear)
+                    .listRowSeparator(.hidden)
+
+                if store.trips.isEmpty {
+                    emptyState
+                        .listRowInsets(EdgeInsets(top: 6, leading: 12, bottom: 10, trailing: 12))
+                        .listRowBackground(Color.clear)
+                        .listRowSeparator(.hidden)
+                } else {
                     if !upcomingTrips.isEmpty {
-                        Text("home.upcoming")
-                            .font(.system(size: 11, weight: .medium))
-                            .foregroundStyle(colorScheme == .dark ? .secondary : .tertiary)
-                            .tracking(2)
-                            .listRowInsets(EdgeInsets(top: 0, leading: 16, bottom: 12, trailing: 16))
+                        sectionLabel("home.upcoming")
+                            .listRowInsets(EdgeInsets(top: 2, leading: 16, bottom: 4, trailing: 16))
                             .listRowBackground(Color.clear)
                             .listRowSeparator(.hidden)
 
@@ -132,11 +103,8 @@ struct HomeView: View {
                     }
 
                     ForEach(Array(pastTripsByYear.enumerated()), id: \.element.year) { index, section in
-                        Text(verbatim: "\(section.year)")
-                            .font(.system(size: 11, weight: .medium))
-                            .foregroundStyle(colorScheme == .dark ? .secondary : .tertiary)
-                            .tracking(2)
-                            .listRowInsets(EdgeInsets(top: upcomingTrips.isEmpty && index == 0 ? 0 : 24, leading: 16, bottom: 8, trailing: 16))
+                        sectionLabel(verbatim: "\(section.year)")
+                            .listRowInsets(EdgeInsets(top: upcomingTrips.isEmpty && index == 0 ? 0 : 14, leading: 16, bottom: 6, trailing: 16))
                             .listRowBackground(Color.clear)
                             .listRowSeparator(.hidden)
 
@@ -144,14 +112,19 @@ struct HomeView: View {
                             tripRow(bundle: bundle, isPast: true)
                         }
                     }
+
+                    listFooter
+                        .listRowInsets(EdgeInsets(top: 14, leading: 16, bottom: 4, trailing: 16))
+                        .listRowBackground(Color.clear)
+                        .listRowSeparator(.hidden)
                 }
-                .id(listIdentity)
-                .listStyle(.plain)
-                .scrollContentBackground(.hidden)
-                .background(Color.clear)
             }
+            .id(listIdentity)
+            .listStyle(.plain)
+            .scrollContentBackground(.hidden)
+            .scrollIndicators(.hidden)
+            .background(Color.clear)
         }
-        .background(Color(UIColor.systemGroupedBackground).ignoresSafeArea())
         .navigationBarHidden(true)
         .onAppear { store.refresh() }
         .onReceive(router.$path) { path in
@@ -174,12 +147,221 @@ struct HomeView: View {
         }
     }
 
-    private var plusButton: some View {
-        Image(systemName: "plus")
-            .font(.system(size: 17, weight: .semibold))
-            .foregroundStyle(.primary)
-            .frame(width: 44, height: 44)
-            .glassCircleButton()
+    private var heroSection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack(spacing: 8) {
+                Image(systemName: "airplane.departure")
+                    .font(.system(size: 11, weight: .semibold))
+                    .foregroundStyle(.secondary)
+                Text("Trip overview")
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(.secondary)
+                    .textCase(.uppercase)
+                    .tracking(1.4)
+            }
+
+            HStack(alignment: .top) {
+                VStack(alignment: .leading, spacing: 6) {
+                    Text("home.title")
+                        .font(.system(size: 30, weight: .bold, design: .rounded))
+                        .foregroundStyle(.primary)
+                    Text("All your trips in one place")
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                }
+                Spacer(minLength: 12)
+                Button {
+                    startNewTrip()
+                } label: {
+                    HStack(spacing: 6) {
+                        Image(systemName: "plus")
+                            .font(.system(size: 14, weight: .semibold))
+                        Text("New")
+                            .font(.caption.weight(.semibold))
+                    }
+                    .foregroundStyle(Color(UIColor.systemBackground))
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 9)
+                    .background(
+                        Capsule(style: .continuous)
+                            .fill(
+                                LinearGradient(
+                                    colors: [
+                                        Color.primary.opacity(0.95),
+                                        Color.primary.opacity(0.82)
+                                    ],
+                                    startPoint: .topLeading,
+                                    endPoint: .bottomTrailing
+                                )
+                            )
+                    )
+                    .overlay(
+                        Capsule(style: .continuous)
+                            .strokeBorder(Color.primary.opacity(0.10), lineWidth: 1)
+                    )
+                    .shadow(color: Color.black.opacity(0.08), radius: 8, x: 0, y: 4)
+                }
+                .buttonStyle(.plain)
+            }
+
+            HStack(spacing: 10) {
+                statPill(value: "\(store.trips.count)", label: "Trips")
+                statPill(value: "\(upcomingTrips.count)", label: "home.upcoming")
+            }
+        }
+        .padding(.vertical, 14)
+        .padding(.horizontal, 16)
+        .background(
+            RoundedRectangle(cornerRadius: 24, style: .continuous)
+                .fill(
+                    LinearGradient(
+                        colors: [
+                            Color(UIColor.systemBackground).opacity(0.95),
+                            Color(UIColor.systemBackground).opacity(0.82)
+                        ],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    )
+                )
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 24, style: .continuous)
+                .strokeBorder(Color.primary.opacity(0.05), lineWidth: 1)
+        )
+        .shadow(color: Color.black.opacity(0.045), radius: 16, x: 0, y: 10)
+    }
+
+    private func sectionLabel(_ key: LocalizedStringKey) -> some View {
+        Text(key)
+            .font(.system(size: 11, weight: .medium))
+            .foregroundStyle(colorScheme == .dark ? .secondary : .tertiary)
+            .tracking(2)
+    }
+
+    private func sectionLabel(verbatim: String) -> some View {
+        Text(verbatim: verbatim)
+            .font(.system(size: 11, weight: .medium))
+            .foregroundStyle(colorScheme == .dark ? .secondary : .tertiary)
+            .tracking(2)
+    }
+
+    private func statPill(value: String, label: LocalizedStringKey) -> some View {
+        VStack(alignment: .leading, spacing: 2) {
+            Text(value)
+                .font(.headline.weight(.bold))
+                .foregroundStyle(.primary)
+            Text(label)
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(.secondary)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(.horizontal, 14)
+        .padding(.vertical, 10)
+        .background(
+            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                .fill(
+                    LinearGradient(
+                        colors: [
+                            Color(UIColor.systemBackground).opacity(0.96),
+                            Color(UIColor.systemBackground).opacity(0.88)
+                        ],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    )
+                )
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                .strokeBorder(Color.primary.opacity(0.04), lineWidth: 1)
+        )
+    }
+
+    private var listFooter: some View {
+        VStack(spacing: 8) {
+            HStack(spacing: 6) {
+                Rectangle()
+                    .fill(Color.primary.opacity(0.06))
+                    .frame(height: 1)
+                Text(homeFooterText())
+                    .font(.caption.weight(.medium))
+                    .foregroundStyle(.secondary)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.85)
+                    .padding(.horizontal, 10)
+                Rectangle()
+                    .fill(Color.primary.opacity(0.06))
+                    .frame(height: 1)
+            }
+
+            Text(homeFooterHintText())
+                .font(.caption2)
+                .foregroundStyle(.tertiary)
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, 8)
+    }
+
+    private func homeFooterText() -> String {
+        let preferred = Bundle.main.preferredLocalizations.first ?? "en"
+        let isChinese = preferred.lowercased().hasPrefix("zh")
+        if isChinese {
+            return "已展示全部行程"
+        }
+        return "You have reached the end"
+    }
+
+    private func homeFooterHintText() -> String {
+        let preferred = Bundle.main.preferredLocalizations.first ?? "en"
+        let isChinese = preferred.lowercased().hasPrefix("zh")
+        if isChinese {
+            return "回到了最初的地方"
+        }
+        return "You are back where it all began."
+    }
+
+    private var emptyState: some View {
+        VStack(spacing: 12) {
+            Image(systemName: "suitcase")
+                .font(.system(size: 48))
+                .foregroundStyle(.secondary)
+                .frame(width: 78, height: 78)
+                .background(
+                    Circle()
+                        .fill(Color(UIColor.systemBackground))
+                )
+                .overlay(
+                    Circle()
+                        .strokeBorder(Color.primary.opacity(0.05), lineWidth: 1)
+                )
+
+            VStack(spacing: 8) {
+                Text("No trips yet")
+                    .font(.headline)
+                    .foregroundStyle(.primary)
+                Text("Tap the plus button to create your first trip")
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+                    .multilineTextAlignment(.center)
+                    .lineSpacing(2)
+            }
+
+            Button {
+                startNewTrip()
+            } label: {
+                Text("Create Trip")
+                    .font(.subheadline.weight(.semibold))
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 10)
+                    .background(
+                        Capsule(style: .continuous)
+                            .fill(Color.primary)
+                    )
+                    .foregroundStyle(Color(UIColor.systemBackground))
+            }
+            .buttonStyle(.plain)
+        }
+        .frame(maxWidth: .infinity, minHeight: 240)
+        .padding(.vertical, 18)
     }
 
     @ViewBuilder
@@ -251,18 +433,6 @@ struct TripCard: View {
         bundle.totalCount > 0 && bundle.packedCount == bundle.totalCount
     }
 
-    private var cardBackgroundColor: Color {
-        colorScheme == .dark
-            ? Color.white.opacity(0.09)
-            : Color(uiColor: .systemBackground)
-    }
-
-    private var cardBorderColor: Color {
-        colorScheme == .dark
-            ? Color.white.opacity(0.18)
-            : Color(uiColor: .separator).opacity(0.4)
-    }
-
     private var destinationTextColor: Color {
         if isPast {
             return colorScheme == .dark ? Color.white.opacity(0.62) : Color(uiColor: .secondaryLabel)
@@ -287,88 +457,164 @@ struct TripCard: View {
             : Color(uiColor: .systemGray5)
     }
 
-    private var cardHighlightColor: Color {
-        colorScheme == .dark ? Color.white.opacity(0.14) : Color.white.opacity(0.55)
+    private var cardFill: LinearGradient {
+        if isPast {
+            return LinearGradient(
+                colors: [
+                    Color(UIColor.systemBackground).opacity(colorScheme == .dark ? 0.82 : 0.90),
+                    Color(UIColor.systemBackground).opacity(colorScheme == .dark ? 0.76 : 0.84)
+                ],
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
+            )
+        }
+
+        return LinearGradient(
+            colors: [
+                Color(red: 0.99, green: 0.98, blue: 0.95),
+                Color(UIColor.systemBackground).opacity(colorScheme == .dark ? 0.82 : 0.94)
+            ],
+            startPoint: .topLeading,
+            endPoint: .bottomTrailing
+        )
     }
 
-    private var cardShadowColor: Color {
-        colorScheme == .dark ? Color.black.opacity(0.24) : Color.black.opacity(0.08)
+    private var cardShadow: Color {
+        isPast ? Color.black.opacity(0.048) : Color.black.opacity(0.068)
+    }
+
+    private var statusPillText: String? {
+        guard !isPast else { return nil }
+        if isComplete {
+            return NSLocalizedString("home.packed.all", comment: "All items packed")
+        }
+        let left = bundle.totalCount - bundle.packedCount
+        let format = NSLocalizedString("%lld left", comment: "Remaining item count")
+        return String(format: format, locale: Locale.current, Int64(left))
+    }
+
+    private var statusPillFillColor: Color {
+        if isComplete {
+            return Color(UIColor.systemGray5).opacity(colorScheme == .dark ? 0.32 : 0.72)
+        }
+        return Color.blue.opacity(colorScheme == .dark ? 0.18 : 0.10)
+    }
+
+    private var statusPillStrokeColor: Color {
+        if isComplete {
+            return Color.primary.opacity(0.025)
+        }
+        return Color.blue.opacity(0.16)
+    }
+
+    private var statusPillForeground: Color {
+        if isComplete {
+            return .secondary.opacity(0.76)
+        }
+        return .primary
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            HStack(spacing: 6) {
-                Text(bundle.name)
-                    .font(.title3)
-                    .fontWeight(.bold)
-                    .foregroundColor(.primary)
-                if isComplete && !isPast {
-                    Image(systemName: "checkmark.circle.fill")
-                        .font(.subheadline)
+        HStack(alignment: .top, spacing: 12) {
+            RoundedRectangle(cornerRadius: 2.5, style: .continuous)
+                .fill(
+                    LinearGradient(
+                        colors: [
+                            Color.primary.opacity(isPast ? 0.10 : 0.34),
+                            Color.primary.opacity(isPast ? 0.04 : 0.14)
+                        ],
+                        startPoint: .top,
+                        endPoint: .bottom
+                    )
+                )
+                .frame(width: 2.5, height: isPast ? 48 : 62)
+                .padding(.top, 2)
+
+            VStack(alignment: .leading, spacing: 0) {
+                HStack(alignment: .firstTextBaseline, spacing: 8) {
+                    Text(bundle.name)
+                        .font(.headline.weight(.semibold))
                         .foregroundColor(.primary)
+                        .lineLimit(1)
                 }
-            }
-            .padding(.bottom, 2)
+                .padding(.bottom, 3)
 
-            Text(bundle.destinationCity)
-                .font(.subheadline)
-                .foregroundColor(Color(.systemGray))
-                .padding(.bottom, 2)
+                Text(bundle.destinationCity)
+                    .font(.subheadline.weight(.medium))
+                    .foregroundColor(Color(.systemGray))
+                    .lineLimit(1)
+                    .padding(.bottom, 4)
 
-            HStack {
-                Text(dateAndDurationText)
-                    .font(.caption)
-                    .foregroundColor(Color(.systemGray2))
-                if !isPast {
-                    Spacer()
-                    Text(remainingText)
+                HStack(spacing: 8) {
+                    Text(dateAndDurationText)
                         .font(.caption.weight(.medium))
                         .foregroundColor(Color(.systemGray2))
-                        .transition(.opacity)
-                        .frame(width: 90, alignment: .trailing)
-                }
-            }
-            .animation(.easeInOut(duration: 0.3), value: isComplete)
+                        .lineLimit(1)
 
-            if !isPast {
-                Color.clear.frame(height: 8)
-                GeometryReader { geo in
-                    ZStack(alignment: .leading) {
-                        Capsule()
-                            .fill(Color(.systemGray5))
-                            .frame(height: 3)
-                        Capsule()
-                            .fill(Color.primary)
-                            .frame(width: max(0, geo.size.width * progress), height: 3)
-                            .animation(.spring(response: 0.42, dampingFraction: 0.82), value: progress)
+                    if let statusPillText {
+                        Spacer(minLength: 8)
+                        statusPill(statusPillText)
                     }
                 }
-                .frame(height: 3)
+                .animation(.easeInOut(duration: 0.3), value: isComplete)
+
+                if !isPast && !isComplete {
+                    Color.clear.frame(height: 10)
+                    GeometryReader { geo in
+                        ZStack(alignment: .leading) {
+                            Capsule()
+                                .fill(progressTrackColor)
+                                .frame(height: 3)
+                            Capsule()
+                                .fill(
+                                    LinearGradient(
+                                        colors: [
+                                            Color.primary.opacity(0.90),
+                                            Color.primary.opacity(0.64)
+                                        ],
+                                        startPoint: .leading,
+                                        endPoint: .trailing
+                                    )
+                                )
+                                .frame(width: max(0, geo.size.width * progress), height: 3)
+                                .animation(.spring(response: 0.42, dampingFraction: 0.82), value: progress)
+                        }
+                    }
+                    .frame(height: 3)
+                }
             }
+            .frame(maxWidth: .infinity, alignment: .leading)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(.top, 16)
-        .padding(.bottom, 16)
-        .padding(.horizontal, 20)
+        .padding(.top, 13)
+        .padding(.bottom, 13)
+        .padding(.horizontal, 18)
         .background(
-            RoundedRectangle(cornerRadius: 16)
-                .fill(cardBackgroundColor)
-                .overlay(
-                    LinearGradient(
-                        colors: [cardHighlightColor, .clear],
-                        startPoint: .topLeading,
-                        endPoint: .bottomTrailing
-                    )
-                    .opacity(0.34)
-                    .clipShape(RoundedRectangle(cornerRadius: 16))
-                )
+            RoundedRectangle(cornerRadius: 18, style: .continuous)
+                .fill(cardFill)
         )
         .overlay(
-            RoundedRectangle(cornerRadius: 16)
-                .strokeBorder(cardBorderColor, lineWidth: 0.6)
+            RoundedRectangle(cornerRadius: 18, style: .continuous)
+                .strokeBorder(Color.primary.opacity(isPast ? 0.035 : 0.05), lineWidth: 1)
         )
-        .shadow(color: cardShadowColor, radius: 14, x: 0, y: 8)
-        .contentShape(RoundedRectangle(cornerRadius: 16))
+        .shadow(color: cardShadow, radius: isPast ? 10 : 14, x: 0, y: isPast ? 5 : 7)
+        .contentShape(RoundedRectangle(cornerRadius: 18))
+    }
+
+    private func statusPill(_ text: String) -> some View {
+        Text(text)
+            .font(.system(size: 9, weight: .medium))
+            .foregroundStyle(statusPillForeground)
+            .padding(.horizontal, 6)
+            .padding(.vertical, 2)
+            .background(
+                Capsule(style: .continuous)
+                    .fill(statusPillFillColor)
+            )
+            .overlay(
+                Capsule(style: .continuous)
+                    .strokeBorder(statusPillStrokeColor, lineWidth: 1)
+            )
     }
 }
 
@@ -388,9 +634,7 @@ struct PressableScaleButtonStyle: ButtonStyle {
 // MARK: - Preview
 
 #Preview {
-    NavigationStack {
-        HomeView()
-    }
-    .environmentObject(TripStore())
-    .environmentObject(NavigationRouter())
+    HomeView()
+        .environmentObject(TripStore())
+        .environmentObject(NavigationRouter())
 }

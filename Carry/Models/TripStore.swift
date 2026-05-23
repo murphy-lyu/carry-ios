@@ -22,7 +22,19 @@ final class TripBundle {
     var dismissedSurpriseNames: [String] = []
     var nudgeShown: Bool = false
     var sceneCardDismissed: Bool = false
+    var remindersEnabled: Bool = true
+    var reminderConfigData: Data = Data()
     @Relationship(deleteRule: .cascade, inverse: \PackingSection.bundle) var sections: [PackingSection]? = []
+
+    var reminderConfigs: [TripReminderConfig] {
+        get {
+            guard !reminderConfigData.isEmpty else { return TripReminderConfig.defaults }
+            return (try? JSONDecoder().decode([TripReminderConfig].self, from: reminderConfigData)) ?? TripReminderConfig.defaults
+        }
+        set {
+            reminderConfigData = (try? JSONEncoder().encode(newValue)) ?? Data()
+        }
+    }
 
     init(
         id: UUID = UUID(),
@@ -265,7 +277,51 @@ final class TripStore: ObservableObject {
             CarryLogger.shared.log(.tripEditSaveFailed)
         }
         fetchTrips()
-        NotificationManager.scheduleReminders(for: trip)
+        if trip.remindersEnabled {
+            NotificationManager.scheduleReminders(for: trip)
+        }
+    }
+
+    func setRemindersEnabled(_ enabled: Bool, tripId: UUID) {
+        guard let trip = trips.first(where: { $0.id == tripId }) else { return }
+        trip.remindersEnabled = enabled
+        save()
+        if enabled {
+            NotificationManager.scheduleReminders(for: trip)
+        } else {
+            NotificationManager.cancelReminders(forTripId: tripId)
+        }
+    }
+
+    func addReminder(_ config: TripReminderConfig, tripId: UUID) {
+        guard let trip = trips.first(where: { $0.id == tripId }) else { return }
+        var configs = trip.reminderConfigs
+        guard !configs.contains(where: { $0.isSameTrigger(as: config) }) else { return }
+        configs.append(config)
+        trip.reminderConfigs = configs
+        save()
+        NotificationManager.scheduleReminder(for: trip, config: config)
+    }
+
+    func removeReminder(configId: UUID, tripId: UUID) {
+        guard let trip = trips.first(where: { $0.id == tripId }) else { return }
+        var configs = trip.reminderConfigs
+        configs.removeAll { $0.id == configId }
+        trip.reminderConfigs = configs
+        save()
+        NotificationManager.cancelReminder(tripId: tripId, configId: configId)
+    }
+
+    func updateReminderTime(configId: UUID, hour: Int, minute: Int, tripId: UUID) {
+        guard let trip = trips.first(where: { $0.id == tripId }) else { return }
+        var configs = trip.reminderConfigs
+        guard let index = configs.firstIndex(where: { $0.id == configId }) else { return }
+        NotificationManager.cancelReminder(tripId: tripId, configId: configId)
+        configs[index].hour = hour
+        configs[index].minute = minute
+        trip.reminderConfigs = configs
+        save()
+        NotificationManager.scheduleReminder(for: trip, config: configs[index])
     }
 
     func toggleItem(tripId: UUID, itemId: UUID) {
@@ -659,10 +715,17 @@ final class TripStore: ObservableObject {
     }
 
     @discardableResult
-    func addMyItem(name: String, category: String = "", defaultQuantity: Int = 1, collectionName: String = "Default") -> MyItem {
+    func addMyItem(
+        name: String,
+        category: String = "",
+        defaultQuantity: Int = 1,
+        quantityMode: MyItemQuantityMode = .fixed,
+        quantityIntervalDays: Int = 2,
+        collectionName: String = "Default"
+    ) -> MyItem {
         let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else {
-            return MyItem(name: "", collectionName: normalizedCollectionName(collectionName), category: "", defaultQuantity: 1)
+            return MyItem(name: "", collectionName: normalizedCollectionName(collectionName), category: "", defaultQuantity: 1, quantityMode: quantityMode, quantityIntervalDays: quantityIntervalDays)
         }
         let targetCollection = normalizedCollectionName(collectionName)
         if let existing = myItems.first(where: {
@@ -671,6 +734,8 @@ final class TripStore: ObservableObject {
             && normalizedCollectionName($0.collectionName) == targetCollection
         }) {
             existing.defaultQuantity = max(1, defaultQuantity)
+            existing.quantityMode = quantityMode
+            existing.quantityIntervalDays = max(1, quantityIntervalDays)
             existing.updatedAt = Date()
             save()
             return existing
@@ -681,6 +746,8 @@ final class TripStore: ObservableObject {
             collectionName: targetCollection,
             category: category,
             defaultQuantity: defaultQuantity,
+            quantityMode: quantityMode,
+            quantityIntervalDays: quantityIntervalDays,
             sortOrder: nextOrder
         )
         context.insert(item)
@@ -697,16 +764,32 @@ final class TripStore: ObservableObject {
             collectionName: normalizedCollectionName(item.collectionName),
             category: item.category,
             defaultQuantity: item.defaultQuantity,
+            quantityMode: item.quantityMode,
+            quantityIntervalDays: item.quantityIntervalDays,
             sortOrder: nextOrder
         )
         context.insert(copy)
         save()
     }
 
-    func updateMyItem(_ item: MyItem, name: String, category: String, defaultQuantity: Int, collectionName: String? = nil) {
+    func updateMyItem(
+        _ item: MyItem,
+        name: String,
+        category: String,
+        defaultQuantity: Int,
+        quantityMode: MyItemQuantityMode? = nil,
+        quantityIntervalDays: Int? = nil,
+        collectionName: String? = nil
+    ) {
         item.name = name.trimmingCharacters(in: .whitespacesAndNewlines)
         item.category = category
         item.defaultQuantity = max(1, defaultQuantity)
+        if let quantityMode {
+            item.quantityMode = quantityMode
+        }
+        if let quantityIntervalDays {
+            item.quantityIntervalDays = max(1, quantityIntervalDays)
+        }
         if let collectionName {
             item.collectionName = normalizedCollectionName(collectionName)
         }

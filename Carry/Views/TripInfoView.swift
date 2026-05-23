@@ -14,19 +14,13 @@ struct TripInfoView: View {
     @State private var destinationCity: String
     @State private var departureDate: Date
     @State private var returnDate: Date
-    @State private var activePicker: ActiveDatePicker?
+    @State private var showDatePicker = false
     @FocusState private var focusedField: FocusField?
     @EnvironmentObject var router: NavigationRouter
 
     private enum FocusField: Hashable {
         case tripName
         case destinationCity
-    }
-
-    private enum ActiveDatePicker: String, Identifiable {
-        case departure
-        case `return`
-        var id: String { rawValue }
     }
 
     init(routeID: UUID? = nil, startInMyItems: Bool = false) {
@@ -64,47 +58,60 @@ struct TripInfoView: View {
     }
 
     var body: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 24) {
+        ZStack {
+            CarrySubtleBackground()
 
-                Text("Where are you headed?")
-                    .font(.headline)
-                    .fontWeight(.medium)
-                    .padding(.horizontal, 16)
-                    .padding(.top, 8)
+            ScrollView {
+                VStack(alignment: .leading, spacing: 24) {
 
-                fieldGroup(label: "Trip Name") {
-                    stableField("e.g. Italy · Tuscany", text: $tripName, focus: .tripName)
-                }
+                    heroSection
 
-                fieldGroup(label: "Destination City") {
-                    stableField("e.g. Florence", text: $destinationCity, focus: .destinationCity)
-                }
-
-                fieldGroup(label: "Dates") {
-                    VStack(spacing: 0) {
-                        dateRow(
-                            title: "Departure",
-                            value: departureDate,
-                            action: { activePicker = .departure }
-                        )
-
-                        Rectangle()
-                            .fill(Color(UIColor.separator))
-                            .frame(height: 0.5)
-                            .padding(.horizontal, 12)
-
-                        dateRow(
-                            title: "Return",
-                            value: returnDate,
-                            action: { activePicker = .return }
-                        )
+                    fieldGroup(label: "Trip Name") {
+                        stableField("e.g. Italy · Tuscany", text: $tripName, focus: .tripName)
                     }
-                    .background(Color(UIColor.secondarySystemBackground))
-                    .cornerRadius(12)
+
+                    fieldGroup(label: "Destination City") {
+                        stableField("e.g. Florence", text: $destinationCity, focus: .destinationCity)
+                    }
+
+                    fieldGroup(label: "Dates") {
+                        Button { showDatePicker = true } label: {
+                            HStack(spacing: 0) {
+                                VStack(alignment: .leading, spacing: 3) {
+                                    Text(isChineseLocale ? "出发" : "Departure")
+                                        .font(.caption.weight(.semibold))
+                                        .foregroundStyle(.secondary)
+                                    Text(departureDate.formatted(date: .long, time: .omitted))
+                                        .font(.subheadline)
+                                        .foregroundStyle(.primary)
+                                }
+                                Spacer()
+                                Image(systemName: "arrow.right")
+                                    .font(.caption.weight(.semibold))
+                                    .foregroundStyle(.tertiary)
+                                Spacer()
+                                VStack(alignment: .trailing, spacing: 3) {
+                                    Text(isChineseLocale ? "返回" : "Return")
+                                        .font(.caption.weight(.semibold))
+                                        .foregroundStyle(.secondary)
+                                    Text(returnDate.formatted(date: .long, time: .omitted))
+                                        .font(.subheadline)
+                                        .foregroundStyle(.primary)
+                                }
+                            }
+                            .padding(14)
+                        }
+                        .buttonStyle(.plain)
+                        .background(Color(UIColor.systemBackground).opacity(0.70))
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 12, style: .continuous)
+                                .strokeBorder(Color.primary.opacity(0.05), lineWidth: 1)
+                        )
+                        .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+                    }
                 }
+                .padding(.bottom, 16)
             }
-            .padding(.bottom, 16)
         }
         .scrollDismissesKeyboard(.interactively)
         .simultaneousGesture(
@@ -133,44 +140,27 @@ struct TripInfoView: View {
             }
             .padding(.top, 12)
             .padding(.bottom, 16)
-            .background(Color(UIColor.systemBackground))
+            .background(
+                LinearGradient(
+                    colors: [
+                        Color(UIColor.systemBackground).opacity(0.92),
+                        Color(UIColor.systemBackground).opacity(0.78)
+                    ],
+                    startPoint: .top,
+                    endPoint: .bottom
+                )
+            )
         }
-        .navigationTitle("New trip")
+        .navigationTitle("")
         .navigationBarTitleDisplayMode(.inline)
-        .sheet(item: $activePicker) { picker in
-            NavigationStack {
-                VStack(spacing: 0) {
-                    if picker == .departure {
-                        DatePicker(
-                            "Departure",
-                            selection: $departureDate,
-                            displayedComponents: .date
-                        )
-                        .datePickerStyle(.graphical)
-                        .tint(.primary)
-                        .padding(16)
-                    } else {
-                        DatePicker(
-                            "Return",
-                            selection: $returnDate,
-                            in: departureDate...,
-                            displayedComponents: .date
-                        )
-                        .datePickerStyle(.graphical)
-                        .tint(.primary)
-                        .padding(16)
-                    }
-                }
-                .navigationTitle(picker == .departure ? "Departure" : "Return")
-                .navigationBarTitleDisplayMode(.inline)
-                .toolbar {
-                    ToolbarItem(placement: .topBarTrailing) {
-                        Button("Done") { activePicker = nil }
-                    }
-                }
+        .sheet(isPresented: $showDatePicker) {
+            TripDateRangePickerSheet(
+                departure: departureDate,
+                return: returnDate
+            ) { start, end in
+                departureDate = start
+                returnDate = max(end, Calendar.current.date(byAdding: .day, value: 1, to: start) ?? start)
             }
-            .presentationDetents([.medium])
-            .presentationDragIndicator(.visible)
         }
         .onAppear {
             #if DEBUG
@@ -180,15 +170,18 @@ struct TripInfoView: View {
             CarryLogger.shared.log(.tripInfoOpened, context: context)
             #endif
         }
-        .onChange(of: departureDate, initial: false) { oldVal, newVal in
-            let days = Calendar.current.dateComponents([.day], from: oldVal, to: returnDate).day ?? 7
-            returnDate = Calendar.current.date(byAdding: .day, value: max(1, days), to: newVal) ?? newVal
+    }
+
+    private var heroSection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text(isChineseLocale ? "创建新行程" : "New trip")
+                .font(.system(size: 30, weight: .bold, design: .rounded))
+                .foregroundStyle(.primary)
+            Text(isChineseLocale ? "先填基本信息，再进入物品选择" : "Add the essentials first, then choose your items")
+                .font(.subheadline)
+                .foregroundStyle(.secondary)
         }
-        .onChange(of: returnDate, initial: false) { _, newVal in
-            if newVal < departureDate {
-                returnDate = departureDate
-            }
-        }
+        .padding(16)
     }
 
     private func stableField(
@@ -207,30 +200,16 @@ struct TripInfoView: View {
                 .font(.subheadline)
                 .tint(.primary)
                 .focused($focusedField, equals: focus)
+                .textFieldStyle(.plain)
         }
         .frame(height: 44)
         .padding(.horizontal, 12)
-        .background(Color(UIColor.secondarySystemBackground))
-        .cornerRadius(12)
-    }
-
-    private func dateRow(title: LocalizedStringKey, value: Date, action: @escaping () -> Void) -> some View {
-        Button(action: action) {
-            HStack {
-                Text(title)
-                    .foregroundStyle(.primary)
-                Spacer()
-                Text(value.formatted(date: .long, time: .omitted))
-                    .foregroundStyle(.primary)
-                    .padding(.horizontal, 12)
-                    .padding(.vertical, 6)
-                    .background(Color(UIColor.systemGray5))
-                    .clipShape(Capsule())
-            }
-            .font(.subheadline)
-            .padding(12)
-        }
-        .buttonStyle(.plain)
+        .background(Color(UIColor.systemBackground).opacity(0.72))
+        .overlay(
+            RoundedRectangle(cornerRadius: 12, style: .continuous)
+                .strokeBorder(Color.primary.opacity(0.05), lineWidth: 1)
+        )
+        .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
     }
 
     private func fieldGroup<Content: View>(
@@ -240,7 +219,7 @@ struct TripInfoView: View {
         VStack(alignment: .leading, spacing: 6) {
             Text(label)
                 .font(.system(size: 11, weight: .medium))
-                .foregroundStyle(.tertiary)
+                .foregroundStyle(.secondary)
                 .kerning(1.5)
                 .textCase(.uppercase)
                 .padding(.horizontal, 16)
@@ -251,8 +230,6 @@ struct TripInfoView: View {
 }
 
 #Preview {
-    NavigationStack {
-        TripInfoView()
-    }
-    .environmentObject(NavigationRouter())
+    TripInfoView()
+        .environmentObject(NavigationRouter())
 }

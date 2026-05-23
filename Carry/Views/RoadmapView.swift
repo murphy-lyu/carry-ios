@@ -13,7 +13,7 @@ private enum RoadmapRemote {
 
 private enum RoadmapL10n {
     private static var languageCode: String {
-        Locale.preferredLanguages.first?.lowercased() ?? "en"
+        (Bundle.main.preferredLocalizations.first ?? Locale.current.language.languageCode?.identifier ?? "en").lowercased()
     }
 
     static var isChinese: Bool {
@@ -110,12 +110,11 @@ struct RoadmapView: View {
         VStack(spacing: 0) {
             topBar
                 .padding(.horizontal, 16)
-                .padding(.top, 24)
-                .padding(.bottom, 10)
-                .background(background)
+                .padding(.top, 14)
+                .padding(.bottom, 6)
 
             ScrollView {
-                VStack(alignment: .leading, spacing: 20) {
+                VStack(alignment: .leading, spacing: 14) {
                     header
                     content
                     footerNote
@@ -125,26 +124,75 @@ struct RoadmapView: View {
                 .padding(.bottom, 24)
             }
         }
-        .background(background.ignoresSafeArea())
+        .background(CarrySubtleBackground())
         .navigationBarHidden(true)
         .sheet(isPresented: $showSourceSheet) {
             NavigationStack {
-                Form {
-                    Section(RoadmapL10n.text(en: "Remote JSON URL", zhHans: "远程 JSON 地址", zhHant: "遠端 JSON 位址")) {
+                ScrollView {
+                    VStack(alignment: .leading, spacing: 16) {
+                        VStack(alignment: .leading, spacing: 8) {
+                            Text(RoadmapL10n.text(en: "Remote JSON URL", zhHans: "远程 JSON 地址", zhHant: "遠端 JSON 位址"))
+                                .font(.system(size: 26, weight: .bold, design: .rounded))
+                                .foregroundStyle(.primary)
+                            Text(RoadmapL10n.text(
+                                en: "Leave empty to use built-in defaults; fill in URL to prioritize remote data.",
+                                zhHans: "留空将使用内置默认数据；填入后会优先拉取远程。",
+                                zhHant: "留空將使用內建預設資料；填入後會優先拉取遠端。"
+                            ))
+                                .font(.subheadline)
+                                .foregroundStyle(.secondary)
+                                .lineLimit(2)
+                        }
+
                         TextField("https://raw.githubusercontent.com/...", text: $draftURL)
+                            .font(.subheadline)
+                            .padding(.horizontal, 12)
+                            .frame(height: 44)
+                            .background(Color(UIColor.systemBackground).opacity(0.62))
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 12, style: .continuous)
+                                    .strokeBorder(Color.primary.opacity(0.04), lineWidth: 1)
+                            )
+                            .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
                             .textInputAutocapitalization(.never)
                             .autocorrectionDisabled()
                             .keyboardType(.URL)
-                        Text(RoadmapL10n.text(
-                            en: "Leave empty to use built-in defaults; fill in URL to prioritize remote data.",
-                            zhHans: "留空将使用内置默认数据；填入后会优先拉取远程。",
-                            zhHant: "留空將使用內建預設資料；填入後會優先拉取遠端。"
-                        ))
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
+
+                        HStack(spacing: 10) {
+                            Button(RoadmapL10n.text(en: "Cancel", zhHans: "取消", zhHant: "取消")) {
+                                showSourceSheet = false
+                            }
+                            .buttonStyle(.plain)
+                            .frame(maxWidth: .infinity)
+                            .frame(height: 50)
+                            .background(
+                                RoundedRectangle(cornerRadius: 16, style: .continuous)
+                                    .fill(Color(UIColor.systemBackground).opacity(0.60))
+                            )
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 16, style: .continuous)
+                                    .strokeBorder(Color.primary.opacity(0.04), lineWidth: 1)
+                            )
+
+                            Button(RoadmapL10n.text(en: "Save", zhHans: "保存", zhHant: "儲存")) {
+                                remoteURL = draftURL.trimmingCharacters(in: .whitespacesAndNewlines)
+                                showSourceSheet = false
+                                Task { await load() }
+                            }
+                            .buttonStyle(.plain)
+                            .frame(maxWidth: .infinity)
+                            .frame(height: 50)
+                            .foregroundStyle(Color(UIColor.systemBackground))
+                            .background(
+                                RoundedRectangle(cornerRadius: 16, style: .continuous)
+                                    .fill(Color.primary.opacity(0.92))
+                            )
+                        }
                     }
+                    .padding(16)
                 }
-                .navigationTitle(RoadmapL10n.text(en: "Roadmap Source", zhHans: "路线图数据源", zhHant: "路線圖資料來源"))
+                .background(CarrySubtleBackground())
+                .navigationTitle("")
                 .navigationBarTitleDisplayMode(.inline)
                 .toolbar {
                     ToolbarItem(placement: .cancellationAction) {
@@ -167,7 +215,7 @@ struct RoadmapView: View {
     private var topBar: some View {
         HStack(spacing: 12) {
             Text(RoadmapL10n.text(en: "Roadmap", zhHans: "路线图", zhHant: "路線圖"))
-                .font(.system(size: 34, weight: .bold))
+                .font(.system(size: 28, weight: .semibold, design: .rounded))
                 .foregroundStyle(.primary)
                 .frame(maxWidth: .infinity, alignment: .leading)
 
@@ -178,49 +226,50 @@ struct RoadmapView: View {
                     showSourceSheet = true
                 } label: {
                     Image(systemName: "link")
-                        .font(.system(size: 13, weight: .semibold))
+                        .font(.system(size: 12, weight: .semibold))
                         .foregroundStyle(.primary)
-                        .frame(width: 36, height: 36)
+                        .frame(width: 32, height: 32)
                         .glassCircleButton()
                 }
                 .buttonStyle(.plain)
 #endif
 
                 if let onClose {
-                Button {
-                    onClose()
-                } label: {
-                    Image(systemName: "xmark")
-                        .font(.system(size: 13, weight: .semibold))
-                        .foregroundStyle(.primary)
-                        .frame(width: 36, height: 36)
-                        .glassCircleButton()
+                    Button {
+                        onClose()
+                    } label: {
+                        Image(systemName: "xmark")
+                            .font(.system(size: 12, weight: .semibold))
+                            .foregroundStyle(.primary)
+                            .frame(width: 32, height: 32)
+                            .glassCircleButton()
+                    }
+                    .buttonStyle(.plain)
                 }
-                .buttonStyle(.plain)
-            }
             }
         }
     }
 
     private var header: some View {
-        VStack(alignment: .leading, spacing: 6) {
+        VStack(alignment: .leading, spacing: 8) {
             if let banner = payload?.banner, !banner.isEmpty {
                 Text(banner)
-                    .font(.caption.weight(.semibold))
-                    .foregroundStyle(.secondary)
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(.primary)
             }
             if let updatedAt = payload?.updatedAt, !updatedAt.isEmpty {
                 Text(RoadmapL10n.text(en: "Updated: \(updatedAt)", zhHans: "更新于：\(updatedAt)", zhHant: "更新於：\(updatedAt)"))
                     .font(.caption)
-                    .foregroundStyle(.tertiary)
+                    .foregroundStyle(.secondary)
             }
         }
+        .padding(.horizontal, 4)
     }
 
     @ViewBuilder
     private var content: some View {
         if isLoading && payload == nil {
-            ProgressView().frame(maxWidth: .infinity, alignment: .center).padding(.top, 40)
+            ProgressView().frame(maxWidth: .infinity, alignment: .center).padding(.top, 32)
         } else if let payload {
             ForEach(payload.sections) { section in
                 sectionBlock(section)
@@ -241,12 +290,12 @@ struct RoadmapView: View {
             .padding(16)
             .frame(maxWidth: .infinity, alignment: .leading)
             .background(cardBackground)
-            .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+            .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
         }
     }
 
     private func sectionBlock(_ section: RoadmapSection) -> some View {
-        VStack(alignment: .leading, spacing: 14) {
+        VStack(alignment: .leading, spacing: 8) {
             Text(section.title)
                 .font(.system(size: 11, weight: .medium))
                 .foregroundStyle(.tertiary)
@@ -264,9 +313,13 @@ struct RoadmapView: View {
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(16)
+        .padding(12)
         .background(cardBackground)
-        .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: 18, style: .continuous)
+                .strokeBorder(Color.primary.opacity(0.035), lineWidth: 1)
+        )
+        .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
     }
 
     private var footerNote: some View {
@@ -279,7 +332,7 @@ struct RoadmapView: View {
                 .font(.footnote)
             Spacer()
         }
-        .padding(.top, 8)
+        .padding(.top, 4)
     }
 
     private func roadmapRow(item: RoadmapItem, isLast: Bool, showLatestBadge: Bool) -> some View {
@@ -319,7 +372,7 @@ struct RoadmapView: View {
                         .foregroundStyle(.secondary)
                 }
             }
-            .padding(.bottom, isLast ? 0 : 8)
+            .padding(.bottom, isLast ? 0 : 6)
         }
     }
 
@@ -350,11 +403,9 @@ struct RoadmapView: View {
     }
 
     private var cardBackground: Color {
-        colorScheme == .dark ? Color.white.opacity(0.06) : Color.white
-    }
-
-    private var background: Color {
-        colorScheme == .dark ? Color.black : Color(.systemGroupedBackground)
+        colorScheme == .dark
+            ? Color.white.opacity(0.070)
+            : Color(UIColor.systemBackground).opacity(0.82)
     }
 
     private func load() async {
@@ -446,7 +497,5 @@ private struct RippleDot: View {
 }
 
 #Preview {
-    NavigationStack {
-        RoadmapView()
-    }
+    RoadmapView()
 }

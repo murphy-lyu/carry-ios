@@ -147,6 +147,7 @@ struct ItemPickerView: View {
     @State private var toastText = ""
     @State private var didApplyInitialSource = false
     @State private var showMyItemAddSheet = false
+    @State private var selectedMyItemCollection: String = "Default"
 
     private var hasSelection: Bool {
         !selectedItems.isEmpty || !selectedMyItemIDs.isEmpty
@@ -214,7 +215,7 @@ struct ItemPickerView: View {
 
     private func myItemsSearchResults() -> [MyItem] {
         let query = normalizedForSearch(searchText)
-        return store.myItems.filter {
+        return store.myItems(in: selectedMyItemCollection).filter {
             searchText.isEmpty
                 || normalizedForSearch($0.name).contains(query)
                 || normalizedForSearch($0.category).contains(query)
@@ -231,124 +232,123 @@ struct ItemPickerView: View {
     }
 
     var body: some View {
-        VStack(spacing: 0) {
+        ZStack {
+            CarrySubtleBackground()
 
-            // Large title — fixed, never collapses
-            Text("Add items")
-                .font(.largeTitle)
-                .fontWeight(.bold)
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .padding(.horizontal, 16)
-                .padding(.top, 12)
-                .padding(.bottom, 8)
+            VStack(spacing: 0) {
+                VStack(alignment: .leading, spacing: 0) {
+                    heroSection
 
-            // Search bar — fixed, always accessible
-            searchBar
-                .padding(.horizontal, 16)
-                .padding(.bottom, 12)
+                    searchBar
+                        .padding(.horizontal, 16)
+                        .padding(.bottom, 12)
 
-            sourcePicker
-                .padding(.horizontal, 16)
-                .padding(.bottom, 12)
+                    sourcePicker
+                        .padding(.horizontal, 16)
+                        .padding(.bottom, 12)
+                }
 
-            // Scrollable content
-            if sourceMode == .myItems {
-                List {
-                    myItemsHeader
-                        .listRowBackground(Color.clear)
-                        .listRowSeparator(.hidden)
-                    let myItems = myItemsSearchResults().sorted(by: compareMyItems(_:_:))
-                    if myItems.isEmpty {
-                        VStack(spacing: 10) {
-                            Image(systemName: searchText.isEmpty ? "shippingbox" : "magnifyingglass")
-                                .font(.system(size: 22, weight: .semibold))
-                                .foregroundStyle(.secondary)
-                            Text(searchText.isEmpty ? "myitems.empty.title" : "No results")
-                                .font(.headline)
-                                .foregroundStyle(.primary)
-                                .multilineTextAlignment(.center)
-                            if searchText.isEmpty {
-                                Text("myitems.empty.subtitle")
-                                    .font(.subheadline)
+                if sourceMode == .myItems {
+                    List {
+                        myItemsHeader
+                            .listRowBackground(Color.clear)
+                            .listRowSeparator(.hidden)
+                            .listRowInsets(EdgeInsets(top: 0, leading: 16, bottom: 8, trailing: 16))
+
+                        let myItems = myItemsSearchResults().sorted(by: compareMyItems(_:_:))
+                        if myItems.isEmpty {
+                            VStack(spacing: 10) {
+                                Image(systemName: searchText.isEmpty ? "shippingbox" : "magnifyingglass")
+                                    .font(.system(size: 22, weight: .semibold))
                                     .foregroundStyle(.secondary)
+                                Text(searchText.isEmpty ? LocalizedStringKey("myitems.empty.title") : "No results")
+                                    .font(.headline)
+                                    .foregroundStyle(.primary)
                                     .multilineTextAlignment(.center)
-                                    .lineSpacing(2)
-                            }
-                        }
-                        .frame(maxWidth: .infinity)
-                        .padding(.top, 88)
-                        .padding(.horizontal, 24)
-                        .listRowBackground(Color.clear)
-                        .listRowSeparator(.hidden)
-                    } else {
-                        ForEach(myItems) { item in
-                            myItemRow(item)
-                                .listRowInsets(EdgeInsets(top: 0, leading: 16, bottom: 0, trailing: 16))
-                                .listRowBackground(Color(UIColor.systemBackground))
-                                .listRowSeparator(.hidden)
-                                .swipeActions(edge: .trailing, allowsFullSwipe: false) {
-                                    Button {
-                                        store.removeMyItem(id: item.id)
-                                    } label: {
-                                        Label("Delete", systemImage: "trash")
-                                    }
-                                    .tint(Color(UIColor.label))
-                                }
-                        }
-                    }
-                }
-                .listStyle(.plain)
-                .scrollContentBackground(.hidden)
-                .background(Color(UIColor.systemBackground))
-                .padding(.bottom, 0)
-                .sheet(isPresented: $showMyItemAddSheet) {
-                    NavigationStack {
-                        MyItemEditorView(titleKey: "myitems.add.title") { name, category, quantity in
-                            let normalizedCategory = category.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? NSLocalizedString("myitems.custom_category", comment: "") : category
-                            let item = store.addMyItem(name: name, category: normalizedCategory, defaultQuantity: quantity)
-                            selectedMyItemIDs.insert(item.id)
-                            showToast("myitems.saved")
-                        }
-                    }
-                }
-            } else {
-                ScrollView {
-                    LazyVStack(alignment: .leading, spacing: 0, pinnedViews: [.sectionHeaders]) {
-                        if searchText.isEmpty {
-                            ForEach(itemPickerCatalog, id: \.name) { category in
-                                Section {
-                                    if expandedCategories.contains(category.name) {
-                                        categoryBody(category)
-                                    }
-                                } header: {
-                                    categoryHeader(category)
+                                if searchText.isEmpty {
+                                    Text(LocalizedStringKey("myitems.empty.subtitle"))
+                                        .font(.subheadline)
+                                        .foregroundStyle(.secondary)
+                                        .multilineTextAlignment(.center)
+                                        .lineSpacing(2)
                                 }
                             }
+                            .frame(maxWidth: .infinity)
+                            .padding(.top, 40)
+                            .padding(.horizontal, 24)
+                            .listRowBackground(Color.clear)
+                            .listRowSeparator(.hidden)
                         } else {
-                            if filteredResults.isEmpty {
-                                Text("No results")
-                                    .font(.subheadline)
-                                    .foregroundColor(.secondary)
-                                    .frame(maxWidth: .infinity, alignment: .center)
-                                    .padding(.top, 48)
-                            } else {
-                                ForEach(filteredResults, id: \.self) { result in
-                                    itemRow(result.item, category: result.category)
-                                        .padding(.horizontal, 16)
-                                }
-                                .padding(.top, 4)
+                            ForEach(myItems) { item in
+                                myItemRow(item)
+                                    .listRowInsets(EdgeInsets(top: 0, leading: 16, bottom: 0, trailing: 16))
+                                    .listRowBackground(Color.clear)
+                                    .listRowSeparator(.hidden)
+                                    .swipeActions(edge: .trailing, allowsFullSwipe: false) {
+                                        Button {
+                                            store.removeMyItem(id: item.id)
+                                        } label: {
+                                            Label("Delete", systemImage: "trash")
+                                        }
+                                        .tint(Color(UIColor.label))
+                                    }
                             }
                         }
                     }
-                    .padding(.bottom, isCreateMode ? 96 : 24)
-                }
-                .scrollDismissesKeyboard(.interactively)
-                .simultaneousGesture(
-                    TapGesture().onEnded {
-                        isSearchFocused = false
-                        hideKeyboard()
+                    .listStyle(.plain)
+                    .scrollContentBackground(.hidden)
+                    .background(Color.clear)
+                    .padding(.bottom, 0)
+                    .sheet(isPresented: $showMyItemAddSheet) {
+                        NavigationStack {
+                            ItemPickerMyItemEditorView(titleKey: "myitems.add.title") { name, category, quantity in
+                                let normalizedCategory = category.trimmingCharacters(in: CharacterSet.whitespacesAndNewlines).isEmpty ? "Custom" : category
+                                let item = store.addMyItem(name: name, category: normalizedCategory, defaultQuantity: quantity, collectionName: selectedMyItemCollection)
+                                selectedMyItemIDs.insert(item.id)
+                                showToast("Saved to My Items")
+                            }
+                        }
                     }
-                )
+                } else {
+                    ScrollView {
+                        LazyVStack(alignment: .leading, spacing: 0, pinnedViews: [.sectionHeaders]) {
+                            if searchText.isEmpty {
+                                ForEach(itemPickerCatalog, id: \.name) { category in
+                                    Section {
+                                        if expandedCategories.contains(category.name) {
+                                            categoryBody(category)
+                                        }
+                                    } header: {
+                                        categoryHeader(category)
+                                    }
+                                    .padding(.bottom, 0)
+                                }
+                            } else {
+                                if filteredResults.isEmpty {
+                                    Text("No results")
+                                        .font(.subheadline)
+                                        .foregroundColor(.secondary)
+                                        .frame(maxWidth: .infinity, alignment: .center)
+                                        .padding(.top, 48)
+                                } else {
+                                    ForEach(filteredResults, id: \.self) { result in
+                                        itemRow(result.item, category: result.category)
+                                            .padding(.horizontal, 16)
+                                    }
+                                    .padding(.top, 4)
+                                }
+                            }
+                        }
+                        .padding(.bottom, isCreateMode ? 96 : 24)
+                    }
+                    .scrollDismissesKeyboard(.interactively)
+                    .simultaneousGesture(
+                        TapGesture().onEnded {
+                            isSearchFocused = false
+                            hideKeyboard()
+                        }
+                    )
+                }
             }
         }
         .contentShape(Rectangle())
@@ -381,106 +381,229 @@ struct ItemPickerView: View {
                     .transition(.move(edge: .bottom).combined(with: .opacity))
             }
         }
-        .overlay(alignment: .bottomTrailing) {
-            if isCreateMode {
-                autoPackFAB
-                    .padding(.trailing, 20)
-                    .padding(.bottom, 20)
-            }
-        }
-        .sheet(isPresented: $showAutoPackSheet) {
-            if let info = tripInfoForAutoPack {
-                NavigationStack {
-                    ScenePickerView(autoPackTripInfo: info, seedSections: buildSections())
-                }
-                .presentationDetents([.large])
-                .presentationDragIndicator(.visible)
-            }
-        }
+        // TODO: Re-enable Auto Pack FAB when feature is ready for public release
+//        .overlay(alignment: .bottomTrailing) {
+//            if isCreateMode {
+//                autoPackFAB
+//                    .padding(.trailing, 20)
+//                    .padding(.bottom, 20)
+//            }
+//        }
+//        .sheet(isPresented: $showAutoPackSheet) {
+//            if let info = tripInfoForAutoPack {
+//                NavigationStack {
+//                    ScenePickerView(autoPackTripInfo: info, seedSections: buildSections())
+//                }
+//                .presentationDetents([.large])
+//                .presentationDragIndicator(.visible)
+//            }
+//        }
         .onAppear {
             guard !didApplyInitialSource else { return }
             didApplyInitialSource = true
             if startInMyItems {
                 sourceMode = .myItems
             }
+            let collections = store.myItemCollections()
+            if !collections.contains(selectedMyItemCollection) {
+                selectedMyItemCollection = collections.first ?? "Default"
+            }
         }
+    }
+
+    private var heroSection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text(LocalizedStringKey("myitems.add.title"))
+                .font(.system(size: 30, weight: .bold, design: .rounded))
+                .foregroundStyle(.primary)
+            Text(LocalizedStringKey("myitems.add.subtitle"))
+                .font(.subheadline)
+                .foregroundStyle(.secondary)
+        }
+        .padding(.horizontal, 16)
+        .padding(.top, 8)
+        .padding(.bottom, 6)
     }
 
     private var sourcePicker: some View {
-        ZStack {
-            RoundedRectangle(cornerRadius: 20, style: .continuous)
-                .fill(Color(UIColor.secondarySystemBackground))
-
-            GeometryReader { geo in
-                let segmentWidth = max((geo.size.width - 8) / 2, 0)
-                RoundedRectangle(cornerRadius: 16, style: .continuous)
-                    .fill(Color(UIColor.systemBackground))
-                    .frame(width: segmentWidth, height: geo.size.height - 8)
-                    .offset(x: sourceMode == .preset ? 4 : segmentWidth + 4, y: 4)
-                    .animation(.easeInOut(duration: 0.22), value: sourceMode)
+        HStack(spacing: 0) {
+            sourceSegment(
+                title: "myitems.source.base",
+                subtitle: "myitems.source.base.subtitle",
+                isSelected: sourceMode == .preset
+            ) {
+                sourceMode = .preset
+                searchText = ""
+                expandedCategories.removeAll()
+                isSearchFocused = false
+                hideKeyboard()
             }
 
-            HStack(spacing: 0) {
-                ForEach(SourceMode.allCases, id: \.self) { mode in
-                    Button {
-                    sourceMode = mode
-                    searchText = ""
-                    expandedCategories.removeAll()
-                    isSearchFocused = false
-                    hideKeyboard()
-                } label: {
-                        VStack(spacing: 2) {
-                            Text(mode == .preset ? "myitems.source.base" : "myitems.source.mine")
-                                .font(.subheadline.weight(.semibold))
-                            Text(mode == .preset ? "myitems.source.base.subtitle" : "myitems.source.mine.subtitle")
-                                .font(.caption2)
-                                .foregroundStyle(.secondary)
-                        }
-                        .foregroundStyle(sourceMode == mode ? .primary : .secondary)
-                        .frame(maxWidth: .infinity)
-                        .frame(height: 44)
-                    }
-                    .buttonStyle(.plain)
-                }
+            sourceSegment(
+                title: "myitems.source.mine",
+                subtitle: "myitems.source.mine.subtitle",
+                isSelected: sourceMode == .myItems
+            ) {
+                sourceMode = .myItems
+                searchText = ""
+                expandedCategories.removeAll()
+                isSearchFocused = false
+                hideKeyboard()
             }
-            .padding(4)
         }
-        .frame(height: 52)
+        .padding(5)
+        .background(
+            RoundedRectangle(cornerRadius: 18, style: .continuous)
+                .fill(
+                    LinearGradient(
+                        colors: [
+                            Color(UIColor.systemBackground).opacity(0.96),
+                            Color(UIColor.systemBackground).opacity(0.88)
+                        ],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    )
+                )
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 18, style: .continuous)
+                .strokeBorder(Color.primary.opacity(0.06), lineWidth: 1)
+        )
+        .shadow(color: Color.black.opacity(0.035), radius: 8, x: 0, y: 3)
+        .frame(height: 58)
+        .padding(.top, 2)
+    }
+
+    private func sourceSegment(title: String, subtitle: String, isSelected: Bool, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            VStack(spacing: 2) {
+                Text(LocalizedStringKey(title))
+                    .font(.subheadline.weight(isSelected ? .semibold : .medium))
+                Text(LocalizedStringKey(subtitle))
+                    .font(.caption2)
+                    .foregroundStyle(isSelected ? Color.white.opacity(0.88) : Color.secondary.opacity(0.78))
+            }
+            .foregroundStyle(isSelected ? Color.white : Color.secondary)
+            .frame(maxWidth: .infinity)
+            .frame(height: 44)
+            .background(
+                RoundedRectangle(cornerRadius: 14, style: .continuous)
+                    .fill(
+                        isSelected
+                            ? LinearGradient(
+                                colors: [
+                                Color.primary.opacity(0.98),
+                                Color.primary.opacity(0.84)
+                                ],
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            )
+                            : LinearGradient(
+                                colors: [
+                                    Color(UIColor.systemBackground).opacity(0.78),
+                                    Color(UIColor.systemBackground).opacity(0.68)
+                                ],
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            )
+                    )
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 14, style: .continuous)
+                    .strokeBorder(Color.primary.opacity(isSelected ? 0.02 : 0.08), lineWidth: 1)
+            )
+            .shadow(color: isSelected ? Color.black.opacity(0.10) : Color.black.opacity(0.03), radius: isSelected ? 8 : 4, x: 0, y: 2)
+        }
+        .buttonStyle(.plain)
     }
 
     private var myItemsHeader: some View {
-        HStack {
-            VStack(alignment: .leading, spacing: 2) {
-                Text("myitems.title")
-                    .font(.headline)
-                Text("myitems.source.mine.subtitle")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-            }
-            Spacer()
-            if selectedMyItemIDs.isEmpty {
-                Text("myitems.none_selected")
-                    .font(.caption.weight(.semibold))
-                    .foregroundStyle(.secondary)
-            } else {
-                Text(String.localizedStringWithFormat(NSLocalizedString("myitems.selected_count", comment: ""), selectedMyItemIDs.count))
-                    .font(.caption.weight(.semibold))
-                    .foregroundStyle(.secondary)
-            }
-            Button {
-                showMyItemAddSheet = true
-            } label: {
-                Image(systemName: "plus")
-                    .font(.system(size: 12, weight: .semibold))
+        VStack(alignment: .leading, spacing: 12) {
+            HStack(alignment: .firstTextBaseline) {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(LocalizedStringKey("myitems.title"))
+                        .font(.headline)
+                    Text(verbatim: selectedMyItemCollection == "Default"
+                         ? String(localized: "myitems.collection.default_hint")
+                         : selectedMyItemCollection)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+                Spacer()
+                Button {
+                    showMyItemAddSheet = true
+                } label: {
+                    HStack(spacing: 6) {
+                        Image(systemName: "plus")
+                            .font(.system(size: 12, weight: .semibold))
+                        Text(LocalizedStringKey("myitems.add.title"))
+                            .font(.subheadline.weight(.semibold))
+                    }
                     .foregroundStyle(.primary)
-                    .frame(width: 24, height: 24)
-                    .background(Circle().fill(Color(UIColor.secondarySystemBackground)))
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 8)
+                    .background(
+                        Capsule(style: .continuous)
+                            .fill(Color(UIColor.systemBackground).opacity(0.84))
+                    )
+                }
+                .buttonStyle(.plain)
             }
-            .buttonStyle(.plain)
+
+            if store.myItemCollections().count > 1 {
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(spacing: 8) {
+                        ForEach(store.myItemCollections(), id: \.self) { collection in
+                            Button {
+                                selectedMyItemCollection = collection
+                                searchText = ""
+                            } label: {
+                                Text(collection)
+                                    .font(.caption.weight(.semibold))
+                                    .foregroundStyle(selectedMyItemCollection == collection ? Color(UIColor.systemBackground) : .primary)
+                                    .padding(.horizontal, 12)
+                                    .padding(.vertical, 8)
+                                    .background(
+                                        Capsule(style: .continuous)
+                                            .fill(selectedMyItemCollection == collection ? Color.primary : Color(UIColor.systemBackground).opacity(0.84))
+                                    )
+                                    .overlay(
+                                        Capsule(style: .continuous)
+                                            .strokeBorder(Color.primary.opacity(selectedMyItemCollection == collection ? 0 : 0.08), lineWidth: 1)
+                                    )
+                            }
+                            .buttonStyle(.plain)
+                        }
+                    }
+                }
+            }
+
+            Text(selectedMyItemIDs.isEmpty
+                 ? String(localized: "myitems.none_selected")
+                 : String.localizedStringWithFormat(NSLocalizedString("myitems.selected_count", comment: ""), selectedMyItemIDs.count))
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(.secondary)
         }
         .padding(.horizontal, 16)
-        .padding(.vertical, 10)
-        .background(RoundedRectangle(cornerRadius: 14, style: .continuous).fill(Color(UIColor.secondarySystemBackground)))
+        .padding(.vertical, 12)
+        .background(
+            RoundedRectangle(cornerRadius: 18, style: .continuous)
+                .fill(
+                    LinearGradient(
+                        colors: [
+                            Color(UIColor.systemBackground).opacity(0.90),
+                            Color(UIColor.systemBackground).opacity(0.80)
+                        ],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    )
+                )
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 18, style: .continuous)
+                .strokeBorder(Color.primary.opacity(0.045), lineWidth: 1)
+        )
+        .shadow(color: Color.black.opacity(0.02), radius: 6, x: 0, y: 2)
     }
 
     // MARK: - Auto Pack FAB
@@ -511,7 +634,7 @@ struct ItemPickerView: View {
                             .blur(radius: 8)
                             .opacity(0.5)
                         Circle()
-                            .fill(Color(UIColor.systemBackground))
+                            .fill(Color(UIColor.systemBackground).opacity(0.94))
                     }
                 }
                 .overlay {
@@ -531,8 +654,12 @@ struct ItemPickerView: View {
         }
         .padding(.horizontal, 16)
         .frame(height: 52)
-        .background(Color(UIColor.systemBackground))
-        .overlay(alignment: .bottom) { Divider() }
+        .background(Color(UIColor.systemBackground).opacity(0.86))
+        .overlay(alignment: .bottom) {
+            Rectangle()
+                .fill(Color.primary.opacity(0.025))
+                .frame(height: 1)
+        }
     }
 
     private func myItemRow(_ item: MyItem) -> some View {
@@ -608,7 +735,7 @@ struct ItemPickerView: View {
                 .font(.subheadline)
             ZStack(alignment: .leading) {
                 if searchText.isEmpty {
-                    Text("Search items...")
+            Text("Search items...")
                         .font(.subheadline)
                         .foregroundColor(Color(UIColor.placeholderText))
                         .allowsHitTesting(false)
@@ -617,6 +744,7 @@ struct ItemPickerView: View {
                     .font(.subheadline)
                     .tint(.primary)
                     .focused($isSearchFocused)
+                    .textFieldStyle(.plain)
             }
             if !searchText.isEmpty {
                 Button { searchText = "" } label: {
@@ -627,8 +755,12 @@ struct ItemPickerView: View {
         }
         .frame(height: 44)
         .padding(.horizontal, 12)
-        .background(Color(UIColor.secondarySystemBackground))
-        .cornerRadius(12)
+        .background(Color(UIColor.systemBackground).opacity(0.84))
+        .overlay(
+            RoundedRectangle(cornerRadius: 12, style: .continuous)
+                .strokeBorder(Color.primary.opacity(0.05), lineWidth: 1)
+        )
+        .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
     }
 
     // MARK: - Category header (pinned)
@@ -674,10 +806,16 @@ struct ItemPickerView: View {
         }
         .buttonStyle(.plain)
         .frame(maxWidth: .infinity)
-        .background(Color(UIColor.systemBackground))
+        .background(
+            Color(UIColor.systemBackground).opacity(0.86)
+        )
         .overlay(alignment: .bottom) {
-            Divider()
+            Rectangle()
+                .fill(Color.primary.opacity(0.025))
+                .frame(height: 1)
+                .padding(.horizontal, 0)
         }
+        .padding(.horizontal, 16)
     }
 
     // MARK: - Category body (expanded items)
@@ -752,6 +890,7 @@ struct ItemPickerView: View {
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
+        .padding(.horizontal, 16)
     }
 
     // MARK: - Toast
@@ -819,7 +958,7 @@ struct ItemPickerView: View {
             let items = sectionsByTitle[title, default: []].enumerated().map { idx, myItem in
                 PackingItem(
                     name: myItem.name,
-                    quantity: myItem.defaultQuantity,
+                    quantity: myItem.resolvedDefaultQuantity(tripDays: tripDays),
                     isAlert: false,
                     sortOrder: idx
                 )
@@ -891,12 +1030,66 @@ private struct AutoPackFABButtonStyle: ButtonStyle {
     }
 }
 
+private struct ItemPickerMyItemEditorView: View {
+    let titleKey: LocalizedStringKey
+    var initialName: String = ""
+    var initialCategory: String = ""
+    var initialQuantity: Int = 1
+    var onSave: (String, String, Int) -> Void
+
+    @Environment(\.dismiss) private var dismiss
+    @State private var name: String
+    @State private var category: String
+    @State private var quantity: String
+
+    init(
+        titleKey: LocalizedStringKey,
+        initialName: String = "",
+        initialCategory: String = "",
+        initialQuantity: Int = 1,
+        onSave: @escaping (String, String, Int) -> Void
+    ) {
+        self.titleKey = titleKey
+        self.initialName = initialName
+        self.initialCategory = initialCategory
+        self.initialQuantity = initialQuantity
+        self.onSave = onSave
+        _name = State(initialValue: initialName)
+        _category = State(initialValue: initialCategory)
+        _quantity = State(initialValue: String(initialQuantity))
+    }
+
+    var body: some View {
+        Form {
+            Section {
+                TextField("myitems.name", text: $name)
+                TextField("myitems.category", text: $category)
+                TextField("myitems.quantity", text: $quantity)
+                    .keyboardType(.numberPad)
+            }
+        }
+        .navigationTitle(titleKey)
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            ToolbarItem(placement: .cancellationAction) {
+                Button("common.cancel") { dismiss() }
+            }
+            ToolbarItem(placement: .confirmationAction) {
+                Button("common.done") {
+                    let value = max(1, Int(quantity) ?? 1)
+                    onSave(name, category, value)
+                    dismiss()
+                }
+                .disabled(name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+            }
+        }
+    }
+}
+
 // MARK: - Preview
 
 #Preview {
-    NavigationStack {
-        ItemPickerView(tripInfo: TripInfo())
-    }
-    .environmentObject(TripStore())
-    .environmentObject(NavigationRouter())
+    ItemPickerView(tripInfo: TripInfo(name: "Tokyo", destinationCity: "Tokyo"))
+        .environmentObject(TripStore())
+        .environmentObject(NavigationRouter())
 }

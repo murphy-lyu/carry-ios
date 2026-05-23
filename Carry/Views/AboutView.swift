@@ -8,13 +8,12 @@ import UIKit
 
 struct AboutView: View {
 
-    @Environment(\.colorScheme) private var colorScheme
     @EnvironmentObject private var store: TripStore
     @State private var versionTapCount = 0
     @State private var versionTapTimer: Timer?
 
     private var isChineseLanguage: Bool {
-        (Locale.preferredLanguages.first ?? "en").lowercased().hasPrefix("zh")
+        (Bundle.main.preferredLocalizations.first ?? Locale.current.language.languageCode?.identifier ?? "en").lowercased().hasPrefix("zh")
     }
 
     private var appVersion: String {
@@ -24,102 +23,64 @@ struct AboutView: View {
         return build.isEmpty ? version : "\(version) (\(build))"
     }
 
-    private var dividerColor: Color {
-        colorScheme == .dark
-            ? Color.white.opacity(0.18)
-            : Color.black.opacity(0.10)
-    }
-
     var body: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: 0) {
-
-                // — Tagline
+            VStack(alignment: .leading, spacing: 14) {
                 Text("about.tagline")
-                    .font(.subheadline)
-                    .foregroundStyle(.secondary)
+                    .font(.subheadline.weight(.medium))
+                    .foregroundStyle(.primary.opacity(0.72))
                     .lineSpacing(7)
-                    .padding(.horizontal, 20)
-                    .padding(.top, 24)
-                    .padding(.bottom, 28)
+                    .padding(.horizontal, 6)
+                    .padding(.top, 6)
 
-                // — Author card
-                Rectangle()
-                    .fill(dividerColor)
-                    .frame(height: 0.67)
-                    .padding(.horizontal, 16)
+                moduleCard {
+                    HStack(spacing: 12) {
+                        Image("murphy")
+                            .resizable()
+                            .scaledToFill()
+                            .frame(width: 44, height: 44)
+                            .clipShape(Circle())
 
-                HStack(spacing: 12) {
-                    Image("murphy")
-                        .resizable()
-                        .scaledToFill()
-                        .frame(width: 40, height: 40)
-                        .clipShape(Circle())
-
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text("about.author.name")
-                            .font(.subheadline)
-                            .fontWeight(.medium)
-                            .foregroundColor(.primary)
-                        Text("about.author.role")
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("about.author.name")
+                                .font(.subheadline.weight(.semibold))
+                                .foregroundColor(.primary)
+                            Text("about.author.role")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                        }
+                        Spacer()
                     }
-                    Spacer()
                 }
-                .padding(.horizontal, 20)
-                .padding(.vertical, 16)
 
-                Rectangle()
-                    .fill(dividerColor)
-                    .frame(height: 0.67)
-                    .padding(.horizontal, 16)
+                moduleCard(title: "about.follow") {
+                    VStack(spacing: 0) {
+                        socialRow(label: "Twitter / X", handle: "@murphy_lyu", url: "https://x.com/murphy_Iyu")
+                        if isChineseLanguage {
+                            socialRow(
+                                label: "about.social.xiaohongshu",
+                                handle: "@murphy_lyu",
+                                url: "xhsdiscover://user/5484e470d6e4a9281353f172",
+                                fallbackURL: "https://www.xiaohongshu.com/user/profile/5484e470d6e4a9281353f172"
+                            )
+                        }
+                    }
+                }
 
-                // — Follow us
-                VStack(alignment: .leading, spacing: 0) {
-                    Text("about.follow")
-                        .font(.system(size: 11, weight: .medium))
-                        .foregroundStyle(.tertiary)
-                        .kerning(1.5)
-                        .textCase(.uppercase)
-                        .padding(.horizontal, 16)
-                        .padding(.top, 24)
-                        .padding(.bottom, 8)
-
-                    socialRow(label: "Twitter / X", handle: "@murphy_lyu", url: "https://x.com/murphy_Iyu")
-                    if isChineseLanguage {
-                        socialRow(
-                            label: "about.social.xiaohongshu",
-                            handle: "@murphy_lyu",
-                            url: "xhsdiscover://user/5484e470d6e4a9281353f172",
-                            fallbackURL: "https://www.xiaohongshu.com/user/profile/5484e470d6e4a9281353f172"
+                moduleCard(title: "about.app") {
+                    VStack(spacing: 0) {
+                        infoRow(
+                            label: "settings.about.appName",
+                            value: "Carry"
+                        )
+                        infoRow(
+                            label: "settings.about.version",
+                            value: appVersion,
+                            onTap: handleVersionTap
                         )
                     }
                 }
 
-                // — App info
-                VStack(alignment: .leading, spacing: 0) {
-                    Text("about.app")
-                        .font(.system(size: 11, weight: .medium))
-                        .foregroundStyle(.tertiary)
-                        .kerning(1.5)
-                        .textCase(.uppercase)
-                        .padding(.horizontal, 16)
-                        .padding(.top, 24)
-                        .padding(.bottom, 8)
-
-                    infoRow(
-                        label: "settings.about.appName",
-                        value: "Carry"
-                    )
-                    infoRow(
-                        label: "settings.about.version",
-                        value: appVersion,
-                        onTap: handleVersionTap
-                    )
-                }
-
-                // — Footer: made with + (dedication hidden for now)
                 VStack(spacing: 12) {
                     HStack(spacing: 6) {
                         Text("about.madeWith")
@@ -128,28 +89,61 @@ struct AboutView: View {
                         Text("❤️")
                             .font(.footnote)
                     }
-
-                    // Hidden by request — keep this block ready for when we want
-                    // to bring the dedication back. Translation strings remain
-                    // in the catalog under `about.dedication`.
-                    //
-                    // Text("about.dedication")
-                    //     .font(.footnote)
-                    //     .italic()
-                    //     .foregroundStyle(.tertiary)
                 }
                 .frame(maxWidth: .infinity, alignment: .center)
-                .padding(.top, 80)
+                .padding(.top, 36)
                 .padding(.bottom, 8)
             }
-            .padding(.bottom, 32)
+            .padding(.horizontal, 16)
+            .padding(.bottom, 20)
         }
-        .background(Color(UIColor.systemBackground))
+        .background(CarrySubtleBackground())
         .navigationTitle("about.title")
         .navigationBarTitleDisplayMode(.inline)
     }
 
     // MARK: Subviews
+
+    private func moduleCard<Content: View>(
+        title: LocalizedStringKey? = nil,
+        @ViewBuilder content: () -> Content
+    ) -> some View {
+        VStack(alignment: .leading, spacing: 0) {
+            if let title {
+                Text(title)
+                    .font(.system(size: 11, weight: .medium))
+                    .foregroundStyle(.tertiary)
+                    .kerning(1.5)
+                    .textCase(.uppercase)
+                    .padding(.horizontal, 16)
+                    .padding(.bottom, 8)
+            }
+
+            VStack(spacing: 0) {
+                content()
+            }
+            .padding(.vertical, 2)
+        }
+        .padding(14)
+        .background(
+            RoundedRectangle(cornerRadius: 18, style: .continuous)
+                .fill(
+                    LinearGradient(
+                        colors: [
+                            Color(UIColor.systemBackground).opacity(0.94),
+                            Color(UIColor.systemBackground).opacity(0.82)
+                        ],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    )
+                )
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 18, style: .continuous)
+                .strokeBorder(Color.primary.opacity(0.05), lineWidth: 1)
+        )
+        .shadow(color: Color.black.opacity(0.022), radius: 10, x: 0, y: 5)
+    }
 
     private func socialRow(label: LocalizedStringKey, handle: String, url: String, fallbackURL: String? = nil) -> some View {
         Button {
@@ -171,12 +165,6 @@ struct AboutView: View {
             .frame(height: 44)
         }
         .buttonStyle(.plain)
-        .overlay(alignment: .bottom) {
-            Rectangle()
-                .fill(dividerColor)
-                .frame(height: 0.67)
-                .padding(.leading, 16)
-        }
     }
 
     private func openSocialURL(_ urlString: String, fallbackURL: String? = nil) {
@@ -207,12 +195,6 @@ struct AboutView: View {
             }
             .padding(.horizontal, 16)
             .frame(height: 44)
-            .overlay(alignment: .bottom) {
-                Rectangle()
-                    .fill(dividerColor)
-                    .frame(height: 0.67)
-                    .padding(.leading, 16)
-            }
         }
         .buttonStyle(.plain)
         .contentShape(Rectangle())
@@ -253,7 +235,6 @@ struct AboutView: View {
 }
 
 #Preview {
-    NavigationStack {
-        AboutView()
-    }
+    AboutView()
+        .environmentObject(TripStore())
 }

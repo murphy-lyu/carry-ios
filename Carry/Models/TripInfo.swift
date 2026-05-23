@@ -22,7 +22,7 @@ struct TripInfo: Hashable {
 
         let calendar = Calendar.current
         let base = calendar.startOfDay(for: departureDate ?? Date())
-        let computedReturn = calendar.date(byAdding: .day, value: 7, to: base) ?? base
+        let computedReturn = calendar.date(byAdding: .day, value: 6, to: base) ?? base
 
         self.departureDate = base
         self.returnDate = calendar.startOfDay(for: returnDate ?? computedReturn)

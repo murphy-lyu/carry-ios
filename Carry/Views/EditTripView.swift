@@ -15,6 +15,7 @@ struct EditTripView: View {
 
     @State private var info: TripInfo
     @State private var isSaved = false
+    @State private var showDatePicker = false
     @FocusState private var focusedField: FocusField?
 
     private enum FocusField: Hashable {
@@ -50,47 +51,60 @@ struct EditTripView: View {
 
     var body: some View {
         NavigationStack {
-            ScrollView {
-                VStack(alignment: .leading, spacing: 24) {
+            ZStack {
+                CarrySubtleBackground()
 
-                    fieldGroup(label: "Trip Name") {
-                        stableField("e.g. Italy · Tuscany", text: $info.name, focus: .tripName)
-                    }
+                ScrollView {
+                    VStack(alignment: .leading, spacing: 24) {
+                        heroSection
 
-                    fieldGroup(label: "Destination City") {
-                        stableField("e.g. Florence", text: $info.destinationCity, focus: .destinationCity)
-                    }
-
-                    fieldGroup(label: "Dates") {
-                        VStack(spacing: 0) {
-                            DatePicker("Departure", selection: $info.departureDate,
-                                       displayedComponents: .date)
-                                .font(.subheadline)
-                                .tint(.primary)
-                                .padding(12)
-                                .onChange(of: info.departureDate) { oldVal, newVal in
-                                    let days = Calendar.current.dateComponents([.day], from: oldVal, to: info.returnDate).day ?? 7
-                                    info.returnDate = Calendar.current.date(byAdding: .day, value: max(1, days), to: newVal) ?? newVal
-                                }
-
-                            Rectangle()
-                                .fill(Color(UIColor.separator))
-                                .frame(height: 0.5)
-                                .padding(.horizontal, 12)
-
-                            DatePicker("Return", selection: $info.returnDate,
-                                       in: info.departureDate...,
-                                       displayedComponents: .date)
-                                .font(.subheadline)
-                                .tint(.primary)
-                                .padding(12)
+                        fieldGroup(label: "Trip Name") {
+                            stableField("e.g. Italy · Tuscany", text: $info.name, focus: .tripName)
                         }
-                        .background(Color(UIColor.secondarySystemBackground))
-                        .cornerRadius(12)
+
+                        fieldGroup(label: "Destination City") {
+                            stableField("e.g. Florence", text: $info.destinationCity, focus: .destinationCity)
+                        }
+
+                        fieldGroup(label: "Dates") {
+                            Button { showDatePicker = true } label: {
+                                HStack(spacing: 0) {
+                                    VStack(alignment: .leading, spacing: 3) {
+                                        Text(isChineseLocale ? "出发" : "Departure")
+                                            .font(.caption.weight(.semibold))
+                                            .foregroundStyle(.secondary)
+                                        Text(info.departureDate.formatted(date: .long, time: .omitted))
+                                            .font(.subheadline)
+                                            .foregroundStyle(.primary)
+                                    }
+                                    Spacer()
+                                    Image(systemName: "arrow.right")
+                                        .font(.caption.weight(.semibold))
+                                        .foregroundStyle(.tertiary)
+                                    Spacer()
+                                    VStack(alignment: .trailing, spacing: 3) {
+                                        Text(isChineseLocale ? "返回" : "Return")
+                                            .font(.caption.weight(.semibold))
+                                            .foregroundStyle(.secondary)
+                                        Text(info.returnDate.formatted(date: .long, time: .omitted))
+                                            .font(.subheadline)
+                                            .foregroundStyle(.primary)
+                                    }
+                                }
+                                .padding(14)
+                            }
+                            .buttonStyle(.plain)
+                            .background(Color(UIColor.systemBackground).opacity(0.72))
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 12, style: .continuous)
+                                    .strokeBorder(Color.primary.opacity(0.05), lineWidth: 1)
+                            )
+                            .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+                        }
                     }
+                    .padding(.top, 8)
+                    .padding(.bottom, 16)
                 }
-                .padding(.top, 8)
-                .padding(.bottom, 16)
             }
             .scrollDismissesKeyboard(.interactively)
             .simultaneousGesture(
@@ -98,8 +112,17 @@ struct EditTripView: View {
                     hideKeyboard()
                 }
             )
-            .navigationTitle("Edit trip")
+            .navigationTitle("")
             .navigationBarTitleDisplayMode(.inline)
+            .sheet(isPresented: $showDatePicker) {
+                TripDateRangePickerSheet(
+                    departure: info.departureDate,
+                    return: info.returnDate
+                ) { start, end in
+                    info.departureDate = start
+                    info.returnDate = max(end, Calendar.current.date(byAdding: .day, value: 1, to: start) ?? start)
+                }
+            }
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
                     Button("Cancel") { dismiss() }
@@ -134,6 +157,20 @@ struct EditTripView: View {
         }
     }
 
+    private var heroSection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text(isChineseLocale ? "编辑行程" : "Edit trip")
+                .font(.system(size: 30, weight: .bold, design: .rounded))
+                .foregroundStyle(.primary)
+            Text(isChineseLocale ? "调整行程信息，不影响清单结构" : "Update trip details without changing your list structure")
+                .font(.subheadline)
+                .foregroundStyle(.secondary)
+        }
+        .padding(.horizontal, 16)
+        .padding(.top, 8)
+        .padding(.bottom, 6)
+    }
+
     private func stableField(
         _ placeholder: LocalizedStringKey,
         text: Binding<String>,
@@ -150,11 +187,16 @@ struct EditTripView: View {
                 .font(.subheadline)
                 .tint(.primary)
                 .focused($focusedField, equals: focus)
+                .textFieldStyle(.plain)
         }
         .frame(height: 44)
         .padding(.horizontal, 12)
-        .background(Color(UIColor.secondarySystemBackground))
-        .cornerRadius(12)
+        .background(Color(UIColor.systemBackground).opacity(0.72))
+        .overlay(
+            RoundedRectangle(cornerRadius: 12, style: .continuous)
+                .strokeBorder(Color.primary.opacity(0.05), lineWidth: 1)
+        )
+        .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
     }
 
     private func fieldGroup<Content: View>(
@@ -172,4 +214,10 @@ struct EditTripView: View {
                 .padding(.horizontal, 16)
         }
     }
+}
+
+#Preview {
+    let trip = TripBundle(name: "Tokyo", destinationCity: "Tokyo", days: 6, departureDate: Date())
+    EditTripView(trip: trip)
+        .environmentObject(TripStore())
 }

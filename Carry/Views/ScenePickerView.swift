@@ -88,43 +88,27 @@ struct ScenePickerView: View {
     }
 
     var body: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 28) {
+        ZStack {
+            CarrySubtleBackground()
 
-                // — Header
-                HStack(spacing: 0) {
-                    Text("What's your trip like?")
-                        .font(.title2)
-                        .bold()
-                    Spacer()
-                    if isAutoPack || isEditing || isSuggest {
-                        Button { dismiss() } label: {
-                            Image(systemName: "xmark")
-                                .font(.system(size: 13, weight: .semibold))
-                                .foregroundStyle(.primary)
-                                .frame(width: 36, height: 36)
-                                .glassCircleButton()
-                        }
-                        .buttonStyle(.plain)
+            ScrollView {
+                VStack(alignment: .leading, spacing: 28) {
+                    heroSection
+
+                    if isSuggest {
+                        Text("scenes.suggest.subtitle")
+                            .font(.subheadline)
+                            .foregroundStyle(.secondary)
+                            .padding(.horizontal, 16)
+                            .padding(.top, -10)
+                    }
+
+                    ForEach(defaultSceneGroups) { group in
+                        SceneGroupSection(group: group, selectedItems: $selectedItems)
                     }
                 }
-                .padding(.horizontal, 16)
-                .padding(.top, (isAutoPack || isEditing || isSuggest) ? 24 : 8)
-
-                if isSuggest {
-                    Text("scenes.suggest.subtitle")
-                        .font(.subheadline)
-                        .foregroundStyle(.secondary)
-                        .padding(.horizontal, 16)
-                        .padding(.top, -10)
-                }
-
-                // — Scene groups
-                ForEach(defaultSceneGroups) { group in
-                    SceneGroupSection(group: group, selectedItems: $selectedItems)
-                }
+                .padding(.bottom, 16)
             }
-            .padding(.bottom, 16)
         }
         .safeAreaInset(edge: .bottom) {
             VStack(spacing: 0) {
@@ -163,7 +147,16 @@ struct ScenePickerView: View {
             }
             .padding(.top, 12)
             .padding(.bottom, 16)
-            .background(.regularMaterial)
+            .background(
+                LinearGradient(
+                    colors: [
+                        Color(UIColor.systemBackground).opacity(0.92),
+                        Color(UIColor.systemBackground).opacity(0.82)
+                    ],
+                    startPoint: .top,
+                    endPoint: .bottom
+                )
+            )
         }
         .navigationTitle("")
         .navigationBarTitleDisplayMode(.inline)
@@ -179,6 +172,33 @@ struct ScenePickerView: View {
         .onChange(of: didFinishSuggest) { _, finished in
             if finished { dismiss() }
         }
+    }
+
+    private var heroSection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack {
+                VStack(alignment: .leading, spacing: 6) {
+                    Text(isChineseLocale ? "选择场景" : "Choose scenes")
+                        .font(.system(size: 30, weight: .bold, design: .rounded))
+                        .foregroundStyle(.primary)
+                    Text(isChineseLocale ? "根据旅行场景生成更合适的清单" : "Pick travel scenes to generate a better list")
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                }
+                Spacer()
+                if isAutoPack || isEditing || isSuggest {
+                    Button { dismiss() } label: {
+                        Image(systemName: "xmark")
+                            .font(.system(size: 13, weight: .semibold))
+                            .foregroundStyle(.primary)
+                            .frame(width: 36, height: 36)
+                            .glassCircleButton()
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+        }
+        .padding(16)
     }
 
     // MARK: Private
@@ -445,8 +465,11 @@ struct SceneChip: View {
 
 #Preview {
     NavigationStack {
-        ScenePickerView(tripInfo: TripInfo())
+        ScenePickerView(
+            autoPackTripInfo: TripInfo(name: "Tokyo", destinationCity: "Tokyo"),
+            seedSections: []
+        )
+        .environmentObject(TripStore())
+        .environmentObject(NavigationRouter())
     }
-    .environmentObject(TripStore())
-    .environmentObject(NavigationRouter())
 }

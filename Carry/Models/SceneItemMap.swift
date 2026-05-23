@@ -51,11 +51,12 @@ func defaultQuantity(for itemName: String, tripDays: Int) -> Int {
 
 // MARK: - Locale detection
 
+private var appPreferredLanguageCode: String {
+    (Bundle.main.preferredLocalizations.first ?? Locale.current.language.languageCode?.identifier ?? "en").lowercased()
+}
+
 var isChineseLocale: Bool {
-    let lang = Locale.preferredLanguages.first ?? ""
-    if lang.hasPrefix("zh") { return true }
-    let region = Locale.current.region?.identifier ?? ""
-    return ["CN", "TW", "HK", "MO"].contains(region)
+    appPreferredLanguageCode.hasPrefix("zh")
 }
 
 // MARK: - Chip label → scene key
@@ -243,7 +244,7 @@ func generatePackingSections(selectedScenes: [String], tripDays: Int = 1) -> [Pa
     baseItems.forEach { insert($0) }
     selectedScenes.flatMap { sceneItems(for: $0) }.forEach { insert($0) }
 
-    let order: [ItemCategory] = [.documents, .essentials, .health, .electronics, .clothing, .toiletries]
+    let order: [ItemCategory] = [.documents, .clothing, .electronics, .toiletries, .essentials, .health]
     var sectionIndex = 0
     var result: [PackingSection] = []
     for category in order {

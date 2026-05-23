@@ -47,16 +47,36 @@ private func legalScroll(
     fullURL: URL
 ) -> some View {
     ScrollView {
-        VStack(alignment: .leading, spacing: 24) {
+        VStack(alignment: .leading, spacing: 12) {
+            VStack(alignment: .leading, spacing: 8) {
+                Text(updated)
+                    .font(.caption)
+                    .foregroundStyle(.tertiary)
 
-            Text(updated)
-                .font(.caption)
-                .foregroundStyle(.tertiary)
-
-            Text(body)
-                .font(.subheadline)
-                .foregroundColor(.primary)
-                .lineSpacing(6)
+                Text(body)
+                    .font(.subheadline)
+                    .foregroundColor(.primary)
+                    .lineSpacing(6)
+            }
+            .padding(14)
+            .background(
+                RoundedRectangle(cornerRadius: 18, style: .continuous)
+                    .fill(
+                        LinearGradient(
+                            colors: [
+                                Color(UIColor.systemBackground).opacity(0.86),
+                                Color(UIColor.systemBackground).opacity(0.72)
+                            ],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        )
+                    )
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 18, style: .continuous)
+                    .strokeBorder(Color.primary.opacity(0.035), lineWidth: 1)
+            )
+            .shadow(color: Color.black.opacity(0.012), radius: 6, x: 0, y: 3)
 
             Button {
                 UIApplication.shared.open(fullURL)
@@ -66,22 +86,21 @@ private func legalScroll(
                     Image(systemName: "arrow.up.right")
                         .font(.caption)
                 }
-                .font(.subheadline)
+                .font(.subheadline.weight(.semibold))
                 .foregroundColor(.primary)
             }
-            .padding(.top, 8)
+            .padding(.horizontal, 16)
+            .padding(.vertical, 14)
+            .background(
+                RoundedRectangle(cornerRadius: 14, style: .continuous)
+                    .fill(Color(UIColor.systemBackground).opacity(0.56))
+            )
         }
-        .padding(.horizontal, 20)
-        .padding(.vertical, 24)
-        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(.horizontal, 16)
+        .padding(.vertical, 20)
     }
-    .background(Color(UIColor.systemBackground))
+    .background(CarrySubtleBackground())
 }
 
-#Preview("Terms") {
-    NavigationStack { TermsView() }
-}
-
-#Preview("Privacy") {
-    NavigationStack { PrivacyView() }
-}
+#Preview("Terms") { TermsView() }
+#Preview("Privacy") { PrivacyView() }
