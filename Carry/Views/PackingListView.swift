@@ -44,6 +44,8 @@ struct PackingListView: View {
     @State private var swipeOpenItemId: UUID? = nil
     @State private var swipeOffset: CGFloat = 0
     @State private var swipeStartOffset: CGFloat = 0
+    private let swipeOpenThreshold: CGFloat = 30
+    private let swipeRevealWidth: CGFloat = 76
     @State private var toastVisible = false
     @State private var toastText = ""
 
@@ -393,15 +395,10 @@ struct PackingListView: View {
     @ViewBuilder
     private func row(for item: PackingItem, sectionId: UUID) -> some View {
         ZStack(alignment: .trailing) {
-            deleteSwipeButton(for: item)
-                .padding(.trailing, 10)
-                .offset(x: swipeOffset(for: item.id) >= 76 ? 0 : 76 - swipeOffset(for: item.id))
-                .opacity(min(1, swipeOffset(for: item.id) / 76))
-                .allowsHitTesting(swipeOffset(for: item.id) >= 76)
-
             contentRow(for: item, sectionId: sectionId)
-                .offset(x: swipeOffset(for: item.id) == 0 ? 0 : -swipeOffset(for: item.id))
+                .offset(x: contentSwipeOffset(for: item.id))
                 .allowsHitTesting(swipeOpenItemId != item.id)
+                .zIndex(0)
                 .gesture(
                     DragGesture(minimumDistance: 10, coordinateSpace: .local)
                         .onChanged { value in
@@ -413,16 +410,15 @@ struct PackingListView: View {
                             }
                             let translation = value.translation.width
                             guard translation != 0 else { return }
-                            let maxOffset: CGFloat = 76
                             let proposed = swipeStartOffset - translation
-                            swipeOffset = max(0, min(maxOffset, proposed))
+                            swipeOffset = max(0, min(swipeRevealWidth, proposed))
                             swipeOpenItemId = item.id
                         }
                         .onEnded { _ in
                             guard swipeOpenItemId == item.id else { return }
-                            let shouldOpen = swipeOffset > 30
+                            let shouldOpen = swipeOffset > swipeOpenThreshold
                             withAnimation(.interactiveSpring(response: 0.28, dampingFraction: 0.72, blendDuration: 0.08)) {
-                                swipeOffset = shouldOpen ? 76 : 0
+                                swipeOffset = shouldOpen ? swipeRevealWidth : 0
                                 if !shouldOpen {
                                     swipeOpenItemId = nil
                                 }
@@ -430,15 +426,19 @@ struct PackingListView: View {
                             swipeStartOffset = swipeOffset
                         }
                 )
-                .overlay {
-                    if swipeOpenItemId == item.id {
-                        Color.clear
-                            .contentShape(Rectangle())
-                            .onTapGesture {
-                                collapseOpenSwipeIfNeeded()
-                            }
-                    }
-                }
+
+            if swipeOpenItemId == item.id {
+                openSwipeShield
+                    .padding(.trailing, 56)
+                    .zIndex(0.5)
+            }
+
+            deleteSwipeButton(for: item)
+                .padding(.trailing, 10)
+                .offset(x: deleteButtonOffset(for: item.id))
+                .opacity(deleteButtonOpacity(for: item.id))
+                .allowsHitTesting(isDeleteButtonInteractive(for: item.id))
+                .zIndex(1)
         }
     }
 
@@ -542,13 +542,51 @@ struct PackingListView: View {
         swipeOpenItemId == itemId ? swipeOffset : 0
     }
 
+    private func displayedSwipeOffset(for itemId: UUID) -> CGFloat {
+        min(swipeOffset(for: itemId), swipeRevealWidth)
+    }
+
+    private func contentSwipeOffset(for itemId: UUID) -> CGFloat {
+        displayedSwipeOffset(for: itemId) == 0 ? 0 : -displayedSwipeOffset(for: itemId)
+    }
+
+    private func deleteButtonOffset(for itemId: UUID) -> CGFloat {
+        swipeRevealWidth - displayedSwipeOffset(for: itemId)
+    }
+
+    private func deleteButtonOpacity(for itemId: UUID) -> CGFloat {
+        min(1, displayedSwipeOffset(for: itemId) / swipeRevealWidth)
+    }
+
+    private func isDeleteButtonInteractive(for itemId: UUID) -> Bool {
+        displayedSwipeOffset(for: itemId) >= swipeRevealWidth
+    }
+
+    private var openSwipeShield: some View {
+        Color.clear
+            .contentShape(Rectangle())
+            .gesture(
+                DragGesture(minimumDistance: 6, coordinateSpace: .local)
+                    .onChanged { _ in
+                        collapseOpenSwipeIfNeeded()
+                    }
+                    .onEnded { _ in
+                        collapseOpenSwipeIfNeeded()
+                    }
+            )
+            .onTapGesture {
+                collapseOpenSwipeIfNeeded()
+            }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
+
     private func handleItemTap(itemId: UUID) {
         toggleItem(itemId: itemId)
     }
 
     private func collapseOpenSwipeIfNeeded() {
         guard swipeOpenItemId != nil else { return }
-        withAnimation(.interactiveSpring(response: 0.28, dampingFraction: 0.72, blendDuration: 0.08)) {
+        withAnimation(.spring(response: 0.34, dampingFraction: 0.92, blendDuration: 0.06)) {
             swipeOffset = 0
             swipeOpenItemId = nil
             swipeStartOffset = 0
