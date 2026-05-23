@@ -161,51 +161,43 @@ struct HomeView: View {
             }
 
             HStack(alignment: .top) {
-                VStack(alignment: .leading, spacing: 6) {
-                    Text("home.title")
-                        .font(.system(size: 30, weight: .bold, design: .rounded))
-                        .foregroundStyle(.primary)
-                    Text("All your trips in one place")
-                        .font(.subheadline)
-                        .foregroundStyle(.secondary)
-                }
+                Text("home.title")
+                    .font(.system(size: 30, weight: .bold, design: .rounded))
+                    .foregroundStyle(.primary)
+
                 Spacer(minLength: 12)
+
                 Button {
                     startNewTrip()
                 } label: {
-                    HStack(spacing: 6) {
-                        Image(systemName: "plus")
-                            .font(.system(size: 14, weight: .semibold))
-                        Text("New")
-                            .font(.caption.weight(.semibold))
-                    }
-                    .foregroundStyle(Color(UIColor.systemBackground))
-                    .padding(.horizontal, 12)
-                    .padding(.vertical, 9)
-                    .background(
-                        Capsule(style: .continuous)
-                            .fill(
-                                LinearGradient(
-                                    colors: [
-                                        Color.primary.opacity(0.95),
-                                        Color.primary.opacity(0.82)
-                                    ],
-                                    startPoint: .topLeading,
-                                    endPoint: .bottomTrailing
-                                )
+                    Image(systemName: "plus")
+                        .font(.system(size: 14, weight: .semibold))
+                        .foregroundStyle(Color(UIColor.systemBackground))
+                        .frame(width: 34, height: 34)
+                        .background(
+                            Circle()
+                                .fill(
+                                    LinearGradient(
+                                        colors: [
+                                            Color.primary.opacity(0.95),
+                                            Color.primary.opacity(0.82)
+                                        ],
+                                        startPoint: .topLeading,
+                                        endPoint: .bottomTrailing
+                                    )
                             )
-                    )
-                    .overlay(
-                        Capsule(style: .continuous)
-                            .strokeBorder(Color.primary.opacity(0.10), lineWidth: 1)
-                    )
-                    .shadow(color: Color.black.opacity(0.08), radius: 8, x: 0, y: 4)
+                        )
+                        .overlay(
+                            Circle()
+                                .strokeBorder(Color.primary.opacity(0.10), lineWidth: 1)
+                        )
+                        .shadow(color: Color.black.opacity(0.08), radius: 8, x: 0, y: 4)
                 }
                 .buttonStyle(.plain)
             }
 
             HStack(spacing: 10) {
-                statPill(value: "\(store.trips.count)", label: "Trips")
+                statPill(value: "\(store.trips.count)", label: "home.allTrips")
                 statPill(value: "\(upcomingTrips.count)", label: "home.upcoming")
             }
         }
@@ -278,45 +270,40 @@ struct HomeView: View {
 
     private var listFooter: some View {
         VStack(spacing: 8) {
-            HStack(spacing: 6) {
-                Rectangle()
-                    .fill(Color.primary.opacity(0.06))
+            HStack(spacing: 10) {
+                Capsule(style: .continuous)
+                    .fill(Color.primary.opacity(0.10))
                     .frame(height: 1)
-                Text(homeFooterText())
-                    .font(.caption.weight(.medium))
-                    .foregroundStyle(.secondary)
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.85)
-                    .padding(.horizontal, 10)
-                Rectangle()
-                    .fill(Color.primary.opacity(0.06))
+
+                Image(systemName: "paperplane.fill")
+                    .font(.system(size: 10, weight: .semibold))
+                    .foregroundStyle(.tertiary)
+
+                Capsule(style: .continuous)
+                    .fill(Color.primary.opacity(0.10))
                     .frame(height: 1)
             }
+            .frame(maxWidth: 220)
 
-            Text(homeFooterHintText())
-                .font(.caption2)
-                .foregroundStyle(.tertiary)
+            Text(homeFooterText())
+                .font(.caption.weight(.medium))
+                .foregroundStyle(.secondary)
+                .multilineTextAlignment(.center)
+                .lineLimit(1)
+                .minimumScaleFactor(0.85)
+                .padding(.horizontal, 10)
         }
         .frame(maxWidth: .infinity)
-        .padding(.vertical, 8)
+        .padding(.vertical, 10)
     }
 
     private func homeFooterText() -> String {
         let preferred = Bundle.main.preferredLocalizations.first ?? "en"
         let isChinese = preferred.lowercased().hasPrefix("zh")
         if isChinese {
-            return "已展示全部行程"
+            return "第一次出行的地方"
         }
-        return "You have reached the end"
-    }
-
-    private func homeFooterHintText() -> String {
-        let preferred = Bundle.main.preferredLocalizations.first ?? "en"
-        let isChinese = preferred.lowercased().hasPrefix("zh")
-        if isChinese {
-            return "回到了最初的地方"
-        }
-        return "You are back where it all began."
+        return "The place where your first trip began"
     }
 
     private var emptyState: some View {
