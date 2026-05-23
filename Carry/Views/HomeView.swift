@@ -89,7 +89,7 @@ struct HomeView: View {
     }
 
     @State private var sheetOffset: CGFloat = 0
-    @State private var sheetDrag: CGFloat = 0
+    @State private var capsuleDrag: CGFloat = 0
 
     private var expandedSheetHeight: CGFloat {
         UIScreen.main.bounds.height * 0.90
@@ -136,14 +136,21 @@ struct HomeView: View {
                     .gesture(
                         DragGesture()
                             .onChanged { v in
-                                guard v.translation.height > 0 else { return }
-                                sheetDrag = v.translation.height
+                                capsuleDrag = v.translation.height
                             }
                             .onEnded { v in
-                                let end = min(max(0, sheetOffset + v.translation.height), collapsedSheetOffset)
+                                let velocity = v.velocity.height
+                                let translation = v.translation.height
+                                let current = sheetOffset + translation
                                 withAnimation(.spring(response: 0.38, dampingFraction: 0.82)) {
-                                    sheetOffset = end > collapsedSheetOffset * 0.35 ? collapsedSheetOffset : 0
-                                    sheetDrag = 0
+                                    capsuleDrag = 0
+                                    if velocity > 200 || translation > collapsedSheetOffset * 0.20 {
+                                        sheetOffset = collapsedSheetOffset
+                                    } else if velocity < -200 || translation < -50 {
+                                        sheetOffset = 0
+                                    } else {
+                                        sheetOffset = current > collapsedSheetOffset * 0.5 ? collapsedSheetOffset : 0
+                                    }
                                 }
                             }
                     )
@@ -217,13 +224,6 @@ struct HomeView: View {
                     .scrollContentBackground(.hidden)
                     .scrollIndicators(.hidden)
                     .background(Color.clear)
-                    .background(
-                        SheetDragBridge(
-                            sheetOffset: $sheetOffset,
-                            sheetDrag: $sheetDrag,
-                            collapsedSheetOffset: collapsedSheetOffset
-                        )
-                    )
                 }
                 .overlay {
                     if revealCurtainOpacity > 0 {
@@ -294,100 +294,11 @@ struct HomeView: View {
             .background(CarryAtmosphereBackground())
             .compositingGroup()
             .clipShape(UnevenRoundedRectangle(topLeadingRadius: 36, bottomLeadingRadius: 0, bottomTrailingRadius: 0, topTrailingRadius: 36, style: .continuous))
-            .offset(y: min(max(0, sheetOffset + sheetDrag), collapsedSheetOffset))
-        }
+            .offset(y: min(max(0, sheetOffset + capsuleDrag), collapsedSheetOffset))
+    }
         .ignoresSafeArea(edges: .bottom)
     }
 
-    private struct SheetDragBridge: UIViewRepresentable {
-        @Binding var sheetOffset: CGFloat
-        @Binding var sheetDrag: CGFloat
-        let collapsedSheetOffset: CGFloat
-
-        func makeUIView(context: Context) -> UIView {
-            UIView(frame: .zero)
-        }
-
-        func updateUIView(_ uiView: UIView, context: Context) {
-            context.coordinator.sheetOffset = $sheetOffset
-            context.coordinator.sheetDrag = $sheetDrag
-            context.coordinator.collapsedSheetOffset = collapsedSheetOffset
-            context.coordinator.attachIfNeeded(from: uiView)
-        }
-
-        func makeCoordinator() -> Coordinator {
-            Coordinator()
-        }
-
-        final class Coordinator: NSObject, UIGestureRecognizerDelegate {
-            var sheetOffset: Binding<CGFloat>?
-            var sheetDrag: Binding<CGFloat>?
-            var collapsedSheetOffset: CGFloat = 0
-            private weak var attachedScrollView: UIScrollView?
-            private lazy var panRecognizer: UIPanGestureRecognizer = {
-                let recognizer = UIPanGestureRecognizer(target: self, action: #selector(handlePan(_:)))
-                recognizer.delegate = self
-                recognizer.cancelsTouchesInView = false
-                recognizer.delaysTouchesBegan = false
-                recognizer.delaysTouchesEnded = false
-                return recognizer
-            }()
-
-            func attachIfNeeded(from view: UIView) {
-                DispatchQueue.main.async {
-                    guard let scrollView = self.findScrollView(from: view) else { return }
-                    guard self.attachedScrollView !== scrollView else { return }
-                    self.attachedScrollView = scrollView
-                    if self.panRecognizer.view == nil {
-                        scrollView.addGestureRecognizer(self.panRecognizer)
-                    }
-                }
-            }
-
-            private func findScrollView(from view: UIView) -> UIScrollView? {
-                var current: UIView? = view
-                while let candidate = current {
-                    if let scrollView = candidate as? UIScrollView {
-                        return scrollView
-                    }
-                    current = candidate.superview
-                }
-                return nil
-            }
-
-            func gestureRecognizerShouldBegin(_ gestureRecognizer: UIGestureRecognizer) -> Bool {
-                guard let scrollView = attachedScrollView,
-                      let pan = gestureRecognizer as? UIPanGestureRecognizer
-                else { return false }
-                let velocity = pan.velocity(in: scrollView)
-                let topY = -scrollView.adjustedContentInset.top
-                let isAtTop = scrollView.contentOffset.y <= topY + 1
-                return isAtTop && velocity.y > abs(velocity.x) && velocity.y > 0
-            }
-
-            func gestureRecognizer(_ gestureRecognizer: UIGestureRecognizer, shouldRecognizeSimultaneouslyWith otherGestureRecognizer: UIGestureRecognizer) -> Bool {
-                false
-            }
-
-            @objc private func handlePan(_ recognizer: UIPanGestureRecognizer) {
-                guard let scrollView = attachedScrollView else { return }
-                let translation = max(0, recognizer.translation(in: scrollView).y)
-
-                switch recognizer.state {
-                case .began, .changed:
-                    sheetDrag?.wrappedValue = translation
-                case .ended, .cancelled, .failed:
-                    let end = min(max(0, (sheetOffset?.wrappedValue ?? 0) + translation), collapsedSheetOffset)
-                    withAnimation(.spring(response: 0.38, dampingFraction: 0.82)) {
-                        sheetOffset?.wrappedValue = end > collapsedSheetOffset * 0.35 ? collapsedSheetOffset : 0
-                        sheetDrag?.wrappedValue = 0
-                    }
-                default:
-                    break
-                }
-            }
-        }
-    }
 
     private var heroSection: some View {
         VStack(alignment: .leading, spacing: 12) {
