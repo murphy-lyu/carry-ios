@@ -4,6 +4,7 @@
 //
 
 import SwiftUI
+import MapKit
 
 // MARK: - HomeView
 
@@ -87,11 +88,46 @@ struct HomeView: View {
         }
     }
 
-    var body: some View {
-        ZStack {
-            CarryAtmosphereBackground()
+    @State private var sheetOffset: CGFloat = 0
+    @GestureState private var sheetDrag: CGFloat = 0
 
-            List {
+    private var visitedCities: [VisitedCity] {
+        store.trips
+            .filter { isPast($0) && $0.latitude != 0 }
+            .map { VisitedCity(id: $0.id, name: $0.destinationCity,
+                               coordinate: .init(latitude: $0.latitude, longitude: $0.longitude),
+                               countryCode: $0.countryCode) }
+    }
+
+    var body: some View {
+        ZStack(alignment: .bottom) {
+            // Globe background
+            GlobeMapView(visitedCities: visitedCities)
+                .ignoresSafeArea()
+
+            // Trip list sheet
+            VStack(spacing: 0) {
+                // Drag handle — gesture lives only here so List scrolls freely
+                Capsule()
+                    .fill(Color.primary.opacity(0.18))
+                    .frame(width: 36, height: 5)
+                    .padding(.top, 10)
+                .padding(.bottom, 6)
+                .frame(maxWidth: .infinity)
+                .contentShape(Rectangle())
+                .gesture(
+                    DragGesture()
+                            .updating($sheetDrag) { v, state, _ in state = v.translation.height }
+                            .onEnded { v in
+                                let end = max(0, sheetOffset + v.translation.height)
+                                let snap = UIScreen.main.bounds.height - 110
+                                withAnimation(.spring(response: 0.38, dampingFraction: 0.82)) {
+                                    sheetOffset = end > snap * 0.35 ? snap : 0
+                                }
+                            }
+                    )
+                ZStack {
+                    List {
                 heroSection
                     .opacity(initialRevealPhase >= 1 ? 1 : 0)
                     .offset(y: initialRevealPhase >= 1 ? 0 : 18)
@@ -164,6 +200,8 @@ struct HomeView: View {
             .scrollIndicators(.hidden)
             .background(Color.clear)
         }
+        .contentShape(Rectangle())
+        .simultaneousGesture(sheetDragGesture, including: .subviews)
         .overlay {
             if revealCurtainOpacity > 0 {
                 LinearGradient(
@@ -226,6 +264,29 @@ struct HomeView: View {
         } message: {
             Text("This will permanently delete your packing list and all progress.")
         }
+        }
+        .frame(maxWidth: .infinity, maxHeight: UIScreen.main.bounds.height - 120)
+        .background(CarryAtmosphereBackground())
+        .compositingGroup()
+        .clipShape(UnevenRoundedRectangle(topLeadingRadius: 36, bottomLeadingRadius: 0, bottomTrailingRadius: 0, topTrailingRadius: 36, style: .continuous))
+        .offset(y: max(0, sheetOffset + sheetDrag))
+    }
+        .ignoresSafeArea(edges: .bottom)
+    }
+
+    private var sheetDragGesture: some Gesture {
+        DragGesture()
+            .updating($sheetDrag) { v, state, _ in
+                guard v.translation.height > 0 else { return }
+                state = v.translation.height
+            }
+            .onEnded { v in
+                let end = max(0, sheetOffset + v.translation.height)
+                let snap = UIScreen.main.bounds.height - 110
+                withAnimation(.spring(response: 0.38, dampingFraction: 0.82)) {
+                    sheetOffset = end > snap * 0.35 ? snap : 0
+                }
+            }
     }
 
     private var heroSection: some View {
