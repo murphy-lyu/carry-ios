@@ -90,6 +90,7 @@ struct HomeView: View {
 
     @State private var sheetOffset: CGFloat = 0
     @State private var capsuleDrag: CGFloat = 0
+    @State private var listDrag: CGFloat = 0
 
     private var expandedSheetHeight: CGFloat {
         UIScreen.main.bounds.height * 0.90
@@ -224,6 +225,13 @@ struct HomeView: View {
                     .scrollContentBackground(.hidden)
                     .scrollIndicators(.hidden)
                     .background(Color.clear)
+                    .background(
+                        ListDragBridge(
+                            sheetOffset: $sheetOffset,
+                            listDrag: $listDrag,
+                            collapsedSheetOffset: collapsedSheetOffset
+                        )
+                    )
                 }
                 .overlay {
                     if revealCurtainOpacity > 0 {
@@ -294,11 +302,102 @@ struct HomeView: View {
             .background(CarryAtmosphereBackground())
             .compositingGroup()
             .clipShape(UnevenRoundedRectangle(topLeadingRadius: 36, bottomLeadingRadius: 0, bottomTrailingRadius: 0, topTrailingRadius: 36, style: .continuous))
-            .offset(y: min(max(0, sheetOffset + capsuleDrag), collapsedSheetOffset))
+            .offset(y: min(max(0, sheetOffset + capsuleDrag + listDrag), collapsedSheetOffset))
     }
         .ignoresSafeArea(edges: .bottom)
     }
 
+    // MARK: - List drag bridge
+
+    private struct ListDragBridge: UIViewRepresentable {
+        @Binding var sheetOffset: CGFloat
+        @Binding var listDrag: CGFloat
+        let collapsedSheetOffset: CGFloat
+
+        func makeUIView(context: Context) -> UIView { UIView(frame: .zero) }
+
+        func updateUIView(_ uiView: UIView, context: Context) {
+            context.coordinator.sheetOffset = $sheetOffset
+            context.coordinator.listDrag = $listDrag
+            context.coordinator.collapsedSheetOffset = collapsedSheetOffset
+            context.coordinator.attachIfNeeded(from: uiView)
+        }
+
+        func makeCoordinator() -> Coordinator { Coordinator() }
+
+        final class Coordinator: NSObject, UIGestureRecognizerDelegate {
+            var sheetOffset: Binding<CGFloat>?
+            var listDrag: Binding<CGFloat>?
+            var collapsedSheetOffset: CGFloat = 0
+            private weak var attachedScrollView: UIScrollView?
+
+            private lazy var pan: UIPanGestureRecognizer = {
+                let r = UIPanGestureRecognizer(target: self, action: #selector(handlePan(_:)))
+                r.delegate = self
+                r.cancelsTouchesInView = false
+                return r
+            }()
+
+            func attachIfNeeded(from view: UIView) {
+                guard attachedScrollView == nil else { return }
+                DispatchQueue.main.async { [weak self] in
+                    guard let self, self.attachedScrollView == nil else { return }
+                    if let sv = self.findScrollView(from: view) {
+                        self.attachedScrollView = sv
+                        sv.addGestureRecognizer(self.pan)
+                    }
+                }
+            }
+
+            // Bridge UIView and UITableView are siblings — search parent's subtree
+            private func findScrollView(from view: UIView) -> UIScrollView? {
+                var ancestor: UIView? = view.superview
+                while let parent = ancestor {
+                    for sub in parent.subviews where sub !== view {
+                        if let sv = sub as? UIScrollView { return sv }
+                        if let sv = firstScrollView(in: sub) { return sv }
+                    }
+                    ancestor = parent.superview
+                }
+                return nil
+            }
+
+            private func firstScrollView(in view: UIView) -> UIScrollView? {
+                if let sv = view as? UIScrollView { return sv }
+                for child in view.subviews {
+                    if let sv = firstScrollView(in: child) { return sv }
+                }
+                return nil
+            }
+
+            func gestureRecognizerShouldBegin(_ gr: UIGestureRecognizer) -> Bool {
+                guard let sv = attachedScrollView, let pan = gr as? UIPanGestureRecognizer else { return false }
+                let vel = pan.velocity(in: sv)
+                let atTop = sv.contentOffset.y <= -sv.adjustedContentInset.top + 1
+                return atTop && vel.y > abs(vel.x) && vel.y > 0
+            }
+
+            func gestureRecognizer(_ gr: UIGestureRecognizer, shouldRecognizeSimultaneouslyWith other: UIGestureRecognizer) -> Bool { false }
+
+            @objc private func handlePan(_ pan: UIPanGestureRecognizer) {
+                guard let sv = attachedScrollView else { return }
+                let translation = max(0, pan.translation(in: sv).y)
+                switch pan.state {
+                case .began, .changed:
+                    listDrag?.wrappedValue = translation
+                case .ended, .cancelled, .failed:
+                    let velocity = pan.velocity(in: sv).y
+                    let current = (sheetOffset?.wrappedValue ?? 0) + translation
+                    let collapse = velocity > 200 || current > collapsedSheetOffset * 0.20
+                    withAnimation(.spring(response: 0.38, dampingFraction: 0.82)) {
+                        listDrag?.wrappedValue = 0
+                        sheetOffset?.wrappedValue = collapse ? collapsedSheetOffset : 0
+                    }
+                default: break
+                }
+            }
+        }
+    }
 
     private var heroSection: some View {
         VStack(alignment: .leading, spacing: 12) {
