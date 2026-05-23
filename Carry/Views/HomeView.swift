@@ -16,6 +16,9 @@ struct HomeView: View {
     @State private var tripToDelete: TripBundle?
     @State private var showDeleteConfirmation = false
     @State private var listIdentity = UUID()
+    @State private var didPlayInitialReveal = false
+    @State private var initialRevealPhase = 0
+    @State private var revealCurtainOpacity: Double = 1
 
     private func isPast(_ trip: TripBundle) -> Bool {
         let calendar = Calendar.current
@@ -72,7 +75,16 @@ struct HomeView: View {
 
     private func startNewTrip() {
         UIImpactFeedbackGenerator(style: .light).impactOccurred()
-        router.path.append(CreationRoute.tripInfo(UUID(), startInMyItems: false))
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.06) {
+            router.path.append(CreationRoute.tripInfo(UUID(), startInMyItems: false))
+        }
+    }
+
+    private func openTrip(_ bundle: TripBundle) {
+        UIImpactFeedbackGenerator(style: .soft).impactOccurred()
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.06) {
+            router.path.append(bundle.id)
+        }
     }
 
     var body: some View {
@@ -81,6 +93,11 @@ struct HomeView: View {
 
             List {
                 heroSection
+                    .opacity(initialRevealPhase >= 1 ? 1 : 0)
+                    .offset(y: initialRevealPhase >= 1 ? 0 : 18)
+                    .scaleEffect(initialRevealPhase >= 1 ? 1 : 0.985)
+                    .blur(radius: initialRevealPhase >= 1 ? 0 : 6)
+                    .animation(.spring(response: 0.48, dampingFraction: 0.86).delay(0.02), value: initialRevealPhase)
                     .listRowInsets(EdgeInsets(top: 2, leading: 12, bottom: 4, trailing: 12))
                     .listRowBackground(Color.clear)
                     .listRowSeparator(.hidden)
@@ -92,28 +109,50 @@ struct HomeView: View {
                         .listRowSeparator(.hidden)
                 } else {
                     if !upcomingTrips.isEmpty {
-                        sectionLabel("home.upcoming")
+                        sectionLabel("home.upcoming", uppercase: true)
+                            .opacity(initialRevealPhase >= 2 ? 1 : 0)
+                            .offset(y: initialRevealPhase >= 2 ? 0 : 10)
+                            .blur(radius: initialRevealPhase >= 2 ? 0 : 4)
+                            .animation(.easeOut(duration: 0.24).delay(0.16), value: initialRevealPhase)
                             .listRowInsets(EdgeInsets(top: 2, leading: 16, bottom: 4, trailing: 16))
                             .listRowBackground(Color.clear)
                             .listRowSeparator(.hidden)
 
-                        ForEach(upcomingTrips) { bundle in
+                        ForEach(Array(upcomingTrips.enumerated()), id: \.element.id) { index, bundle in
                             tripRow(bundle: bundle, isPast: false)
+                                .opacity(initialRevealPhase >= 2 ? 1 : 0)
+                                .offset(y: initialRevealPhase >= 2 ? 0 : 14)
+                                .scaleEffect(initialRevealPhase >= 2 ? 1 : 0.97)
+                                .blur(radius: initialRevealPhase >= 2 ? 0 : 5)
+                                .animation(.spring(response: 0.42, dampingFraction: 0.84).delay(0.20 + Double(index) * 0.05), value: initialRevealPhase)
                         }
                     }
 
                     ForEach(Array(pastTripsByYear.enumerated()), id: \.element.year) { index, section in
                         sectionLabel(verbatim: "\(section.year)")
+                            .opacity(initialRevealPhase >= 3 ? 1 : 0)
+                            .offset(y: initialRevealPhase >= 3 ? 0 : 10)
+                            .blur(radius: initialRevealPhase >= 3 ? 0 : 4)
+                            .animation(.easeOut(duration: 0.24).delay(0.34 + Double(index) * 0.06), value: initialRevealPhase)
                             .listRowInsets(EdgeInsets(top: upcomingTrips.isEmpty && index == 0 ? 0 : 14, leading: 16, bottom: 6, trailing: 16))
                             .listRowBackground(Color.clear)
                             .listRowSeparator(.hidden)
 
-                        ForEach(section.trips) { bundle in
+                        ForEach(Array(section.trips.enumerated()), id: \.element.id) { tripIndex, bundle in
                             tripRow(bundle: bundle, isPast: true)
+                                .opacity(initialRevealPhase >= 3 ? 1 : 0)
+                                .offset(y: initialRevealPhase >= 3 ? 0 : 14)
+                                .scaleEffect(initialRevealPhase >= 3 ? 1 : 0.97)
+                                .blur(radius: initialRevealPhase >= 3 ? 0 : 5)
+                                .animation(.spring(response: 0.42, dampingFraction: 0.84).delay(0.38 + Double(index) * 0.06 + Double(tripIndex) * 0.03), value: initialRevealPhase)
                         }
                     }
 
                     listFooter
+                        .opacity(initialRevealPhase >= 3 ? 1 : 0)
+                        .offset(y: initialRevealPhase >= 3 ? 0 : 8)
+                        .blur(radius: initialRevealPhase >= 3 ? 0 : 3)
+                        .animation(.easeOut(duration: 0.24).delay(0.56), value: initialRevealPhase)
                         .listRowInsets(EdgeInsets(top: 14, leading: 16, bottom: 4, trailing: 16))
                         .listRowBackground(Color.clear)
                         .listRowSeparator(.hidden)
@@ -125,8 +164,50 @@ struct HomeView: View {
             .scrollIndicators(.hidden)
             .background(Color.clear)
         }
+        .overlay {
+            if revealCurtainOpacity > 0 {
+                LinearGradient(
+                    colors: [
+                        Color(UIColor.systemBackground).opacity(revealCurtainOpacity),
+                        Color(UIColor.systemBackground).opacity(revealCurtainOpacity * 0.5),
+                        Color.clear
+                    ],
+                    startPoint: .top,
+                    endPoint: .bottom
+                )
+                .ignoresSafeArea()
+                .allowsHitTesting(false)
+            }
+        }
         .navigationBarHidden(true)
-        .onAppear { store.refresh() }
+        .onAppear {
+            store.refresh()
+            if !didPlayInitialReveal {
+                didPlayInitialReveal = true
+                initialRevealPhase = 0
+                revealCurtainOpacity = 1
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.04) {
+                    withAnimation(.easeOut(duration: 0.38)) {
+                        revealCurtainOpacity = 0
+                    }
+                }
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.08) {
+                    withAnimation(.spring(response: 0.48, dampingFraction: 0.88)) {
+                        initialRevealPhase = 1
+                    }
+                }
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.18) {
+                    withAnimation(.spring(response: 0.44, dampingFraction: 0.84)) {
+                        initialRevealPhase = 2
+                    }
+                }
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.30) {
+                    withAnimation(.spring(response: 0.44, dampingFraction: 0.84)) {
+                        initialRevealPhase = 3
+                    }
+                }
+            }
+        }
         .onReceive(router.$path) { path in
             if path.isEmpty {
                 store.refresh()
@@ -193,7 +274,7 @@ struct HomeView: View {
                         )
                         .shadow(color: Color.black.opacity(0.08), radius: 8, x: 0, y: 4)
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(PressableScaleButtonStyle(scale: 0.92, pressedBrightness: -0.03, pressedOpacity: 0.94))
             }
 
             HStack(spacing: 10) {
@@ -223,10 +304,11 @@ struct HomeView: View {
         .shadow(color: Color.black.opacity(0.045), radius: 16, x: 0, y: 10)
     }
 
-    private func sectionLabel(_ key: LocalizedStringKey) -> some View {
+    private func sectionLabel(_ key: LocalizedStringKey, uppercase: Bool = false) -> some View {
         Text(key)
             .font(.system(size: 11, weight: .medium))
             .foregroundStyle(colorScheme == .dark ? .secondary : .tertiary)
+            .textCase(uppercase ? .uppercase : nil)
             .tracking(2)
     }
 
@@ -275,7 +357,7 @@ struct HomeView: View {
                     .fill(Color.primary.opacity(0.10))
                     .frame(height: 1)
 
-                Image(systemName: "paperplane.fill")
+                Image(systemName: "airplane.departure")
                     .font(.system(size: 10, weight: .semibold))
                     .foregroundStyle(.tertiary)
 
@@ -345,7 +427,7 @@ struct HomeView: View {
                     )
                     .foregroundStyle(Color(UIColor.systemBackground))
             }
-            .buttonStyle(.plain)
+            .buttonStyle(PressableScaleButtonStyle(scale: 0.96, pressedBrightness: -0.02, pressedOpacity: 0.96))
         }
         .frame(maxWidth: .infinity, minHeight: 240)
         .padding(.vertical, 18)
@@ -354,12 +436,11 @@ struct HomeView: View {
     @ViewBuilder
     private func tripRow(bundle: TripBundle, isPast: Bool) -> some View {
         Button {
-            UIImpactFeedbackGenerator(style: .soft).impactOccurred()
-            router.path.append(bundle.id)
+            openTrip(bundle)
         } label: {
             TripCard(bundle: bundle, isPast: isPast)
         }
-        .buttonStyle(PressableScaleButtonStyle(scale: 0.985))
+        .buttonStyle(PressableScaleButtonStyle(scale: 0.982, pressedBrightness: -0.02, pressedOpacity: 0.96))
         .id("\(bundle.id.uuidString)-\(bundle.packedCount)-\(bundle.totalCount)")
         .swipeActions(edge: .trailing, allowsFullSwipe: false) {
             Button(role: .none) {
@@ -608,11 +689,13 @@ struct TripCard: View {
 struct PressableScaleButtonStyle: ButtonStyle {
     var scale: CGFloat = 0.96
     var pressedBrightness: Double = 0
+    var pressedOpacity: Double = 1.0
 
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
             .scaleEffect(configuration.isPressed ? scale : 1.0)
             .brightness(configuration.isPressed ? pressedBrightness : 0)
+            .opacity(configuration.isPressed ? pressedOpacity : 1.0)
             .animation(.spring(response: 0.22, dampingFraction: 0.72), value: configuration.isPressed)
     }
 }

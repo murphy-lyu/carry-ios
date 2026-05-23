@@ -8530,43 +8530,43 @@
         "de" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "All trips"
+            "value" : "All Trips"
           }
         },
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "All trips"
+            "value" : "All Trips"
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "All trips"
+            "value" : "All Trips"
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "All trips"
+            "value" : "All Trips"
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "All trips"
+            "value" : "All Trips"
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "All trips"
+            "value" : "All Trips"
           }
         },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "All trips"
+            "value" : "All Trips"
           }
         },
         "zh-Hans" : {
@@ -8589,43 +8589,43 @@
         "de" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "UPCOMING"
+            "value" : "Upcoming"
           }
         },
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "UPCOMING"
+            "value" : "Upcoming"
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "UPCOMING"
+            "value" : "Upcoming"
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "UPCOMING"
+            "value" : "Upcoming"
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "UPCOMING"
+            "value" : "Upcoming"
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "UPCOMING"
+            "value" : "Upcoming"
           }
         },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "UPCOMING"
+            "value" : "Upcoming"
           }
         },
         "zh-Hans" : {
