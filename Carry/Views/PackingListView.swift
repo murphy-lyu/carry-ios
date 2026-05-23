@@ -36,14 +36,14 @@ struct PackingListView: View {
     @State private var hasTriggeredNudge = false
     @State private var surpriseBatchOffset: Int = 0
     @State private var showReminderSheet = false
-    @State private var showMyItemsCollectionPicker = false
-    @State private var myItemsCollectionDraft: String = "Default"
-    @State private var pendingSaveToMyItems: PackingItem?
     @State private var showSceneCardDismissHintBanner = false
     @State private var draggingItemId: UUID? = nil
     @State private var dragStartIds: [UUID] = []
     @State private var dragStartIndex: Int = 0
     @State private var currentDragIndex: Int = 0
+    @State private var swipeOpenItemId: UUID? = nil
+    @State private var swipeOffset: CGFloat = 0
+    @State private var swipeStartOffset: CGFloat = 0
     @State private var toastVisible = false
     @State private var toastText = ""
 
@@ -155,9 +155,9 @@ struct PackingListView: View {
                     .scrollContentBackground(.hidden)
                     .environment(\.defaultMinListRowHeight, 0)
                     .listSectionSpacing(0)
-                    .scrollIndicators(.hidden)
-                    .safeAreaInset(edge: .bottom) { Color.clear.frame(height: 83) }
-                    .safeAreaInset(edge: .top, spacing: 0) {
+            .scrollIndicators(.hidden)
+            .safeAreaInset(edge: .bottom) { Color.clear.frame(height: 83) }
+            .safeAreaInset(edge: .top, spacing: 0) {
                         VStack(spacing: 0) {
                             if showCompletionBanner {
                                 completionBanner
@@ -180,6 +180,7 @@ struct PackingListView: View {
         .contentShape(Rectangle())
         .simultaneousGesture(
             TapGesture().onEnded {
+                collapseOpenSwipeIfNeeded()
                 if editingItemId != nil {
                     dismissInlineEditing()
                 }
@@ -373,23 +374,6 @@ struct PackingListView: View {
                     .environmentObject(store)
             }
         }
-        .sheet(isPresented: $showMyItemsCollectionPicker, onDismiss: {
-            pendingSaveToMyItems = nil
-        }) {
-            NavigationStack {
-                MyItemsCollectionPickerView(
-                    selectedCollection: $myItemsCollectionDraft,
-                    collections: store.myItemCollections()
-                ) {
-                    if let item = pendingSaveToMyItems {
-                        saveToMyItems(item: item)
-                    }
-                    showMyItemsCollectionPicker = false
-                }
-            }
-            .presentationDetents([.medium])
-            .presentationDragIndicator(.visible)
-        }
         .alert(
             "Delete \(bundle?.name ?? "")?",
             isPresented: $showDeleteConfirmation
@@ -408,6 +392,58 @@ struct PackingListView: View {
 
     @ViewBuilder
     private func row(for item: PackingItem, sectionId: UUID) -> some View {
+        ZStack(alignment: .trailing) {
+            deleteSwipeButton(for: item)
+                .padding(.trailing, 10)
+                .offset(x: swipeOffset(for: item.id) >= 76 ? 0 : 76 - swipeOffset(for: item.id))
+                .opacity(min(1, swipeOffset(for: item.id) / 76))
+                .allowsHitTesting(swipeOffset(for: item.id) >= 76)
+
+            contentRow(for: item, sectionId: sectionId)
+                .offset(x: swipeOffset(for: item.id) == 0 ? 0 : -swipeOffset(for: item.id))
+                .allowsHitTesting(swipeOpenItemId != item.id)
+                .gesture(
+                    DragGesture(minimumDistance: 10, coordinateSpace: .local)
+                        .onChanged { value in
+                            guard editingItemId == nil, draggingItemId == nil else { return }
+                            if swipeOpenItemId != item.id {
+                                swipeOpenItemId = item.id
+                                swipeOffset = 0
+                                swipeStartOffset = 0
+                            }
+                            let translation = value.translation.width
+                            guard translation != 0 else { return }
+                            let maxOffset: CGFloat = 76
+                            let proposed = swipeStartOffset - translation
+                            swipeOffset = max(0, min(maxOffset, proposed))
+                            swipeOpenItemId = item.id
+                        }
+                        .onEnded { _ in
+                            guard swipeOpenItemId == item.id else { return }
+                            let shouldOpen = swipeOffset > 30
+                            withAnimation(.interactiveSpring(response: 0.28, dampingFraction: 0.72, blendDuration: 0.08)) {
+                                swipeOffset = shouldOpen ? 76 : 0
+                                if !shouldOpen {
+                                    swipeOpenItemId = nil
+                                }
+                            }
+                            swipeStartOffset = swipeOffset
+                        }
+                )
+                .overlay {
+                    if swipeOpenItemId == item.id {
+                        Color.clear
+                            .contentShape(Rectangle())
+                            .onTapGesture {
+                                collapseOpenSwipeIfNeeded()
+                            }
+                    }
+                }
+        }
+    }
+
+    @ViewBuilder
+    private func contentRow(for item: PackingItem, sectionId: UUID) -> some View {
         if editingItemId == item.id {
             editableRow(itemId: item.id, sectionId: sectionId)
                 .padding(.horizontal, 6)
@@ -417,7 +453,9 @@ struct PackingListView: View {
                 item: item,
                 showCheckmark: draggingItemId == nil && !isNewTrip,
                 showQuantity: !isNewTrip,
-                onTap: { toggleItem(itemId: item.id) },
+                onTap: {
+                    toggleItem(itemId: item.id)
+                },
                 onDecrement: { decrementItemQuantity(itemId: item.id, current: item.quantity) },
                 onIncrement: { incrementItemQuantity(itemId: item.id, current: item.quantity) },
                 onSetQuantity: { newValue in
@@ -475,24 +513,45 @@ struct PackingListView: View {
                         currentDragIndex = 0
                     }
                 )
-            )
-            .swipeActions(edge: .trailing, allowsFullSwipe: false) {
-                Button(role: .destructive) {
-                    deleteItem(itemId: item.id)
-                } label: {
-                    Label("Delete", systemImage: "trash")
-                }
-                if !isNewTrip {
-                    Button {
-                        pendingSaveToMyItems = item
-                        myItemsCollectionDraft = store.myItemCollections().first ?? "Default"
-                        showMyItemsCollectionPicker = true
-                    } label: {
-                        Label("Save to My Items", systemImage: "bookmark")
-                    }
-                    .tint(Color.indigo)
-                }
-            }
+                )
+        }
+    }
+
+    @ViewBuilder
+    private func deleteSwipeButton(for item: PackingItem) -> some View {
+        Button {
+            swipeOpenItemId = nil
+            swipeOffset = 0
+            swipeStartOffset = 0
+            deleteItem(itemId: item.id)
+        } label: {
+            Image(systemName: "trash")
+                .font(.system(size: 15, weight: .semibold))
+                .foregroundStyle(.white)
+                .frame(width: 44, height: 44)
+                .background(
+                    RoundedRectangle(cornerRadius: 13, style: .continuous)
+                        .fill(Color(red: 0.86, green: 0.28, blue: 0.25))
+                )
+                .shadow(color: .black.opacity(0.12), radius: 6, x: 0, y: 3)
+        }
+        .buttonStyle(.plain)
+    }
+
+    private func swipeOffset(for itemId: UUID) -> CGFloat {
+        swipeOpenItemId == itemId ? swipeOffset : 0
+    }
+
+    private func handleItemTap(itemId: UUID) {
+        toggleItem(itemId: itemId)
+    }
+
+    private func collapseOpenSwipeIfNeeded() {
+        guard swipeOpenItemId != nil else { return }
+        withAnimation(.interactiveSpring(response: 0.28, dampingFraction: 0.72, blendDuration: 0.08)) {
+            swipeOffset = 0
+            swipeOpenItemId = nil
+            swipeStartOffset = 0
         }
     }
 
@@ -500,6 +559,7 @@ struct PackingListView: View {
 
     private func toggleItem(itemId: UUID) {
         guard !isNewTrip else { return }
+        guard swipeOpenItemId == nil else { return }
         store.toggleItem(tripId: tripId, itemId: itemId)
         if totalCount > 0, packedCount == totalCount {
             UINotificationFeedbackGenerator().notificationOccurred(.success)
@@ -509,25 +569,11 @@ struct PackingListView: View {
     }
 
     private func deleteItem(itemId: UUID) {
-        store.removeItem(tripId: tripId, itemId: itemId)
-    }
-
-    private func saveToMyItems(item: PackingItem) {
-        let category = sectionTitle(for: item.id) ?? ""
-        let existed = store.myItems.contains {
-            $0.name.trimmingCharacters(in: .whitespacesAndNewlines)
-                .localizedCaseInsensitiveCompare(item.name.trimmingCharacters(in: .whitespacesAndNewlines)) == .orderedSame
-            && $0.category.trimmingCharacters(in: .whitespacesAndNewlines)
-                .localizedCaseInsensitiveCompare(category.trimmingCharacters(in: .whitespacesAndNewlines)) == .orderedSame
+        var transaction = Transaction()
+        transaction.disablesAnimations = true
+        withTransaction(transaction) {
+            store.removeItem(tripId: tripId, itemId: itemId)
         }
-        store.addMyItem(
-            name: item.name,
-            category: category,
-            defaultQuantity: item.quantity,
-            collectionName: myItemsCollectionDraft
-        )
-        showToast(existed ? "Already in My Items" : "Saved to My Items")
-        UINotificationFeedbackGenerator().notificationOccurred(.success)
     }
     private func markTripCompleted() {
         store.markTripCompleted(tripId: tripId)
@@ -640,23 +686,23 @@ struct PackingListView: View {
                     ZStack(alignment: .leading) {
                         RoundedRectangle(cornerRadius: 1)
                             .fill(colorScheme == .dark ? Color.white.opacity(0.18) : Color(UIColor.systemGray5))
-                            .frame(height: 2)
+                            .frame(height: 2.5)
                         RoundedRectangle(cornerRadius: 1)
                             .fill(Color.primary)
-                            .frame(width: max(0, geo.size.width * progress), height: 2)
+                            .frame(width: max(0, geo.size.width * progress), height: 2.5)
                             .overlay {
                                 LinearGradient(
                                     colors: [.clear, Color(UIColor.systemBackground).opacity(0.65), .clear],
                                     startPoint: .leading,
                                     endPoint: .trailing
                                 )
-                                .frame(width: geo.size.width * 0.35)
+                                .frame(width: geo.size.width * 0.38)
                                 .offset(x: shimmerPhase * geo.size.width * 0.675)
                             }
                             .clipShape(RoundedRectangle(cornerRadius: 1))
                     }
                 }
-                .frame(height: 2)
+                .frame(height: 2.5)
             }
 
             HStack(alignment: .firstTextBaseline) {
@@ -993,24 +1039,25 @@ struct PackingListView: View {
         Button {
             appendNewItem(sectionId: sectionId)
         } label: {
-            HStack(spacing: 12) {
+            HStack(spacing: 10) {
                 Image(systemName: "plus")
-                    .font(.system(size: 11, weight: .semibold))
-                    .foregroundStyle(Color.primary.opacity(0.72))
-                    .frame(width: 18, height: 18)
+                    .font(.system(size: 10, weight: .semibold))
+                    .foregroundStyle(isComplete ? Color.primary.opacity(0.48) : Color.primary.opacity(0.72))
+                    .frame(width: 16, height: 16)
                     .background(
                         Circle()
-                            .fill(Color.primary.opacity(0.05))
+                            .fill(isComplete ? Color.primary.opacity(0.025) : Color.primary.opacity(0.05))
                     )
                 Text("Add item")
                     .font(.subheadline.weight(.medium))
-                    .foregroundStyle(Color.primary.opacity(0.78))
+                    .foregroundStyle(isComplete ? Color.primary.opacity(0.42) : Color.primary.opacity(0.78))
                 Spacer()
             }
             .frame(height: 44)
-            .padding(.horizontal, 4)
+            .padding(.horizontal, 2)
+            .opacity(isComplete ? 0.7 : 1.0)
         }
-        .buttonStyle(.plain)
+        .buttonStyle(PressableScaleButtonStyle(scale: 0.985, pressedBrightness: -0.02, pressedOpacity: 0.95))
         .padding(.vertical, 1)
     }
 
@@ -1024,7 +1071,11 @@ struct PackingListView: View {
                 Task {
                     try? await Task.sleep(for: .milliseconds(700))
                     if isNewTrip {
+                        let city = store.bundle(for: tripId)?.destinationCity ?? ""
                         store.commitDraftTrip()
+                        if !city.isEmpty {
+                            store.updateCountryCode(for: tripId, city: city)
+                        }
                     }
                     router.path = NavigationPath([tripId])
                     await NotificationManager.requestAuthorizationIfNeeded()
@@ -1261,7 +1312,6 @@ struct PackingItemRow: View {
                             .opacity(checkmarkOpacity)
                     }
                     .transition(.opacity)
-                    .scaleEffect(checkScale)
                 }
             }
         }
