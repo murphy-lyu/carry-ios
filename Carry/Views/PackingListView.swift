@@ -41,6 +41,7 @@ struct PackingListView: View {
     @State private var dragStartIds: [UUID] = []
     @State private var dragStartIndex: Int = 0
     @State private var currentDragIndex: Int = 0
+    @State private var pendingDeleteItemIds: Set<UUID> = []
     @State private var toastVisible = false
     @State private var toastText = ""
 
@@ -395,14 +396,16 @@ struct PackingListView: View {
 
     @ViewBuilder
     private func row(for item: PackingItem, sectionId: UUID) -> some View {
-        contentRow(for: item, sectionId: sectionId)
-            .swipeActions(edge: .trailing, allowsFullSwipe: false) {
-                Button(role: .destructive) {
-                    deleteItem(itemId: item.id)
-                } label: {
-                    Image(systemName: "trash")
+        if !pendingDeleteItemIds.contains(item.id) {
+            contentRow(for: item, sectionId: sectionId)
+                .swipeActions(edge: .trailing, allowsFullSwipe: false) {
+                    Button(role: .destructive) {
+                        deleteItem(itemId: item.id)
+                    } label: {
+                        Image(systemName: "trash")
+                    }
                 }
-            }
+        }
     }
 
     @ViewBuilder
@@ -493,10 +496,19 @@ struct PackingListView: View {
     }
 
     private func deleteItem(itemId: UUID) {
-        var transaction = Transaction()
-        transaction.disablesAnimations = true
-        withTransaction(transaction) {
-            store.removeItem(tripId: tripId, itemId: itemId)
+        var hideTransaction = Transaction()
+        hideTransaction.disablesAnimations = true
+        withTransaction(hideTransaction) {
+            pendingDeleteItemIds.insert(itemId)
+        }
+
+        DispatchQueue.main.async {
+            var transaction = Transaction()
+            transaction.disablesAnimations = true
+            withTransaction(transaction) {
+                store.removeItem(tripId: tripId, itemId: itemId)
+            }
+            pendingDeleteItemIds.remove(itemId)
         }
     }
     private func markTripCompleted() {
