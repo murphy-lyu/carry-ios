@@ -325,18 +325,14 @@ struct HomeView: View {
 
         func makeCoordinator() -> Coordinator { Coordinator() }
 
-        final class Coordinator: NSObject, UIGestureRecognizerDelegate {
+        final class Coordinator: NSObject {
             var sheetOffset: Binding<CGFloat>?
             var listDrag: Binding<CGFloat>?
             var collapsedSheetOffset: CGFloat = 0
             private weak var attachedScrollView: UIScrollView?
-
-            private lazy var pan: UIPanGestureRecognizer = {
-                let r = UIPanGestureRecognizer(target: self, action: #selector(handlePan(_:)))
-                r.delegate = self
-                r.cancelsTouchesInView = false
-                return r
-            }()
+            // Translation value at the moment scroll view hit the top mid-gesture
+            private var capturedTranslationAtTop: CGFloat? = nil
+            private var wasAtTop = false
 
             func attachIfNeeded(from view: UIView) {
                 guard attachedScrollView == nil else { return }
@@ -344,12 +340,12 @@ struct HomeView: View {
                     guard let self, self.attachedScrollView == nil else { return }
                     if let sv = self.findScrollView(from: view) {
                         self.attachedScrollView = sv
-                        sv.addGestureRecognizer(self.pan)
+                        // Piggyback on the scroll view's own pan gesture — catches mid-gesture reversals
+                        sv.panGestureRecognizer.addTarget(self, action: #selector(self.handleScrollPan(_:)))
                     }
                 }
             }
 
-            // Bridge UIView and UITableView are siblings — search parent's subtree
             private func findScrollView(from view: UIView) -> UIScrollView? {
                 var ancestor: UIView? = view.superview
                 while let parent = ancestor {
@@ -370,29 +366,64 @@ struct HomeView: View {
                 return nil
             }
 
-            func gestureRecognizerShouldBegin(_ gr: UIGestureRecognizer) -> Bool {
-                guard let sv = attachedScrollView, let pan = gr as? UIPanGestureRecognizer else { return false }
-                let vel = pan.velocity(in: sv)
-                let atTop = sv.contentOffset.y <= -sv.adjustedContentInset.top + 1
-                return atTop && vel.y > abs(vel.x) && vel.y > 0
-            }
-
-            func gestureRecognizer(_ gr: UIGestureRecognizer, shouldRecognizeSimultaneouslyWith other: UIGestureRecognizer) -> Bool { false }
-
-            @objc private func handlePan(_ pan: UIPanGestureRecognizer) {
+            @objc private func handleScrollPan(_ pan: UIPanGestureRecognizer) {
                 guard let sv = attachedScrollView else { return }
-                let translation = max(0, pan.translation(in: sv).y)
+                let topInset = -sv.adjustedContentInset.top
+                let translation = pan.translation(in: sv).y
+                let velocity  = pan.velocity(in: sv).y
+                let atTop = sv.contentOffset.y <= topInset + 1
+                let isCollapsed = (sheetOffset?.wrappedValue ?? 0) >= collapsedSheetOffset - 1
+
                 switch pan.state {
-                case .began, .changed:
-                    listDrag?.wrappedValue = translation
+                case .changed:
+                    // --- Collapse: scroll is at top and moving downward ---
+                    if atTop && velocity > 0 {
+                        if !wasAtTop {
+                            // Just arrived at top mid-gesture — capture this translation as baseline
+                            capturedTranslationAtTop = translation
+                        }
+                        if let captured = capturedTranslationAtTop {
+                            let drag = max(0, translation - captured)
+                            listDrag?.wrappedValue = drag
+                            sv.contentOffset.y = topInset  // prevent overscroll
+                        }
+                    } else if capturedTranslationAtTop != nil && !atTop {
+                        // Scrolled back above top — cancel sheet drag
+                        capturedTranslationAtTop = nil
+                        listDrag?.wrappedValue = 0
+                    }
+
+                    // --- Expand: sheet is collapsed and moving upward ---
+                    if isCollapsed && velocity < 0 {
+                        listDrag?.wrappedValue = min(0, translation)
+                        sv.contentOffset.y = topInset  // lock scroll while expanding
+                    }
+
+                    wasAtTop = atTop
+
                 case .ended, .cancelled, .failed:
-                    let velocity = pan.velocity(in: sv).y
-                    let current = (sheetOffset?.wrappedValue ?? 0) + translation
-                    let collapse = velocity > 200 || current > collapsedSheetOffset * 0.20
+                    let drag = listDrag?.wrappedValue ?? 0
+                    capturedTranslationAtTop = nil
+                    wasAtTop = false
+
+                    guard drag != 0 else { return }
+                    let wasExpanding = drag < 0
+                    if wasExpanding {
+                        // Cancel UIScrollView's deceleration scroll that would fire after gesture end
+                        sv.setContentOffset(CGPoint(x: sv.contentOffset.x, y: topInset), animated: false)
+                    }
+                    let shouldCollapse: Bool
+                    if drag > 0 {
+                        let current = (sheetOffset?.wrappedValue ?? 0) + drag
+                        shouldCollapse = velocity > 200 || current > collapsedSheetOffset * 0.20
+                    } else {
+                        shouldCollapse = !(velocity < -200 || drag < -50)
+                    }
                     withAnimation(.spring(response: 0.38, dampingFraction: 0.82)) {
                         listDrag?.wrappedValue = 0
-                        sheetOffset?.wrappedValue = collapse ? collapsedSheetOffset : 0
+                        sheetOffset?.wrappedValue = shouldCollapse ? collapsedSheetOffset : 0
                     }
+
                 default: break
                 }
             }
