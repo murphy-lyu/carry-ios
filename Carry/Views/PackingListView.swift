@@ -41,11 +41,6 @@ struct PackingListView: View {
     @State private var dragStartIds: [UUID] = []
     @State private var dragStartIndex: Int = 0
     @State private var currentDragIndex: Int = 0
-    @State private var swipeOpenItemId: UUID? = nil
-    @State private var swipeOffset: CGFloat = 0
-    @State private var swipeStartOffset: CGFloat = 0
-    private let swipeOpenThreshold: CGFloat = 30
-    private let swipeRevealWidth: CGFloat = 76
     @State private var toastVisible = false
     @State private var toastText = ""
 
@@ -90,99 +85,11 @@ struct PackingListView: View {
     var body: some View {
         ZStack {
             CarrySubtleBackground()
-
-            VStack(spacing: 0) {
-                if toastVisible {
-                    toastBanner
-                }
-
-                progressHeader
-
-                if sections.isEmpty {
-                    emptyState
-                } else {
-                    List {
-                        ForEach(Array(sections.enumerated()), id: \.element.id) { index, section in
-                            Section {
-                                if isNewTrip {
-                                    previewChipsRow(items: section.sortedItems.filter { !$0.name.isEmpty })
-                                        .listRowInsets(EdgeInsets(top: 4, leading: 16, bottom: 16, trailing: 16))
-                                        .listRowSeparator(.hidden)
-                                        .listRowBackground(Color.clear)
-                                } else {
-                                    ForEach(section.sortedItems.filter { !$0.name.isEmpty || $0.id == editingItemId }, id: \.id) { item in
-                                        row(for: item, sectionId: section.id)
-                                            .listRowInsets(EdgeInsets(top: 4, leading: 16, bottom: 4, trailing: 16))
-                                            .listRowSeparator(.hidden)
-                                            .listRowBackground(Color.clear)
-                                    }
-                                    addItemRow(sectionId: section.id)
-                                        .listRowInsets(EdgeInsets(top: 4, leading: 16, bottom: 16, trailing: 16))
-                                        .listRowSeparator(.hidden)
-                                        .listRowBackground(Color.clear)
-                                }
-                            } header: {
-                                sectionTitle(section.title, isFirst: index == 0)
-                                    .listRowInsets(EdgeInsets())
-                            }
-                            .listSectionSeparator(.hidden)
-                        }
-
-                        if !surpriseItems.isEmpty && isNewTrip {
-                            Section {
-                                ForEach(visibleSurpriseItems) { item in
-                                    surpriseRow(for: item)
-                                        .listRowInsets(EdgeInsets(top: 0, leading: 16, bottom: 0, trailing: 16))
-                                        .listRowSeparator(.hidden)
-                                        .listRowBackground(Color.clear)
-                                }
-                            } header: {
-                                surpriseSectionHeader
-                                    .listRowInsets(EdgeInsets())
-                            }
-                            .listSectionSeparator(.hidden)
-                        }
-
-                        if isNewTrip && !sceneCardDismissed {
-                            Section {
-                                sceneEntryCard
-                                    .listRowInsets(EdgeInsets(top: 8, leading: 16, bottom: 16, trailing: 16))
-                                    .listRowSeparator(.hidden)
-                                    .listRowBackground(Color.clear)
-                            }
-                            .listSectionSeparator(.hidden)
-                        }
-                    }
-                    .listStyle(.plain)
-                    .scrollContentBackground(.hidden)
-                    .environment(\.defaultMinListRowHeight, 0)
-                    .listSectionSpacing(0)
-            .scrollIndicators(.hidden)
-            .safeAreaInset(edge: .bottom) { Color.clear.frame(height: 83) }
-            .safeAreaInset(edge: .top, spacing: 0) {
-                        VStack(spacing: 0) {
-                            if showCompletionBanner {
-                                completionBanner
-                                    .transition(.move(edge: .top).combined(with: .opacity))
-                            }
-                            if showNudgeBanner {
-                                nudgeBanner
-                                    .transition(.move(edge: .top).combined(with: .opacity))
-                            }
-                            if showSceneCardDismissHintBanner {
-                                sceneCardDismissHintBanner
-                                    .transition(.opacity.combined(with: .scale(scale: 0.98, anchor: .top)))
-                                    .padding(.top, 4)
-                            }
-                        }
-                    }
-                }
-            }
+            mainContent
         }
         .contentShape(Rectangle())
         .simultaneousGesture(
             TapGesture().onEnded {
-                collapseOpenSwipeIfNeeded()
                 if editingItemId != nil {
                     dismissInlineEditing()
                 }
@@ -392,54 +299,110 @@ struct PackingListView: View {
 
     // MARK: Row dispatch
 
-    @ViewBuilder
-    private func row(for item: PackingItem, sectionId: UUID) -> some View {
-        ZStack(alignment: .trailing) {
-            contentRow(for: item, sectionId: sectionId)
-                .offset(x: contentSwipeOffset(for: item.id))
-                .allowsHitTesting(swipeOpenItemId != item.id)
-                .zIndex(0)
-                .gesture(
-                    DragGesture(minimumDistance: 10, coordinateSpace: .local)
-                        .onChanged { value in
-                            guard editingItemId == nil, draggingItemId == nil else { return }
-                            if swipeOpenItemId != item.id {
-                                swipeOpenItemId = item.id
-                                swipeOffset = 0
-                                swipeStartOffset = 0
-                            }
-                            let translation = value.translation.width
-                            guard translation != 0 else { return }
-                            let proposed = swipeStartOffset - translation
-                            swipeOffset = max(0, min(swipeRevealWidth, proposed))
-                            swipeOpenItemId = item.id
-                        }
-                        .onEnded { _ in
-                            guard swipeOpenItemId == item.id else { return }
-                            let shouldOpen = swipeOffset > swipeOpenThreshold
-                            withAnimation(.interactiveSpring(response: 0.28, dampingFraction: 0.72, blendDuration: 0.08)) {
-                                swipeOffset = shouldOpen ? swipeRevealWidth : 0
-                                if !shouldOpen {
-                                    swipeOpenItemId = nil
-                                }
-                            }
-                            swipeStartOffset = swipeOffset
-                        }
-                )
-
-            if swipeOpenItemId == item.id {
-                openSwipeShield
-                    .padding(.trailing, 56)
-                    .zIndex(0.5)
+    private var mainContent: some View {
+        VStack(spacing: 0) {
+            if toastVisible {
+                toastBanner
             }
 
-            deleteSwipeButton(for: item)
-                .padding(.trailing, 10)
-                .offset(x: deleteButtonOffset(for: item.id))
-                .opacity(deleteButtonOpacity(for: item.id))
-                .allowsHitTesting(isDeleteButtonInteractive(for: item.id))
-                .zIndex(1)
+            progressHeader
+
+            if sections.isEmpty {
+                emptyState
+            } else {
+                packingList
+            }
         }
+    }
+
+    private var packingList: some View {
+        List {
+            ForEach(Array(sections.enumerated()), id: \.element.id) { index, section in
+                Section {
+                    if isNewTrip {
+                        previewChipsRow(items: section.sortedItems.filter { !$0.name.isEmpty })
+                            .listRowInsets(EdgeInsets(top: 4, leading: 16, bottom: 16, trailing: 16))
+                            .listRowSeparator(.hidden)
+                            .listRowBackground(Color.clear)
+                    } else {
+                        ForEach(section.sortedItems.filter { !$0.name.isEmpty || $0.id == editingItemId }, id: \.id) { item in
+                            row(for: item, sectionId: section.id)
+                                .listRowInsets(EdgeInsets(top: 4, leading: 16, bottom: 4, trailing: 16))
+                                .listRowSeparator(.hidden)
+                                .listRowBackground(Color.clear)
+                        }
+                        addItemRow(sectionId: section.id)
+                            .listRowInsets(EdgeInsets(top: 4, leading: 16, bottom: 16, trailing: 16))
+                            .listRowSeparator(.hidden)
+                            .listRowBackground(Color.clear)
+                    }
+                } header: {
+                    sectionTitle(section.title, isFirst: index == 0)
+                        .listRowInsets(EdgeInsets())
+                }
+                .listSectionSeparator(.hidden)
+            }
+
+            if !surpriseItems.isEmpty && isNewTrip {
+                Section {
+                    ForEach(visibleSurpriseItems) { item in
+                        surpriseRow(for: item)
+                            .listRowInsets(EdgeInsets(top: 0, leading: 16, bottom: 0, trailing: 16))
+                            .listRowSeparator(.hidden)
+                            .listRowBackground(Color.clear)
+                    }
+                } header: {
+                    surpriseSectionHeader
+                        .listRowInsets(EdgeInsets())
+                }
+                .listSectionSeparator(.hidden)
+            }
+
+            if isNewTrip && !sceneCardDismissed {
+                Section {
+                    sceneEntryCard
+                        .listRowInsets(EdgeInsets(top: 8, leading: 16, bottom: 16, trailing: 16))
+                        .listRowSeparator(.hidden)
+                        .listRowBackground(Color.clear)
+                }
+                .listSectionSeparator(.hidden)
+            }
+        }
+        .listStyle(.plain)
+        .scrollContentBackground(.hidden)
+        .environment(\.defaultMinListRowHeight, 0)
+        .listSectionSpacing(0)
+        .scrollIndicators(.hidden)
+        .safeAreaInset(edge: .bottom) { Color.clear.frame(height: 83) }
+        .safeAreaInset(edge: .top, spacing: 0) {
+            VStack(spacing: 0) {
+                if showCompletionBanner {
+                    completionBanner
+                        .transition(.move(edge: .top).combined(with: .opacity))
+                }
+                if showNudgeBanner {
+                    nudgeBanner
+                        .transition(.move(edge: .top).combined(with: .opacity))
+                }
+                if showSceneCardDismissHintBanner {
+                    sceneCardDismissHintBanner
+                        .transition(.opacity.combined(with: .scale(scale: 0.98, anchor: .top)))
+                        .padding(.top, 4)
+                }
+            }
+        }
+    }
+
+    @ViewBuilder
+    private func row(for item: PackingItem, sectionId: UUID) -> some View {
+        contentRow(for: item, sectionId: sectionId)
+            .swipeActions(edge: .trailing, allowsFullSwipe: false) {
+                Button(role: .destructive) {
+                    deleteItem(itemId: item.id)
+                } label: {
+                    Image(systemName: "trash")
+                }
+            }
     }
 
     @ViewBuilder
@@ -513,83 +476,7 @@ struct PackingListView: View {
                         currentDragIndex = 0
                     }
                 )
-                )
-        }
-    }
-
-    @ViewBuilder
-    private func deleteSwipeButton(for item: PackingItem) -> some View {
-        Button {
-            swipeOpenItemId = nil
-            swipeOffset = 0
-            swipeStartOffset = 0
-            deleteItem(itemId: item.id)
-        } label: {
-            Image(systemName: "trash")
-                .font(.system(size: 15, weight: .semibold))
-                .foregroundStyle(.white)
-                .frame(width: 44, height: 44)
-                .background(
-                    RoundedRectangle(cornerRadius: 13, style: .continuous)
-                        .fill(Color(red: 0.86, green: 0.28, blue: 0.25))
-                )
-                .shadow(color: .black.opacity(0.12), radius: 6, x: 0, y: 3)
-        }
-        .buttonStyle(.plain)
-    }
-
-    private func swipeOffset(for itemId: UUID) -> CGFloat {
-        swipeOpenItemId == itemId ? swipeOffset : 0
-    }
-
-    private func displayedSwipeOffset(for itemId: UUID) -> CGFloat {
-        min(swipeOffset(for: itemId), swipeRevealWidth)
-    }
-
-    private func contentSwipeOffset(for itemId: UUID) -> CGFloat {
-        displayedSwipeOffset(for: itemId) == 0 ? 0 : -displayedSwipeOffset(for: itemId)
-    }
-
-    private func deleteButtonOffset(for itemId: UUID) -> CGFloat {
-        swipeRevealWidth - displayedSwipeOffset(for: itemId)
-    }
-
-    private func deleteButtonOpacity(for itemId: UUID) -> CGFloat {
-        min(1, displayedSwipeOffset(for: itemId) / swipeRevealWidth)
-    }
-
-    private func isDeleteButtonInteractive(for itemId: UUID) -> Bool {
-        displayedSwipeOffset(for: itemId) >= swipeRevealWidth
-    }
-
-    private var openSwipeShield: some View {
-        Color.clear
-            .contentShape(Rectangle())
-            .gesture(
-                DragGesture(minimumDistance: 6, coordinateSpace: .local)
-                    .onChanged { _ in
-                        collapseOpenSwipeIfNeeded()
-                    }
-                    .onEnded { _ in
-                        collapseOpenSwipeIfNeeded()
-                    }
             )
-            .onTapGesture {
-                collapseOpenSwipeIfNeeded()
-            }
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
-    }
-
-    private func handleItemTap(itemId: UUID) {
-        toggleItem(itemId: itemId)
-    }
-
-    private func collapseOpenSwipeIfNeeded() {
-        guard swipeOpenItemId != nil else { return }
-        withAnimation(.spring(response: 0.34, dampingFraction: 0.92, blendDuration: 0.06)) {
-            swipeOffset = 0
-            swipeOpenItemId = nil
-            swipeStartOffset = 0
         }
     }
 
@@ -597,7 +484,6 @@ struct PackingListView: View {
 
     private func toggleItem(itemId: UUID) {
         guard !isNewTrip else { return }
-        guard swipeOpenItemId == nil else { return }
         store.toggleItem(tripId: tripId, itemId: itemId)
         if totalCount > 0, packedCount == totalCount {
             UINotificationFeedbackGenerator().notificationOccurred(.success)
@@ -1809,6 +1695,9 @@ private struct LongPressDragBridge: UIViewRepresentable {
                         )
                         r.minimumPressDuration = 0.4
                         r.allowableMovement = 10
+                        r.cancelsTouchesInView = false
+                        r.delaysTouchesBegan = false
+                        r.delaysTouchesEnded = false
                         r.delegate = context.coordinator
                         cell.addGestureRecognizer(r)
                         context.coordinator.attachedRecognizer = r
@@ -1846,6 +1735,14 @@ private struct LongPressDragBridge: UIViewRepresentable {
         }
 
         func gestureRecognizer(_ gr: UIGestureRecognizer, shouldRecognizeSimultaneouslyWith other: UIGestureRecognizer) -> Bool {
+            false
+        }
+
+        func gestureRecognizer(_ gestureRecognizer: UIGestureRecognizer, shouldRequireFailureOf otherGestureRecognizer: UIGestureRecognizer) -> Bool {
+            false
+        }
+
+        func gestureRecognizer(_ gestureRecognizer: UIGestureRecognizer, shouldBeRequiredToFailBy otherGestureRecognizer: UIGestureRecognizer) -> Bool {
             false
         }
     }
