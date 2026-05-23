@@ -96,7 +96,7 @@ struct HomeView: View {
     }
 
     private var collapsedSheetOffset: CGFloat {
-        max(0, expandedSheetHeight - 130)
+        max(0, expandedSheetHeight - 144)
     }
 
     private var visitedCountries: [VisitedCountry] {
