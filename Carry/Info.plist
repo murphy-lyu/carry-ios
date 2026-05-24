@@ -1,5 +1,32 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
-<dict/>
+<dict>
+    <key>CFBundleIcons</key>
+    <dict>
+        <key>CFBundleAlternateIcons</key>
+        <dict>
+            <!-- Dark icon — add CarryIconDark.png to project root when ready -->
+            <key>CarryIconDark</key>
+            <dict>
+                <key>CFBundleIconFiles</key>
+                <array>
+                    <string>CarryIconDark</string>
+                </array>
+                <key>UIPrerenderedIcon</key>
+                <false/>
+            </dict>
+            <!-- Mono icon — add CarryIconMono.png to project root when ready -->
+            <key>CarryIconMono</key>
+            <dict>
+                <key>CFBundleIconFiles</key>
+                <array>
+                    <string>CarryIconMono</string>
+                </array>
+                <key>UIPrerenderedIcon</key>
+                <false/>
+            </dict>
+        </dict>
+    </dict>
+</dict>
 </plist>
