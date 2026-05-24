@@ -229,11 +229,11 @@ struct SettingsView: View {
                                 }
                             }
                         }
-                        settingsRow(title: "settings.about.language", valueText: currentLanguageDisplay) {
-                            openSystemSettings()
-                        }
                         settingsNavigationRow(title: "settings.appicon.entry") {
                             AppIconView()
+                        }
+                        settingsRow(title: "settings.about.language", valueText: currentLanguageDisplay) {
+                            openSystemSettings()
                         }
                     }
 
