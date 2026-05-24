@@ -805,66 +805,30 @@ struct HomeView: View {
         VStack(spacing: 0) {
             VStack(spacing: 18) {
                 ZStack {
-                    RoundedRectangle(cornerRadius: 18, style: .continuous)
-                        .fill(
-                            LinearGradient(
-                                colors: [
-                                    Color(UIColor.systemBackground).opacity(colorScheme == .dark ? 0.42 : 0.74),
-                                    Color(UIColor.systemBackground).opacity(colorScheme == .dark ? 0.28 : 0.58)
-                                ],
-                                startPoint: .topLeading,
-                                endPoint: .bottomTrailing
-                            )
-                        )
+                    Image("HomeEmptyTrip1")
+                        .resizable()
+                        .scaledToFill()
                         .frame(width: 128, height: 84)
+                        .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
                         .rotationEffect(.degrees(-12))
                         .offset(x: -34, y: 8)
-                        .overlay(
-                            Image(systemName: "mountain.2.fill")
-                                .font(.system(size: 18, weight: .semibold))
-                                .foregroundStyle(.primary.opacity(colorScheme == .dark ? 0.78 : 0.72))
-                                .offset(x: -18, y: 10)
-                        )
+                        .shadow(color: Color.black.opacity(colorScheme == .dark ? 0.18 : 0.12), radius: 10, x: 0, y: 5)
 
-                    RoundedRectangle(cornerRadius: 18, style: .continuous)
-                        .fill(
-                            LinearGradient(
-                                colors: [
-                                    Color(UIColor.systemBackground).opacity(colorScheme == .dark ? 0.56 : 0.90),
-                                    Color(UIColor.systemBackground).opacity(colorScheme == .dark ? 0.42 : 0.76)
-                                ],
-                                startPoint: .topLeading,
-                                endPoint: .bottomTrailing
-                            )
-                        )
+                    Image("HomeEmptyTrip2")
+                        .resizable()
+                        .scaledToFill()
                         .frame(width: 128, height: 84)
-                        .overlay(
-                            Image(systemName: "map.fill")
-                                .font(.system(size: 21, weight: .semibold))
-                                .foregroundStyle(.primary)
-                        )
-                        .shadow(color: Color.black.opacity(colorScheme == .dark ? 0.16 : 0.08), radius: 10, x: 0, y: 5)
+                        .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+                        .shadow(color: Color.black.opacity(colorScheme == .dark ? 0.18 : 0.12), radius: 10, x: 0, y: 5)
 
-                    RoundedRectangle(cornerRadius: 18, style: .continuous)
-                        .fill(
-                            LinearGradient(
-                                colors: [
-                                    Color(UIColor.systemBackground).opacity(colorScheme == .dark ? 0.42 : 0.74),
-                                    Color(UIColor.systemBackground).opacity(colorScheme == .dark ? 0.28 : 0.58)
-                                ],
-                                startPoint: .topLeading,
-                                endPoint: .bottomTrailing
-                            )
-                        )
+                    Image("HomeEmptyTrip3")
+                        .resizable()
+                        .scaledToFill()
                         .frame(width: 128, height: 84)
+                        .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
                         .rotationEffect(.degrees(12))
                         .offset(x: 34, y: 8)
-                        .overlay(
-                            Image(systemName: "airplane")
-                                .font(.system(size: 18, weight: .semibold))
-                                .foregroundStyle(.primary.opacity(colorScheme == .dark ? 0.78 : 0.72))
-                                .offset(x: 18, y: 10)
-                        )
+                        .shadow(color: Color.black.opacity(colorScheme == .dark ? 0.18 : 0.12), radius: 10, x: 0, y: 5)
                 }
                 .frame(height: 104)
                 .padding(.top, 8)
@@ -884,8 +848,8 @@ struct HomeView: View {
                     startNewTrip()
                 } label: {
                     HStack(spacing: 7) {
-                        Image(systemName: "plus")
-                            .font(.system(size: 13, weight: .bold))
+                        Image(systemName: "airplane.departure")
+                            .font(.system(size: 13, weight: .semibold))
                         Text("home.empty.cta")
                             .font(.subheadline.weight(.semibold))
                     }

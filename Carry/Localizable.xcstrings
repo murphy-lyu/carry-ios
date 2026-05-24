@@ -8814,55 +8814,55 @@
         "de": {
           "stringUnit": {
             "state": "needs_review",
-            "value": "Create First Trip"
+            "value": "Begin Your First Journey"
           }
         },
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Create First Trip"
+            "value": "Begin Your First Journey"
           }
         },
         "es": {
           "stringUnit": {
             "state": "needs_review",
-            "value": "Create First Trip"
+            "value": "Begin Your First Journey"
           }
         },
         "fr": {
           "stringUnit": {
             "state": "needs_review",
-            "value": "Create First Trip"
+            "value": "Begin Your First Journey"
           }
         },
         "ja": {
           "stringUnit": {
             "state": "needs_review",
-            "value": "最初の旅を作成"
+            "value": "最初の旅を始める"
           }
         },
         "ko": {
           "stringUnit": {
             "state": "needs_review",
-            "value": "첫 여행 만들기"
+            "value": "첫 여행을 시작하기"
           }
         },
         "pt-BR": {
           "stringUnit": {
             "state": "needs_review",
-            "value": "Create First Trip"
+            "value": "Begin Your First Journey"
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "创建第一次行程"
+            "value": "开启第一段旅程"
           }
         },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "建立第一次行程"
+            "value": "開啟第一段旅程"
           }
         }
       }
