@@ -1601,6 +1601,26 @@ final class TripStore: ObservableObject {
         }
     }
 
+    /// Corrects trips whose countryCode / coordinates were set incorrectly by
+    /// an old CLGeocoder call. Uses the local city lookup table as the source
+    /// of truth: if the table disagrees with the stored countryCode, overwrite.
+    func correctMisgecodedTrips() {
+        var changed = false
+        for trip in trips {
+            guard !trip.destinationCity.isEmpty,
+                  let local = lookupCity(trip.destinationCity),
+                  trip.countryCode.uppercased() != local.code.uppercased() else { continue }
+            trip.countryCode = local.code
+            trip.latitude    = local.lat
+            trip.longitude   = local.lon
+            changed = true
+        }
+        if changed {
+            try? context.save()
+            fetchTrips()
+        }
+    }
+
     func geocodeMissingTrips() {
         // Re-geocode if countryCode is missing OR if coordinates are still zero.
         // The second condition catches the case where a previous geocode call

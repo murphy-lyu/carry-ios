@@ -113,12 +113,8 @@ struct HomeView: View {
     }
 
     private var visitedCountries: [VisitedCountry] {
-        let now = Date()
-        for t in store.trips {
-            print("[Globe] '\(t.destinationCity)' code='\(t.countryCode)' lat=\(t.latitude) departed=\(t.departureDate <= now)")
-        }
         let departed = store.trips.filter {
-            $0.departureDate <= now && !$0.countryCode.isEmpty && $0.latitude != 0
+            $0.departureDate <= Date() && !$0.countryCode.isEmpty && $0.latitude != 0
         }
         var grouped: [String: [TripBundle]] = [:]
         for trip in departed {
@@ -275,6 +271,7 @@ struct HomeView: View {
                 .navigationBarHidden(true)
                 .onAppear {
                     store.refresh()
+                    store.correctMisgecodedTrips()
                     store.geocodeMissingTrips()
                     if !didPlayInitialReveal {
                         didPlayInitialReveal = true
