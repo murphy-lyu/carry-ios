@@ -214,6 +214,21 @@ struct HomeView: View {
                             }
                     )
 
+                if isEffectivelyEmpty {
+                    VStack(spacing: 4) {
+                        Text(isChineseLocale ? "开始你的第一段旅行" : "Start your journey")
+                            .font(.system(size: 22, weight: .semibold, design: .rounded))
+                            .foregroundStyle(.primary)
+                        Text(isChineseLocale ? "把第一段行程放进这里，后面的旅行会慢慢长出来。" : "Add your first trip and let the next journeys follow.")
+                            .font(.subheadline)
+                            .foregroundStyle(.secondary)
+                            .multilineTextAlignment(.center)
+                    }
+                    .padding(.top, 6)
+                    .padding(.bottom, 8)
+                    .padding(.horizontal, 26)
+                }
+
                 ZStack {
                     List {
                         if !isEffectivelyEmpty {
@@ -804,44 +819,48 @@ struct HomeView: View {
     private var emptyState: some View {
         VStack(spacing: 0) {
             VStack(spacing: 18) {
-                ZStack {
-                    Image("HomeEmptyTrip1")
-                        .resizable()
-                        .scaledToFill()
-                        .frame(width: 128, height: 84)
-                        .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
-                        .rotationEffect(.degrees(-12))
-                        .offset(x: -34, y: 8)
-                        .shadow(color: Color.black.opacity(colorScheme == .dark ? 0.18 : 0.12), radius: 10, x: 0, y: 5)
+                VStack(spacing: 14) {
+                    ZStack {
+                        Image("HomeEmptyTrip1")
+                            .resizable()
+                            .scaledToFill()
+                            .frame(width: 114, height: 78)
+                            .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+                            .rotationEffect(.degrees(-14))
+                            .offset(x: -52, y: 2)
+                            .shadow(color: Color.black.opacity(colorScheme == .dark ? 0.18 : 0.12), radius: 10, x: 0, y: 5)
 
-                    Image("HomeEmptyTrip2")
-                        .resizable()
-                        .scaledToFill()
-                        .frame(width: 128, height: 84)
-                        .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
-                        .shadow(color: Color.black.opacity(colorScheme == .dark ? 0.18 : 0.12), radius: 10, x: 0, y: 5)
+                        Image("HomeEmptyTrip2")
+                            .resizable()
+                            .scaledToFill()
+                            .frame(width: 118, height: 80)
+                            .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+                            .shadow(color: Color.black.opacity(colorScheme == .dark ? 0.18 : 0.12), radius: 10, x: 0, y: 5)
 
-                    Image("HomeEmptyTrip3")
-                        .resizable()
-                        .scaledToFill()
-                        .frame(width: 128, height: 84)
-                        .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
-                        .rotationEffect(.degrees(12))
-                        .offset(x: 34, y: 8)
-                        .shadow(color: Color.black.opacity(colorScheme == .dark ? 0.18 : 0.12), radius: 10, x: 0, y: 5)
-                }
-                .frame(height: 104)
-                .padding(.top, 8)
+                        Image("HomeEmptyTrip3")
+                            .resizable()
+                            .scaledToFill()
+                            .frame(width: 114, height: 78)
+                            .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+                            .rotationEffect(.degrees(14))
+                            .offset(x: 52, y: 2)
+                            .shadow(color: Color.black.opacity(colorScheme == .dark ? 0.18 : 0.12), radius: 10, x: 0, y: 5)
+                    }
+                    .frame(height: 130)
+                    .padding(.top, 6)
 
-                VStack(spacing: 8) {
-                    Text("home.empty.title")
-                        .font(.title2.weight(.semibold))
-                        .foregroundStyle(.primary)
-                    Text("home.empty.subtitle")
-                        .font(.subheadline)
-                        .foregroundStyle(.secondary)
-                        .multilineTextAlignment(.center)
-                        .lineSpacing(3)
+                    VStack(spacing: 8) {
+                        Text("home.empty.title")
+                            .font(.title2.weight(.semibold))
+                            .foregroundStyle(.primary)
+                        Text("home.empty.subtitle")
+                            .font(.subheadline)
+                            .foregroundStyle(.secondary)
+                            .multilineTextAlignment(.center)
+                            .lineSpacing(3)
+                    }
+                    .padding(.top, -2)
+                    .padding(.horizontal, 26)
                 }
 
                 Button {
@@ -876,6 +895,7 @@ struct HomeView: View {
                     .shadow(color: Color.black.opacity(colorScheme == .dark ? 0.26 : 0.08), radius: 10, x: 0, y: 5)
                 }
                 .buttonStyle(PressableScaleButtonStyle(scale: 0.97, pressedBrightness: -0.02, pressedOpacity: 0.95))
+                .padding(.horizontal, 26)
             }
             .padding(.vertical, 24)
             .padding(.horizontal, 22)
