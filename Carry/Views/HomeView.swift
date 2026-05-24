@@ -135,7 +135,7 @@ struct HomeView: View {
                     .frame(maxWidth: .infinity)
                     .contentShape(Rectangle())
                     .gesture(
-                        DragGesture()
+                        DragGesture(minimumDistance: 4, coordinateSpace: .global)
                             .onChanged { v in
                                 capsuleDrag = v.translation.height
                             }
@@ -145,12 +145,12 @@ struct HomeView: View {
                                 let current = sheetOffset + translation
                                 withAnimation(.spring(response: 0.38, dampingFraction: 0.82)) {
                                     capsuleDrag = 0
-                                    if velocity > 200 || translation > collapsedSheetOffset * 0.20 {
+                                    if velocity > 650 || translation > collapsedSheetOffset * 0.46 {
                                         sheetOffset = collapsedSheetOffset
-                                    } else if velocity < -200 || translation < -50 {
+                                    } else if velocity < -350 || translation < -70 {
                                         sheetOffset = 0
                                     } else {
-                                        sheetOffset = current > collapsedSheetOffset * 0.5 ? collapsedSheetOffset : 0
+                                        sheetOffset = current > collapsedSheetOffset * 0.68 ? collapsedSheetOffset : 0
                                     }
                                 }
                             }
@@ -415,9 +415,9 @@ struct HomeView: View {
                     let shouldCollapse: Bool
                     if drag > 0 {
                         let current = (sheetOffset?.wrappedValue ?? 0) + drag
-                        shouldCollapse = velocity > 200 || current > collapsedSheetOffset * 0.20
+                        shouldCollapse = velocity > 650 || current > collapsedSheetOffset * 0.46
                     } else {
-                        shouldCollapse = !(velocity < -200 || drag < -50)
+                        shouldCollapse = !(velocity < -350 || drag < -70)
                     }
                     withAnimation(.spring(response: 0.38, dampingFraction: 0.82)) {
                         listDrag?.wrappedValue = 0
