@@ -102,6 +102,16 @@ struct HomeView: View {
         max(0, expandedSheetHeight - 144)
     }
 
+    /// Unique country codes from all trips whose departure date has passed,
+    /// regardless of whether coordinates have been resolved yet.
+    private var visitedCountriesCount: Int {
+        Set(
+            store.trips
+                .filter { $0.departureDate <= Date() && !$0.countryCode.isEmpty }
+                .map { $0.countryCode.uppercased() }
+        ).count
+    }
+
     private var visitedCountries: [VisitedCountry] {
         // Show any trip whose departure date has already passed and whose
         // country/coordinates have been resolved — we don't require the return
@@ -588,6 +598,7 @@ struct HomeView: View {
             HStack(spacing: 10) {
                 statPill(value: "\(store.trips.count)", label: "home.allTrips")
                 statPill(value: "\(upcomingTrips.count)", label: "home.upcoming")
+                statPill(value: "\(visitedCountriesCount)", label: "home.countries")
             }
         }
         .padding(.vertical, 14)
