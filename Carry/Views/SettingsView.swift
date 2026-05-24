@@ -264,10 +264,7 @@ struct SettingsView: View {
                         }
                     }
 
-                    settingsGroup(
-                        title: "settings.data.title",
-                        subtitle: "settings.data.subtitle"
-                    ) {
+                    settingsGroup(title: "settings.data.title") {
                         // Export — share the JSON file via AirDrop, Files, iCloud Drive, etc.
                         settingsRow(
                             title: "settings.data.export",
@@ -281,7 +278,7 @@ struct SettingsView: View {
                         }
                         // Auto-Save — NavigationLink into DataRecoveryView
                         settingsNavigationRow(
-                            title: "settings.data.autosave",
+                            title: "settings.data.local_backup",
                             valueText: autoSaveValueText
                         ) {
                             DataRecoveryView()
@@ -627,7 +624,7 @@ private struct DataRecoveryView: View {
                 .padding(.bottom, 40)
             }
         }
-        .navigationTitle(Text("settings.data.autosave"))
+        .navigationTitle(Text("settings.data.local_backup"))
         .navigationBarTitleDisplayMode(.inline)
         .confirmationDialog(
             Text("settings.data.restore.confirm.title"),

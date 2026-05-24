@@ -15311,6 +15311,20 @@
         }
       }
     },
+    "settings.data.local_backup" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : { "stringUnit" : { "state" : "needs_review", "value" : "Local Backup" } },
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Local Backup" } },
+        "es" : { "stringUnit" : { "state" : "needs_review", "value" : "Local Backup" } },
+        "fr" : { "stringUnit" : { "state" : "needs_review", "value" : "Local Backup" } },
+        "ja" : { "stringUnit" : { "state" : "needs_review", "value" : "ローカルバックアップ" } },
+        "ko" : { "stringUnit" : { "state" : "needs_review", "value" : "로컬 백업" } },
+        "pt-BR" : { "stringUnit" : { "state" : "needs_review", "value" : "Local Backup" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "本地备份" } },
+        "zh-Hant" : { "stringUnit" : { "state" : "translated", "value" : "本機備份" } }
+      }
+    },
     "settings.data.autosave" : {
       "extractionState" : "manual",
       "localizations" : {
