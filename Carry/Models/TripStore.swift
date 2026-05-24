@@ -877,6 +877,163 @@ final class TripStore: ObservableObject {
 
     // MARK: - Geocoding
 
+    // MARK: - City lookup table
+
+    /// Local city → (countryCode, lat, lon) table.
+    /// Used as the primary lookup so the globe works even when CLGeocoder is
+    /// unavailable (simulator, offline, rate-limited, etc.).
+    /// Keys are lowercased for case-insensitive matching.
+    private static let cityLookup: [String: (code: String, lat: Double, lon: Double)] = {
+        let entries: [(String, String, Double, Double)] = [
+            // 中文城市名
+            ("北京",   "CN",  39.91, 116.39), ("上海",   "CN",  31.23, 121.47),
+            ("广州",   "CN",  23.13, 113.27), ("深圳",   "CN",  22.54, 114.06),
+            ("成都",   "CN",  30.66, 104.08), ("杭州",   "CN",  30.25, 120.16),
+            ("武汉",   "CN",  30.59, 114.31), ("西安",   "CN",  34.27, 108.95),
+            ("南京",   "CN",  32.06, 118.80), ("重庆",   "CN",  29.56, 106.55),
+            ("天津",   "CN",  39.13, 117.20), ("苏州",   "CN",  31.30, 120.62),
+            ("青岛",   "CN",  36.07, 120.37), ("大连",   "CN",  38.91, 121.60),
+            ("厦门",   "CN",  24.48, 118.09), ("哈尔滨", "CN",  45.75, 126.63),
+            ("长春",   "CN",  43.88, 125.32), ("沈阳",   "CN",  41.81, 123.43),
+            ("济南",   "CN",  36.67, 116.99), ("郑州",   "CN",  34.75, 113.63),
+            ("昆明",   "CN",  25.04, 102.71), ("贵阳",   "CN",  26.58, 106.71),
+            ("南昌",   "CN",  28.69, 115.86), ("合肥",   "CN",  31.86, 117.28),
+            ("福州",   "CN",  26.08, 119.30), ("石家庄", "CN",  38.05, 114.48),
+            ("太原",   "CN",  37.87, 112.55), ("南宁",   "CN",  22.82, 108.32),
+            ("长沙",   "CN",  28.23, 112.94), ("乌鲁木齐","CN", 43.83, 87.62),
+            ("拉萨",   "CN",  29.65, 91.13),  ("兰州",   "CN",  36.06, 103.83),
+            ("西宁",   "CN",  36.62, 101.78), ("银川",   "CN",  38.47, 106.27),
+            ("呼和浩特","CN", 40.84, 111.75), ("伊犁",   "CN",  43.92, 81.32),
+            ("三亚",   "CN",  18.25, 109.51), ("桂林",   "CN",  25.27, 110.29),
+            ("丽江",   "CN",  26.87, 100.23), ("张家界", "CN",  29.12, 110.48),
+            ("九寨沟", "CN",  33.26, 103.92), ("黄山",   "CN",  29.72, 118.33),
+            ("香格里拉","CN", 27.83, 99.71),
+            ("香港",   "HK",  22.40, 114.11), ("澳门",   "MO",  22.20, 113.55),
+            ("台北",   "TW",  25.05, 121.56), ("高雄",   "TW",  22.63, 120.30),
+            ("台中",   "TW",  24.15, 120.67),
+            ("曼谷",   "TH",  13.75, 100.52), ("清迈",   "TH",  18.79, 98.98),
+            ("普吉",   "TH",   7.89, 98.40),  ("普吉岛", "TH",   7.89, 98.40),
+            ("芭提雅", "TH",  12.93, 100.88),
+            ("东京",   "JP",  35.69, 139.69), ("大阪",   "JP",  34.69, 135.50),
+            ("京都",   "JP",  35.01, 135.77), ("福冈",   "JP",  33.59, 130.40),
+            ("札幌",   "JP",  43.06, 141.35), ("冲绳",   "JP",  26.21, 127.68),
+            ("名古屋", "JP",  35.18, 136.91),
+            ("首尔",   "KR",  37.57, 126.98), ("釜山",   "KR",  35.10, 129.04),
+            ("济州岛", "KR",  33.49, 126.53),
+            ("新加坡", "SG",   1.35, 103.82),
+            ("吉隆坡", "MY",   3.14, 101.69), ("槟城",   "MY",   5.41, 100.33),
+            ("河内",   "VN",  21.03, 105.85), ("胡志明", "VN",  10.82, 106.63),
+            ("胡志明市","VN", 10.82, 106.63), ("岘港",   "VN",  16.05, 108.22),
+            ("雅加达", "ID",  -6.21, 106.85), ("巴厘",   "ID",  -8.34, 115.09),
+            ("巴厘岛", "ID",  -8.34, 115.09), ("日惹",   "ID",  -7.80, 110.36),
+            ("马尼拉", "PH",  14.60, 120.98),
+            ("仰光",   "MM",  16.87, 96.19),  ("内比都", "MM",  19.74, 96.08),
+            ("科伦坡", "LK",   6.93, 79.85),
+            ("加德满都","NP", 27.72, 85.32),
+            ("孟买",   "IN",  19.08, 72.88),  ("新德里", "IN",  28.61, 77.21),
+            ("德里",   "IN",  28.61, 77.21),  ("班加罗尔","IN", 12.97, 77.59),
+            ("海得拉巴","IN", 17.39, 78.49),  ("金奈",   "IN",  13.08, 80.27),
+            ("加尔各答","IN", 22.57, 88.36),
+            ("迪拜",   "AE",  25.20, 55.27),  ("阿布扎比","AE", 24.47, 54.37),
+            ("多哈",   "QA",  25.29, 51.53),  ("科威特", "KW",  29.37, 47.98),
+            ("利雅得", "SA",  24.69, 46.72),  ("迪拜",   "AE",  25.20, 55.27),
+            ("特拉维夫","IL", 32.08, 34.78),  ("耶路撒冷","IL", 31.78, 35.22),
+            ("伊斯坦布尔","TR",41.01,28.95),  ("安卡拉", "TR",  39.93, 32.86),
+            ("开罗",   "EG",  30.04, 31.24),
+            ("莫斯科", "RU",  55.75, 37.62),  ("圣彼得堡","RU", 59.94, 30.32),
+            ("巴黎",   "FR",  48.86, 2.35),   ("尼斯",   "FR",  43.71, 7.26),
+            ("马赛",   "FR",  43.30, 5.37),   ("里昂",   "FR",  45.75, 4.83),
+            ("伦敦",   "GB",  51.51,-0.13),   ("爱丁堡", "GB",  55.95,-3.19),
+            ("曼彻斯特","GB", 53.48,-2.24),
+            ("罗马",   "IT",  41.90, 12.50),  ("米兰",   "IT",  45.46, 9.19),
+            ("威尼斯", "IT",  45.44, 12.33),  ("佛罗伦萨","IT", 43.77, 11.25),
+            ("那不勒斯","IT", 40.84, 14.25),  ("西西里", "IT",  37.60, 14.02),
+            ("阿姆斯特丹","NL",52.37,4.90),   ("鹿特丹", "NL",  51.92, 4.48),
+            ("马德里", "ES",  40.42,-3.70),   ("巴塞罗那","ES", 41.39, 2.15),
+            ("塞维利亚","ES", 37.39,-5.99),   ("格拉纳达","ES", 37.18,-3.60),
+            ("柏林",   "DE",  52.52, 13.40),  ("慕尼黑", "DE",  48.14, 11.58),
+            ("汉堡",   "DE",  53.55, 9.99),   ("法兰克福","DE", 50.11, 8.68),
+            ("维也纳", "AT",  48.21, 16.37),  ("萨尔茨堡","AT", 47.80, 13.04),
+            ("苏黎世", "CH",  47.38, 8.54),   ("日内瓦", "CH",  46.20, 6.14),
+            ("布鲁塞尔","BE", 50.85, 4.35),   ("布鲁日", "BE",  51.21, 3.22),
+            ("布拉格", "CZ",  50.08, 14.44),  ("布达佩斯","HU", 47.50, 19.04),
+            ("华沙",   "PL",  52.23, 21.01),  ("克拉科夫","PL", 50.06, 19.94),
+            ("雅典",   "GR",  37.98, 23.73),  ("圣托里尼","GR", 36.39, 25.46),
+            ("里斯本", "PT",  38.72,-9.14),   ("波尔图", "PT",  41.15,-8.61),
+            ("赫尔辛基","FI", 60.17, 24.94),  ("斯德哥尔摩","SE",59.33,18.07),
+            ("哥本哈根","DK", 55.68, 12.57),  ("奥斯陆", "NO",  59.91, 10.75),
+            ("赫尔辛基","FI", 60.17, 24.94),
+            ("纽约",   "US",  40.71,-74.01),  ("洛杉矶", "US",  34.05,-118.24),
+            ("旧金山", "US",  37.77,-122.42), ("拉斯维加斯","US",36.17,-115.14),
+            ("芝加哥", "US",  41.88,-87.63),  ("波士顿", "US",  42.36,-71.06),
+            ("西雅图", "US",  47.61,-122.33), ("迈阿密", "US",  25.77,-80.19),
+            ("华盛顿", "US",  38.91,-77.04),  ("奥兰多", "US",  28.54,-81.38),
+            ("檀香山", "US",  21.31,-157.86), ("夏威夷", "US",  21.31,-157.86),
+            ("多伦多", "CA",  43.65,-79.38),  ("温哥华", "CA",  49.26,-123.11),
+            ("蒙特利尔","CA", 45.50,-73.57),  ("班夫",   "CA",  51.18,-115.57),
+            ("悉尼",   "AU", -33.87, 151.21), ("墨尔本", "AU", -37.81, 144.96),
+            ("布里斯班","AU",-27.47, 153.02), ("黄金海岸","AU",-28.02,153.40),
+            ("凯恩斯", "AU", -16.92, 145.77), ("珀斯",   "AU", -31.95, 115.86),
+            ("奥克兰", "NZ", -36.86, 174.77), ("皇后镇", "NZ", -45.03, 168.66),
+            ("开普敦", "ZA", -33.93, 18.42),  ("约翰内斯堡","ZA",-26.20,28.04),
+            ("内罗毕", "KE",  -1.29, 36.82),
+            ("墨西哥城","MX", 19.43,-99.13),  ("坎昆",   "MX",  21.16,-86.85),
+            ("布宜诺斯艾利斯","AR",-34.60,-58.38),
+            ("圣保罗", "BR", -23.55,-46.63),  ("里约",   "BR", -22.91,-43.17),
+            ("里约热内卢","BR",-22.91,-43.17),
+        ]
+        var dict: [String: (code: String, lat: Double, lon: Double)] = [:]
+        for (city, code, lat, lon) in entries {
+            dict[city] = (code, lat, lon)
+            dict[city.lowercased()] = (code, lat, lon)
+        }
+        // English names
+        let english: [(String, String, Double, Double)] = [
+            ("amsterdam","NL",52.37,4.90), ("bangkok","TH",13.75,100.52),
+            ("rome","IT",41.90,12.50), ("paris","FR",48.86,2.35),
+            ("london","GB",51.51,-0.13), ("tokyo","JP",35.69,139.69),
+            ("osaka","JP",34.69,135.50), ("seoul","KR",37.57,126.98),
+            ("singapore","SG",1.35,103.82), ("sydney","AU",-33.87,151.21),
+            ("melbourne","AU",-37.81,144.96), ("dubai","AE",25.20,55.27),
+            ("barcelona","ES",41.39,2.15), ("madrid","ES",40.42,-3.70),
+            ("berlin","DE",52.52,13.40), ("munich","DE",48.14,11.58),
+            ("vienna","AT",48.21,16.37), ("prague","CZ",50.08,14.44),
+            ("budapest","HU",47.50,19.04), ("milan","IT",45.46,9.19),
+            ("venice","IT",45.44,12.33), ("florence","IT",43.77,11.25),
+            ("athens","GR",37.98,23.73), ("lisbon","PT",38.72,-9.14),
+            ("stockholm","SE",59.33,18.07), ("copenhagen","DK",55.68,12.57),
+            ("oslo","NO",59.91,10.75), ("zurich","CH",47.38,8.54),
+            ("brussels","BE",50.85,4.35), ("cairo","EG",30.04,31.24),
+            ("istanbul","TR",41.01,28.95), ("moscow","RU",55.75,37.62),
+            ("toronto","CA",43.65,-79.38), ("vancouver","CA",49.26,-123.11),
+            ("new york","US",40.71,-74.01), ("los angeles","US",34.05,-118.24),
+            ("san francisco","US",37.77,-122.42), ("chicago","US",41.88,-87.63),
+            ("hong kong","HK",22.40,114.11), ("taipei","TW",25.05,121.56),
+            ("chiang mai","TH",18.79,98.98), ("phuket","TH",7.89,98.40),
+            ("bali","ID",-8.34,115.09), ("kuala lumpur","MY",3.14,101.69),
+            ("hanoi","VN",21.03,105.85), ("ho chi minh","VN",10.82,106.63),
+            ("jakarta","ID",-6.21,106.85), ("manila","PH",14.60,120.98),
+            ("mumbai","IN",19.08,72.88), ("delhi","IN",28.61,77.21),
+            ("new delhi","IN",28.61,77.21), ("beijing","CN",39.91,116.39),
+            ("shanghai","CN",31.23,121.47), ("guangzhou","CN",23.13,113.27),
+            ("shenzhen","CN",22.54,114.06), ("chengdu","CN",30.66,104.08),
+            ("auckland","NZ",-36.86,174.77), ("queenstown","NZ",-45.03,168.66),
+            ("cape town","ZA",-33.93,18.42),
+        ]
+        for (city, code, lat, lon) in english {
+            dict[city] = (code, lat, lon)
+        }
+        return dict
+    }()
+
+    private func lookupCity(_ city: String) -> (code: String, lat: Double, lon: Double)? {
+        let trimmed = city.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard trimmed.count >= 2 else { return nil }  // filter out garbage like "2"
+        return Self.cityLookup[trimmed] ?? Self.cityLookup[trimmed.lowercased()]
+    }
+
+    // MARK: - Country centroids
+
     /// Approximate country centroids used as a fallback when CLGeocoder returns
     /// a valid isoCountryCode but a nil CLLocation (can happen for broad queries).
     private static let countryCentroids: [String: (lat: Double, lon: Double)] = [
@@ -915,11 +1072,20 @@ final class TripStore: ObservableObject {
     }
 
     func updateCountryCode(for tripId: UUID, city: String) {
+        // Try local table first (instant, no network).
+        if let local = lookupCity(city) {
+            guard let bundle = bundle(for: tripId) else { return }
+            bundle.countryCode = local.code
+            bundle.latitude    = local.lat
+            bundle.longitude   = local.lon
+            try? context.save()
+            return
+        }
+        // Fall back to CLGeocoder for cities not in the local table.
         Task {
             let geocoder = CLGeocoder()
             guard let placemark = try? await geocoder.geocodeAddressString(city).first else { return }
             let code = placemark.isoCountryCode ?? ""
-            // Prefer the precise placemark location; fall back to country centroid.
             let coordinate: (lat: Double, lon: Double)?
             if let loc = placemark.location, loc.coordinate.latitude != 0 {
                 coordinate = (loc.coordinate.latitude, loc.coordinate.longitude)
@@ -951,11 +1117,23 @@ final class TripStore: ObservableObject {
         Task {
             let geocoder = CLGeocoder()
             for trip in missing {
-                guard let placemark = try? await geocoder.geocodeAddressString(trip.destinationCity).first else { continue }
+                // 1. Try local city table first (instant, no network needed).
+                if let local = lookupCity(trip.destinationCity) {
+                    await MainActor.run {
+                        guard let bundle = self.bundle(for: trip.id) else { return }
+                        bundle.countryCode = local.code
+                        bundle.latitude    = local.lat
+                        bundle.longitude   = local.lon
+                        try? self.context.save()
+                    }
+                    continue
+                }
+
+                // 2. Fall back to CLGeocoder for cities not in the local table.
+                let placemarks = try? await geocoder.geocodeAddressString(trip.destinationCity)
+                guard let placemark = placemarks?.first else { continue }
                 let code = placemark.isoCountryCode ?? ""
-                // Prefer the precise placemark location; fall back to country centroid
-                // so we always save usable coordinates even when CLGeocoder returns a
-                // valid country code but a nil CLLocation.
+                // Prefer the precise placemark location; fall back to country centroid.
                 let coordinate: (lat: Double, lon: Double)?
                 if let loc = placemark.location, loc.coordinate.latitude != 0 {
                     coordinate = (loc.coordinate.latitude, loc.coordinate.longitude)
