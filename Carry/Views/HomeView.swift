@@ -134,13 +134,12 @@ struct HomeView: View {
             grouped[trip.countryCode.uppercased(), default: []].append(trip)
         }
         return grouped.map { code, trips in
-            let lat = trips.map(\.latitude).reduce(0, +) / Double(trips.count)
-            let lon = trips.map(\.longitude).reduce(0, +) / Double(trips.count)
+            let latest = trips.max(by: { $0.departureDate < $1.departureDate }) ?? trips[0]
             let name = Locale.current.localizedString(forRegionCode: code) ?? code
             return VisitedCountry(
                 countryCode: code,
                 name: name,
-                coordinate: CLLocationCoordinate2D(latitude: lat, longitude: lon)
+                coordinate: CLLocationCoordinate2D(latitude: latest.latitude, longitude: latest.longitude)
             )
         }
     }
