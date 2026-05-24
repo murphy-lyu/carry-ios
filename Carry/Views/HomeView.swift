@@ -21,6 +21,12 @@ struct HomeView: View {
     @State private var initialRevealPhase = 0
     @State private var revealCurtainOpacity: Double = 1
 
+    /// True when the list should appear empty — either no real trips exist,
+    /// or the developer mock is active.
+    private var isEffectivelyEmpty: Bool {
+        store.trips.isEmpty || store.isHomeEmptyStateMockEnabled
+    }
+
     private func isPast(_ trip: TripBundle) -> Bool {
         let calendar = Calendar.current
         let returnDayStart = calendar.startOfDay(for: returnDate(for: trip))
@@ -220,7 +226,7 @@ struct HomeView: View {
                             .listRowBackground(Color.clear)
                             .listRowSeparator(.hidden)
 
-                        if store.trips.isEmpty {
+                        if isEffectivelyEmpty {
                             emptyState
                                 .listRowInsets(EdgeInsets(top: 6, leading: 12, bottom: 10, trailing: 12))
                                 .listRowBackground(Color.clear)
@@ -626,7 +632,7 @@ struct HomeView: View {
                 .buttonStyle(PressableScaleButtonStyle(scale: 0.92, pressedBrightness: -0.03, pressedOpacity: 0.94))
             }
 
-            if store.trips.isEmpty {
+            if isEffectivelyEmpty {
                 Text("home.empty.hero_tagline")
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
