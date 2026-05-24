@@ -17,6 +17,7 @@ struct TripInfoView: View {
     @State private var showDatePicker = false
     @FocusState private var focusedField: FocusField?
     @EnvironmentObject var router: NavigationRouter
+    @Environment(\.colorScheme) private var colorScheme
 
     private enum FocusField: Hashable {
         case tripName
@@ -78,9 +79,9 @@ struct TripInfoView: View {
                         Button { showDatePicker = true } label: {
                             HStack(spacing: 0) {
                                 VStack(alignment: .leading, spacing: 3) {
-                                    Text(isChineseLocale ? "出发" : "Departure")
+                                    Text("Departure")
                                         .font(.caption.weight(.semibold))
-                                        .foregroundStyle(.secondary)
+                                        .foregroundStyle(.secondary.opacity(0.82))
                                     Text(departureDate.formatted(date: .long, time: .omitted))
                                         .font(.subheadline)
                                         .foregroundStyle(.primary)
@@ -88,12 +89,12 @@ struct TripInfoView: View {
                                 Spacer()
                                 Image(systemName: "arrow.right")
                                     .font(.caption.weight(.semibold))
-                                    .foregroundStyle(.tertiary)
+                                    .foregroundStyle(.tertiary.opacity(0.88))
                                 Spacer()
                                 VStack(alignment: .trailing, spacing: 3) {
-                                    Text(isChineseLocale ? "返回" : "Return")
+                                    Text("Return")
                                         .font(.caption.weight(.semibold))
-                                        .foregroundStyle(.secondary)
+                                        .foregroundStyle(.secondary.opacity(0.82))
                                     Text(returnDate.formatted(date: .long, time: .omitted))
                                         .font(.subheadline)
                                         .foregroundStyle(.primary)
@@ -102,10 +103,10 @@ struct TripInfoView: View {
                             .padding(14)
                         }
                         .buttonStyle(.plain)
-                        .background(Color(UIColor.systemBackground).opacity(0.70))
+                        .background(Color(UIColor.systemBackground).opacity(0.64))
                         .overlay(
                             RoundedRectangle(cornerRadius: 12, style: .continuous)
-                                .strokeBorder(Color.primary.opacity(0.05), lineWidth: 1)
+                                .strokeBorder(Color.primary.opacity(0.04), lineWidth: 1)
                         )
                         .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
                     }
@@ -131,7 +132,7 @@ struct TripInfoView: View {
                         .foregroundColor(Color(UIColor.systemBackground))
                         .frame(maxWidth: .infinity)
                         .frame(height: 52)
-                        .background(Color.primary)
+                        .background(Color.primary.opacity(0.92))
                         .cornerRadius(14)
                 }
                 .disabled(!canContinue)
@@ -140,16 +141,7 @@ struct TripInfoView: View {
             }
             .padding(.top, 12)
             .padding(.bottom, 16)
-            .background(
-                LinearGradient(
-                    colors: [
-                        Color(UIColor.systemBackground).opacity(0.92),
-                        Color(UIColor.systemBackground).opacity(0.78)
-                    ],
-                    startPoint: .top,
-                    endPoint: .bottom
-                )
-            )
+            .background(Color.clear)
         }
         .navigationTitle("")
         .navigationBarTitleDisplayMode(.inline)
@@ -174,12 +166,12 @@ struct TripInfoView: View {
 
     private var heroSection: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text(isChineseLocale ? "创建新行程" : "New trip")
+            Text("New trip")
                 .font(.system(size: 30, weight: .bold, design: .rounded))
                 .foregroundStyle(.primary)
-            Text(isChineseLocale ? "先填基本信息，再进入物品选择" : "Add the essentials first, then choose your items")
+            Text("Add the essentials first, then choose your items")
                 .font(.subheadline)
-                .foregroundStyle(.secondary)
+                .foregroundStyle(.secondary.opacity(0.86))
         }
         .padding(16)
     }
@@ -204,10 +196,10 @@ struct TripInfoView: View {
         }
         .frame(height: 44)
         .padding(.horizontal, 12)
-        .background(Color(UIColor.systemBackground).opacity(0.72))
+        .background(Color(UIColor.systemBackground).opacity(0.66))
         .overlay(
             RoundedRectangle(cornerRadius: 12, style: .continuous)
-                .strokeBorder(Color.primary.opacity(0.05), lineWidth: 1)
+                .strokeBorder(Color.primary.opacity(0.04), lineWidth: 1)
         )
         .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
     }
@@ -219,7 +211,7 @@ struct TripInfoView: View {
         VStack(alignment: .leading, spacing: 6) {
             Text(label)
                 .font(.system(size: 11, weight: .medium))
-                .foregroundStyle(.secondary)
+                .foregroundStyle(.tertiary.opacity(0.86))
                 .kerning(1.5)
                 .textCase(.uppercase)
                 .padding(.horizontal, 16)

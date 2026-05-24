@@ -1,17 +1,17 @@
 {
   "images" : [
     {
-      "filename" : "packly_orange_xcode_ready_1024.png",
+      "filename" : "IconDefault.png",
       "idiom" : "universal",
       "scale" : "1x"
     },
     {
-      "filename" : "packly_orange_xcode_ready_1024 1.png",
+      "filename" : "IconDefault 1.png",
       "idiom" : "universal",
       "scale" : "2x"
     },
     {
-      "filename" : "packly_orange_xcode_ready_1024 2.png",
+      "filename" : "IconDefault 2.png",
       "idiom" : "universal",
       "scale" : "3x"
     }
