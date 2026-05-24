@@ -221,14 +221,14 @@ private struct ReminderRow: View {
 
     private var reminderLabelColor: Color {
         if isFired {
-            return colorScheme == .dark ? Color.secondary.opacity(0.82) : Color.secondary
+            return Color.primary
         }
         return Color.primary
     }
 
     private var reminderTimeColor: Color {
         if isFired {
-            return colorScheme == .dark ? Color.secondary.opacity(0.55) : Color(UIColor.tertiaryLabel)
+            return colorScheme == .dark ? Color.primary.opacity(0.86) : Color.primary.opacity(0.72)
         }
         return Color.accentColor
     }
@@ -238,7 +238,7 @@ private struct ReminderRow: View {
     }
 
     private var reminderDeleteColor: Color {
-        colorScheme == .dark ? Color.secondary.opacity(0.72) : Color.secondary
+        colorScheme == .dark ? Color.secondary.opacity(0.96) : Color.secondary
     }
 
     var body: some View {
