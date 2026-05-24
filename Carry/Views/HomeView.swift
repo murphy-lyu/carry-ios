@@ -226,44 +226,9 @@ struct HomeView: View {
                                 .listRowInsets(EdgeInsets(top: 2, leading: 12, bottom: 4, trailing: 12))
                                 .listRowBackground(Color.clear)
                                 .listRowSeparator(.hidden)
-                        }
 
-                        if isEffectivelyEmpty {
-                            emptyState
-                                .listRowInsets(EdgeInsets(top: 6, leading: 12, bottom: 10, trailing: 12))
-                                .listRowBackground(Color.clear)
-                                .listRowSeparator(.hidden)
-                        } else {
-                            if !upcomingTrips.isEmpty {
-                                sectionLabel("home.upcoming", uppercase: true)
-                                    .opacity(initialRevealPhase >= 2 ? 1 : 0)
-                                    .offset(y: initialRevealPhase >= 2 ? 0 : 10)
-                                    .blur(radius: initialRevealPhase >= 2 ? 0 : 4)
-                                    .animation(.easeOut(duration: 0.24).delay(0.16), value: initialRevealPhase)
-                                    .listRowInsets(EdgeInsets(top: 2, leading: 16, bottom: 4, trailing: 16))
-                                    .listRowBackground(Color.clear)
-                                    .listRowSeparator(.hidden)
-
-                                ForEach(Array(upcomingTrips.enumerated()), id: \.element.id) { index, bundle in
-                                    tripRow(bundle: bundle, isPast: false)
-                                        .opacity(initialRevealPhase >= 2 ? 1 : 0)
-                                        .offset(y: initialRevealPhase >= 2 ? 0 : 14)
-                                        .scaleEffect(initialRevealPhase >= 2 ? 1 : 0.97)
-                                        .blur(radius: initialRevealPhase >= 2 ? 0 : 5)
-                                        .animation(.spring(response: 0.42, dampingFraction: 0.84).delay(0.20 + Double(index) * 0.05), value: initialRevealPhase)
-                                }
-                            }
-
-                            ForEach(Array(pastTripsByYear.enumerated()), id: \.element.year) { index, section in
-                                pastSectionLabel(year: section.year, isFirst: upcomingTrips.isEmpty && index == 0, delay: 0.34 + Double(index) * 0.06)
-
-                                ForEach(Array(section.trips.enumerated()), id: \.element.id) { tripIndex, bundle in
-                                    pastTripRow(
-                                        bundle: bundle,
-                                        delay: 0.38 + Double(index) * 0.06 + Double(tripIndex) * 0.03
-                                    )
-                                }
-                            }
+                            upcomingSection
+                            pastSection
 
                             listFooter
                                 .opacity(initialRevealPhase >= 3 ? 1 : 0)
@@ -278,7 +243,7 @@ struct HomeView: View {
                                 .frame(height: 72)
                                 .listRowBackground(Color.clear)
                                 .listRowSeparator(.hidden)
-                        }
+                        } // end if !isEffectivelyEmpty
                     }
                     .id(listIdentity)
                     .listStyle(.plain)
@@ -292,7 +257,12 @@ struct HomeView: View {
                             collapsedSheetOffset: collapsedSheetOffset
                         )
                     )
+
+                    if isEffectivelyEmpty {
+                        emptyState
+                    }
                 }
+                .frame(maxHeight: .infinity)
                 .overlay {
                     if revealCurtainOpacity > 0 {
                         LinearGradient(
@@ -585,6 +555,44 @@ struct HomeView: View {
         }
     }
 
+    @ViewBuilder
+    private var upcomingSection: some View {
+        if !upcomingTrips.isEmpty {
+            sectionLabel("home.upcoming", uppercase: true)
+                .opacity(initialRevealPhase >= 2 ? 1 : 0)
+                .offset(y: initialRevealPhase >= 2 ? 0 : 10)
+                .blur(radius: initialRevealPhase >= 2 ? 0 : 4)
+                .animation(.easeOut(duration: 0.24).delay(0.16), value: initialRevealPhase)
+                .listRowInsets(EdgeInsets(top: 2, leading: 16, bottom: 4, trailing: 16))
+                .listRowBackground(Color.clear)
+                .listRowSeparator(.hidden)
+
+            ForEach(Array(upcomingTrips.enumerated()), id: \.element.id) { index, bundle in
+                let delay = 0.20 + Double(index) * 0.05
+                tripRow(bundle: bundle, isPast: false)
+                    .opacity(initialRevealPhase >= 2 ? 1 : 0)
+                    .offset(y: initialRevealPhase >= 2 ? 0 : 14)
+                    .scaleEffect(initialRevealPhase >= 2 ? 1 : 0.97)
+                    .blur(radius: initialRevealPhase >= 2 ? 0 : 5)
+                    .animation(.spring(response: 0.42, dampingFraction: 0.84).delay(delay), value: initialRevealPhase)
+            }
+        }
+    }
+
+    @ViewBuilder
+    private var pastSection: some View {
+        ForEach(Array(pastTripsByYear.enumerated()), id: \.element.year) { index, section in
+            let isFirst = upcomingTrips.isEmpty && index == 0
+            let sectionDelay = 0.34 + Double(index) * 0.06
+            pastSectionLabel(year: section.year, isFirst: isFirst, delay: sectionDelay)
+
+            ForEach(Array(section.trips.enumerated()), id: \.element.id) { tripIndex, bundle in
+                let delay = 0.38 + Double(index) * 0.06 + Double(tripIndex) * 0.03
+                pastTripRow(bundle: bundle, delay: delay)
+            }
+        }
+    }
+
     private var heroSection: some View {
         VStack(alignment: .leading, spacing: 12) {
             HStack(spacing: 8) {
@@ -794,58 +802,53 @@ struct HomeView: View {
     }
 
     private var emptyState: some View {
-        VStack {
-            Spacer(minLength: 24)
-            VStack(spacing: 28) {
-                VStack(spacing: 8) {
-                    Text("home.empty.title")
-                        .font(.title3.weight(.semibold))
-                        .foregroundStyle(.primary)
-                    Text("home.empty.subtitle")
-                        .font(.subheadline)
-                        .foregroundStyle(.secondary)
-                        .multilineTextAlignment(.center)
-                        .lineSpacing(3)
-                }
-
-                Button {
-                    startNewTrip()
-                } label: {
-                    HStack(spacing: 7) {
-                        Image(systemName: "plus")
-                            .font(.system(size: 13, weight: .bold))
-                        Text("home.empty.cta")
-                            .font(.subheadline.weight(.semibold))
-                    }
-                    .foregroundStyle(Color(UIColor.systemBackground))
-                    .frame(maxWidth: .infinity)
-                    .frame(height: 50)
-                    .background(
-                        RoundedRectangle(cornerRadius: 16, style: .continuous)
-                            .fill(
-                                LinearGradient(
-                                    colors: [
-                                        Color.primary.opacity(0.95),
-                                        Color.primary.opacity(0.82)
-                                    ],
-                                    startPoint: .topLeading,
-                                    endPoint: .bottomTrailing
-                                )
-                            )
-                    )
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 16, style: .continuous)
-                            .strokeBorder(Color.primary.opacity(0.10), lineWidth: 1)
-                    )
-                    .shadow(color: Color.black.opacity(colorScheme == .dark ? 0.30 : 0.10), radius: 10, x: 0, y: 5)
-                }
-                .buttonStyle(PressableScaleButtonStyle(scale: 0.97, pressedBrightness: -0.02, pressedOpacity: 0.95))
+        VStack(spacing: 28) {
+            VStack(spacing: 8) {
+                Text("home.empty.title")
+                    .font(.title3.weight(.semibold))
+                    .foregroundStyle(.primary)
+                Text("home.empty.subtitle")
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+                    .multilineTextAlignment(.center)
+                    .lineSpacing(3)
             }
-            Spacer(minLength: 24)
+
+            Button {
+                startNewTrip()
+            } label: {
+                HStack(spacing: 7) {
+                    Image(systemName: "plus")
+                        .font(.system(size: 13, weight: .bold))
+                    Text("home.empty.cta")
+                        .font(.subheadline.weight(.semibold))
+                }
+                .foregroundStyle(Color(UIColor.systemBackground))
+                .frame(maxWidth: .infinity)
+                .frame(height: 50)
+                .background(
+                    RoundedRectangle(cornerRadius: 16, style: .continuous)
+                        .fill(
+                            LinearGradient(
+                                colors: [
+                                    Color.primary.opacity(0.95),
+                                    Color.primary.opacity(0.82)
+                                ],
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            )
+                        )
+                )
+                .overlay(
+                    RoundedRectangle(cornerRadius: 16, style: .continuous)
+                        .strokeBorder(Color.primary.opacity(0.10), lineWidth: 1)
+                )
+                .shadow(color: Color.black.opacity(colorScheme == .dark ? 0.30 : 0.10), radius: 10, x: 0, y: 5)
+            }
+            .buttonStyle(PressableScaleButtonStyle(scale: 0.97, pressedBrightness: -0.02, pressedOpacity: 0.95))
         }
-        .frame(maxWidth: .infinity)
-        .frame(minHeight: expandedSheetHeight - 40)
-        .padding(.horizontal, 4)
+        .padding(.horizontal, 20)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 
     @ViewBuilder
