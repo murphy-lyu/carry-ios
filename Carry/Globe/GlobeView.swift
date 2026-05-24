@@ -83,11 +83,21 @@ struct GlobeMapView: View {
     // MARK: - City dot
 
     private var cityDot: some View {
-        Circle()
-            .fill(.white)
-            .frame(width: 7, height: 7)
-            .shadow(color: .white.opacity(0.55), radius: 5, x: 0, y: 0)
-            .shadow(color: .black.opacity(0.28), radius: 2, x: 0, y: 1)
+        ZStack {
+            // Outer glow ring
+            Circle()
+                .fill(.white.opacity(0.22))
+                .frame(width: 20, height: 20)
+            // Solid center
+            Circle()
+                .fill(.white.opacity(0.90))
+                .frame(width: 11, height: 11)
+            // Inner white highlight
+            Circle()
+                .fill(.white)
+                .frame(width: 5, height: 5)
+        }
+        .shadow(color: .black.opacity(0.25), radius: 3, x: 0, y: 1)
     }
 
     // MARK: - Country pin
