@@ -12,10 +12,15 @@ import SwiftData
 struct CarryApp: App {
     static let container: ModelContainer = {
         do {
-            return try ModelContainer(for: TripBundle.self, MyItem.self)
+            // Use the versioned schema + migration plan so future schema changes
+            // can be applied without corrupting existing user data.
+            return try ModelContainer(
+                for: TripBundle.self, MyItem.self,
+                migrationPlan: CarryMigrationPlan.self
+            )
         } catch {
             CarryLogger.shared.log(.dbInitFailed, context: "error=\(error.localizedDescription)")
-            // Fall back to an in-memory store so the app stays alive
+            // Fall back to an in-memory store so the app stays alive.
             return try! ModelContainer(
                 for: TripBundle.self, MyItem.self,
                 configurations: ModelConfiguration(isStoredInMemoryOnly: true)

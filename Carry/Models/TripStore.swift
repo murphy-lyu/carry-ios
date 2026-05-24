@@ -108,6 +108,17 @@ final class TripStore: ObservableObject {
 
     func refresh() { fetchTrips() }
 
+    // MARK: - Backup & Restore
+
+    /// Restore all data from the latest JSON backup.
+    /// Returns the number of trips restored, or throws on failure.
+    @discardableResult
+    func restoreFromBackup() throws -> (trips: Int, myItems: Int) {
+        let result = try DataBackupManager.shared.restore(into: context)
+        fetchTrips()
+        return result
+    }
+
     func setDraftTrip(_ trip: TripBundle?) {
         draftTrip = trip
     }
@@ -147,6 +158,10 @@ final class TripStore: ObservableObject {
 
             trips = fetchedTrips
             myItems = fetchedMyItems
+            // Keep the JSON backup in sync after every data load.
+            // Encoding a few trips worth of JSON is sub-millisecond, so doing it
+            // inline here is safe and ensures the backup is always up-to-date.
+            DataBackupManager.shared.backup(trips: fetchedTrips, myItems: fetchedMyItems)
             for trip in trips {
                 if trip.sections == nil {
                     CarryLogger.shared.log(.dataCorrupted, context: "context=fetchTrips_nil_sections")

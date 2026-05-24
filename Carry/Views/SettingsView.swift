@@ -14,6 +14,9 @@ struct SettingsView: View {
     @State private var showRoadmapSheet = false
     @State private var showCoffeeSheet = false
     @State private var didApplyLaunchSheetReset = false
+    @State private var showRestoreConfirmation = false
+    @State private var restoreToastMessage: String?
+    @State private var backupDate: Date? = DataBackupManager.shared.latestBackupDate()
     @Environment(\.scenePhase) private var scenePhase
     @Environment(\.colorScheme) private var colorScheme
     @EnvironmentObject private var store: TripStore
@@ -85,6 +88,30 @@ struct SettingsView: View {
 
         guard let url = components?.url else { return }
         UIApplication.shared.open(url)
+    }
+
+    private var backupDateDisplay: String {
+        guard let date = backupDate else {
+            return NSLocalizedString("settings.data.restore.no_backup", comment: "")
+        }
+        let fmt = DateFormatter()
+        fmt.dateStyle = .medium
+        fmt.timeStyle = .short
+        return fmt.string(from: date)
+    }
+
+    private func showToast(_ message: String) {
+        withAnimation(.easeInOut(duration: 0.2)) {
+            restoreToastMessage = message
+        }
+        Task {
+            try? await Task.sleep(for: .milliseconds(2000))
+            await MainActor.run {
+                withAnimation(.easeIn(duration: 0.2)) {
+                    restoreToastMessage = nil
+                }
+            }
+        }
     }
 
     private var settingsGroupFill: Color {
@@ -194,7 +221,42 @@ struct SettingsView: View {
                             PrivacyView()
                         }
                     }
+
+                    settingsGroup(title: "settings.data.title") {
+                        settingsRow(title: "settings.data.restore", valueText: backupDateDisplay) {
+                            showRestoreConfirmation = true
+                        }
+                    }
                     .padding(.bottom, 10)
+                    .confirmationDialog(
+                        Text("settings.data.restore.confirm.title"),
+                        isPresented: $showRestoreConfirmation,
+                        titleVisibility: .visible
+                    ) {
+                        Button(role: .destructive) {
+                            do {
+                                let result = try store.restoreFromBackup()
+                                backupDate = DataBackupManager.shared.latestBackupDate()
+                                showToast(
+                                    String(
+                                        format: NSLocalizedString(
+                                            result.trips == 1
+                                                ? "settings.data.restore.success.one"
+                                                : "settings.data.restore.success",
+                                            comment: ""
+                                        ),
+                                        result.trips
+                                    )
+                                )
+                            } catch {
+                                showToast(error.localizedDescription)
+                            }
+                        } label: {
+                            Text("settings.data.restore.action")
+                        }
+                    } message: {
+                        Text("settings.data.restore.confirm.message")
+                    }
 
 #if DEBUG
                     settingsGroup(title: "settings.developer.title") {
@@ -208,6 +270,20 @@ struct SettingsView: View {
             }
             .background(Color(.systemGroupedBackground).ignoresSafeArea())
         }
+        .overlay(alignment: .bottom) {
+            if let msg = restoreToastMessage {
+                Text(msg)
+                    .font(.subheadline.weight(.medium))
+                    .foregroundStyle(.white)
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 10)
+                    .background(Color.black.opacity(0.88))
+                    .clipShape(Capsule())
+                    .padding(.bottom, 32)
+                    .transition(.move(edge: .bottom).combined(with: .opacity))
+            }
+        }
+        .animation(.easeInOut(duration: 0.2), value: restoreToastMessage != nil)
         .navigationBarHidden(true)
         .task { await refreshNotificationStatus() }
         .onChange(of: scenePhase) { _, phase in
