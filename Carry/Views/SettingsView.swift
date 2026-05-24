@@ -247,12 +247,6 @@ struct SettingsView: View {
                         settingsRow(title: "settings.feedback") {
                             openFeedbackMail()
                         }
-                        settingsNavigationRow(title: "settings.legal.terms") {
-                            TermsView()
-                        }
-                        settingsNavigationRow(title: "settings.legal.privacy") {
-                            PrivacyView()
-                        }
                     }
 
                     settingsGroup(title: "settings.data.title") {

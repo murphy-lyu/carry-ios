@@ -82,6 +82,13 @@ struct AboutView: View {
                     }
                 }
 
+                moduleCard(title: "about.legal") {
+                    VStack(spacing: 0) {
+                        legalRow(label: "settings.legal.terms") { TermsView() }
+                        legalRow(label: "settings.legal.privacy") { PrivacyView() }
+                    }
+                }
+
                 VStack(spacing: 12) {
                     HStack(spacing: 6) {
                         Text("about.madeWith")
@@ -135,6 +142,26 @@ struct AboutView: View {
                 .strokeBorder(cardStroke, lineWidth: 1)
         )
         .shadow(color: cardShadow, radius: colorScheme == .dark ? 8 : 10, x: 0, y: colorScheme == .dark ? 3 : 5)
+    }
+
+    private func legalRow<Destination: View>(
+        label: LocalizedStringKey,
+        @ViewBuilder destination: () -> Destination
+    ) -> some View {
+        NavigationLink(destination: destination()) {
+            HStack {
+                Text(label)
+                    .font(.subheadline)
+                    .foregroundColor(.primary)
+                Spacer()
+                Image(systemName: "chevron.right")
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(colorScheme == .dark ? Color.secondary.opacity(0.5) : Color.secondary.opacity(0.45))
+            }
+            .padding(.horizontal, 16)
+            .frame(height: 44)
+        }
+        .buttonStyle(.plain)
     }
 
     private func socialRow(label: LocalizedStringKey, handle: String, url: String, fallbackURL: String? = nil) -> some View {

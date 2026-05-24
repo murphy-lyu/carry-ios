@@ -1574,6 +1574,20 @@
         }
       }
     },
+    "about.legal" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : { "stringUnit" : { "state" : "needs_review", "value" : "Legal" } },
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Legal" } },
+        "es" : { "stringUnit" : { "state" : "needs_review", "value" : "Legal" } },
+        "fr" : { "stringUnit" : { "state" : "needs_review", "value" : "Légal" } },
+        "ja" : { "stringUnit" : { "state" : "needs_review", "value" : "法的情報" } },
+        "ko" : { "stringUnit" : { "state" : "needs_review", "value" : "법적 정보" } },
+        "pt-BR" : { "stringUnit" : { "state" : "needs_review", "value" : "Legal" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "法律条款" } },
+        "zh-Hant" : { "stringUnit" : { "state" : "translated", "value" : "法律條款" } }
+      }
+    },
     "about.madeWith" : {
       "extractionState" : "manual",
       "localizations" : {
