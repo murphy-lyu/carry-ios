@@ -1977,6 +1977,9 @@
     "Add %lld items" : {
 
     },
+    "Add category" : {
+
+    },
     "Add item" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -4721,6 +4724,9 @@
         }
       }
     },
+    "Create a section to organize your packing list." : {
+
+    },
     "Create Trip" : {
 
     },
@@ -6553,52 +6559,6 @@
         }
       }
     },
-    "Foldable chair" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Foldable chair"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "折叠椅"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "摺疊椅"
-          }
-        }
-      }
-    },
-    "Picnic mat" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Picnic mat"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "野餐垫"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "野餐墊"
-          }
-        }
-      }
-    },
     "Everything ready. Let's go." : {
 
     },
@@ -7382,6 +7342,29 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "人字拖"
+          }
+        }
+      }
+    },
+    "Foldable chair" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Foldable chair"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "折叠椅"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "摺疊椅"
           }
         }
       }
@@ -11067,6 +11050,9 @@
         }
       }
     },
+    "No sections yet" : {
+
+    },
     "No trips yet" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -11916,55 +11902,55 @@
         "de" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "Tap the ⋯ menu and choose Edit scenes to pick what to bring"
+            "value" : "Tap Add category or Add item below to start, or use the ⋯ menu to edit sections"
           }
         },
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Tap the ⋯ menu and choose Add recommended items to fill your list"
+            "value" : "Tap Add category or Add item below to start, or use the ⋯ menu to edit sections"
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "Tap the ⋯ menu and choose Edit scenes to pick what to bring"
+            "value" : "Tap Add category or Add item below to start, or use the ⋯ menu to edit sections"
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "Tap the ⋯ menu and choose Edit scenes to pick what to bring"
+            "value" : "Tap Add category or Add item below to start, or use the ⋯ menu to edit sections"
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "Tap the ⋯ menu and choose Edit scenes to pick what to bring"
+            "value" : "Tap Add category or Add item below to start, or use the ⋯ menu to edit sections"
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "Tap the ⋯ menu and choose Edit scenes to pick what to bring"
+            "value" : "Tap Add category or Add item below to start, or use the ⋯ menu to edit sections"
           }
         },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "Tap the ⋯ menu and choose Edit scenes to pick what to bring"
+            "value" : "Tap Add category or Add item below to start, or use the ⋯ menu to edit sections"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "点击右上角 ⋯ → 补充推荐物品，帮你查缺补漏"
+            "value" : "点击下方添加分类或添加物品开始整理，也可以在右上角 ⋯ 菜单中编辑分类。"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "點擊右上角 ⋯ → 補充推薦物品，幫你查缺補漏"
+            "value" : "點擊下方新增分類或新增物品開始整理，也可以在右上角 ⋯ 選單中編輯分類。"
           }
         }
       }
@@ -12017,13 +12003,13 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "还没有物品"
+            "value" : "清单里还没有物品"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "還沒有物品"
+            "value" : "清單裡還沒有物品"
           }
         }
       }
@@ -12719,6 +12705,29 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "挑食的孩子加上陌生的食物=不必要的崩潰——有備無患"
+          }
+        }
+      }
+    },
+    "Picnic mat" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Picnic mat"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "野餐垫"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "野餐墊"
           }
         }
       }

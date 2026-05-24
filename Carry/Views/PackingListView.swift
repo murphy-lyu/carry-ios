@@ -27,6 +27,9 @@ struct PackingListView: View {
     @State private var showSuggestSheet = false
     @State private var showReorderSheet = false
     @State private var showDeleteConfirmation = false
+    @State private var showAddSectionAlert = false
+    @State private var newSectionName = ""
+    @State private var showAddItemsRoute = false
     @State private var isSaved = false
     @State private var showConfetti = false
     @State private var showCompletionBanner = false
@@ -48,7 +51,7 @@ struct PackingListView: View {
 
     private var bundle: TripBundle? { store.bundle(for: tripId) }
     private var sections: [PackingSection] {
-        (bundle?.safeSections ?? []).filter { ($0.items?.isEmpty == false) }
+        bundle?.safeSections ?? []
     }
     private var hasScenes: Bool { !(bundle?.selectedSceneKeys.isEmpty ?? true) }
     private var sceneCardDismissed: Bool {
@@ -279,6 +282,20 @@ struct PackingListView: View {
                     store.reorderSections(tripId: tripId, newOrder: newOrder)
                 }
             }
+        }
+        .alert("New section", isPresented: $showAddSectionAlert) {
+            TextField("Section name", text: $newSectionName)
+            Button("Add") {
+                addSectionFromEmptyState()
+            }
+            Button("Cancel", role: .cancel) {
+                newSectionName = ""
+            }
+        }
+        .onChange(of: showAddItemsRoute) { _, newValue in
+            guard newValue else { return }
+            router.path.append(CreationRoute.addItems(tripId))
+            showAddItemsRoute = false
         }
         .sheet(isPresented: $showReminderSheet) {
             if let bundle = bundle {
@@ -873,8 +890,7 @@ struct PackingListView: View {
     }
 
     private var emptyState: some View {
-        VStack(spacing: 0) {
-            Spacer()
+        VStack(spacing: 18) {
             Spacer()
             Image(systemName: "suitcase")
                 .font(.system(size: 48))
@@ -882,19 +898,72 @@ struct PackingListView: View {
             Text("packing.empty.title")
                 .font(.headline)
                 .foregroundColor(.primary)
-                .padding(.top, 12)
             Text("packing.empty.subtitle")
                 .font(.subheadline)
                 .foregroundColor(.secondary)
                 .multilineTextAlignment(.center)
-                .padding(.top, 6)
+                .padding(.horizontal, 4)
+
+            VStack(spacing: 10) {
+                Button {
+                    newSectionName = ""
+                    showAddSectionAlert = true
+                } label: {
+                    HStack(spacing: 10) {
+                        Image(systemName: "folder.badge.plus")
+                            .font(.system(size: 11, weight: .semibold))
+                        Text("Add category")
+                    }
+                    .font(.subheadline.weight(.medium))
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 11)
+                    .foregroundStyle(colorScheme == .dark ? Color.primary.opacity(0.82) : Color.primary.opacity(0.88))
+                    .background(
+                        RoundedRectangle(cornerRadius: 13, style: .continuous)
+                            .fill(colorScheme == .dark ? Color.white.opacity(0.035) : Color.primary.opacity(0.03))
+                    )
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 13, style: .continuous)
+                            .strokeBorder(Color.primary.opacity(colorScheme == .dark ? 0.03 : 0.045), lineWidth: 1)
+                    )
+                }
+                .buttonStyle(.plain)
+
+                Button {
+                    if sections.isEmpty {
+                        showAddItemsRoute = true
+                    } else {
+                        router.path.append(CreationRoute.addItems(tripId))
+                    }
+                } label: {
+                    HStack(spacing: 10) {
+                        Image(systemName: "plus.circle.fill")
+                            .font(.system(size: 13, weight: .semibold))
+                        Text("Add item")
+                    }
+                    .font(.subheadline.weight(.semibold))
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 13)
+                    .foregroundStyle(.primary)
+                    .background(
+                        RoundedRectangle(cornerRadius: 14, style: .continuous)
+                            .fill(colorScheme == .dark ? Color.white.opacity(0.06) : Color.primary.opacity(0.055))
+                    )
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 14, style: .continuous)
+                            .strokeBorder(Color.primary.opacity(colorScheme == .dark ? 0.05 : 0.06), lineWidth: 1)
+                    )
+                }
+                .buttonStyle(.plain)
+            }
+            .padding(.top, 6)
+
             Spacer()
             if isNewTrip && !sceneCardDismissed {
                 sceneEntryCard
                     .padding(.horizontal, 16)
                     .padding(.bottom, 24)
             }
-            Spacer()
         }
         .padding(.horizontal, 32)
         .frame(maxWidth: .infinity)
@@ -986,6 +1055,13 @@ struct PackingListView: View {
         }
         .buttonStyle(PressableScaleButtonStyle(scale: 0.985, pressedBrightness: -0.02, pressedOpacity: 0.95))
         .padding(.vertical, 1)
+    }
+
+    private func addSectionFromEmptyState() {
+        let name = newSectionName.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !name.isEmpty else { return }
+        _ = store.addSection(tripId: tripId, name: name)
+        newSectionName = ""
     }
 
     private var addItemTint: Color {
@@ -1427,14 +1503,45 @@ struct ReorderSectionsView: View {
 
     var body: some View {
         ScrollView {
-            VStack(spacing: rowGap) {
-                ForEach(ordered) { section in
-                    rowView(section: section)
+            if ordered.isEmpty {
+                VStack(spacing: 16) {
+                    Spacer(minLength: 90)
+                    Image(systemName: "square.grid.2x2")
+                        .font(.system(size: 38, weight: .regular))
+                        .foregroundStyle(.secondary)
+                    Text("No sections yet")
+                        .font(.headline)
+                        .foregroundStyle(.primary)
+                    Text("Create a section to organize your packing list.")
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                        .multilineTextAlignment(.center)
+                        .frame(maxWidth: 260)
+                    Button {
+                        newSectionName = ""
+                        showAddAlert = true
+                    } label: {
+                        Label("New section", systemImage: "plus")
+                            .font(.subheadline.weight(.semibold))
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 12)
+                    }
+                    .buttonStyle(PressableScaleButtonStyle(scale: 0.985, pressedBrightness: -0.02, pressedOpacity: 0.95))
+                    .padding(.horizontal, 16)
+                    Spacer(minLength: 90)
                 }
+                .frame(maxWidth: .infinity)
+                .padding(.horizontal, 24)
+            } else {
+                VStack(spacing: rowGap) {
+                    ForEach(ordered) { section in
+                        rowView(section: section)
+                    }
+                }
+                .padding(.horizontal, 16)
+                .padding(.top, 16)
+                .padding(.bottom, 80)
             }
-            .padding(.horizontal, 16)
-            .padding(.top, 16)
-            .padding(.bottom, 80)
         }
         .scrollDisabled(draggingId != nil)
         .background(CarrySubtleBackground())
@@ -1467,8 +1574,7 @@ struct ReorderSectionsView: View {
             Button("Cancel", role: .cancel) { renamingSection = nil }
         }
         .onAppear {
-            ordered = store.bundle(for: tripId)?.safeSections
-                .filter { $0.items?.isEmpty == false } ?? []
+            ordered = store.bundle(for: tripId)?.safeSections ?? []
         }
     }
 
