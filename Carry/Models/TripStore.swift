@@ -877,40 +877,103 @@ final class TripStore: ObservableObject {
 
     // MARK: - Geocoding
 
+    /// Approximate country centroids used as a fallback when CLGeocoder returns
+    /// a valid isoCountryCode but a nil CLLocation (can happen for broad queries).
+    private static let countryCentroids: [String: (lat: Double, lon: Double)] = [
+        "AF": (33.93, 67.71), "AL": (41.15, 20.17), "DZ": (28.03, 1.66),
+        "AO": (-11.20, 17.87), "AR": (-38.42, -63.62), "AU": (-25.27, 133.78),
+        "AT": (47.52, 14.55), "AZ": (40.14, 47.58), "BD": (23.68, 90.36),
+        "BE": (50.50, 4.47), "BR": (-14.24, -51.93), "BG": (42.73, 25.49),
+        "CA": (56.13, -106.35), "CL": (-35.68, -71.54), "CN": (35.86, 104.20),
+        "CO": (4.57, -74.30), "HR": (45.10, 15.20), "CZ": (49.82, 15.47),
+        "DK": (56.26, 9.50), "EG": (26.82, 30.80), "ET": (9.15, 40.49),
+        "FI": (61.92, 25.75), "FR": (46.23, 2.21), "DE": (51.17, 10.45),
+        "GH": (7.95, -1.02), "GR": (39.07, 21.82), "HK": (22.40, 114.11),
+        "HU": (47.16, 19.50), "IN": (20.59, 78.96), "ID": (-0.79, 113.92),
+        "IQ": (33.22, 43.68), "IE": (53.41, -8.24), "IL": (31.05, 34.85),
+        "IT": (41.87, 12.57), "JP": (36.20, 138.25), "JO": (30.59, 36.24),
+        "KZ": (48.02, 66.92), "KE": (-0.02, 37.91), "KR": (35.91, 127.77),
+        "KW": (29.31, 47.48), "MY": (4.21, 108.10), "MX": (23.63, -102.55),
+        "MA": (31.79, -7.09), "MZ": (-18.67, 35.53), "MM": (16.87, 96.19),
+        "NP": (28.39, 84.12), "NL": (52.13, 5.29), "NZ": (-40.90, 174.89),
+        "NG": (9.08, 8.68), "NO": (60.47, 8.47), "PK": (30.38, 69.35),
+        "PE": (-9.19, -75.02), "PH": (12.88, 121.77), "PL": (51.92, 19.15),
+        "PT": (39.40, -8.22), "QA": (25.35, 51.18), "RO": (45.94, 24.97),
+        "RU": (61.52, 105.32), "SA": (23.89, 45.08), "SN": (14.50, -14.45),
+        "RS": (44.02, 21.01), "SG": (1.35, 103.82), "ZA": (-30.56, 22.94),
+        "ES": (40.46, -3.75), "LK": (7.87, 80.77), "SD": (12.86, 30.22),
+        "SE": (60.13, 18.64), "CH": (46.82, 8.23), "SY": (34.80, 38.99),
+        "TW": (23.70, 121.00), "TZ": (-6.37, 34.89), "TH": (15.87, 100.99),
+        "TN": (33.89, 9.54), "TR": (38.96, 35.24), "UA": (48.38, 31.17),
+        "AE": (23.42, 53.85), "GB": (55.38, -3.44), "US": (37.09, -95.71),
+        "UZ": (41.38, 63.97), "VE": (6.42, -66.59), "VN": (14.06, 108.28),
+        "YE": (15.55, 48.52), "ZM": (-13.13, 27.85), "ZW": (-19.02, 29.15),
+    ]
+
+    private func coordinatesForCountry(_ code: String) -> (lat: Double, lon: Double)? {
+        Self.countryCentroids[code.uppercased()]
+    }
+
     func updateCountryCode(for tripId: UUID, city: String) {
         Task {
             let geocoder = CLGeocoder()
             guard let placemark = try? await geocoder.geocodeAddressString(city).first else { return }
             let code = placemark.isoCountryCode ?? ""
-            let lat  = placemark.location?.coordinate.latitude  ?? 0
-            let lon  = placemark.location?.coordinate.longitude ?? 0
+            // Prefer the precise placemark location; fall back to country centroid.
+            let coordinate: (lat: Double, lon: Double)?
+            if let loc = placemark.location, loc.coordinate.latitude != 0 {
+                coordinate = (loc.coordinate.latitude, loc.coordinate.longitude)
+            } else if !code.isEmpty, let centroid = coordinatesForCountry(code) {
+                coordinate = centroid
+            } else {
+                coordinate = nil
+            }
+            guard let coord = coordinate else { return }
             await MainActor.run {
                 guard let bundle = bundle(for: tripId) else { return }
-                bundle.countryCode = code
-                bundle.latitude = lat
-                bundle.longitude = lon
+                if !code.isEmpty { bundle.countryCode = code }
+                bundle.latitude  = coord.lat
+                bundle.longitude = coord.lon
                 try? context.save()
             }
         }
     }
 
     func geocodeMissingTrips() {
-        let missing = trips.filter { $0.countryCode.isEmpty && !$0.destinationCity.isEmpty }
+        // Re-geocode if countryCode is missing OR if coordinates are still zero.
+        // The second condition catches the case where a previous geocode call
+        // resolved isoCountryCode but returned a nil location, leaving latitude = 0
+        // and permanently hiding the country from the map.
+        let missing = trips.filter {
+            !$0.destinationCity.isEmpty && ($0.countryCode.isEmpty || $0.latitude == 0)
+        }
         guard !missing.isEmpty else { return }
         Task {
             let geocoder = CLGeocoder()
             for trip in missing {
                 guard let placemark = try? await geocoder.geocodeAddressString(trip.destinationCity).first else { continue }
                 let code = placemark.isoCountryCode ?? ""
-                let lat  = placemark.location?.coordinate.latitude  ?? 0
-                let lon  = placemark.location?.coordinate.longitude ?? 0
+                // Prefer the precise placemark location; fall back to country centroid
+                // so we always save usable coordinates even when CLGeocoder returns a
+                // valid country code but a nil CLLocation.
+                let coordinate: (lat: Double, lon: Double)?
+                if let loc = placemark.location, loc.coordinate.latitude != 0 {
+                    coordinate = (loc.coordinate.latitude, loc.coordinate.longitude)
+                } else if !code.isEmpty, let centroid = coordinatesForCountry(code) {
+                    coordinate = centroid
+                } else {
+                    coordinate = nil
+                }
+                guard let coord = coordinate else { continue }
                 await MainActor.run {
                     guard let bundle = self.bundle(for: trip.id) else { return }
-                    bundle.countryCode = code
-                    bundle.latitude    = lat
-                    bundle.longitude   = lon
+                    if !code.isEmpty { bundle.countryCode = code }
+                    bundle.latitude  = coord.lat
+                    bundle.longitude = coord.lon
                     try? self.context.save()
                 }
+                // Respect CLGeocoder's recommended 1 req/s rate limit
+                try? await Task.sleep(for: .milliseconds(400))
             }
         }
     }
