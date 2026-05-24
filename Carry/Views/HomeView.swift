@@ -802,52 +802,140 @@ struct HomeView: View {
     }
 
     private var emptyState: some View {
-        VStack(spacing: 28) {
-            VStack(spacing: 8) {
-                Text("home.empty.title")
-                    .font(.title3.weight(.semibold))
-                    .foregroundStyle(.primary)
-                Text("home.empty.subtitle")
-                    .font(.subheadline)
-                    .foregroundStyle(.secondary)
-                    .multilineTextAlignment(.center)
-                    .lineSpacing(3)
-            }
-
-            Button {
-                startNewTrip()
-            } label: {
-                HStack(spacing: 7) {
-                    Image(systemName: "plus")
-                        .font(.system(size: 13, weight: .bold))
-                    Text("home.empty.cta")
-                        .font(.subheadline.weight(.semibold))
-                }
-                .foregroundStyle(Color(UIColor.systemBackground))
-                .frame(maxWidth: .infinity)
-                .frame(height: 50)
-                .background(
-                    RoundedRectangle(cornerRadius: 16, style: .continuous)
+        VStack(spacing: 0) {
+            VStack(spacing: 18) {
+                ZStack {
+                    RoundedRectangle(cornerRadius: 18, style: .continuous)
                         .fill(
                             LinearGradient(
                                 colors: [
-                                    Color.primary.opacity(0.95),
-                                    Color.primary.opacity(0.82)
+                                    Color(UIColor.systemBackground).opacity(colorScheme == .dark ? 0.42 : 0.74),
+                                    Color(UIColor.systemBackground).opacity(colorScheme == .dark ? 0.28 : 0.58)
                                 ],
                                 startPoint: .topLeading,
                                 endPoint: .bottomTrailing
                             )
                         )
-                )
-                .overlay(
-                    RoundedRectangle(cornerRadius: 16, style: .continuous)
-                        .strokeBorder(Color.primary.opacity(0.10), lineWidth: 1)
-                )
-                .shadow(color: Color.black.opacity(colorScheme == .dark ? 0.30 : 0.10), radius: 10, x: 0, y: 5)
+                        .frame(width: 128, height: 84)
+                        .rotationEffect(.degrees(-12))
+                        .offset(x: -34, y: 8)
+                        .overlay(
+                            Image(systemName: "mountain.2.fill")
+                                .font(.system(size: 18, weight: .semibold))
+                                .foregroundStyle(.primary.opacity(colorScheme == .dark ? 0.78 : 0.72))
+                                .offset(x: -18, y: 10)
+                        )
+
+                    RoundedRectangle(cornerRadius: 18, style: .continuous)
+                        .fill(
+                            LinearGradient(
+                                colors: [
+                                    Color(UIColor.systemBackground).opacity(colorScheme == .dark ? 0.56 : 0.90),
+                                    Color(UIColor.systemBackground).opacity(colorScheme == .dark ? 0.42 : 0.76)
+                                ],
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            )
+                        )
+                        .frame(width: 128, height: 84)
+                        .overlay(
+                            Image(systemName: "map.fill")
+                                .font(.system(size: 21, weight: .semibold))
+                                .foregroundStyle(.primary)
+                        )
+                        .shadow(color: Color.black.opacity(colorScheme == .dark ? 0.16 : 0.08), radius: 10, x: 0, y: 5)
+
+                    RoundedRectangle(cornerRadius: 18, style: .continuous)
+                        .fill(
+                            LinearGradient(
+                                colors: [
+                                    Color(UIColor.systemBackground).opacity(colorScheme == .dark ? 0.42 : 0.74),
+                                    Color(UIColor.systemBackground).opacity(colorScheme == .dark ? 0.28 : 0.58)
+                                ],
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            )
+                        )
+                        .frame(width: 128, height: 84)
+                        .rotationEffect(.degrees(12))
+                        .offset(x: 34, y: 8)
+                        .overlay(
+                            Image(systemName: "airplane")
+                                .font(.system(size: 18, weight: .semibold))
+                                .foregroundStyle(.primary.opacity(colorScheme == .dark ? 0.78 : 0.72))
+                                .offset(x: 18, y: 10)
+                        )
+                }
+                .frame(height: 104)
+                .padding(.top, 8)
+
+                VStack(spacing: 8) {
+                    Text("home.empty.title")
+                        .font(.title2.weight(.semibold))
+                        .foregroundStyle(.primary)
+                    Text("home.empty.subtitle")
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                        .multilineTextAlignment(.center)
+                        .lineSpacing(3)
+                }
+
+                Button {
+                    startNewTrip()
+                } label: {
+                    HStack(spacing: 7) {
+                        Image(systemName: "plus")
+                            .font(.system(size: 13, weight: .bold))
+                        Text("home.empty.cta")
+                            .font(.subheadline.weight(.semibold))
+                    }
+                    .foregroundStyle(Color(UIColor.systemBackground))
+                    .frame(maxWidth: .infinity)
+                    .frame(height: 50)
+                    .background(
+                        RoundedRectangle(cornerRadius: 16, style: .continuous)
+                            .fill(
+                                LinearGradient(
+                                    colors: [
+                                        Color.primary.opacity(0.95),
+                                        Color.primary.opacity(0.82)
+                                    ],
+                                    startPoint: .topLeading,
+                                    endPoint: .bottomTrailing
+                                )
+                            )
+                    )
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 16, style: .continuous)
+                            .strokeBorder(Color.primary.opacity(0.10), lineWidth: 1)
+                    )
+                    .shadow(color: Color.black.opacity(colorScheme == .dark ? 0.26 : 0.08), radius: 10, x: 0, y: 5)
+                }
+                .buttonStyle(PressableScaleButtonStyle(scale: 0.97, pressedBrightness: -0.02, pressedOpacity: 0.95))
             }
-            .buttonStyle(PressableScaleButtonStyle(scale: 0.97, pressedBrightness: -0.02, pressedOpacity: 0.95))
+            .padding(.vertical, 24)
+            .padding(.horizontal, 22)
+            .frame(maxWidth: .infinity)
+            .background(
+                RoundedRectangle(cornerRadius: 30, style: .continuous)
+                    .fill(
+                        LinearGradient(
+                            colors: [
+                                Color(UIColor.systemBackground).opacity(colorScheme == .dark ? 0.56 : 0.82),
+                                Color(UIColor.systemBackground).opacity(colorScheme == .dark ? 0.44 : 0.70)
+                            ],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        )
+                    )
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 30, style: .continuous)
+                    .strokeBorder(Color.primary.opacity(colorScheme == .dark ? 0.07 : 0.05), lineWidth: 1)
+            )
+            .shadow(color: Color.black.opacity(colorScheme == .dark ? 0.18 : 0.08), radius: 16, x: 0, y: 8)
+            .padding(.horizontal, 22)
         }
-        .padding(.horizontal, 20)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 
