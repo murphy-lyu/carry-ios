@@ -296,6 +296,10 @@ struct SuggestionPreviewView: View {
         let existingLower = Set(
             bundle.safeSections.flatMap { $0.items ?? [] }.map { $0.name.lowercased() }
         )
+        let myItemLower = Set(
+            store.myItems.map { canonicalItemName($0.name).lowercased() }
+        )
+        let excludedLower = existingLower.union(myItemLower)
 
         // Regular suggestions (default unselected)
         let generated = generatePackingSections(selectedScenes: sceneKeys, tripDays: bundle.days)
@@ -303,7 +307,7 @@ struct SuggestionPreviewView: View {
         var allNames = Set<String>()
         for section in generated {
             let newItems = (section.items ?? [])
-                .filter { !existingLower.contains($0.name.lowercased()) }
+                .filter { !excludedLower.contains($0.name.lowercased()) }
                 .map { $0.name }
             guard !newItems.isEmpty else { continue }
             result.append((title: section.title, items: newItems))
@@ -315,7 +319,7 @@ struct SuggestionPreviewView: View {
 
         // Surprise items (not pre-selected) — also exclude names already in regular suggestions
         let dismissed = Set(bundle.dismissedSurpriseNames.map { $0.lowercased() })
-        let excludedNames = existingLower.union(allNames.map { $0.lowercased() })
+        let excludedNames = excludedLower.union(allNames.map { $0.lowercased() })
         surpriseItems = computeSurpriseItems(for: sceneKeys, existingNames: excludedNames)
             .filter { !dismissed.contains($0.name.lowercased()) }
     }

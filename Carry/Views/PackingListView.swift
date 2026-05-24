@@ -66,10 +66,13 @@ struct PackingListView: View {
     private var surpriseItems: [SurpriseItem] {
         guard let bundle else { return [] }
         let existingNames = Set(
-            bundle.safeSections.flatMap { $0.items ?? [] }.map { $0.name.lowercased() }
+            bundle.safeSections.flatMap { $0.items ?? [] }.map { canonicalItemName($0.name).lowercased() }
+        )
+        let myItemNames = Set(
+            store.myItems.map { canonicalItemName($0.name).lowercased() }
         )
         let dismissed = Set(bundle.dismissedSurpriseNames.map { $0.lowercased() })
-        return computeSurpriseItems(for: bundle.selectedSceneKeys, existingNames: existingNames)
+        return computeSurpriseItems(for: bundle.selectedSceneKeys, existingNames: existingNames.union(myItemNames))
             .filter { !dismissed.contains($0.name.lowercased()) }
     }
 
@@ -420,7 +423,7 @@ struct PackingListView: View {
         } else {
             PackingItemRow(
                 item: item,
-                showCheckmark: draggingItemId == nil && !isNewTrip,
+                showCheckmark: !isNewTrip,
                 showQuantity: !isNewTrip,
                 onTap: {
                     toggleItem(itemId: item.id)
