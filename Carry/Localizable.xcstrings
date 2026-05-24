@@ -8991,55 +8991,55 @@
         "de": {
           "stringUnit": {
             "state": "needs_review",
-            "value": "Add your first trip and watch your world come alive on the globe."
+            "value": "Add a trip to begin."
           }
         },
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Add your first trip and watch your world come alive on the globe."
+            "value": "Add a trip to begin."
           }
         },
         "es": {
           "stringUnit": {
             "state": "needs_review",
-            "value": "Add your first trip and watch your world come alive on the globe."
+            "value": "Add a trip to begin."
           }
         },
         "fr": {
           "stringUnit": {
             "state": "needs_review",
-            "value": "Add your first trip and watch your world come alive on the globe."
+            "value": "Add a trip to begin."
           }
         },
         "ja": {
           "stringUnit": {
             "state": "needs_review",
-            "value": "最初の旅を追加して、地球儀に世界を描こう。"
+            "value": "旅を追加して始めよう。"
           }
         },
         "ko": {
           "stringUnit": {
             "state": "needs_review",
-            "value": "첫 여행을 추가하고 지구본에 세계를 펼쳐보세요."
+            "value": "여행을 추가하고 시작하세요."
           }
         },
         "pt-BR": {
           "stringUnit": {
             "state": "needs_review",
-            "value": "Add your first trip and watch your world come alive on the globe."
+            "value": "Add a trip to begin."
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "创建第一次行程，让你的世界在地球仪上亮起来。"
+            "value": "添加一段行程，出发吧。"
           }
         },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "建立第一次行程，讓你的世界在地球儀上亮起來。"
+            "value": "添加一段行程，出發吧。"
           }
         }
       }
@@ -9050,55 +9050,55 @@
         "de": {
           "stringUnit": {
             "state": "needs_review",
-            "value": "Start your journey"
+            "value": "The world awaits."
           }
         },
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Start your journey"
+            "value": "The world awaits."
           }
         },
         "es": {
           "stringUnit": {
             "state": "needs_review",
-            "value": "Start your journey"
+            "value": "The world awaits."
           }
         },
         "fr": {
           "stringUnit": {
             "state": "needs_review",
-            "value": "Start your journey"
+            "value": "The world awaits."
           }
         },
         "ja": {
           "stringUnit": {
             "state": "needs_review",
-            "value": "旅を始めよう"
+            "value": "世界が待っている。"
           }
         },
         "ko": {
           "stringUnit": {
             "state": "needs_review",
-            "value": "여행을 시작하세요"
+            "value": "세상이 기다리고 있어요."
           }
         },
         "pt-BR": {
           "stringUnit": {
             "state": "needs_review",
-            "value": "Start your journey"
+            "value": "The world awaits."
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "开启你的旅程"
+            "value": "世界在等你。"
           }
         },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "開啟你的旅程"
+            "value": "世界在等你。"
           }
         }
       }
