@@ -33,6 +33,7 @@ struct HomeView: View {
     }
 
     private var upcomingTrips: [TripBundle] {
+        guard !store.isHomeEmptyStateMockEnabled else { return [] }
         struct Decorated {
             let trip: TripBundle
             let isComplete: Bool
@@ -56,6 +57,7 @@ struct HomeView: View {
     }
 
     private var pastTripsByYear: [(year: Int, trips: [TripBundle])] {
+        guard !store.isHomeEmptyStateMockEnabled else { return [] }
         let calendar = Calendar.current
         let grouped = Dictionary(grouping: store.trips.filter { isPast($0) }) { trip in
             calendar.component(.year, from: returnDate(for: trip))
@@ -142,16 +144,22 @@ struct HomeView: View {
                             .onEnded { v in
                                 let velocity = v.velocity.height
                                 let translation = v.translation.height
-                                let current = sheetOffset + translation
-                                withAnimation(.spring(response: 0.38, dampingFraction: 0.82)) {
+                                let currentOffset = min(max(0, sheetOffset + translation), collapsedSheetOffset)
+                                let shouldCollapse: Bool
+                                if velocity > 650 || translation > collapsedSheetOffset * 0.46 {
+                                    shouldCollapse = true
+                                } else if velocity < -350 || translation < -70 {
+                                    shouldCollapse = false
+                                } else {
+                                    shouldCollapse = currentOffset > collapsedSheetOffset * 0.68
+                                }
+                                let target: CGFloat = shouldCollapse ? collapsedSheetOffset : 0
+                                let travel = target - currentOffset
+                                let normalizedV = abs(travel) < 1 ? 0 : max(-2.5, min(2.5, velocity / travel))
+                                UIImpactFeedbackGenerator(style: .soft).impactOccurred()
+                                withAnimation(.interpolatingSpring(stiffness: 280, damping: 30, initialVelocity: normalizedV)) {
                                     capsuleDrag = 0
-                                    if velocity > 650 || translation > collapsedSheetOffset * 0.46 {
-                                        sheetOffset = collapsedSheetOffset
-                                    } else if velocity < -350 || translation < -70 {
-                                        sheetOffset = 0
-                                    } else {
-                                        sheetOffset = current > collapsedSheetOffset * 0.68 ? collapsedSheetOffset : 0
-                                    }
+                                    sheetOffset = target
                                 }
                             }
                     )
@@ -325,14 +333,56 @@ struct HomeView: View {
 
         func makeCoordinator() -> Coordinator { Coordinator() }
 
+        // Delegate proxy that intercepts two UIScrollViewDelegate methods:
+        // • scrollViewWillBeginDecelerating — cancels deceleration when cancelNext is armed
+        // • scrollViewDidScroll — locks contentOffset while lockedOffsetY is set (belt-and-suspenders)
+        // All other delegate messages are forwarded to the original delegate via forwardingTarget.
+        private class DecelerationCanceller: NSObject, UIScrollViewDelegate {
+            weak var original: AnyObject?
+            var cancelNext = false
+            var lockedOffsetY: CGFloat? = nil
+
+            func scrollViewWillBeginDecelerating(_ scrollView: UIScrollView) {
+                if cancelNext {
+                    cancelNext = false
+                    scrollView.setContentOffset(scrollView.contentOffset, animated: false)
+                }
+                (original as? UIScrollViewDelegate)?.scrollViewWillBeginDecelerating?(scrollView)
+            }
+
+            func scrollViewDidScroll(_ scrollView: UIScrollView) {
+                if let locked = lockedOffsetY, abs(scrollView.contentOffset.y - locked) > 0.5 {
+                    // Deceleration slipped through — force the offset back every frame
+                    scrollView.setContentOffset(CGPoint(x: scrollView.contentOffset.x, y: locked), animated: false)
+                }
+                (original as? UIScrollViewDelegate)?.scrollViewDidScroll?(scrollView)
+            }
+
+            override func responds(to sel: Selector!) -> Bool {
+                sel == #selector(UIScrollViewDelegate.scrollViewWillBeginDecelerating(_:))
+                    || sel == #selector(UIScrollViewDelegate.scrollViewDidScroll(_:))
+                    || (original?.responds(to: sel) ?? false)
+            }
+
+            override func forwardingTarget(for sel: Selector!) -> Any? {
+                guard sel != #selector(UIScrollViewDelegate.scrollViewWillBeginDecelerating(_:)),
+                      sel != #selector(UIScrollViewDelegate.scrollViewDidScroll(_:)) else { return nil }
+                return (original?.responds(to: sel) == true) ? original : nil
+            }
+        }
+
         final class Coordinator: NSObject {
             var sheetOffset: Binding<CGFloat>?
             var listDrag: Binding<CGFloat>?
             var collapsedSheetOffset: CGFloat = 0
             private weak var attachedScrollView: UIScrollView?
-            // Translation value at the moment scroll view hit the top mid-gesture
             private var capturedTranslationAtTop: CGFloat? = nil
             private var wasAtTop = false
+            private var savedScrollOffsetY: CGFloat = 0
+            private var isExpandingFromCollapsed = false
+            private var decelerationCanceller: DecelerationCanceller?
+            // Watches sv.delegate so we can reinstall the proxy if SwiftUI resets it
+            private var delegateObservation: NSKeyValueObservation?
 
             func attachIfNeeded(from view: UIView) {
                 guard attachedScrollView == nil else { return }
@@ -340,10 +390,23 @@ struct HomeView: View {
                     guard let self, self.attachedScrollView == nil else { return }
                     if let sv = self.findScrollView(from: view) {
                         self.attachedScrollView = sv
-                        // Piggyback on the scroll view's own pan gesture — catches mid-gesture reversals
                         sv.panGestureRecognizer.addTarget(self, action: #selector(self.handleScrollPan(_:)))
+                        self.installDelegateProxy(on: sv)
+                        // SwiftUI may reset sv.delegate on each render cycle.
+                        // KVO ensures the proxy is always in place when needed.
+                        self.delegateObservation = sv.observe(\.delegate, options: []) { [weak self, weak sv] _, _ in
+                            guard let self, let sv, sv.delegate !== self.decelerationCanceller else { return }
+                            self.installDelegateProxy(on: sv)
+                        }
                     }
                 }
+            }
+
+            private func installDelegateProxy(on sv: UIScrollView) {
+                let canceller = decelerationCanceller ?? DecelerationCanceller()
+                canceller.original = sv.delegate
+                sv.delegate = canceller
+                decelerationCanceller = canceller
             }
 
             private func findScrollView(from view: UIView) -> UIScrollView? {
@@ -394,9 +457,27 @@ struct HomeView: View {
                     }
 
                     // --- Expand: sheet is collapsed and moving upward ---
-                    if isCollapsed && velocity < 0 {
+                    // Use translation (cumulative) not velocity so slow drags are caught reliably
+                    if isCollapsed && translation < 0 {
+                        if !isExpandingFromCollapsed {
+                            // Collapsed state always shows the top of the list.
+                            // Read contentOffset only after we've locked it to topInset;
+                            // using the live value here races with UIKit's own scroll update
+                            // on fast swipes and captures a stale, already-scrolled offset.
+                            savedScrollOffsetY = topInset
+                            isExpandingFromCollapsed = true
+                        }
                         listDrag?.wrappedValue = min(0, translation)
                         sv.contentOffset.y = topInset  // lock scroll while expanding
+                        // Pre-arm the deceleration canceller NOW — scrollViewWillBeginDecelerating
+                        // fires inside UIKit's own .ended handler, before ours, so setting this
+                        // flag in .ended would be too late
+                        decelerationCanceller?.cancelNext = true
+                    }
+
+                    // While sheet is fully collapsed, block all list scrolling
+                    if isCollapsed {
+                        sv.contentOffset.y = topInset
                     }
 
                     wasAtTop = atTop
@@ -406,10 +487,25 @@ struct HomeView: View {
                     capturedTranslationAtTop = nil
                     wasAtTop = false
 
-                    guard drag != 0 else { return }
+                    guard drag != 0 else {
+                        isExpandingFromCollapsed = false
+                        return
+                    }
                     let wasExpanding = drag < 0
-                    if wasExpanding {
-                        // Cancel UIScrollView's deceleration scroll that would fire after gesture end
+                    if isExpandingFromCollapsed {
+                        let targetY = savedScrollOffsetY
+                        isExpandingFromCollapsed = false
+                        // Primary: cancel deceleration via scrollViewWillBeginDecelerating
+                        decelerationCanceller?.cancelNext = true
+                        // Backup: lock contentOffset in scrollViewDidScroll every frame in
+                        // case deceleration slips through (e.g. proxy was briefly uninstalled)
+                        decelerationCanceller?.lockedOffsetY = targetY
+                        sv.setContentOffset(CGPoint(x: sv.contentOffset.x, y: targetY), animated: false)
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) { [weak self] in
+                            self?.decelerationCanceller?.lockedOffsetY = nil
+                        }
+                    } else if wasExpanding {
+                        decelerationCanceller?.cancelNext = true
                         sv.setContentOffset(CGPoint(x: sv.contentOffset.x, y: topInset), animated: false)
                     }
                     let shouldCollapse: Bool
@@ -419,9 +515,14 @@ struct HomeView: View {
                     } else {
                         shouldCollapse = !(velocity < -350 || drag < -70)
                     }
-                    withAnimation(.spring(response: 0.38, dampingFraction: 0.82)) {
+                    let currentOffset = min(max(0, (sheetOffset?.wrappedValue ?? 0) + drag), collapsedSheetOffset)
+                    let target: CGFloat = shouldCollapse ? collapsedSheetOffset : 0
+                    let travel = target - currentOffset
+                    let normalizedV = abs(travel) < 1 ? 0 : max(-2.5, min(2.5, velocity / travel))
+                    UIImpactFeedbackGenerator(style: .soft).impactOccurred()
+                    withAnimation(.interpolatingSpring(stiffness: 280, damping: 30, initialVelocity: normalizedV)) {
                         listDrag?.wrappedValue = 0
-                        sheetOffset?.wrappedValue = shouldCollapse ? collapsedSheetOffset : 0
+                        sheetOffset?.wrappedValue = target
                     }
 
                 default: break
@@ -489,21 +590,34 @@ struct HomeView: View {
         .background(
             RoundedRectangle(cornerRadius: 24, style: .continuous)
                 .fill(
-                    LinearGradient(
-                        colors: [
-                            Color(UIColor.systemBackground).opacity(0.95),
-                            Color(UIColor.systemBackground).opacity(0.82)
-                        ],
-                        startPoint: .topLeading,
-                        endPoint: .bottomTrailing
+                    colorScheme == .dark
+                    ? AnyShapeStyle(
+                        LinearGradient(
+                            colors: [
+                                Color(red: 0.17, green: 0.17, blue: 0.18).opacity(0.96),
+                                Color(red: 0.20, green: 0.20, blue: 0.21).opacity(0.90)
+                            ],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        )
+                    )
+                    : AnyShapeStyle(
+                        LinearGradient(
+                            colors: [
+                                Color(UIColor.systemBackground).opacity(0.95),
+                                Color(UIColor.systemBackground).opacity(0.82)
+                            ],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        )
                     )
                 )
         )
         .overlay(
             RoundedRectangle(cornerRadius: 24, style: .continuous)
-                .strokeBorder(Color.primary.opacity(0.05), lineWidth: 1)
+                .strokeBorder(Color.primary.opacity(colorScheme == .dark ? 0.10 : 0.05), lineWidth: 1)
         )
-        .shadow(color: Color.black.opacity(0.045), radius: 16, x: 0, y: 10)
+        .shadow(color: Color.black.opacity(colorScheme == .dark ? 0.22 : 0.045), radius: colorScheme == .dark ? 18 : 16, x: 0, y: colorScheme == .dark ? 12 : 10)
     }
 
     private func sectionLabel(_ key: LocalizedStringKey, uppercase: Bool = false) -> some View {
@@ -555,20 +669,32 @@ struct HomeView: View {
         .padding(.vertical, 10)
         .background(
             RoundedRectangle(cornerRadius: 16, style: .continuous)
-                .fill(
-                    LinearGradient(
-                        colors: [
-                            Color(UIColor.systemBackground).opacity(0.96),
-                            Color(UIColor.systemBackground).opacity(0.88)
-                        ],
-                        startPoint: .topLeading,
-                        endPoint: .bottomTrailing
-                    )
-                )
+                .fill(statPillFill)
         )
         .overlay(
             RoundedRectangle(cornerRadius: 16, style: .continuous)
-                .strokeBorder(Color.primary.opacity(0.04), lineWidth: 1)
+                .strokeBorder(Color.primary.opacity(colorScheme == .dark ? 0.03 : 0.04), lineWidth: 1)
+        )
+    }
+
+    private var statPillFill: LinearGradient {
+        if colorScheme == .dark {
+            return LinearGradient(
+                colors: [
+                    Color(red: 0.17, green: 0.17, blue: 0.18),
+                    Color(red: 0.20, green: 0.20, blue: 0.21)
+                ],
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
+            )
+        }
+        return LinearGradient(
+            colors: [
+                Color(UIColor.systemBackground).opacity(0.96),
+                Color(UIColor.systemBackground).opacity(0.88)
+            ],
+            startPoint: .topLeading,
+            endPoint: .bottomTrailing
         )
     }
 
@@ -743,16 +869,37 @@ struct TripCard: View {
 
     private var progressTrackColor: Color {
         colorScheme == .dark
-            ? Color.white.opacity(0.18)
+            ? Color.white.opacity(0.06)
             : Color(uiColor: .systemGray5)
     }
 
     private var cardFill: LinearGradient {
         if isPast {
+            if colorScheme == .dark {
+                return LinearGradient(
+                    colors: [
+                        Color(red: 0.12, green: 0.12, blue: 0.13),
+                        Color(red: 0.14, green: 0.14, blue: 0.15)
+                    ],
+                    startPoint: .topLeading,
+                    endPoint: .bottomTrailing
+                )
+            }
             return LinearGradient(
                 colors: [
                     Color(UIColor.systemBackground).opacity(colorScheme == .dark ? 0.82 : 0.90),
                     Color(UIColor.systemBackground).opacity(colorScheme == .dark ? 0.76 : 0.84)
+                ],
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
+            )
+        }
+
+        if colorScheme == .dark {
+            return LinearGradient(
+                colors: [
+                    Color(red: 0.14, green: 0.14, blue: 0.15),
+                    Color(red: 0.17, green: 0.17, blue: 0.18)
                 ],
                 startPoint: .topLeading,
                 endPoint: .bottomTrailing
@@ -770,7 +917,10 @@ struct TripCard: View {
     }
 
     private var cardShadow: Color {
-        isPast ? Color.black.opacity(0.048) : Color.black.opacity(0.068)
+        if colorScheme == .dark {
+            return Color.black.opacity(isPast ? 0.16 : 0.22)
+        }
+        return isPast ? Color.black.opacity(0.048) : Color.black.opacity(0.068)
     }
 
     private var statusPillText: String? {
@@ -785,21 +935,21 @@ struct TripCard: View {
 
     private var statusPillFillColor: Color {
         if isComplete {
-            return Color(UIColor.systemGray5).opacity(colorScheme == .dark ? 0.32 : 0.72)
+            return colorScheme == .dark ? Color.white.opacity(0.045) : Color(UIColor.systemGray5).opacity(0.72)
         }
-        return Color.blue.opacity(colorScheme == .dark ? 0.18 : 0.10)
+        return colorScheme == .dark ? Color.blue.opacity(0.07) : Color.blue.opacity(0.10)
     }
 
     private var statusPillStrokeColor: Color {
         if isComplete {
-            return Color.primary.opacity(0.025)
+            return Color.primary.opacity(colorScheme == .dark ? 0.06 : 0.025)
         }
-        return Color.blue.opacity(0.16)
+        return Color.blue.opacity(colorScheme == .dark ? 0.08 : 0.16)
     }
 
     private var statusPillForeground: Color {
         if isComplete {
-            return .secondary.opacity(0.76)
+            return colorScheme == .dark ? .secondary.opacity(0.68) : .secondary.opacity(0.76)
         }
         return .primary
     }
@@ -831,14 +981,14 @@ struct TripCard: View {
 
                 Text(bundle.destinationCity)
                     .font(.subheadline.weight(.medium))
-                    .foregroundColor(Color(.systemGray))
+                    .foregroundColor(colorScheme == .dark ? Color.white.opacity(0.56) : Color(.systemGray))
                     .lineLimit(1)
                     .padding(.bottom, 4)
 
                 HStack(spacing: 8) {
                     Text(dateAndDurationText)
                         .font(.caption.weight(.medium))
-                        .foregroundColor(Color(.systemGray2))
+                        .foregroundColor(colorScheme == .dark ? Color.white.opacity(0.30) : Color(.systemGray2))
                         .lineLimit(1)
 
                     if let statusPillText {
