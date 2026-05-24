@@ -1577,15 +1577,60 @@
     "about.legal" : {
       "extractionState" : "manual",
       "localizations" : {
-        "de" : { "stringUnit" : { "state" : "needs_review", "value" : "Legal" } },
-        "en" : { "stringUnit" : { "state" : "translated", "value" : "Legal" } },
-        "es" : { "stringUnit" : { "state" : "needs_review", "value" : "Legal" } },
-        "fr" : { "stringUnit" : { "state" : "needs_review", "value" : "Légal" } },
-        "ja" : { "stringUnit" : { "state" : "needs_review", "value" : "法的情報" } },
-        "ko" : { "stringUnit" : { "state" : "needs_review", "value" : "법적 정보" } },
-        "pt-BR" : { "stringUnit" : { "state" : "needs_review", "value" : "Legal" } },
-        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "法律条款" } },
-        "zh-Hant" : { "stringUnit" : { "state" : "translated", "value" : "法律條款" } }
+        "de" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Legal"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Legal"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Legal"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Légal"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "法的情報"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "법적 정보"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Legal"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "法律条款"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "法律條款"
+          }
+        }
       }
     },
     "about.madeWith" : {
@@ -4736,9 +4781,6 @@
       }
     },
     "Create a section to organize your packing list." : {
-
-    },
-    "Create Trip" : {
 
     },
     "Crossbody bag" : {
@@ -8544,57 +8586,119 @@
     "home.empty.cta" : {
       "extractionState" : "manual",
       "localizations" : {
-        "de" : { "stringUnit" : { "state" : "needs_review", "value" : "Create First Trip" } },
-        "en" : { "stringUnit" : { "state" : "translated", "value" : "Create First Trip" } },
-        "es" : { "stringUnit" : { "state" : "needs_review", "value" : "Create First Trip" } },
-        "fr" : { "stringUnit" : { "state" : "needs_review", "value" : "Create First Trip" } },
-        "ja" : { "stringUnit" : { "state" : "needs_review", "value" : "最初の旅を作成" } },
-        "ko" : { "stringUnit" : { "state" : "needs_review", "value" : "첫 여행 만들기" } },
-        "pt-BR" : { "stringUnit" : { "state" : "needs_review", "value" : "Create First Trip" } },
-        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "创建第一次行程" } },
-        "zh-Hant" : { "stringUnit" : { "state" : "translated", "value" : "建立第一次行程" } }
+        "de" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Create First Trip"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Create First Trip"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Create First Trip"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Create First Trip"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "最初の旅を作成"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "첫 여행 만들기"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Create First Trip"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "创建第一次行程"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "建立第一次行程"
+          }
+        }
       }
     },
     "home.empty.hero_tagline" : {
       "extractionState" : "manual",
       "localizations" : {
-        "de" : { "stringUnit" : { "state" : "needs_review", "value" : "Your trips will appear here" } },
-        "en" : { "stringUnit" : { "state" : "translated", "value" : "Your trips will appear here" } },
-        "es" : { "stringUnit" : { "state" : "needs_review", "value" : "Your trips will appear here" } },
-        "fr" : { "stringUnit" : { "state" : "needs_review", "value" : "Your trips will appear here" } },
-        "ja" : { "stringUnit" : { "state" : "needs_review", "value" : "旅がここに表示されます" } },
-        "ko" : { "stringUnit" : { "state" : "needs_review", "value" : "여행이 여기에 표시됩니다" } },
-        "pt-BR" : { "stringUnit" : { "state" : "needs_review", "value" : "Your trips will appear here" } },
-        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "你的行程将显示在这里" } },
-        "zh-Hant" : { "stringUnit" : { "state" : "translated", "value" : "你的行程將顯示在這裡" } }
-      }
-    },
-    "home.empty.subtitle" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "de" : { "stringUnit" : { "state" : "needs_review", "value" : "Add your first trip and watch your world come alive on the globe." } },
-        "en" : { "stringUnit" : { "state" : "translated", "value" : "Add your first trip and watch your world come alive on the globe." } },
-        "es" : { "stringUnit" : { "state" : "needs_review", "value" : "Add your first trip and watch your world come alive on the globe." } },
-        "fr" : { "stringUnit" : { "state" : "needs_review", "value" : "Add your first trip and watch your world come alive on the globe." } },
-        "ja" : { "stringUnit" : { "state" : "needs_review", "value" : "最初の旅を追加して、地球儀に世界を描こう。" } },
-        "ko" : { "stringUnit" : { "state" : "needs_review", "value" : "첫 여행을 추가하고 지구본에 세계를 펼쳐보세요." } },
-        "pt-BR" : { "stringUnit" : { "state" : "needs_review", "value" : "Add your first trip and watch your world come alive on the globe." } },
-        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "创建第一次行程，让你的世界在地球仪上亮起来。" } },
-        "zh-Hant" : { "stringUnit" : { "state" : "translated", "value" : "建立第一次行程，讓你的世界在地球儀上亮起來。" } }
-      }
-    },
-    "home.empty.title" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "de" : { "stringUnit" : { "state" : "needs_review", "value" : "Start your journey" } },
-        "en" : { "stringUnit" : { "state" : "translated", "value" : "Start your journey" } },
-        "es" : { "stringUnit" : { "state" : "needs_review", "value" : "Start your journey" } },
-        "fr" : { "stringUnit" : { "state" : "needs_review", "value" : "Start your journey" } },
-        "ja" : { "stringUnit" : { "state" : "needs_review", "value" : "旅を始めよう" } },
-        "ko" : { "stringUnit" : { "state" : "needs_review", "value" : "여행을 시작하세요" } },
-        "pt-BR" : { "stringUnit" : { "state" : "needs_review", "value" : "Start your journey" } },
-        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "开启你的旅程" } },
-        "zh-Hant" : { "stringUnit" : { "state" : "translated", "value" : "開啟你的旅程" } }
+        "de" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Your trips will appear here"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Your trips will appear here"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Your trips will appear here"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Your trips will appear here"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "旅がここに表示されます"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "여행이 여기에 표시됩니다"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Your trips will appear here"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "你的行程将显示在这里"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "你的行程將顯示在這裡"
+          }
+        }
       }
     },
     "home.empty.items" : {
@@ -8652,6 +8756,124 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "暫無物品"
+          }
+        }
+      }
+    },
+    "home.empty.subtitle" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Add your first trip and watch your world come alive on the globe."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Add your first trip and watch your world come alive on the globe."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Add your first trip and watch your world come alive on the globe."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Add your first trip and watch your world come alive on the globe."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "最初の旅を追加して、地球儀に世界を描こう。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "첫 여행을 추가하고 지구본에 세계를 펼쳐보세요."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Add your first trip and watch your world come alive on the globe."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "创建第一次行程，让你的世界在地球仪上亮起来。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "建立第一次行程，讓你的世界在地球儀上亮起來。"
+          }
+        }
+      }
+    },
+    "home.empty.title" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Start your journey"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Start your journey"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Start your journey"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Start your journey"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "旅を始めよう"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "여행을 시작하세요"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Start your journey"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "开启你的旅程"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "開啟你的旅程"
           }
         }
       }
@@ -10643,52 +10865,6 @@
         }
       }
     },
-    "myitems.panel.subtitle" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Create custom items"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "创建自定义物品"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "建立自訂物品"
-          }
-        }
-      }
-    },
-    "myitems.panel.hint" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Create items not in Base Items"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "创建不在基础库中的物品"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "建立不在基礎庫中的物品"
-          }
-        }
-      }
-    },
     "myitems.add.title" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -10708,52 +10884,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "新增物品"
-          }
-        }
-      }
-    },
-    "myitems.custom.new" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "New Item"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "新建物品"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "新增物品"
-          }
-        }
-      }
-    },
-    "myitems.search.custom_tag" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Custom"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "自定义"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "自訂"
           }
         }
       }
@@ -10800,6 +10930,29 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "分類"
+          }
+        }
+      }
+    },
+    "myitems.custom.new" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "New Item"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "新建物品"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "新增物品"
           }
         }
       }
@@ -10925,8 +11078,77 @@
     "myitems.name" : {
 
     },
+    "myitems.panel.hint" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Create items not in Base Items"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "创建不在基础库中的物品"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "建立不在基礎庫中的物品"
+          }
+        }
+      }
+    },
+    "myitems.panel.subtitle" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Create custom items"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "创建自定义物品"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "建立自訂物品"
+          }
+        }
+      }
+    },
     "myitems.quantity" : {
 
+    },
+    "myitems.search.custom_tag" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Custom"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "自定义"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "自訂"
+          }
+        }
+      }
     },
     "myitems.source.base" : {
       "extractionState" : "manual",
@@ -15368,121 +15590,121 @@
         }
       }
     },
-    "settings.data.local_backup" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "de" : { "stringUnit" : { "state" : "needs_review", "value" : "Local Backup" } },
-        "en" : { "stringUnit" : { "state" : "translated", "value" : "Local Backup" } },
-        "es" : { "stringUnit" : { "state" : "needs_review", "value" : "Local Backup" } },
-        "fr" : { "stringUnit" : { "state" : "needs_review", "value" : "Local Backup" } },
-        "ja" : { "stringUnit" : { "state" : "needs_review", "value" : "ローカルバックアップ" } },
-        "ko" : { "stringUnit" : { "state" : "needs_review", "value" : "로컬 백업" } },
-        "pt-BR" : { "stringUnit" : { "state" : "needs_review", "value" : "Local Backup" } },
-        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "本地备份" } },
-        "zh-Hant" : { "stringUnit" : { "state" : "translated", "value" : "本機備份" } }
-      }
-    },
     "settings.data.autosave" : {
       "extractionState" : "manual",
       "localizations" : {
-        "de" : { "stringUnit" : { "state" : "needs_review", "value" : "Auto-Save" } },
-        "en" : { "stringUnit" : { "state" : "translated", "value" : "Auto-Save" } },
-        "es" : { "stringUnit" : { "state" : "needs_review", "value" : "Auto-Save" } },
-        "fr" : { "stringUnit" : { "state" : "needs_review", "value" : "Auto-Save" } },
-        "ja" : { "stringUnit" : { "state" : "needs_review", "value" : "自動保存" } },
-        "ko" : { "stringUnit" : { "state" : "needs_review", "value" : "자동 저장" } },
-        "pt-BR" : { "stringUnit" : { "state" : "needs_review", "value" : "Auto-Save" } },
-        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "自动保存" } },
-        "zh-Hant" : { "stringUnit" : { "state" : "translated", "value" : "自動儲存" } }
-      }
-    },
-    "settings.data.recovery.explanation" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : { "stringUnit" : { "state" : "translated", "value" : "If your trips disappeared after an app update or device restore, you can recover them from the most recent auto-save below." } },
-        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "如果你的行程在 App 更新或设备恢复后消失了，可以从下方最近一次的自动保存中找回它们。" } },
-        "zh-Hant" : { "stringUnit" : { "state" : "translated", "value" : "如果你的行程在 App 更新或裝置還原後消失了，可以從下方最近一次的自動儲存中找回它們。" } }
-      }
-    },
-    "settings.data.recovery.last_saved" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "de" : { "stringUnit" : { "state" : "needs_review", "value" : "Last Saved" } },
-        "en" : { "stringUnit" : { "state" : "translated", "value" : "Last Saved" } },
-        "es" : { "stringUnit" : { "state" : "needs_review", "value" : "Last Saved" } },
-        "fr" : { "stringUnit" : { "state" : "needs_review", "value" : "Last Saved" } },
-        "ja" : { "stringUnit" : { "state" : "needs_review", "value" : "最終保存" } },
-        "ko" : { "stringUnit" : { "state" : "needs_review", "value" : "마지막 저장" } },
-        "pt-BR" : { "stringUnit" : { "state" : "needs_review", "value" : "Last Saved" } },
-        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "保存时间" } },
-        "zh-Hant" : { "stringUnit" : { "state" : "translated", "value" : "儲存時間" } }
-      }
-    },
-    "settings.data.recovery.no_backup" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : { "stringUnit" : { "state" : "translated", "value" : "No auto-save found yet. Your data will be backed up automatically as you use Carry." } },
-        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "暂无自动保存记录。使用 Carry 后，数据将会自动备份。" } },
-        "zh-Hant" : { "stringUnit" : { "state" : "translated", "value" : "尚無自動儲存記錄。使用 Carry 後，資料將會自動備份。" } }
-      }
-    },
-    "settings.data.recovery.trips_count" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "de" : { "stringUnit" : { "state" : "needs_review", "value" : "Trips in Backup" } },
-        "en" : { "stringUnit" : { "state" : "translated", "value" : "Trips in Backup" } },
-        "es" : { "stringUnit" : { "state" : "needs_review", "value" : "Trips in Backup" } },
-        "fr" : { "stringUnit" : { "state" : "needs_review", "value" : "Trips in Backup" } },
-        "ja" : { "stringUnit" : { "state" : "needs_review", "value" : "バックアップ内の旅行" } },
-        "ko" : { "stringUnit" : { "state" : "needs_review", "value" : "백업 내 여행" } },
-        "pt-BR" : { "stringUnit" : { "state" : "needs_review", "value" : "Trips in Backup" } },
-        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "备份行程数" } },
-        "zh-Hant" : { "stringUnit" : { "state" : "translated", "value" : "備份行程數" } }
-      }
-    },
-    "settings.data.subtitle" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "de" : { "stringUnit" : { "state" : "needs_review", "value" : "Automatically saved after every change." } },
-        "en" : { "stringUnit" : { "state" : "translated", "value" : "Automatically saved after every change." } },
-        "es" : { "stringUnit" : { "state" : "needs_review", "value" : "Automatically saved after every change." } },
-        "fr" : { "stringUnit" : { "state" : "needs_review", "value" : "Automatically saved after every change." } },
-        "ja" : { "stringUnit" : { "state" : "needs_review", "value" : "変更のたびに自動的に保存されます。" } },
-        "ko" : { "stringUnit" : { "state" : "needs_review", "value" : "변경할 때마다 자동으로 저장됩니다." } },
-        "pt-BR" : { "stringUnit" : { "state" : "needs_review", "value" : "Automatically saved after every change." } },
-        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "每次修改后自动保存。" } },
-        "zh-Hant" : { "stringUnit" : { "state" : "translated", "value" : "每次修改後自動儲存。" } }
+        "de" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Auto-Save"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Auto-Save"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Auto-Save"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Auto-Save"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "自動保存"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "자동 저장"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Auto-Save"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "自动保存"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "自動儲存"
+          }
+        }
       }
     },
     "settings.data.export" : {
       "extractionState" : "manual",
       "localizations" : {
         "de" : {
-          "stringUnit" : { "state" : "needs_review", "value" : "Export Backup" }
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Export Backup"
+          }
         },
         "en" : {
-          "stringUnit" : { "state" : "translated", "value" : "Export Backup" }
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Export Backup"
+          }
         },
         "es" : {
-          "stringUnit" : { "state" : "needs_review", "value" : "Export Backup" }
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Export Backup"
+          }
         },
         "fr" : {
-          "stringUnit" : { "state" : "needs_review", "value" : "Export Backup" }
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Export Backup"
+          }
         },
         "ja" : {
-          "stringUnit" : { "state" : "needs_review", "value" : "Export Backup" }
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Export Backup"
+          }
         },
         "ko" : {
-          "stringUnit" : { "state" : "needs_review", "value" : "Export Backup" }
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Export Backup"
+          }
         },
         "pt-BR" : {
-          "stringUnit" : { "state" : "needs_review", "value" : "Export Backup" }
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Export Backup"
+          }
         },
         "zh-Hans" : {
-          "stringUnit" : { "state" : "translated", "value" : "导出备份" }
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "导出备份"
+          }
         },
         "zh-Hant" : {
-          "stringUnit" : { "state" : "translated", "value" : "匯出備份" }
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "匯出備份"
+          }
         }
       }
     },
@@ -15490,31 +15712,58 @@
       "extractionState" : "manual",
       "localizations" : {
         "de" : {
-          "stringUnit" : { "state" : "needs_review", "value" : "Import Backup File" }
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Import Backup File"
+          }
         },
         "en" : {
-          "stringUnit" : { "state" : "translated", "value" : "Import Backup File" }
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Import Backup File"
+          }
         },
         "es" : {
-          "stringUnit" : { "state" : "needs_review", "value" : "Import Backup File" }
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Import Backup File"
+          }
         },
         "fr" : {
-          "stringUnit" : { "state" : "needs_review", "value" : "Import Backup File" }
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Import Backup File"
+          }
         },
         "ja" : {
-          "stringUnit" : { "state" : "needs_review", "value" : "Import Backup File" }
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Import Backup File"
+          }
         },
         "ko" : {
-          "stringUnit" : { "state" : "needs_review", "value" : "Import Backup File" }
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Import Backup File"
+          }
         },
         "pt-BR" : {
-          "stringUnit" : { "state" : "needs_review", "value" : "Import Backup File" }
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Import Backup File"
+          }
         },
         "zh-Hans" : {
-          "stringUnit" : { "state" : "translated", "value" : "导入备份文件" }
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "导入备份文件"
+          }
         },
         "zh-Hant" : {
-          "stringUnit" : { "state" : "translated", "value" : "匯入備份檔案" }
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "匯入備份檔案"
+          }
         }
       }
     },
@@ -15522,13 +15771,22 @@
       "extractionState" : "manual",
       "localizations" : {
         "en" : {
-          "stringUnit" : { "state" : "translated", "value" : "Import & Replace" }
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Import & Replace"
+          }
         },
         "zh-Hans" : {
-          "stringUnit" : { "state" : "translated", "value" : "导入并替换" }
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "导入并替换"
+          }
         },
         "zh-Hant" : {
-          "stringUnit" : { "state" : "translated", "value" : "匯入並取代" }
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "匯入並取代"
+          }
         }
       }
     },
@@ -15536,13 +15794,22 @@
       "extractionState" : "manual",
       "localizations" : {
         "en" : {
-          "stringUnit" : { "state" : "translated", "value" : "All current trips will be replaced with the data from the selected file. This cannot be undone." }
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "All current trips will be replaced with the data from the selected file. This cannot be undone."
+          }
         },
         "zh-Hans" : {
-          "stringUnit" : { "state" : "translated", "value" : "当前所有行程将被所选文件中的数据替换，此操作无法撤销。" }
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "当前所有行程将被所选文件中的数据替换，此操作无法撤销。"
+          }
         },
         "zh-Hant" : {
-          "stringUnit" : { "state" : "translated", "value" : "目前所有行程將被所選檔案中的資料取代，此操作無法復原。" }
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "目前所有行程將被所選檔案中的資料取代，此操作無法復原。"
+          }
         }
       }
     },
@@ -15550,13 +15817,245 @@
       "extractionState" : "manual",
       "localizations" : {
         "en" : {
-          "stringUnit" : { "state" : "translated", "value" : "Import This Backup?" }
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Import This Backup?"
+          }
         },
         "zh-Hans" : {
-          "stringUnit" : { "state" : "translated", "value" : "导入此备份？" }
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "导入此备份？"
+          }
         },
         "zh-Hant" : {
-          "stringUnit" : { "state" : "translated", "value" : "匯入此備份？" }
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "匯入此備份？"
+          }
+        }
+      }
+    },
+    "settings.data.local_backup" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Local Backup"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Local Backup"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Local Backup"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Local Backup"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "ローカルバックアップ"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "로컬 백업"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Local Backup"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "本地备份"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "本機備份"
+          }
+        }
+      }
+    },
+    "settings.data.recovery.explanation" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "If your trips disappeared after an app update or device restore, you can recover them from the most recent auto-save below."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "如果你的行程在 App 更新或设备恢复后消失了，可以从下方最近一次的自动保存中找回它们。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "如果你的行程在 App 更新或裝置還原後消失了，可以從下方最近一次的自動儲存中找回它們。"
+          }
+        }
+      }
+    },
+    "settings.data.recovery.last_saved" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Last Saved"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Last Saved"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Last Saved"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Last Saved"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "最終保存"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "마지막 저장"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Last Saved"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "保存时间"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "儲存時間"
+          }
+        }
+      }
+    },
+    "settings.data.recovery.no_backup" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No auto-save found yet. Your data will be backed up automatically as you use Carry."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "暂无自动保存记录。使用 Carry 后，数据将会自动备份。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "尚無自動儲存記錄。使用 Carry 後，資料將會自動備份。"
+          }
+        }
+      }
+    },
+    "settings.data.recovery.trips_count" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Trips in Backup"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Trips in Backup"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Trips in Backup"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Trips in Backup"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "バックアップ内の旅行"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "백업 내 여행"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Trips in Backup"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "备份行程数"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "備份行程數"
+          }
         }
       }
     },
@@ -15734,6 +16233,29 @@
         }
       }
     },
+    "settings.data.restore.no_backup" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No backup yet"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "暂无备份"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "尚無備份"
+          }
+        }
+      }
+    },
     "settings.data.restore.success" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -15780,25 +16302,61 @@
         }
       }
     },
-    "settings.data.restore.no_backup" : {
+    "settings.data.subtitle" : {
       "extractionState" : "manual",
       "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Automatically saved after every change."
+          }
+        },
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "No backup yet"
+            "value" : "Automatically saved after every change."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Automatically saved after every change."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Automatically saved after every change."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "変更のたびに自動的に保存されます。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "변경할 때마다 자동으로 저장됩니다."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Automatically saved after every change."
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "暂无备份"
+            "value" : "每次修改后自动保存。"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "尚無備份"
+            "value" : "每次修改後自動儲存。"
           }
         }
       }
@@ -19289,9 +19847,6 @@
         }
       }
     },
-    "Tap the plus button to create your first trip" : {
-
-    },
     "Tea bags" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -20537,6 +21092,9 @@
           }
         }
       }
+    },
+    "Try a different keyword" : {
+
     },
     "Twitter / X" : {
 

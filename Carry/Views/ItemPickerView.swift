@@ -13,6 +13,20 @@ private struct PickerItemID: Hashable {
     let item: String
 }
 
+private enum SearchResultSource {
+    case base
+    case custom
+}
+
+private struct SearchResultItem: Identifiable, Hashable {
+    let id = UUID()
+    let source: SearchResultSource
+    let title: String
+    let category: String?
+    let itemID: PickerItemID?
+    let myItem: MyItem?
+}
+
 // MARK: - ItemPickerView
 
 struct ItemPickerView: View {
@@ -93,23 +107,31 @@ struct ItemPickerView: View {
         }
     }
 
-    private var filteredResults: [PickerItemID] {
-        guard sourceMode == .preset else { return [] }
+    private var baseSearchResults: [SearchResultItem] {
         guard !searchText.isEmpty else { return [] }
         let query = normalizedForSearch(searchText)
         return itemPickerCatalog.flatMap { cat in
             cat.items
                 .filter { itemMatchesQuery($0, query: query) }
-                .map { PickerItemID(category: cat.name, item: canonicalItemName($0)) }
+                .map {
+                    SearchResultItem(
+                        source: .base,
+                        title: canonicalItemName($0),
+                        category: cat.name,
+                        itemID: PickerItemID(category: cat.name, item: canonicalItemName($0)),
+                        myItem: nil
+                    )
+                }
+        }
+        .sorted { lhs, rhs in
+            searchRank(for: lhs, query: query) < searchRank(for: rhs, query: query)
         }
     }
 
     private func itemMatchesQuery(_ itemKey: String, query: String) -> Bool {
-        let canonical = canonicalItemName(itemKey)
-        let localized = NSLocalizedString(canonical, comment: "")
-        let raw = canonical
-        return normalizedForSearch(localized).contains(query) ||
-               normalizedForSearch(raw).contains(query)
+        searchableTerms(for: itemKey).contains {
+            normalizedForSearch($0).contains(query)
+        }
     }
 
     private func normalizedForSearch(_ text: String) -> String {
@@ -117,13 +139,89 @@ struct ItemPickerView: View {
             .trimmingCharacters(in: .whitespacesAndNewlines)
     }
 
-    private func myItemsSearchResults() -> [MyItem] {
+    private func searchableTerms(for itemKey: String) -> [String] {
+        let canonical = canonicalItemName(itemKey)
+        let currentLanguageValue = NSLocalizedString(canonical, comment: "")
+        return ItemPickerView.localizedSearchTermsByItem[canonical] ?? [
+            canonical,
+            itemKey,
+            currentLanguageValue
+        ]
+    }
+
+    private static let localizedSearchTermsByItem: [String: [String]] = {
+        var lookup: [String: Set<String>] = [:]
+        let bundle = Bundle.main
+        let localizationFolders = Set(bundle.localizations + ["Base"])
+
+        for category in itemPickerCatalog {
+            for item in category.items {
+                let canonical = canonicalItemName(item)
+                var terms: Set<String> = [canonical, item, NSLocalizedString(canonical, comment: "")]
+
+                for localization in localizationFolders {
+                    guard let path = bundle.path(forResource: localization, ofType: "lproj"),
+                          let localizedBundle = Bundle(path: path) else { continue }
+                    let translated = localizedBundle.localizedString(forKey: canonical, value: nil, table: nil)
+                    terms.insert(translated)
+                }
+
+                lookup[canonical, default: []].formUnion(terms)
+            }
+        }
+
+        return lookup.mapValues { Array($0) }
+    }()
+
+    private var customSearchResults: [SearchResultItem] {
         let query = normalizedForSearch(searchText)
-        return store.myItems(in: selectedMyItemCollection).filter {
+        return store.myItems().filter {
             searchText.isEmpty
                 || normalizedForSearch($0.name).contains(query)
                 || normalizedForSearch($0.category).contains(query)
         }
+        .map {
+            SearchResultItem(
+                source: .custom,
+                title: $0.name,
+                category: $0.category,
+                itemID: nil,
+                myItem: $0
+            )
+        }
+        .sorted { lhs, rhs in
+            searchRank(for: lhs, query: query) < searchRank(for: rhs, query: query)
+        }
+    }
+
+    private var orderedSearchResults: [SearchResultItem] {
+        guard !searchText.isEmpty else { return [] }
+        let query = normalizedForSearch(searchText)
+        return (customSearchResults + baseSearchResults).sorted { lhs, rhs in
+            let lhsRank = searchRank(for: lhs, query: query)
+            let rhsRank = searchRank(for: rhs, query: query)
+            if lhsRank != rhsRank { return lhsRank < rhsRank }
+            if lhs.source != rhs.source {
+                return lhs.source == .custom
+            }
+            return lhs.title.localizedCaseInsensitiveCompare(rhs.title) == .orderedAscending
+        }
+    }
+
+    private func searchRank(for result: SearchResultItem, query: String) -> Int {
+        let terms: [String]
+        switch result.source {
+        case .base:
+            terms = searchableTerms(for: result.itemID?.item ?? result.title)
+        case .custom:
+            terms = [result.title, result.category ?? ""]
+        }
+
+        let normalizedTerms = terms.map(normalizedForSearch)
+        if normalizedTerms.contains(where: { $0 == query }) { return 0 }
+        if normalizedTerms.contains(where: { $0.hasPrefix(query) }) { return 1 }
+        if normalizedTerms.contains(where: { $0.contains(query) }) { return 2 }
+        return 3
     }
 
     private func hideKeyboard() {
@@ -152,99 +250,117 @@ struct ItemPickerView: View {
                         .padding(.bottom, 12)
                 }
 
-                if sourceMode == .myItems {
-                    let myItems = myItemsSearchResults().sorted(by: compareMyItems(_:_:))
-                    List {
-                        myItemsHeader(isCompact: myItems.isEmpty)
-                            .listRowBackground(Color.clear)
-                            .listRowSeparator(.hidden)
-                            .listRowInsets(EdgeInsets(top: 0, leading: 16, bottom: 8, trailing: 16))
-
-                        if myItems.isEmpty {
-                            VStack(spacing: 8) {
-                                Image(systemName: searchText.isEmpty ? "shippingbox" : "magnifyingglass")
-                                    .font(.system(size: 20, weight: .semibold))
-                                    .foregroundStyle(.secondary)
-                                Text(searchText.isEmpty ? LocalizedStringKey("myitems.empty.title") : "No results")
-                                    .font(.subheadline.weight(.semibold))
-                                    .foregroundStyle(.primary)
-                                    .multilineTextAlignment(.center)
-                                if searchText.isEmpty {
-                                    Text(LocalizedStringKey("myitems.empty.subtitle"))
-                                        .font(.caption)
-                                        .foregroundStyle(.secondary)
-                                        .multilineTextAlignment(.center)
-                                        .lineSpacing(1.5)
-                                }
-                            }
-                            .frame(maxWidth: .infinity)
-                            .padding(.top, 16)
-                            .padding(.horizontal, 24)
-                            .listRowBackground(Color.clear)
-                            .listRowSeparator(.hidden)
-                        } else {
-                            ForEach(myItems) { item in
-                                myItemRow(item)
-                                    .listRowInsets(EdgeInsets(top: 0, leading: 16, bottom: 0, trailing: 16))
+                Group {
+                    if sourceMode == .myItems {
+                        if searchText.isEmpty {
+                            let myItems = store.myItems(in: selectedMyItemCollection).sorted(by: compareMyItems(_:_:))
+                            List {
+                                myItemsHeader(isCompact: myItems.isEmpty)
                                     .listRowBackground(Color.clear)
                                     .listRowSeparator(.hidden)
-                                    .swipeActions(edge: .trailing, allowsFullSwipe: false) {
-                                        Button {
-                                            store.removeMyItem(id: item.id)
-                                        } label: {
-                                            Label("Delete", systemImage: "trash")
-                                        }
-                                        .tint(Color(UIColor.label))
+                                    .listRowInsets(EdgeInsets(top: 0, leading: 16, bottom: 8, trailing: 16))
+
+                                if myItems.isEmpty {
+                                    VStack(spacing: 8) {
+                                        Image(systemName: "shippingbox")
+                                            .font(.system(size: 20, weight: .semibold))
+                                            .foregroundStyle(.secondary)
+                                        Text(LocalizedStringKey("myitems.empty.title"))
+                                            .font(.subheadline.weight(.semibold))
+                                            .foregroundStyle(.primary)
+                                            .multilineTextAlignment(.center)
+                                        Text(LocalizedStringKey("myitems.empty.subtitle"))
+                                            .font(.caption)
+                                            .foregroundStyle(.secondary)
+                                            .multilineTextAlignment(.center)
+                                            .lineSpacing(1.5)
                                     }
-                            }
-                        }
-                    }
-                    .listStyle(.plain)
-                    .scrollContentBackground(.hidden)
-                    .background(Color.clear)
-                    .padding(.bottom, 0)
-                    .sheet(isPresented: $showMyItemAddSheet) {
-                        NavigationStack {
-                            ItemPickerMyItemEditorView(titleKey: "myitems.add.title") { name, category, quantity in
-                                let normalizedCategory = category.trimmingCharacters(in: CharacterSet.whitespacesAndNewlines).isEmpty ? "Custom" : category
-                                let item = store.addMyItem(name: name, category: normalizedCategory, defaultQuantity: quantity, collectionName: selectedMyItemCollection)
-                                selectedMyItemIDs.insert(item.id)
-                                showToast("Saved to My Items")
-                            }
-                        }
-                    }
-                } else {
-                    ScrollView {
-                        LazyVStack(alignment: .leading, spacing: 12) {
-                            if searchText.isEmpty {
-                                ForEach(itemPickerCatalog, id: \.name) { category in
-                                    categoryCard(category)
-                                }
-                            } else {
-                                if filteredResults.isEmpty {
-                                    Text("No results")
-                                        .font(.subheadline)
-                                        .foregroundColor(.secondary)
-                                        .frame(maxWidth: .infinity, alignment: .center)
-                                        .padding(.top, 48)
+                                    .frame(maxWidth: .infinity)
+                                    .padding(.top, 16)
+                                    .padding(.horizontal, 24)
+                                    .listRowBackground(Color.clear)
+                                    .listRowSeparator(.hidden)
                                 } else {
-                                    ForEach(filteredResults, id: \.self) { result in
-                                        itemRow(result.item, category: result.category)
-                                            .padding(.horizontal, 16)
+                                    ForEach(myItems) { item in
+                                        myItemRow(item)
+                                            .listRowInsets(EdgeInsets(top: 0, leading: 16, bottom: 0, trailing: 16))
+                                            .listRowBackground(Color.clear)
+                                            .listRowSeparator(.hidden)
+                                            .swipeActions(edge: .trailing, allowsFullSwipe: false) {
+                                                Button {
+                                                    store.removeMyItem(id: item.id)
+                                                } label: {
+                                                    Label("Delete", systemImage: "trash")
+                                                }
+                                                .tint(Color(UIColor.label))
+                                            }
                                     }
-                                    .padding(.top, 4)
                                 }
                             }
+                            .listStyle(.plain)
+                            .scrollContentBackground(.hidden)
+                            .background(Color.clear)
+                            .padding(.bottom, 0)
+                        } else {
+                            let searchResults = orderedSearchResults
+                            List {
+                                if searchResults.isEmpty {
+                                    searchEmptyState
+                                        .listRowBackground(Color.clear)
+                                        .listRowSeparator(.hidden)
+                                } else {
+                                    ForEach(searchResults) { result in
+                                        searchResultRow(result)
+                                            .listRowBackground(Color.clear)
+                                            .listRowSeparator(.hidden)
+                                    }
+                                }
+                            }
+                            .listStyle(.plain)
+                            .scrollContentBackground(.hidden)
+                            .background(Color.clear)
+                            .padding(.bottom, 0)
                         }
-                        .padding(.bottom, isCreateMode ? 96 : 24)
+                    } else {
+                        ScrollView {
+                            LazyVStack(alignment: .leading, spacing: 12) {
+                                if searchText.isEmpty {
+                                    ForEach(itemPickerCatalog, id: \.name) { category in
+                                        categoryCard(category)
+                                    }
+                                } else {
+                                    let searchResults = orderedSearchResults
+                                if searchResults.isEmpty {
+                                    searchEmptyState
+                                } else {
+                                    VStack(spacing: 0) {
+                                        ForEach(searchResults) { result in
+                                            searchResultRow(result)
+                                        }
+                                        }
+                                    }
+                                }
+                            }
+                            .padding(.bottom, isCreateMode ? 96 : 24)
+                        }
+                        .scrollDismissesKeyboard(.interactively)
+                        .simultaneousGesture(
+                            TapGesture().onEnded {
+                                isSearchFocused = false
+                                hideKeyboard()
+                            }
+                        )
                     }
-                    .scrollDismissesKeyboard(.interactively)
-                    .simultaneousGesture(
-                        TapGesture().onEnded {
-                            isSearchFocused = false
-                            hideKeyboard()
+                }
+                .sheet(isPresented: $showMyItemAddSheet) {
+                    NavigationStack {
+                        ItemPickerMyItemEditorView(titleKey: "myitems.add.title") { name, category, quantity in
+                            let normalizedCategory = category.trimmingCharacters(in: CharacterSet.whitespacesAndNewlines).isEmpty ? "Custom" : category
+                            let item = store.addMyItem(name: name, category: normalizedCategory, defaultQuantity: quantity, collectionName: selectedMyItemCollection)
+                            selectedMyItemIDs.insert(item.id)
+                            showToast("Saved to My Items")
                         }
-                    )
+                    }
                 }
             }
         }
@@ -338,6 +454,139 @@ struct ItemPickerView: View {
         .padding(.horizontal, 16)
     }
 
+    private func searchResultSection(titleKey: String, results: [SearchResultItem]) -> some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text(LocalizedStringKey(titleKey))
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(.secondary)
+                .padding(.horizontal, 16)
+
+            VStack(spacing: 0) {
+                ForEach(results) { result in
+                    searchResultRow(result)
+                    if result.id != results.last?.id {
+                        Rectangle()
+                            .fill(Color.primary.opacity(colorScheme == .dark ? 0.05 : 0.03))
+                            .frame(height: 1)
+                            .padding(.leading, 56)
+                    }
+                }
+            }
+            .background(
+                RoundedRectangle(cornerRadius: 16, style: .continuous)
+                    .fill(Color(UIColor.systemBackground).opacity(colorScheme == .dark ? 0.52 : 0.66))
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 16, style: .continuous)
+                    .strokeBorder(Color.primary.opacity(colorScheme == .dark ? 0.05 : 0.03), lineWidth: 1)
+            )
+            .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+            .padding(.horizontal, 16)
+        }
+    }
+
+    private func searchResultRow(_ result: SearchResultItem) -> some View {
+        Button {
+            switch result.source {
+            case .base:
+                if let id = result.itemID {
+                    if selectedItems.contains(id) {
+                        selectedItems.remove(id)
+                    } else {
+                        selectedItems.insert(id)
+                    }
+                }
+            case .custom:
+                if let myItem = result.myItem {
+                    if selectedMyItemIDs.contains(myItem.id) {
+                        selectedMyItemIDs.remove(myItem.id)
+                    } else {
+                        selectedMyItemIDs.insert(myItem.id)
+                    }
+                }
+            }
+        } label: {
+            HStack(spacing: 12) {
+                ZStack {
+                    Circle()
+                        .fill(isSearchResultSelected(result) ? Color.primary : Color.clear)
+                    Circle()
+                        .strokeBorder(isSearchResultSelected(result) ? Color.primary : Color.secondary.opacity(0.4), lineWidth: 1.5)
+                    if isSearchResultSelected(result) {
+                        Image(systemName: "checkmark")
+                            .font(.system(size: 11, weight: .bold))
+                            .foregroundColor(Color(UIColor.systemBackground))
+                    }
+                }
+                .frame(width: 24, height: 24)
+                VStack(alignment: .leading, spacing: 2) {
+                    HStack(spacing: 6) {
+                        Text(LocalizedStringKey(result.title))
+                            .font(.body)
+                            .foregroundStyle(.primary)
+                        if result.source == .custom {
+                            Text(LocalizedStringKey("myitems.search.custom_tag"))
+                                .font(.caption2.weight(.semibold))
+                                .foregroundStyle(.secondary)
+                                .padding(.horizontal, 8)
+                                .padding(.vertical, 3)
+                                .background(
+                                    Capsule(style: .continuous)
+                                        .fill(Color(UIColor.tertiarySystemFill))
+                                )
+                        }
+                        Spacer()
+                    }
+                    if let category = result.category, !category.isEmpty {
+                        Text(LocalizedStringKey(category))
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+                }
+                Spacer()
+            }
+            .frame(height: 48)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .padding(.horizontal, 16)
+    }
+
+    private var searchEmptyState: some View {
+        VStack(spacing: 12) {
+            ZStack {
+                Circle()
+                    .fill(Color.primary.opacity(colorScheme == .dark ? 0.08 : 0.05))
+                    .frame(width: 56, height: 56)
+                Image(systemName: "magnifyingglass")
+                    .font(.system(size: 22, weight: .semibold))
+                    .foregroundStyle(.secondary)
+            }
+
+            VStack(spacing: 4) {
+                Text("No results")
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(.primary)
+                Text("Try a different keyword")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.top, 72)
+        .padding(.bottom, 12)
+        .padding(.horizontal, 24)
+    }
+
+    private func isSearchResultSelected(_ result: SearchResultItem) -> Bool {
+        switch result.source {
+        case .base:
+            return result.itemID.map { selectedItems.contains($0) } ?? false
+        case .custom:
+            return result.myItem.map { selectedMyItemIDs.contains($0.id) } ?? false
+        }
+    }
+
     private var heroSection: some View {
         VStack(alignment: .leading, spacing: 12) {
             Text(LocalizedStringKey("myitems.add.title"))
@@ -360,19 +609,17 @@ struct ItemPickerView: View {
                 isSelected: sourceMode == .preset
             ) {
                 sourceMode = .preset
-                searchText = ""
                 expandedCategories.removeAll()
                 isSearchFocused = false
                 hideKeyboard()
             }
 
             sourceSegment(
-                title: "myitems.source.mine",
-                subtitle: "myitems.source.mine.subtitle",
+                title: "myitems.source.custom",
+                subtitle: "myitems.source.custom.subtitle",
                 isSelected: sourceMode == .myItems
             ) {
                 sourceMode = .myItems
-                searchText = ""
                 expandedCategories.removeAll()
                 isSearchFocused = false
                 hideKeyboard()
@@ -420,8 +667,8 @@ struct ItemPickerView: View {
                         isSelected
                             ? LinearGradient(
                                 colors: [
-                                isDarkMode ? Color(UIColor.secondarySystemBackground).opacity(0.98) : Color.primary.opacity(0.98),
-                                isDarkMode ? Color(UIColor.tertiarySystemBackground).opacity(0.96) : Color.primary.opacity(0.84)
+                                    isDarkMode ? Color.black.opacity(0.78) : Color.primary.opacity(0.98),
+                                    isDarkMode ? Color.black.opacity(0.58) : Color.primary.opacity(0.84)
                                 ],
                                 startPoint: .topLeading,
                                 endPoint: .bottomTrailing
@@ -438,9 +685,9 @@ struct ItemPickerView: View {
             )
             .overlay(
                 RoundedRectangle(cornerRadius: 14, style: .continuous)
-                    .strokeBorder(Color.primary.opacity(isSelected ? (isDarkMode ? 0.10 : 0.02) : (isDarkMode ? 0.06 : 0.08)), lineWidth: 1)
+                    .strokeBorder(Color.primary.opacity(isSelected ? (isDarkMode ? 0.18 : 0.02) : (isDarkMode ? 0.06 : 0.08)), lineWidth: 1)
             )
-            .shadow(color: isSelected ? Color.black.opacity(isDarkMode ? 0.18 : 0.10) : Color.black.opacity(isDarkMode ? 0.08 : 0.03), radius: isSelected ? 8 : 4, x: 0, y: 2)
+            .shadow(color: isSelected ? Color.black.opacity(isDarkMode ? 0.28 : 0.10) : Color.black.opacity(isDarkMode ? 0.08 : 0.03), radius: isSelected ? 10 : 4, x: 0, y: 2)
         }
         .buttonStyle(.plain)
     }
@@ -463,7 +710,7 @@ struct ItemPickerView: View {
                 HStack(spacing: 6) {
                     Image(systemName: "plus")
                         .font(.system(size: 12, weight: .semibold))
-                    Text(LocalizedStringKey("myitems.add.title"))
+                    Text(LocalizedStringKey("myitems.custom.new"))
                         .font(.subheadline.weight(.semibold))
                 }
                 .foregroundStyle(.primary)
