@@ -102,6 +102,19 @@ struct HomeView: View {
         max(0, expandedSheetHeight - 144)
     }
 
+    /// 0 = fully expanded, 1 = fully collapsed (includes live drag)
+    private var sheetProgress: CGFloat {
+        guard collapsedSheetOffset > 0 else { return 0 }
+        let raw = sheetOffset + capsuleDrag + listDrag
+        return min(max(0, raw), collapsedSheetOffset) / collapsedSheetOffset
+    }
+
+    /// Horizontal scale: 1.0 when expanded → 0.94 when fully collapsed
+    private var sheetScaleX: CGFloat { 1.0 - sheetProgress * 0.06 }
+
+    /// Top corner radius: 36 when expanded → 46 when fully collapsed
+    private var sheetCornerRadius: CGFloat { 36 + sheetProgress * 10 }
+
     /// Unique country codes from all trips whose departure date has passed,
     /// regardless of whether coordinates have been resolved yet.
     private var visitedCountriesCount: Int {
@@ -322,7 +335,8 @@ struct HomeView: View {
             .frame(height: expandedSheetHeight)
             .background(CarryAtmosphereBackground())
             .compositingGroup()
-            .clipShape(UnevenRoundedRectangle(topLeadingRadius: 36, bottomLeadingRadius: 0, bottomTrailingRadius: 0, topTrailingRadius: 36, style: .continuous))
+            .clipShape(UnevenRoundedRectangle(topLeadingRadius: sheetCornerRadius, bottomLeadingRadius: 0, bottomTrailingRadius: 0, topTrailingRadius: sheetCornerRadius, style: .continuous))
+            .scaleEffect(x: sheetScaleX, y: 1.0, anchor: .bottom)
             .offset(y: min(max(0, sheetOffset + capsuleDrag + listDrag), collapsedSheetOffset))
     }
         .ignoresSafeArea(edges: .bottom)
