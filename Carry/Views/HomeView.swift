@@ -125,6 +125,22 @@ struct HomeView: View {
         ).count
     }
 
+    /// Deduplicated city dots for departed trips with valid coordinates.
+    /// Rounded to ~1 km precision so multiple trips to the same city collapse to one dot.
+    private var visitedCities: [VisitedCity] {
+        var seen = Set<String>()
+        return store.trips
+            .filter { $0.departureDate <= Date() && $0.latitude != 0 }
+            .compactMap { trip -> VisitedCity? in
+                let key = "\(Int(trip.latitude * 100)),\(Int(trip.longitude * 100))"
+                guard seen.insert(key).inserted else { return nil }
+                return VisitedCity(
+                    id: key,
+                    coordinate: CLLocationCoordinate2D(latitude: trip.latitude, longitude: trip.longitude)
+                )
+            }
+    }
+
     private var visitedCountries: [VisitedCountry] {
         let departed = store.trips.filter {
             $0.departureDate <= Date() && !$0.countryCode.isEmpty && $0.latitude != 0
@@ -147,7 +163,11 @@ struct HomeView: View {
     var body: some View {
         ZStack(alignment: .bottom) {
             // Globe background
-            GlobeMapView(visitedCountries: visitedCountries)
+            GlobeMapView(
+                visitedCountries: visitedCountries,
+                visitedCities: visitedCities,
+                cityOpacity: Double(sheetProgress)
+            )
                 .ignoresSafeArea()
 
             // Trip list sheet

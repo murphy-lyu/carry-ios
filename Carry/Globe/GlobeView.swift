@@ -14,11 +14,19 @@ struct VisitedCountry: Identifiable {
     let coordinate: CLLocationCoordinate2D
 }
 
+struct VisitedCity: Identifiable {
+    let id: String          // dedup key based on rounded coordinate
+    let coordinate: CLLocationCoordinate2D
+}
+
 // MARK: - GlobeMapView
 
 struct GlobeMapView: View {
 
     let visitedCountries: [VisitedCountry]
+    let visitedCities: [VisitedCity]
+    /// 0 = fully expanded (cities hidden), 1 = fully collapsed (cities visible)
+    var cityOpacity: Double
 
     @State private var position: MapCameraPosition = .camera(
         MapCamera(
@@ -45,6 +53,14 @@ struct GlobeMapView: View {
                         .frame(width: 8, height: 8)
                 }
             }
+            // City dots — subtle, fade in as sheet collapses
+            ForEach(visitedCities) { city in
+                Annotation("", coordinate: city.coordinate, anchor: .center) {
+                    cityDot
+                        .opacity(cityOpacity)
+                }
+            }
+            // Country pins — always visible
             ForEach(visitedCountries) { country in
                 Annotation("", coordinate: country.coordinate, anchor: .center) {
                     countryPin(country: country)
@@ -64,7 +80,17 @@ struct GlobeMapView: View {
         }
     }
 
-    // MARK: - Pin
+    // MARK: - City dot
+
+    private var cityDot: some View {
+        Circle()
+            .fill(.white)
+            .frame(width: 7, height: 7)
+            .shadow(color: .white.opacity(0.55), radius: 5, x: 0, y: 0)
+            .shadow(color: .black.opacity(0.28), radius: 2, x: 0, y: 1)
+    }
+
+    // MARK: - Country pin
 
     private func countryPin(country: VisitedCountry) -> some View {
         VStack(spacing: 5) {
