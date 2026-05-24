@@ -232,23 +232,20 @@ struct SettingsView: View {
                         settingsRow(title: "settings.about.language", valueText: currentLanguageDisplay) {
                             openSystemSettings()
                         }
-                        settingsRow(title: "settings.notifications", valueKey: notificationStatusText) {
-                            openSystemSettings()
-                        }
                     }
 
                     settingsGroup(title: "settings.section.about") {
                         settingsNavigationRow(title: "settings.about.entry") {
                             AboutView()
                         }
+                        settingsRow(title: "settings.section.support", valueText: "☕️") {
+                            showCoffeeSheet = true
+                        }
                         settingsRow(titleText: roadmapTitle) {
                             showRoadmapSheet = true
                         }
                         settingsRow(title: "settings.feedback") {
                             openFeedbackMail()
-                        }
-                        settingsRow(title: "settings.section.support", valueText: "☕️") {
-                            showCoffeeSheet = true
                         }
                         settingsNavigationRow(title: "settings.legal.terms") {
                             TermsView()
