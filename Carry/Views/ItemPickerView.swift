@@ -8,108 +8,10 @@ import UIKit
 
 // MARK: - Data
 
-private struct ItemPickerCategory {
-    let name: String
-    let items: [String]
-}
-
 private struct PickerItemID: Hashable {
     let category: String
     let item: String
 }
-
-private let itemPickerCatalog: [ItemPickerCategory] = [
-    ItemPickerCategory(name: "Documents", items: [
-        // 证件核心 → 预订凭证 → 驾驶相关 → 地区通行证 → 健康证明
-        "Passport", "ID card", "Visa",
-        "Hotel booking", "Travel insurance", "Itinerary",
-        "Driver's license", "International driving permit",
-        "HK & Macao permit", "Taiwan permit",
-        "Vaccination certificate",
-    ]),
-    ItemPickerCategory(name: "Clothing", items: [
-        // 按必须性与广泛性排序
-        "Underwear", "Socks",
-        "T-shirt", "Jeans", "Long pants", "Pajamas",
-        "Shirt", "Cardigan", "Hoodie",
-        "Bra", "Sports bra", "Leggings", "Tights", "Disposable underwear",
-        "Shorts",
-        "Dress", "Skirt", "Hat", "Belt",
-        "Formal wear", "Sweater", "Rain jacket", "Swimsuit", "Nipple covers",
-    ]),
-    ItemPickerCategory(name: "Electronics", items: [
-        // 充电/供电（全员必备）→ 音频 → 电脑/平板 → 摄影 → 配件
-        "Phone charger", "Charging cable", "Portable charger", "Smart watch charger", "Travel adapter",
-        "Earphones", "Noise-cancelling headphones",
-        "Tablet", "Laptop", "Laptop charger", "E-reader",
-        "Camera", "Camera charger", "Pocket camera", "Action camera", "Drone", "Memory card",
-        "Selfie stick", "Tripod", "Power strip", "Bluetooth speaker", "Portable WiFi device",
-    ]),
-    ItemPickerCategory(name: "Toiletries", items: [
-        // 按固定护肤顺序优先，其余放后
-        "Makeup remover / cleansing oil", "Cotton pads", "Face wash", "Face mask", "Toner", "Serum", "Eye cream", "Facial oil", "Lotion", "Moisturiser",
-        "Body lotion",
-        "Lip balm", "Sunscreen",
-        "Hair ties", "Comb", "Hair straightener", "Dry shampoo", "Perfume",
-        "Dental floss", "Toothbrush", "Toothpaste", "Mouthwash",
-        "Shampoo", "Conditioner", "Body wash",
-        "Razor", "Nail clippers",
-        "Acne patches", "Deodorant",
-    ]),
-    ItemPickerCategory(name: "Travel Accessories", items: [
-        // 钱/证件载体 → 日常随身 → 飞机/长途舒适 → 整理辅助
-        "Card holder", "Wallet", "Cash",
-        "Sunglasses", "Umbrella", "Water bottle",
-        "Travel pillow", "Eye mask", "Earplugs",
-        "Pen", "Packing cubes", "Laundry bag", "Travel towel",
-    ]),
-    ItemPickerCategory(name: "Makeup", items: [
-        // 基础底妆 → 眼妆 → 唇颊 → 妆前/定妆 → 工具/特殊项
-        "Primer", "Foundation", "Concealer",
-        "Eyebrow pencil", "Mascara", "Lipstick / Lip gloss", "Eyeliner", "Eyeshadow",
-        "Blush", "Highlighter",
-        "Setting powder",
-        "Makeup brushes", "Makeup sponge",
-        "Eyelash curler", "False eyelashes",
-        "Colored contacts",
-    ]),
-    ItemPickerCategory(name: "Jewellery", items: [
-        // 日常高频 → 叠搭配件
-        "Earrings", "Necklace", "Ring", "Bracelet", "Watch", "Hair clip",
-    ]),
-    ItemPickerCategory(name: "Leisure", items: [
-        // 阅读 → 零食/即食 → 社交/娱乐
-        "Book",
-        "Gum", "Instant coffee", "Tea bags",
-        "Travel board game",
-    ]),
-    ItemPickerCategory(name: "Health & Wellness", items: [
-        // 处方药优先 → 眼部护理 → 常备OTC → 旅行高发症状 → 卫生防护 → 女性用品 → 保健品
-        "Painkillers", "Cold & flu medicine", "Stomach medicine",
-        "Motion sickness tablets", "Antihistamines",
-        "Prescription medication",
-        "Contact lenses",
-        "Disposable face masks", "Hand sanitiser", "First aid kit",
-        "Eye drops", "Throat lozenges",
-        "Feminine hygiene products",
-        "Vitamin C", "Vitamin D", "Multivitamins", "Probiotics", "Melatonin",
-        "Birth control pills", "Condoms", "Anti-diarrhea",
-    ]),
-    ItemPickerCategory(name: "Winter Travel", items: [
-        // 外层保暖 → 基础层 → 四肢保暖 → 辅助保暖
-        "Thermal underwear",
-        "Wool coat",
-        "Snow boots",
-        "Gloves", "Beanie", "Scarf",
-        "Hand warmers", "Heat patches",
-    ]),
-    ItemPickerCategory(name: "Beach & Outdoor", items: [
-        // 沙滩必带 → 水上活动 → 户外/徒步
-        "Flip flops", "Beach towel", "Waterproof bag", "Insect repellent",
-        "Rash guard", "Swimming goggles",
-        "Hiking boots", "Trekking poles",
-    ]),
-]
 
 // MARK: - ItemPickerView
 
@@ -197,13 +99,14 @@ struct ItemPickerView: View {
         return itemPickerCatalog.flatMap { cat in
             cat.items
                 .filter { itemMatchesQuery($0, query: query) }
-                .map { PickerItemID(category: cat.name, item: $0) }
+                .map { PickerItemID(category: cat.name, item: canonicalItemName($0)) }
         }
     }
 
     private func itemMatchesQuery(_ itemKey: String, query: String) -> Bool {
-        let localized = NSLocalizedString(itemKey, comment: "")
-        let raw = itemKey
+        let canonical = canonicalItemName(itemKey)
+        let localized = NSLocalizedString(canonical, comment: "")
+        let raw = canonical
         return normalizedForSearch(localized).contains(query) ||
                normalizedForSearch(raw).contains(query)
     }
@@ -1004,12 +907,13 @@ struct ItemPickerView: View {
         var result: [PackingSection] = []
         for category in itemPickerCatalog {
             let items = category.items
-                .filter { selectedItems.contains(PickerItemID(category: category.name, item: $0)) }
+                .filter { selectedItems.contains(PickerItemID(category: category.name, item: canonicalItemName($0))) }
                 .enumerated()
-                .map { idx, name in
-                    PackingItem(
-                        name: name,
-                        quantity: defaultQuantity(for: name, tripDays: tripDays),
+                .map { idx, name -> PackingItem in
+                    let canonical = canonicalItemName(name)
+                    return PackingItem(
+                        name: canonical,
+                        quantity: defaultQuantity(for: canonical, tripDays: tripDays),
                         isAlert: false,
                         sortOrder: idx
                     )

@@ -14,6 +14,7 @@ struct TripReminderSheet: View {
     @State private var notifStatus: UNAuthorizationStatus = .notDetermined
     @State private var showPicker = false
     @State private var expandedConfigId: UUID?
+    @Environment(\.colorScheme) private var colorScheme
 
     private var isPastDeparture: Bool {
         bundle.departureDate < Calendar.current.startOfDay(for: Date())
@@ -70,7 +71,7 @@ struct TripReminderSheet: View {
                 .foregroundStyle(.primary)
             Text("reminder.sheet.subtitle")
                 .font(.subheadline)
-                .foregroundStyle(.secondary)
+                .foregroundStyle(colorScheme == .dark ? Color.secondary.opacity(0.88) : .secondary)
         }
         .padding(.horizontal, 16)
         .padding(.top, 8)
@@ -102,15 +103,24 @@ struct TripReminderSheet: View {
                     }
                 )
                 if index < configs.count - 1 {
-                    Divider().padding(.leading, 20)
+                    Divider()
+                        .padding(.leading, 20)
+                        .padding(.trailing, 20)
+                        .opacity(colorScheme == .dark ? 0.42 : 1)
                 }
             }
 
             if !configs.isEmpty {
-                Divider().padding(.leading, 20)
+                Divider()
+                    .padding(.leading, 20)
+                    .padding(.trailing, 20)
+                    .padding(.top, 2)
+                    .padding(.bottom, 12)
+                    .opacity(colorScheme == .dark ? 0.42 : 1)
             }
 
             addReminderRow
+                .padding(.top, configs.isEmpty ? 0 : 6)
         }
     }
 
@@ -121,26 +131,29 @@ struct TripReminderSheet: View {
         } label: {
             HStack(spacing: 10) {
                 Image(systemName: "plus.circle.fill")
-                    .font(.system(size: 16, weight: .semibold))
+                    .font(.system(size: 15, weight: .semibold))
+                    .foregroundStyle(colorScheme == .dark ? Color.accentColor.opacity(0.82) : Color.accentColor.opacity(0.92))
                 Text(LocalizedStringKey("reminder.add"))
-                    .font(.subheadline.weight(.semibold))
+                    .font(.subheadline.weight(.medium))
                 Spacer()
             }
             .padding(.horizontal, 16)
-            .padding(.vertical, 13)
-            .foregroundStyle(.primary)
+            .padding(.vertical, 12)
+            .foregroundStyle(colorScheme == .dark ? Color.primary.opacity(0.86) : .primary)
             .background(
                 RoundedRectangle(cornerRadius: 16, style: .continuous)
-                    .fill(Color(UIColor.systemBackground).opacity(0.66))
+                    .fill(colorScheme == .dark ? Color(UIColor.secondarySystemBackground).opacity(0.58) : Color(UIColor.systemBackground).opacity(0.28))
             )
             .overlay(
                 RoundedRectangle(cornerRadius: 16, style: .continuous)
-                    .strokeBorder(Color.primary.opacity(0.06), lineWidth: 1)
+                    .strokeBorder(colorScheme == .dark ? Color.white.opacity(0.03) : Color.primary.opacity(0.035), lineWidth: 1)
             )
+            .contentShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
         }
         .buttonStyle(.plain)
         .disabled(isPastDeparture || notifStatus == .denied)
         .opacity((isPastDeparture || notifStatus == .denied) ? 0.4 : 1)
+        .padding(.bottom, 0)
     }
 
     private var permissionWarning: some View {
@@ -161,7 +174,7 @@ struct TripReminderSheet: View {
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 12)
-        .background(Color(UIColor.systemBackground).opacity(0.32))
+        .background(colorScheme == .dark ? Color(UIColor.secondarySystemBackground).opacity(0.55) : Color(UIColor.systemBackground).opacity(0.28))
     }
 }
 
@@ -178,6 +191,7 @@ private struct ReminderRow: View {
     let onDelete: () -> Void
 
     @State private var selectedTime: Date
+    @Environment(\.colorScheme) private var colorScheme
 
     init(
         config: TripReminderConfig,
@@ -205,6 +219,28 @@ private struct ReminderRow: View {
         config.fireDate(relativeTo: departureDate).map { $0 < Date() } ?? true
     }
 
+    private var reminderLabelColor: Color {
+        if isFired {
+            return colorScheme == .dark ? Color.secondary.opacity(0.82) : Color.secondary
+        }
+        return Color.primary
+    }
+
+    private var reminderTimeColor: Color {
+        if isFired {
+            return colorScheme == .dark ? Color.secondary.opacity(0.55) : Color(UIColor.tertiaryLabel)
+        }
+        return Color.accentColor
+    }
+
+    private var reminderChevronColor: Color {
+        colorScheme == .dark ? Color.secondary.opacity(0.55) : Color(UIColor.tertiaryLabel)
+    }
+
+    private var reminderDeleteColor: Color {
+        colorScheme == .dark ? Color.secondary.opacity(0.72) : Color.secondary
+    }
+
     var body: some View {
         VStack(spacing: 0) {
             // Main row
@@ -213,16 +249,16 @@ private struct ReminderRow: View {
                     HStack {
                         Text(reminderLabel(for: config))
                             .font(.subheadline)
-                            .foregroundStyle(isFired ? .secondary : .primary)
+                            .foregroundStyle(reminderLabelColor)
                         Spacer()
                         HStack(spacing: 4) {
                             Text(config.timeString)
                                 .font(.subheadline)
-                                .foregroundStyle(isFired ? AnyShapeStyle(.tertiary) : AnyShapeStyle(Color.accentColor))
+                                .foregroundStyle(reminderTimeColor)
                             if !isPastDeparture && !isFired {
                                 Image(systemName: isExpanded ? "chevron.up" : "chevron.down")
                                     .font(.caption2.weight(.semibold))
-                                    .foregroundStyle(.tertiary)
+                                    .foregroundStyle(reminderChevronColor)
                             }
                         }
                     }
@@ -236,7 +272,7 @@ private struct ReminderRow: View {
                 if !isPastDeparture {
                     Button(action: onDelete) {
                         Image(systemName: "minus.circle.fill")
-                            .foregroundStyle(.secondary)
+                            .foregroundStyle(reminderDeleteColor)
                             .font(.system(size: 18, weight: .semibold))
                     }
                     .buttonStyle(.plain)
@@ -266,7 +302,7 @@ private struct ReminderRow: View {
                     } label: {
                         Text(LocalizedStringKey("Done"))
                             .font(.subheadline.weight(.medium))
-                            .foregroundStyle(Color.accentColor)
+                            .foregroundStyle(colorScheme == .dark ? Color.accentColor.opacity(0.92) : Color.accentColor)
                             .frame(maxWidth: .infinity)
                             .padding(.vertical, 13)
                     }

@@ -133,14 +133,6 @@ struct CoffeeSheetView: View {
                     .padding(.top, 6)
                     .padding(.bottom, 6)
 
-                    Text("support.sheet.footer")
-                        .font(.system(size: 12))
-                        .foregroundStyle(.secondary)
-                        .multilineTextAlignment(.center)
-                        .frame(maxWidth: 280)
-                        .frame(maxWidth: .infinity, alignment: .center)
-                        .padding(.top, 8)
-                        .padding(.bottom, 18)
                 }
             }
             .overlay {
@@ -149,6 +141,14 @@ struct CoffeeSheetView: View {
                 }
             }
             .alert("StoreKit not ready", isPresented: $showStoreKitNotReadyAlert) {
+                if let productID = pendingMockProductID {
+                    Button("Mock") {
+#if DEBUG
+                        coffeeStore.debugMockPurchase(productID: productID)
+#endif
+                        pendingMockProductID = nil
+                    }
+                }
                 Button("OK", role: .cancel) {
                     pendingMockProductID = nil
                 }

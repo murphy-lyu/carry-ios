@@ -18,8 +18,8 @@ private func legalURL(_ slug: String) -> URL {
 
 struct TermsView: View {
     var body: some View {
-        legalScroll(
-            body: "legal.terms.body",
+        LegalScrollView(
+            contentBody: "legal.terms.body",
             updated: "legal.updated",
             fullURL: legalURL("terms")
         )
@@ -30,8 +30,8 @@ struct TermsView: View {
 
 struct PrivacyView: View {
     var body: some View {
-        legalScroll(
-            body: "legal.privacy.body",
+        LegalScrollView(
+            contentBody: "legal.privacy.body",
             updated: "legal.updated",
             fullURL: legalURL("privacy")
         )
@@ -40,20 +40,31 @@ struct PrivacyView: View {
     }
 }
 
-@ViewBuilder
-private func legalScroll(
-    body: LocalizedStringKey,
-    updated: LocalizedStringKey,
-    fullURL: URL
-) -> some View {
-    ScrollView {
+private struct LegalScrollView: View {
+
+    let contentBody: LocalizedStringKey
+    let updated: LocalizedStringKey
+    let fullURL: URL
+
+    @Environment(\.colorScheme) private var colorScheme
+
+    var body: some View {
+        ScrollView {
+            legalContent
+                .padding(.horizontal, 16)
+                .padding(.vertical, 20)
+        }
+        .background(CarrySubtleBackground())
+    }
+
+    private var legalContent: some View {
         VStack(alignment: .leading, spacing: 12) {
             VStack(alignment: .leading, spacing: 8) {
                 Text(updated)
                     .font(.caption)
-                    .foregroundStyle(.tertiary)
+                    .foregroundStyle(colorScheme == .dark ? Color.secondary.opacity(0.68) : Color(UIColor.tertiaryLabel))
 
-                Text(body)
+                Text(contentBody)
                     .font(.subheadline)
                     .foregroundColor(.primary)
                     .lineSpacing(6)
@@ -61,22 +72,13 @@ private func legalScroll(
             .padding(14)
             .background(
                 RoundedRectangle(cornerRadius: 18, style: .continuous)
-                    .fill(
-                        LinearGradient(
-                            colors: [
-                                Color(UIColor.systemBackground).opacity(0.86),
-                                Color(UIColor.systemBackground).opacity(0.72)
-                            ],
-                            startPoint: .topLeading,
-                            endPoint: .bottomTrailing
-                        )
-                    )
+                    .fill(colorScheme == .dark ? Color(UIColor.secondarySystemBackground).opacity(0.76) : Color(UIColor.systemBackground).opacity(0.80))
             )
             .overlay(
                 RoundedRectangle(cornerRadius: 18, style: .continuous)
-                    .strokeBorder(Color.primary.opacity(0.035), lineWidth: 1)
+                    .strokeBorder(colorScheme == .dark ? Color.white.opacity(0.045) : Color.primary.opacity(0.035), lineWidth: 1)
             )
-            .shadow(color: Color.black.opacity(0.012), radius: 6, x: 0, y: 3)
+            .shadow(color: colorScheme == .dark ? Color.black.opacity(0.16) : Color.black.opacity(0.012), radius: colorScheme == .dark ? 8 : 6, x: 0, y: 3)
 
             Button {
                 UIApplication.shared.open(fullURL)
@@ -87,19 +89,16 @@ private func legalScroll(
                         .font(.caption)
                 }
                 .font(.subheadline.weight(.semibold))
-                .foregroundColor(.primary)
+                .foregroundColor(colorScheme == .dark ? Color.primary.opacity(0.92) : .primary)
             }
             .padding(.horizontal, 16)
             .padding(.vertical, 14)
             .background(
                 RoundedRectangle(cornerRadius: 14, style: .continuous)
-                    .fill(Color(UIColor.systemBackground).opacity(0.56))
+                    .fill(colorScheme == .dark ? Color(UIColor.secondarySystemBackground).opacity(0.58) : Color(UIColor.systemBackground).opacity(0.56))
             )
         }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 20)
     }
-    .background(CarrySubtleBackground())
 }
 
 #Preview("Terms") { TermsView() }

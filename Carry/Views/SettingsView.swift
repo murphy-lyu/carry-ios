@@ -15,6 +15,7 @@ struct SettingsView: View {
     @State private var showCoffeeSheet = false
     @State private var didApplyLaunchSheetReset = false
     @Environment(\.scenePhase) private var scenePhase
+    @Environment(\.colorScheme) private var colorScheme
     @EnvironmentObject private var store: TripStore
     @AppStorage("appearance_mode") private var appearanceModeRaw = AppearanceMode.system.rawValue
 
@@ -84,6 +85,36 @@ struct SettingsView: View {
 
         guard let url = components?.url else { return }
         UIApplication.shared.open(url)
+    }
+
+    private var settingsGroupFill: Color {
+        colorScheme == .dark
+            ? Color(UIColor.secondarySystemGroupedBackground).opacity(0.72)
+            : Color(UIColor.secondarySystemGroupedBackground)
+    }
+
+    private var settingsGroupStroke: Color {
+        colorScheme == .dark
+            ? Color.white.opacity(0.045)
+            : Color.primary.opacity(0.05)
+    }
+
+    private var settingsGroupShadow: Color {
+        colorScheme == .dark
+            ? Color.black.opacity(0.16)
+            : Color.black.opacity(0.03)
+    }
+
+    private var settingsTitleColor: Color {
+        colorScheme == .dark ? Color.secondary.opacity(0.9) : Color.secondary
+    }
+
+    private var settingsValueColor: Color {
+        colorScheme == .dark ? Color.secondary.opacity(0.92) : Color.secondary
+    }
+
+    private var settingsChevronColor: Color {
+        colorScheme == .dark ? Color.secondary.opacity(0.5) : Color.secondary.opacity(0.45)
     }
 
     var body: some View {
@@ -206,7 +237,7 @@ struct SettingsView: View {
         VStack(alignment: .leading, spacing: 12) {
             Text(title)
                 .font(.system(size: 13, weight: .semibold))
-                .foregroundStyle(.secondary)
+                .foregroundStyle(settingsTitleColor)
                 .padding(.horizontal, 16)
 
             VStack(spacing: 0) {
@@ -214,13 +245,13 @@ struct SettingsView: View {
             }
             .background(
                 RoundedRectangle(cornerRadius: 28, style: .continuous)
-                    .fill(Color(.secondarySystemGroupedBackground))
+                    .fill(settingsGroupFill)
                     .overlay(
                         RoundedRectangle(cornerRadius: 28, style: .continuous)
-                            .strokeBorder(Color.primary.opacity(0.05), lineWidth: 1)
+                            .strokeBorder(settingsGroupStroke, lineWidth: 1)
                     )
             )
-            .shadow(color: Color.black.opacity(0.03), radius: 12, x: 0, y: 4)
+            .shadow(color: settingsGroupShadow, radius: colorScheme == .dark ? 10 : 12, x: 0, y: colorScheme == .dark ? 3 : 4)
             .padding(.horizontal, 16)
         }
     }
@@ -236,11 +267,11 @@ struct SettingsView: View {
                 if let valueText {
                     Text(valueText)
                         .font(.body)
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(settingsValueColor)
                 }
                 Image(systemName: "chevron.right")
                     .font(.caption.weight(.semibold))
-                    .foregroundStyle(.tertiary)
+                    .foregroundStyle(settingsChevronColor)
             }
             .padding(.horizontal, 18)
             .frame(height: 58)
@@ -259,10 +290,10 @@ struct SettingsView: View {
                 Spacer()
                 Text(valueKey)
                     .font(.body)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(settingsValueColor)
                 Image(systemName: "chevron.right")
                     .font(.caption.weight(.semibold))
-                    .foregroundStyle(.tertiary)
+                    .foregroundStyle(settingsChevronColor)
             }
             .padding(.horizontal, 18)
             .frame(height: 58)
@@ -281,7 +312,7 @@ struct SettingsView: View {
                 Spacer()
                 Image(systemName: "chevron.right")
                     .font(.caption.weight(.semibold))
-                    .foregroundStyle(.tertiary)
+                    .foregroundStyle(settingsChevronColor)
             }
             .padding(.horizontal, 18)
             .frame(height: 58)
@@ -300,7 +331,7 @@ struct SettingsView: View {
                 Spacer()
                 Image(systemName: "chevron.right")
                     .font(.caption.weight(.semibold))
-                    .foregroundStyle(.tertiary)
+                    .foregroundStyle(settingsChevronColor)
             }
             .padding(.horizontal, 18)
             .frame(height: 58)
@@ -322,7 +353,7 @@ struct SettingsView: View {
                 Spacer()
                 Image(systemName: "chevron.right")
                     .font(.caption.weight(.semibold))
-                    .foregroundStyle(.tertiary)
+                    .foregroundStyle(settingsChevronColor)
             }
             .padding(.horizontal, 18)
             .frame(height: 58)
@@ -340,12 +371,13 @@ struct SettingsView: View {
 #if DEBUG
 private struct DeveloperModeView: View {
     @EnvironmentObject private var store: TripStore
+    @Environment(\.colorScheme) private var colorScheme
     @StateObject private var coffeeStore = CoffeeStore()
-    @State private var toastMessage: LocalizedStringKey?
+    @State private var toastMessage: String?
 
     var body: some View {
         List {
-            Section {
+            Section("settings.developer.reset_group") {
                 actionRow(title: "settings.debug.reset_support_tone") {
                     coffeeStore.debugResetSupportCount()
                     UIImpactFeedbackGenerator(style: .light).impactOccurred()
@@ -357,13 +389,40 @@ private struct DeveloperModeView: View {
                     showToast("settings.debug.reset_recommendation_entry.success")
                 }
             }
+
+            Section("settings.developer.notifications_group") {
+                actionRow(title: "settings.developer.test_notifications") {
+                    NotificationManager.scheduleTestNotifications()
+                    UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                    showToast("settings.developer.test_notifications.success")
+                }
+            }
+
+            Section("settings.developer.mock_group") {
+                Toggle(isOn: Binding(
+                    get: { store.isHomeEmptyStateMockEnabled },
+                    set: { newValue in
+                        store.setHomeEmptyStateMockEnabled(newValue)
+                        UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                        showToast(newValue ? String(localized: "settings.mock.home_empty_state.enabled") : String(localized: "settings.mock.home_empty_state.disabled"))
+                    }
+                )) {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("settings.mock.home_empty_state")
+                        Text("settings.mock.home_empty_state.subtitle")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+                }
+                .tint(colorScheme == .dark ? Color.accentColor.opacity(0.86) : Color.accentColor)
+            }
         }
         .listStyle(.insetGrouped)
         .navigationTitle("settings.developer.entry")
         .navigationBarTitleDisplayMode(.inline)
         .overlay(alignment: .bottom) {
             if let toastMessage {
-                Text(toastMessage)
+                Text(LocalizedStringKey(toastMessage))
                     .font(.subheadline.weight(.medium))
                     .foregroundStyle(.white)
                     .padding(.horizontal, 16)
@@ -391,7 +450,7 @@ private struct DeveloperModeView: View {
         .listRowSeparator(.hidden)
     }
 
-    private func showToast(_ message: LocalizedStringKey) {
+    private func showToast(_ message: String) {
         withAnimation(.easeInOut(duration: 0.2)) {
             toastMessage = message
         }

@@ -9,6 +9,7 @@ import UIKit
 struct AboutView: View {
 
     @EnvironmentObject private var store: TripStore
+    @Environment(\.colorScheme) private var colorScheme
     @State private var versionTapCount = 0
     @State private var versionTapTimer: Timer?
 
@@ -28,7 +29,7 @@ struct AboutView: View {
             VStack(alignment: .leading, spacing: 14) {
                 Text("about.tagline")
                     .font(.subheadline.weight(.medium))
-                    .foregroundStyle(.primary.opacity(0.72))
+                    .foregroundStyle(colorScheme == .dark ? Color.secondary.opacity(0.9) : Color.primary.opacity(0.72))
                     .lineSpacing(7)
                     .padding(.horizontal, 6)
                     .padding(.top, 6)
@@ -47,7 +48,7 @@ struct AboutView: View {
                                 .foregroundColor(.primary)
                             Text("about.author.role")
                                 .font(.caption)
-                                .foregroundStyle(.secondary)
+                                .foregroundStyle(colorScheme == .dark ? Color.secondary.opacity(0.78) : .secondary)
                         }
                         Spacer()
                     }
@@ -85,7 +86,7 @@ struct AboutView: View {
                     HStack(spacing: 6) {
                         Text("about.madeWith")
                             .font(.footnote)
-                            .foregroundStyle(.tertiary)
+                            .foregroundStyle(colorScheme == .dark ? Color.secondary.opacity(0.7) : Color(UIColor.tertiaryLabel))
                         Text("❤️")
                             .font(.footnote)
                     }
@@ -112,7 +113,7 @@ struct AboutView: View {
             if let title {
                 Text(title)
                     .font(.system(size: 11, weight: .medium))
-                    .foregroundStyle(.tertiary)
+                    .foregroundStyle(colorScheme == .dark ? Color.secondary.opacity(0.65) : Color(UIColor.tertiaryLabel))
                     .kerning(1.5)
                     .textCase(.uppercase)
                     .padding(.horizontal, 16)
@@ -127,22 +128,13 @@ struct AboutView: View {
         .padding(14)
         .background(
             RoundedRectangle(cornerRadius: 18, style: .continuous)
-                .fill(
-                    LinearGradient(
-                        colors: [
-                            Color(UIColor.systemBackground).opacity(0.94),
-                            Color(UIColor.systemBackground).opacity(0.82)
-                        ],
-                        startPoint: .topLeading,
-                        endPoint: .bottomTrailing
-                    )
-                )
+                .fill(cardFill)
         )
         .overlay(
             RoundedRectangle(cornerRadius: 18, style: .continuous)
-                .strokeBorder(Color.primary.opacity(0.05), lineWidth: 1)
+                .strokeBorder(cardStroke, lineWidth: 1)
         )
-        .shadow(color: Color.black.opacity(0.022), radius: 10, x: 0, y: 5)
+        .shadow(color: cardShadow, radius: colorScheme == .dark ? 8 : 10, x: 0, y: colorScheme == .dark ? 3 : 5)
     }
 
     private func socialRow(label: LocalizedStringKey, handle: String, url: String, fallbackURL: String? = nil) -> some View {
@@ -156,10 +148,10 @@ struct AboutView: View {
                 Spacer()
                 Text(handle)
                     .font(.subheadline)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(colorScheme == .dark ? Color.secondary.opacity(0.88) : .secondary)
                 Image(systemName: "arrow.up.right")
                     .font(.caption)
-                    .foregroundStyle(.tertiary)
+                    .foregroundStyle(colorScheme == .dark ? Color.secondary.opacity(0.55) : Color(UIColor.tertiaryLabel))
             }
             .padding(.horizontal, 16)
             .frame(height: 44)
@@ -198,6 +190,31 @@ struct AboutView: View {
         }
         .buttonStyle(.plain)
         .contentShape(Rectangle())
+    }
+
+    private var cardFill: some ShapeStyle {
+        if colorScheme == .dark {
+            return AnyShapeStyle(Color(UIColor.secondarySystemBackground).opacity(0.76))
+        } else {
+            return AnyShapeStyle(
+                LinearGradient(
+                    colors: [
+                        Color(UIColor.systemBackground).opacity(0.94),
+                        Color(UIColor.systemBackground).opacity(0.82)
+                    ],
+                    startPoint: .topLeading,
+                    endPoint: .bottomTrailing
+                )
+            )
+        }
+    }
+
+    private var cardStroke: Color {
+        colorScheme == .dark ? Color.white.opacity(0.045) : Color.primary.opacity(0.05)
+    }
+
+    private var cardShadow: Color {
+        colorScheme == .dark ? Color.black.opacity(0.18) : Color.black.opacity(0.022)
     }
 
     private func handleVersionTap() {

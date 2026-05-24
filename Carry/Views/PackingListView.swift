@@ -397,11 +397,17 @@ struct PackingListView: View {
     private func row(for item: PackingItem, sectionId: UUID) -> some View {
         contentRow(for: item, sectionId: sectionId)
             .swipeActions(edge: .trailing, allowsFullSwipe: false) {
-                Button(role: .destructive) {
+                // Do NOT use role: .destructive — it maps to UIContextualAction(.destructive)
+                // which plays a UIKit expand-then-collapse animation on tap, causing a ghost
+                // artifact. A plain button with .tint(.red) gives identical visuals without
+                // the animation, and the explicit white foreground fixes dark-mode visibility.
+                Button {
                     deleteItem(itemId: item.id)
                 } label: {
                     Image(systemName: "trash")
+                        .foregroundStyle(.white)
                 }
+                .tint(.red)
             }
     }
 
@@ -493,11 +499,7 @@ struct PackingListView: View {
     }
 
     private func deleteItem(itemId: UUID) {
-        var transaction = Transaction()
-        transaction.disablesAnimations = true
-        withTransaction(transaction) {
-            store.removeItem(tripId: tripId, itemId: itemId)
-        }
+        store.removeItem(tripId: tripId, itemId: itemId)
     }
     private func markTripCompleted() {
         store.markTripCompleted(tripId: tripId)
@@ -609,7 +611,7 @@ struct PackingListView: View {
                 GeometryReader { geo in
                     ZStack(alignment: .leading) {
                         RoundedRectangle(cornerRadius: 1)
-                            .fill(colorScheme == .dark ? Color.white.opacity(0.18) : Color(UIColor.systemGray5))
+                            .fill(colorScheme == .dark ? Color.white.opacity(0.12) : Color(UIColor.systemGray5))
                             .frame(height: 2.5)
                         RoundedRectangle(cornerRadius: 1)
                             .fill(Color.primary)
@@ -632,7 +634,7 @@ struct PackingListView: View {
             HStack(alignment: .firstTextBaseline) {
                 Text(tripInfoLine)
                     .font(.caption)
-                    .foregroundColor(.secondary)
+                    .foregroundColor(colorScheme == .dark ? Color.secondary.opacity(0.88) : .secondary)
                 Spacer()
                 Group {
                     if isNewTrip {
@@ -644,7 +646,7 @@ struct PackingListView: View {
                     }
                 }
                 .font(.caption)
-                .foregroundColor(.secondary)
+                .foregroundColor(colorScheme == .dark ? Color.secondary.opacity(0.88) : .secondary)
                 .animation(.easeInOut(duration: 0.3), value: isComplete)
             }
             .padding(.top, isNewTrip ? 0 : 6)
@@ -665,9 +667,9 @@ struct PackingListView: View {
         HStack(spacing: 10) {
             Image(systemName: "checkmark.circle.fill")
                 .font(.system(size: 14, weight: .semibold))
-                .foregroundStyle(Color.primary.opacity(0.82))
+                .foregroundStyle(colorScheme == .dark ? Color.primary.opacity(0.72) : Color.primary.opacity(0.82))
                 .frame(width: 22, height: 22)
-                .background(Circle().fill(Color.primary.opacity(0.045)))
+                .background(Circle().fill(colorScheme == .dark ? Color.white.opacity(0.035) : Color.primary.opacity(0.045)))
             Text("packing.complete.banner")
                 .foregroundStyle(.primary)
         }
@@ -694,9 +696,9 @@ struct PackingListView: View {
             HStack(spacing: 12) {
                 Image(systemName: "sparkles")
                     .font(.system(size: 15, weight: .semibold))
-                    .foregroundStyle(Color.orange)
+                    .foregroundStyle(colorScheme == .dark ? Color.orange.opacity(0.88) : Color.orange)
                     .frame(width: 34, height: 34)
-                    .background(Circle().fill(Color.orange.opacity(0.12)))
+                    .background(Circle().fill(colorScheme == .dark ? Color.orange.opacity(0.14) : Color.orange.opacity(0.12)))
                 VStack(alignment: .leading, spacing: 2) {
                     Text("Add recommended items")
                         .font(.subheadline.weight(.medium))
@@ -716,11 +718,11 @@ struct PackingListView: View {
         .buttonStyle(.plain)
         .background(
             RoundedRectangle(cornerRadius: 18, style: .continuous)
-                .fill(Color(UIColor.systemBackground).opacity(0.72))
+                .fill(colorScheme == .dark ? Color(UIColor.secondarySystemBackground).opacity(0.88) : Color(UIColor.systemBackground).opacity(0.72))
         )
         .overlay(
             RoundedRectangle(cornerRadius: 18, style: .continuous)
-                .strokeBorder(Color.primary.opacity(0.05), lineWidth: 1)
+                .strokeBorder(colorScheme == .dark ? Color.white.opacity(0.045) : Color.primary.opacity(0.05), lineWidth: 1)
         )
         .padding(.vertical, 2)
         .overlay(alignment: .trailing) {
@@ -752,9 +754,9 @@ struct PackingListView: View {
         HStack(spacing: 10) {
             Image(systemName: "sparkles")
                 .font(.system(size: 14, weight: .semibold))
-                .foregroundStyle(Color.indigo)
+                .foregroundStyle(colorScheme == .dark ? Color.indigo.opacity(0.88) : Color.indigo)
                 .frame(width: 28, height: 28)
-                .background(Circle().fill(Color.indigo.opacity(0.12)))
+                .background(Circle().fill(colorScheme == .dark ? Color.indigo.opacity(0.14) : Color.indigo.opacity(0.12)))
             Text("Almost there! A few things worth a second thought ↓")
                 .foregroundStyle(.primary)
         }
@@ -764,11 +766,11 @@ struct PackingListView: View {
         .padding(.horizontal, 16)
         .background(
             RoundedRectangle(cornerRadius: 18, style: .continuous)
-                .fill(Color(UIColor.systemBackground).opacity(0.78))
+                .fill(colorScheme == .dark ? Color(UIColor.secondarySystemBackground).opacity(0.88) : Color(UIColor.systemBackground).opacity(0.78))
         )
         .overlay(
             RoundedRectangle(cornerRadius: 18, style: .continuous)
-                .strokeBorder(Color.primary.opacity(0.05), lineWidth: 1)
+                .strokeBorder(colorScheme == .dark ? Color.white.opacity(0.045) : Color.primary.opacity(0.05), lineWidth: 1)
         )
     }
 
@@ -789,11 +791,11 @@ struct PackingListView: View {
         .padding(.horizontal, 16)
         .background(
             RoundedRectangle(cornerRadius: 18, style: .continuous)
-                .fill(Color(UIColor.systemBackground).opacity(0.78))
+                .fill(colorScheme == .dark ? Color(UIColor.secondarySystemBackground).opacity(0.88) : Color(UIColor.systemBackground).opacity(0.78))
         )
         .overlay(
             RoundedRectangle(cornerRadius: 18, style: .continuous)
-                .strokeBorder(Color.primary.opacity(0.05), lineWidth: 1)
+                .strokeBorder(colorScheme == .dark ? Color.white.opacity(0.045) : Color.primary.opacity(0.05), lineWidth: 1)
         )
     }
 
@@ -804,7 +806,7 @@ struct PackingListView: View {
                 .foregroundStyle(.secondary)
             Text("Worth considering")
                 .font(.caption.bold())
-                .foregroundStyle(Color(.systemGray))
+                .foregroundStyle(colorScheme == .dark ? Color(.systemGray2) : Color(.systemGray))
                 .kerning(1.5)
                 .textCase(.uppercase)
             Spacer()
@@ -898,7 +900,7 @@ struct PackingListView: View {
     private func sectionTitle(_ title: String, isFirst: Bool) -> some View {
         Text(LocalizedStringKey(title))
             .font(.caption.weight(.medium))
-            .foregroundStyle(Color(.systemGray))
+            .foregroundStyle(colorScheme == .dark ? Color(.systemGray2) : Color(.systemGray))
             .kerning(1.2)
             .textCase(.uppercase)
             .frame(maxWidth: .infinity, alignment: .leading)
@@ -907,15 +909,13 @@ struct PackingListView: View {
             .padding(.bottom, 4)
             .background(
                 Rectangle()
-                    .fill(
-                        Color(UIColor.systemBackground).opacity(0.92)
-                    )
+                    .fill(colorScheme == .dark ? Color(UIColor.secondarySystemBackground).opacity(0.78) : Color(UIColor.systemBackground).opacity(0.92))
                     .overlay(alignment: .bottom) {
                         Rectangle()
-                            .fill(Color.primary.opacity(0.03))
+                            .fill(colorScheme == .dark ? Color.white.opacity(0.035) : Color.primary.opacity(0.03))
                             .frame(height: 1)
                     }
-                    .shadow(color: Color.black.opacity(0.012), radius: 4, x: 0, y: 1)
+                    .shadow(color: colorScheme == .dark ? .clear : Color.black.opacity(0.012), radius: 4, x: 0, y: 1)
             )
             .padding(.horizontal, 10)
     }
@@ -966,15 +966,15 @@ struct PackingListView: View {
             HStack(spacing: 10) {
                 Image(systemName: "plus")
                     .font(.system(size: 10, weight: .semibold))
-                    .foregroundStyle(isComplete ? Color.primary.opacity(0.48) : Color.primary.opacity(0.72))
+                    .foregroundStyle(addItemTint)
                     .frame(width: 16, height: 16)
                     .background(
                         Circle()
-                            .fill(isComplete ? Color.primary.opacity(0.025) : Color.primary.opacity(0.05))
+                            .fill(addItemBadgeFill)
                     )
                 Text("Add item")
                     .font(.subheadline.weight(.medium))
-                    .foregroundStyle(isComplete ? Color.primary.opacity(0.42) : Color.primary.opacity(0.78))
+                    .foregroundStyle(addItemTextTint)
                 Spacer()
             }
             .frame(height: 44)
@@ -983,6 +983,30 @@ struct PackingListView: View {
         }
         .buttonStyle(PressableScaleButtonStyle(scale: 0.985, pressedBrightness: -0.02, pressedOpacity: 0.95))
         .padding(.vertical, 1)
+    }
+
+    private var addItemTint: Color {
+        if colorScheme == .dark {
+            return isComplete ? Color.primary.opacity(0.32) : Color.primary.opacity(0.58)
+        } else {
+            return isComplete ? Color.primary.opacity(0.48) : Color.primary.opacity(0.72)
+        }
+    }
+
+    private var addItemBadgeFill: Color {
+        if colorScheme == .dark {
+            return isComplete ? Color.white.opacity(0.02) : Color.white.opacity(0.04)
+        } else {
+            return isComplete ? Color.primary.opacity(0.025) : Color.primary.opacity(0.05)
+        }
+    }
+
+    private var addItemTextTint: Color {
+        if colorScheme == .dark {
+            return isComplete ? Color.primary.opacity(0.34) : Color.primary.opacity(0.66)
+        } else {
+            return isComplete ? Color.primary.opacity(0.42) : Color.primary.opacity(0.78)
+        }
     }
 
     private var saveTripButton: some View {

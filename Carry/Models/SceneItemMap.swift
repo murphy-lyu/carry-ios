@@ -5,21 +5,16 @@
 
 import Foundation
 
-// MARK: - Types
-
-enum ItemCategory: String, CaseIterable {
-    case clothing    = "Clothing"
-    case essentials  = "Essentials"
-    case documents   = "Documents"
-    case electronics = "Electronics"
-    case health      = "Health"
-    case toiletries  = "Toiletries"
-}
-
 struct SceneItem {
     let name: String
     let category: ItemCategory
     let isAlert: Bool
+}
+
+private func makeSceneItem(_ name: String, isAlert: Bool) -> SceneItem {
+    let canonicalName = canonicalItemName(name)
+    let category = categoryForCatalogItem(canonicalName) ?? .essentials
+    return SceneItem(name: canonicalName, category: category, isAlert: isAlert)
 }
 
 func defaultQuantity(for itemName: String, tripDays: Int) -> Int {
@@ -82,131 +77,133 @@ let sceneLabelToKey: [String: String] = [
 // MARK: - Base items (every trip)
 
 let baseItems: [SceneItem] = [
-    SceneItem(name: "Passport",             category: .documents,   isAlert: true),
-    SceneItem(name: "Wallet",               category: .essentials,  isAlert: false),
-    SceneItem(name: "Cash (local currency)", category: .essentials, isAlert: false),
-    SceneItem(name: "Phone charger",        category: .electronics, isAlert: false),
-    SceneItem(name: "Underwear",            category: .clothing,    isAlert: false),
-    SceneItem(name: "Socks",                category: .clothing,    isAlert: false),
-    SceneItem(name: "Toothbrush",           category: .toiletries,  isAlert: false),
-    SceneItem(name: "Toothpaste",           category: .toiletries,  isAlert: false),
-    SceneItem(name: "Deodorant",            category: .toiletries,  isAlert: false),
+    makeSceneItem("Passport", isAlert: true),
+    makeSceneItem("Wallet", isAlert: false),
+    makeSceneItem("Cash (local currency)", isAlert: false),
+    makeSceneItem("Phone charger", isAlert: false),
+    makeSceneItem("Underwear", isAlert: false),
+    makeSceneItem("Socks", isAlert: false),
+    makeSceneItem("Toothbrush", isAlert: false),
+    makeSceneItem("Toothpaste", isAlert: false),
+    makeSceneItem("Deodorant", isAlert: false),
 ]
 
 // MARK: - Scene → item map
 
 let sceneItemMap: [String: [SceneItem]] = [
     "road_trip": [
-        SceneItem(name: "Driver's licence",        category: .documents,   isAlert: true),
-        SceneItem(name: "Car insurance docs",       category: .documents,   isAlert: true),
-        SceneItem(name: "Car charger",              category: .electronics, isAlert: true),
-        SceneItem(name: "Sunglasses",               category: .health,      isAlert: true),
-        SceneItem(name: "Reusable water bottle",    category: .essentials,  isAlert: false),
-        SceneItem(name: "Snacks",                   category: .essentials,  isAlert: false),
-        SceneItem(name: "Nuts",                     category: .essentials,  isAlert: false),
+        makeSceneItem("Driver's licence", isAlert: true),
+        makeSceneItem("Car insurance docs", isAlert: true),
+        makeSceneItem("Car charger", isAlert: true),
+        makeSceneItem("Sunglasses", isAlert: true),
+        makeSceneItem("Reusable water bottle", isAlert: false),
+        makeSceneItem("Snacks", isAlert: false),
+        makeSceneItem("Nuts", isAlert: false),
+        makeSceneItem("Foldable chair", isAlert: false),
+        makeSceneItem("Picnic mat", isAlert: false),
     ],
     "long_haul_flight": [
-        SceneItem(name: "Passport",                 category: .documents,   isAlert: true),
-        SceneItem(name: "Flight tickets",           category: .documents,   isAlert: true),
-        SceneItem(name: "Neck pillow",              category: .essentials,  isAlert: true),
-        SceneItem(name: "Noise-cancelling headphones", category: .electronics, isAlert: true),
-        SceneItem(name: "Eye mask",                 category: .essentials,  isAlert: false),
-        SceneItem(name: "Earplugs",                 category: .essentials,  isAlert: false),
-        SceneItem(name: "Compression socks",        category: .clothing,    isAlert: false),
+        makeSceneItem("Passport", isAlert: true),
+        makeSceneItem("Flight tickets", isAlert: true),
+        makeSceneItem("Neck pillow", isAlert: true),
+        makeSceneItem("Noise-cancelling headphones", isAlert: true),
+        makeSceneItem("Eye mask", isAlert: false),
+        makeSceneItem("Earplugs", isAlert: false),
+        makeSceneItem("Compression socks", isAlert: false),
     ],
     "cruise": [
-        SceneItem(name: "Passport",                 category: .documents,   isAlert: true),
-        SceneItem(name: "Boarding pass",            category: .documents,   isAlert: true),
-        SceneItem(name: "Motion sickness pills",    category: .health,      isAlert: true),
-        SceneItem(name: "Formal dinner outfit",     category: .clothing,    isAlert: true),
-        SceneItem(name: "Swimwear",                 category: .clothing,    isAlert: false),
-        SceneItem(name: "Sunscreen SPF 50+",        category: .health,      isAlert: false),
+        makeSceneItem("Passport", isAlert: true),
+        makeSceneItem("Boarding pass", isAlert: true),
+        makeSceneItem("Motion sickness pills", isAlert: true),
+        makeSceneItem("Formal dinner outfit", isAlert: true),
+        makeSceneItem("Swimwear", isAlert: false),
+        makeSceneItem("Sunscreen SPF 50+", isAlert: false),
     ],
     "tropical": [
-        SceneItem(name: "Sunscreen SPF 50+",        category: .health,      isAlert: true),
-        SceneItem(name: "Sunglasses",               category: .health,      isAlert: true),
-        SceneItem(name: "Sun hat",                  category: .clothing,    isAlert: true),
-        SceneItem(name: "Insect repellent",         category: .health,      isAlert: true),
-        SceneItem(name: "Swimwear",                 category: .clothing,    isAlert: false),
-        SceneItem(name: "Light rain jacket",        category: .clothing,    isAlert: false),
+        makeSceneItem("Sunscreen SPF 50+", isAlert: true),
+        makeSceneItem("Sunglasses", isAlert: true),
+        makeSceneItem("Sun hat", isAlert: true),
+        makeSceneItem("Insect repellent", isAlert: true),
+        makeSceneItem("Swimwear", isAlert: false),
+        makeSceneItem("Light rain jacket", isAlert: false),
     ],
     "rainy_city": [
-        SceneItem(name: "Compact umbrella",         category: .essentials,  isAlert: true),
-        SceneItem(name: "Waterproof jacket",        category: .clothing,    isAlert: true),
-        SceneItem(name: "Waterproof shoes",         category: .clothing,    isAlert: true),
-        SceneItem(name: "Waterproof phone case",    category: .electronics, isAlert: false),
-        SceneItem(name: "Quick-dry towel",          category: .essentials,  isAlert: false),
+        makeSceneItem("Compact umbrella", isAlert: true),
+        makeSceneItem("Waterproof jacket", isAlert: true),
+        makeSceneItem("Waterproof shoes", isAlert: true),
+        makeSceneItem("Waterproof phone case", isAlert: false),
+        makeSceneItem("Quick-dry towel", isAlert: false),
     ],
     "high_altitude": [
-        SceneItem(name: "Altitude sickness pills",  category: .health,      isAlert: true),
-        SceneItem(name: "Warm base layer",          category: .clothing,    isAlert: true),
-        SceneItem(name: "Sunscreen SPF 50+",        category: .health,      isAlert: true),
-        SceneItem(name: "Sunglasses",               category: .health,      isAlert: true),
-        SceneItem(name: "Thermal socks",            category: .clothing,    isAlert: false),
-        SceneItem(name: "Windproof jacket",         category: .clothing,    isAlert: false),
+        makeSceneItem("Altitude sickness pills", isAlert: true),
+        makeSceneItem("Warm base layer", isAlert: true),
+        makeSceneItem("Sunscreen SPF 50+", isAlert: true),
+        makeSceneItem("Sunglasses", isAlert: true),
+        makeSceneItem("Thermal socks", isAlert: false),
+        makeSceneItem("Windproof jacket", isAlert: false),
     ],
     "winter": [
-        SceneItem(name: "Thermal underwear",        category: .clothing,    isAlert: true),
-        SceneItem(name: "Heavy winter coat",        category: .clothing,    isAlert: true),
-        SceneItem(name: "Gloves",                   category: .clothing,    isAlert: true),
-        SceneItem(name: "Beanie / hat",             category: .clothing,    isAlert: true),
-        SceneItem(name: "Scarf",                    category: .clothing,    isAlert: false),
-        SceneItem(name: "Thermal socks",            category: .clothing,    isAlert: false),
-        SceneItem(name: "Snow boots",               category: .clothing,    isAlert: false),
+        makeSceneItem("Thermal underwear", isAlert: true),
+        makeSceneItem("Heavy winter coat", isAlert: true),
+        makeSceneItem("Gloves", isAlert: true),
+        makeSceneItem("Beanie / hat", isAlert: true),
+        makeSceneItem("Scarf", isAlert: false),
+        makeSceneItem("Thermal socks", isAlert: false),
+        makeSceneItem("Snow boots", isAlert: false),
     ],
     "business": [
-        SceneItem(name: "Business cards",           category: .essentials,  isAlert: true),
-        SceneItem(name: "Laptop",                   category: .electronics, isAlert: true),
-        SceneItem(name: "Laptop charger",           category: .electronics, isAlert: true),
-        SceneItem(name: "Formal shirt / blouse",    category: .clothing,    isAlert: true),
-        SceneItem(name: "Dress shoes",              category: .clothing,    isAlert: true),
-        SceneItem(name: "Universal adapter",        category: .electronics, isAlert: false),
+        makeSceneItem("Business cards", isAlert: true),
+        makeSceneItem("Laptop", isAlert: true),
+        makeSceneItem("Laptop charger", isAlert: true),
+        makeSceneItem("Formal shirt / blouse", isAlert: true),
+        makeSceneItem("Dress shoes", isAlert: true),
+        makeSceneItem("Universal adapter", isAlert: false),
     ],
     "kids": [
-        SceneItem(name: "Children's passport / ID", category: .documents,   isAlert: true),
-        SceneItem(name: "Children's medication",    category: .health,      isAlert: true),
-        SceneItem(name: "Wet wipes",                category: .essentials,  isAlert: true),
-        SceneItem(name: "Snacks for kids",          category: .essentials,  isAlert: true),
-        SceneItem(name: "Favourite toy / comfort item", category: .essentials, isAlert: true),
-        SceneItem(name: "Change of clothes (extra)", category: .clothing,   isAlert: false),
-        SceneItem(name: "Sunscreen for kids",       category: .health,      isAlert: false),
+        makeSceneItem("Children's passport / ID", isAlert: true),
+        makeSceneItem("Children's medication", isAlert: true),
+        makeSceneItem("Wet wipes", isAlert: true),
+        makeSceneItem("Snacks for kids", isAlert: true),
+        makeSceneItem("Favourite toy / comfort item", isAlert: true),
+        makeSceneItem("Change of clothes (extra)", isAlert: false),
+        makeSceneItem("Sunscreen for kids", isAlert: false),
     ],
     "hiking": [
-        SceneItem(name: "Hiking boots",             category: .clothing,    isAlert: true),
-        SceneItem(name: "First aid kit",            category: .health,      isAlert: true),
-        SceneItem(name: "Headlamp + batteries",     category: .essentials,  isAlert: true),
-        SceneItem(name: "Sunscreen SPF 50+",        category: .health,      isAlert: true),
-        SceneItem(name: "Reusable water bottle",    category: .essentials,  isAlert: true),
-        SceneItem(name: "Trekking poles",           category: .essentials,  isAlert: false),
-        SceneItem(name: "Trail snacks / energy bars", category: .essentials, isAlert: false),
+        makeSceneItem("Hiking boots", isAlert: true),
+        makeSceneItem("First aid kit", isAlert: true),
+        makeSceneItem("Headlamp + batteries", isAlert: true),
+        makeSceneItem("Sunscreen SPF 50+", isAlert: true),
+        makeSceneItem("Reusable water bottle", isAlert: true),
+        makeSceneItem("Trekking poles", isAlert: false),
+        makeSceneItem("Trail snacks / energy bars", isAlert: false),
     ],
     "honeymoon": [
-        SceneItem(name: "Passport",                 category: .documents,   isAlert: true),
-        SceneItem(name: "Dressy outfit",            category: .clothing,    isAlert: true),
-        SceneItem(name: "Camera / extra memory card", category: .electronics, isAlert: false),
-        SceneItem(name: "Portable Bluetooth speaker", category: .electronics, isAlert: false),
-        SceneItem(name: "Perfume / cologne",        category: .toiletries,  isAlert: false),
+        makeSceneItem("Passport", isAlert: true),
+        makeSceneItem("Dressy outfit", isAlert: true),
+        makeSceneItem("Camera / extra memory card", isAlert: false),
+        makeSceneItem("Portable Bluetooth speaker", isAlert: false),
+        makeSceneItem("Perfume / cologne", isAlert: false),
     ],
     "backpacking": [
-        SceneItem(name: "Backpack rain cover",      category: .clothing,    isAlert: true),
-        SceneItem(name: "Microfibre towel",         category: .essentials,  isAlert: true),
-        SceneItem(name: "Quick-dry clothing",       category: .clothing,    isAlert: true),
-        SceneItem(name: "Padlock",                  category: .essentials,  isAlert: true),
-        SceneItem(name: "Reusable water bottle",    category: .essentials,  isAlert: false),
+        makeSceneItem("Backpack rain cover", isAlert: true),
+        makeSceneItem("Microfibre towel", isAlert: true),
+        makeSceneItem("Quick-dry clothing", isAlert: true),
+        makeSceneItem("Padlock", isAlert: true),
+        makeSceneItem("Reusable water bottle", isAlert: false),
     ],
     "city_break": [
-        SceneItem(name: "Comfortable walking shoes", category: .clothing,   isAlert: true),
-        SceneItem(name: "Crossbody bag",             category: .essentials, isAlert: true),
-        SceneItem(name: "Transit card / app",        category: .essentials, isAlert: false),
-        SceneItem(name: "Umbrella",                  category: .essentials, isAlert: false),
-        SceneItem(name: "Photo ID copy",             category: .documents,  isAlert: true),
+        makeSceneItem("Comfortable walking shoes", isAlert: true),
+        makeSceneItem("Crossbody bag", isAlert: true),
+        makeSceneItem("Transit card / app", isAlert: false),
+        makeSceneItem("Umbrella", isAlert: false),
+        makeSceneItem("Photo ID copy", isAlert: true),
     ],
     "personal_period": [
-        SceneItem(name: "Sanitary pads / tampons",  category: .health,      isAlert: true),
-        SceneItem(name: "Pain relievers",           category: .health,      isAlert: true),
+        makeSceneItem("Sanitary pads / tampons", isAlert: true),
+        makeSceneItem("Pain relievers", isAlert: true),
     ],
     "personal_medication": [
-        SceneItem(name: "Daily medication",         category: .health,      isAlert: true),
+        makeSceneItem("Daily medication", isAlert: true),
     ],
 ]
 
@@ -217,7 +214,7 @@ func sceneItems(for key: String) -> [SceneItem] {
     guard isChineseLocale else { return items }
     switch key {
     case "long_haul_flight", "business":
-        items.append(SceneItem(name: "Overseas SIM / portable WiFi", category: .electronics, isAlert: false))
+        items.append(makeSceneItem("Overseas SIM / portable WiFi", isAlert: false))
     default:
         break
     }
@@ -244,7 +241,7 @@ func generatePackingSections(selectedScenes: [String], tripDays: Int = 1) -> [Pa
     baseItems.forEach { insert($0) }
     selectedScenes.flatMap { sceneItems(for: $0) }.forEach { insert($0) }
 
-    let order: [ItemCategory] = [.documents, .clothing, .electronics, .toiletries, .essentials, .health]
+    let order: [ItemCategory] = [.documents, .clothing, .electronics, .travelAccessories, .toiletries, .essentials, .health]
     var sectionIndex = 0
     var result: [PackingSection] = []
     for category in order {

@@ -81,19 +81,27 @@ final class TripStore: ObservableObject {
     @Published var trips: [TripBundle] = []
     @Published var myItems: [MyItem] = []
     @Published var isSceneCardDismissedGlobally: Bool
+    @Published var isHomeEmptyStateMockEnabled: Bool
     @Published private(set) var draftTrip: TripBundle?
 
     private let context: ModelContext
     private let defaults = UserDefaults.standard
     private static let sceneCardDismissedGlobalKey = "scene_card_dismissed_global"
+    private static let homeEmptyStateMockKey = "home_empty_state_mock_enabled"
     private var didCleanupCorruptedData = false
 
     init() {
         self.context = ModelContext(CarryApp.container)
         self.isSceneCardDismissedGlobally = defaults.bool(forKey: Self.sceneCardDismissedGlobalKey)
+        self.isHomeEmptyStateMockEnabled = defaults.bool(forKey: Self.homeEmptyStateMockKey)
         Task { @MainActor in
             fetchTrips()
         }
+    }
+
+    func setHomeEmptyStateMockEnabled(_ enabled: Bool) {
+        isHomeEmptyStateMockEnabled = enabled
+        defaults.set(enabled, forKey: Self.homeEmptyStateMockKey)
     }
 
     // MARK: - Persistence

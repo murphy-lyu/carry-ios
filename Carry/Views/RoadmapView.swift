@@ -285,7 +285,7 @@ struct RoadmapView: View {
                     zhHant: "點擊右上角連結圖示，設定你的 GitHub Raw JSON 位址。"
                 ))
                     .font(.caption)
-                    .foregroundStyle(.tertiary)
+                    .foregroundStyle(colorScheme == .dark ? Color.secondary.opacity(0.68) : Color(UIColor.tertiaryLabel))
             }
             .padding(16)
             .frame(maxWidth: .infinity, alignment: .leading)
@@ -298,7 +298,7 @@ struct RoadmapView: View {
         VStack(alignment: .leading, spacing: 8) {
             Text(section.title)
                 .font(.system(size: 11, weight: .medium))
-                .foregroundStyle(.tertiary)
+                .foregroundStyle(colorScheme == .dark ? Color.secondary.opacity(0.68) : Color(UIColor.tertiaryLabel))
                 .kerning(1.4)
                 .textCase(.uppercase)
 
@@ -317,7 +317,7 @@ struct RoadmapView: View {
         .background(cardBackground)
         .overlay(
             RoundedRectangle(cornerRadius: 18, style: .continuous)
-                .strokeBorder(Color.primary.opacity(0.035), lineWidth: 1)
+                .strokeBorder(colorScheme == .dark ? Color.white.opacity(0.045) : Color.primary.opacity(0.035), lineWidth: 1)
         )
         .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
     }
@@ -404,7 +404,7 @@ struct RoadmapView: View {
 
     private var cardBackground: Color {
         colorScheme == .dark
-            ? Color.white.opacity(0.070)
+            ? Color(UIColor.secondarySystemGroupedBackground).opacity(0.74)
             : Color(UIColor.systemBackground).opacity(0.82)
     }
 
