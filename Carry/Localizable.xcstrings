@@ -1977,9 +1977,6 @@
     "Add %lld items" : {
 
     },
-    "Add category" : {
-
-    },
     "Add item" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -8471,6 +8468,65 @@
         }
       }
     },
+    "home.countries" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Länder"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Countries"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Países"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Pays"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "訪問国"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "방문 국가"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Países"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "到访国家"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "到訪國家"
+          }
+        }
+      }
+    },
     "home.overview.title" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -8667,65 +8723,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "即將出發"
-          }
-        }
-      }
-    },
-    "home.countries" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Länder"
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Countries"
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Países"
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Pays"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "訪問国"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "방문 국가"
-          }
-        },
-        "pt-BR" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Países"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "到访国家"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "到訪國家"
           }
         }
       }
@@ -11961,55 +11958,55 @@
         "de" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "Tap Add category or Add item below to start, or use the ⋯ menu to edit sections"
+            "value" : "Tap Add item below to start, and use the ⋯ menu to edit sections."
           }
         },
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Tap Add category or Add item below to start, or use the ⋯ menu to edit sections"
+            "value" : "Tap Add item below to start, and use the ⋯ menu to edit sections."
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "Tap Add category or Add item below to start, or use the ⋯ menu to edit sections"
+            "value" : "Tap Add item below to start, and use the ⋯ menu to edit sections."
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "Tap Add category or Add item below to start, or use the ⋯ menu to edit sections"
+            "value" : "Tap Add item below to start, and use the ⋯ menu to edit sections."
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "Tap Add category or Add item below to start, or use the ⋯ menu to edit sections"
+            "value" : "Tap Add item below to start, and use the ⋯ menu to edit sections."
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "Tap Add category or Add item below to start, or use the ⋯ menu to edit sections"
+            "value" : "Tap Add item below to start, and use the ⋯ menu to edit sections."
           }
         },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "Tap Add category or Add item below to start, or use the ⋯ menu to edit sections"
+            "value" : "Tap Add item below to start, and use the ⋯ menu to edit sections."
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "点击下方添加分类或添加物品开始整理，也可以在右上角 ⋯ 菜单中编辑分类。"
+            "value" : "点击下方 Add item 开始，分类可在右上角 ⋯ 中编辑。"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "點擊下方新增分類或新增物品開始整理，也可以在右上角 ⋯ 選單中編輯分類。"
+            "value" : "點擊下方 Add item 開始，分類可在右上角 ⋯ 中編輯。"
           }
         }
       }

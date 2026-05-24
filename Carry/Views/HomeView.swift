@@ -113,11 +113,12 @@ struct HomeView: View {
     }
 
     private var visitedCountries: [VisitedCountry] {
-        // Show any trip whose departure date has already passed and whose
-        // country/coordinates have been resolved — we don't require the return
-        // date to have passed, because once you've departed you've visited.
+        let now = Date()
+        for t in store.trips {
+            print("[Globe] '\(t.destinationCity)' code='\(t.countryCode)' lat=\(t.latitude) departed=\(t.departureDate <= now)")
+        }
         let departed = store.trips.filter {
-            $0.departureDate <= Date() && !$0.countryCode.isEmpty && $0.latitude != 0
+            $0.departureDate <= now && !$0.countryCode.isEmpty && $0.latitude != 0
         }
         var grouped: [String: [TripBundle]] = [:]
         for trip in departed {

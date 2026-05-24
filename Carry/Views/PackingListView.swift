@@ -906,30 +906,6 @@ struct PackingListView: View {
 
             VStack(spacing: 10) {
                 Button {
-                    newSectionName = ""
-                    showAddSectionAlert = true
-                } label: {
-                    HStack(spacing: 10) {
-                        Image(systemName: "folder.badge.plus")
-                            .font(.system(size: 11, weight: .semibold))
-                        Text("Add category")
-                    }
-                    .font(.subheadline.weight(.medium))
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 11)
-                    .foregroundStyle(colorScheme == .dark ? Color.primary.opacity(0.82) : Color.primary.opacity(0.88))
-                    .background(
-                        RoundedRectangle(cornerRadius: 13, style: .continuous)
-                            .fill(colorScheme == .dark ? Color.white.opacity(0.035) : Color.primary.opacity(0.03))
-                    )
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 13, style: .continuous)
-                            .strokeBorder(Color.primary.opacity(colorScheme == .dark ? 0.03 : 0.045), lineWidth: 1)
-                    )
-                }
-                .buttonStyle(.plain)
-
-                Button {
                     if sections.isEmpty {
                         showAddItemsRoute = true
                     } else {
