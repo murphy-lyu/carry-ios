@@ -169,6 +169,9 @@ final class DataBackupManager {
 
     // MARK: - Query
 
+    /// The file URL of the backup, usable for sharing via UIActivityViewController.
+    var backupFileURL: URL? { backupURL }
+
     func hasBackup() -> Bool {
         guard let url = backupURL else { return false }
         return FileManager.default.fileExists(atPath: url.path)
@@ -202,20 +205,34 @@ final class DataBackupManager {
         }
     }
 
-    /// Deletes all current data and replaces it with the contents of the latest backup.
-    /// Must be called on the same actor/thread that owns the ModelContext.
+    // MARK: - Restore (device backup)
+
+    /// Restore from the automatic local backup written after every save.
     @discardableResult
     func restore(into context: ModelContext) throws -> (trips: Int, myItems: Int) {
         guard let url = backupURL,
               FileManager.default.fileExists(atPath: url.path) else {
             throw BackupError.fileNotFound
         }
-
         let data = try Data(contentsOf: url)
+        return try restoreFromData(data, into: context)
+    }
+
+    // MARK: - Restore (imported file)
+
+    /// Restore from raw JSON data — used when the caller has already read the
+    /// file within a security scope (e.g., from the file importer picker).
+    @discardableResult
+    func restoreFromData(_ data: Data, into context: ModelContext) throws -> (trips: Int, myItems: Int) {
         guard let backup = try? decoder.decode(CarryBackup.self, from: data) else {
             throw BackupError.decodingFailed
         }
+        return try performRestore(from: backup, into: context)
+    }
 
+    // MARK: - Core restore
+
+    private func performRestore(from backup: CarryBackup, into context: ModelContext) throws -> (trips: Int, myItems: Int) {
         // Wipe existing data (cascade deletes PackingSection + PackingItem)
         try context.delete(model: TripBundle.self)
         try context.delete(model: MyItem.self)

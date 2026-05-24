@@ -110,11 +110,18 @@ final class TripStore: ObservableObject {
 
     // MARK: - Backup & Restore
 
-    /// Restore all data from the latest JSON backup.
-    /// Returns the number of trips restored, or throws on failure.
+    /// Restore all data from the automatic device-local JSON backup.
     @discardableResult
     func restoreFromBackup() throws -> (trips: Int, myItems: Int) {
         let result = try DataBackupManager.shared.restore(into: context)
+        fetchTrips()
+        return result
+    }
+
+    /// Restore all data from raw JSON data read from a user-selected file.
+    @discardableResult
+    func restoreFromData(_ data: Data) throws -> (trips: Int, myItems: Int) {
+        let result = try DataBackupManager.shared.restoreFromData(data, into: context)
         fetchTrips()
         return result
     }

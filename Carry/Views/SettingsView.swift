@@ -15,6 +15,9 @@ struct SettingsView: View {
     @State private var showCoffeeSheet = false
     @State private var didApplyLaunchSheetReset = false
     @State private var showRestoreConfirmation = false
+    @State private var showImporter = false
+    @State private var showImportConfirmation = false
+    @State private var pendingImportData: Data?
     @State private var restoreToastMessage: String?
     @State private var backupDate: Date? = DataBackupManager.shared.latestBackupDate()
     @Environment(\.scenePhase) private var scenePhase
@@ -111,6 +114,29 @@ struct SettingsView: View {
                     restoreToastMessage = nil
                 }
             }
+        }
+    }
+
+    private func restoreSuccessMessage(count: Int) -> String {
+        String(
+            format: NSLocalizedString(
+                count == 1 ? "settings.data.restore.success.one" : "settings.data.restore.success",
+                comment: ""
+            ),
+            count
+        )
+    }
+
+    private func shareBackupFile() {
+        guard let url = DataBackupManager.shared.backupFileURL else {
+            showToast(NSLocalizedString("settings.data.restore.error.not_found", comment: ""))
+            return
+        }
+        let activityVC = UIActivityViewController(activityItems: [url], applicationActivities: nil)
+        if let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
+           let rootVC = windowScene.windows.first?.rootViewController {
+            activityVC.popoverPresentationController?.sourceView = rootVC.view
+            rootVC.present(activityVC, animated: true)
         }
     }
 
@@ -223,11 +249,24 @@ struct SettingsView: View {
                     }
 
                     settingsGroup(title: "settings.data.title") {
+                        // Export — share the JSON file via AirDrop, Files, Mail, etc.
+                        settingsRow(
+                            title: "settings.data.export",
+                            valueText: DataBackupManager.shared.hasBackup() ? nil : NSLocalizedString("settings.data.restore.no_backup", comment: "")
+                        ) {
+                            shareBackupFile()
+                        }
+                        // Import — pick a previously exported JSON and restore from it
+                        settingsRow(title: "settings.data.import") {
+                            showImporter = true
+                        }
+                        // Restore — use the automatic on-device backup
                         settingsRow(title: "settings.data.restore", valueText: backupDateDisplay) {
                             showRestoreConfirmation = true
                         }
                     }
                     .padding(.bottom, 10)
+                    // Restore (device backup) confirmation
                     .confirmationDialog(
                         Text("settings.data.restore.confirm.title"),
                         isPresented: $showRestoreConfirmation,
@@ -237,17 +276,7 @@ struct SettingsView: View {
                             do {
                                 let result = try store.restoreFromBackup()
                                 backupDate = DataBackupManager.shared.latestBackupDate()
-                                showToast(
-                                    String(
-                                        format: NSLocalizedString(
-                                            result.trips == 1
-                                                ? "settings.data.restore.success.one"
-                                                : "settings.data.restore.success",
-                                            comment: ""
-                                        ),
-                                        result.trips
-                                    )
-                                )
+                                showToast(restoreSuccessMessage(count: result.trips))
                             } catch {
                                 showToast(error.localizedDescription)
                             }
@@ -256,6 +285,28 @@ struct SettingsView: View {
                         }
                     } message: {
                         Text("settings.data.restore.confirm.message")
+                    }
+                    // Import (file) confirmation
+                    .confirmationDialog(
+                        Text("settings.data.import.confirm.title"),
+                        isPresented: $showImportConfirmation,
+                        titleVisibility: .visible
+                    ) {
+                        Button(role: .destructive) {
+                            guard let data = pendingImportData else { return }
+                            do {
+                                let result = try store.restoreFromData(data)
+                                backupDate = DataBackupManager.shared.latestBackupDate()
+                                showToast(restoreSuccessMessage(count: result.trips))
+                            } catch {
+                                showToast(error.localizedDescription)
+                            }
+                            pendingImportData = nil
+                        } label: {
+                            Text("settings.data.import.action")
+                        }
+                    } message: {
+                        Text("settings.data.import.confirm.message")
                     }
 
 #if DEBUG
@@ -284,6 +335,27 @@ struct SettingsView: View {
             }
         }
         .animation(.easeInOut(duration: 0.2), value: restoreToastMessage != nil)
+        .fileImporter(
+            isPresented: $showImporter,
+            allowedContentTypes: [.json],
+            allowsMultipleSelection: false
+        ) { result in
+            switch result {
+            case .success(let urls):
+                guard let url = urls.first else { return }
+                // Read within the security scope before it expires
+                let accessing = url.startAccessingSecurityScopedResource()
+                defer { if accessing { url.stopAccessingSecurityScopedResource() } }
+                guard let data = try? Data(contentsOf: url) else {
+                    showToast(NSLocalizedString("settings.data.restore.error.corrupt", comment: ""))
+                    return
+                }
+                pendingImportData = data
+                showImportConfirmation = true
+            case .failure(let error):
+                showToast(error.localizedDescription)
+            }
+        }
         .navigationBarHidden(true)
         .task { await refreshNotificationStatus() }
         .onChange(of: scenePhase) { _, phase in
