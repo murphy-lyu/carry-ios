@@ -632,13 +632,7 @@ struct HomeView: View {
                 .buttonStyle(PressableScaleButtonStyle(scale: 0.92, pressedBrightness: -0.03, pressedOpacity: 0.94))
             }
 
-            if isEffectivelyEmpty {
-                Text("home.empty.hero_tagline")
-                    .font(.subheadline)
-                    .foregroundStyle(.secondary)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .padding(.top, 2)
-            } else {
+            if !isEffectivelyEmpty {
                 HStack(spacing: 10) {
                     statPill(value: "\(store.trips.count)", label: "home.allTrips")
                     statPill(value: "\(upcomingTrips.count)", label: "home.upcoming")
@@ -798,54 +792,58 @@ struct HomeView: View {
     }
 
     private var emptyState: some View {
-        VStack(spacing: 28) {
-            VStack(spacing: 8) {
-                Text("home.empty.title")
-                    .font(.title3.weight(.semibold))
-                    .foregroundStyle(.primary)
-                Text("home.empty.subtitle")
-                    .font(.subheadline)
-                    .foregroundStyle(.secondary)
-                    .multilineTextAlignment(.center)
-                    .lineSpacing(3)
-            }
-
-            Button {
-                startNewTrip()
-            } label: {
-                HStack(spacing: 7) {
-                    Image(systemName: "plus")
-                        .font(.system(size: 13, weight: .bold))
-                    Text("home.empty.cta")
-                        .font(.subheadline.weight(.semibold))
+        VStack {
+            Spacer(minLength: 24)
+            VStack(spacing: 28) {
+                VStack(spacing: 8) {
+                    Text("home.empty.title")
+                        .font(.title3.weight(.semibold))
+                        .foregroundStyle(.primary)
+                    Text("home.empty.subtitle")
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                        .multilineTextAlignment(.center)
+                        .lineSpacing(3)
                 }
-                .foregroundStyle(Color(UIColor.systemBackground))
-                .frame(maxWidth: .infinity)
-                .frame(height: 50)
-                .background(
-                    RoundedRectangle(cornerRadius: 16, style: .continuous)
-                        .fill(
-                            LinearGradient(
-                                colors: [
-                                    Color.primary.opacity(0.95),
-                                    Color.primary.opacity(0.82)
-                                ],
-                                startPoint: .topLeading,
-                                endPoint: .bottomTrailing
+
+                Button {
+                    startNewTrip()
+                } label: {
+                    HStack(spacing: 7) {
+                        Image(systemName: "plus")
+                            .font(.system(size: 13, weight: .bold))
+                        Text("home.empty.cta")
+                            .font(.subheadline.weight(.semibold))
+                    }
+                    .foregroundStyle(Color(UIColor.systemBackground))
+                    .frame(maxWidth: .infinity)
+                    .frame(height: 50)
+                    .background(
+                        RoundedRectangle(cornerRadius: 16, style: .continuous)
+                            .fill(
+                                LinearGradient(
+                                    colors: [
+                                        Color.primary.opacity(0.95),
+                                        Color.primary.opacity(0.82)
+                                    ],
+                                    startPoint: .topLeading,
+                                    endPoint: .bottomTrailing
+                                )
                             )
-                        )
-                )
-                .overlay(
-                    RoundedRectangle(cornerRadius: 16, style: .continuous)
-                        .strokeBorder(Color.primary.opacity(0.10), lineWidth: 1)
-                )
-                .shadow(color: Color.black.opacity(colorScheme == .dark ? 0.30 : 0.10), radius: 10, x: 0, y: 5)
+                    )
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 16, style: .continuous)
+                            .strokeBorder(Color.primary.opacity(0.10), lineWidth: 1)
+                    )
+                    .shadow(color: Color.black.opacity(colorScheme == .dark ? 0.30 : 0.10), radius: 10, x: 0, y: 5)
+                }
+                .buttonStyle(PressableScaleButtonStyle(scale: 0.97, pressedBrightness: -0.02, pressedOpacity: 0.95))
             }
-            .buttonStyle(PressableScaleButtonStyle(scale: 0.97, pressedBrightness: -0.02, pressedOpacity: 0.95))
+            Spacer(minLength: 24)
         }
         .frame(maxWidth: .infinity)
+        .frame(minHeight: expandedSheetHeight - 200)
         .padding(.horizontal, 4)
-        .padding(.vertical, 36)
     }
 
     @ViewBuilder
