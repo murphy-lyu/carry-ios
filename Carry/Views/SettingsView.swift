@@ -129,11 +129,27 @@ struct SettingsView: View {
     }
 
     private func shareBackupFile() {
-        guard let url = DataBackupManager.shared.backupFileURL else {
+        guard let sourceURL = DataBackupManager.shared.backupFileURL,
+              FileManager.default.fileExists(atPath: sourceURL.path) else {
             showToast(NSLocalizedString("settings.data.restore.error.not_found", comment: ""))
             return
         }
-        let activityVC = UIActivityViewController(activityItems: [url], applicationActivities: nil)
+        // Copy to a temp file with a timestamped name so the share sheet
+        // shows something like "carry_backup_2026-05-24_15-41.json".
+        let fmt = DateFormatter()
+        fmt.dateFormat = "yyyy-MM-dd_HH-mm"
+        let exportName = "carry_backup_\(fmt.string(from: Date())).json"
+        let exportURL = FileManager.default.temporaryDirectory.appendingPathComponent(exportName)
+        do {
+            if FileManager.default.fileExists(atPath: exportURL.path) {
+                try FileManager.default.removeItem(at: exportURL)
+            }
+            try FileManager.default.copyItem(at: sourceURL, to: exportURL)
+        } catch {
+            showToast(error.localizedDescription)
+            return
+        }
+        let activityVC = UIActivityViewController(activityItems: [exportURL], applicationActivities: nil)
         if let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
            let rootVC = windowScene.windows.first?.rootViewController {
             activityVC.popoverPresentationController?.sourceView = rootVC.view
