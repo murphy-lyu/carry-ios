@@ -216,15 +216,17 @@ struct HomeView: View {
 
                 ZStack {
                     List {
-                        heroSection
-                            .opacity(initialRevealPhase >= 1 ? 1 : 0)
-                            .offset(y: initialRevealPhase >= 1 ? 0 : 18)
-                            .scaleEffect(initialRevealPhase >= 1 ? 1 : 0.985)
-                            .blur(radius: initialRevealPhase >= 1 ? 0 : 6)
-                            .animation(.spring(response: 0.48, dampingFraction: 0.86).delay(0.02), value: initialRevealPhase)
-                            .listRowInsets(EdgeInsets(top: 2, leading: 12, bottom: 4, trailing: 12))
-                            .listRowBackground(Color.clear)
-                            .listRowSeparator(.hidden)
+                        if !isEffectivelyEmpty {
+                            heroSection
+                                .opacity(initialRevealPhase >= 1 ? 1 : 0)
+                                .offset(y: initialRevealPhase >= 1 ? 0 : 18)
+                                .scaleEffect(initialRevealPhase >= 1 ? 1 : 0.985)
+                                .blur(radius: initialRevealPhase >= 1 ? 0 : 6)
+                                .animation(.spring(response: 0.48, dampingFraction: 0.86).delay(0.02), value: initialRevealPhase)
+                                .listRowInsets(EdgeInsets(top: 2, leading: 12, bottom: 4, trailing: 12))
+                                .listRowBackground(Color.clear)
+                                .listRowSeparator(.hidden)
+                        }
 
                         if isEffectivelyEmpty {
                             emptyState
@@ -842,7 +844,7 @@ struct HomeView: View {
             Spacer(minLength: 24)
         }
         .frame(maxWidth: .infinity)
-        .frame(minHeight: expandedSheetHeight - 200)
+        .frame(minHeight: expandedSheetHeight - 40)
         .padding(.horizontal, 4)
     }
 
