@@ -6,6 +6,7 @@
 import SwiftUI
 import UIKit
 import UserNotifications
+import UniformTypeIdentifiers
 
 struct SettingsView: View {
 
