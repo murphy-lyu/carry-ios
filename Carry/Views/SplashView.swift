@@ -43,7 +43,7 @@ struct SplashView: View {
                     Text("Carry")
                         .font(.system(size: 30, weight: .bold, design: .rounded))
                         .foregroundColor(.primary)
-                    Text(isChineseLocale ? "出发前，把一切备好" : "Everything ready. Let's go.")
+                    Text("Everything ready. Let's go.")
                         .font(.subheadline)
                         .foregroundStyle(.secondary)
                 }

@@ -6,52 +6,92 @@
     <dict>
         <key>CFBundleAlternateIcons</key>
         <dict>
-            <!-- Dark icon — add CarryIconDark.png to project root when ready -->
-            <key>CarryIconDark</key>
+            <key>HandDrawn</key>
             <dict>
                 <key>CFBundleIconFiles</key>
                 <array>
-                    <string>CarryIconDark</string>
+                    <string>HandDrawn</string>
                 </array>
                 <key>UIPrerenderedIcon</key>
                 <false/>
             </dict>
-            <!-- Mono icon — add CarryIconMono.png to project root when ready -->
-            <key>CarryIconMono</key>
+            <key>IconLight</key>
             <dict>
                 <key>CFBundleIconFiles</key>
                 <array>
-                    <string>CarryIconMono</string>
+                    <string>IconLight</string>
                 </array>
                 <key>UIPrerenderedIcon</key>
                 <false/>
             </dict>
-            <!-- Sunny icon -->
-            <key>CarryIconSunny</key>
+            <key>IconDark</key>
             <dict>
                 <key>CFBundleIconFiles</key>
                 <array>
-                    <string>CarryIconSunny</string>
+                    <string>IconDark</string>
                 </array>
                 <key>UIPrerenderedIcon</key>
                 <false/>
             </dict>
-            <!-- Aurora icon -->
-            <key>CarryIconAurora</key>
+            <key>IconBlue</key>
             <dict>
                 <key>CFBundleIconFiles</key>
                 <array>
-                    <string>CarryIconAurora</string>
+                    <string>IconBlue</string>
                 </array>
                 <key>UIPrerenderedIcon</key>
                 <false/>
             </dict>
-            <!-- Midnight icon -->
-            <key>CarryIconMidnight</key>
+            <key>IconOrange</key>
             <dict>
                 <key>CFBundleIconFiles</key>
                 <array>
-                    <string>CarryIconMidnight</string>
+                    <string>IconOrange</string>
+                </array>
+                <key>UIPrerenderedIcon</key>
+                <false/>
+            </dict>
+            <key>IconButter</key>
+            <dict>
+                <key>CFBundleIconFiles</key>
+                <array>
+                    <string>IconButter</string>
+                </array>
+                <key>UIPrerenderedIcon</key>
+                <false/>
+            </dict>
+            <key>IconGreen</key>
+            <dict>
+                <key>CFBundleIconFiles</key>
+                <array>
+                    <string>IconGreen</string>
+                </array>
+                <key>UIPrerenderedIcon</key>
+                <false/>
+            </dict>
+            <key>IconPink</key>
+            <dict>
+                <key>CFBundleIconFiles</key>
+                <array>
+                    <string>IconPink</string>
+                </array>
+                <key>UIPrerenderedIcon</key>
+                <false/>
+            </dict>
+            <key>IconPride</key>
+            <dict>
+                <key>CFBundleIconFiles</key>
+                <array>
+                    <string>IconPride</string>
+                </array>
+                <key>UIPrerenderedIcon</key>
+                <false/>
+            </dict>
+            <key>IconSoft</key>
+            <dict>
+                <key>CFBundleIconFiles</key>
+                <array>
+                    <string>IconSoft</string>
                 </array>
                 <key>UIPrerenderedIcon</key>
                 <false/>

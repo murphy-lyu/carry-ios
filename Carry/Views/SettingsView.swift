@@ -188,122 +188,147 @@ struct SettingsView: View {
 
     var body: some View {
         ZStack {
-            ScrollView {
-                VStack(alignment: .leading, spacing: 18) {
-                    HStack {
-                        Text("settings.title")
-                            .font(.largeTitle)
-                            .fontWeight(.bold)
-                            .foregroundStyle(.primary)
-                        Spacer()
-                    }
-                    .padding(.horizontal, 16)
-                    .padding(.top, 8)
-                    .padding(.bottom, 8)
+            VStack(spacing: 0) {
+                // ── Fixed large title — stays pinned above the scroll area ──
+                HStack {
+                    Text("settings.title")
+                        .font(.largeTitle)
+                        .fontWeight(.bold)
+                        .foregroundStyle(.primary)
+                    Spacer()
+                }
+                .padding(.horizontal, 16)
+                .padding(.top, 8)
+                .padding(.bottom, 8)
+                .background(Color(.systemGroupedBackground))
 
-                    settingsGroup(title: "settings.section.general") {
-                        Button {
-                            showAppearancePicker = true
-                        } label: {
-                            HStack(spacing: 14) {
-                                Text("Appearance")
-                                    .font(.body)
-                                    .foregroundStyle(.primary)
-                                Spacer()
-                                Text(currentAppearance.titleKey)
-                                    .font(.body)
-                                    .foregroundStyle(.secondary)
-                                Image(systemName: "chevron.right")
-                                    .font(.caption.weight(.semibold))
-                                    .foregroundStyle(.tertiary)
-                            }
-                            .padding(.horizontal, 18)
-                            .frame(height: 58)
-                            .contentShape(Rectangle())
-                        }
-                        .buttonStyle(.plain)
-                        .confirmationDialog("Appearance", isPresented: $showAppearancePicker, titleVisibility: .visible) {
-                            ForEach(AppearanceMode.allCases) { mode in
-                                Button(mode.titleKey) {
-                                    appearanceModeRaw = mode.rawValue
+                // ── Scrollable content with sticky section headers ──
+                ScrollView {
+                    LazyVStack(alignment: .leading, spacing: 0, pinnedViews: [.sectionHeaders]) {
+
+                        Section {
+                            settingsCard {
+                                Button {
+                                    showAppearancePicker = true
+                                } label: {
+                                    HStack(spacing: 14) {
+                                        Text("Appearance")
+                                            .font(.body)
+                                            .foregroundStyle(.primary)
+                                        Spacer()
+                                        Text(currentAppearance.titleKey)
+                                            .font(.body)
+                                            .foregroundStyle(.secondary)
+                                        Image(systemName: "chevron.right")
+                                            .font(.caption.weight(.semibold))
+                                            .foregroundStyle(.tertiary)
+                                    }
+                                    .padding(.horizontal, 18)
+                                    .frame(height: 58)
+                                    .contentShape(Rectangle())
+                                }
+                                .buttonStyle(.plain)
+                                .confirmationDialog("Appearance", isPresented: $showAppearancePicker, titleVisibility: .visible) {
+                                    ForEach(AppearanceMode.allCases) { mode in
+                                        Button(mode.titleKey) {
+                                            appearanceModeRaw = mode.rawValue
+                                        }
+                                    }
+                                }
+                                settingsRow(title: "settings.about.language", valueText: currentLanguageDisplay) {
+                                    openSystemSettings()
+                                }
+                                settingsNavigationRow(title: "settings.appicon.entry") {
+                                    AppIconView()
                                 }
                             }
+                            .padding(.horizontal, 16)
+                            .padding(.bottom, 18)
+                        } header: {
+                            sectionHeader("settings.section.general")
                         }
-                        settingsRow(title: "settings.about.language", valueText: currentLanguageDisplay) {
-                            openSystemSettings()
-                        }
-                        settingsNavigationRow(title: "settings.appicon.entry") {
-                            AppIconView()
-                        }
-                    }
 
-                    settingsGroup(title: "settings.section.about") {
-                        settingsNavigationRow(title: "settings.about.entry") {
-                            AboutView()
-                        }
-                        settingsRow(title: "settings.section.support", valueText: "☕️") {
-                            showCoffeeSheet = true
-                        }
-                        settingsRow(titleText: roadmapTitle) {
-                            showRoadmapSheet = true
-                        }
-                        settingsRow(title: "settings.feedback") {
-                            openFeedbackMail()
-                        }
-                    }
-
-                    settingsGroup(title: "settings.data.title") {
-                        // Export — share the JSON file via AirDrop, Files, iCloud Drive, etc.
-                        settingsRow(
-                            title: "settings.data.export",
-                            valueText: DataBackupManager.shared.hasBackup() ? nil : NSLocalizedString("settings.data.restore.no_backup", comment: "")
-                        ) {
-                            shareBackupFile()
-                        }
-                        // Import — pick a previously exported JSON and restore from it
-                        settingsRow(title: "settings.data.import") {
-                            showImporter = true
-                        }
-                        // Auto-Save — NavigationLink into DataRecoveryView
-                        settingsNavigationRow(
-                            title: "settings.data.local_backup",
-                            valueText: autoSaveValueText
-                        ) {
-                            DataRecoveryView()
-                        }
-                    }
-                    .padding(.bottom, 10)
-                    // Import (file) confirmation
-                    .confirmationDialog(
-                        Text("settings.data.import.confirm.title"),
-                        isPresented: $showImportConfirmation,
-                        titleVisibility: .visible
-                    ) {
-                        Button(role: .destructive) {
-                            guard let data = pendingImportData else { return }
-                            do {
-                                let result = try store.restoreFromData(data)
-                                showToast(restoreSuccessMessage(count: result.trips))
-                            } catch {
-                                showToast(error.localizedDescription)
+                        Section {
+                            settingsCard {
+                                settingsNavigationRow(title: "settings.about.entry") {
+                                    AboutView()
+                                }
+                                settingsRow(title: "settings.section.support", valueText: "☕️") {
+                                    showCoffeeSheet = true
+                                }
+                                settingsRow(titleText: roadmapTitle) {
+                                    showRoadmapSheet = true
+                                }
+                                settingsRow(title: "settings.feedback") {
+                                    openFeedbackMail()
+                                }
                             }
-                            pendingImportData = nil
-                        } label: {
-                            Text("settings.data.import.action")
+                            .padding(.horizontal, 16)
+                            .padding(.bottom, 18)
+                        } header: {
+                            sectionHeader("settings.section.about")
                         }
-                    } message: {
-                        Text("settings.data.import.confirm.message")
-                    }
+
+                        Section {
+                            settingsCard {
+                                settingsRow(
+                                    title: "settings.data.export",
+                                    valueText: DataBackupManager.shared.hasBackup() ? nil : NSLocalizedString("settings.data.restore.no_backup", comment: "")
+                                ) {
+                                    shareBackupFile()
+                                }
+                                settingsRow(title: "settings.data.import") {
+                                    showImporter = true
+                                }
+                                settingsNavigationRow(
+                                    title: "settings.data.local_backup",
+                                    valueText: autoSaveValueText
+                                ) {
+                                    DataRecoveryView()
+                                }
+                            }
+                            .padding(.horizontal, 16)
+                            .padding(.bottom, 18)
+                            .confirmationDialog(
+                                Text("settings.data.import.confirm.title"),
+                                isPresented: $showImportConfirmation,
+                                titleVisibility: .visible
+                            ) {
+                                Button(role: .destructive) {
+                                    guard let data = pendingImportData else { return }
+                                    do {
+                                        let result = try store.restoreFromData(data)
+                                        showToast(restoreSuccessMessage(count: result.trips))
+                                    } catch {
+                                        showToast(error.localizedDescription)
+                                    }
+                                    pendingImportData = nil
+                                } label: {
+                                    Text("settings.data.import.action")
+                                }
+                            } message: {
+                                Text("settings.data.import.confirm.message")
+                            }
+                        } header: {
+                            sectionHeader("settings.data.title")
+                        }
 
 #if DEBUG
-                    settingsGroup(title: "settings.developer.title") {
-                        settingsNavigationRow(title: "settings.developer.entry") {
-                            DeveloperModeView()
+                        Section {
+                            settingsCard {
+                                settingsNavigationRow(title: "settings.developer.entry") {
+                                    DeveloperModeView()
+                                }
+                            }
+                            .padding(.horizontal, 16)
+                            .padding(.bottom, 18)
+                        } header: {
+                            sectionHeader("settings.developer.title")
                         }
-                    }
 #endif
+                    }
+                    .padding(.bottom, 20)
                 }
-                .padding(.bottom, 20)
             }
             .background(Color(.systemGroupedBackground).ignoresSafeArea())
         }
@@ -365,6 +390,34 @@ struct SettingsView: View {
         .sheet(isPresented: $showCoffeeSheet) {
             CoffeeSheetView()
         }
+    }
+
+    /// Sticky section header with opaque background so content scrolls behind it cleanly.
+    private func sectionHeader(_ title: LocalizedStringKey) -> some View {
+        Text(title)
+            .font(.system(size: 13, weight: .semibold))
+            .foregroundStyle(settingsTitleColor)
+            .padding(.horizontal, 16)
+            .padding(.top, 18)
+            .padding(.bottom, 8)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(Color(.systemGroupedBackground))
+    }
+
+    /// Card-only container (no title). Used with Section headers for sticky behaviour.
+    private func settingsCard<Content: View>(@ViewBuilder content: () -> Content) -> some View {
+        VStack(spacing: 0) {
+            content()
+        }
+        .background(
+            RoundedRectangle(cornerRadius: 28, style: .continuous)
+                .fill(settingsGroupFill)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 28, style: .continuous)
+                        .strokeBorder(settingsGroupStroke, lineWidth: 1)
+                )
+        )
+        .shadow(color: settingsGroupShadow, radius: colorScheme == .dark ? 10 : 12, x: 0, y: colorScheme == .dark ? 3 : 4)
     }
 
     private func settingsGroup<Content: View>(title: LocalizedStringKey, subtitle: LocalizedStringKey? = nil, @ViewBuilder content: () -> Content) -> some View {

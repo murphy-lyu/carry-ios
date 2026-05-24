@@ -178,10 +178,10 @@ struct ScenePickerView: View {
         VStack(alignment: .leading, spacing: 12) {
             HStack {
                 VStack(alignment: .leading, spacing: 6) {
-                    Text(isChineseLocale ? "选择场景" : "Choose scenes")
+                    Text("Choose scenes")
                         .font(.system(size: 30, weight: .bold, design: .rounded))
                         .foregroundStyle(.primary)
-                    Text(isChineseLocale ? "根据旅行场景生成更合适的清单" : "Pick travel scenes to generate a better list")
+                    Text("Pick travel scenes to generate a better list")
                         .font(.subheadline)
                         .foregroundStyle(.secondary)
                 }

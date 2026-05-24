@@ -29,6 +29,7 @@ struct ContentView: View {
     @EnvironmentObject private var store: TripStore
     @EnvironmentObject private var router: NavigationRouter
     @Environment(\.scenePhase) private var scenePhase
+    @Environment(\.colorScheme) private var colorScheme
     @State private var selectedTab = 0
     @State private var didApplyStartupReset = false
     @State private var didRefreshOnLaunch = false
@@ -71,6 +72,13 @@ struct ContentView: View {
             .tag(1)
         }
         .tint(.primary)
+        .toolbarBackground(
+            colorScheme == .dark
+                ? Color(red: 0.09, green: 0.09, blue: 0.10)
+                : Color(UIColor.systemBackground),
+            for: .tabBar
+        )
+        .toolbarBackground(.visible, for: .tabBar)
         .environmentObject(store)
         .environmentObject(router)
         .onAppear {

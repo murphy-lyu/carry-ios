@@ -100,8 +100,15 @@ struct HomeView: View {
     @State private var capsuleDrag: CGFloat = 0
     @State private var listDrag: CGFloat = 0
 
+    @AppStorage("mapStyleOption") private var mapStyleRaw: String = MapStyleOption.hybrid.rawValue
+    private var mapStyleOption: MapStyleOption {
+        MapStyleOption(rawValue: mapStyleRaw) ?? .hybrid
+    }
+
     private var expandedSheetHeight: CGFloat {
-        UIScreen.main.bounds.height * 0.90
+        // Reduce sheet height when empty so the CTA sits centered without
+        // large blank areas. Full height is restored once trips exist.
+        UIScreen.main.bounds.height * (isEffectivelyEmpty ? 0.58 : 0.90)
     }
 
     private var collapsedSheetOffset: CGFloat {
@@ -172,9 +179,14 @@ struct HomeView: View {
             GlobeMapView(
                 visitedCountries: visitedCountries,
                 visitedCities: visitedCities,
-                cityOpacity: Double(sheetProgress)
+                cityOpacity: Double(sheetProgress),
+                mapStyleOption: mapStyleOption
             )
-                .ignoresSafeArea()
+            .ignoresSafeArea()
+
+            // Map style button — fades in as sheet collapses
+            mapStyleButton
+                .ignoresSafeArea(edges: .top)
 
             // Trip list sheet
             VStack(spacing: 0) {
@@ -186,47 +198,24 @@ struct HomeView: View {
                     .padding(.bottom, 6)
                     .frame(maxWidth: .infinity)
                     .contentShape(Rectangle())
-                    .gesture(
-                        DragGesture(minimumDistance: 4, coordinateSpace: .global)
-                            .onChanged { v in
-                                capsuleDrag = v.translation.height
-                            }
-                            .onEnded { v in
-                                let velocity = v.velocity.height
-                                let translation = v.translation.height
-                                let currentOffset = min(max(0, sheetOffset + translation), collapsedSheetOffset)
-                                let shouldCollapse: Bool
-                                if velocity > 650 || translation > collapsedSheetOffset * 0.46 {
-                                    shouldCollapse = true
-                                } else if velocity < -350 || translation < -70 {
-                                    shouldCollapse = false
-                                } else {
-                                    shouldCollapse = currentOffset > collapsedSheetOffset * 0.68
-                                }
-                                let target: CGFloat = shouldCollapse ? collapsedSheetOffset : 0
-                                let travel = target - currentOffset
-                                let normalizedV = abs(travel) < 1 ? 0 : max(-2.5, min(2.5, velocity / travel))
-                                UIImpactFeedbackGenerator(style: .soft).impactOccurred()
-                                withAnimation(.interpolatingSpring(stiffness: 280, damping: 30, initialVelocity: normalizedV)) {
-                                    capsuleDrag = 0
-                                    sheetOffset = target
-                                }
-                            }
-                    )
+                    .gesture(sheetDragGesture)
 
                 if isEffectivelyEmpty {
                     VStack(spacing: 4) {
-                        Text(isChineseLocale ? "开始你的第一段旅行" : "Start your journey")
+                        Text("home.empty.header.title")
                             .font(.system(size: 22, weight: .semibold, design: .rounded))
                             .foregroundStyle(.primary)
-                        Text(isChineseLocale ? "把第一段行程放进这里，后面的旅行会慢慢长出来。" : "Add your first trip and let the next journeys follow.")
+                        Text("home.empty.header.subtitle")
                             .font(.subheadline)
-                            .foregroundStyle(.secondary)
+                            .foregroundStyle(.secondary.opacity(0.78))
                             .multilineTextAlignment(.center)
                     }
-                    .padding(.top, 6)
-                    .padding(.bottom, 8)
+                    .padding(.top, 8)
+                    .padding(.bottom, 20)
                     .padding(.horizontal, 26)
+                    .frame(maxWidth: .infinity)
+                    .contentShape(Rectangle())
+                    .simultaneousGesture(sheetDragGesture)
                 }
 
                 ZStack {
@@ -345,6 +334,7 @@ struct HomeView: View {
             }
             .frame(maxWidth: .infinity)
             .frame(height: expandedSheetHeight)
+            .animation(.spring(response: 0.5, dampingFraction: 0.82), value: isEffectivelyEmpty)
             .background(CarryAtmosphereBackground())
             .compositingGroup()
             .clipShape(UnevenRoundedRectangle(topLeadingRadius: sheetCornerRadius, bottomLeadingRadius: 0, bottomTrailingRadius: 0, topTrailingRadius: sheetCornerRadius, style: .continuous))
@@ -352,6 +342,71 @@ struct HomeView: View {
             .offset(y: min(max(0, sheetOffset + capsuleDrag + listDrag), collapsedSheetOffset))
     }
         .ignoresSafeArea(edges: .bottom)
+    }
+
+    // MARK: - Map style button
+
+    private var mapStyleButton: some View {
+        VStack {
+            HStack {
+                Spacer()
+                Menu {
+                    ForEach(MapStyleOption.allCases, id: \.rawValue) { option in
+                        Button {
+                            UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                            mapStyleRaw = option.rawValue
+                        } label: {
+                            Label(option.label, systemImage: option.icon)
+                        }
+                    }
+                } label: {
+                    Image(systemName: mapStyleOption.icon)
+                        .font(.system(size: 17, weight: .semibold))
+                        .foregroundStyle(.primary)
+                        .frame(width: 48, height: 48)
+                        .glassCircleButton()
+                }
+                .padding(.trailing, 16)
+                .padding(.top, 56)
+            }
+            Spacer()
+        }
+        // Fade in as sheet collapses, invisible when fully expanded
+        .opacity(Double(sheetProgress))
+        .allowsHitTesting(sheetProgress > 0.05)
+    }
+
+    // MARK: - Shared sheet drag gesture
+    //
+    // Used by both the capsule handle and the empty-state overlay so that
+    // dragging anywhere in the sheet works consistently when there are no trips.
+
+    private var sheetDragGesture: some Gesture {
+        DragGesture(minimumDistance: 4, coordinateSpace: .global)
+            .onChanged { v in
+                capsuleDrag = v.translation.height
+            }
+            .onEnded { v in
+                let velocity = v.velocity.height
+                let translation = v.translation.height
+                let currentOffset = min(max(0, sheetOffset + translation), collapsedSheetOffset)
+                let shouldCollapse: Bool
+                if velocity > 650 || translation > collapsedSheetOffset * 0.46 {
+                    shouldCollapse = true
+                } else if velocity < -350 || translation < -70 {
+                    shouldCollapse = false
+                } else {
+                    shouldCollapse = currentOffset > collapsedSheetOffset * 0.68
+                }
+                let target: CGFloat = shouldCollapse ? collapsedSheetOffset : 0
+                let travel = target - currentOffset
+                let normalizedV = abs(travel) < 1 ? 0 : max(-2.5, min(2.5, velocity / travel))
+                UIImpactFeedbackGenerator(style: .soft).impactOccurred()
+                withAnimation(.interpolatingSpring(stiffness: 280, damping: 30, initialVelocity: normalizedV)) {
+                    capsuleDrag = 0
+                    sheetOffset = target
+                }
+            }
     }
 
     // MARK: - List drag bridge
@@ -818,6 +873,7 @@ struct HomeView: View {
 
     private var emptyState: some View {
         VStack(spacing: 0) {
+            Spacer(minLength: 0).frame(maxHeight: 8)
             VStack(spacing: 18) {
                 VStack(spacing: 14) {
                     ZStack {
@@ -828,14 +884,14 @@ struct HomeView: View {
                             .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
                             .rotationEffect(.degrees(-14))
                             .offset(x: -52, y: 2)
-                            .shadow(color: Color.black.opacity(colorScheme == .dark ? 0.18 : 0.12), radius: 10, x: 0, y: 5)
+                            .shadow(color: Color.black.opacity(colorScheme == .dark ? 0.10 : 0.08), radius: 10, x: 0, y: 5)
 
                         Image("HomeEmptyTrip2")
                             .resizable()
                             .scaledToFill()
                             .frame(width: 118, height: 80)
                             .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
-                            .shadow(color: Color.black.opacity(colorScheme == .dark ? 0.18 : 0.12), radius: 10, x: 0, y: 5)
+                            .shadow(color: Color.black.opacity(colorScheme == .dark ? 0.10 : 0.08), radius: 10, x: 0, y: 5)
 
                         Image("HomeEmptyTrip3")
                             .resizable()
@@ -844,23 +900,16 @@ struct HomeView: View {
                             .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
                             .rotationEffect(.degrees(14))
                             .offset(x: 52, y: 2)
-                            .shadow(color: Color.black.opacity(colorScheme == .dark ? 0.18 : 0.12), radius: 10, x: 0, y: 5)
+                            .shadow(color: Color.black.opacity(colorScheme == .dark ? 0.10 : 0.08), radius: 10, x: 0, y: 5)
                     }
                     .frame(height: 130)
                     .padding(.top, 6)
 
-                    VStack(spacing: 8) {
-                        Text("home.empty.title")
-                            .font(.title2.weight(.semibold))
-                            .foregroundStyle(.primary)
-                        Text("home.empty.subtitle")
-                            .font(.subheadline)
-                            .foregroundStyle(.secondary)
-                            .multilineTextAlignment(.center)
-                            .lineSpacing(3)
-                    }
-                    .padding(.top, -2)
-                    .padding(.horizontal, 26)
+                    Text("home.empty.title")
+                        .font(.title2.weight(.semibold))
+                        .foregroundStyle(.primary)
+                        .padding(.top, -2)
+                        .padding(.horizontal, 26)
                 }
 
                 Button {
@@ -880,8 +929,8 @@ struct HomeView: View {
                             .fill(
                                 LinearGradient(
                                     colors: [
-                                        Color.primary.opacity(0.95),
-                                        Color.primary.opacity(0.82)
+                                        Color.primary.opacity(0.90),
+                                        Color.primary.opacity(0.76)
                                     ],
                                     startPoint: .topLeading,
                                     endPoint: .bottomTrailing
@@ -890,9 +939,9 @@ struct HomeView: View {
                     )
                     .overlay(
                         RoundedRectangle(cornerRadius: 16, style: .continuous)
-                            .strokeBorder(Color.primary.opacity(0.10), lineWidth: 1)
+                            .strokeBorder(Color.primary.opacity(0.06), lineWidth: 1)
                     )
-                    .shadow(color: Color.black.opacity(colorScheme == .dark ? 0.26 : 0.08), radius: 10, x: 0, y: 5)
+                    .shadow(color: Color.black.opacity(colorScheme == .dark ? 0.14 : 0.08), radius: 10, x: 0, y: 5)
                 }
                 .buttonStyle(PressableScaleButtonStyle(scale: 0.97, pressedBrightness: -0.02, pressedOpacity: 0.95))
                 .padding(.horizontal, 26)
@@ -905,8 +954,8 @@ struct HomeView: View {
                     .fill(
                         LinearGradient(
                             colors: [
-                                Color(UIColor.systemBackground).opacity(colorScheme == .dark ? 0.56 : 0.82),
-                                Color(UIColor.systemBackground).opacity(colorScheme == .dark ? 0.44 : 0.70)
+                                Color(UIColor.systemBackground).opacity(colorScheme == .dark ? 0.46 : 0.82),
+                                Color(UIColor.systemBackground).opacity(colorScheme == .dark ? 0.34 : 0.70)
                             ],
                             startPoint: .topLeading,
                             endPoint: .bottomTrailing
@@ -915,12 +964,17 @@ struct HomeView: View {
             )
             .overlay(
                 RoundedRectangle(cornerRadius: 30, style: .continuous)
-                    .strokeBorder(Color.primary.opacity(colorScheme == .dark ? 0.07 : 0.05), lineWidth: 1)
+                    .strokeBorder(Color.primary.opacity(colorScheme == .dark ? 0.04 : 0.05), lineWidth: 1)
             )
-            .shadow(color: Color.black.opacity(colorScheme == .dark ? 0.18 : 0.08), radius: 16, x: 0, y: 8)
+            .shadow(color: Color.black.opacity(colorScheme == .dark ? 0.10 : 0.08), radius: 14, x: 0, y: 8)
             .padding(.horizontal, 22)
+            Spacer(minLength: 72)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
+        // Allow the entire empty-state area to drive the sheet up/down,
+        // just like the list content does when trips exist.
+        // simultaneousGesture preserves the CTA button's tap.
+        .simultaneousGesture(sheetDragGesture)
     }
 
     @ViewBuilder

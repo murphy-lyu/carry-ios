@@ -19,6 +19,34 @@ struct VisitedCity: Identifiable {
     let coordinate: CLLocationCoordinate2D
 }
 
+// MARK: - Map style
+
+enum MapStyleOption: String, CaseIterable {
+    case hybrid   = "hybrid"
+    case standard = "standard"
+
+    var mapStyle: MapStyle {
+        switch self {
+        case .hybrid:   return .hybrid(elevation: .realistic)
+        case .standard: return .standard(elevation: .realistic)
+        }
+    }
+
+    var label: LocalizedStringKey {
+        switch self {
+        case .hybrid:   return "map.style.hybrid"
+        case .standard: return "map.style.standard"
+        }
+    }
+
+    var icon: String {
+        switch self {
+        case .hybrid:   return "map.fill"
+        case .standard: return "road.lanes"
+        }
+    }
+}
+
 // MARK: - GlobeMapView
 
 struct GlobeMapView: View {
@@ -27,6 +55,7 @@ struct GlobeMapView: View {
     let visitedCities: [VisitedCity]
     /// 0 = fully expanded (cities hidden), 1 = fully collapsed (cities visible)
     var cityOpacity: Double
+    var mapStyleOption: MapStyleOption = .hybrid
 
     @State private var position: MapCameraPosition = .camera(
         MapCamera(
@@ -67,7 +96,7 @@ struct GlobeMapView: View {
                 }
             }
         }
-        .mapStyle(.hybrid(elevation: .realistic))
+        .mapStyle(mapStyleOption.mapStyle)
         .onAppear {
             locationManager.requestWhenInUseAuthorization()
             locationManager.startUpdatingLocation()

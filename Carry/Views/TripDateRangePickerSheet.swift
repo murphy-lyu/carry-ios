@@ -60,7 +60,7 @@ struct TripDateRangePickerSheet: View {
                     monthsScrollView
                 }
             }
-            .navigationTitle(isChineseLocale ? "选择日期" : "Select Dates")
+            .navigationTitle("Select Dates")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
@@ -84,9 +84,9 @@ struct TripDateRangePickerSheet: View {
     private var summaryStrip: some View {
         HStack(spacing: 16) {
             VStack(alignment: .leading, spacing: 3) {
-                Text(isChineseLocale ? "出发" : "Departure")
+                Text("Departure")
                     .font(.caption.weight(.semibold))
-                    .foregroundStyle(!isSelectingEnd ? AnyShapeStyle(Color.accentColor) : AnyShapeStyle(.secondary))
+                    .foregroundStyle(!isSelectingEnd ? AnyShapeStyle(Color.accentColor.opacity(0.92)) : AnyShapeStyle(.secondary))
                 Text(selectedStart.formatted(.dateTime.month(.abbreviated).day().year()))
                     .font(.subheadline.weight(.medium))
                     .foregroundStyle(.primary)
@@ -94,12 +94,12 @@ struct TripDateRangePickerSheet: View {
 
             Image(systemName: "arrow.right")
                 .font(.caption.weight(.semibold))
-                .foregroundStyle(.tertiary)
+                .foregroundStyle(.tertiary.opacity(0.88))
 
             VStack(alignment: .leading, spacing: 3) {
-                Text(isChineseLocale ? "返回" : "Return")
+                Text("Return")
                     .font(.caption.weight(.semibold))
-                    .foregroundStyle(isSelectingEnd ? AnyShapeStyle(Color.accentColor) : AnyShapeStyle(.secondary))
+                    .foregroundStyle(isSelectingEnd ? AnyShapeStyle(Color.accentColor.opacity(0.92)) : AnyShapeStyle(.secondary))
                 Text(selectedEnd.formatted(.dateTime.month(.abbreviated).day().year()))
                     .font(.subheadline.weight(.medium))
                     .foregroundStyle(.primary)
@@ -108,12 +108,12 @@ struct TripDateRangePickerSheet: View {
             Spacer()
 
             if nightsCount > 0 {
-                Text(isChineseLocale ? "\(nightsCount) 晚" : "\(nightsCount) \(nightsCount == 1 ? "night" : "nights")")
+                Text("\(nightsCount) \(nightsCount == 1 ? NSLocalizedString("date.night", comment: "") : NSLocalizedString("date.nights", comment: ""))")
                     .font(.caption.weight(.semibold))
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(.secondary.opacity(0.90))
                     .padding(.horizontal, 10)
                     .padding(.vertical, 5)
-                    .background(Color.primary.opacity(0.07))
+                    .background(Color.primary.opacity(0.05))
                     .clipShape(Capsule())
             }
         }
@@ -129,7 +129,7 @@ struct TripDateRangePickerSheet: View {
             ForEach(ordered, id: \.self) { symbol in
                 Text(symbol)
                     .font(.caption.weight(.medium))
-                    .foregroundStyle(.tertiary)
+                    .foregroundStyle(.tertiary.opacity(0.86))
                     .frame(maxWidth: .infinity)
             }
         }
@@ -263,15 +263,15 @@ private struct DayCell: View {
             // Range band background
             if hasRange {
                 if isInRange {
-                    Color.accentColor.opacity(0.13)
+                    Color.accentColor.opacity(0.10)
                 } else if isStart {
                     HStack(spacing: 0) {
                         Color.clear
-                        Color.accentColor.opacity(0.13)
+                        Color.accentColor.opacity(0.10)
                     }
                 } else if isEnd {
                     HStack(spacing: 0) {
-                        Color.accentColor.opacity(0.13)
+                        Color.accentColor.opacity(0.10)
                         Color.clear
                     }
                 }
@@ -284,7 +284,7 @@ private struct DayCell: View {
                     .padding(5)
             } else if isToday && !isPast {
                 Circle()
-                    .strokeBorder(Color.accentColor, lineWidth: 1.5)
+                    .strokeBorder(Color.accentColor.opacity(0.92), lineWidth: 1.5)
                     .padding(5)
             }
 

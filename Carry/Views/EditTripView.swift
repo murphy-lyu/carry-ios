@@ -70,7 +70,7 @@ struct EditTripView: View {
                             Button { showDatePicker = true } label: {
                                 HStack(spacing: 0) {
                                     VStack(alignment: .leading, spacing: 3) {
-                                        Text(isChineseLocale ? "出发" : "Departure")
+                                        Text("Departure")
                                             .font(.caption.weight(.semibold))
                                             .foregroundStyle(.secondary)
                                         Text(info.departureDate.formatted(date: .long, time: .omitted))
@@ -83,7 +83,7 @@ struct EditTripView: View {
                                         .foregroundStyle(.tertiary)
                                     Spacer()
                                     VStack(alignment: .trailing, spacing: 3) {
-                                        Text(isChineseLocale ? "返回" : "Return")
+                                        Text("Return")
                                             .font(.caption.weight(.semibold))
                                             .foregroundStyle(.secondary)
                                         Text(info.returnDate.formatted(date: .long, time: .omitted))
@@ -159,10 +159,10 @@ struct EditTripView: View {
 
     private var heroSection: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text(isChineseLocale ? "编辑行程" : "Edit trip")
+            Text("Edit trip")
                 .font(.system(size: 30, weight: .bold, design: .rounded))
                 .foregroundStyle(.primary)
-            Text(isChineseLocale ? "调整行程信息，不影响清单结构" : "Update trip details without changing your list structure")
+            Text("Update trip details without changing your list structure")
                 .font(.subheadline)
                 .foregroundStyle(.secondary)
         }
