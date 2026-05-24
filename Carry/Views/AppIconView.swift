@@ -29,14 +29,14 @@ private let iconOptions: [AppIconOption] = [
         description: "icon.default.description"
     ),
     AppIconOption(
-        id: "IconLight",
-        name: "icon.light.name",
-        description: "icon.light.description"
-    ),
-    AppIconOption(
         id: "IconDark",
         name: "icon.dark.name",
         description: "icon.dark.description"
+    ),
+    AppIconOption(
+        id: "IconLight",
+        name: "icon.light.name",
+        description: "icon.light.description"
     ),
     AppIconOption(
         id: "IconPride",
