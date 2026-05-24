@@ -170,14 +170,16 @@ struct PackingListView: View {
                             Label("Share list", systemImage: "square.and.arrow.up")
                         }
                         Divider()
-                        Button {
-                            if isComplete {
-                                markTripUncompleted()
-                            } else {
-                                markTripCompleted()
+                        if totalCount > 0 {
+                            Button {
+                                if isComplete {
+                                    markTripUncompleted()
+                                } else {
+                                    markTripCompleted()
+                                }
+                            } label: {
+                                Label(isComplete ? "packing.mark_uncomplete" : "packing.mark_complete", systemImage: isComplete ? "arrow.uturn.left.circle" : "checkmark.circle")
                             }
-                        } label: {
-                            Label(isComplete ? "packing.mark_uncomplete" : "packing.mark_complete", systemImage: isComplete ? "arrow.uturn.left.circle" : "checkmark.circle")
                         }
                         Button(role: .destructive) {
                             showDeleteConfirmation = true
@@ -659,6 +661,8 @@ struct PackingListView: View {
                 Group {
                     if isNewTrip {
                         Text("\(totalCount) items")
+                    } else if totalCount == 0 {
+                        Text("packing.empty.items")
                     } else if isComplete {
                         Text("packing.complete.short")
                     } else {

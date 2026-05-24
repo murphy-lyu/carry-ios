@@ -37,6 +37,7 @@ struct ItemPickerView: View {
 
     @EnvironmentObject var store: TripStore
     @EnvironmentObject var router: NavigationRouter
+    @Environment(\.colorScheme) private var colorScheme
 
     @State private var searchText = ""
     @FocusState private var isSearchFocused: Bool
@@ -152,32 +153,32 @@ struct ItemPickerView: View {
                 }
 
                 if sourceMode == .myItems {
+                    let myItems = myItemsSearchResults().sorted(by: compareMyItems(_:_:))
                     List {
-                        myItemsHeader
+                        myItemsHeader(isCompact: myItems.isEmpty)
                             .listRowBackground(Color.clear)
                             .listRowSeparator(.hidden)
                             .listRowInsets(EdgeInsets(top: 0, leading: 16, bottom: 8, trailing: 16))
 
-                        let myItems = myItemsSearchResults().sorted(by: compareMyItems(_:_:))
                         if myItems.isEmpty {
-                            VStack(spacing: 10) {
+                            VStack(spacing: 8) {
                                 Image(systemName: searchText.isEmpty ? "shippingbox" : "magnifyingglass")
-                                    .font(.system(size: 22, weight: .semibold))
+                                    .font(.system(size: 20, weight: .semibold))
                                     .foregroundStyle(.secondary)
                                 Text(searchText.isEmpty ? LocalizedStringKey("myitems.empty.title") : "No results")
-                                    .font(.headline)
+                                    .font(.subheadline.weight(.semibold))
                                     .foregroundStyle(.primary)
                                     .multilineTextAlignment(.center)
                                 if searchText.isEmpty {
                                     Text(LocalizedStringKey("myitems.empty.subtitle"))
-                                        .font(.subheadline)
+                                        .font(.caption)
                                         .foregroundStyle(.secondary)
                                         .multilineTextAlignment(.center)
-                                        .lineSpacing(2)
+                                        .lineSpacing(1.5)
                                 }
                             }
                             .frame(maxWidth: .infinity)
-                            .padding(.top, 40)
+                            .padding(.top, 16)
                             .padding(.horizontal, 24)
                             .listRowBackground(Color.clear)
                             .listRowSeparator(.hidden)
@@ -214,17 +215,10 @@ struct ItemPickerView: View {
                     }
                 } else {
                     ScrollView {
-                        LazyVStack(alignment: .leading, spacing: 0, pinnedViews: [.sectionHeaders]) {
+                        LazyVStack(alignment: .leading, spacing: 12) {
                             if searchText.isEmpty {
                                 ForEach(itemPickerCatalog, id: \.name) { category in
-                                    Section {
-                                        if expandedCategories.contains(category.name) {
-                                            categoryBody(category)
-                                        }
-                                    } header: {
-                                        categoryHeader(category)
-                                    }
-                                    .padding(.bottom, 0)
+                                    categoryCard(category)
                                 }
                             } else {
                                 if filteredResults.isEmpty {
@@ -314,6 +308,36 @@ struct ItemPickerView: View {
         }
     }
 
+    private func categoryCard(_ category: ItemPickerCategory) -> some View {
+        let isExpanded = expandedCategories.contains(category.name)
+        let isDarkMode = colorScheme == .dark
+        let fill = isDarkMode
+            ? Color(UIColor.secondarySystemBackground).opacity(isExpanded ? 0.62 : 0.50)
+            : Color(UIColor.systemBackground).opacity(isExpanded ? 0.82 : 0.88)
+
+        return VStack(spacing: 0) {
+            categoryHeader(category)
+
+            if isExpanded {
+                Rectangle()
+                    .fill(Color.primary.opacity(isDarkMode ? 0.06 : 0.03))
+                    .frame(height: 1)
+
+                categoryBody(category)
+            }
+        }
+        .background(
+            RoundedRectangle(cornerRadius: 18, style: .continuous)
+                .fill(fill)
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 18, style: .continuous)
+                .strokeBorder(Color.primary.opacity(isDarkMode ? 0.05 : 0.03), lineWidth: 1)
+        )
+        .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+        .padding(.horizontal, 16)
+    }
+
     private var heroSection: some View {
         VStack(alignment: .leading, spacing: 12) {
             Text(LocalizedStringKey("myitems.add.title"))
@@ -329,7 +353,7 @@ struct ItemPickerView: View {
     }
 
     private var sourcePicker: some View {
-        HStack(spacing: 0) {
+        HStack(spacing: 4) {
             sourceSegment(
                 title: "myitems.source.base",
                 subtitle: "myitems.source.base.subtitle",
@@ -378,7 +402,8 @@ struct ItemPickerView: View {
     }
 
     private func sourceSegment(title: String, subtitle: String, isSelected: Bool, action: @escaping () -> Void) -> some View {
-        Button(action: action) {
+        let isDarkMode = colorScheme == .dark
+        return Button(action: action) {
             VStack(spacing: 2) {
                 Text(LocalizedStringKey(title))
                     .font(.subheadline.weight(isSelected ? .semibold : .medium))
@@ -395,16 +420,16 @@ struct ItemPickerView: View {
                         isSelected
                             ? LinearGradient(
                                 colors: [
-                                Color.primary.opacity(0.98),
-                                Color.primary.opacity(0.84)
+                                isDarkMode ? Color(UIColor.secondarySystemBackground).opacity(0.98) : Color.primary.opacity(0.98),
+                                isDarkMode ? Color(UIColor.tertiarySystemBackground).opacity(0.96) : Color.primary.opacity(0.84)
                                 ],
                                 startPoint: .topLeading,
                                 endPoint: .bottomTrailing
                             )
                             : LinearGradient(
                                 colors: [
-                                    Color(UIColor.systemBackground).opacity(0.78),
-                                    Color(UIColor.systemBackground).opacity(0.68)
+                                    isDarkMode ? Color(UIColor.secondarySystemBackground).opacity(0.80) : Color(UIColor.systemBackground).opacity(0.78),
+                                    isDarkMode ? Color(UIColor.secondarySystemBackground).opacity(0.72) : Color(UIColor.systemBackground).opacity(0.68)
                                 ],
                                 startPoint: .topLeading,
                                 endPoint: .bottomTrailing
@@ -413,100 +438,59 @@ struct ItemPickerView: View {
             )
             .overlay(
                 RoundedRectangle(cornerRadius: 14, style: .continuous)
-                    .strokeBorder(Color.primary.opacity(isSelected ? 0.02 : 0.08), lineWidth: 1)
+                    .strokeBorder(Color.primary.opacity(isSelected ? (isDarkMode ? 0.10 : 0.02) : (isDarkMode ? 0.06 : 0.08)), lineWidth: 1)
             )
-            .shadow(color: isSelected ? Color.black.opacity(0.10) : Color.black.opacity(0.03), radius: isSelected ? 8 : 4, x: 0, y: 2)
+            .shadow(color: isSelected ? Color.black.opacity(isDarkMode ? 0.18 : 0.10) : Color.black.opacity(isDarkMode ? 0.08 : 0.03), radius: isSelected ? 8 : 4, x: 0, y: 2)
         }
         .buttonStyle(.plain)
     }
 
-    private var myItemsHeader: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            HStack(alignment: .firstTextBaseline) {
-                VStack(alignment: .leading, spacing: 4) {
-                    Text(LocalizedStringKey("myitems.title"))
-                        .font(.headline)
-                    Text(verbatim: selectedMyItemCollection == "Default"
-                         ? String(localized: "myitems.collection.default_hint")
-                         : selectedMyItemCollection)
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                }
-                Spacer()
-                Button {
-                    showMyItemAddSheet = true
-                } label: {
-                    HStack(spacing: 6) {
-                        Image(systemName: "plus")
-                            .font(.system(size: 12, weight: .semibold))
-                        Text(LocalizedStringKey("myitems.add.title"))
-                            .font(.subheadline.weight(.semibold))
-                    }
-                    .foregroundStyle(.primary)
-                    .padding(.horizontal, 12)
-                    .padding(.vertical, 8)
-                    .background(
-                        Capsule(style: .continuous)
-                            .fill(Color(UIColor.systemBackground).opacity(0.84))
-                    )
-                }
-                .buttonStyle(.plain)
+    private func myItemsHeader(isCompact: Bool) -> some View {
+        HStack(alignment: .center, spacing: 12) {
+            VStack(alignment: .leading, spacing: 4) {
+                Text(LocalizedStringKey("myitems.panel.subtitle"))
+                    .font(.caption.weight(.medium))
+                    .foregroundStyle(.secondary)
+                Text(LocalizedStringKey("myitems.panel.hint"))
+                    .font(.caption2)
+                    .foregroundStyle(.tertiary)
+                    .lineLimit(1)
             }
-
-            if store.myItemCollections().count > 1 {
-                ScrollView(.horizontal, showsIndicators: false) {
-                    HStack(spacing: 8) {
-                        ForEach(store.myItemCollections(), id: \.self) { collection in
-                            Button {
-                                selectedMyItemCollection = collection
-                                searchText = ""
-                            } label: {
-                                Text(collection)
-                                    .font(.caption.weight(.semibold))
-                                    .foregroundStyle(selectedMyItemCollection == collection ? Color(UIColor.systemBackground) : .primary)
-                                    .padding(.horizontal, 12)
-                                    .padding(.vertical, 8)
-                                    .background(
-                                        Capsule(style: .continuous)
-                                            .fill(selectedMyItemCollection == collection ? Color.primary : Color(UIColor.systemBackground).opacity(0.84))
-                                    )
-                                    .overlay(
-                                        Capsule(style: .continuous)
-                                            .strokeBorder(Color.primary.opacity(selectedMyItemCollection == collection ? 0 : 0.08), lineWidth: 1)
-                                    )
-                            }
-                            .buttonStyle(.plain)
-                        }
-                    }
+            Spacer(minLength: 12)
+            Button {
+                showMyItemAddSheet = true
+            } label: {
+                HStack(spacing: 6) {
+                    Image(systemName: "plus")
+                        .font(.system(size: 12, weight: .semibold))
+                    Text(LocalizedStringKey("myitems.add.title"))
+                        .font(.subheadline.weight(.semibold))
                 }
+                .foregroundStyle(.primary)
+                .padding(.horizontal, 12)
+                .padding(.vertical, 8)
+                .background(
+                    Capsule(style: .continuous)
+                        .fill(Color(UIColor.systemBackground).opacity(isCompact ? 0.82 : 0.88))
+                )
+                .overlay(
+                    Capsule(style: .continuous)
+                        .strokeBorder(Color.primary.opacity(0.06), lineWidth: 1)
+                )
             }
-
-            Text(selectedMyItemIDs.isEmpty
-                 ? String(localized: "myitems.none_selected")
-                 : String.localizedStringWithFormat(NSLocalizedString("myitems.selected_count", comment: ""), selectedMyItemIDs.count))
-                .font(.caption.weight(.semibold))
-                .foregroundStyle(.secondary)
+            .buttonStyle(.plain)
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 12)
         .background(
             RoundedRectangle(cornerRadius: 18, style: .continuous)
-                .fill(
-                    LinearGradient(
-                        colors: [
-                            Color(UIColor.systemBackground).opacity(0.90),
-                            Color(UIColor.systemBackground).opacity(0.80)
-                        ],
-                        startPoint: .topLeading,
-                        endPoint: .bottomTrailing
-                    )
-                )
+                .fill(Color(UIColor.systemBackground).opacity(0.60))
         )
         .overlay(
             RoundedRectangle(cornerRadius: 18, style: .continuous)
-                .strokeBorder(Color.primary.opacity(0.045), lineWidth: 1)
+                .strokeBorder(Color.primary.opacity(0.03), lineWidth: 1)
         )
-        .shadow(color: Color.black.opacity(0.02), radius: 6, x: 0, y: 2)
+        .shadow(color: Color.black.opacity(0.012), radius: 4, x: 0, y: 1)
     }
 
     // MARK: - Auto Pack FAB
@@ -709,16 +693,6 @@ struct ItemPickerView: View {
         }
         .buttonStyle(.plain)
         .frame(maxWidth: .infinity)
-        .background(
-            Color(UIColor.systemBackground).opacity(0.86)
-        )
-        .overlay(alignment: .bottom) {
-            Rectangle()
-                .fill(Color.primary.opacity(0.025))
-                .frame(height: 1)
-                .padding(.horizontal, 0)
-        }
-        .padding(.horizontal, 16)
     }
 
     // MARK: - Category body (expanded items)
@@ -729,32 +703,44 @@ struct ItemPickerView: View {
             selectedItems.contains(PickerItemID(category: category.name, item: $0))
         }.count
         let allSelected = selectedCount == category.items.count
+        let isDarkMode = colorScheme == .dark
 
-        Button {
-            withAnimation(.easeInOut(duration: 0.15)) {
-                if allSelected {
-                    for item in category.items {
-                        selectedItems.remove(PickerItemID(category: category.name, item: item))
-                    }
-                } else {
-                    for item in category.items {
-                        selectedItems.insert(PickerItemID(category: category.name, item: item))
+        VStack(spacing: 0) {
+            Button {
+                withAnimation(.easeInOut(duration: 0.15)) {
+                    if allSelected {
+                        for item in category.items {
+                            selectedItems.remove(PickerItemID(category: category.name, item: item))
+                        }
+                    } else {
+                        for item in category.items {
+                            selectedItems.insert(PickerItemID(category: category.name, item: item))
+                        }
                     }
                 }
+            } label: {
+                HStack {
+                    Text(allSelected ? "Deselect all" : "Select all")
+                        .font(.subheadline)
+                        .foregroundColor(.secondary)
+                    Spacer()
+                }
             }
-        } label: {
-            Text(allSelected ? "Deselect all" : "Select all")
-                .font(.subheadline)
-                .foregroundColor(.secondary)
-        }
-        .buttonStyle(.plain)
-        .padding(.horizontal, 16)
-        .padding(.vertical, 8)
+            .buttonStyle(.plain)
+            .padding(.horizontal, 16)
+            .padding(.vertical, 8)
 
-        ForEach(category.items, id: \.self) { item in
-            itemRow(item, category: category.name)
-                .padding(.horizontal, 16)
+            ForEach(category.items, id: \.self) { item in
+                itemRow(item, category: category.name)
+                if item != category.items.last {
+                    Rectangle()
+                        .fill(Color.primary.opacity(isDarkMode ? 0.05 : 0.03))
+                        .frame(height: 1)
+                        .padding(.leading, 56)
+                }
+            }
         }
+        .padding(.vertical, 6)
     }
 
     // MARK: - Item row
