@@ -10900,19 +10900,19 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Quick picks by category"
+            "value" : "Picks by category"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "按分类快速筛选"
+            "value" : "按分类挑选"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "按分類快速篩選"
+            "value" : "按分類挑選"
           }
         }
       }
@@ -10946,19 +10946,19 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Quick picks from your My Items library"
+            "value" : "Saved items"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "从我的物品库中挑选"
+            "value" : "已保存物品"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "從我的物品庫中挑選"
+            "value" : "已儲存物品"
           }
         }
       }
@@ -15309,6 +15309,78 @@
             "value" : "版本"
           }
         }
+      }
+    },
+    "settings.data.autosave" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : { "stringUnit" : { "state" : "needs_review", "value" : "Auto-Save" } },
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Auto-Save" } },
+        "es" : { "stringUnit" : { "state" : "needs_review", "value" : "Auto-Save" } },
+        "fr" : { "stringUnit" : { "state" : "needs_review", "value" : "Auto-Save" } },
+        "ja" : { "stringUnit" : { "state" : "needs_review", "value" : "自動保存" } },
+        "ko" : { "stringUnit" : { "state" : "needs_review", "value" : "자동 저장" } },
+        "pt-BR" : { "stringUnit" : { "state" : "needs_review", "value" : "Auto-Save" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "自动保存" } },
+        "zh-Hant" : { "stringUnit" : { "state" : "translated", "value" : "自動儲存" } }
+      }
+    },
+    "settings.data.recovery.explanation" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "If your trips disappeared after an app update or device restore, you can recover them from the most recent auto-save below." } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "如果你的行程在 App 更新或设备恢复后消失了，可以从下方最近一次的自动保存中找回它们。" } },
+        "zh-Hant" : { "stringUnit" : { "state" : "translated", "value" : "如果你的行程在 App 更新或裝置還原後消失了，可以從下方最近一次的自動儲存中找回它們。" } }
+      }
+    },
+    "settings.data.recovery.last_saved" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : { "stringUnit" : { "state" : "needs_review", "value" : "Last Saved" } },
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Last Saved" } },
+        "es" : { "stringUnit" : { "state" : "needs_review", "value" : "Last Saved" } },
+        "fr" : { "stringUnit" : { "state" : "needs_review", "value" : "Last Saved" } },
+        "ja" : { "stringUnit" : { "state" : "needs_review", "value" : "最終保存" } },
+        "ko" : { "stringUnit" : { "state" : "needs_review", "value" : "마지막 저장" } },
+        "pt-BR" : { "stringUnit" : { "state" : "needs_review", "value" : "Last Saved" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "保存时间" } },
+        "zh-Hant" : { "stringUnit" : { "state" : "translated", "value" : "儲存時間" } }
+      }
+    },
+    "settings.data.recovery.no_backup" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "No auto-save found yet. Your data will be backed up automatically as you use Carry." } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "暂无自动保存记录。使用 Carry 后，数据将会自动备份。" } },
+        "zh-Hant" : { "stringUnit" : { "state" : "translated", "value" : "尚無自動儲存記錄。使用 Carry 後，資料將會自動備份。" } }
+      }
+    },
+    "settings.data.recovery.trips_count" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : { "stringUnit" : { "state" : "needs_review", "value" : "Trips in Backup" } },
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Trips in Backup" } },
+        "es" : { "stringUnit" : { "state" : "needs_review", "value" : "Trips in Backup" } },
+        "fr" : { "stringUnit" : { "state" : "needs_review", "value" : "Trips in Backup" } },
+        "ja" : { "stringUnit" : { "state" : "needs_review", "value" : "バックアップ内の旅行" } },
+        "ko" : { "stringUnit" : { "state" : "needs_review", "value" : "백업 내 여행" } },
+        "pt-BR" : { "stringUnit" : { "state" : "needs_review", "value" : "Trips in Backup" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "备份行程数" } },
+        "zh-Hant" : { "stringUnit" : { "state" : "translated", "value" : "備份行程數" } }
+      }
+    },
+    "settings.data.subtitle" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : { "stringUnit" : { "state" : "needs_review", "value" : "Automatically saved after every change." } },
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Automatically saved after every change." } },
+        "es" : { "stringUnit" : { "state" : "needs_review", "value" : "Automatically saved after every change." } },
+        "fr" : { "stringUnit" : { "state" : "needs_review", "value" : "Automatically saved after every change." } },
+        "ja" : { "stringUnit" : { "state" : "needs_review", "value" : "変更のたびに自動的に保存されます。" } },
+        "ko" : { "stringUnit" : { "state" : "needs_review", "value" : "변경할 때마다 자동으로 저장됩니다." } },
+        "pt-BR" : { "stringUnit" : { "state" : "needs_review", "value" : "Automatically saved after every change." } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "每次修改后自动保存。" } },
+        "zh-Hant" : { "stringUnit" : { "state" : "translated", "value" : "每次修改後自動儲存。" } }
       }
     },
     "settings.data.export" : {
