@@ -23,7 +23,7 @@ struct GlobeMapView: View {
     @State private var position: MapCameraPosition = .camera(
         MapCamera(
             centerCoordinate: CLLocationCoordinate2D(latitude: 25, longitude: 100),
-            distance: 20_000_000,
+            distance: 30_000_000,
             heading: 0,
             pitch: 0
         )
@@ -58,7 +58,7 @@ struct GlobeMapView: View {
             if let centroid = centroid(of: visitedCountries) {
                 position = .camera(MapCamera(
                     centerCoordinate: centroid,
-                    distance: 20_000_000
+                    distance: 30_000_000
                 ))
             }
         }

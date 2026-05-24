@@ -109,11 +109,11 @@ struct HomeView: View {
         return min(max(0, raw), collapsedSheetOffset) / collapsedSheetOffset
     }
 
-    /// Horizontal scale: 1.0 when expanded → 0.94 when fully collapsed
-    private var sheetScaleX: CGFloat { 1.0 - sheetProgress * 0.06 }
+    /// Horizontal scale: 1.0 when expanded → 0.97 when fully collapsed
+    private var sheetScaleX: CGFloat { 1.0 - sheetProgress * 0.03 }
 
-    /// Top corner radius: 36 when expanded → 46 when fully collapsed
-    private var sheetCornerRadius: CGFloat { 36 + sheetProgress * 10 }
+    /// Top corner radius: 36 when expanded → 42 when fully collapsed
+    private var sheetCornerRadius: CGFloat { 36 + sheetProgress * 6 }
 
     /// Unique country codes from all trips whose departure date has passed,
     /// regardless of whether coordinates have been resolved yet.
