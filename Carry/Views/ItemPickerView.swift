@@ -667,8 +667,8 @@ struct ItemPickerView: View {
                         isSelected
                             ? LinearGradient(
                                 colors: [
-                                    isDarkMode ? Color.black.opacity(0.78) : Color.primary.opacity(0.98),
-                                    isDarkMode ? Color.black.opacity(0.58) : Color.primary.opacity(0.84)
+                                    isDarkMode ? Color(UIColor.secondarySystemBackground).opacity(0.99) : Color.primary.opacity(0.98),
+                                    isDarkMode ? Color(UIColor.tertiarySystemBackground).opacity(0.98) : Color.primary.opacity(0.84)
                                 ],
                                 startPoint: .topLeading,
                                 endPoint: .bottomTrailing
@@ -685,9 +685,9 @@ struct ItemPickerView: View {
             )
             .overlay(
                 RoundedRectangle(cornerRadius: 14, style: .continuous)
-                    .strokeBorder(Color.primary.opacity(isSelected ? (isDarkMode ? 0.18 : 0.02) : (isDarkMode ? 0.06 : 0.08)), lineWidth: 1)
+                    .strokeBorder(Color.primary.opacity(isSelected ? (isDarkMode ? 0.06 : 0.02) : (isDarkMode ? 0.06 : 0.08)), lineWidth: 1)
             )
-            .shadow(color: isSelected ? Color.black.opacity(isDarkMode ? 0.28 : 0.10) : Color.black.opacity(isDarkMode ? 0.08 : 0.03), radius: isSelected ? 10 : 4, x: 0, y: 2)
+            .shadow(color: isSelected ? Color.black.opacity(isDarkMode ? 0.10 : 0.10) : Color.black.opacity(isDarkMode ? 0.08 : 0.03), radius: isSelected ? 7 : 4, x: 0, y: 2)
         }
         .buttonStyle(.plain)
     }
