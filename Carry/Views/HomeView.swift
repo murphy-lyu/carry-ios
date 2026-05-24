@@ -939,6 +939,9 @@ struct TripCard: View {
 
     private var statusPillText: String? {
         guard !isPast else { return nil }
+        if bundle.totalCount == 0 {
+            return NSLocalizedString("home.empty.items", comment: "No items in packing list")
+        }
         if isComplete {
             return NSLocalizedString("home.packed.all", comment: "All items packed")
         }
@@ -948,6 +951,9 @@ struct TripCard: View {
     }
 
     private var statusPillFillColor: Color {
+        if bundle.totalCount == 0 {
+            return colorScheme == .dark ? Color.white.opacity(0.035) : Color(UIColor.systemGray5).opacity(0.58)
+        }
         if isComplete {
             return colorScheme == .dark ? Color.white.opacity(0.045) : Color(UIColor.systemGray5).opacity(0.72)
         }
@@ -955,6 +961,9 @@ struct TripCard: View {
     }
 
     private var statusPillStrokeColor: Color {
+        if bundle.totalCount == 0 {
+            return Color.primary.opacity(colorScheme == .dark ? 0.04 : 0.03)
+        }
         if isComplete {
             return Color.primary.opacity(colorScheme == .dark ? 0.06 : 0.025)
         }
@@ -962,6 +971,9 @@ struct TripCard: View {
     }
 
     private var statusPillForeground: Color {
+        if bundle.totalCount == 0 {
+            return colorScheme == .dark ? .secondary.opacity(0.65) : .secondary.opacity(0.82)
+        }
         if isComplete {
             return colorScheme == .dark ? .secondary.opacity(0.68) : .secondary.opacity(0.76)
         }
