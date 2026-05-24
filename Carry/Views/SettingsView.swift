@@ -237,28 +237,22 @@ struct SettingsView: View {
                         }
                     }
 
-                    settingsGroup(title: "settings.group.support") {
-                        settingsRow(title: "settings.section.support", valueText: "☕️") {
-                            showCoffeeSheet = true
-                        }
-                        settingsRow(title: "settings.feedback") {
-                            openFeedbackMail()
-                        }
-                    }
-
                     settingsGroup(title: "settings.section.about") {
                         settingsNavigationRow(title: "settings.about.entry") {
                             AboutView()
                         }
-
                         settingsRow(titleText: roadmapTitle) {
                             showRoadmapSheet = true
                         }
-
+                        settingsRow(title: "settings.feedback") {
+                            openFeedbackMail()
+                        }
+                        settingsRow(title: "settings.section.support", valueText: "☕️") {
+                            showCoffeeSheet = true
+                        }
                         settingsNavigationRow(title: "settings.legal.terms") {
                             TermsView()
                         }
-
                         settingsNavigationRow(title: "settings.legal.privacy") {
                             PrivacyView()
                         }
