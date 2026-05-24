@@ -26,6 +26,36 @@
                 <key>UIPrerenderedIcon</key>
                 <false/>
             </dict>
+            <!-- Sunny icon -->
+            <key>CarryIconSunny</key>
+            <dict>
+                <key>CFBundleIconFiles</key>
+                <array>
+                    <string>CarryIconSunny</string>
+                </array>
+                <key>UIPrerenderedIcon</key>
+                <false/>
+            </dict>
+            <!-- Aurora icon -->
+            <key>CarryIconAurora</key>
+            <dict>
+                <key>CFBundleIconFiles</key>
+                <array>
+                    <string>CarryIconAurora</string>
+                </array>
+                <key>UIPrerenderedIcon</key>
+                <false/>
+            </dict>
+            <!-- Midnight icon -->
+            <key>CarryIconMidnight</key>
+            <dict>
+                <key>CFBundleIconFiles</key>
+                <array>
+                    <string>CarryIconMidnight</string>
+                </array>
+                <key>UIPrerenderedIcon</key>
+                <false/>
+            </dict>
         </dict>
     </dict>
 </dict>

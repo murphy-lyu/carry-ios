@@ -38,6 +38,21 @@ private let iconOptions: [AppIconOption] = [
         name: "icon.mono.name",
         description: "icon.mono.description"
     ),
+    AppIconOption(
+        id: "CarryIconSunny",
+        name: "icon.sunny.name",
+        description: "icon.sunny.description"
+    ),
+    AppIconOption(
+        id: "CarryIconAurora",
+        name: "icon.aurora.name",
+        description: "icon.aurora.description"
+    ),
+    AppIconOption(
+        id: "CarryIconMidnight",
+        name: "icon.midnight.name",
+        description: "icon.midnight.description"
+    ),
 ]
 
 // MARK: - AppIconView
@@ -191,10 +206,30 @@ struct AppIconView: View {
                 colors: [Color(red: 0.08, green: 0.08, blue: 0.10),
                          Color(red: 0.05, green: 0.05, blue: 0.08)],
                 startPoint: .topLeading, endPoint: .bottomTrailing)
-        default:
+        case "CarryIconMono":
             return LinearGradient(
                 colors: [Color(red: 0.88, green: 0.86, blue: 0.82),
-                         Color(red: 0.78, green: 0.76, blue: 0.72)],
+                         Color(red: 0.72, green: 0.70, blue: 0.68)],
+                startPoint: .topLeading, endPoint: .bottomTrailing)
+        case "CarryIconSunny":
+            return LinearGradient(
+                colors: [Color(red: 0.99, green: 0.78, blue: 0.30),
+                         Color(red: 0.96, green: 0.55, blue: 0.20)],
+                startPoint: .topLeading, endPoint: .bottomTrailing)
+        case "CarryIconAurora":
+            return LinearGradient(
+                colors: [Color(red: 0.28, green: 0.72, blue: 0.82),
+                         Color(red: 0.48, green: 0.30, blue: 0.86)],
+                startPoint: .topLeading, endPoint: .bottomTrailing)
+        case "CarryIconMidnight":
+            return LinearGradient(
+                colors: [Color(red: 0.06, green: 0.08, blue: 0.20),
+                         Color(red: 0.02, green: 0.04, blue: 0.14)],
+                startPoint: .topLeading, endPoint: .bottomTrailing)
+        default:
+            return LinearGradient(
+                colors: [Color(red: 0.80, green: 0.80, blue: 0.82),
+                         Color(red: 0.68, green: 0.68, blue: 0.70)],
                 startPoint: .topLeading, endPoint: .bottomTrailing)
         }
     }

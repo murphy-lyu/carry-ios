@@ -8737,6 +8737,54 @@
         }
       }
     },
+    "icon.sunny.name": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Sunny" } },
+        "zh-Hans": { "stringUnit": { "state": "translated", "value": "晴天" } },
+        "zh-Hant": { "stringUnit": { "state": "translated", "value": "晴天" } }
+      }
+    },
+    "icon.sunny.description": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Warm like a good departure" } },
+        "zh-Hans": { "stringUnit": { "state": "translated", "value": "出发时的那道阳光" } },
+        "zh-Hant": { "stringUnit": { "state": "translated", "value": "出發時的那道陽光" } }
+      }
+    },
+    "icon.aurora.name": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Aurora" } },
+        "zh-Hans": { "stringUnit": { "state": "translated", "value": "极光" } },
+        "zh-Hant": { "stringUnit": { "state": "translated", "value": "極光" } }
+      }
+    },
+    "icon.aurora.description": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Somewhere far and magical" } },
+        "zh-Hans": { "stringUnit": { "state": "translated", "value": "遥远而神奇的地方" } },
+        "zh-Hant": { "stringUnit": { "state": "translated", "value": "遙遠而神奇的地方" } }
+      }
+    },
+    "icon.midnight.name": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Midnight" } },
+        "zh-Hans": { "stringUnit": { "state": "translated", "value": "午夜" } },
+        "zh-Hant": { "stringUnit": { "state": "translated", "value": "午夜" } }
+      }
+    },
+    "icon.midnight.description": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Red-eye flights and quiet terminals" } },
+        "zh-Hans": { "stringUnit": { "state": "translated", "value": "深夜航班与寂静的候机厅" } },
+        "zh-Hant": { "stringUnit": { "state": "translated", "value": "深夜航班與寂靜的候機廳" } }
+      }
+    },
     "settings.appicon.entry": {
       "extractionState": "manual",
       "localizations": {
