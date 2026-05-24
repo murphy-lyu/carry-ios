@@ -8541,6 +8541,62 @@
         }
       }
     },
+    "home.empty.cta" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : { "stringUnit" : { "state" : "needs_review", "value" : "Create First Trip" } },
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Create First Trip" } },
+        "es" : { "stringUnit" : { "state" : "needs_review", "value" : "Create First Trip" } },
+        "fr" : { "stringUnit" : { "state" : "needs_review", "value" : "Create First Trip" } },
+        "ja" : { "stringUnit" : { "state" : "needs_review", "value" : "最初の旅を作成" } },
+        "ko" : { "stringUnit" : { "state" : "needs_review", "value" : "첫 여행 만들기" } },
+        "pt-BR" : { "stringUnit" : { "state" : "needs_review", "value" : "Create First Trip" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "创建第一次行程" } },
+        "zh-Hant" : { "stringUnit" : { "state" : "translated", "value" : "建立第一次行程" } }
+      }
+    },
+    "home.empty.hero_tagline" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : { "stringUnit" : { "state" : "needs_review", "value" : "Your trips will appear here" } },
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Your trips will appear here" } },
+        "es" : { "stringUnit" : { "state" : "needs_review", "value" : "Your trips will appear here" } },
+        "fr" : { "stringUnit" : { "state" : "needs_review", "value" : "Your trips will appear here" } },
+        "ja" : { "stringUnit" : { "state" : "needs_review", "value" : "旅がここに表示されます" } },
+        "ko" : { "stringUnit" : { "state" : "needs_review", "value" : "여행이 여기에 표시됩니다" } },
+        "pt-BR" : { "stringUnit" : { "state" : "needs_review", "value" : "Your trips will appear here" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "你的行程将显示在这里" } },
+        "zh-Hant" : { "stringUnit" : { "state" : "translated", "value" : "你的行程將顯示在這裡" } }
+      }
+    },
+    "home.empty.subtitle" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : { "stringUnit" : { "state" : "needs_review", "value" : "Add your first trip and watch your world come alive on the globe." } },
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Add your first trip and watch your world come alive on the globe." } },
+        "es" : { "stringUnit" : { "state" : "needs_review", "value" : "Add your first trip and watch your world come alive on the globe." } },
+        "fr" : { "stringUnit" : { "state" : "needs_review", "value" : "Add your first trip and watch your world come alive on the globe." } },
+        "ja" : { "stringUnit" : { "state" : "needs_review", "value" : "最初の旅を追加して、地球儀に世界を描こう。" } },
+        "ko" : { "stringUnit" : { "state" : "needs_review", "value" : "첫 여행을 추가하고 지구본에 세계를 펼쳐보세요." } },
+        "pt-BR" : { "stringUnit" : { "state" : "needs_review", "value" : "Add your first trip and watch your world come alive on the globe." } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "创建第一次行程，让你的世界在地球仪上亮起来。" } },
+        "zh-Hant" : { "stringUnit" : { "state" : "translated", "value" : "建立第一次行程，讓你的世界在地球儀上亮起來。" } }
+      }
+    },
+    "home.empty.title" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : { "stringUnit" : { "state" : "needs_review", "value" : "Start your journey" } },
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Start your journey" } },
+        "es" : { "stringUnit" : { "state" : "needs_review", "value" : "Start your journey" } },
+        "fr" : { "stringUnit" : { "state" : "needs_review", "value" : "Start your journey" } },
+        "ja" : { "stringUnit" : { "state" : "needs_review", "value" : "旅を始めよう" } },
+        "ko" : { "stringUnit" : { "state" : "needs_review", "value" : "여행을 시작하세요" } },
+        "pt-BR" : { "stringUnit" : { "state" : "needs_review", "value" : "Start your journey" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "开启你的旅程" } },
+        "zh-Hant" : { "stringUnit" : { "state" : "translated", "value" : "開啟你的旅程" } }
+      }
+    },
     "home.empty.items" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -10593,19 +10649,19 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Your saved items"
+            "value" : "Create custom items"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "你保存的物品"
+            "value" : "创建自定义物品"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "你保存的物品"
+            "value" : "建立自訂物品"
           }
         }
       }
@@ -10616,19 +10672,19 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Add personal items here"
+            "value" : "Create items not in Base Items"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "在这里添加个人物品"
+            "value" : "创建不在基础库中的物品"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "在這裡添加個人物品"
+            "value" : "建立不在基礎庫中的物品"
           }
         }
       }
@@ -10652,6 +10708,52 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "新增物品"
+          }
+        }
+      }
+    },
+    "myitems.custom.new" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "New Item"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "新建物品"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "新增物品"
+          }
+        }
+      }
+    },
+    "myitems.search.custom_tag" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Custom"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "自定义"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "自訂"
           }
         }
       }
@@ -10698,65 +10800,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "分類"
-          }
-        }
-      }
-    },
-    "myitems.collection.default_hint" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Default collection"
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Default collection"
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Default collection"
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Default collection"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Default collection"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Default collection"
-          }
-        },
-        "pt-BR" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Default collection"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "默认分类"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "預設分類"
           }
         }
       }
@@ -10931,48 +10974,48 @@
         }
       }
     },
-    "myitems.source.mine" : {
+    "myitems.source.custom" : {
       "extractionState" : "manual",
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "My Items"
+            "value" : "Custom Items"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "我的物品"
+            "value" : "自定义物品"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "我的物品"
+            "value" : "自訂物品"
           }
         }
       }
     },
-    "myitems.source.mine.subtitle" : {
+    "myitems.source.custom.subtitle" : {
       "extractionState" : "manual",
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Saved items"
+            "value" : "Created by you"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "已保存物品"
+            "value" : "由你创建"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "已儲存物品"
+            "value" : "由你建立"
           }
         }
       }

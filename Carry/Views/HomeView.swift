@@ -626,10 +626,18 @@ struct HomeView: View {
                 .buttonStyle(PressableScaleButtonStyle(scale: 0.92, pressedBrightness: -0.03, pressedOpacity: 0.94))
             }
 
-            HStack(spacing: 10) {
-                statPill(value: "\(store.trips.count)", label: "home.allTrips")
-                statPill(value: "\(upcomingTrips.count)", label: "home.upcoming")
-                statPill(value: "\(visitedCountriesCount)", label: "home.countries")
+            if store.trips.isEmpty {
+                Text("home.empty.hero_tagline")
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(.top, 2)
+            } else {
+                HStack(spacing: 10) {
+                    statPill(value: "\(store.trips.count)", label: "home.allTrips")
+                    statPill(value: "\(upcomingTrips.count)", label: "home.upcoming")
+                    statPill(value: "\(visitedCountriesCount)", label: "home.countries")
+                }
             }
         }
         .padding(.vertical, 14)
@@ -784,48 +792,54 @@ struct HomeView: View {
     }
 
     private var emptyState: some View {
-        VStack(spacing: 12) {
-            Image(systemName: "suitcase")
-                .font(.system(size: 48))
-                .foregroundStyle(.secondary)
-                .frame(width: 78, height: 78)
-                .background(
-                    Circle()
-                        .fill(Color(UIColor.systemBackground))
-                )
-                .overlay(
-                    Circle()
-                        .strokeBorder(Color.primary.opacity(0.05), lineWidth: 1)
-                )
-
+        VStack(spacing: 28) {
             VStack(spacing: 8) {
-                Text("No trips yet")
-                    .font(.headline)
+                Text("home.empty.title")
+                    .font(.title3.weight(.semibold))
                     .foregroundStyle(.primary)
-                Text("Tap the plus button to create your first trip")
+                Text("home.empty.subtitle")
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
                     .multilineTextAlignment(.center)
-                    .lineSpacing(2)
+                    .lineSpacing(3)
             }
 
             Button {
                 startNewTrip()
             } label: {
-                Text("Create Trip")
-                    .font(.subheadline.weight(.semibold))
-                    .padding(.horizontal, 16)
-                    .padding(.vertical, 10)
-                    .background(
-                        Capsule(style: .continuous)
-                            .fill(Color.primary)
-                    )
-                    .foregroundStyle(Color(UIColor.systemBackground))
+                HStack(spacing: 7) {
+                    Image(systemName: "plus")
+                        .font(.system(size: 13, weight: .bold))
+                    Text("home.empty.cta")
+                        .font(.subheadline.weight(.semibold))
+                }
+                .foregroundStyle(Color(UIColor.systemBackground))
+                .frame(maxWidth: .infinity)
+                .frame(height: 50)
+                .background(
+                    RoundedRectangle(cornerRadius: 16, style: .continuous)
+                        .fill(
+                            LinearGradient(
+                                colors: [
+                                    Color.primary.opacity(0.95),
+                                    Color.primary.opacity(0.82)
+                                ],
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            )
+                        )
+                )
+                .overlay(
+                    RoundedRectangle(cornerRadius: 16, style: .continuous)
+                        .strokeBorder(Color.primary.opacity(0.10), lineWidth: 1)
+                )
+                .shadow(color: Color.black.opacity(colorScheme == .dark ? 0.30 : 0.10), radius: 10, x: 0, y: 5)
             }
-            .buttonStyle(PressableScaleButtonStyle(scale: 0.96, pressedBrightness: -0.02, pressedOpacity: 0.96))
+            .buttonStyle(PressableScaleButtonStyle(scale: 0.97, pressedBrightness: -0.02, pressedOpacity: 0.95))
         }
-        .frame(maxWidth: .infinity, minHeight: 240)
-        .padding(.vertical, 18)
+        .frame(maxWidth: .infinity)
+        .padding(.horizontal, 4)
+        .padding(.vertical, 36)
     }
 
     @ViewBuilder
