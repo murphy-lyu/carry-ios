@@ -101,6 +101,7 @@ struct HomeView: View {
     @State private var listDrag: CGFloat = 0
 
     @AppStorage("mapStyleOption") private var mapStyleRaw: String = MapStyleOption.hybrid.rawValue
+    @State private var locationPermission = LocationPermissionManager()
     private var mapStyleOption: MapStyleOption {
         MapStyleOption(rawValue: mapStyleRaw) ?? .hybrid
     }
@@ -204,7 +205,8 @@ struct HomeView: View {
                 visitedCountries: visitedCountries,
                 visitedCities: visitedCities,
                 cityOpacity: Double(sheetProgress),
-                mapStyleOption: mapStyleOption
+                mapStyleOption: mapStyleOption,
+                showUserLocation: locationPermission.isTracking
             )
             .ignoresSafeArea()
 
@@ -374,21 +376,34 @@ struct HomeView: View {
         VStack {
             HStack {
                 Spacer()
-                Menu {
-                    ForEach(MapStyleOption.allCases, id: \.rawValue) { option in
-                        Button {
-                            UIImpactFeedbackGenerator(style: .light).impactOccurred()
-                            mapStyleRaw = option.rawValue
-                        } label: {
-                            Label(option.label, systemImage: option.icon)
+                VStack(spacing: 8) {
+                    Menu {
+                        ForEach(MapStyleOption.allCases, id: \.rawValue) { option in
+                            Button {
+                                UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                                mapStyleRaw = option.rawValue
+                            } label: {
+                                Label(option.label, systemImage: option.icon)
+                            }
                         }
+                    } label: {
+                        Image(systemName: mapStyleOption.icon)
+                            .font(.system(size: 17, weight: .semibold))
+                            .foregroundStyle(.primary)
+                            .frame(width: 48, height: 48)
+                            .glassCircleButton()
                     }
-                } label: {
-                    Image(systemName: mapStyleOption.icon)
-                        .font(.system(size: 17, weight: .semibold))
-                        .foregroundStyle(.primary)
-                        .frame(width: 48, height: 48)
-                        .glassCircleButton()
+
+                    Button {
+                        UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                        locationPermission.handleTap()
+                    } label: {
+                        Image(systemName: locationPermission.isTracking ? "location.fill" : "location")
+                            .font(.system(size: 17, weight: .semibold))
+                            .foregroundStyle(locationPermission.isTracking ? Color.orange : Color.primary)
+                            .frame(width: 48, height: 48)
+                            .glassCircleButton()
+                    }
                 }
                 .padding(.trailing, 16)
                 .padding(.top, 56)

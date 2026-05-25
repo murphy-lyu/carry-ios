@@ -4,6 +4,7 @@
 
 import SwiftUI
 import MapKit
+import CoreLocation
 
 // MARK: - Data
 
@@ -47,6 +48,62 @@ enum MapStyleOption: String, CaseIterable {
     }
 }
 
+// MARK: - Location permission manager
+
+/// Handles CLLocationManager lifecycle and authorization state.
+/// Owned by HomeView so the permission button and the map share the same state.
+@Observable
+final class LocationPermissionManager: NSObject, CLLocationManagerDelegate {
+
+    private(set) var authStatus: CLAuthorizationStatus = .notDetermined
+    private(set) var isTracking = false
+
+    private let manager = CLLocationManager()
+
+    override init() {
+        super.init()
+        manager.delegate = self
+        authStatus = manager.authorizationStatus
+    }
+
+    /// Call when the user taps the location button.
+    func handleTap() {
+        switch authStatus {
+        case .notDetermined:
+            // Triggers the system dialog; delegate callback will enable tracking
+            manager.requestWhenInUseAuthorization()
+        case .authorizedWhenInUse, .authorizedAlways:
+            isTracking.toggle()
+            if isTracking {
+                manager.startUpdatingLocation()
+            } else {
+                manager.stopUpdatingLocation()
+            }
+        case .denied, .restricted:
+            // Guide the user to Settings to change the decision
+            if let url = URL(string: UIApplication.openSettingsURLString) {
+                UIApplication.shared.open(url)
+            }
+        @unknown default:
+            break
+        }
+    }
+
+    // MARK: CLLocationManagerDelegate
+
+    func locationManagerDidChangeAuthorization(_ manager: CLLocationManager) {
+        authStatus = manager.authorizationStatus
+        // Automatically start tracking once the user grants permission
+        if authStatus == .authorizedWhenInUse || authStatus == .authorizedAlways {
+            isTracking = true
+            manager.startUpdatingLocation()
+        } else {
+            isTracking = false
+            manager.stopUpdatingLocation()
+        }
+    }
+}
+
 // MARK: - GlobeMapView
 
 struct GlobeMapView: View {
@@ -56,6 +113,8 @@ struct GlobeMapView: View {
     /// 0 = fully expanded (cities hidden), 1 = fully collapsed (cities visible)
     var cityOpacity: Double
     var mapStyleOption: MapStyleOption = .hybrid
+    /// Controlled by the parent; true only after the user grants location permission.
+    var showUserLocation: Bool = false
 
     @State private var position: MapCameraPosition = .camera(
         MapCamera(
@@ -65,21 +124,23 @@ struct GlobeMapView: View {
             pitch: 0
         )
     )
-    @State private var locationManager = CLLocationManager()
 
     var body: some View {
         Map(position: $position) {
-            UserAnnotation {
-                ZStack {
-                    Circle()
-                        .fill(.orange.opacity(0.25))
-                        .frame(width: 36, height: 36)
-                    Circle()
-                        .fill(.orange)
-                        .frame(width: 20, height: 20)
-                    Circle()
-                        .fill(.white)
-                        .frame(width: 8, height: 8)
+            // Only rendered after the user explicitly enables location
+            if showUserLocation {
+                UserAnnotation {
+                    ZStack {
+                        Circle()
+                            .fill(.orange.opacity(0.25))
+                            .frame(width: 36, height: 36)
+                        Circle()
+                            .fill(.orange)
+                            .frame(width: 20, height: 20)
+                        Circle()
+                            .fill(.white)
+                            .frame(width: 8, height: 8)
+                    }
                 }
             }
             // City dots — subtle, fade in as sheet collapses
@@ -98,8 +159,6 @@ struct GlobeMapView: View {
         }
         .mapStyle(mapStyleOption.mapStyle)
         .onAppear {
-            locationManager.requestWhenInUseAuthorization()
-            locationManager.startUpdatingLocation()
             if let centroid = centroid(of: visitedCountries) {
                 position = .camera(MapCamera(
                     centerCoordinate: centroid,
