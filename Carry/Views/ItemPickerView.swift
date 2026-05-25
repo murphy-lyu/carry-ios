@@ -61,6 +61,8 @@ struct ItemPickerView: View {
     @State private var selectedMyItemIDs: Set<UUID> = []
     @State private var expandedCategories: Set<String> = []
     @State private var showAutoPackSheet = false
+    @State private var toastVisible = false
+    @State private var toastText = ""
     @State private var didApplyInitialSource = false
     @State private var showMyItemAddSheet = false
     @State private var selectedMyItemCollection: String = "Default"
@@ -364,7 +366,7 @@ struct ItemPickerView: View {
                             let normalizedCategory = category.trimmingCharacters(in: CharacterSet.whitespacesAndNewlines).isEmpty ? "Custom" : category
                             let item = store.addMyItem(name: name, category: normalizedCategory, defaultQuantity: quantity, collectionName: selectedMyItemCollection)
                             selectedMyItemIDs.insert(item.id)
-                            store.pendingPackingToast = NSLocalizedString("myitems.toast.saved", comment: "")
+                            showToast(NSLocalizedString("myitems.toast.saved", comment: ""))
                         }
                     }
                 }
@@ -378,6 +380,13 @@ struct ItemPickerView: View {
                 hideKeyboard()
             }
         )
+        .overlay(alignment: .bottom) {
+            if toastVisible {
+                toastBanner
+                    .padding(.bottom, 16)
+                    .transition(.move(edge: .bottom).combined(with: .opacity))
+            }
+        }
         .navigationTitle("")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
@@ -1109,7 +1118,7 @@ struct ItemPickerView: View {
             toastVisible = true
         }
         Task {
-            try? await Task.sleep(for: .milliseconds(2200))
+            try? await Task.sleep(for: .milliseconds(1500))
             withAnimation(.easeIn(duration: 0.25)) {
                 toastVisible = false
             }
@@ -1148,7 +1157,7 @@ struct ItemPickerView: View {
             isConfirmingSelection = true
             showToast(NSLocalizedString("itempicker.toast.added_to_list", comment: ""))
             Task { @MainActor in
-                try? await Task.sleep(for: .milliseconds(500))
+                try? await Task.sleep(for: .milliseconds(600))
                 router.path.removeLast()
                 isConfirmingSelection = false
             }

@@ -112,7 +112,6 @@ final class TripStore: ObservableObject {
     @Published var isSceneCardDismissedGlobally: Bool
     @Published var isHomeEmptyStateMockEnabled: Bool
     @Published private(set) var draftTrip: TripBundle?
-    @Published var pendingPackingToast: String?
 
     private let context: ModelContext
     private let defaults = UserDefaults.standard
