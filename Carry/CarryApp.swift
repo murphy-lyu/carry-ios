@@ -45,6 +45,8 @@ struct CarryApp: App {
                 .preferredColorScheme(appearanceMode.colorScheme)
                 .onAppear {
                     CarryLogger.shared.log(.appLaunched)
+                    // Register App Shortcuts with Siri / Spotlight.
+                    CarryAppShortcuts.updateAppShortcutParameters()
                 }
                 .onReceive(NotificationCenter.default.publisher(
                     for: UIApplication.didReceiveMemoryWarningNotification)
