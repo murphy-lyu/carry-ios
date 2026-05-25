@@ -21,6 +21,7 @@ enum CreationRoute: Hashable {
 
 final class NavigationRouter: ObservableObject {
     @Published var path = NavigationPath()
+    @Published var showMapFullscreen = false
 }
 
 // MARK: - ContentView
@@ -136,6 +137,9 @@ struct ContentView: View {
                     defaults.removeObject(forKey: "carry_shortcut_trip_id")
                     router.path.append(id)
                 }
+            case "show_map":
+                router.path = NavigationPath()   // go to HomeView root
+                router.showMapFullscreen = true  // signal HomeView to collapse sheet
             default:
                 break
             }

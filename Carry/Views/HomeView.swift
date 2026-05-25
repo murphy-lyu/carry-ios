@@ -344,6 +344,13 @@ struct HomeView: View {
                         store.refresh()
                     }
                 }
+                .onChange(of: router.showMapFullscreen) { _, show in
+                    guard show else { return }
+                    router.showMapFullscreen = false
+                    withAnimation(.spring(response: 0.5, dampingFraction: 0.82)) {
+                        sheetOffset = collapsedSheetOffset
+                    }
+                }
                 .alert(
                     "Delete \(tripToDelete?.name ?? "")?",
                     isPresented: $showDeleteConfirmation
@@ -905,9 +912,9 @@ struct HomeView: View {
         let preferred = Bundle.main.preferredLocalizations.first ?? "en"
         let isChinese = preferred.lowercased().hasPrefix("zh")
         if isChinese {
-            return "第一次出行的地方"
+            return "第一次出发的地方"
         }
-        return "The place where your first trip began"
+        return "The place where your first departure began"
     }
 
     private var emptyState: some View {

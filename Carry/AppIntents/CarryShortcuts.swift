@@ -63,23 +63,15 @@ struct OpenNearestTripIntent: AppIntent {
     }
 }
 
-// MARK: - 3. Continue Packing (last opened trip)
+// MARK: - 3. Footprint — open the visited-countries map
 
-struct ContinuePackingIntent: AppIntent {
-    static var title: LocalizedStringResource = "shortcut.continue_packing.title"
-    static var description = IntentDescription("shortcut.continue_packing.description")
+struct ShowFootprintIntent: AppIntent {
+    static var title: LocalizedStringResource = "shortcut.footprint.title"
+    static var description = IntentDescription("shortcut.footprint.description")
     static var openAppWhenRun: Bool = true
 
     func perform() async throws -> some IntentResult {
-        // Use the last trip the user explicitly opened, fall back to nearest.
-        if let idStr = UserDefaults.standard.string(forKey: "carry_last_opened_trip"),
-           let id = UUID(uuidString: idStr) {
-            UserDefaults.standard.setShortcutOpenTrip(id)
-        } else if let trip = try nearestTrip() {
-            UserDefaults.standard.setShortcutOpenTrip(trip.id)
-        } else {
-            UserDefaults.standard.setShortcutCreateTrip()
-        }
+        UserDefaults.standard.set("show_map", forKey: "carry_shortcut_action")
         return .result()
     }
 }
@@ -109,14 +101,14 @@ struct CarryAppShortcuts: AppShortcutsProvider {
             systemImageName: "airplane.departure"
         )
         AppShortcut(
-            intent: ContinuePackingIntent(),
+            intent: ShowFootprintIntent(),
             phrases: [
-                "Continue packing in \(.applicationName)",
-                "Open packing list in \(.applicationName)",
-                "My packing list in \(.applicationName)"
+                "Show my footprint in \(.applicationName)",
+                "Open travel map in \(.applicationName)",
+                "My visited countries in \(.applicationName)"
             ],
-            shortTitle: LocalizedStringResource("Packing List"),
-            systemImageName: "checklist"
+            shortTitle: LocalizedStringResource("Footprint"),
+            systemImageName: "globe.asia.australia.fill"
         )
     }
 }
