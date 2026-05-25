@@ -663,11 +663,47 @@ struct PackingListView: View {
                 .frame(height: 2.5)
             }
 
+            if !isNewTrip {
+                HStack(alignment: .firstTextBaseline, spacing: 12) {
+                    Text(tripInfoLine)
+                        .font(.caption)
+                        .foregroundColor(colorScheme == .dark ? Color.secondary.opacity(0.88) : .secondary)
+                        .lineLimit(1)
+                        .truncationMode(.tail)
+
+                    Spacer(minLength: 12)
+
+                    Button {
+                        showReminderSheet = true
+                    } label: {
+                        HStack(spacing: 6) {
+                            Image(systemName: bundle?.remindersEnabled == true ? "bell.fill" : "bell.slash")
+                                .font(.system(size: 10, weight: .semibold))
+                            Text(reminderStatusText)
+                                .font(.caption2.weight(.medium))
+                            Image(systemName: "chevron.right")
+                                .font(.system(size: 8, weight: .semibold))
+                                .foregroundStyle(.tertiary)
+                        }
+                        .foregroundStyle(colorScheme == .dark ? Color.secondary.opacity(0.9) : .secondary)
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 5)
+                        .background(
+                            Capsule(style: .continuous)
+                                .fill(colorScheme == .dark ? Color.white.opacity(0.035) : Color.black.opacity(0.025))
+                        )
+                        .overlay(
+                            Capsule(style: .continuous)
+                                .strokeBorder(Color.primary.opacity(colorScheme == .dark ? 0.025 : 0.035), lineWidth: 1)
+                        )
+                    }
+                    .buttonStyle(.plain)
+                }
+                .padding(.top, 8)
+                .padding(.bottom, 5)
+            }
+
             HStack(alignment: .firstTextBaseline) {
-                Text(tripInfoLine)
-                    .font(.caption)
-                    .foregroundColor(colorScheme == .dark ? Color.secondary.opacity(0.88) : .secondary)
-                Spacer()
                 Group {
                     if isNewTrip {
                         Text("\(totalCount) items")
@@ -682,6 +718,7 @@ struct PackingListView: View {
                 .font(.caption)
                 .foregroundColor(colorScheme == .dark ? Color.secondary.opacity(0.88) : .secondary)
                 .animation(.easeInOut(duration: 0.3), value: isComplete)
+                Spacer()
             }
             .padding(.top, isNewTrip ? 0 : 6)
         }
@@ -723,6 +760,17 @@ struct PackingListView: View {
                 .frame(height: 1)
                 .padding(.horizontal, 0)
         }
+    }
+
+    private var reminderStatusText: String {
+        let count = bundle?.reminderConfigs.count ?? 0
+        if count == 0 {
+            return NSLocalizedString("reminder.menu.item", comment: "")
+        }
+        return String.localizedStringWithFormat(
+            NSLocalizedString("trip.reminders.count", comment: ""),
+            count
+        )
     }
 
     private var sceneEntryCard: some View {
