@@ -46,12 +46,29 @@ struct CarryApp: App {
                 .onAppear {
                     CarryLogger.shared.log(.appLaunched)
                 }
-                .onReceive(
-                    NotificationCenter.default.publisher(
-                        for: UIApplication.didReceiveMemoryWarningNotification
-                    )
+                .onReceive(NotificationCenter.default.publisher(
+                    for: UIApplication.didReceiveMemoryWarningNotification)
                 ) { _ in
                     CarryLogger.shared.log(.memoryWarning)
+                }
+                .onReceive(NotificationCenter.default.publisher(
+                    for: UIApplication.didEnterBackgroundNotification)
+                ) { _ in
+                    CarryLogger.shared.log(.appDidEnterBackground)
+                    CarryLogger.shared.markSessionEnded()
+                }
+                .onReceive(NotificationCenter.default.publisher(
+                    for: UIApplication.willEnterForegroundNotification)
+                ) { _ in
+                    CarryLogger.shared.log(.appWillEnterForeground)
+                    // Re-arm the session flag when returning to foreground
+                    UserDefaults.standard.set(true, forKey: "carry_session_active")
+                }
+                .onReceive(NotificationCenter.default.publisher(
+                    for: UIApplication.willTerminateNotification)
+                ) { _ in
+                    CarryLogger.shared.log(.appWillTerminate)
+                    CarryLogger.shared.markSessionEnded()
                 }
         }
         .modelContainer(Self.container)

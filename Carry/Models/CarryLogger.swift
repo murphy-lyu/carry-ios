@@ -68,6 +68,9 @@ final class CarryLogger {
         case appWillEnterForeground = "app_will_enter_foreground"
         case appWillTerminate       = "app_will_terminate"
         case memoryWarning          = "memory_warning"
+        case abnormalTermination    = "abnormal_termination"
+        // 地理编码
+        case geocodeFailed          = "geocode_failed"
         // 保存失败
         case tripSaveFailed         = "trip_save_failed"
         case tripEditSaveFailed     = "trip_edit_save_failed"
@@ -97,11 +100,31 @@ final class CarryLogger {
         .itemAddFailed, .itemDeleteFailed, .orphanTrip, .orphanSection,
         .sortIndexOutOfBounds, .apiTimeout, .apiError,
         .iconSwitchFailed, .backupRestoreFailed, .reminderPermissionDenied,
+        .abnormalTermination, .geocodeFailed,
     ]
+
+    private let sessionActiveKey = "carry_session_active"
 
     private init() {
         performVersionCleanup()
         performTimeCleanup()
+        detectAbnormalTermination()
+    }
+
+    // MARK: - Session / crash detection
+
+    /// Called once on app launch. If the previous session's flag was never
+    /// cleared (i.e. the app crashed or was force-killed), logs abnormalTermination.
+    private func detectAbnormalTermination() {
+        if UserDefaults.standard.bool(forKey: sessionActiveKey) {
+            log(.abnormalTermination)
+        }
+        UserDefaults.standard.set(true, forKey: sessionActiveKey)
+    }
+
+    /// Call when the app exits normally (willTerminate / didEnterBackground).
+    func markSessionEnded() {
+        UserDefaults.standard.set(false, forKey: sessionActiveKey)
     }
 
     // MARK: - Public

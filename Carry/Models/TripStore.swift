@@ -241,11 +241,11 @@ final class TripStore: ObservableObject {
         return didDelete
     }
 
-    private func save() {
+    private func save(_ caller: String = #function) {
         do {
             try context.save()
         } catch {
-            CarryLogger.shared.log(.persistFailed, context: "context=save")
+            CarryLogger.shared.log(.persistFailed, context: "caller=\(caller)")
         }
         fetchTrips()
     }
@@ -1651,7 +1651,9 @@ final class TripStore: ObservableObject {
             bundle.additionalDestinations = localResults.dropFirst().map {
                 DestinationEntry(countryCode: $0.code, latitude: $0.lat, longitude: $0.lon)
             }
-            try? context.save()
+            do { try context.save() } catch {
+                CarryLogger.shared.log(.persistFailed, context: "caller=updateCountryCode")
+            }
             return
         }
 
@@ -1688,7 +1690,9 @@ final class TripStore: ObservableObject {
                 bundle.additionalDestinations = Array(resolved.dropFirst()).map {
                     DestinationEntry(countryCode: $0.code, latitude: $0.lat, longitude: $0.lon)
                 }
-                try? self.context.save()
+                do { try self.context.save() } catch {
+                    CarryLogger.shared.log(.persistFailed, context: "caller=updateCountryCode_async")
+                }
             }
         }
     }
@@ -1714,7 +1718,9 @@ final class TripStore: ObservableObject {
             changed = true
         }
         if changed {
-            try? context.save()
+            do { try context.save() } catch {
+                CarryLogger.shared.log(.persistFailed, context: "caller=correctMisgecodedTrips")
+            }
             fetchTrips()
         }
     }
@@ -1773,7 +1779,9 @@ final class TripStore: ObservableObject {
                         bundle.latitude    = local.lat
                         bundle.longitude   = local.lon
                         bundle.additionalDestinations = extras
-                        try? self.context.save()
+                        do { try self.context.save() } catch {
+                            CarryLogger.shared.log(.persistFailed, context: "caller=geocodeMissingTrips_local")
+                        }
                     }
                     continue
                 }
@@ -1797,7 +1805,9 @@ final class TripStore: ObservableObject {
                     bundle.latitude  = primary.lat
                     bundle.longitude = primary.lon
                     bundle.additionalDestinations = extras
-                    try? self.context.save()
+                    do { try self.context.save() } catch {
+                        CarryLogger.shared.log(.persistFailed, context: "caller=geocodeMissingTrips_geocoder")
+                    }
                 }
             }
 
@@ -1816,7 +1826,9 @@ final class TripStore: ObservableObject {
                 await MainActor.run {
                     guard let bundle = self.bundle(for: trip.id) else { return }
                     bundle.additionalDestinations = extras
-                    try? self.context.save()
+                    do { try self.context.save() } catch {
+                        CarryLogger.shared.log(.persistFailed, context: "caller=geocodeMissingTrips_extras")
+                    }
                 }
             }
         }
