@@ -206,14 +206,18 @@ struct ItemPickerView: View {
 
     private var orderedSearchResults: [SearchResultItem] {
         guard !searchText.isEmpty else { return [] }
-        let query = normalizedForSearch(searchText)
-        return (customSearchResults + baseSearchResults).sorted { lhs, rhs in
+        let results: [SearchResultItem]
+        switch sourceMode {
+        case .preset:
+            results = baseSearchResults
+        case .myItems:
+            results = customSearchResults
+        }
+        return results.sorted { lhs, rhs in
+            let query = normalizedForSearch(searchText)
             let lhsRank = searchRank(for: lhs, query: query)
             let rhsRank = searchRank(for: rhs, query: query)
             if lhsRank != rhsRank { return lhsRank < rhsRank }
-            if lhs.source != rhs.source {
-                return lhs.source == .custom
-            }
             return lhs.title.localizedCaseInsensitiveCompare(rhs.title) == .orderedAscending
         }
     }
@@ -317,23 +321,28 @@ struct ItemPickerView: View {
                             .padding(.bottom, 0)
                         } else {
                             let searchResults = orderedSearchResults
-                            List {
-                                if searchResults.isEmpty {
-                                    searchEmptyState
-                                        .listRowBackground(Color.clear)
-                                        .listRowSeparator(.hidden)
-                                } else {
-                                    ForEach(searchResults) { result in
-                                        searchResultRow(result)
-                                            .listRowBackground(Color.clear)
-                                            .listRowSeparator(.hidden)
+                            ScrollView {
+                                VStack(alignment: .leading, spacing: 12) {
+                                    if searchResults.isEmpty {
+                                        searchEmptyState
+                                    } else {
+                                        searchResultsCard {
+                                            ForEach(searchResults) { result in
+                                                searchResultRow(result)
+
+                                                if result.id != searchResults.last?.id {
+                                                    Rectangle()
+                                                        .fill(Color.primary.opacity(colorScheme == .dark ? 0.05 : 0.03))
+                                                        .frame(height: 1)
+                                                        .padding(.leading, 56)
+                                                }
+                                            }
+                                        }
                                     }
                                 }
+                                .padding(.bottom, isCreateMode ? 96 : 24)
                             }
-                            .listStyle(.plain)
-                            .scrollContentBackground(.hidden)
-                            .background(Color.clear)
-                            .padding(.bottom, 0)
+                            .scrollDismissesKeyboard(.interactively)
                         }
                     } else {
                         ScrollView {
@@ -347,9 +356,16 @@ struct ItemPickerView: View {
                                     if searchResults.isEmpty {
                                         searchEmptyState
                                     } else {
-                                        VStack(spacing: 0) {
+                                        searchResultsCard {
                                             ForEach(searchResults) { result in
                                                 searchResultRow(result)
+
+                                                if result.id != searchResults.last?.id {
+                                                    Rectangle()
+                                                        .fill(Color.primary.opacity(colorScheme == .dark ? 0.05 : 0.03))
+                                                        .frame(height: 1)
+                                                        .padding(.leading, 56)
+                                                }
                                             }
                                         }
                                     }
@@ -472,35 +488,22 @@ struct ItemPickerView: View {
         .padding(.horizontal, 16)
     }
 
-    private func searchResultSection(titleKey: String, results: [SearchResultItem]) -> some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text(LocalizedStringKey(titleKey))
-                .font(.caption.weight(.semibold))
-                .foregroundStyle(.secondary)
-                .padding(.horizontal, 16)
+    private func searchResultsCard<Content: View>(@ViewBuilder content: () -> Content) -> some View {
+        let isDarkMode = colorScheme == .dark
 
-            VStack(spacing: 0) {
-                ForEach(results) { result in
-                    searchResultRow(result)
-                    if result.id != results.last?.id {
-                        Rectangle()
-                            .fill(Color.primary.opacity(colorScheme == .dark ? 0.05 : 0.03))
-                            .frame(height: 1)
-                            .padding(.leading, 56)
-                    }
-                }
-            }
-            .background(
-                RoundedRectangle(cornerRadius: 16, style: .continuous)
-                    .fill(Color(UIColor.systemBackground).opacity(colorScheme == .dark ? 0.52 : 0.66))
-            )
-            .overlay(
-                RoundedRectangle(cornerRadius: 16, style: .continuous)
-                    .strokeBorder(Color.primary.opacity(colorScheme == .dark ? 0.05 : 0.03), lineWidth: 1)
-            )
-            .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
-            .padding(.horizontal, 16)
+        return VStack(spacing: 0) {
+            content()
         }
+        .background(
+            RoundedRectangle(cornerRadius: 18, style: .continuous)
+                .fill(Color(UIColor.systemBackground).opacity(isDarkMode ? 0.82 : 0.88))
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 18, style: .continuous)
+                .strokeBorder(Color.primary.opacity(isDarkMode ? 0.05 : 0.03), lineWidth: 1)
+        )
+        .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+        .padding(.horizontal, 16)
     }
 
     private func searchResultRow(_ result: SearchResultItem) -> some View {
@@ -554,20 +557,9 @@ struct ItemPickerView: View {
                                         .fill(Color(UIColor.tertiarySystemFill))
                                 )
                         }
-                        if result.source == .custom {
-                            Text(LocalizedStringKey("myitems.search.custom_tag"))
-                                .font(.caption2.weight(.semibold))
-                                .foregroundStyle(.secondary)
-                                .padding(.horizontal, 8)
-                                .padding(.vertical, 3)
-                                .background(
-                                    Capsule(style: .continuous)
-                                        .fill(Color(UIColor.tertiarySystemFill))
-                                )
-                        }
                         Spacer()
                     }
-                    if let category = result.category, !category.isEmpty {
+                    if result.source == .custom, let category = result.category, !category.isEmpty {
                         Text(LocalizedStringKey(category))
                             .font(.caption)
                             .foregroundStyle(.secondary)
@@ -575,7 +567,7 @@ struct ItemPickerView: View {
                 }
                 Spacer()
             }
-            .frame(height: 48)
+            .frame(height: 44)
             .opacity(result.isAlreadyAdded ? 0.72 : 1.0)
             .contentShape(Rectangle())
         }
