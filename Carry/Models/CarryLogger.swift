@@ -20,6 +20,13 @@ final class CarryLogger {
         case tripDuplicated         = "trip_duplicated"
         case tripOpened             = "trip_opened"
         case tripInfoOpened         = "trip_info_opened"
+        // 物品选择器
+        case pickerOpened           = "picker_opened"
+        case pickerCategoryExpanded = "picker_category_expanded"
+        case pickerSearchUsed       = "picker_search_used"
+        case pickerSourceSwitched   = "picker_source_switched"
+        case pickerSelectAllTapped  = "picker_select_all_tapped"
+        case pickerConfirmed        = "picker_confirmed"
         // 物品
         case itemChecked            = "item_checked"
         case itemUnchecked          = "item_unchecked"

@@ -65,6 +65,7 @@ struct ItemPickerView: View {
     @State private var didApplyInitialSource = false
     @State private var showMyItemAddSheet = false
     @State private var selectedMyItemCollection: String = "Default"
+    @State private var didLogSearch = false
 
     private var hasSelection: Bool {
         !selectedItems.isEmpty || !selectedMyItemIDs.isEmpty
@@ -413,6 +414,14 @@ struct ItemPickerView: View {
             if !collections.contains(selectedMyItemCollection) {
                 selectedMyItemCollection = collections.first ?? "Default"
             }
+            let modeLabel: String
+            if case .create = mode { modeLabel = "create" } else { modeLabel = "merge" }
+            CarryLogger.shared.log(.pickerOpened, context: "mode=\(modeLabel)")
+        }
+        .onChange(of: searchText) { _, newValue in
+            guard !newValue.isEmpty, !didLogSearch else { return }
+            didLogSearch = true
+            CarryLogger.shared.log(.pickerSearchUsed, context: "source=\(sourceMode.rawValue)")
         }
     }
 
@@ -606,6 +615,7 @@ struct ItemPickerView: View {
                 expandedCategories.removeAll()
                 isSearchFocused = false
                 hideKeyboard()
+                CarryLogger.shared.log(.pickerSourceSwitched, context: "to=preset")
             }
 
             sourceSegment(
@@ -617,6 +627,7 @@ struct ItemPickerView: View {
                 expandedCategories.removeAll()
                 isSearchFocused = false
                 hideKeyboard()
+                CarryLogger.shared.log(.pickerSourceSwitched, context: "to=myitems")
             }
         }
         .padding(5)
@@ -905,6 +916,7 @@ struct ItemPickerView: View {
                 expandedCategories.remove(category.name)
             } else {
                 expandedCategories.insert(category.name)
+                CarryLogger.shared.log(.pickerCategoryExpanded, context: "category=\(category.name)")
             }
         } label: {
             HStack(spacing: 12) {
@@ -950,10 +962,12 @@ struct ItemPickerView: View {
                     for item in category.items {
                         selectedItems.remove(PickerItemID(category: category.name, item: item))
                     }
+                    CarryLogger.shared.log(.pickerSelectAllTapped, context: "category=\(category.name) action=deselect")
                 } else {
                     for item in category.items {
                         selectedItems.insert(PickerItemID(category: category.name, item: item))
                     }
+                    CarryLogger.shared.log(.pickerSelectAllTapped, context: "category=\(category.name) action=select")
                 }
             } label: {
                 HStack {
@@ -1048,6 +1062,12 @@ struct ItemPickerView: View {
     private func confirmSelection() {
         let sections = combinedSelectedSections()
         guard !sections.isEmpty else { return }
+        let presetCount = selectedItems.count
+        let myItemCount = selectedMyItemIDs.count
+        let sourceLabel = presetCount > 0 && myItemCount > 0 ? "mixed"
+            : presetCount > 0 ? "preset" : "myitems"
+        CarryLogger.shared.log(.pickerConfirmed,
+            context: "items=\(presetCount + myItemCount) source=\(sourceLabel)")
 
         switch mode {
         case .create(let info):
