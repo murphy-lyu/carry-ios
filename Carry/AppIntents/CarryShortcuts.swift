@@ -88,7 +88,7 @@ struct CarryAppShortcuts: AppShortcutsProvider {
                 "Plan a trip with \(.applicationName)"
             ],
             shortTitle: LocalizedStringResource("New Trip"),
-            systemImageName: "plus.circle.fill"
+            systemImageName: "plus"
         )
         AppShortcut(
             intent: OpenNearestTripIntent(),
@@ -98,7 +98,7 @@ struct CarryAppShortcuts: AppShortcutsProvider {
                 "Open my trip in \(.applicationName)"
             ],
             shortTitle: LocalizedStringResource("Nearest Trip"),
-            systemImageName: "airplane.departure"
+            systemImageName: "suitcase.fill"
         )
         AppShortcut(
             intent: ShowFootprintIntent(),
