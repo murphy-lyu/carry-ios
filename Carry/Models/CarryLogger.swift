@@ -152,6 +152,7 @@ final class CarryLogger {
         saveEntries(entries)
     }
 
+    @MainActor
     func exportLog(tripCount: Int, totalItemCount: Int) -> String {
         let device = UIDevice.current
         let dict = Bundle.main.infoDictionary
