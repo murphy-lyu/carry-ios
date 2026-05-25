@@ -40,6 +40,7 @@ struct CreateTripIntent: AppIntent {
     static var description = IntentDescription("shortcut.create_trip.description")
     static var openAppWhenRun: Bool = true
 
+    @MainActor
     func perform() async throws -> some IntentResult {
         UserDefaults.standard.setShortcutCreateTrip()
         return .result()
@@ -53,6 +54,7 @@ struct OpenNearestTripIntent: AppIntent {
     static var description = IntentDescription("shortcut.nearest_trip.description")
     static var openAppWhenRun: Bool = true
 
+    @MainActor
     func perform() async throws -> some IntentResult {
         if let trip = try nearestTrip() {
             UserDefaults.standard.setShortcutOpenTrip(trip.id)
@@ -70,6 +72,7 @@ struct ShowFootprintIntent: AppIntent {
     static var description = IntentDescription("shortcut.footprint.description")
     static var openAppWhenRun: Bool = true
 
+    @MainActor
     func perform() async throws -> some IntentResult {
         UserDefaults.standard.set("show_map", forKey: "carry_shortcut_action")
         return .result()
