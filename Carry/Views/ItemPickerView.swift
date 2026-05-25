@@ -979,9 +979,11 @@ struct ItemPickerView: View {
                         Capsule(style: .continuous)
                             .fill(Color(UIColor.tertiarySystemFill))
                     )
-                Image(systemName: isExpanded ? "chevron.up" : "chevron.down")
+                Image(systemName: "chevron.down")
                     .font(.system(size: 12, weight: .medium))
                     .foregroundColor(.secondary)
+                    .rotationEffect(.degrees(isExpanded ? 180 : 0))
+                    .animation(.easeInOut(duration: 0.2), value: isExpanded)
             }
             .padding(.horizontal, 16)
             .frame(height: 52)
