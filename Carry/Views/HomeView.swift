@@ -127,7 +127,25 @@ struct HomeView: View {
         max(0, expandedSheetHeight - 144)
     }
 
-    /// 0 = fully expanded, 1 = fully collapsed (includes live drag)
+    /// Rubber-band resistance past the two sheet endpoints.
+    /// Uses the same coefficient (0.55) as UIScrollView's own over-scroll formula,
+    /// so the feel matches native iOS behaviour.
+    private func rubberBandOffset(_ raw: CGFloat) -> CGFloat {
+        let lo: CGFloat = 0
+        let hi = collapsedSheetOffset
+        guard hi > lo else { return raw }
+        if raw < lo {
+            let over = lo - raw
+            return lo - over * 0.55 / (1 + over / hi)
+        } else if raw > hi {
+            let over = raw - hi
+            return hi + over * 0.55 / (1 + over / hi)
+        }
+        return raw
+    }
+
+    /// 0 = fully expanded, 1 = fully collapsed (includes live drag).
+    /// Always clamped to [0, 1] — rubber-band only affects the visual offset.
     private var sheetProgress: CGFloat {
         guard collapsedSheetOffset > 0 else { return 0 }
         let raw = sheetOffset + capsuleDrag + listDrag
@@ -396,7 +414,7 @@ struct HomeView: View {
             .compositingGroup()
             .clipShape(UnevenRoundedRectangle(topLeadingRadius: sheetCornerRadius, bottomLeadingRadius: 0, bottomTrailingRadius: 0, topTrailingRadius: sheetCornerRadius, style: .continuous))
             .scaleEffect(x: sheetScaleX, y: 1.0, anchor: .bottom)
-            .offset(y: min(max(0, sheetOffset + capsuleDrag + listDrag), collapsedSheetOffset))
+            .offset(y: rubberBandOffset(sheetOffset + capsuleDrag + listDrag))
     }
         .ignoresSafeArea(edges: .bottom)
     }
@@ -459,7 +477,10 @@ struct HomeView: View {
             .onEnded { v in
                 let velocity = v.velocity.height
                 let translation = v.translation.height
-                let currentOffset = min(max(0, sheetOffset + translation), collapsedSheetOffset)
+                // Use rubber-banded position as the real "where we are" for spring initial velocity,
+                // but clamp for the snap decision so threshold logic isn't affected.
+                let rawOffset = sheetOffset + translation
+                let currentOffset = min(max(0, rawOffset), collapsedSheetOffset)
                 let shouldCollapse: Bool
                 if velocity > 650 || translation > collapsedSheetOffset * 0.46 {
                     shouldCollapse = true
@@ -679,7 +700,7 @@ struct HomeView: View {
                     } else {
                         shouldCollapse = !(velocity < -350 || drag < -70)
                     }
-                    let currentOffset = min(max(0, (sheetOffset?.wrappedValue ?? 0) + drag), collapsedSheetOffset)
+                    let currentOffset = min(max(0, (sheetOffset?.wrappedValue ?? 0) + drag), collapsedSheetOffset)  // clamped for travel calculation
                     let target: CGFloat = shouldCollapse ? collapsedSheetOffset : 0
                     let travel = target - currentOffset
                     let normalizedV = abs(travel) < 1 ? 0 : max(-2.5, min(2.5, velocity / travel))
