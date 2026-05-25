@@ -1647,13 +1647,13 @@ final class TripStore: ObservableObject {
                 if geocodedCount > 0 { try? await Task.sleep(for: .milliseconds(400)) }
                 geocodedCount += 1
                 guard let placemark = try? await geocoder.geocodeAddressString(token).first else {
-                    CarryLogger.shared.log(.geocodeFailed, context: "city=\(token)")
+                    await MainActor.run { CarryLogger.shared.log(.geocodeFailed, context: "city=\(token)") }
                     continue
                 }
                 let code = placemark.isoCountryCode ?? ""
                 if let loc = placemark.location, loc.coordinate.latitude != 0 {
                     resolved.append((code, loc.coordinate.latitude, loc.coordinate.longitude))
-                } else if !code.isEmpty, let centroid = coordinatesForCountry(code) {
+                } else if !code.isEmpty, let centroid = countryCentroids[code.uppercased()] {
                     resolved.append((code, centroid.lat, centroid.lon))
                 }
             }
@@ -1732,13 +1732,13 @@ final class TripStore: ObservableObject {
                 if geocodedCount > 0 { try? await Task.sleep(for: .milliseconds(400)) }
                 geocodedCount += 1
                 guard let placemark = try? await geocoder.geocodeAddressString(token).first else {
-                    CarryLogger.shared.log(.geocodeFailed, context: "city=\(token)")
+                    await MainActor.run { CarryLogger.shared.log(.geocodeFailed, context: "city=\(token)") }
                     return nil
                 }
                 let code = placemark.isoCountryCode ?? ""
                 if let loc = placemark.location, loc.coordinate.latitude != 0 {
                     return (code, loc.coordinate.latitude, loc.coordinate.longitude)
-                } else if !code.isEmpty, let centroid = coordinatesForCountry(code) {
+                } else if !code.isEmpty, let centroid = countryCentroids[code.uppercased()] {
                     return (code, centroid.lat, centroid.lon)
                 }
                 return nil
