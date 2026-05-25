@@ -1157,7 +1157,7 @@ struct ItemPickerView: View {
             isConfirmingSelection = true
             showToast(NSLocalizedString("itempicker.toast.added_to_list", comment: ""))
             Task { @MainActor in
-                try? await Task.sleep(for: .milliseconds(600))
+                try? await Task.sleep(for: .milliseconds(500))
                 router.path.removeLast()
                 isConfirmingSelection = false
             }

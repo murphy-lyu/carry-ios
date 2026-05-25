@@ -71,6 +71,7 @@ final class CarryLogger {
         case abnormalTermination    = "abnormal_termination"
         // 地理编码
         case geocodeFailed          = "geocode_failed"
+        case geocodeResolved        = "geocode_resolved"
         // 保存失败
         case tripSaveFailed         = "trip_save_failed"
         case tripEditSaveFailed     = "trip_edit_save_failed"

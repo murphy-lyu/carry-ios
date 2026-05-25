@@ -1654,6 +1654,8 @@ final class TripStore: ObservableObject {
             do { try context.save() } catch {
                 CarryLogger.shared.log(.persistFailed, context: "caller=updateCountryCode")
             }
+            CarryLogger.shared.log(.geocodeResolved,
+                context: "tokens=\(tokens.count) resolved=\(localResults.count) city=\(city)")
             return
         }
 
@@ -1672,7 +1674,10 @@ final class TripStore: ObservableObject {
                 // Rate limit: respect CLGeocoder's ~1 req/s recommendation
                 if geocodedCount > 0 { try? await Task.sleep(for: .milliseconds(400)) }
                 geocodedCount += 1
-                guard let placemark = try? await geocoder.geocodeAddressString(token).first else { continue }
+                guard let placemark = try? await geocoder.geocodeAddressString(token).first else {
+                    CarryLogger.shared.log(.geocodeFailed, context: "city=\(token)")
+                    continue
+                }
                 let code = placemark.isoCountryCode ?? ""
                 if let loc = placemark.location, loc.coordinate.latitude != 0 {
                     resolved.append((code, loc.coordinate.latitude, loc.coordinate.longitude))
@@ -1693,6 +1698,8 @@ final class TripStore: ObservableObject {
                 do { try self.context.save() } catch {
                     CarryLogger.shared.log(.persistFailed, context: "caller=updateCountryCode_async")
                 }
+                CarryLogger.shared.log(.geocodeResolved,
+                    context: "tokens=\(tokens.count) resolved=\(resolved.count) city=\(city)")
             }
         }
     }
@@ -1752,7 +1759,10 @@ final class TripStore: ObservableObject {
             func geocodeToken(_ token: String) async -> (code: String, lat: Double, lon: Double)? {
                 if geocodedCount > 0 { try? await Task.sleep(for: .milliseconds(400)) }
                 geocodedCount += 1
-                guard let placemark = try? await geocoder.geocodeAddressString(token).first else { return nil }
+                guard let placemark = try? await geocoder.geocodeAddressString(token).first else {
+                    CarryLogger.shared.log(.geocodeFailed, context: "city=\(token)")
+                    return nil
+                }
                 let code = placemark.isoCountryCode ?? ""
                 if let loc = placemark.location, loc.coordinate.latitude != 0 {
                     return (code, loc.coordinate.latitude, loc.coordinate.longitude)
