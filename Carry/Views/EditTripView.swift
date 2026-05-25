@@ -125,13 +125,17 @@ struct EditTripView: View {
             }
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
-                    Button("Cancel") { dismiss() }
+                    Button("Cancel") {
+                        CarryLogger.shared.log(.tripEditCancelled)
+                        dismiss()
+                    }
                 }
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button {
                         guard !isSaved else { return }
                         hideKeyboard()
                         store.updateTripInfo(tripId: tripId, info: info)
+                        CarryLogger.shared.log(.tripEditSaved)
                         UINotificationFeedbackGenerator().notificationOccurred(.success)
                         withAnimation(.easeInOut(duration: 0.2)) { isSaved = true }
                         Task {

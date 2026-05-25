@@ -20,6 +20,32 @@ final class CarryLogger {
         case tripDuplicated         = "trip_duplicated"
         case tripOpened             = "trip_opened"
         case tripInfoOpened         = "trip_info_opened"
+        case tripEditSaved          = "trip_edit_saved"
+        case tripEditCancelled      = "trip_edit_cancelled"
+        case tripCompleted          = "trip_completed"
+        case tripUncompleted        = "trip_uncompleted"
+        // 分类
+        case sectionAdded           = "section_added"
+        case sectionDeleted         = "section_deleted"
+        case sectionRenamed         = "section_renamed"
+        // My Items
+        case myItemAdded            = "my_item_added"
+        case myItemDeleted          = "my_item_deleted"
+        // 惊喜 / 场景卡片
+        case surpriseItemAdded      = "surprise_item_added"
+        case surpriseItemDismissed  = "surprise_item_dismissed"
+        case sceneCardDismissed     = "scene_card_dismissed"
+        // 提醒
+        case reminderAdded          = "reminder_added"
+        case reminderDeleted        = "reminder_deleted"
+        case reminderPermissionDenied = "reminder_permission_denied"
+        // 应用图标
+        case iconSwitched           = "icon_switched"
+        case iconSwitchFailed       = "icon_switch_failed"
+        // 数据备份 / 恢复
+        case backupExported         = "backup_exported"
+        case backupRestored         = "backup_restored"
+        case backupRestoreFailed    = "backup_restore_failed"
         // 物品选择器
         case pickerOpened           = "picker_opened"
         case pickerCategoryExpanded = "picker_category_expanded"
@@ -70,6 +96,7 @@ final class CarryLogger {
         .tripDataEmpty, .tripSaveFailed, .tripEditSaveFailed,
         .itemAddFailed, .itemDeleteFailed, .orphanTrip, .orphanSection,
         .sortIndexOutOfBounds, .apiTimeout, .apiError,
+        .iconSwitchFailed, .backupRestoreFailed, .reminderPermissionDenied,
     ]
 
     private init() {

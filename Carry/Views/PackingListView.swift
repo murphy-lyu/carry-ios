@@ -144,6 +144,11 @@ struct PackingListView: View {
                         }
                     }
                     Button {
+                        router.path.append(CreationRoute.addItems(tripId))
+                    } label: {
+                        Label("packing.menu.add_from_library", systemImage: "shippingbox")
+                    }
+                    Button {
                         showReorderSheet = true
                     } label: {
                         Label("Edit sections", systemImage: "arrow.up.arrow.down")
@@ -752,6 +757,7 @@ struct PackingListView: View {
         .overlay(alignment: .trailing) {
             Button {
                 store.dismissSceneCard(tripId: tripId)
+                CarryLogger.shared.log(.sceneCardDismissed)
                 withAnimation(.easeInOut(duration: 0.25)) {
                     showSceneCardDismissHintBanner = true
                 }
@@ -870,6 +876,7 @@ struct PackingListView: View {
             Spacer(minLength: 8)
             Button {
                 store.addSurpriseItem(tripId: tripId, item: item)
+                CarryLogger.shared.log(.surpriseItemAdded, context: "item=\(item.name)")
                 UIImpactFeedbackGenerator(style: .light).impactOccurred()
             } label: {
                 Text("Add")
@@ -886,6 +893,7 @@ struct PackingListView: View {
         .swipeActions(edge: .trailing, allowsFullSwipe: true) {
             Button {
                 store.dismissSurpriseItem(tripId: tripId, itemName: item.name)
+                CarryLogger.shared.log(.surpriseItemDismissed, context: "item=\(item.name)")
             } label: {
                 Label("Dismiss", systemImage: "xmark")
             }

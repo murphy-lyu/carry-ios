@@ -282,10 +282,15 @@ struct AppIconView: View {
         UIApplication.shared.setAlternateIconName(iconName) { error in
             DispatchQueue.main.async {
                 isChanging = false
-                if error == nil {
+                if let error {
+                    CarryLogger.shared.log(.iconSwitchFailed,
+                        context: "icon=\(iconName ?? "default") error=\(error.localizedDescription)")
+                } else {
                     withAnimation {
                         currentIconName = iconName
                     }
+                    CarryLogger.shared.log(.iconSwitched,
+                        context: "icon=\(iconName ?? "default")")
                 }
             }
         }

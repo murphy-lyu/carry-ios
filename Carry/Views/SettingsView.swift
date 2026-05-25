@@ -154,6 +154,7 @@ struct SettingsView: View {
             activityVC.popoverPresentationController?.sourceView = rootVC.view
             rootVC.present(activityVC, animated: true)
         }
+        CarryLogger.shared.log(.backupExported)
     }
 
     private var settingsGroupFill: Color {
@@ -299,8 +300,12 @@ struct SettingsView: View {
                                     do {
                                         let result = try store.restoreFromData(data)
                                         showToast(restoreSuccessMessage(count: result.trips))
+                                        CarryLogger.shared.log(.backupRestored,
+                                            context: "trips=\(result.trips) myItems=\(result.myItems)")
                                     } catch {
                                         showToast(error.localizedDescription)
+                                        CarryLogger.shared.log(.backupRestoreFailed,
+                                            context: "error=\(error.localizedDescription)")
                                     }
                                     pendingImportData = nil
                                 } label: {

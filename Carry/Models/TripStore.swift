@@ -401,7 +401,7 @@ final class TripStore: ObservableObject {
             }
         }
         save()
-        CarryLogger.shared.log(.itemChecked, context: "bulk=all")
+        CarryLogger.shared.log(.tripCompleted)
     }
 
     func markTripUncompleted(tripId: UUID) {
@@ -412,7 +412,7 @@ final class TripStore: ObservableObject {
             }
         }
         save()
-        CarryLogger.shared.log(.itemUnchecked, context: "bulk=all")
+        CarryLogger.shared.log(.tripUncompleted)
     }
 
     @discardableResult
@@ -622,6 +622,7 @@ final class TripStore: ObservableObject {
         if trip.sections == nil { trip.sections = [] }
         trip.sections?.append(section)
         save()
+        CarryLogger.shared.log(.sectionAdded)
         return section
     }
 
@@ -631,6 +632,7 @@ final class TripStore: ObservableObject {
         context.delete(section)
         trip.sections?.removeAll { $0.id == sectionId }
         save()
+        CarryLogger.shared.log(.sectionDeleted)
     }
 
     func renameSection(tripId: UUID, sectionId: UUID, newName: String) {
@@ -638,6 +640,7 @@ final class TripStore: ObservableObject {
               let section = trip.safeSections.first(where: { $0.id == sectionId }) else { return }
         section.title = newName
         save()
+        CarryLogger.shared.log(.sectionRenamed)
     }
 
     func insertPendingSections(tripId: UUID, sections: [PackingSection]) {
@@ -809,6 +812,7 @@ final class TripStore: ObservableObject {
         )
         context.insert(item)
         save()
+        CarryLogger.shared.log(.myItemAdded)
         return item
     }
 
@@ -858,6 +862,7 @@ final class TripStore: ObservableObject {
         guard let item = myItems.first(where: { $0.id == id }) else { return }
         context.delete(item)
         save()
+        CarryLogger.shared.log(.myItemDeleted)
     }
 
     func reorderMyItems(newOrder: [UUID]) {

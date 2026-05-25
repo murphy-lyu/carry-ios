@@ -53,10 +53,14 @@ struct TripReminderSheet: View {
             }
             .task {
                 notifStatus = await NotificationManager.authorizationStatus()
+                if notifStatus == .denied {
+                    CarryLogger.shared.log(.reminderPermissionDenied, context: "context=sheet_open")
+                }
             }
             .sheet(isPresented: $showPicker) {
                 ReminderPickerSheet(bundle: bundle) { config in
                     store.addReminder(config, tripId: bundle.id)
+                    CarryLogger.shared.log(.reminderAdded)
                 }
             }
         }
@@ -100,6 +104,7 @@ struct TripReminderSheet: View {
                     },
                     onDelete: {
                         store.removeReminder(configId: config.id, tripId: bundle.id)
+                        CarryLogger.shared.log(.reminderDeleted)
                     }
                 )
                 if index < configs.count - 1 {
