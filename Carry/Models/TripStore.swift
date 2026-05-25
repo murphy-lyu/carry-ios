@@ -1639,7 +1639,7 @@ final class TripStore: ObservableObject {
         "YE": (15.55, 48.52), "ZM": (-13.13, 27.85), "ZW": (-19.02, 29.15),
     ]
 
-    private func coordinatesForCountry(_ code: String) -> (lat: Double, lon: Double)? {
+    nonisolated private func coordinatesForCountry(_ code: String) -> (lat: Double, lon: Double)? {
         Self.countryCentroids[code.uppercased()]
     }
 
