@@ -23288,6 +23288,133 @@
         }
       }
     }
+  ,
+    "shortcut.create_trip.title": {
+      "extractionState": "manual",
+      "localizations": {
+        "en":    { "stringUnit": { "state": "translated", "value": "New Trip" } },
+        "zh-Hans": { "stringUnit": { "state": "translated", "value": "新建行程" } },
+        "zh-Hant": { "stringUnit": { "state": "translated", "value": "新增行程" } },
+        "ja":    { "stringUnit": { "state": "translated", "value": "旅行を作成" } },
+        "ko":    { "stringUnit": { "state": "translated", "value": "새 여행 만들기" } },
+        "fr":    { "stringUnit": { "state": "translated", "value": "Nouveau voyage" } },
+        "de":    { "stringUnit": { "state": "translated", "value": "Neue Reise" } },
+        "es":    { "stringUnit": { "state": "translated", "value": "Nuevo viaje" } },
+        "pt-BR": { "stringUnit": { "state": "translated", "value": "Nova viagem" } }
+      }
+    },
+    "shortcut.create_trip.short_title": {
+      "extractionState": "manual",
+      "localizations": {
+        "en":    { "stringUnit": { "state": "translated", "value": "New Trip" } },
+        "zh-Hans": { "stringUnit": { "state": "translated", "value": "新建行程" } },
+        "zh-Hant": { "stringUnit": { "state": "translated", "value": "新增行程" } },
+        "ja":    { "stringUnit": { "state": "translated", "value": "旅行を作成" } },
+        "ko":    { "stringUnit": { "state": "translated", "value": "새 여행" } },
+        "fr":    { "stringUnit": { "state": "translated", "value": "Nouveau voyage" } },
+        "de":    { "stringUnit": { "state": "translated", "value": "Neue Reise" } },
+        "es":    { "stringUnit": { "state": "translated", "value": "Nuevo viaje" } },
+        "pt-BR": { "stringUnit": { "state": "translated", "value": "Nova viagem" } }
+      }
+    },
+    "shortcut.create_trip.description": {
+      "extractionState": "manual",
+      "localizations": {
+        "en":    { "stringUnit": { "state": "translated", "value": "Start planning a new trip in Carry." } },
+        "zh-Hans": { "stringUnit": { "state": "translated", "value": "在启程中开始规划一次新行程。" } },
+        "zh-Hant": { "stringUnit": { "state": "translated", "value": "在啟程中開始規劃一次新行程。" } },
+        "ja":    { "stringUnit": { "state": "translated", "value": "Carryで新しい旅行の計画を始めます。" } },
+        "ko":    { "stringUnit": { "state": "translated", "value": "Carry에서 새 여행 계획을 시작합니다." } },
+        "fr":    { "stringUnit": { "state": "translated", "value": "Commencez à planifier un nouveau voyage dans Carry." } },
+        "de":    { "stringUnit": { "state": "translated", "value": "Starten Sie die Planung einer neuen Reise in Carry." } },
+        "es":    { "stringUnit": { "state": "translated", "value": "Empieza a planificar un nuevo viaje en Carry." } },
+        "pt-BR": { "stringUnit": { "state": "translated", "value": "Comece a planejar uma nova viagem no Carry." } }
+      }
+    },
+    "shortcut.nearest_trip.title": {
+      "extractionState": "manual",
+      "localizations": {
+        "en":    { "stringUnit": { "state": "translated", "value": "Nearest Trip" } },
+        "zh-Hans": { "stringUnit": { "state": "translated", "value": "最近行程" } },
+        "zh-Hant": { "stringUnit": { "state": "translated", "value": "最近行程" } },
+        "ja":    { "stringUnit": { "state": "translated", "value": "直近の旅行" } },
+        "ko":    { "stringUnit": { "state": "translated", "value": "가장 가까운 여행" } },
+        "fr":    { "stringUnit": { "state": "translated", "value": "Prochain voyage" } },
+        "de":    { "stringUnit": { "state": "translated", "value": "Nächste Reise" } },
+        "es":    { "stringUnit": { "state": "translated", "value": "Próximo viaje" } },
+        "pt-BR": { "stringUnit": { "state": "translated", "value": "Próxima viagem" } }
+      }
+    },
+    "shortcut.nearest_trip.short_title": {
+      "extractionState": "manual",
+      "localizations": {
+        "en":    { "stringUnit": { "state": "translated", "value": "Nearest Trip" } },
+        "zh-Hans": { "stringUnit": { "state": "translated", "value": "最近行程" } },
+        "zh-Hant": { "stringUnit": { "state": "translated", "value": "最近行程" } },
+        "ja":    { "stringUnit": { "state": "translated", "value": "直近の旅行" } },
+        "ko":    { "stringUnit": { "state": "translated", "value": "가까운 여행" } },
+        "fr":    { "stringUnit": { "state": "translated", "value": "Prochain voyage" } },
+        "de":    { "stringUnit": { "state": "translated", "value": "Nächste Reise" } },
+        "es":    { "stringUnit": { "state": "translated", "value": "Próximo viaje" } },
+        "pt-BR": { "stringUnit": { "state": "translated", "value": "Próxima viagem" } }
+      }
+    },
+    "shortcut.nearest_trip.description": {
+      "extractionState": "manual",
+      "localizations": {
+        "en":    { "stringUnit": { "state": "translated", "value": "Open the trip with the closest departure date." } },
+        "zh-Hans": { "stringUnit": { "state": "translated", "value": "打开出发日期最近的那次行程。" } },
+        "zh-Hant": { "stringUnit": { "state": "translated", "value": "開啟出發日期最近的行程。" } },
+        "ja":    { "stringUnit": { "state": "translated", "value": "出発日が最も近い旅行を開きます。" } },
+        "ko":    { "stringUnit": { "state": "translated", "value": "출발일이 가장 가까운 여행을 엽니다." } },
+        "fr":    { "stringUnit": { "state": "translated", "value": "Ouvrez le voyage dont la date de départ est la plus proche." } },
+        "de":    { "stringUnit": { "state": "translated", "value": "Öffnet die Reise mit dem nächsten Abreisedatum." } },
+        "es":    { "stringUnit": { "state": "translated", "value": "Abre el viaje con la fecha de salida más próxima." } },
+        "pt-BR": { "stringUnit": { "state": "translated", "value": "Abre a viagem com a data de partida mais próxima." } }
+      }
+    },
+    "shortcut.continue_packing.title": {
+      "extractionState": "manual",
+      "localizations": {
+        "en":    { "stringUnit": { "state": "translated", "value": "Packing List" } },
+        "zh-Hans": { "stringUnit": { "state": "translated", "value": "行李清单" } },
+        "zh-Hant": { "stringUnit": { "state": "translated", "value": "行李清單" } },
+        "ja":    { "stringUnit": { "state": "translated", "value": "パッキングリスト" } },
+        "ko":    { "stringUnit": { "state": "translated", "value": "짐 목록" } },
+        "fr":    { "stringUnit": { "state": "translated", "value": "Liste de bagages" } },
+        "de":    { "stringUnit": { "state": "translated", "value": "Packliste" } },
+        "es":    { "stringUnit": { "state": "translated", "value": "Lista de equipaje" } },
+        "pt-BR": { "stringUnit": { "state": "translated", "value": "Lista de bagagem" } }
+      }
+    },
+    "shortcut.continue_packing.short_title": {
+      "extractionState": "manual",
+      "localizations": {
+        "en":    { "stringUnit": { "state": "translated", "value": "Packing List" } },
+        "zh-Hans": { "stringUnit": { "state": "translated", "value": "行李清单" } },
+        "zh-Hant": { "stringUnit": { "state": "translated", "value": "行李清單" } },
+        "ja":    { "stringUnit": { "state": "translated", "value": "パッキングリスト" } },
+        "ko":    { "stringUnit": { "state": "translated", "value": "짐 목록" } },
+        "fr":    { "stringUnit": { "state": "translated", "value": "Liste de bagages" } },
+        "de":    { "stringUnit": { "state": "translated", "value": "Packliste" } },
+        "es":    { "stringUnit": { "state": "translated", "value": "Lista de equipaje" } },
+        "pt-BR": { "stringUnit": { "state": "translated", "value": "Lista de bagagem" } }
+      }
+    },
+    "shortcut.continue_packing.description": {
+      "extractionState": "manual",
+      "localizations": {
+        "en":    { "stringUnit": { "state": "translated", "value": "Jump back to the last trip you were packing for." } },
+        "zh-Hans": { "stringUnit": { "state": "translated", "value": "快速返回上次整理行李的行程。" } },
+        "zh-Hant": { "stringUnit": { "state": "translated", "value": "快速返回上次整理行李的行程。" } },
+        "ja":    { "stringUnit": { "state": "translated", "value": "最後に荷造りしていた旅行に戻ります。" } },
+        "ko":    { "stringUnit": { "state": "translated", "value": "마지막으로 짐을 쌌던 여행으로 돌아갑니다." } },
+        "fr":    { "stringUnit": { "state": "translated", "value": "Revenez au dernier voyage pour lequel vous faisiez vos bagages." } },
+        "de":    { "stringUnit": { "state": "translated", "value": "Kehren Sie zur letzten Reise zurück, für die Sie gepackt haben." } },
+        "es":    { "stringUnit": { "state": "translated", "value": "Vuelve al último viaje para el que estabas haciendo la maleta." } },
+        "pt-BR": { "stringUnit": { "state": "translated", "value": "Volte para a última viagem para a qual estava fazendo as malas." } }
+      }
+    }
   },
   "version": "1.0"
 }

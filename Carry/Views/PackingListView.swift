@@ -213,6 +213,8 @@ struct PackingListView: View {
         }
         .onAppear {
             CarryLogger.shared.log(.tripOpened)
+            // Remember this trip so "Continue Packing" shortcut can reopen it.
+            UserDefaults.standard.set(tripId.uuidString, forKey: "carry_last_opened_trip")
             if let b = bundle, b.sections == nil {
                 CarryLogger.shared.log(.tripDataEmpty, context: "context=onAppear")
             }

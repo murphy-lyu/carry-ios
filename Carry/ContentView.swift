@@ -92,6 +92,12 @@ struct ContentView: View {
             if phase == .active {
                 applyStartupResetIfNeeded()
                 store.refresh()
+                // Also handle shortcuts when returning from background
+                // (applyStartupResetIfNeeded is a no-op after first run,
+                //  so we call handlePendingShortcut explicitly here too).
+                if didApplyStartupReset {
+                    handlePendingShortcut()
+                }
             }
         }
     }
@@ -102,5 +108,31 @@ struct ContentView: View {
         selectedTab = 0
         router.path = NavigationPath()
         didApplyStartupReset = true
+        // Handle any Spotlight / Siri shortcut that launched the app.
+        handlePendingShortcut()
+    }
+
+    /// Reads a pending shortcut action written by a CarryAppIntent and navigates accordingly.
+    /// Safe to call multiple times — clears UserDefaults immediately so it's a no-op on repeat.
+    func handlePendingShortcut() {
+        let defaults = UserDefaults.standard
+        guard let action = defaults.string(forKey: "carry_shortcut_action") else { return }
+        defaults.removeObject(forKey: "carry_shortcut_action")
+
+        // Small delay so NavigationStack is fully settled before we push.
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) {
+            switch action {
+            case "create_trip":
+                router.path.append(CreationRoute.tripInfo(UUID(), startInMyItems: false))
+            case "open_trip":
+                if let idStr = defaults.string(forKey: "carry_shortcut_trip_id"),
+                   let id = UUID(uuidString: idStr) {
+                    defaults.removeObject(forKey: "carry_shortcut_trip_id")
+                    router.path.append(id)
+                }
+            default:
+                break
+            }
+        }
     }
 }
