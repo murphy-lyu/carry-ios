@@ -8,6 +8,16 @@ import Combine
 import SwiftData
 import CoreLocation
 
+// MARK: - DestinationEntry
+
+/// A single resolved destination (countryCode + coordinates).
+/// Used to store the 2nd, 3rd… cities of a multi-destination trip.
+struct DestinationEntry: Codable {
+    let countryCode: String
+    let latitude: Double
+    let longitude: Double
+}
+
 // MARK: - TripBundle
 
 @Model
@@ -28,6 +38,8 @@ final class TripBundle {
     var countryCode: String = ""
     var latitude: Double = 0
     var longitude: Double = 0
+    /// JSON-encoded [DestinationEntry] for the 2nd+ cities in a multi-destination trip.
+    var additionalDestinationsData: Data = Data()
     @Relationship(deleteRule: .cascade, inverse: \PackingSection.bundle) var sections: [PackingSection]? = []
 
     var reminderConfigs: [TripReminderConfig] {
@@ -37,6 +49,17 @@ final class TripBundle {
         }
         set {
             reminderConfigData = (try? JSONEncoder().encode(newValue)) ?? Data()
+        }
+    }
+
+    /// Decoded list of extra destinations (2nd city onward) for multi-destination trips.
+    var additionalDestinations: [DestinationEntry] {
+        get {
+            guard !additionalDestinationsData.isEmpty else { return [] }
+            return (try? JSONDecoder().decode([DestinationEntry].self, from: additionalDestinationsData)) ?? []
+        }
+        set {
+            additionalDestinationsData = (try? JSONEncoder().encode(newValue)) ?? Data()
         }
     }
 
@@ -1524,6 +1547,26 @@ final class TripStore: ObservableObject {
         ("陕西",    "CN", 34.27,108.95), ("中国",    "CN", 35.86,104.20),
     ]
 
+    // MARK: - Multi-city splitting
+
+    /// Splits a free-form destination string into individual city tokens.
+    /// Handles: comma variants, slash, ampersand, plus, " and ", " 和 ".
+    /// Deliberately avoids splitting on bare "和" to protect city names like "和田".
+    private func splitCities(_ input: String) -> [String] {
+        var tokens = [input]
+        // Multi-char separators first (order matters)
+        for sep in [" and ", " And ", " AND ", " 和 "] {
+            tokens = tokens.flatMap { $0.components(separatedBy: sep) }
+        }
+        // Single-char separators
+        for sep in [",", "，", "、", "/", "／", "&", "＆", "+", "＋"] {
+            tokens = tokens.flatMap { $0.components(separatedBy: sep) }
+        }
+        return tokens
+            .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+            .filter { $0.count >= 2 }
+    }
+
     private func lookupCity(_ city: String) -> (code: String, lat: Double, lon: Double)? {
         let trimmed = city.trimmingCharacters(in: .whitespacesAndNewlines)
         guard trimmed.count >= 2 else { return nil }
@@ -1590,35 +1633,57 @@ final class TripStore: ObservableObject {
     }
 
     func updateCountryCode(for tripId: UUID, city: String) {
-        // Try local table first (instant, no network).
-        if let local = lookupCity(city) {
+        let tokens = splitCities(city)
+        guard !tokens.isEmpty else { return }
+
+        // Fast path: every token resolves from local table, no network needed.
+        let localResults = tokens.compactMap { lookupCity($0) }
+        if localResults.count == tokens.count {
             guard let bundle = bundle(for: tripId) else { return }
-            bundle.countryCode = local.code
-            bundle.latitude    = local.lat
-            bundle.longitude   = local.lon
+            bundle.countryCode = localResults[0].code
+            bundle.latitude    = localResults[0].lat
+            bundle.longitude   = localResults[0].lon
+            bundle.additionalDestinations = localResults.dropFirst().map {
+                DestinationEntry(countryCode: $0.code, latitude: $0.lat, longitude: $0.lon)
+            }
             try? context.save()
             return
         }
-        // Fall back to CLGeocoder for cities not in the local table.
+
+        // Slow path: at least one token needs CLGeocoder.
         Task {
             let geocoder = CLGeocoder()
-            guard let placemark = try? await geocoder.geocodeAddressString(city).first else { return }
-            let code = placemark.isoCountryCode ?? ""
-            let coordinate: (lat: Double, lon: Double)?
-            if let loc = placemark.location, loc.coordinate.latitude != 0 {
-                coordinate = (loc.coordinate.latitude, loc.coordinate.longitude)
-            } else if !code.isEmpty, let centroid = coordinatesForCountry(code) {
-                coordinate = centroid
-            } else {
-                coordinate = nil
+            var resolved: [(code: String, lat: Double, lon: Double)] = []
+            var geocodedCount = 0
+
+            for token in tokens {
+                // Try local lookup first (instant, no network)
+                if let local = lookupCity(token) {
+                    resolved.append((local.code, local.lat, local.lon))
+                    continue
+                }
+                // Rate limit: respect CLGeocoder's ~1 req/s recommendation
+                if geocodedCount > 0 { try? await Task.sleep(for: .milliseconds(400)) }
+                geocodedCount += 1
+                guard let placemark = try? await geocoder.geocodeAddressString(token).first else { continue }
+                let code = placemark.isoCountryCode ?? ""
+                if let loc = placemark.location, loc.coordinate.latitude != 0 {
+                    resolved.append((code, loc.coordinate.latitude, loc.coordinate.longitude))
+                } else if !code.isEmpty, let centroid = coordinatesForCountry(code) {
+                    resolved.append((code, centroid.lat, centroid.lon))
+                }
             }
-            guard let coord = coordinate else { return }
+
+            guard !resolved.isEmpty else { return }
             await MainActor.run {
-                guard let bundle = bundle(for: tripId) else { return }
-                if !code.isEmpty { bundle.countryCode = code }
-                bundle.latitude  = coord.lat
-                bundle.longitude = coord.lon
-                try? context.save()
+                guard let bundle = self.bundle(for: tripId) else { return }
+                bundle.countryCode = resolved[0].code
+                bundle.latitude    = resolved[0].lat
+                bundle.longitude   = resolved[0].lon
+                bundle.additionalDestinations = Array(resolved.dropFirst()).map {
+                    DestinationEntry(countryCode: $0.code, latitude: $0.lat, longitude: $0.lon)
+                }
+                try? self.context.save()
             }
         }
     }
@@ -1629,12 +1694,18 @@ final class TripStore: ObservableObject {
     func correctMisgecodedTrips() {
         var changed = false
         for trip in trips {
-            guard !trip.destinationCity.isEmpty,
-                  let local = lookupCity(trip.destinationCity),
+            guard !trip.destinationCity.isEmpty else { continue }
+            let tokens = splitCities(trip.destinationCity)
+            guard let primaryToken = tokens.first,
+                  let local = lookupCity(primaryToken),
                   trip.countryCode.uppercased() != local.code.uppercased() else { continue }
             trip.countryCode = local.code
             trip.latitude    = local.lat
             trip.longitude   = local.lon
+            trip.additionalDestinations = tokens.dropFirst().compactMap { token in
+                guard let r = lookupCity(token) else { return nil }
+                return DestinationEntry(countryCode: r.code, latitude: r.lat, longitude: r.lon)
+            }
             changed = true
         }
         if changed {
@@ -1651,45 +1722,97 @@ final class TripStore: ObservableObject {
         let missing = trips.filter {
             !$0.destinationCity.isEmpty && ($0.countryCode.isEmpty || $0.latitude == 0)
         }
-        guard !missing.isEmpty else { return }
+        // Also pick up multi-destination trips whose extras haven't been resolved yet.
+        let missingExtras = trips.filter {
+            !$0.destinationCity.isEmpty &&
+            !$0.countryCode.isEmpty &&
+            $0.latitude != 0 &&
+            $0.additionalDestinationsData.isEmpty &&
+            splitCities($0.destinationCity).count > 1
+        }
+
+        guard !missing.isEmpty || !missingExtras.isEmpty else { return }
+
         Task {
             let geocoder = CLGeocoder()
+            var geocodedCount = 0
+
+            // Helper: geocode a single token with rate limiting
+            func geocodeToken(_ token: String) async -> (code: String, lat: Double, lon: Double)? {
+                if geocodedCount > 0 { try? await Task.sleep(for: .milliseconds(400)) }
+                geocodedCount += 1
+                guard let placemark = try? await geocoder.geocodeAddressString(token).first else { return nil }
+                let code = placemark.isoCountryCode ?? ""
+                if let loc = placemark.location, loc.coordinate.latitude != 0 {
+                    return (code, loc.coordinate.latitude, loc.coordinate.longitude)
+                } else if !code.isEmpty, let centroid = coordinatesForCountry(code) {
+                    return (code, centroid.lat, centroid.lon)
+                }
+                return nil
+            }
+
+            // 1. Trips with no primary country resolved yet
             for trip in missing {
-                // 1. Try local city table first (instant, no network needed).
-                if let local = lookupCity(trip.destinationCity) {
+                let tokens = splitCities(trip.destinationCity)
+                guard let primaryToken = tokens.first else { continue }
+
+                // Try local table first
+                if let local = lookupCity(primaryToken) {
+                    let extras = tokens.dropFirst().compactMap { token -> DestinationEntry? in
+                        guard let r = lookupCity(token) else { return nil }
+                        return DestinationEntry(countryCode: r.code, latitude: r.lat, longitude: r.lon)
+                    }
                     await MainActor.run {
                         guard let bundle = self.bundle(for: trip.id) else { return }
                         bundle.countryCode = local.code
                         bundle.latitude    = local.lat
                         bundle.longitude   = local.lon
+                        bundle.additionalDestinations = extras
                         try? self.context.save()
                     }
                     continue
                 }
 
-                // 2. Fall back to CLGeocoder for cities not in the local table.
-                let placemarks = try? await geocoder.geocodeAddressString(trip.destinationCity)
-                guard let placemark = placemarks?.first else { continue }
-                let code = placemark.isoCountryCode ?? ""
-                // Prefer the precise placemark location; fall back to country centroid.
-                let coordinate: (lat: Double, lon: Double)?
-                if let loc = placemark.location, loc.coordinate.latitude != 0 {
-                    coordinate = (loc.coordinate.latitude, loc.coordinate.longitude)
-                } else if !code.isEmpty, let centroid = coordinatesForCountry(code) {
-                    coordinate = centroid
-                } else {
-                    coordinate = nil
+                // Fall back to CLGeocoder for primary
+                guard let primary = await geocodeToken(primaryToken) else { continue }
+
+                // Resolve extras (local then geocoder)
+                var extras: [DestinationEntry] = []
+                for token in tokens.dropFirst() {
+                    if let r = lookupCity(token) {
+                        extras.append(DestinationEntry(countryCode: r.code, latitude: r.lat, longitude: r.lon))
+                    } else if let r = await geocodeToken(token) {
+                        extras.append(DestinationEntry(countryCode: r.code, latitude: r.lat, longitude: r.lon))
+                    }
                 }
-                guard let coord = coordinate else { continue }
+
                 await MainActor.run {
                     guard let bundle = self.bundle(for: trip.id) else { return }
-                    if !code.isEmpty { bundle.countryCode = code }
-                    bundle.latitude  = coord.lat
-                    bundle.longitude = coord.lon
+                    if !primary.code.isEmpty { bundle.countryCode = primary.code }
+                    bundle.latitude  = primary.lat
+                    bundle.longitude = primary.lon
+                    bundle.additionalDestinations = extras
                     try? self.context.save()
                 }
-                // Respect CLGeocoder's recommended 1 req/s rate limit
-                try? await Task.sleep(for: .milliseconds(400))
+            }
+
+            // 2. Trips whose primary is already resolved but extras are missing
+            for trip in missingExtras {
+                let tokens = splitCities(trip.destinationCity)
+                var extras: [DestinationEntry] = []
+                for token in tokens.dropFirst() {
+                    if let r = lookupCity(token) {
+                        extras.append(DestinationEntry(countryCode: r.code, latitude: r.lat, longitude: r.lon))
+                    } else if let r = await geocodeToken(token) {
+                        extras.append(DestinationEntry(countryCode: r.code, latitude: r.lat, longitude: r.lon))
+                    }
+                }
+                guard !extras.isEmpty else { continue }
+                await MainActor.run {
+                    guard let bundle = self.bundle(for: trip.id) else { return }
+                    bundle.additionalDestinations = extras
+                    try? self.context.save()
+                }
             }
         }
     }

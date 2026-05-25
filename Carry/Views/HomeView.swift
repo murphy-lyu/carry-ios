@@ -128,47 +128,71 @@ struct HomeView: View {
     /// Top corner radius: 36 when expanded → 42 when fully collapsed
     private var sheetCornerRadius: CGFloat { 36 + sheetProgress * 6 }
 
-    /// Unique country codes from all trips whose departure date has passed,
-    /// regardless of whether coordinates have been resolved yet.
+    /// Unique country codes from all trips whose departure date has passed.
+    /// Includes both the primary destination and any additional destinations
+    /// stored for multi-city trips.
     private var visitedCountriesCount: Int {
-        Set(
-            store.trips
-                .filter { $0.departureDate <= Date() && !$0.countryCode.isEmpty }
-                .map { $0.countryCode.uppercased() }
-        ).count
+        var codes = Set<String>()
+        for trip in store.trips where trip.departureDate <= Date() {
+            if !trip.countryCode.isEmpty { codes.insert(trip.countryCode.uppercased()) }
+            for dest in trip.additionalDestinations where !dest.countryCode.isEmpty {
+                codes.insert(dest.countryCode.uppercased())
+            }
+        }
+        return codes.count
     }
 
     /// Deduplicated city dots for departed trips with valid coordinates.
     /// Rounded to ~1 km precision so multiple trips to the same city collapse to one dot.
+    /// Includes additional destinations from multi-city trips.
     private var visitedCities: [VisitedCity] {
         var seen = Set<String>()
-        return store.trips
-            .filter { $0.departureDate <= Date() && $0.latitude != 0 }
-            .compactMap { trip -> VisitedCity? in
-                let key = "\(Int(trip.latitude * 100)),\(Int(trip.longitude * 100))"
-                guard seen.insert(key).inserted else { return nil }
-                return VisitedCity(
-                    id: key,
-                    coordinate: CLLocationCoordinate2D(latitude: trip.latitude, longitude: trip.longitude)
-                )
+        var cities: [VisitedCity] = []
+
+        func addCoordinate(lat: Double, lon: Double) {
+            guard lat != 0 else { return }
+            let key = "\(Int(lat * 100)),\(Int(lon * 100))"
+            guard seen.insert(key).inserted else { return }
+            cities.append(VisitedCity(id: key, coordinate: CLLocationCoordinate2D(latitude: lat, longitude: lon)))
+        }
+
+        for trip in store.trips where trip.departureDate <= Date() {
+            addCoordinate(lat: trip.latitude, lon: trip.longitude)
+            for dest in trip.additionalDestinations {
+                addCoordinate(lat: dest.latitude, lon: dest.longitude)
             }
+        }
+        return cities
     }
 
     private var visitedCountries: [VisitedCountry] {
-        let departed = store.trips.filter {
-            $0.departureDate <= Date() && !$0.countryCode.isEmpty && $0.latitude != 0
+        // For each country code, keep the coordinates from the most-recent trip that includes it.
+        // Accepts both primary and additional destinations from multi-city trips.
+        var best: [String: (lat: Double, lon: Double, date: Date)] = [:]
+
+        func consider(code: String, lat: Double, lon: Double, date: Date) {
+            guard !code.isEmpty, lat != 0 else { return }
+            let key = code.uppercased()
+            if let existing = best[key] {
+                if date > existing.date { best[key] = (lat, lon, date) }
+            } else {
+                best[key] = (lat, lon, date)
+            }
         }
-        var grouped: [String: [TripBundle]] = [:]
-        for trip in departed {
-            grouped[trip.countryCode.uppercased(), default: []].append(trip)
+
+        for trip in store.trips where trip.departureDate <= Date() {
+            consider(code: trip.countryCode, lat: trip.latitude, lon: trip.longitude, date: trip.departureDate)
+            for dest in trip.additionalDestinations {
+                consider(code: dest.countryCode, lat: dest.latitude, lon: dest.longitude, date: trip.departureDate)
+            }
         }
-        return grouped.map { code, trips in
-            let latest = trips.max(by: { $0.departureDate < $1.departureDate }) ?? trips[0]
+
+        return best.map { code, info in
             let name = Locale.current.localizedString(forRegionCode: code) ?? code
             return VisitedCountry(
                 countryCode: code,
                 name: name,
-                coordinate: CLLocationCoordinate2D(latitude: latest.latitude, longitude: latest.longitude)
+                coordinate: CLLocationCoordinate2D(latitude: info.lat, longitude: info.lon)
             )
         }
     }
