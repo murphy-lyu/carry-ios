@@ -13,7 +13,7 @@
 /// Stored as `static let` on a caseless enum so Swift never infers @MainActor
 /// (global stored `let` at file scope gets @MainActor in Swift 6 strict mode).
 enum GeocodingData {
-    static let countryCentroids: [String: (lat: Double, lon: Double)] = [
+    nonisolated(unsafe) static let countryCentroids: [String: (lat: Double, lon: Double)] = [
         "AF": (33.93, 67.71), "AL": (41.15, 20.17), "DZ": (28.03, 1.66),
         "AO": (-11.20, 17.87), "AR": (-38.42, -63.62), "AU": (-25.27, 133.78),
         "AT": (47.52, 14.55), "AZ": (40.14, 47.58), "BD": (23.68, 90.36),
