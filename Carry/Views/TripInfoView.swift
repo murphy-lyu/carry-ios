@@ -39,6 +39,17 @@ struct TripInfoView: View {
         !destinationCity.trimmingCharacters(in: .whitespaces).isEmpty
     }
 
+    private var continueButtonBackground: Color {
+        if canContinue {
+            return Color.primary.opacity(0.92)
+        }
+        return Color(UIColor.secondarySystemFill)
+    }
+
+    private var continueButtonForeground: Color {
+        canContinue ? Color(UIColor.systemBackground) : Color.secondary
+    }
+
     private var info: TripInfo {
         TripInfo(
             name: tripName,
@@ -129,14 +140,17 @@ struct TripInfoView: View {
                     Text("Continue")
                         .font(.subheadline)
                         .fontWeight(.medium)
-                        .foregroundColor(Color(UIColor.systemBackground))
+                        .foregroundColor(continueButtonForeground)
                         .frame(maxWidth: .infinity)
                         .frame(height: 52)
-                        .background(Color.primary.opacity(0.92))
+                        .background(continueButtonBackground)
                         .cornerRadius(14)
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                                .strokeBorder(Color.primary.opacity(canContinue ? 0 : 0.05), lineWidth: 1)
+                        )
                 }
                 .disabled(!canContinue)
-                .opacity(canContinue ? 1 : 0.3)
                 .padding(.horizontal, 16)
             }
             .padding(.top, 12)
