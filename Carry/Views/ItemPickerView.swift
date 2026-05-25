@@ -67,6 +67,7 @@ struct ItemPickerView: View {
     @State private var showMyItemAddSheet = false
     @State private var selectedMyItemCollection: String = "Default"
     @State private var didLogSearch = false
+    @State private var isConfirmingSelection = false
 
     private var existingItemNames: Set<String> {
         guard case .merge(let tripId) = mode,
@@ -1152,7 +1153,14 @@ struct ItemPickerView: View {
 
         case .merge(let tripId):
             store.mergeItems(tripId: tripId, sections: sections)
-            router.path.removeLast()
+            guard !isConfirmingSelection else { return }
+            isConfirmingSelection = true
+            showToast(NSLocalizedString("itempicker.toast.added_to_list", comment: ""))
+            Task { @MainActor in
+                try? await Task.sleep(for: .milliseconds(600))
+                router.path.removeLast()
+                isConfirmingSelection = false
+            }
         }
     }
 
