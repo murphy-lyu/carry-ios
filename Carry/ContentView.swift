@@ -92,12 +92,18 @@ struct ContentView: View {
             if phase == .active {
                 applyStartupResetIfNeeded()
                 store.refresh()
-                // Also handle shortcuts when returning from background
-                // (applyStartupResetIfNeeded is a no-op after first run,
-                //  so we call handlePendingShortcut explicitly here too).
                 if didApplyStartupReset {
                     handlePendingShortcut()
                 }
+            }
+        }
+        // React to UserDefaults changes written by an AppIntent perform(),
+        // which can arrive slightly after scenePhase turns .active.
+        .onReceive(NotificationCenter.default.publisher(
+            for: UserDefaults.didChangeNotification)
+        ) { _ in
+            if didApplyStartupReset {
+                handlePendingShortcut()
             }
         }
     }

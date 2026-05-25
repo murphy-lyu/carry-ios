@@ -95,7 +95,7 @@ struct CarryAppShortcuts: AppShortcutsProvider {
                 "Create a trip in \(.applicationName)",
                 "Plan a trip with \(.applicationName)"
             ],
-            shortTitle: "shortcut.create_trip.short_title",
+            shortTitle: LocalizedStringResource("New Trip"),
             systemImageName: "plus.circle.fill"
         )
         AppShortcut(
@@ -105,7 +105,7 @@ struct CarryAppShortcuts: AppShortcutsProvider {
                 "Upcoming trip in \(.applicationName)",
                 "Open my trip in \(.applicationName)"
             ],
-            shortTitle: "shortcut.nearest_trip.short_title",
+            shortTitle: LocalizedStringResource("Nearest Trip"),
             systemImageName: "airplane.departure"
         )
         AppShortcut(
@@ -115,7 +115,7 @@ struct CarryAppShortcuts: AppShortcutsProvider {
                 "Open packing list in \(.applicationName)",
                 "My packing list in \(.applicationName)"
             ],
-            shortTitle: "shortcut.continue_packing.short_title",
+            shortTitle: LocalizedStringResource("Packing List"),
             systemImageName: "checklist"
         )
     }
