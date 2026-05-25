@@ -820,9 +820,9 @@ struct HomeView: View {
         )
         .overlay(
             RoundedRectangle(cornerRadius: 24, style: .continuous)
-                .strokeBorder(Color.primary.opacity(colorScheme == .dark ? 0.10 : 0.05), lineWidth: 1)
+                .strokeBorder(Color.primary.opacity(colorScheme == .dark ? 0.06 : 0.05), lineWidth: 1)
         )
-        .shadow(color: Color.black.opacity(colorScheme == .dark ? 0.22 : 0.045), radius: colorScheme == .dark ? 18 : 16, x: 0, y: colorScheme == .dark ? 12 : 10)
+        .shadow(color: Color.black.opacity(colorScheme == .dark ? 0.18 : 0.045), radius: colorScheme == .dark ? 14 : 16, x: 0, y: colorScheme == .dark ? 10 : 10)
     }
 
     private func sectionLabel(_ key: LocalizedStringKey, uppercase: Bool = false) -> some View {
@@ -878,7 +878,7 @@ struct HomeView: View {
         )
         .overlay(
             RoundedRectangle(cornerRadius: 16, style: .continuous)
-                .strokeBorder(Color.primary.opacity(colorScheme == .dark ? 0.03 : 0.04), lineWidth: 1)
+                .strokeBorder(Color.primary.opacity(colorScheme == .dark ? 0.015 : 0.04), lineWidth: 1)
         )
     }
 
@@ -1204,30 +1204,30 @@ struct TripCard: View {
 
     private var statusPillFillColor: Color {
         if bundle.totalCount == 0 {
-            return colorScheme == .dark ? Color.white.opacity(0.035) : Color(UIColor.systemGray5).opacity(0.58)
+            return colorScheme == .dark ? Color.white.opacity(0.028) : Color(UIColor.systemGray5).opacity(0.58)
         }
         if isComplete {
-            return colorScheme == .dark ? Color.white.opacity(0.045) : Color(UIColor.systemGray5).opacity(0.72)
+            return colorScheme == .dark ? Color.white.opacity(0.032) : Color(UIColor.systemGray5).opacity(0.72)
         }
-        return colorScheme == .dark ? Color.blue.opacity(0.07) : Color.blue.opacity(0.10)
+        return colorScheme == .dark ? Color.blue.opacity(0.05) : Color.blue.opacity(0.10)
     }
 
     private var statusPillStrokeColor: Color {
         if bundle.totalCount == 0 {
-            return Color.primary.opacity(colorScheme == .dark ? 0.04 : 0.03)
+            return Color.primary.opacity(colorScheme == .dark ? 0.025 : 0.03)
         }
         if isComplete {
-            return Color.primary.opacity(colorScheme == .dark ? 0.06 : 0.025)
+            return Color.primary.opacity(colorScheme == .dark ? 0.03 : 0.025)
         }
-        return Color.blue.opacity(colorScheme == .dark ? 0.08 : 0.16)
+        return Color.blue.opacity(colorScheme == .dark ? 0.06 : 0.16)
     }
 
     private var statusPillForeground: Color {
         if bundle.totalCount == 0 {
-            return colorScheme == .dark ? .secondary.opacity(0.65) : .secondary.opacity(0.82)
+            return colorScheme == .dark ? .secondary.opacity(0.72) : .secondary.opacity(0.82)
         }
         if isComplete {
-            return colorScheme == .dark ? .secondary.opacity(0.68) : .secondary.opacity(0.76)
+            return colorScheme == .dark ? .secondary.opacity(0.74) : .secondary.opacity(0.76)
         }
         return .primary
     }
@@ -1259,14 +1259,14 @@ struct TripCard: View {
 
                 Text(bundle.destinationCity)
                     .font(.subheadline.weight(.medium))
-                    .foregroundColor(colorScheme == .dark ? Color.white.opacity(0.56) : Color(.systemGray))
+                    .foregroundColor(colorScheme == .dark ? Color.white.opacity(0.64) : Color(.systemGray))
                     .lineLimit(1)
                     .padding(.bottom, 4)
 
                 HStack(spacing: 8) {
                     Text(dateAndDurationText)
                         .font(.caption.weight(.medium))
-                        .foregroundColor(colorScheme == .dark ? Color.white.opacity(0.30) : Color(.systemGray2))
+                        .foregroundColor(colorScheme == .dark ? Color.white.opacity(0.40) : Color(.systemGray2))
                         .lineLimit(1)
 
                     if let statusPillText {
