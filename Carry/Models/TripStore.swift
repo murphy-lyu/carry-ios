@@ -1653,7 +1653,7 @@ final class TripStore: ObservableObject {
                 let code = placemark.isoCountryCode ?? ""
                 if let loc = placemark.location, loc.coordinate.latitude != 0 {
                     resolved.append((code, loc.coordinate.latitude, loc.coordinate.longitude))
-                } else if !code.isEmpty, let centroid = countryCentroids[code.uppercased()] {
+                } else if !code.isEmpty, let centroid = GeocodingData.countryCentroids[code.uppercased()] {
                     resolved.append((code, centroid.lat, centroid.lon))
                 }
             }
@@ -1738,7 +1738,7 @@ final class TripStore: ObservableObject {
                 let code = placemark.isoCountryCode ?? ""
                 if let loc = placemark.location, loc.coordinate.latitude != 0 {
                     return (code, loc.coordinate.latitude, loc.coordinate.longitude)
-                } else if !code.isEmpty, let centroid = countryCentroids[code.uppercased()] {
+                } else if !code.isEmpty, let centroid = GeocodingData.countryCentroids[code.uppercased()] {
                     return (code, centroid.lat, centroid.lon)
                 }
                 return nil
