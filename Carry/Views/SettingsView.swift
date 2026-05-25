@@ -364,12 +364,15 @@ struct SettingsView: View {
                 defer { if accessing { url.stopAccessingSecurityScopedResource() } }
                 guard let data = try? Data(contentsOf: url) else {
                     showToast(NSLocalizedString("settings.data.restore.error.corrupt", comment: ""))
+                    CarryLogger.shared.log(.backupRestoreFailed, context: "reason=file_unreadable")
                     return
                 }
                 pendingImportData = data
                 showImportConfirmation = true
             case .failure(let error):
                 showToast(error.localizedDescription)
+                CarryLogger.shared.log(.backupRestoreFailed,
+                    context: "reason=picker_failed error=\(error.localizedDescription)")
             }
         }
         .navigationBarHidden(true)

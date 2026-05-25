@@ -61,8 +61,6 @@ struct ItemPickerView: View {
     @State private var selectedMyItemIDs: Set<UUID> = []
     @State private var expandedCategories: Set<String> = []
     @State private var showAutoPackSheet = false
-    @State private var toastVisible = false
-    @State private var toastText = ""
     @State private var didApplyInitialSource = false
     @State private var showMyItemAddSheet = false
     @State private var selectedMyItemCollection: String = "Default"
@@ -366,7 +364,7 @@ struct ItemPickerView: View {
                             let normalizedCategory = category.trimmingCharacters(in: CharacterSet.whitespacesAndNewlines).isEmpty ? "Custom" : category
                             let item = store.addMyItem(name: name, category: normalizedCategory, defaultQuantity: quantity, collectionName: selectedMyItemCollection)
                             selectedMyItemIDs.insert(item.id)
-                            showToast("Saved to My Items")
+                            store.pendingPackingToast = NSLocalizedString("myitems.toast.saved", comment: "")
                         }
                     }
                 }
@@ -393,13 +391,6 @@ struct ItemPickerView: View {
                 .fontWeight(.semibold)
                 .disabled(!hasSelection)
                 .animation(.easeInOut(duration: 0.15), value: hasSelection)
-            }
-        }
-        .overlay(alignment: .bottom) {
-            if toastVisible {
-                toastBanner
-                    .padding(.bottom, 16)
-                    .transition(.move(edge: .bottom).combined(with: .opacity))
             }
         }
         // TODO: Re-enable Auto Pack FAB when feature is ready for public release
@@ -1118,7 +1109,7 @@ struct ItemPickerView: View {
             toastVisible = true
         }
         Task {
-            try? await Task.sleep(for: .milliseconds(1500))
+            try? await Task.sleep(for: .milliseconds(2200))
             withAnimation(.easeIn(duration: 0.25)) {
                 toastVisible = false
             }

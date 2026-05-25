@@ -36,6 +36,8 @@ final class CoffeeStore: ObservableObject {
             lastFetchErrorMessage = nil
         } catch {
             lastFetchErrorMessage = error.localizedDescription
+            CarryLogger.shared.log(.coffeeProductsFetchFailed,
+                context: "error=\(error.localizedDescription)")
         }
     }
 
@@ -60,6 +62,8 @@ final class CoffeeStore: ObservableObject {
                     lastPurchasedID = productID
                     supportCount += 1
                     defaults.set(supportCount, forKey: supportCountKey)
+                    CarryLogger.shared.log(.coffeePurchased,
+                        context: "product=\(productID) totalCount=\(supportCount)")
                 }
             case .userCancelled, .pending:
                 break
@@ -67,7 +71,8 @@ final class CoffeeStore: ObservableObject {
                 break
             }
         } catch {
-            // Purchase failed silently — StoreKit surfaces its own error UI
+            CarryLogger.shared.log(.coffeePurchaseFailed,
+                context: "product=\(productID) error=\(error.localizedDescription)")
         }
     }
 

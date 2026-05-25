@@ -163,8 +163,16 @@ final class DataBackupManager {
             myItems: backupMyItems
         )
 
-        guard let data = try? encoder.encode(backup) else { return }
-        try? data.write(to: url, options: .atomic)
+        guard let data = try? encoder.encode(backup) else {
+            CarryLogger.shared.log(.backupWriteFailed, context: "reason=encode_failed")
+            return
+        }
+        do {
+            try data.write(to: url, options: .atomic)
+        } catch {
+            CarryLogger.shared.log(.backupWriteFailed,
+                context: "reason=write_failed error=\(error.localizedDescription)")
+        }
     }
 
     // MARK: - Query

@@ -46,6 +46,7 @@ final class CarryLogger {
         case backupExported         = "backup_exported"
         case backupRestored         = "backup_restored"
         case backupRestoreFailed    = "backup_restore_failed"
+        case backupWriteFailed      = "backup_write_failed"
         // 物品选择器
         case pickerOpened           = "picker_opened"
         case pickerCategoryExpanded = "picker_category_expanded"
@@ -92,6 +93,12 @@ final class CarryLogger {
         // 网络（为后续 AI 功能预留）
         case apiTimeout             = "api_timeout"
         case apiError               = "api_error"
+        // 数据解码
+        case destinationDecodeFailed = "destination_decode_failed"
+        // 应用内购
+        case coffeePurchased        = "coffee_purchased"
+        case coffeePurchaseFailed   = "coffee_purchase_failed"
+        case coffeeProductsFetchFailed = "coffee_products_fetch_failed"
     }
 
     private static let errorEvents: Set<Event> = [
@@ -100,8 +107,9 @@ final class CarryLogger {
         .tripDataEmpty, .tripSaveFailed, .tripEditSaveFailed,
         .itemAddFailed, .itemDeleteFailed, .orphanTrip, .orphanSection,
         .sortIndexOutOfBounds, .apiTimeout, .apiError,
-        .iconSwitchFailed, .backupRestoreFailed, .reminderPermissionDenied,
+        .iconSwitchFailed, .backupRestoreFailed, .backupWriteFailed, .reminderPermissionDenied,
         .abnormalTermination, .geocodeFailed,
+        .destinationDecodeFailed, .coffeePurchaseFailed, .coffeeProductsFetchFailed,
     ]
 
     private let sessionActiveKey = "carry_session_active"

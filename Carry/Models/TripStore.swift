@@ -56,7 +56,13 @@ final class TripBundle {
     var additionalDestinations: [DestinationEntry] {
         get {
             guard !additionalDestinationsData.isEmpty else { return [] }
-            return (try? JSONDecoder().decode([DestinationEntry].self, from: additionalDestinationsData)) ?? []
+            do {
+                return try JSONDecoder().decode([DestinationEntry].self, from: additionalDestinationsData)
+            } catch {
+                CarryLogger.shared.log(.destinationDecodeFailed,
+                    context: "error=\(error.localizedDescription)")
+                return []
+            }
         }
         set {
             additionalDestinationsData = (try? JSONEncoder().encode(newValue)) ?? Data()
@@ -106,6 +112,7 @@ final class TripStore: ObservableObject {
     @Published var isSceneCardDismissedGlobally: Bool
     @Published var isHomeEmptyStateMockEnabled: Bool
     @Published private(set) var draftTrip: TripBundle?
+    @Published var pendingPackingToast: String?
 
     private let context: ModelContext
     private let defaults = UserDefaults.standard
