@@ -25,7 +25,7 @@ struct TripDateRangePickerSheet: View {
         self.today = now
         let monthStart = cal.date(from: cal.dateComponents([.year, .month], from: now))!
         var ms: [Date] = []
-        for i in 0..<24 {
+        for i in -36...36 {
             if let m = cal.date(byAdding: .month, value: i, to: monthStart) {
                 ms.append(m)
             }
@@ -159,9 +159,12 @@ struct TripDateRangePickerSheet: View {
             .onAppear {
                 let startMonth = calendar.date(
                     from: calendar.dateComponents([.year, .month], from: selectedStart)
-                )!
+                ) ?? months.first ?? Date()
+                let targetMonth = months.contains(startMonth) ? startMonth : (selectedStart < months.first ?? startMonth ? months.first : months.last)
                 DispatchQueue.main.async {
-                    proxy.scrollTo(startMonth, anchor: .top)
+                    if let targetMonth {
+                        proxy.scrollTo(targetMonth, anchor: .top)
+                    }
                 }
             }
         }
@@ -251,7 +254,6 @@ private struct DayCell: View {
 
     private let calendar = Calendar.current
 
-    private var isPast: Bool { date < today }
     private var isStart: Bool { calendar.isDate(date, inSameDayAs: selectedStart) }
     private var isEnd: Bool { calendar.isDate(date, inSameDayAs: selectedEnd) }
     private var hasRange: Bool { selectedStart < selectedEnd }
@@ -282,7 +284,7 @@ private struct DayCell: View {
                 Circle()
                     .fill(Color.accentColor)
                     .padding(5)
-            } else if isToday && !isPast {
+            } else if isToday {
                 Circle()
                     .strokeBorder(Color.accentColor.opacity(0.92), lineWidth: 1.5)
                     .padding(5)
@@ -292,14 +294,13 @@ private struct DayCell: View {
             Text("\(calendar.component(.day, from: date))")
                 .font(.system(size: 15, weight: (isStart || isEnd) ? .semibold : .regular))
                 .foregroundStyle(
-                    isPast ? AnyShapeStyle(.tertiary) :
                     (isStart || isEnd) ? AnyShapeStyle(Color.white) :
                     AnyShapeStyle(Color.primary)
                 )
         }
         .frame(height: 44)
         .contentShape(Rectangle())
-        .onTapGesture { if !isPast { onTap() } }
+        .onTapGesture { onTap() }
     }
 }
 
