@@ -42,55 +42,55 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Used to show your current location on the map"
+            "value" : "Carry uses your location to show where you are on the travel map, and to power travel features such as local weather forecasts and route planning."
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "用于在地图上显示您的当前位置"
+            "value" : "启程使用您的位置在旅行地图上标注您的当前位置，并为目的地天气预报和路线规划等旅行功能提供支持。"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "用於在地圖上顯示您目前的位置"
+            "value" : "啟程使用您的位置在旅行地圖上標註您目前的位置，並為目的地天氣預報和路線規劃等旅行功能提供支援。"
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "マップ上に現在地を表示するために使用します"
+            "value" : "現在地をマップに表示し、目的地の天気予報やルート案内などの旅行機能を利用するために位置情報を使用します。"
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "지도에서 현재 위치를 표시하는 데 사용됩니다"
+            "value" : "여행 지도에서 현재 위치를 표시하고, 목적지 날씨 예보 및 경로 안내 등의 여행 기능을 제공하기 위해 위치를 사용합니다."
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Utilisé pour afficher votre position actuelle sur la carte"
+            "value" : "Carry utilise votre position pour l'afficher sur la carte de voyage, et pour des fonctionnalités comme les prévisions météo locales et la planification d'itinéraires."
           }
         },
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Wird verwendet, um Ihren aktuellen Standort auf der Karte anzuzeigen"
+            "value" : "Carry verwendet Ihren Standort, um Sie auf der Reisekarte anzuzeigen und Reisefunktionen wie lokale Wettervorhersagen und Routenplanung zu unterstützen."
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Se usa para mostrar tu ubicación actual en el mapa"
+            "value" : "Carry usa tu ubicación para mostrarte en el mapa de viaje y para funciones como la previsión del tiempo local y la planificación de rutas."
           }
         },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Usado para mostrar sua localização atual no mapa"
+            "value" : "O Carry usa sua localização para exibi-la no mapa de viagem e para funcionalidades como previsão do tempo local e planejamento de rotas."
           }
         }
       }
