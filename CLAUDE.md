@@ -4,6 +4,7 @@
 Carry 是一款面向有旅行习惯、追求生活品质的 iOS 用户的旅行助手 App。
 当前核心是旅行打包清单，未来会逐步延伸到完整的旅行规划场景。
 产品哲学：克制、聚焦，只解决旅行场景中最核心的问题，体验做到极致，不做臃肿的大而全产品。
+设计原则：视觉和交互都要追求极致，但一切以用户价值、理解成本和操作流畅度为准，不为设计而设计；始终先站在用户视角思考，克制表达，避免为了形式感牺牲实用性。
 
 目标用户：有旅行习惯、追求生活品质的 iOS 用户。
 当前阶段：已上线 App Store（2026年5月），持续迭代中。
@@ -65,7 +66,7 @@ Carry 是一款面向有旅行习惯、追求生活品质的 iOS 用户的旅行
 
 ## 技术栈
 - 语言：Swift，iOS 17+
-- UI 框架：SwiftUI（禁止使用 UIKit）
+- UI 框架：SwiftUI 为主；手势拦截、动画性能优化等场景允许通过 UIViewRepresentable 使用 UIKit，但须隔离在独立组件里，不暴露给上层
 - 数据层：SwiftData，versioned schema + migration plan（CarrySchema.swift / CarryMigrationPlan）
 - 核心 Model：TripBundle、MyItem
 - 状态管理：TripStore（ObservableObject）、NavigationRouter（ObservableObject）
@@ -95,7 +96,7 @@ Carry/
 → 详见 docs/progress.md
 
 ## 重要约定（每次必须遵守）
-- 禁止使用 UIKit，全部 SwiftUI
+- 业务逻辑、页面布局、导航全部 SwiftUI；手势拦截、动画性能优化等场景允许通过 UIViewRepresentable 使用 UIKit，但要隔离在独立文件/组件里，不暴露给上层；禁止使用私有 API
 - 颜色必须使用 docs/design-system.md 中定义的 Color Token，禁止硬编码 hex
 - 所有 View 必须支持 Dark Mode
 - 动画统一：标准交互用 .spring(duration: 0.3, bounce: 0.2)

@@ -106,7 +106,13 @@ final class LocationPermissionManager: NSObject, CLLocationManagerDelegate {
 
 // MARK: - GlobeMapView
 
-struct GlobeMapView: View {
+/// Custom equality: skip body re-evaluation when all inputs are stable.
+/// During the sheet snap spring animation, HomeView.body re-evaluates every frame
+/// (sheetOffset is @State). Without Equatable, SwiftUI always calls GlobeMapView.body
+/// → MapKit updates all Annotation views every frame → jank at spring tail.
+/// With Equatable + .equatable() modifier, SwiftUI compares old vs new struct;
+/// if equal (trips didn't change, cityOpacity stable), body is skipped entirely.
+struct GlobeMapView: View, Equatable {
 
     let visitedCountries: [VisitedCountry]
     let visitedCities: [VisitedCity]
@@ -115,6 +121,16 @@ struct GlobeMapView: View {
     var mapStyleOption: MapStyleOption = .hybrid
     /// Controlled by the parent; true only after the user grants location permission.
     var showUserLocation: Bool = false
+
+    static func == (lhs: GlobeMapView, rhs: GlobeMapView) -> Bool {
+        lhs.cityOpacity == rhs.cityOpacity
+            && lhs.mapStyleOption == rhs.mapStyleOption
+            && lhs.showUserLocation == rhs.showUserLocation
+            && lhs.visitedCities.count == rhs.visitedCities.count
+            && lhs.visitedCountries.count == rhs.visitedCountries.count
+            && zip(lhs.visitedCities, rhs.visitedCities).allSatisfy { $0.id == $1.id }
+            && zip(lhs.visitedCountries, rhs.visitedCountries).allSatisfy { $0.countryCode == $1.countryCode }
+    }
 
     @State private var position: MapCameraPosition = .camera(
         MapCamera(

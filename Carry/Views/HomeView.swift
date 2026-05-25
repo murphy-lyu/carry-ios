@@ -107,9 +107,18 @@ struct HomeView: View {
         }
     }
 
-    @State private var sheetOffset: CGFloat = 0
-    @State private var capsuleDrag: CGFloat = 0
-    @State private var listDrag: CGFloat = 0
+    /// All per-frame drag/animation state in an @Observable class.
+    /// SheetTransformModifier reads this; HomeView.body does not — so HomeView.body
+    /// stays idle during drag and spring animations.
+    @State private var liveDrag = LiveDragState()
+
+    /// Opacity for GlobeMapView city dots and the map style button.
+    /// 0 = sheet expanded (dots hidden), 1 = sheet collapsed (dots visible).
+    ///
+    /// Animated once via .easeOut(0.18s) at snap time — NOT derived from
+    /// liveDrag.snappedOffset — so GlobeMapView inputs are constant during the
+    /// spring tail and MapKit never updates Annotation opacity per-frame.
+    @State private var mapCityOpacity: Double = 0
 
     @AppStorage("mapStyleOption") private var mapStyleRaw: String = MapStyleOption.hybrid.rawValue
     @State private var locationPermission = LocationPermissionManager()
@@ -126,37 +135,6 @@ struct HomeView: View {
     private var collapsedSheetOffset: CGFloat {
         max(0, expandedSheetHeight - 144)
     }
-
-    /// Rubber-band resistance past the two sheet endpoints.
-    /// Uses the same coefficient (0.55) as UIScrollView's own over-scroll formula,
-    /// so the feel matches native iOS behaviour.
-    private func rubberBandOffset(_ raw: CGFloat) -> CGFloat {
-        let lo: CGFloat = 0
-        let hi = collapsedSheetOffset
-        guard hi > lo else { return raw }
-        if raw < lo {
-            let over = lo - raw
-            return lo - over * 0.55 / (1 + over / hi)
-        } else if raw > hi {
-            let over = raw - hi
-            return hi + over * 0.55 / (1 + over / hi)
-        }
-        return raw
-    }
-
-    /// 0 = fully expanded, 1 = fully collapsed (includes live drag).
-    /// Always clamped to [0, 1] — rubber-band only affects the visual offset.
-    private var sheetProgress: CGFloat {
-        guard collapsedSheetOffset > 0 else { return 0 }
-        let raw = sheetOffset + capsuleDrag + listDrag
-        return min(max(0, raw), collapsedSheetOffset) / collapsedSheetOffset
-    }
-
-    /// Horizontal scale: 1.0 when expanded → 0.97 when fully collapsed
-    private var sheetScaleX: CGFloat { 1.0 - sheetProgress * 0.03 }
-
-    /// Top corner radius: 36 when expanded → 42 when fully collapsed
-    private var sheetCornerRadius: CGFloat { 36 + sheetProgress * 6 }
 
     /// Unique country codes from all trips whose departure date has passed.
     /// Includes both the primary destination and any additional destinations
@@ -230,14 +208,18 @@ struct HomeView: View {
     var body: some View {
         ZStack(alignment: .bottom) {
             // Globe background
+            // .equatable() lets SwiftUI skip GlobeMapView.body when inputs are stable,
+            // preventing per-frame MapKit annotation updates during the spring animation.
             GlobeMapView(
                 visitedCountries: visitedCountries,
                 visitedCities: visitedCities,
-                cityOpacity: Double(sheetProgress),
+                cityOpacity: mapCityOpacity,
                 mapStyleOption: mapStyleOption,
                 showUserLocation: locationPermission.isTracking
             )
+            .equatable()
             .ignoresSafeArea()
+
 
             // Map style button — fades in as sheet collapses
             mapStyleButton
@@ -311,9 +293,13 @@ struct HomeView: View {
                     .background(Color.clear)
                     .background(
                         ListDragBridge(
-                            sheetOffset: $sheetOffset,
-                            listDrag: $listDrag,
-                            collapsedSheetOffset: collapsedSheetOffset
+                            sheetOffset: Binding(
+                                get: { liveDrag.snappedOffset },
+                                set: { liveDrag.snappedOffset = $0 }
+                            ),
+                            listDrag: Binding(get: { liveDrag.listDrag }, set: { liveDrag.listDrag = $0 }),
+                            collapsedSheetOffset: collapsedSheetOffset,
+                            mapCityOpacity: $mapCityOpacity
                         )
                     )
 
@@ -376,8 +362,9 @@ struct HomeView: View {
                 .onChange(of: router.showMapFullscreen) { _, show in
                     guard show else { return }
                     router.showMapFullscreen = false
+                    animateMapOverlay(collapsed: true)
                     withAnimation(.spring(response: 0.5, dampingFraction: 0.82)) {
-                        sheetOffset = collapsedSheetOffset
+                        liveDrag.snappedOffset = collapsedSheetOffset
                     }
                 }
                 .alert(
@@ -411,10 +398,15 @@ struct HomeView: View {
                     .ignoresSafeArea()
                 }
             }
-            .compositingGroup()
-            .clipShape(UnevenRoundedRectangle(topLeadingRadius: sheetCornerRadius, bottomLeadingRadius: 0, bottomTrailingRadius: 0, topTrailingRadius: sheetCornerRadius, style: .continuous))
-            .scaleEffect(x: sheetScaleX, y: 1.0, anchor: .bottom)
-            .offset(y: rubberBandOffset(sheetOffset + capsuleDrag + listDrag))
+            // SheetTransformModifier owns ALL per-frame sheet visuals (clip, scale,
+            // corner radii, bottom lift, rubber-band offset, gap cover).
+            // HomeView.body never reads liveDrag directly, so it does NOT re-evaluate
+            // during spring animations — eliminating spring-tail jank.
+            .modifier(SheetTransformModifier(
+                liveDrag: liveDrag,
+                collapsedSheetOffset: collapsedSheetOffset,
+                coverColor: colorScheme == .dark ? homeDarkBackdropBottom : Color(UIColor.systemBackground)
+            ))
     }
         .ignoresSafeArea(edges: .bottom)
     }
@@ -440,7 +432,14 @@ struct HomeView: View {
                             .font(.system(size: 17, weight: .semibold))
                             .foregroundStyle(.primary)
                             .frame(width: 48, height: 48)
-                            .glassCircleButton()
+                            .background(
+                                Circle()
+                                    .fill(Color(UIColor.secondarySystemBackground))
+                            )
+                            .overlay(
+                                Circle()
+                                    .strokeBorder(Color.primary.opacity(colorScheme == .dark ? 0.06 : 0.05), lineWidth: 1)
+                            )
                     }
 
                     Button {
@@ -451,7 +450,14 @@ struct HomeView: View {
                             .font(.system(size: 17, weight: .semibold))
                             .foregroundStyle(locationPermission.isTracking ? Color.orange : Color.primary)
                             .frame(width: 48, height: 48)
-                            .glassCircleButton()
+                            .background(
+                                Circle()
+                                    .fill(Color(UIColor.secondarySystemBackground))
+                            )
+                            .overlay(
+                                Circle()
+                                    .strokeBorder(Color.primary.opacity(colorScheme == .dark ? 0.06 : 0.05), lineWidth: 1)
+                            )
                     }
                 }
                 .padding(.trailing, 16)
@@ -460,8 +466,20 @@ struct HomeView: View {
             Spacer()
         }
         // Fade in as sheet collapses, invisible when fully expanded
-        .opacity(Double(sheetProgress))
-        .allowsHitTesting(sheetProgress > 0.05)
+        .opacity(mapCityOpacity)
+        .allowsHitTesting(mapCityOpacity > 0.05)
+    }
+
+    // MARK: - Map overlay opacity
+
+    /// Animate mapCityOpacity to its target before starting the spring so that
+    /// the quick easeOut finishes (~0.18s) well before the spring's tail (~0.3s+).
+    /// During the tail, mapCityOpacity is constant → GlobeMapView.body never
+    /// re-evaluates → no MapKit Annotation updates → no tail-end jank.
+    private func animateMapOverlay(collapsed: Bool) {
+        withAnimation(.easeOut(duration: 0.18)) {
+            mapCityOpacity = collapsed ? 1.0 : 0.0
+        }
     }
 
     // MARK: - Shared sheet drag gesture
@@ -472,14 +490,12 @@ struct HomeView: View {
     private var sheetDragGesture: some Gesture {
         DragGesture(minimumDistance: 4, coordinateSpace: .global)
             .onChanged { v in
-                capsuleDrag = v.translation.height
+                liveDrag.capsuleDrag = v.translation.height
             }
             .onEnded { v in
                 let velocity = v.velocity.height
                 let translation = v.translation.height
-                // Use rubber-banded position as the real "where we are" for spring initial velocity,
-                // but clamp for the snap decision so threshold logic isn't affected.
-                let rawOffset = sheetOffset + translation
+                let rawOffset = liveDrag.snappedOffset + translation
                 let currentOffset = min(max(0, rawOffset), collapsedSheetOffset)
                 let shouldCollapse: Bool
                 if velocity > 650 || translation > collapsedSheetOffset * 0.46 {
@@ -493,9 +509,10 @@ struct HomeView: View {
                 let travel = target - currentOffset
                 let normalizedV = abs(travel) < 1 ? 0 : max(-2.5, min(2.5, velocity / travel))
                 UIImpactFeedbackGenerator(style: .soft).impactOccurred()
-                withAnimation(.interpolatingSpring(stiffness: 280, damping: 30, initialVelocity: normalizedV)) {
-                    capsuleDrag = 0
-                    sheetOffset = target
+                animateMapOverlay(collapsed: shouldCollapse)
+                withAnimation(.interpolatingSpring(stiffness: 320, damping: 28, initialVelocity: normalizedV)) {
+                    liveDrag.capsuleDrag = 0
+                    liveDrag.snappedOffset = target
                 }
             }
     }
@@ -506,6 +523,7 @@ struct HomeView: View {
         @Binding var sheetOffset: CGFloat
         @Binding var listDrag: CGFloat
         let collapsedSheetOffset: CGFloat
+        @Binding var mapCityOpacity: Double
 
         func makeUIView(context: Context) -> UIView { UIView(frame: .zero) }
 
@@ -513,6 +531,7 @@ struct HomeView: View {
             context.coordinator.sheetOffset = $sheetOffset
             context.coordinator.listDrag = $listDrag
             context.coordinator.collapsedSheetOffset = collapsedSheetOffset
+            context.coordinator.mapCityOpacity = $mapCityOpacity
             context.coordinator.attachIfNeeded(from: uiView)
         }
 
@@ -560,6 +579,7 @@ struct HomeView: View {
             var sheetOffset: Binding<CGFloat>?
             var listDrag: Binding<CGFloat>?
             var collapsedSheetOffset: CGFloat = 0
+            var mapCityOpacity: Binding<Double>?
             private weak var attachedScrollView: UIScrollView?
             private var capturedTranslationAtTop: CGFloat? = nil
             private var wasAtTop = false
@@ -651,23 +671,28 @@ struct HomeView: View {
                             // on fast swipes and captures a stale, already-scrolled offset.
                             savedScrollOffsetY = topInset
                             isExpandingFromCollapsed = true
+                            // Disable UIKit scrolling for the entire expansion gesture.
+                            // This stops UIKit from consuming the upward pan for list scrolling,
+                            // eliminating the per-frame scrollViewDidScroll cascade that was
+                            // causing frame drops near the fully-expanded position.
+                            sv.isScrollEnabled = false
                         }
                         listDrag?.wrappedValue = min(0, translation)
-                        sv.contentOffset.y = topInset  // lock scroll while expanding
-                        // Pre-arm the deceleration canceller NOW — scrollViewWillBeginDecelerating
-                        // fires inside UIKit's own .ended handler, before ours, so setting this
-                        // flag in .ended would be too late
                         decelerationCanceller?.cancelNext = true
                     }
 
-                    // While sheet is fully collapsed, block all list scrolling
-                    if isCollapsed {
+                    // While sheet is fully collapsed and NOT actively expanding,
+                    // block list scrolling via direct contentOffset reset.
+                    // (During expansion isScrollEnabled = false handles this more efficiently.)
+                    if isCollapsed && !isExpandingFromCollapsed {
                         sv.contentOffset.y = topInset
                     }
 
                     wasAtTop = atTop
 
                 case .ended, .cancelled, .failed:
+                    // Always restore scroll — safe even if isScrollEnabled was never set to false
+                    sv.isScrollEnabled = true
                     let drag = listDrag?.wrappedValue ?? 0
                     capturedTranslationAtTop = nil
                     wasAtTop = false
@@ -705,7 +730,13 @@ struct HomeView: View {
                     let travel = target - currentOffset
                     let normalizedV = abs(travel) < 1 ? 0 : max(-2.5, min(2.5, velocity / travel))
                     UIImpactFeedbackGenerator(style: .soft).impactOccurred()
-                    withAnimation(.interpolatingSpring(stiffness: 280, damping: 30, initialVelocity: normalizedV)) {
+                    // Animate map overlay separately so it finishes before the spring tail,
+                    // preventing per-frame GlobeMapView updates during the expensive tail end.
+                    let targetMapOpacity: Double = shouldCollapse ? 1.0 : 0.0
+                    withAnimation(.easeOut(duration: 0.18)) {
+                        mapCityOpacity?.wrappedValue = targetMapOpacity
+                    }
+                    withAnimation(.interpolatingSpring(stiffness: 320, damping: 28, initialVelocity: normalizedV)) {
                         listDrag?.wrappedValue = 0
                         sheetOffset?.wrappedValue = target
                     }
@@ -1371,6 +1402,99 @@ struct PressableScaleButtonStyle: ButtonStyle {
     }
 }
 
+
+// MARK: - Live drag state
+
+/// Holds all per-frame drag/animation state as an @Observable class so that
+/// SwiftUI's fine-grained observation (iOS 17+) only re-evaluates
+/// SheetTransformModifier — not the entire HomeView.body — on every frame.
+///
+/// snappedOffset (formerly HomeView @State sheetOffset) is moved here so that
+/// HomeView.body never reads it directly. Without this move, SwiftUI's spring
+/// animations update @State every frame, triggering a full HomeView.body
+/// re-evaluate each frame — the root cause of spring-tail jank.
+@Observable
+private final class LiveDragState {
+    var capsuleDrag: CGFloat = 0
+    var listDrag: CGFloat = 0
+    /// The snapped/animated sheet offset. Driven by withAnimation at gesture end.
+    /// Lives in LiveDragState (not HomeView @State) so only SheetTransformModifier
+    /// re-evaluates during spring animation, not HomeView.body.
+    var snappedOffset: CGFloat = 0
+}
+
+// MARK: - Sheet transform modifier
+
+/// The ONLY view modifier that re-evaluates on every drag/animation frame.
+/// Reads liveDrag properties via @Observable fine-grained tracking.
+/// HomeView.body does NOT re-evaluate during spring animations because it no
+/// longer reads liveDrag or sheetOffset directly.
+///
+/// Owns ALL per-frame sheet visuals:
+///   • rubber-band offset
+///   • top corner radius (36→42 as sheet collapses)
+///   • bottom corner radius (0→20, gives the Flighty/Tripsy floating-card look)
+///   • horizontal scale (1.0→0.97)
+///   • bottom lift (0→12pt gap between sheet bottom and screen edge)
+///   • rubber-band gap cover (fills the gap when sheet overshoots upward)
+private struct SheetTransformModifier: ViewModifier {
+    let liveDrag: LiveDragState
+    let collapsedSheetOffset: CGFloat
+    /// Matched to the sheet background colour so the rubber-band cover blends in.
+    let coverColor: Color
+
+    private func rubberBandOffset(_ raw: CGFloat) -> CGFloat {
+        let lo: CGFloat = 0
+        let hi = collapsedSheetOffset
+        guard hi > lo else { return raw }
+        if raw < lo {
+            let over = lo - raw
+            return lo - over * 0.55 / (1 + over / hi)
+        } else if raw > hi {
+            let over = raw - hi
+            return hi + over * 0.55 / (1 + over / hi)
+        }
+        return raw
+    }
+
+    func body(content: Content) -> some View {
+        // Current real position (snapped + live drag, before rubber-band)
+        let currentRaw = liveDrag.snappedOffset + liveDrag.capsuleDrag + liveDrag.listDrag
+        let banded = rubberBandOffset(currentRaw)
+
+        // Progress 0 = fully expanded, 1 = fully collapsed.
+        // Clamped to [0, 1] so rubber-band overshoots don't distort visuals.
+        let progress: CGFloat = collapsedSheetOffset > 0
+            ? min(max(0, currentRaw), collapsedSheetOffset) / collapsedSheetOffset
+            : 0
+
+        let topRadius: CGFloat    = 36 + progress * 6      // 36 → 42
+        let bottomRadius: CGFloat = progress * 20           // 0  → 20
+        let scaleX: CGFloat       = 1.0 - progress * 0.03  // 1.0 → 0.97
+        let bottomLift: CGFloat   = progress * 12           // 0  → 12 pt gap
+
+        content
+            .compositingGroup()
+            .clipShape(UnevenRoundedRectangle(
+                topLeadingRadius: topRadius,
+                bottomLeadingRadius: bottomRadius,
+                bottomTrailingRadius: bottomRadius,
+                topTrailingRadius: topRadius,
+                style: .continuous
+            ))
+            .scaleEffect(x: scaleX, y: 1.0, anchor: .bottom)
+            // Rubber-band gap cover: sits just below the sheet frame so it fills
+            // the gap when the sheet overshoots upward.  Must be after clipShape
+            // so the cover itself is not clipped away.
+            .background(alignment: .bottom) {
+                coverColor
+                    .frame(height: 150)
+                    .offset(y: 150)
+                    .allowsHitTesting(false)
+            }
+            .offset(y: banded - bottomLift)
+    }
+}
 
 // MARK: - Preview
 
