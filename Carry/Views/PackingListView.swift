@@ -114,6 +114,8 @@ struct PackingListView: View {
             }
         }
         .coordinateSpace(name: "packingRoot")
+        .toolbarBackground(Color(UIColor.systemBackground), for: .navigationBar)
+        .toolbarBackground(.visible, for: .navigationBar)
         .toolbarBackground(.visible, for: .tabBar)
         .navigationTitle(bundle?.name ?? "")
         .navigationBarTitleDisplayMode(.inline)
@@ -334,13 +336,14 @@ struct PackingListView: View {
                 toastBanner
             }
 
-            progressHeader
-
             if sections.isEmpty {
                 emptyState
             } else {
                 packingList
             }
+        }
+        .safeAreaInset(edge: .top, spacing: 0) {
+            progressHeader
         }
     }
 
