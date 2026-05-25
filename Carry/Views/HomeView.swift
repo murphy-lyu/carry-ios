@@ -6,6 +6,17 @@
 import SwiftUI
 import MapKit
 
+fileprivate let homeDarkBackdropTop = Color(red: 0.03, green: 0.03, blue: 0.04)
+fileprivate let homeDarkBackdropBottom = Color(red: 0.07, green: 0.07, blue: 0.08)
+fileprivate let homeDarkHeroTop = Color(red: 0.12, green: 0.12, blue: 0.13)
+fileprivate let homeDarkHeroBottom = Color(red: 0.17, green: 0.17, blue: 0.18)
+fileprivate let homeDarkStatTop = Color(red: 0.15, green: 0.15, blue: 0.16)
+fileprivate let homeDarkStatBottom = Color(red: 0.20, green: 0.20, blue: 0.21)
+fileprivate let homeDarkCardTop = Color(red: 0.10, green: 0.10, blue: 0.11)
+fileprivate let homeDarkCardBottom = Color(red: 0.14, green: 0.14, blue: 0.15)
+fileprivate let homeDarkPastCardTop = Color(red: 0.09, green: 0.09, blue: 0.10)
+fileprivate let homeDarkPastCardBottom = Color(red: 0.12, green: 0.12, blue: 0.13)
+
 // MARK: - HomeView
 
 struct HomeView: View {
@@ -270,7 +281,7 @@ struct HomeView: View {
                                 .listRowSeparator(.hidden)
 
                             Color.clear
-                                .frame(height: 72)
+                                .frame(height: colorScheme == .dark ? 124 : 72)
                                 .listRowBackground(Color.clear)
                                 .listRowSeparator(.hidden)
                         } // end if !isEffectivelyEmpty
@@ -369,6 +380,19 @@ struct HomeView: View {
             .frame(height: expandedSheetHeight)
             .animation(.spring(response: 0.5, dampingFraction: 0.82), value: isEffectivelyEmpty)
             .background(CarryAtmosphereBackground())
+            .background {
+                if colorScheme == .dark {
+                    LinearGradient(
+                        colors: [
+                            homeDarkBackdropTop,
+                            homeDarkBackdropBottom
+                        ],
+                        startPoint: .top,
+                        endPoint: .bottom
+                    )
+                    .ignoresSafeArea()
+                }
+            }
             .compositingGroup()
             .clipShape(UnevenRoundedRectangle(topLeadingRadius: sheetCornerRadius, bottomLeadingRadius: 0, bottomTrailingRadius: 0, topTrailingRadius: sheetCornerRadius, style: .continuous))
             .scaleEffect(x: sheetScaleX, y: 1.0, anchor: .bottom)
@@ -775,8 +799,8 @@ struct HomeView: View {
                     ? AnyShapeStyle(
                         LinearGradient(
                             colors: [
-                                Color(red: 0.17, green: 0.17, blue: 0.18).opacity(0.96),
-                                Color(red: 0.20, green: 0.20, blue: 0.21).opacity(0.90)
+                                homeDarkHeroTop.opacity(0.98),
+                                homeDarkHeroBottom.opacity(0.94)
                             ],
                             startPoint: .topLeading,
                             endPoint: .bottomTrailing
@@ -862,8 +886,8 @@ struct HomeView: View {
         if colorScheme == .dark {
             return LinearGradient(
                 colors: [
-                    Color(red: 0.17, green: 0.17, blue: 0.18),
-                    Color(red: 0.20, green: 0.20, blue: 0.21)
+                    homeDarkStatTop,
+                    homeDarkStatBottom
                 ],
                 startPoint: .topLeading,
                 endPoint: .bottomTrailing
@@ -1120,8 +1144,8 @@ struct TripCard: View {
             if colorScheme == .dark {
                 return LinearGradient(
                     colors: [
-                        Color(red: 0.12, green: 0.12, blue: 0.13),
-                        Color(red: 0.14, green: 0.14, blue: 0.15)
+                        homeDarkPastCardTop,
+                        homeDarkPastCardBottom
                     ],
                     startPoint: .topLeading,
                     endPoint: .bottomTrailing
@@ -1140,8 +1164,8 @@ struct TripCard: View {
         if colorScheme == .dark {
             return LinearGradient(
                 colors: [
-                    Color(red: 0.14, green: 0.14, blue: 0.15),
-                    Color(red: 0.17, green: 0.17, blue: 0.18)
+                    homeDarkCardTop,
+                    homeDarkCardBottom
                 ],
                 startPoint: .topLeading,
                 endPoint: .bottomTrailing
