@@ -13,10 +13,6 @@ struct AboutView: View {
     @State private var versionTapCount = 0
     @State private var versionTapTimer: Timer?
 
-    private var isChineseLanguage: Bool {
-        (Bundle.main.preferredLocalizations.first ?? Locale.current.language.languageCode?.identifier ?? "en").lowercased().hasPrefix("zh")
-    }
-
     private var appVersion: String {
         let dict = Bundle.main.infoDictionary
         let version = dict?["CFBundleShortVersionString"] as? String ?? "—"
@@ -57,14 +53,6 @@ struct AboutView: View {
                 moduleCard(title: "about.follow") {
                     VStack(spacing: 0) {
                         socialRow(label: "Twitter / X", handle: "@murphy_lyu", url: "https://x.com/murphy_Iyu")
-                        if isChineseLanguage {
-                            socialRow(
-                                label: "about.social.xiaohongshu",
-                                handle: "@murphy_lyu",
-                                url: "xhsdiscover://user/5484e470d6e4a9281353f172",
-                                fallbackURL: "https://www.xiaohongshu.com/user/profile/5484e470d6e4a9281353f172"
-                            )
-                        }
                     }
                 }
 
