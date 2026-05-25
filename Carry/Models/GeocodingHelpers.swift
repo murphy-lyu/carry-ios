@@ -10,10 +10,9 @@
 // MARK: - Country centroids
 
 /// Geographic centre-points keyed by ISO 3166-1 alpha-2 country code.
-/// Stored as `static let` on a caseless enum so Swift never infers @MainActor
-/// (global stored `let` at file scope gets @MainActor in Swift 6 strict mode).
 enum GeocodingData {
-    nonisolated(unsafe) static let countryCentroids: [String: (lat: Double, lon: Double)] = [
+    nonisolated static func countryCentroid(for code: String) -> (lat: Double, lon: Double)? {
+        let countryCentroids: [String: (lat: Double, lon: Double)] = [
         "AF": (33.93, 67.71), "AL": (41.15, 20.17), "DZ": (28.03, 1.66),
         "AO": (-11.20, 17.87), "AR": (-38.42, -63.62), "AU": (-25.27, 133.78),
         "AT": (47.52, 14.55), "AZ": (40.14, 47.58), "BD": (23.68, 90.36),
@@ -42,5 +41,7 @@ enum GeocodingData {
         "AE": (23.42, 53.85), "GB": (55.38, -3.44), "US": (37.09, -95.71),
         "UZ": (41.38, 63.97), "VE": (6.42, -66.59), "VN": (14.06, 108.28),
         "YE": (15.55, 48.52), "ZM": (-13.13, 27.85), "ZW": (-19.02, 29.15),
-    ]
+        ]
+        return countryCentroids[code.uppercased()]
+    }
 }

@@ -265,8 +265,14 @@ private struct DayCell: View {
     private var rangeOpacity: Double {
         colorScheme == .dark ? 0.10 : 0.10
     }
+    private var maxCornerRadius: CGFloat {
+        18
+    }
     private var endpointCircleScale: CGFloat {
         0.96
+    }
+    private var endpointEdgeInset: CGFloat {
+        7
     }
 
     var body: some View {
@@ -304,9 +310,32 @@ private struct DayCell: View {
         .onTapGesture { onTap() }
     }
 
+    @ViewBuilder
     private var selectionBackground: some View {
-        Rectangle()
+        if isStart {
+            UnevenRoundedRectangle(
+                topLeadingRadius: maxCornerRadius,
+                bottomLeadingRadius: maxCornerRadius,
+                bottomTrailingRadius: 0,
+                topTrailingRadius: 0,
+                style: .continuous
+            )
             .fill(Color.accentColor.opacity(rangeOpacity))
+            .padding(.leading, endpointEdgeInset)
+        } else if isEnd {
+            UnevenRoundedRectangle(
+                topLeadingRadius: 0,
+                bottomLeadingRadius: 0,
+                bottomTrailingRadius: maxCornerRadius,
+                topTrailingRadius: maxCornerRadius,
+                style: .continuous
+            )
+            .fill(Color.accentColor.opacity(rangeOpacity))
+            .padding(.trailing, endpointEdgeInset)
+        } else {
+            Rectangle()
+                .fill(Color.accentColor.opacity(rangeOpacity))
+        }
     }
 }
 
