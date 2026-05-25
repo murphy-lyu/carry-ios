@@ -180,6 +180,16 @@ extension View {
     }
 }
 
+struct SolidPressButtonStyle: ButtonStyle {
+    var scale: CGFloat = 0.985
+
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .scaleEffect(configuration.isPressed ? scale : 1.0)
+            .animation(.spring(duration: 0.2, bounce: 0.1), value: configuration.isPressed)
+    }
+}
+
 struct FlowLayout: Layout {
     var spacing: CGFloat = 8
     var lineSpacing: CGFloat = 8

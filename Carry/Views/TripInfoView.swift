@@ -41,13 +41,13 @@ struct TripInfoView: View {
 
     private var continueButtonBackground: Color {
         if canContinue {
-            return Color.primary.opacity(0.92)
+            return colorScheme == .dark ? Color(.label) : Color(.label)
         }
-        return Color(UIColor.secondarySystemFill)
+        return colorScheme == .dark ? Color(.secondarySystemBackground) : Color(.systemGray3)
     }
 
     private var continueButtonForeground: Color {
-        canContinue ? Color(UIColor.systemBackground) : Color.secondary
+        canContinue ? Color(.systemBackground) : Color(.secondaryLabel)
     }
 
     private var info: TripInfo {
@@ -134,6 +134,7 @@ struct TripInfoView: View {
         .safeAreaInset(edge: .bottom) {
             VStack(spacing: 0) {
                 Button(action: {
+                    guard canContinue else { return }
                     hideKeyboard()
                     router.path.append(CreationRoute.itemPicker(info, startInMyItems: startInMyItems))
                 }) {
@@ -147,14 +148,16 @@ struct TripInfoView: View {
                         .cornerRadius(14)
                         .overlay(
                             RoundedRectangle(cornerRadius: 14, style: .continuous)
-                                .strokeBorder(Color.primary.opacity(canContinue ? 0 : 0.05), lineWidth: 1)
+                                .strokeBorder(Color(.separator).opacity(canContinue ? 0.08 : 0.14), lineWidth: 1)
                         )
                 }
-                .disabled(!canContinue)
+                .buttonStyle(SolidPressButtonStyle())
+                .allowsHitTesting(canContinue)
                 .padding(.horizontal, 16)
             }
             .padding(.top, 12)
             .padding(.bottom, 16)
+            .frame(maxWidth: .infinity)
             .background(Color.clear)
         }
         .navigationTitle("")

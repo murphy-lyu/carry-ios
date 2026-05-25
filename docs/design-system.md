@@ -3,6 +3,7 @@
 ## 设计原则
 Apple 原生风格，极简、克制、优雅。
 优先使用系统语义色（自动适配 Dark Mode），品牌色仅用于强调。
+如果旧规范本身不适合现在这套产品气质，那就应该升级并重新统一，而不是继续照着旧的用。
 
 ## Color Tokens
 
@@ -63,10 +64,12 @@ Apple 原生风格，极简、克制、优雅。
 ### 主按钮（Primary Button）
 - 高度：50pt
 - 圆角：12pt
-- 背景：Accent / .primary 色
-- 字体：.body .fontWeight(.semibold)，白色
+- 背景：使用语义色，必须 100% 不透明；优先 `Color(.label)` 或 `Color(.primary)` 这类会随 Dark Mode 翻转的实心色
+- 字体：.body .fontWeight(.semibold)，使用 `Color(.systemBackground)` 形成高对比
 - 水平内边距：24pt
-- 禁用状态：opacity 0.4
+- 按压状态：只做轻微缩放，不使用 opacity 或 material 反馈
+- 禁用状态：使用另一档实心语义色降一阶，Light Mode 选更可辨识的系统灰阶（例如 `Color(.systemGray3)` + `Color(.secondaryLabel)`），Dark Mode 选更稳的深色语义背景（例如 `Color(.secondarySystemBackground)` + `Color(.secondaryLabel)`），不得透底
+- 组件实现建议：不要依赖 `.disabled(...)` 触发系统半透明效果；用明确的背景、前景和命中控制来表达可点/不可点
 
 ### 卡片（Card）
 - 背景：Surface Card

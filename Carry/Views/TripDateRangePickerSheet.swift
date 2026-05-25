@@ -199,7 +199,6 @@ private struct MonthGrid: View {
     let onTap: (Date) -> Void
 
     private let calendar = Calendar.current
-    private let cols = Array(repeating: GridItem(.flexible(), spacing: 0), count: 7)
 
     var body: some View {
         VStack(alignment: .leading, spacing: 4) {
@@ -208,7 +207,7 @@ private struct MonthGrid: View {
                 .foregroundStyle(.primary)
                 .padding(.bottom, 4)
 
-            LazyVGrid(columns: cols, spacing: 0) {
+            LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 0), count: 7), spacing: 0) {
                 ForEach(Array(cells().enumerated()), id: \.offset) { _, date in
                     if let date {
                         DayCell(
@@ -253,54 +252,61 @@ private struct DayCell: View {
     let onTap: () -> Void
 
     private let calendar = Calendar.current
+    @Environment(\.colorScheme) private var colorScheme
 
     private var isStart: Bool { calendar.isDate(date, inSameDayAs: selectedStart) }
     private var isEnd: Bool { calendar.isDate(date, inSameDayAs: selectedEnd) }
     private var hasRange: Bool { selectedStart < selectedEnd }
     private var isInRange: Bool { date > selectedStart && date < selectedEnd }
     private var isToday: Bool { calendar.isDate(date, inSameDayAs: today) }
+    private var selectedDayForeground: Color {
+        colorScheme == .dark ? Color.black : Color.white
+    }
+    private var rangeOpacity: Double {
+        colorScheme == .dark ? 0.10 : 0.10
+    }
+    private var endpointCircleScale: CGFloat {
+        0.96
+    }
 
     var body: some View {
         ZStack {
-            // Range band background
             if hasRange {
-                if isInRange {
-                    Color.accentColor.opacity(0.10)
-                } else if isStart {
-                    HStack(spacing: 0) {
-                        Color.clear
-                        Color.accentColor.opacity(0.10)
-                    }
+                if isStart {
+                    selectionBackground
                 } else if isEnd {
-                    HStack(spacing: 0) {
-                        Color.accentColor.opacity(0.10)
-                        Color.clear
-                    }
+                    selectionBackground
+                } else if isInRange {
+                    selectionBackground
                 }
             }
 
-            // Endpoint circle
             if isStart || isEnd {
                 Circle()
                     .fill(Color.accentColor)
-                    .padding(5)
+                    .scaleEffect(endpointCircleScale)
             } else if isToday {
                 Circle()
                     .strokeBorder(Color.accentColor.opacity(0.92), lineWidth: 1.5)
                     .padding(5)
             }
 
-            // Day number
             Text("\(calendar.component(.day, from: date))")
                 .font(.system(size: 15, weight: (isStart || isEnd) ? .semibold : .regular))
                 .foregroundStyle(
-                    (isStart || isEnd) ? AnyShapeStyle(Color.white) :
+                    (isStart || isEnd) ? AnyShapeStyle(selectedDayForeground) :
                     AnyShapeStyle(Color.primary)
                 )
         }
+        .padding(.vertical, 2)
         .frame(height: 44)
         .contentShape(Rectangle())
         .onTapGesture { onTap() }
+    }
+
+    private var selectionBackground: some View {
+        Rectangle()
+            .fill(Color.accentColor.opacity(rangeOpacity))
     }
 }
 
