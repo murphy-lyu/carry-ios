@@ -82,16 +82,14 @@ struct ItemPickerView: View {
 
     private var myItemsCount: Int { store.myItems.count }
 
-    private var presetCategoryOrder: [String: Int] {
+    private static let presetCategoryOrder: [String: Int] =
         Dictionary(uniqueKeysWithValues: itemPickerCatalog.enumerated().map { ($1.name, $0) })
-    }
 
-    private var presetItemOrderByCategory: [String: [String: Int]] {
+    private static let presetItemOrderByCategory: [String: [String: Int]] =
         Dictionary(uniqueKeysWithValues: itemPickerCatalog.map { category in
             let itemOrder = Dictionary(uniqueKeysWithValues: category.items.enumerated().map { ($1, $0) })
             return (category.name, itemOrder)
         })
-    }
 
     private enum SourceMode: String, CaseIterable {
         case preset
@@ -323,20 +321,20 @@ struct ItemPickerView: View {
                         }
                     } else {
                         ScrollView {
-                            LazyVStack(alignment: .leading, spacing: 12) {
+                            VStack(alignment: .leading, spacing: 12) {
                                 if searchText.isEmpty {
                                     ForEach(itemPickerCatalog, id: \.name) { category in
                                         categoryCard(category)
                                     }
                                 } else {
                                     let searchResults = orderedSearchResults
-                                if searchResults.isEmpty {
-                                    searchEmptyState
-                                } else {
-                                    VStack(spacing: 0) {
-                                        ForEach(searchResults) { result in
-                                            searchResultRow(result)
-                                        }
+                                    if searchResults.isEmpty {
+                                        searchEmptyState
+                                    } else {
+                                        VStack(spacing: 0) {
+                                            ForEach(searchResults) { result in
+                                                searchResultRow(result)
+                                            }
                                         }
                                     }
                                 }
@@ -344,12 +342,6 @@ struct ItemPickerView: View {
                             .padding(.bottom, isCreateMode ? 96 : 24)
                         }
                         .scrollDismissesKeyboard(.interactively)
-                        .simultaneousGesture(
-                            TapGesture().onEnded {
-                                isSearchFocused = false
-                                hideKeyboard()
-                            }
-                        )
                     }
                 }
                 .sheet(isPresented: $showMyItemAddSheet) {
@@ -442,9 +434,11 @@ struct ItemPickerView: View {
                 categoryBody(category)
             }
         }
+        .animation(.easeInOut(duration: 0.2), value: isExpanded)
         .background(
             RoundedRectangle(cornerRadius: 18, style: .continuous)
                 .fill(fill)
+                .animation(.easeInOut(duration: 0.2), value: isExpanded)
         )
         .overlay(
             RoundedRectangle(cornerRadius: 18, style: .continuous)
@@ -837,8 +831,8 @@ struct ItemPickerView: View {
     }
 
     private func compareMyItems(_ lhs: MyItem, _ rhs: MyItem) -> Bool {
-        let lhsCategoryRank = presetCategoryOrder[lhs.category] ?? Int.max
-        let rhsCategoryRank = presetCategoryOrder[rhs.category] ?? Int.max
+        let lhsCategoryRank = Self.presetCategoryOrder[lhs.category] ?? Int.max
+        let rhsCategoryRank = Self.presetCategoryOrder[rhs.category] ?? Int.max
         if lhsCategoryRank != rhsCategoryRank {
             return lhsCategoryRank < rhsCategoryRank
         }
@@ -847,8 +841,8 @@ struct ItemPickerView: View {
             return lhs.category.localizedCaseInsensitiveCompare(rhs.category) == .orderedAscending
         }
 
-        let lhsItemRank = presetItemOrderByCategory[lhs.category]?[lhs.name] ?? Int.max
-        let rhsItemRank = presetItemOrderByCategory[rhs.category]?[rhs.name] ?? Int.max
+        let lhsItemRank = Self.presetItemOrderByCategory[lhs.category]?[lhs.name] ?? Int.max
+        let rhsItemRank = Self.presetItemOrderByCategory[rhs.category]?[rhs.name] ?? Int.max
         if lhsItemRank != rhsItemRank {
             return lhsItemRank < rhsItemRank
         }
@@ -907,12 +901,10 @@ struct ItemPickerView: View {
         }.count
 
         Button {
-            withAnimation(.easeInOut(duration: 0.2)) {
-                if isExpanded {
-                    expandedCategories.remove(category.name)
-                } else {
-                    expandedCategories.insert(category.name)
-                }
+            if isExpanded {
+                expandedCategories.remove(category.name)
+            } else {
+                expandedCategories.insert(category.name)
             }
         } label: {
             HStack(spacing: 12) {
@@ -954,15 +946,13 @@ struct ItemPickerView: View {
 
         VStack(spacing: 0) {
             Button {
-                withAnimation(.easeInOut(duration: 0.15)) {
-                    if allSelected {
-                        for item in category.items {
-                            selectedItems.remove(PickerItemID(category: category.name, item: item))
-                        }
-                    } else {
-                        for item in category.items {
-                            selectedItems.insert(PickerItemID(category: category.name, item: item))
-                        }
+                if allSelected {
+                    for item in category.items {
+                        selectedItems.remove(PickerItemID(category: category.name, item: item))
+                    }
+                } else {
+                    for item in category.items {
+                        selectedItems.insert(PickerItemID(category: category.name, item: item))
                     }
                 }
             } label: {
@@ -996,12 +986,10 @@ struct ItemPickerView: View {
         let id = PickerItemID(category: category, item: item)
         let isSelected = selectedItems.contains(id)
         return Button {
-            withAnimation(.easeInOut(duration: 0.15)) {
-                if isSelected {
-                    selectedItems.remove(id)
-                } else {
-                    selectedItems.insert(id)
-                }
+            if isSelected {
+                selectedItems.remove(id)
+            } else {
+                selectedItems.insert(id)
             }
         } label: {
             HStack(spacing: 12) {
