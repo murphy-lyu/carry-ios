@@ -25,6 +25,7 @@ private struct SearchResultItem: Identifiable, Hashable {
     let category: String?
     let itemID: PickerItemID?
     let myItem: MyItem?
+    let isAlreadyAdded: Bool
 }
 
 // MARK: - ItemPickerView
@@ -66,6 +67,13 @@ struct ItemPickerView: View {
     @State private var showMyItemAddSheet = false
     @State private var selectedMyItemCollection: String = "Default"
     @State private var didLogSearch = false
+
+    private var existingItemNames: Set<String> {
+        guard case .merge(let tripId) = mode,
+              let bundle = store.bundle(for: tripId) else { return [] }
+
+        return Set(bundle.safeSections.flatMap { $0.items ?? [] }.map { normalizedItemName($0.name) })
+    }
 
     private var hasSelection: Bool {
         !selectedItems.isEmpty || !selectedMyItemIDs.isEmpty
@@ -118,7 +126,8 @@ struct ItemPickerView: View {
                         title: canonicalItemName($0),
                         category: cat.name,
                         itemID: PickerItemID(category: cat.name, item: canonicalItemName($0)),
-                        myItem: nil
+                        myItem: nil,
+                        isAlreadyAdded: existingItemNames.contains(normalizedItemName($0))
                     )
                 }
         }
@@ -185,7 +194,8 @@ struct ItemPickerView: View {
                 title: $0.name,
                 category: $0.category,
                 itemID: nil,
-                myItem: $0
+                myItem: $0,
+                isAlreadyAdded: existingItemNames.contains(normalizedItemName($0.name))
             )
         }
         .sorted { lhs, rhs in
@@ -221,6 +231,10 @@ struct ItemPickerView: View {
         if normalizedTerms.contains(where: { $0.hasPrefix(query) }) { return 1 }
         if normalizedTerms.contains(where: { $0.contains(query) }) { return 2 }
         return 3
+    }
+
+    private func normalizedItemName(_ name: String) -> String {
+        normalizedForSearch(canonicalItemName(name))
     }
 
     private func hideKeyboard() {
@@ -490,6 +504,7 @@ struct ItemPickerView: View {
 
     private func searchResultRow(_ result: SearchResultItem) -> some View {
         Button {
+            guard !result.isAlreadyAdded else { return }
             switch result.source {
             case .base:
                 if let id = result.itemID {
@@ -527,6 +542,17 @@ struct ItemPickerView: View {
                         Text(LocalizedStringKey(result.title))
                             .font(.body)
                             .foregroundStyle(.primary)
+                        if result.isAlreadyAdded {
+                            Text(LocalizedStringKey("itempicker.already_added"))
+                                .font(.caption2.weight(.semibold))
+                                .foregroundStyle(.secondary)
+                                .padding(.horizontal, 8)
+                                .padding(.vertical, 3)
+                                .background(
+                                    Capsule(style: .continuous)
+                                        .fill(Color(UIColor.tertiarySystemFill))
+                                )
+                        }
                         if result.source == .custom {
                             Text(LocalizedStringKey("myitems.search.custom_tag"))
                                 .font(.caption2.weight(.semibold))
@@ -549,6 +575,7 @@ struct ItemPickerView: View {
                 Spacer()
             }
             .frame(height: 48)
+            .opacity(result.isAlreadyAdded ? 0.72 : 1.0)
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
@@ -582,6 +609,7 @@ struct ItemPickerView: View {
     }
 
     private func isSearchResultSelected(_ result: SearchResultItem) -> Bool {
+        if result.isAlreadyAdded { return true }
         switch result.source {
         case .base:
             return result.itemID.map { selectedItems.contains($0) } ?? false
@@ -802,8 +830,10 @@ struct ItemPickerView: View {
     }
 
     private func myItemRow(_ item: MyItem) -> some View {
+        let isAlreadyAdded = existingItemNames.contains(normalizedItemName(item.name))
         let isSelected = selectedMyItemIDs.contains(item.id)
         return Button {
+            guard !isAlreadyAdded else { return }
             if isSelected {
                 selectedMyItemIDs.remove(item.id)
             } else {
@@ -813,10 +843,10 @@ struct ItemPickerView: View {
             HStack(spacing: 12) {
                 ZStack {
                     Circle()
-                        .fill(isSelected ? Color.primary : Color.clear)
+                        .fill((isSelected || isAlreadyAdded) ? Color.primary : Color.clear)
                     Circle()
-                        .strokeBorder(isSelected ? Color.primary : Color.secondary.opacity(0.4), lineWidth: 1.5)
-                    if isSelected {
+                        .strokeBorder((isSelected || isAlreadyAdded) ? Color.primary : Color.secondary.opacity(0.4), lineWidth: 1.5)
+                    if isSelected || isAlreadyAdded {
                         Image(systemName: "checkmark")
                             .font(.system(size: 11, weight: .bold))
                             .foregroundColor(Color(UIColor.systemBackground))
@@ -824,9 +854,23 @@ struct ItemPickerView: View {
                 }
                 .frame(width: 24, height: 24)
                 VStack(alignment: .leading, spacing: 2) {
-                    Text(LocalizedStringKey(item.name))
-                        .font(.body)
-                        .foregroundStyle(.primary)
+                    HStack(spacing: 6) {
+                        Text(LocalizedStringKey(item.name))
+                            .font(.body)
+                            .foregroundStyle(.primary)
+                        if isAlreadyAdded {
+                            Text(LocalizedStringKey("itempicker.already_added"))
+                                .font(.caption2.weight(.semibold))
+                                .foregroundStyle(.secondary)
+                                .padding(.horizontal, 8)
+                                .padding(.vertical, 3)
+                                .background(
+                                    Capsule(style: .continuous)
+                                        .fill(Color(UIColor.tertiarySystemFill))
+                                )
+                        }
+                        Spacer()
+                    }
                     if !item.category.isEmpty {
                         Text(LocalizedStringKey(item.category))
                             .font(.caption)
@@ -836,6 +880,7 @@ struct ItemPickerView: View {
                 Spacer()
             }
             .frame(height: 48)
+            .opacity(isAlreadyAdded ? 0.72 : 1.0)
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
@@ -950,21 +995,24 @@ struct ItemPickerView: View {
 
     @ViewBuilder
     private func categoryBody(_ category: ItemPickerCategory) -> some View {
-        let selectedCount = category.items.filter {
+        let selectableItems = category.items.filter {
+            !existingItemNames.contains(normalizedItemName($0))
+        }
+        let selectedCount = selectableItems.filter {
             selectedItems.contains(PickerItemID(category: category.name, item: $0))
         }.count
-        let allSelected = selectedCount == category.items.count
+        let allSelected = !selectableItems.isEmpty && selectedCount == selectableItems.count
         let isDarkMode = colorScheme == .dark
 
         VStack(spacing: 0) {
             Button {
                 if allSelected {
-                    for item in category.items {
+                    for item in selectableItems {
                         selectedItems.remove(PickerItemID(category: category.name, item: item))
                     }
                     CarryLogger.shared.log(.pickerSelectAllTapped, context: "category=\(category.name) action=deselect")
                 } else {
-                    for item in category.items {
+                    for item in selectableItems {
                         selectedItems.insert(PickerItemID(category: category.name, item: item))
                     }
                     CarryLogger.shared.log(.pickerSelectAllTapped, context: "category=\(category.name) action=select")
@@ -998,8 +1046,10 @@ struct ItemPickerView: View {
 
     private func itemRow(_ item: String, category: String) -> some View {
         let id = PickerItemID(category: category, item: item)
+        let isAlreadyAdded = existingItemNames.contains(normalizedItemName(item))
         let isSelected = selectedItems.contains(id)
         return Button {
+            guard !isAlreadyAdded else { return }
             if isSelected {
                 selectedItems.remove(id)
             } else {
@@ -1009,22 +1059,39 @@ struct ItemPickerView: View {
             HStack(spacing: 12) {
                 ZStack {
                     Circle()
-                        .fill(isSelected ? Color.primary : Color.clear)
+                        .fill((isSelected || isAlreadyAdded) ? Color.primary : Color.clear)
                     Circle()
-                        .strokeBorder(isSelected ? Color.primary : Color.secondary.opacity(0.4), lineWidth: 1.5)
-                    if isSelected {
+                        .strokeBorder((isSelected || isAlreadyAdded) ? Color.primary : Color.secondary.opacity(0.4), lineWidth: 1.5)
+                    if isSelected || isAlreadyAdded {
                         Image(systemName: "checkmark")
                             .font(.system(size: 11, weight: .bold))
                             .foregroundColor(Color(UIColor.systemBackground))
                     }
                 }
                 .frame(width: 24, height: 24)
-                Text(LocalizedStringKey(item))
-                    .font(.body)
-                    .foregroundColor(.primary)
+                VStack(alignment: .leading, spacing: 2) {
+                    HStack(spacing: 6) {
+                        Text(LocalizedStringKey(item))
+                            .font(.body)
+                            .foregroundColor(.primary)
+                        if isAlreadyAdded {
+                            Text(LocalizedStringKey("itempicker.already_added"))
+                                .font(.caption2.weight(.semibold))
+                                .foregroundStyle(.secondary)
+                                .padding(.horizontal, 8)
+                                .padding(.vertical, 3)
+                                .background(
+                                    Capsule(style: .continuous)
+                                        .fill(Color(UIColor.tertiarySystemFill))
+                                )
+                        }
+                        Spacer()
+                    }
+                }
                 Spacer()
             }
             .frame(height: 44)
+            .opacity(isAlreadyAdded ? 0.72 : 1.0)
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
