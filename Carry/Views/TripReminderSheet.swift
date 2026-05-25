@@ -250,7 +250,10 @@ private struct ReminderRow: View {
         VStack(spacing: 0) {
             // Main row
             HStack(spacing: 0) {
-                Button(action: onTapTime) {
+                Button(action: {
+                    guard !isPastDeparture else { return }
+                    onTapTime()
+                }) {
                     HStack {
                         Text(reminderLabel(for: config))
                             .font(.subheadline)
@@ -260,7 +263,7 @@ private struct ReminderRow: View {
                             Text(config.timeString)
                                 .font(.subheadline)
                                 .foregroundStyle(reminderTimeColor)
-                            if !isPastDeparture && !isFired {
+                            if !isPastDeparture {
                                 Image(systemName: isExpanded ? "chevron.up" : "chevron.down")
                                     .font(.caption2.weight(.semibold))
                                     .foregroundStyle(reminderChevronColor)
@@ -270,9 +273,9 @@ private struct ReminderRow: View {
                     .padding(.leading, 16)
                     .padding(.trailing, isPastDeparture ? 16 : 10)
                     .padding(.vertical, 13)
+                    .frame(maxWidth: .infinity)
                 }
                 .buttonStyle(.plain)
-                .disabled(isPastDeparture || isFired)
 
                 if !isPastDeparture {
                     Button(action: onDelete) {
@@ -391,8 +394,11 @@ struct ReminderPickerSheet: View {
                                     }
                                     .padding(.horizontal, 16)
                                     .padding(.vertical, 13)
+                                    .frame(maxWidth: .infinity, alignment: .leading)
+                                    .contentShape(Rectangle())
                                 }
                                 .buttonStyle(.plain)
+                                .frame(maxWidth: .infinity)
 
                                 if index < availablePresets.count - 1 {
                                     Divider().padding(.leading, 20)

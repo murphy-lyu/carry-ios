@@ -15295,6 +15295,30 @@
         }
       }
     },
+    "trip.reminder.count.one" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "1 reminder set"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "已设置 1 条提醒"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "已設定 1 條提醒"
+          }
+        }
+      }
+    },
+
     "reminder.permission.denied" : {
       "extractionState" : "manual",
       "localizations" : {
