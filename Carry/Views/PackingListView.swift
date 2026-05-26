@@ -164,15 +164,19 @@ struct PackingListView: View {
                             Label("Edit trip", systemImage: "pencil")
                         }
                     }
-                    Button {
-                        router.path.append(CreationRoute.addItems(tripId))
-                    } label: {
-                        Label("packing.menu.add_from_library", systemImage: "shippingbox")
+                    if !isNewTrip {
+                        Button {
+                            router.path.append(CreationRoute.addItems(tripId))
+                        } label: {
+                            Label("packing.menu.add_from_library", systemImage: "shippingbox")
+                        }
                     }
-                    Button {
-                        showReorderSheet = true
-                    } label: {
-                        Label("Edit sections", systemImage: "arrow.up.arrow.down")
+                    if !isNewTrip {
+                        Button {
+                            showReorderSheet = true
+                        } label: {
+                            Label("Edit sections", systemImage: "arrow.up.arrow.down")
+                        }
                     }
                     if !isNewTrip {
                         Button {
