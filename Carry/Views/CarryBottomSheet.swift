@@ -391,6 +391,13 @@ final class SheetViewController: UIViewController {
             CATransaction.setDisableActions(true)
             self.applyCornerMask(top: self.topRadius(p), bottom: self.bottomRadius(p), progress: p)
             CATransaction.commit()
+            // Release any scroll lock set during an expand-from-collapsed gesture.
+            // Doing this in addCompletion (not via asyncAfter) guarantees the lock
+            // is held for exactly the animation duration — no more, no less.
+            if let sv = self.listScrollView, self.delegateProxy?.lockedOffsetY != nil {
+                self.delegateProxy?.lockedOffsetY = nil
+                sv.isScrollEnabled = true
+            }
         }
 
         runningAnimator = anim
@@ -524,12 +531,12 @@ final class SheetViewController: UIViewController {
             wasAtTop = atTop
 
         case .ended, .cancelled, .failed:
-            sv.isScrollEnabled = true
             let drag = liveDelta
             capturedTranslationAtTop = nil
             wasAtTop = false
 
             guard drag != 0 else {
+                sv.isScrollEnabled = true
                 isExpandingFromCollapsed = false
                 return
             }
@@ -537,15 +544,19 @@ final class SheetViewController: UIViewController {
             if isExpandingFromCollapsed {
                 isExpandingFromCollapsed = false
                 delegateProxy?.cancelNext = true
+                // Pin the content offset and keep isScrollEnabled = false.
+                // Both are released inside commitSnap's addCompletion, which fires
+                // exactly when the spring animation settles — no timer needed.
                 delegateProxy?.lockedOffsetY = savedScrollOffsetY
                 sv.setContentOffset(CGPoint(x: sv.contentOffset.x, y: savedScrollOffsetY),
                                     animated: false)
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) { [weak self] in
-                    self?.delegateProxy?.lockedOffsetY = nil
+            } else {
+                // Collapsing gesture, or any other case: re-enable scroll immediately.
+                sv.isScrollEnabled = true
+                if drag > 0 && !atTop {
+                    delegateProxy?.cancelNext = true
+                    sv.setContentOffset(CGPoint(x: sv.contentOffset.x, y: topInset), animated: false)
                 }
-            } else if drag > 0 && !atTop {
-                delegateProxy?.cancelNext = true
-                sv.setContentOffset(CGPoint(x: sv.contentOffset.x, y: topInset), animated: false)
             }
 
             let rawOffset = snappedOffset + drag
