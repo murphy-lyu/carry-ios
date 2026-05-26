@@ -13,6 +13,7 @@ struct SuggestionPreviewView: View {
 
     @EnvironmentObject var store: TripStore
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.colorScheme) private var colorScheme
 
     @State private var selectedNames: Set<String> = []
     @State private var sections: [(title: String, items: [String])] = []
@@ -112,7 +113,7 @@ struct SuggestionPreviewView: View {
             .padding(.bottom, 4)
             .overlay(alignment: .bottom) {
                 Rectangle()
-                    .fill(Color.primary.opacity(0.03))
+                    .fill(colorScheme == .dark ? Color.white.opacity(0.02) : Color.primary.opacity(0.03))
                     .frame(height: 1)
             }
             .zIndex(1)
@@ -135,7 +136,7 @@ struct SuggestionPreviewView: View {
         .padding(.bottom, 4)
         .overlay(alignment: .bottom) {
             Rectangle()
-                .fill(Color.primary.opacity(0.03))
+                .fill(colorScheme == .dark ? Color.white.opacity(0.02) : Color.primary.opacity(0.03))
                 .frame(height: 1)
         }
         .zIndex(1)
