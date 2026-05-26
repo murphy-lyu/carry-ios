@@ -103,14 +103,16 @@ final class SheetViewController: UIViewController {
 
     // MARK: Effect progress
 
-    /// Visual effects (side margins, bottom lift, corner radii) only activate in the
-    /// last 35% of the collapse travel, so the sheet slides down at full size and
-    /// snaps into the pill shape near the end — matching Tripsy / Flighty behaviour.
-    /// During expand the pill dissolves in the first 35% of travel, then the sheet
-    /// rises at full width for the remaining 65%.
+    /// Position-driven progress (0...1). Used by side/bottom insets so they change
+    /// continuously with drag, matching Tripsy/Flighty's "always-following" feel.
     private func effectProgress(_ p: CGFloat) -> CGFloat {
-        // Start narrowing early so width follows drag continuously.
-        let threshold: CGFloat = 0.18
+        min(max(0, p), 1)
+    }
+
+    /// Bottom clipping/reveal only happens in the final tail of collapse to avoid
+    /// the "sheet gets short first, then falls" artifact on fast downward auto-snap.
+    private func bottomRevealProgress(_ p: CGFloat) -> CGFloat {
+        let threshold: CGFloat = 0.97
         guard p > threshold else { return 0 }
         return (p - threshold) / (1 - threshold)
     }
@@ -412,12 +414,10 @@ final class SheetViewController: UIViewController {
         let fullH = innerView.bounds.height
         guard w > 0, fullH > 0 else { return }
 
-        // During most of the descent the bottom corners stay off-screen (mask at fullH),
-        // so the screen edge acts as a natural clip — no visible compression.
-        // Only in the last 35% of travel (effectProgress) does visibleH transition
-        // toward rawVisible, letting the pill's bottom corners float up into view.
+        // Keep full height for almost the whole descent.
+        // Only reveal bottom clipping in the very final tail.
         let rawVisible = clippingView.frame.height - outerView.frame.origin.y
-        let ep         = effectProgress(progress)
+        let ep         = bottomRevealProgress(progress)
         let visibleH   = max(0, min(fullH, fullH + ep * (rawVisible - fullH)))
 
         // True circular arcs — addArc produces the same geometry as CALayer
@@ -502,7 +502,7 @@ final class SheetViewController: UIViewController {
         CATransaction.commit()
     }
 
-    private func commitSnap(to target: CGFloat, velocity: CGFloat) {
+    private func commitSnap(to target: CGFloat, velocity: CGFloat, source: String = "unknown") {
         let clampedVisual = min(max(0, currentVisualOffset()), collapsedOffset)
 
         // Invalidate older completions before stopping the current animation.
@@ -542,21 +542,42 @@ final class SheetViewController: UIViewController {
         }
 
         let isCollapsing = target >= collapsedOffset - 1
-        let dampingRatio: CGFloat = isCollapsing ? 0.95 : 0.88
-        let scaledNormV = isCollapsing ? normV * 0.5 : normV
-        let params = UISpringTimingParameters(
-            dampingRatio: dampingRatio,
-            initialVelocity: CGVector(dx: 0, dy: scaledNormV)
-        )
-        let anim = UIViewPropertyAnimator(duration: 0.68, timingParameters: params)
+        // Fast handle-down release should be one-way and non-bouncy.
+        let isDirectHandleCollapse = (source == "sheetPanDirectCollapse")
+        let anim: UIViewPropertyAnimator
+        if isDirectHandleCollapse {
+            anim = UIViewPropertyAnimator(duration: 0.34, curve: .easeIn)
+        } else {
+            let dampingRatio: CGFloat = isCollapsing ? 0.95 : 0.88
+            let scaledNormV = isCollapsing ? normV * 0.5 : normV
+            let params = UISpringTimingParameters(
+                dampingRatio: dampingRatio,
+                initialVelocity: CGVector(dx: 0, dy: scaledNormV)
+            )
+            anim = UIViewPropertyAnimator(duration: 0.68, timingParameters: params)
+        }
         let targetShapeProgress = clampedProgress(target)
-        snapShapeStart = shapeProgressState
-        snapShapeTarget = targetShapeProgress
-        startSnapShapeFollow(duration: 0.68)
+        if isDirectHandleCollapse {
+            stopShapeDisplayLink()
+        } else {
+            snapShapeStart = shapeProgressState
+            snapShapeTarget = targetShapeProgress
+            startSnapShapeFollow(duration: 0.68)
+        }
         anim.addAnimations { [weak self] in
             guard let self else { return }
-            // Position channel only.
-            self.placeSheet(at: target)
+            if isDirectHandleCollapse {
+                // Keep the current shape during travel so the sheet does not
+                // visually compress mid-air, then settle to the collapsed
+                // shape at the end.
+                self.placeSheet(at: target, shapeProgressOverride: visualProgress)
+                self.applyCornerMask(top: self.topRadius(visualProgress),
+                                     bottom: self.bottomRadius(visualProgress),
+                                     progress: visualProgress)
+            } else {
+                // Position channel only; shape follows via displayLink.
+                self.placeSheet(at: target)
+            }
         }
         anim.addCompletion { [weak self] _ in
             guard let self else { return }
@@ -605,7 +626,7 @@ final class SheetViewController: UIViewController {
         let clamped = min(max(0, rawOffset), collapsedOffset)
         let shouldCollapse = resolveSnap(velocity: velocity, translation: translation, clamped: clamped)
         lastGestureSource = source
-        commitSnap(to: shouldCollapse ? collapsedOffset : 0, velocity: velocity)
+        commitSnap(to: shouldCollapse ? collapsedOffset : 0, velocity: velocity, source: source)
     }
 
     // MARK: Snap decision
@@ -667,7 +688,10 @@ final class SheetViewController: UIViewController {
 
         case .ended, .cancelled, .failed:
             guard activePanDriver == .sheet else { return }
-            if disableGestureAutoSnap {
+            if translation > 0 || velocity > 0 {
+                lastGestureSource = "sheetPanDirectCollapse"
+                commitSnap(to: collapsedOffset, velocity: velocity, source: "sheetPanDirectCollapse")
+            } else if disableGestureAutoSnap {
                 settleAtCurrentPositionWithoutSnap()
             } else {
                 finalizeGestureAndSnap(
