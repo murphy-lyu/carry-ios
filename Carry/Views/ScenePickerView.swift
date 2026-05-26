@@ -18,21 +18,26 @@ struct ScenePickerView: View {
     }
 
     private let mode: Mode
+    private let preselectedSceneKeys: [String]
 
     init(tripInfo: TripInfo) {
         self.mode = .create(tripInfo)
+        self.preselectedSceneKeys = []
     }
 
     init(editingTripId: UUID) {
         self.mode = .edit(tripId: editingTripId)
+        self.preselectedSceneKeys = []
     }
 
-    init(autoPackTripInfo: TripInfo, seedSections: [PackingSection]) {
+    init(autoPackTripInfo: TripInfo, seedSections: [PackingSection], initialSceneKeys: [String] = []) {
         self.mode = .autoPack(tripInfo: autoPackTripInfo, seedSections: seedSections)
+        self.preselectedSceneKeys = initialSceneKeys
     }
 
     init(suggestForTripId: UUID) {
         self.mode = .suggest(tripId: suggestForTripId)
+        self.preselectedSceneKeys = []
     }
 
     @EnvironmentObject var store: TripStore
@@ -65,9 +70,9 @@ struct ScenePickerView: View {
     private var primaryButtonLabelKey: LocalizedStringKey {
         if isSaved { return "scenes.updated" }
         if isEditing {
-            return hasSelection ? "scenes.update" : "scenes.select_one"
+            return hasSelection ? "scenes.update_list" : "scenes.select_one"
         } else if isAutoPack {
-            return hasSelection ? "Auto Pack" : "scenes.select_one"
+            return hasSelection ? "scenes.update" : "scenes.select_one"
         } else if isSuggest {
             return hasSelection ? "See suggestions" : "scenes.skip"
         } else {
@@ -199,18 +204,24 @@ struct ScenePickerView: View {
     private func loadInitialSelectionIfNeeded() {
         guard !didLoadInitialSelection else { return }
         didLoadInitialSelection = true
-        let tripId: UUID
         switch mode {
-        case .edit(let id):    tripId = id
-        case .suggest(let id): tripId = id
-        default: return
+        case .autoPack:
+            guard !preselectedSceneKeys.isEmpty else { return }
+            let keysSet = Set(preselectedSceneKeys)
+            let labels = sceneLabelToKey.compactMap { (label, key) -> String? in
+                keysSet.contains(key) ? label : nil
+            }
+            selectedItems = Set(labels)
+        case .edit(let id), .suggest(let id):
+            guard let trip = store.bundle(for: id) else { return }
+            let savedKeys = Set(trip.selectedSceneKeys)
+            let labels = sceneLabelToKey.compactMap { (label, key) -> String? in
+                savedKeys.contains(key) ? label : nil
+            }
+            selectedItems = Set(labels)
+        default:
+            return
         }
-        guard let trip = store.bundle(for: tripId) else { return }
-        let savedKeys = Set(trip.selectedSceneKeys)
-        let labels = sceneLabelToKey.compactMap { (label, key) -> String? in
-            savedKeys.contains(key) ? label : nil
-        }
-        selectedItems = Set(labels)
     }
 
     private func primaryAction() {
@@ -227,15 +238,10 @@ struct ScenePickerView: View {
                 try? await Task.sleep(for: .milliseconds(600))
                 dismiss()
             }
-        case .autoPack(let info, let seedSections):
+        case .autoPack(let info, _):
             UINotificationFeedbackGenerator().notificationOccurred(.success)
-            let id = buildTrip(info: info, keys: keys, seedSections: seedSections)
-            guard store.bundle(for: id) != nil else {
-                CarryLogger.shared.log(.autoPackNavigationFailed, context: "context=trip_not_persisted")
-                return
-            }
             router.path = NavigationPath()
-            router.path.append(CreationRoute.packingList(id))
+            router.path.append(CreationRoute.autoPackPicker(info, sceneKeys: keys))
             dismiss()
         case .suggest:
             UIImpactFeedbackGenerator(style: .medium).impactOccurred()

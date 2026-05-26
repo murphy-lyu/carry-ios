@@ -15,6 +15,7 @@ enum CreationRoute: Hashable {
     case scenePicker(TripInfo)
     case packingList(UUID)
     case editScenes(UUID)
+    case autoPackPicker(TripInfo, sceneKeys: [String])
 }
 
 // MARK: - Navigation Router
@@ -56,6 +57,9 @@ struct ContentView: View {
                             PackingListView(tripId: id, isNewTrip: true)
                         case .editScenes(let id):
                             ScenePickerView(editingTripId: id)
+                        case .autoPackPicker(let info, let sceneKeys):
+                            ItemPickerView(autoPackTripInfo: info, sceneKeys: sceneKeys)
+                                .id(sceneKeys.sorted().joined(separator: ","))
                         }
                     }
             }

@@ -35,6 +35,7 @@ struct ItemPickerView: View {
     private enum Mode {
         case create(TripInfo)
         case merge(tripId: UUID)
+        case autoPackReview(TripInfo, sceneKeys: [String])
     }
 
     private let mode: Mode
@@ -48,6 +49,40 @@ struct ItemPickerView: View {
     init(tripId: UUID) {
         self.mode = .merge(tripId: tripId)
         self.startInMyItems = false
+    }
+
+    init(autoPackTripInfo: TripInfo, sceneKeys: [String]) {
+        self.mode = .autoPackReview(autoPackTripInfo, sceneKeys: sceneKeys)
+        self.startInMyItems = false
+
+        // Pre-select items generated from scenes, matched back to catalog raw keys
+        let generated = generatePackingSections(selectedScenes: sceneKeys, tripDays: autoPackTripInfo.durationDays)
+        let generatedByCategory: [String: Set<String>] = Dictionary(
+            uniqueKeysWithValues: generated.map { section in
+                (section.title, Set(section.sortedItems.map { $0.name }))
+            }
+        )
+        var preselected = Set<PickerItemID>()
+        for category in itemPickerCatalog {
+            let generatedNames = generatedByCategory[category.name] ?? []
+            for rawKey in category.items {
+                if generatedNames.contains(canonicalItemName(rawKey)) {
+                    preselected.insert(PickerItemID(category: category.name, item: rawKey))
+                }
+            }
+        }
+        self._selectedItems = State(initialValue: preselected)
+
+        // Auto-expand categories that have pre-selected items so user can see recommendations
+        let expandedCats = Set(itemPickerCatalog
+            .filter { category in
+                category.items.contains { rawKey in
+                    preselected.contains(PickerItemID(category: category.name, item: rawKey))
+                }
+            }
+            .map { $0.name }
+        )
+        self._expandedCategories = State(initialValue: expandedCats)
     }
 
     @EnvironmentObject var store: TripStore
@@ -81,13 +116,28 @@ struct ItemPickerView: View {
     }
 
     private var isCreateMode: Bool {
-        if case .create = mode { return true }
+        switch mode {
+        case .create, .autoPackReview: return true
+        case .merge: return false
+        }
+    }
+
+    private var isAutoPackReview: Bool {
+        if case .autoPackReview = mode { return true }
         return false
     }
 
     private var tripInfoForAutoPack: TripInfo? {
-        if case .create(let info) = mode { return info }
-        return nil
+        switch mode {
+        case .create(let info): return info
+        case .autoPackReview(let info, _): return info
+        case .merge: return nil
+        }
+    }
+
+    private var currentSceneKeys: [String] {
+        if case .autoPackReview(_, let keys) = mode { return keys }
+        return []
     }
 
     private var myItemsCount: Int { store.myItems.count }
@@ -109,6 +159,8 @@ struct ItemPickerView: View {
     private var tripDays: Int {
         switch mode {
         case .create(let info):
+            return info.durationDays
+        case .autoPackReview(let info, _):
             return info.durationDays
         case .merge(let tripId):
             return store.bundle(for: tripId)?.days ?? 1
@@ -418,23 +470,22 @@ struct ItemPickerView: View {
                 .animation(.easeInOut(duration: 0.15), value: hasSelection)
             }
         }
-        // TODO: Re-enable Auto Pack FAB when feature is ready for public release
-//        .overlay(alignment: .bottomTrailing) {
-//            if isCreateMode {
-//                autoPackFAB
-//                    .padding(.trailing, 20)
-//                    .padding(.bottom, 20)
-//            }
-//        }
-//        .sheet(isPresented: $showAutoPackSheet) {
-//            if let info = tripInfoForAutoPack {
-//                NavigationStack {
-//                    ScenePickerView(autoPackTripInfo: info, seedSections: buildSections())
-//                }
-//                .presentationDetents([.large])
-//                .presentationDragIndicator(.visible)
-//            }
-//        }
+        .overlay(alignment: .bottomTrailing) {
+            if tripInfoForAutoPack != nil {
+                autoPackFAB
+                    .padding(.trailing, 20)
+                    .padding(.bottom, 20)
+            }
+        }
+        .sheet(isPresented: $showAutoPackSheet) {
+            if let info = tripInfoForAutoPack {
+                NavigationStack {
+                    ScenePickerView(autoPackTripInfo: info, seedSections: buildSections(), initialSceneKeys: currentSceneKeys)
+                }
+                .presentationDetents([.large])
+                .presentationDragIndicator(.visible)
+            }
+        }
         .onAppear {
             guard !didApplyInitialSource else { return }
             didApplyInitialSource = true
@@ -446,7 +497,11 @@ struct ItemPickerView: View {
                 selectedMyItemCollection = collections.first ?? "Default"
             }
             let modeLabel: String
-            if case .create = mode { modeLabel = "create" } else { modeLabel = "merge" }
+            switch mode {
+            case .create: modeLabel = "create"
+            case .autoPackReview: modeLabel = "autopack"
+            case .merge: modeLabel = "merge"
+            }
             CarryLogger.shared.log(.pickerOpened, context: "mode=\(modeLabel)")
         }
         .onChange(of: searchText) { _, newValue in
@@ -613,10 +668,10 @@ struct ItemPickerView: View {
 
     private var heroSection: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text(LocalizedStringKey("myitems.add.title"))
+            Text(LocalizedStringKey(isAutoPackReview ? "autopick.review.title" : "myitems.add.title"))
                 .font(.system(size: 30, weight: .bold, design: .rounded))
                 .foregroundStyle(.primary)
-            Text(LocalizedStringKey("myitems.add.subtitle"))
+            Text(LocalizedStringKey(isAutoPackReview ? "autopick.review.subtitle" : "myitems.add.subtitle"))
                 .font(.subheadline)
                 .foregroundStyle(.secondary)
         }
@@ -1140,6 +1195,19 @@ struct ItemPickerView: View {
                 dateRange: info.dateRangeDisplay,
                 departureDate: info.departureDate,
                 selectedSceneKeys: [],
+                sections: sections
+            )
+            store.setDraftTrip(bundle)
+            router.path.append(CreationRoute.packingList(bundle.id))
+
+        case .autoPackReview(let info, let sceneKeys):
+            let bundle = TripBundle(
+                name: info.name,
+                destinationCity: info.destinationCity,
+                days: info.durationDays,
+                dateRange: info.dateRangeDisplay,
+                departureDate: info.departureDate,
+                selectedSceneKeys: sceneKeys,
                 sections: sections
             )
             store.setDraftTrip(bundle)
