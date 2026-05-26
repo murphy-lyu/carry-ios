@@ -47,7 +47,7 @@ struct PackingListView: View {
     @State private var toastVisible = false
     @State private var toastText = ""
 
-    private let surpriseBatchSize = 5
+    private let surpriseBatchSize = 1
 
     // Cached — recomputed only when store.trips or store.myItems changes,
     // not on every body re-evaluation (inline edit keystrokes, toggle taps, etc.)
@@ -371,7 +371,9 @@ struct PackingListView: View {
             }
         }
         .safeAreaInset(edge: .top, spacing: 0) {
-            progressHeader
+            if !isNewTrip {
+                progressHeader
+            }
         }
     }
 
@@ -403,21 +405,6 @@ struct PackingListView: View {
                     }
                 } header: {
                     sectionTitle(section.title, isFirst: index == 0)
-                        .listRowInsets(EdgeInsets())
-                }
-                .listSectionSeparator(.hidden)
-            }
-
-            if !surpriseItems.isEmpty && isNewTrip {
-                Section {
-                    ForEach(visibleSurpriseItems) { item in
-                        surpriseRow(for: item)
-                            .listRowInsets(EdgeInsets(top: 0, leading: 16, bottom: 0, trailing: 16))
-                            .listRowSeparator(.hidden)
-                            .listRowBackground(Color.clear)
-                    }
-                } header: {
-                    surpriseSectionHeader
                         .listRowInsets(EdgeInsets())
                 }
                 .listSectionSeparator(.hidden)
@@ -672,34 +659,30 @@ struct PackingListView: View {
 
     private var progressHeader: some View {
         VStack(alignment: .leading, spacing: 0) {
-            if !isNewTrip {
-                GeometryReader { geo in
-                    ZStack(alignment: .leading) {
-                        RoundedRectangle(cornerRadius: 1)
-                            .fill(colorScheme == .dark ? Color.white.opacity(0.09) : Color(UIColor.systemGray5).opacity(0.82))
-                            .frame(height: 2)
-                        RoundedRectangle(cornerRadius: 1)
-                            .fill(Color.primary)
-                            .frame(width: max(0, geo.size.width * progress), height: 2)
-                            .overlay {
-                                LinearGradient(
-                                    colors: [.clear, Color(UIColor.systemBackground).opacity(0.65), .clear],
-                                    startPoint: .leading,
-                                    endPoint: .trailing
-                                )
-                                .frame(width: geo.size.width * 0.38)
-                                .offset(x: shimmerPhase * geo.size.width * 0.675)
-                            }
-                            .clipShape(RoundedRectangle(cornerRadius: 1))
-                    }
+            GeometryReader { geo in
+                ZStack(alignment: .leading) {
+                    RoundedRectangle(cornerRadius: 1)
+                        .fill(colorScheme == .dark ? Color.white.opacity(0.09) : Color(UIColor.systemGray5).opacity(0.82))
+                        .frame(height: 2)
+                    RoundedRectangle(cornerRadius: 1)
+                        .fill(Color.primary)
+                        .frame(width: max(0, geo.size.width * progress), height: 2)
+                        .overlay {
+                            LinearGradient(
+                                colors: [.clear, Color(UIColor.systemBackground).opacity(0.65), .clear],
+                                startPoint: .leading,
+                                endPoint: .trailing
+                            )
+                            .frame(width: geo.size.width * 0.38)
+                            .offset(x: shimmerPhase * geo.size.width * 0.675)
+                        }
+                        .clipShape(RoundedRectangle(cornerRadius: 1))
                 }
-                .frame(height: 2.5)
             }
+            .frame(height: 2.5)
 
-            if !isNewTrip {
-                tripInfoCard
-                    .padding(.top, 6)
-            }
+            tripInfoCard
+                .padding(.top, 6)
         }
         .zIndex(2)
         .padding(.horizontal, 16)
@@ -855,11 +838,11 @@ struct PackingListView: View {
         .buttonStyle(.plain)
         .background(
             RoundedRectangle(cornerRadius: 18, style: .continuous)
-                .fill(colorScheme == .dark ? Color(UIColor.secondarySystemBackground).opacity(0.88) : Color(UIColor.systemBackground).opacity(0.72))
+                .fill(colorScheme == .dark ? Color(UIColor.secondarySystemBackground).opacity(0.82) : Color(UIColor.systemBackground).opacity(0.62))
         )
         .overlay(
             RoundedRectangle(cornerRadius: 18, style: .continuous)
-                .strokeBorder(colorScheme == .dark ? Color.white.opacity(0.045) : Color.primary.opacity(0.05), lineWidth: 1)
+                .strokeBorder(colorScheme == .dark ? Color.white.opacity(0.035) : Color.primary.opacity(0.035), lineWidth: 1)
         )
         .padding(.vertical, 2)
         .overlay(alignment: .trailing) {
@@ -968,6 +951,16 @@ struct PackingListView: View {
         .padding(.top, 16)
         .padding(.bottom, 8)
         .frame(maxWidth: .infinity, alignment: .leading)
+        .overlay(alignment: .bottom) {
+            Rectangle()
+                .fill(colorScheme == .dark ? Color.white.opacity(0.03) : Color.primary.opacity(0.03))
+                .frame(height: 1)
+        }
+        .background(
+            Rectangle()
+                .fill(Color(UIColor.systemBackground))
+        )
+        .zIndex(1)
     }
 
     private func surpriseRow(for item: SurpriseItem) -> some View {
@@ -1073,7 +1066,7 @@ struct PackingListView: View {
             .textCase(.uppercase)
             .frame(maxWidth: .infinity, alignment: .leading)
             .padding(.horizontal, 16)
-            .padding(.top, isFirst ? 10 : 16)
+            .padding(.top, isFirst ? 2 : 16)
             .padding(.bottom, 4)
             .overlay(alignment: .bottom) {
                 Rectangle()
@@ -1218,7 +1211,7 @@ struct PackingListView: View {
                 .animation(.easeInOut(duration: 0.2), value: isSaved)
             }
             .padding(.horizontal, 16)
-            .padding(.top, 12)
+            .padding(.top, 6)
         }
         .padding(.bottom, 4)
     }

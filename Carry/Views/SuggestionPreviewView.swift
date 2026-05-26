@@ -72,6 +72,7 @@ struct SuggestionPreviewView: View {
                     }
                 }
             }
+            .padding(.top, 6)
             .padding(.bottom, 100)
         }
     }
@@ -93,13 +94,10 @@ struct SuggestionPreviewView: View {
                 .buttonStyle(.plain)
             }
 
-            Text("suggestions.subtitle")
-                .font(.subheadline)
-                .foregroundStyle(.secondary)
-                .padding(.bottom, 8)
         }
         .padding(.horizontal, 16)
         .padding(.top, 20)
+        .padding(.bottom, 4)
     }
 
     private func sectionHeader(_ title: String) -> some View {
@@ -115,14 +113,13 @@ struct SuggestionPreviewView: View {
             .background(
                 Rectangle()
                     .fill(
-                        Color(UIColor.systemBackground).opacity(0.92)
+                        Color(UIColor.systemBackground)
                     )
                     .overlay(alignment: .bottom) {
                         Rectangle()
                             .fill(Color.primary.opacity(0.03))
                             .frame(height: 1)
                     }
-                    .shadow(color: Color.black.opacity(0.012), radius: 4, x: 0, y: 1)
             )
             .padding(.horizontal, 10)
             .zIndex(1)
@@ -146,14 +143,13 @@ struct SuggestionPreviewView: View {
         .background(
             Rectangle()
                 .fill(
-                    Color(UIColor.systemBackground).opacity(0.92)
+                    Color(UIColor.systemBackground)
                 )
                 .overlay(alignment: .bottom) {
                     Rectangle()
                         .fill(Color.primary.opacity(0.03))
                         .frame(height: 1)
                 }
-                .shadow(color: Color.black.opacity(0.012), radius: 4, x: 0, y: 1)
         )
         .padding(.horizontal, 10)
         .zIndex(1)
