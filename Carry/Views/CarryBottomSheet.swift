@@ -347,6 +347,49 @@ final class SheetViewController: UIViewController {
         innerMaskLayer.path = path.cgPath
     }
 
+    /// Computes the visible height of innerView at a given snap target position,
+    /// matching the formula used in applyCornerMask — needed to build the target
+    /// mask path analytically (without actually moving frames).
+    private func computeTargetVisibleH(for target: CGFloat) -> CGFloat {
+        let h     = view.bounds.height
+        let fullH = innerView.bounds.height
+        guard fullH > 0 else { return fullH }
+        let tp = clampedProgress(target)
+        let ep = effectProgress(tp)
+        guard ep > 0 else { return fullH }
+        // Replicate placeSheet's frame computation at the target position.
+        let targetOuterY = h - expandedHeight + target          // rubberBand(target)=target at snap point
+        let targetClipH  = h - bottomLift(tp)
+        let rawVisible   = targetClipH - targetOuterY
+        return max(0, min(fullH, fullH + ep * (rawVisible - fullH)))
+    }
+
+    /// Builds a CGPath with per-corner radii and an explicit visible height,
+    /// using the same arc geometry as applyCornerMask.
+    private func makeMaskPath(top: CGFloat, bottom: CGFloat, visibleH: CGFloat) -> CGPath {
+        let w     = innerView.bounds.width
+        let fullH = innerView.bounds.height
+        guard w > 0, fullH > 0 else { return UIBezierPath().cgPath }
+        let vH = max(0, min(fullH, visibleH))
+        let tl = top, tr = top, bl = bottom, br = bottom
+        let path = UIBezierPath()
+        path.move(to: CGPoint(x: tl, y: 0))
+        path.addLine(to: CGPoint(x: w - tr, y: 0))
+        path.addArc(withCenter: CGPoint(x: w - tr, y: tr),
+                    radius: tr, startAngle: -.pi / 2, endAngle: 0, clockwise: true)
+        path.addLine(to: CGPoint(x: w, y: vH - br))
+        path.addArc(withCenter: CGPoint(x: w - br, y: vH - br),
+                    radius: br, startAngle: 0, endAngle: .pi / 2, clockwise: true)
+        path.addLine(to: CGPoint(x: bl, y: vH))
+        path.addArc(withCenter: CGPoint(x: bl, y: vH - bl),
+                    radius: bl, startAngle: .pi / 2, endAngle: .pi, clockwise: true)
+        path.addLine(to: CGPoint(x: 0, y: tl))
+        path.addArc(withCenter: CGPoint(x: tl, y: tl),
+                    radius: tl, startAngle: .pi, endAngle: -.pi / 2, clockwise: true)
+        path.close()
+        return path.cgPath
+    }
+
     private func rubberBand(_ raw: CGFloat) -> CGFloat {
         let lo: CGFloat = 0, hi = collapsedOffset
         guard hi > lo else { return raw }
@@ -373,25 +416,32 @@ final class SheetViewController: UIViewController {
     // MARK: Snap animation
 
     private func commitSnap(to target: CGFloat, velocity: CGFloat) {
-        // ── Step 1: capture current VISUAL (presentation) offset ──────────────────
-        // stopAnimation(true) snaps the model layer to the animation's end-state, not
-        // the current visual position. Capturing the presentation frame first lets us
-        // restore the model after stopping so the new animation starts from the correct
-        // position — preventing the "sheet jumps to collapsed then re-expands" glitch.
         let h = view.bounds.height
+
+        // ── 1: capture current VISUAL position ────────────────────────────────────
+        // stopAnimation(true) can snap the model layer to the animation's end-state;
+        // reading the presentation frame first lets us restore from the actual visual
+        // position so the new animation never jumps.
+        // When no animator is running, liveDelta is the gesture delta still in flight
+        // (callers must NOT zero liveDelta before calling commitSnap — we own that reset).
         let visualOffset: CGFloat
         if runningAnimator != nil,
            let pf = outerView.layer.presentation()?.frame {
-            // Invert placeSheet's formula: outerView.y = h − expandedHeight + offset
             visualOffset = pf.origin.y - (h - expandedHeight)
         } else {
             visualOffset = snappedOffset + liveDelta
         }
         let clampedVisual = min(max(0, visualOffset), collapsedOffset)
 
-        // ── Step 2: stop running animation and reset model to visual position ─────
+        // ── 2: capture current VISUAL mask path (may be mid-animation) ────────────
+        let startMaskPath = innerMaskLayer.presentation()?.path ?? innerMaskLayer.path
+
+        // ── 3: stop spring + remove any in-flight mask animation ─────────────────
         runningAnimator?.stopAnimation(true)
-        runningAnimator = nil   // nil immediately so viewDidLayoutSubviews won't skip
+        runningAnimator = nil
+        innerMaskLayer.removeAnimation(forKey: "sheetMaskPath")
+
+        // ── 4: snap model to current visual position ──────────────────────────────
         snappedOffset = clampedVisual
         liveDelta = 0
         placeSheet(at: clampedVisual)
@@ -403,36 +453,36 @@ final class SheetViewController: UIViewController {
                         progress: visualProgress)
         CATransaction.commit()
 
-        // ── Step 3: velocity normalisation (signed travel so expand ≡ collapse) ───
-        // Using abs(travel) gave expand a negative normV (spring fights itself at start)
-        // while collapse had positive normV — making collapse feel snappier. Fix: keep
-        // the sign so normV is always positive when velocity points toward target.
+        // ── 5: velocity normalisation (signed so expand and collapse are symmetric) ─
         let travel = target - clampedVisual
         let normV  = abs(travel) < 1 ? 0 : max(-30, min(30, velocity / travel))
 
         onSnapChanged?(target >= collapsedOffset)
         feedbackGenerator.impactOccurred()
 
-        // ── Step 4: lock scroll at top during collapse to prevent content bounce ──
-        // Released in addCompletion regardless of direction.
+        // ── 6: lock scroll at top during collapse to prevent content bounce ────────
         if target == collapsedOffset, let sv = listScrollView {
             let topInset = -sv.adjustedContentInset.top
             delegateProxy?.lockedOffsetY = topInset
             delegateProxy?.cancelNext = true
         }
 
-        // ── Step 5: start new spring animation ────────────────────────────────────
+        // ── 7: direction-specific spring — collapse uses higher damping so it
+        //       doesn't feel faster than expand at the same gesture velocity ────────
+        let isCollapsing = target >= collapsedOffset - 1
+        let dampingRatio: CGFloat = isCollapsing ? 0.95 : 0.88
+        let scaledNormV            = isCollapsing ? normV * 0.5 : normV
         let params = UISpringTimingParameters(
-            dampingRatio: 0.88,
-            initialVelocity: CGVector(dx: 0, dy: normV)
+            dampingRatio: dampingRatio,
+            initialVelocity: CGVector(dx: 0, dy: scaledNormV)
         )
         let anim = UIViewPropertyAnimator(duration: 0.68, timingParameters: params)
 
+        // Position animation: spring drives only outerView/clippingView frames.
+        // Mask path has its own independent animation below (issue 4 fix).
         anim.addAnimations { [weak self] in
             guard let self else { return }
-            let progress = self.clampedProgress(target)
             self.placeSheet(at: target)
-            self.setProgress(progress, animated: true)
         }
 
         anim.addCompletion { [weak self] _ in
@@ -445,7 +495,6 @@ final class SheetViewController: UIViewController {
             CATransaction.setDisableActions(true)
             self.applyCornerMask(top: self.topRadius(p), bottom: self.bottomRadius(p), progress: p)
             CATransaction.commit()
-            // Release scroll lock (set for both collapse and expand-from-collapsed paths).
             if let sv = self.listScrollView, self.delegateProxy?.lockedOffsetY != nil {
                 self.delegateProxy?.lockedOffsetY = nil
                 sv.isScrollEnabled = true
@@ -454,6 +503,35 @@ final class SheetViewController: UIViewController {
 
         runningAnimator = anim
         anim.startAnimation()
+
+        // ── 8: mask path animation — decoupled from spring ────────────────────────
+        // Corner radii and visibleH animate with easeOut on expand (slow start =
+        // no visual jump at the moment of release) and easeIn on collapse (front-
+        // loaded = decisive feel). Duration is shorter than the spring so the mask
+        // always settles before the animator's addCompletion fires.
+        let targetProgress = clampedProgress(target)
+        let targetVisibleH = computeTargetVisibleH(for: target)
+        let targetMaskPath = makeMaskPath(
+            top:      topRadius(targetProgress),
+            bottom:   bottomRadius(targetProgress),
+            visibleH: targetVisibleH
+        )
+        // Set model immediately so if this animation is interrupted the layer stays
+        // in a valid state.
+        CATransaction.begin()
+        CATransaction.setDisableActions(true)
+        innerMaskLayer.path = targetMaskPath
+        CATransaction.commit()
+
+        let maskDuration: Double  = isCollapsing ? 0.28 : 0.45
+        let maskTiming = CAMediaTimingFunction(name: isCollapsing ? .easeIn : .easeOut)
+        let pathAnim = CABasicAnimation(keyPath: "path")
+        pathAnim.fromValue            = startMaskPath
+        pathAnim.toValue              = targetMaskPath
+        pathAnim.duration             = maskDuration
+        pathAnim.timingFunction       = maskTiming
+        pathAnim.isRemovedOnCompletion = true
+        innerMaskLayer.add(pathAnim, forKey: "sheetMaskPath")
     }
 
     // MARK: Snap decision
@@ -505,7 +583,9 @@ final class SheetViewController: UIViewController {
             let should    = resolveSnap(velocity: velocity,
                                         translation: translation,
                                         clamped: clamped)
-            liveDelta = 0
+            // liveDelta is intentionally NOT zeroed here.
+            // commitSnap reads (snappedOffset + liveDelta) to get the correct
+            // current visual position when no animator is running.
             commitSnap(to: should ? collapsedOffset : 0, velocity: velocity)
 
         default: break
@@ -615,7 +695,7 @@ final class SheetViewController: UIViewController {
             let clamped   = min(max(0, rawOffset), collapsedOffset)
             let should    = resolveSnap(velocity: velocity,
                                         translation: drag, clamped: clamped)
-            liveDelta = 0
+            // liveDelta is intentionally NOT zeroed here — commitSnap owns that reset.
             commitSnap(to: should ? collapsedOffset : 0, velocity: velocity)
 
         default: break
