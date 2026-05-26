@@ -144,6 +144,13 @@ final class SheetViewController: UIViewController {
     /// Reused mask layer on innerView — path is updated in place so
     /// UIViewPropertyAnimator can spring-animate it automatically.
     private let innerMaskLayer = CAShapeLayer()
+    /// SwiftUI hosting view — referenced so placeSheet can keep its frame
+    /// in lockstep with outerView/innerView. Relying on autoresizingMask
+    /// alone caused SwiftUI content to drift right with each gesture: the
+    /// mask propagates during the next layout pass (outside the animator's
+    /// transaction), so the hosting view briefly saw an in-between width
+    /// and accumulated tiny layout differences across iterations.
+    private weak var hostingView: UIView?
 
     // MARK: Scroll coordination
 
@@ -244,6 +251,7 @@ final class SheetViewController: UIViewController {
         addChild(hosting)
         hosting.view.autoresizingMask = [.flexibleWidth, .flexibleHeight]
         innerView.addSubview(hosting.view)
+        hostingView = hosting.view
         hosting.didMove(toParent: self)
 
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) { [weak self] in
@@ -288,8 +296,15 @@ final class SheetViewController: UIViewController {
         let y = h - expandedHeight + banded
         outerView.frame = CGRect(x: sideMargin, y: y,
                                  width: w - 2 * sideMargin, height: expandedHeight)
-        // innerView fills outerView via autoresizingMask — never set .frame directly
-        // while a transform may be active (undefined behavior in UIKit).
+
+        // Explicitly sync innerView + hostingView frames in the SAME runloop turn
+        // as the outerView frame change. Autoresizing propagates during the next
+        // layout pass — outside any animator transaction — which let SwiftUI see
+        // transient half-state widths during gestures and accumulate layout drift
+        // (visible as the content area sliding right with each up/down cycle).
+        let innerBounds = outerView.bounds
+        innerView.frame = innerBounds
+        hostingView?.frame = innerBounds
     }
 
     /// Called inside UIViewPropertyAnimator.addAnimations — the animator drives
