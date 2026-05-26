@@ -29,8 +29,23 @@ struct HomeView: View {
     @State private var showDeleteConfirmation = false
     @State private var listIdentity = UUID()
     @State private var didPlayInitialReveal = false
-    @State private var initialRevealPhase = 0
+    @State private var initialRevealProgress: Double = 0
     @State private var revealCurtainOpacity: Double = 1
+    @State private var didRevealUpcoming = false
+
+    private let heroRevealThreshold: Double = 0.16
+    private let listRevealThreshold: Double = 0.58
+    private let pastRevealThreshold: Double = 0.78
+
+    private func revealProgress(start: Double, duration: Double) -> Double {
+        guard duration > 0 else { return initialRevealProgress >= start ? 1 : 0 }
+        return min(max((initialRevealProgress - start) / duration, 0), 1)
+    }
+
+    // Cached sorted trip lists — recomputed only when store.trips changes,
+    // not on every body re-evaluation (e.g. initialRevealProgress animation ticks).
+    @State private var cachedUpcoming: [TripBundle] = []
+    @State private var cachedPastByYear: [(year: Int, trips: [TripBundle])] = []
 
     /// True when the list should appear empty — either no real trips exist,
     /// or the developer mock is active.
@@ -38,60 +53,62 @@ struct HomeView: View {
         store.trips.isEmpty || store.isHomeEmptyStateMockEnabled
     }
 
-    private func isPast(_ trip: TripBundle) -> Bool {
-        let calendar = Calendar.current
-        let returnDayStart = calendar.startOfDay(for: returnDate(for: trip))
-        let todayStart = calendar.startOfDay(for: Date())
-        return todayStart > returnDayStart
-    }
-
     private func returnDate(for trip: TripBundle) -> Date {
         Calendar.current.date(byAdding: .day, value: trip.days, to: trip.departureDate) ?? trip.departureDate
     }
 
-    private var upcomingTrips: [TripBundle] {
-        guard !store.isHomeEmptyStateMockEnabled else { return [] }
-        struct Decorated {
-            let trip: TripBundle
-            let isComplete: Bool
-        }
-
-        let decorated = store.trips
-            .filter { !isPast($0) }
-            .map { trip in
-                let complete = trip.totalCount > 0 && trip.packedCount == trip.totalCount
-                return Decorated(trip: trip, isComplete: complete)
-            }
-
-        return decorated
-            .sorted { a, b in
-                if a.isComplete != b.isComplete { return !a.isComplete }
-                if a.trip.departureDate != b.trip.departureDate { return a.trip.departureDate < b.trip.departureDate }
-                if a.trip.createdAt != b.trip.createdAt { return a.trip.createdAt > b.trip.createdAt }
-                return a.trip.id.uuidString < b.trip.id.uuidString
-            }
-            .map(\.trip)
-    }
-
-    private var pastTripsByYear: [(year: Int, trips: [TripBundle])] {
-        guard !store.isHomeEmptyStateMockEnabled else { return [] }
+    /// Recomputes both sorted lists in one pass. Called from onAppear and
+    /// onChange(of: store.trips) so sorting never runs during animation frames.
+    private func rebuildTripLists() {
         let calendar = Calendar.current
-        let grouped = Dictionary(grouping: store.trips.filter { isPast($0) }) { trip in
-            calendar.component(.year, from: returnDate(for: trip))
+        // Compute today's boundary once and share across all trip evaluations.
+        let todayStart = calendar.startOfDay(for: Date())
+
+        func isPast(_ trip: TripBundle) -> Bool {
+            let ret = returnDate(for: trip)
+            return todayStart > calendar.startOfDay(for: ret)
         }
 
-        return grouped.keys.sorted(by: >).map { year in
-            let trips = grouped[year, default: []].sorted { lhs, rhs in
-                let lhsReturn = returnDate(for: lhs)
-                let rhsReturn = returnDate(for: rhs)
-                if lhsReturn != rhsReturn { return lhsReturn > rhsReturn }
-                if lhs.departureDate != rhs.departureDate { return lhs.departureDate > rhs.departureDate }
-                if lhs.createdAt != rhs.createdAt { return lhs.createdAt > rhs.createdAt }
-                return lhs.id.uuidString < rhs.id.uuidString
+        // Upcoming
+        if store.isHomeEmptyStateMockEnabled {
+            cachedUpcoming = []
+        } else {
+            struct Decorated { let trip: TripBundle; let isComplete: Bool }
+            let decorated = store.trips
+                .filter { !isPast($0) }
+                .map { Decorated(trip: $0, isComplete: $0.totalCount > 0 && $0.packedCount == $0.totalCount) }
+            cachedUpcoming = decorated
+                .sorted {
+                    if $0.isComplete != $1.isComplete { return !$0.isComplete }
+                    if $0.trip.departureDate != $1.trip.departureDate { return $0.trip.departureDate < $1.trip.departureDate }
+                    if $0.trip.createdAt != $1.trip.createdAt { return $0.trip.createdAt > $1.trip.createdAt }
+                    return $0.trip.id.uuidString < $1.trip.id.uuidString
+                }
+                .map(\.trip)
+        }
+
+        // Past by year
+        if store.isHomeEmptyStateMockEnabled {
+            cachedPastByYear = []
+        } else {
+            let grouped = Dictionary(grouping: store.trips.filter { isPast($0) }) {
+                calendar.component(.year, from: returnDate(for: $0))
             }
-            return (year: year, trips: trips)
+            cachedPastByYear = grouped.keys.sorted(by: >).map { year in
+                let trips = grouped[year, default: []].sorted { lhs, rhs in
+                    let l = returnDate(for: lhs), r = returnDate(for: rhs)
+                    if l != r { return l > r }
+                    if lhs.departureDate != rhs.departureDate { return lhs.departureDate > rhs.departureDate }
+                    if lhs.createdAt != rhs.createdAt { return lhs.createdAt > rhs.createdAt }
+                    return lhs.id.uuidString < rhs.id.uuidString
+                }
+                return (year: year, trips: trips)
+            }
         }
     }
+
+    private var upcomingTrips: [TripBundle] { cachedUpcoming }
+    private var pastTripsByYear: [(year: Int, trips: [TripBundle])] { cachedPastByYear }
 
     private func startNewTrip() {
         UIImpactFeedbackGenerator(style: .light).impactOccurred()
@@ -266,11 +283,10 @@ struct HomeView: View {
                 List {
                     if !isEffectivelyEmpty {
                         heroSection
-                            .opacity(initialRevealPhase >= 1 ? 1 : 0)
-                            .offset(y: initialRevealPhase >= 1 ? 0 : 18)
-                            .scaleEffect(initialRevealPhase >= 1 ? 1 : 0.985)
-                            .blur(radius: initialRevealPhase >= 1 ? 0 : 6)
-                            .animation(.spring(response: 0.48, dampingFraction: 0.86).delay(0.02), value: initialRevealPhase)
+                            .opacity(initialRevealProgress >= heroRevealThreshold ? 1 : 0)
+                            .offset(y: initialRevealProgress >= heroRevealThreshold ? 0 : 12)
+                            .scaleEffect(initialRevealProgress >= heroRevealThreshold ? 1 : 0.99)
+                            .animation(.easeOut(duration: 0.26), value: initialRevealProgress)
                             .listRowInsets(EdgeInsets(top: 2, leading: 12, bottom: 4, trailing: 12))
                             .listRowBackground(Color.clear)
                             .listRowSeparator(.hidden)
@@ -279,10 +295,9 @@ struct HomeView: View {
                         pastSection
 
                         listFooter
-                            .opacity(initialRevealPhase >= 3 ? 1 : 0)
-                            .offset(y: initialRevealPhase >= 3 ? 0 : 8)
-                            .blur(radius: initialRevealPhase >= 3 ? 0 : 3)
-                            .animation(.easeOut(duration: 0.24).delay(0.56), value: initialRevealPhase)
+                            .opacity(initialRevealProgress >= pastRevealThreshold ? 1 : 0)
+                            .offset(y: initialRevealProgress >= pastRevealThreshold ? 0 : 8)
+                            .animation(.easeOut(duration: 0.20), value: initialRevealProgress)
                             .listRowInsets(EdgeInsets(top: 14, leading: 16, bottom: 4, trailing: 16))
                             .listRowBackground(Color.clear)
                             .listRowSeparator(.hidden)
@@ -324,26 +339,35 @@ struct HomeView: View {
                 store.refresh()
                 store.correctMisgecodedTrips()
                 store.geocodeMissingTrips()
+                rebuildTripLists()
                 if !didPlayInitialReveal {
                     didPlayInitialReveal = true
-                    initialRevealPhase = 0
+                    initialRevealProgress = 0
                     revealCurtainOpacity = 1
+                    didRevealUpcoming = false
                     DispatchQueue.main.asyncAfter(deadline: .now() + 0.04) {
-                        withAnimation(.easeOut(duration: 0.38)) { revealCurtainOpacity = 0 }
+                        withAnimation(.easeOut(duration: 0.22)) { revealCurtainOpacity = 0 }
+                        withAnimation(.easeOut(duration: 0.52)) { initialRevealProgress = 1 }
                     }
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.08) {
-                        withAnimation(.spring(response: 0.48, dampingFraction: 0.88)) { initialRevealPhase = 1 }
-                    }
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.18) {
-                        withAnimation(.spring(response: 0.44, dampingFraction: 0.84)) { initialRevealPhase = 2 }
-                    }
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.30) {
-                        withAnimation(.spring(response: 0.44, dampingFraction: 0.84)) { initialRevealPhase = 3 }
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.22) {
+                        withAnimation(.easeOut(duration: 0.30)) { didRevealUpcoming = true }
                     }
                 }
             }
             .onReceive(router.$path) { path in
-                if path.isEmpty { store.refresh() }
+                if path.isEmpty {
+                    store.refresh()
+                    rebuildTripLists()
+                    didRevealUpcoming = false
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.02) {
+                        withAnimation(.easeOut(duration: 0.26)) {
+                            didRevealUpcoming = true
+                        }
+                    }
+                }
+            }
+            .onChange(of: store.trips) { _, _ in
+                rebuildTripLists()
             }
             .onChange(of: router.showMapFullscreen) { _, show in
                 guard show else { return }
@@ -438,23 +462,23 @@ struct HomeView: View {
     @ViewBuilder
     private var upcomingSection: some View {
         if !upcomingTrips.isEmpty {
+            let sectionProgress = didRevealUpcoming ? 1.0 : 0.0
             sectionLabel("home.upcoming", uppercase: true)
-                .opacity(initialRevealPhase >= 2 ? 1 : 0)
-                .offset(y: initialRevealPhase >= 2 ? 0 : 10)
-                .blur(radius: initialRevealPhase >= 2 ? 0 : 4)
-                .animation(.easeOut(duration: 0.24).delay(0.16), value: initialRevealPhase)
+                .opacity(sectionProgress)
+                .offset(y: (1 - sectionProgress) * 14)
+                .animation(.easeOut(duration: 0.22), value: didRevealUpcoming)
                 .listRowInsets(EdgeInsets(top: 2, leading: 16, bottom: 4, trailing: 16))
                 .listRowBackground(Color.clear)
                 .listRowSeparator(.hidden)
 
             ForEach(Array(upcomingTrips.enumerated()), id: \.element.id) { index, bundle in
-                let delay = 0.20 + Double(index) * 0.05
+                let staggerIndex = min(index, 5)
+                let itemProgress = didRevealUpcoming ? 1.0 : 0.0
                 tripRow(bundle: bundle, isPast: false)
-                    .opacity(initialRevealPhase >= 2 ? 1 : 0)
-                    .offset(y: initialRevealPhase >= 2 ? 0 : 14)
-                    .scaleEffect(initialRevealPhase >= 2 ? 1 : 0.97)
-                    .blur(radius: initialRevealPhase >= 2 ? 0 : 5)
-                    .animation(.spring(response: 0.42, dampingFraction: 0.84).delay(delay), value: initialRevealPhase)
+                    .opacity(itemProgress)
+                    .offset(y: (1 - itemProgress) * 14)
+                    .scaleEffect(0.99 + itemProgress * 0.01)
+                    .animation(.easeOut(duration: 0.24).delay(Double(staggerIndex) * 0.035), value: didRevealUpcoming)
             }
         }
     }
@@ -467,7 +491,8 @@ struct HomeView: View {
             pastSectionLabel(year: section.year, isFirst: isFirst, delay: sectionDelay)
 
             ForEach(Array(section.trips.enumerated()), id: \.element.id) { tripIndex, bundle in
-                let delay = 0.38 + Double(index) * 0.06 + Double(tripIndex) * 0.03
+                let cappedTripIndex = min(tripIndex, 4)
+                let delay = 0.26 + Double(index) * 0.036 + Double(cappedTripIndex) * 0.016
                 pastTripRow(bundle: bundle, delay: delay)
             }
         }
@@ -582,10 +607,9 @@ struct HomeView: View {
 
     private func pastSectionLabel(year: Int, isFirst: Bool, delay: Double) -> some View {
         sectionLabel(verbatim: "\(year)")
-            .opacity(initialRevealPhase >= 3 ? 1 : 0)
-            .offset(y: initialRevealPhase >= 3 ? 0 : 10)
-            .blur(radius: initialRevealPhase >= 3 ? 0 : 4)
-            .animation(.easeOut(duration: 0.24).delay(delay), value: initialRevealPhase)
+            .opacity(initialRevealProgress >= pastRevealThreshold ? 1 : 0)
+            .offset(y: initialRevealProgress >= pastRevealThreshold ? 0 : 10)
+            .animation(.easeOut(duration: 0.24).delay(delay), value: initialRevealProgress)
             .listRowInsets(EdgeInsets(top: isFirst ? 0 : 14, leading: 16, bottom: 6, trailing: 16))
             .listRowBackground(Color.clear)
             .listRowSeparator(.hidden)
@@ -593,11 +617,10 @@ struct HomeView: View {
 
     private func pastTripRow(bundle: TripBundle, delay: Double) -> some View {
         tripRow(bundle: bundle, isPast: true)
-            .opacity(initialRevealPhase >= 3 ? 1 : 0)
-            .offset(y: initialRevealPhase >= 3 ? 0 : 14)
-            .scaleEffect(initialRevealPhase >= 3 ? 1 : 0.97)
-            .blur(radius: initialRevealPhase >= 3 ? 0 : 5)
-            .animation(.spring(response: 0.42, dampingFraction: 0.84).delay(delay), value: initialRevealPhase)
+            .opacity(initialRevealProgress >= pastRevealThreshold ? 1 : 0)
+            .offset(y: initialRevealProgress >= pastRevealThreshold ? 0 : 10)
+            .scaleEffect(initialRevealProgress >= pastRevealThreshold ? 1 : 0.99)
+            .animation(.easeOut(duration: 0.22).delay(delay), value: initialRevealProgress)
     }
 
     private func statPill(value: String, label: LocalizedStringKey) -> some View {

@@ -121,6 +121,7 @@ struct GlobeMapView: View, Equatable {
     var mapStyleOption: MapStyleOption = .hybrid
     /// Controlled by the parent; true only after the user grants location permission.
     var showUserLocation: Bool = false
+    @Environment(\.colorScheme) private var colorScheme
 
     static func == (lhs: GlobeMapView, rhs: GlobeMapView) -> Bool {
         lhs.cityOpacity == rhs.cityOpacity
@@ -140,36 +141,31 @@ struct GlobeMapView: View, Equatable {
             pitch: 0
         )
     )
+    @State private var cityDotsAppeared: Bool = false
+    @State private var userPulseAnimating: Bool = false
+    @State private var userPulseAnimating2: Bool = false
 
     var body: some View {
         Map(position: $position) {
-            // Only rendered after the user explicitly enables location
-            if showUserLocation {
-                UserAnnotation {
-                    ZStack {
-                        Circle()
-                            .fill(.orange.opacity(0.25))
-                            .frame(width: 36, height: 36)
-                        Circle()
-                            .fill(.orange)
-                            .frame(width: 20, height: 20)
-                        Circle()
-                            .fill(.white)
-                            .frame(width: 8, height: 8)
-                    }
-                }
-            }
             // City dots — subtle, fade in as sheet collapses
             ForEach(visitedCities) { city in
                 Annotation("", coordinate: city.coordinate, anchor: .center) {
                     cityDot
-                        .opacity(cityOpacity)
+                        .scaleEffect(cityDotsAppeared ? 1.0 : 0.95)
+                        .opacity(cityDotsAppeared ? cityOpacity : 0)
                 }
             }
             // Country pins — always visible
             ForEach(visitedCountries) { country in
                 Annotation("", coordinate: country.coordinate, anchor: .center) {
                     countryPin(country: country)
+                }
+            }
+            // Only rendered after the user explicitly enables location.
+            // Declared last so it stays visually above other map annotations.
+            if showUserLocation {
+                UserAnnotation {
+                    userLocationDot
                 }
             }
         }
@@ -181,27 +177,84 @@ struct GlobeMapView: View, Equatable {
                     distance: 30_000_000
                 ))
             }
+            guard !cityDotsAppeared else { return }
+            withAnimation(.easeOut(duration: 0.25)) {
+                cityDotsAppeared = true
+            }
+        }
+        .onChange(of: showUserLocation) { _, newValue in
+            if !newValue {
+                userPulseAnimating = false
+                userPulseAnimating2 = false
+            }
         }
     }
 
     // MARK: - City dot
 
-    private var cityDot: some View {
+    private var userLocationDot: some View {
         ZStack {
-            // Outer glow ring
             Circle()
-                .fill(.white.opacity(0.22))
-                .frame(width: 20, height: 20)
-            // Solid center
+                .stroke(Color.orange.opacity(0.35), lineWidth: 2)
+                .frame(width: 18, height: 18)
+                .scaleEffect(userPulseAnimating ? 1.75 : 1.0)
+                .opacity(userPulseAnimating ? 0 : 0.75)
+                .animation(
+                    .linear(duration: 2.1).repeatForever(autoreverses: false),
+                    value: userPulseAnimating
+                )
             Circle()
-                .fill(.white.opacity(0.90))
-                .frame(width: 11, height: 11)
-            // Inner white highlight
+                .stroke(Color.orange.opacity(0.24), lineWidth: 1.6)
+                .frame(width: 18, height: 18)
+                .scaleEffect(userPulseAnimating2 ? 1.75 : 1.0)
+                .opacity(userPulseAnimating2 ? 0 : 0.56)
+                .animation(
+                    .linear(duration: 2.1).repeatForever(autoreverses: false).delay(1.05),
+                    value: userPulseAnimating2
+                )
+
+            Circle()
+                .fill(.orange)
+                .frame(width: 16, height: 16)
             Circle()
                 .fill(.white)
-                .frame(width: 5, height: 5)
+                .frame(width: 6, height: 6)
         }
-        .shadow(color: .black.opacity(0.25), radius: 3, x: 0, y: 1)
+        .onAppear {
+            guard !userPulseAnimating else { return }
+            userPulseAnimating = true
+            userPulseAnimating2 = true
+        }
+    }
+
+    private var cityDot: some View {
+        ZStack {
+            // Outer soft ring
+            Circle()
+                .fill(Color(red: 0.44, green: 0.83, blue: 1.0).opacity(0.20))
+                .frame(width: 18, height: 18)
+            // Core dot
+            Circle()
+                .fill(Color(red: 0.41, green: 0.81, blue: 1.0))
+                .frame(width: 8, height: 8)
+                .overlay {
+                    Circle()
+                        .stroke(
+                            colorScheme == .dark
+                                ? Color.white.opacity(0.34)
+                                : Color.black.opacity(0.14),
+                            lineWidth: 1
+                        )
+                }
+        }
+        .shadow(
+            color: colorScheme == .dark
+                ? Color.black.opacity(0.35)
+                : Color.black.opacity(0.16),
+            radius: 2,
+            x: 0,
+            y: 1
+        )
     }
 
     // MARK: - Country pin

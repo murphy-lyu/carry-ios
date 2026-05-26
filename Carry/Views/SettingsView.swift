@@ -19,6 +19,8 @@ struct SettingsView: View {
     @State private var showImportConfirmation = false
     @State private var pendingImportData: Data?
     @State private var restoreToastMessage: String?
+    // 备份信息缓存：onAppear 时读取一次，避免每次 body 求值触发磁盘 I/O
+    @State private var cachedBackupDate: Date? = nil
     @Environment(\.scenePhase) private var scenePhase
     @Environment(\.colorScheme) private var colorScheme
     @EnvironmentObject private var store: TripStore
@@ -28,20 +30,19 @@ struct SettingsView: View {
         AppearanceMode(rawValue: appearanceModeRaw) ?? .system
     }
 
-    private var currentLanguageDisplay: String {
+    // 语言标识符在 App 生命周期内不会改变，用 let 缓存，避免每次 body 求值都调用系统 API
+    private let currentLanguageDisplay: String = {
         let preferred = Locale.preferredLanguages.first ?? "en"
-        let locale = Locale.current
-        return locale.localizedString(forIdentifier: preferred)?.capitalized
-            ?? preferred
-    }
+        return Locale.current.localizedString(forIdentifier: preferred)?.capitalized ?? preferred
+    }()
 
-    private var roadmapTitle: String {
+    private let roadmapTitle: String = {
         let lang = Locale.preferredLanguages.first?.lowercased() ?? "en"
         if lang.hasPrefix("zh") {
             return lang.contains("hant") ? "路線圖" : "路线图"
         }
         return "Roadmap"
-    }
+    }()
 
     private var notificationStatusText: LocalizedStringKey {
         switch notificationStatus {
@@ -92,15 +93,25 @@ struct SettingsView: View {
         UIApplication.shared.open(url)
     }
 
-    /// Value text shown on the Auto-Save navigation row — always reads fresh from disk.
-    private var autoSaveValueText: String {
-        guard let date = DataBackupManager.shared.latestBackupDate() else {
-            return NSLocalizedString("settings.data.restore.no_backup", comment: "")
-        }
+    // 静态缓存 DateFormatter，避免重复创建（DateFormatter 创建开销大）
+    private static let autoSaveDateFormatter: DateFormatter = {
         let fmt = DateFormatter()
         fmt.dateStyle = .medium
         fmt.timeStyle = .short
-        return fmt.string(from: date)
+        return fmt
+    }()
+
+    /// 从磁盘刷新备份日期缓存（onAppear / 前台激活时调用一次）
+    private func refreshBackupCache() {
+        cachedBackupDate = DataBackupManager.shared.latestBackupDate()
+    }
+
+    /// Value text shown on the Auto-Save navigation row — uses cached date, no disk I/O.
+    private var autoSaveValueText: String {
+        guard let date = cachedBackupDate else {
+            return NSLocalizedString("settings.data.restore.no_backup", comment: "")
+        }
+        return Self.autoSaveDateFormatter.string(from: date)
     }
 
     private func showToast(_ message: String) {
@@ -274,7 +285,7 @@ struct SettingsView: View {
                             settingsCard {
                                 settingsRow(
                                     title: "settings.data.export",
-                                    valueText: DataBackupManager.shared.hasBackup() ? nil : NSLocalizedString("settings.data.restore.no_backup", comment: "")
+                                    valueText: cachedBackupDate != nil ? nil : NSLocalizedString("settings.data.restore.no_backup", comment: "")
                                 ) {
                                     shareBackupFile()
                                 }
@@ -377,10 +388,14 @@ struct SettingsView: View {
         }
         .navigationBarHidden(true)
         .task { await refreshNotificationStatus() }
+        .onAppear { refreshBackupCache() }
         .onChange(of: scenePhase) { _, phase in
-            if phase == .active && !didApplyLaunchSheetReset {
-                showRoadmapSheet = false
-                didApplyLaunchSheetReset = true
+            if phase == .active {
+                refreshBackupCache()
+                if !didApplyLaunchSheetReset {
+                    showRoadmapSheet = false
+                    didApplyLaunchSheetReset = true
+                }
             }
         }
         .onReceive(
@@ -602,15 +617,26 @@ private struct DataRecoveryView: View {
     @State private var showConfirmation = false
     @State private var toastMessage: String?
 
-    private var backupDate: Date? { DataBackupManager.shared.latestBackupDate() }
-    private var backupTripCount: Int? { DataBackupManager.shared.latestBackupTripCount() }
+    // 磁盘读取缓存：onAppear 时加载一次，避免每次 body 求值触发 I/O
+    @State private var backupDate: Date? = nil
+    @State private var backupTripCount: Int? = nil
 
-    private var formattedDate: String {
-        guard let date = backupDate else { return "" }
+    // 静态缓存 DateFormatter，避免重复创建
+    private static let recoveryDateFormatter: DateFormatter = {
         let fmt = DateFormatter()
         fmt.dateStyle = .long
         fmt.timeStyle = .short
-        return fmt.string(from: date)
+        return fmt
+    }()
+
+    private var formattedDate: String {
+        guard let date = backupDate else { return "" }
+        return Self.recoveryDateFormatter.string(from: date)
+    }
+
+    private func loadBackupInfo() {
+        backupDate = DataBackupManager.shared.latestBackupDate()
+        backupTripCount = DataBackupManager.shared.latestBackupTripCount()
     }
 
     var body: some View {
@@ -683,6 +709,7 @@ private struct DataRecoveryView: View {
             Button(role: .destructive) {
                 do {
                     let result = try store.restoreFromBackup()
+                    loadBackupInfo()   // 还原后刷新缓存
                     showRecoveryToast(count: result.trips)
                 } catch {
                     showRecoveryToast(message: error.localizedDescription)
@@ -707,6 +734,7 @@ private struct DataRecoveryView: View {
             }
         }
         .animation(.easeInOut(duration: 0.2), value: toastMessage != nil)
+        .onAppear { loadBackupInfo() }
     }
 
     private func infoRow(label: Text, value: String) -> some View {

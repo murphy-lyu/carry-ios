@@ -49,6 +49,10 @@ struct PackingListView: View {
 
     private let surpriseBatchSize = 5
 
+    // Cached — recomputed only when store.trips or store.myItems changes,
+    // not on every body re-evaluation (inline edit keystrokes, toggle taps, etc.)
+    @State private var cachedSurpriseItems: [SurpriseItem] = []
+
     private var bundle: TripBundle? { store.bundle(for: tripId) }
     private var sections: [PackingSection] {
         bundle?.safeSections ?? []
@@ -66,8 +70,10 @@ struct PackingListView: View {
         totalCount > 0 && packedCount == totalCount
     }
 
-    private var surpriseItems: [SurpriseItem] {
-        guard let bundle else { return [] }
+    private var surpriseItems: [SurpriseItem] { cachedSurpriseItems }
+
+    private func rebuildSurpriseItems() {
+        guard let bundle else { cachedSurpriseItems = []; return }
         let existingNames = Set(
             bundle.safeSections.flatMap { $0.items ?? [] }.map { canonicalItemName($0.name).lowercased() }
         )
@@ -75,18 +81,18 @@ struct PackingListView: View {
             store.myItems.map { canonicalItemName($0.name).lowercased() }
         )
         let dismissed = Set(bundle.dismissedSurpriseNames.map { $0.lowercased() })
-        return computeSurpriseItems(for: bundle.selectedSceneKeys, existingNames: existingNames.union(myItemNames))
+        cachedSurpriseItems = computeSurpriseItems(for: bundle.selectedSceneKeys, existingNames: existingNames.union(myItemNames))
             .filter { !dismissed.contains($0.name.lowercased()) }
     }
 
     private var visibleSurpriseItems: [SurpriseItem] {
-        guard !surpriseItems.isEmpty else { return [] }
-        let total = surpriseItems.count
-        guard total > surpriseBatchSize else { return surpriseItems }
-        return (0..<surpriseBatchSize).map { i in surpriseItems[(surpriseBatchOffset + i) % total] }
+        guard !cachedSurpriseItems.isEmpty else { return [] }
+        let total = cachedSurpriseItems.count
+        guard total > surpriseBatchSize else { return cachedSurpriseItems }
+        return (0..<surpriseBatchSize).map { i in cachedSurpriseItems[(surpriseBatchOffset + i) % total] }
     }
 
-    private var canShuffle: Bool { surpriseItems.count > surpriseBatchSize }
+    private var canShuffle: Bool { cachedSurpriseItems.count > surpriseBatchSize }
 
     var body: some View {
         ZStack {
@@ -214,6 +220,7 @@ struct PackingListView: View {
             }
         }
         .onAppear {
+            rebuildSurpriseItems()
             CarryLogger.shared.log(.tripOpened)
             // Remember this trip so "Continue Packing" shortcut can reopen it.
             UserDefaults.standard.set(tripId.uuidString, forKey: "carry_last_opened_trip")
@@ -265,6 +272,9 @@ struct PackingListView: View {
                 try? await Task.sleep(for: .milliseconds(3500))
                 withAnimation(.easeIn(duration: 0.3)) { showNudgeBanner = false }
             }
+        }
+        .onChange(of: store.trips) { _, _ in
+            rebuildSurpriseItems()
         }
         .onDisappear {
             store.refresh()
@@ -352,14 +362,8 @@ struct PackingListView: View {
     }
 
     private var contentSurface: some View {
-        Group {
-            if colorScheme == .dark {
-                Color(UIColor.systemBackground)
-            } else {
-                Color(UIColor.systemBackground)
-            }
-        }
-        .ignoresSafeArea()
+        Color(UIColor.systemBackground)
+            .ignoresSafeArea()
     }
 
     private var packingList: some View {
@@ -1864,6 +1868,9 @@ private struct LongPressDragBridge: UIViewRepresentable {
         context.coordinator.onBegan = onBegan
         context.coordinator.onChanged = onChanged
         context.coordinator.onEnded = onEnded
+        // Only search for the cell once — skip the view-tree walk on every
+        // subsequent SwiftUI update (inline edit keystrokes, etc.)
+        guard context.coordinator.attachedRecognizer == nil else { return }
         DispatchQueue.main.async {
             var v: UIView? = uiView
             while let current = v {
@@ -1900,6 +1907,7 @@ private struct LongPressDragBridge: UIViewRepresentable {
         var onEnded: (() -> Void)?
         weak var attachedRecognizer: UILongPressGestureRecognizer?
         private var startY: CGFloat = 0
+        private let impactFeedback = UIImpactFeedbackGenerator(style: .medium)
 
         @objc func handle(_ r: UILongPressGestureRecognizer) {
             guard let view = r.view?.superview else { return }
@@ -1907,8 +1915,9 @@ private struct LongPressDragBridge: UIViewRepresentable {
             switch r.state {
             case .began:
                 startY = y
+                impactFeedback.prepare()
                 DispatchQueue.main.async { self.onBegan?() }
-                UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+                impactFeedback.impactOccurred()
             case .changed:
                 DispatchQueue.main.async { self.onChanged?(y - self.startY) }
             case .ended, .cancelled, .failed:

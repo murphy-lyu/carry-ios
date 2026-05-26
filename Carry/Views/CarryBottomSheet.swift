@@ -105,7 +105,8 @@ final class SheetViewController: UIViewController {
     /// Clips the sheet from below: height = screenHeight - bottomLift.
     /// As the sheet collapses, this shrinks and reveals background, creating
     /// the "ship leaving dock" gap at the bottom.
-    private let clippingView = UIView()
+    /// PassthroughView so touches outside the sheet reach MapKit behind it.
+    private let clippingView = PassthroughView()
     /// Moves and scales; clipsToBounds = false so coverView is visible.
     private let outerView = UIView()
     /// Stays within outerView bounds; clips content to rounded corners.
@@ -146,10 +147,16 @@ final class SheetViewController: UIViewController {
 
     // MARK: Lifecycle
 
-    override func viewDidLoad() {
-        super.viewDidLoad()
+    /// Use PassthroughView as the root so touches outside the sheet panel
+    /// fall through to MapKit (or any other view behind the sheet).
+    override func loadView() {
+        view = PassthroughView()
         view.backgroundColor = .clear
         view.clipsToBounds = false
+    }
+
+    override func viewDidLoad() {
+        super.viewDidLoad()
 
         // clippingView: sits full-screen but shrinks from the bottom as the
         // sheet collapses, creating a transparent strip between sheet and screen edge.
@@ -577,6 +584,17 @@ extension SheetViewController: UIGestureRecognizerDelegate {
             if sv.bounds.contains(pointInSV) { return false }
         }
         return true
+    }
+}
+
+// MARK: - PassthroughView
+
+/// A UIView that returns nil from hitTest when no subview claims the touch,
+/// allowing gestures (e.g. MapKit pinch/pan) on views behind it to pass through.
+private final class PassthroughView: UIView {
+    override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
+        let hit = super.hitTest(point, with: event)
+        return hit === self ? nil : hit
     }
 }
 
