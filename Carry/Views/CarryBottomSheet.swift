@@ -102,12 +102,19 @@ final class SheetViewController: UIViewController {
 
     // MARK: View hierarchy
 
+    /// Clips the sheet from below: height = screenHeight - bottomLift.
+    /// As the sheet collapses, this shrinks and reveals background, creating
+    /// the "ship leaving dock" gap at the bottom.
+    private let clippingView = UIView()
     /// Moves and scales; clipsToBounds = false so coverView is visible.
     private let outerView = UIView()
     /// Stays within outerView bounds; clips content to rounded corners.
     private let innerView = UIView()
     /// Sits below innerView inside outerView, fills rubber-band gap.
     private let coverView = UIView()
+    /// Reused mask layer on innerView — path is updated in place so
+    /// UIViewPropertyAnimator can spring-animate it automatically.
+    private let innerMaskLayer = CAShapeLayer()
 
     // MARK: Scroll coordination
 
@@ -115,6 +122,9 @@ final class SheetViewController: UIViewController {
     private weak var listScrollView: UIScrollView?
     private var delegateProxy: DecelerationCanceller?
     private var delegateObservation: NSKeyValueObservation?
+
+    /// Pre-allocated so the Taptic Engine is warm before the first snap.
+    private let feedbackGenerator = UIImpactFeedbackGenerator(style: .soft)
 
     private var capturedTranslationAtTop: CGFloat?
     private var wasAtTop = false
@@ -141,9 +151,17 @@ final class SheetViewController: UIViewController {
         view.backgroundColor = .clear
         view.clipsToBounds = false
 
-        // outerView: moves, scales; does NOT clip
+        // clippingView: sits full-screen but shrinks from the bottom as the
+        // sheet collapses, creating a transparent strip between sheet and screen edge.
+        // Corner rounding is handled entirely by innerMaskLayer (not clippingView.cornerRadius),
+        // which lets us place bottom corners exactly at the visual clip line.
+        clippingView.clipsToBounds = true
+        clippingView.backgroundColor = .clear
+        view.addSubview(clippingView)
+
+        // outerView: moves, scales; does NOT clip (lives inside clippingView)
         outerView.clipsToBounds = false
-        view.addSubview(outerView)
+        clippingView.addSubview(outerView)
 
         // coverView: rubber-band gap filler (below innerView inside outerView)
         outerView.addSubview(coverView)
@@ -153,8 +171,9 @@ final class SheetViewController: UIViewController {
         // this avoids setting innerView.frame directly while a transform is active
         // (which is undefined behavior per UIKit docs).
         innerView.clipsToBounds = true
-        innerView.layer.cornerCurve = .continuous
         innerView.autoresizingMask = [.flexibleWidth, .flexibleHeight]
+        // Mask handles all corner rounding; set once, path updated in place.
+        innerView.layer.mask = innerMaskLayer
         outerView.addSubview(innerView)
 
         // Pan gesture on the full view; shouldReceive limits it to sheet zone.
@@ -176,12 +195,11 @@ final class SheetViewController: UIViewController {
         // setProgress() in viewDidLoad often skips (bounds are zero at that point),
         // so we always refresh here, wrapped in disableActions to avoid implicit animations.
         let progress = clampedProgress(raw)
+        let topRadius: CGFloat = 44 + progress * 6
         CATransaction.begin()
         CATransaction.setDisableActions(true)
-        applyCornerMask(to: innerView,
-                        top: 36 + progress * 6,
-                        bottom: progress * 20)
-        innerView.transform = CGAffineTransform(scaleX: 1.0 - progress * 0.03, y: 1)
+        applyCornerMask(top: topRadius, bottom: topRadius)
+        innerView.transform = CGAffineTransform(scaleX: 1.0 - progress * 0.05, y: 1)
         CATransaction.commit()
     }
 
@@ -236,7 +254,12 @@ final class SheetViewController: UIViewController {
         let h = view.bounds.height
         guard w > 0, h > 0 else { return }
 
-        let y = h - expandedHeight + banded - lift
+        // clippingView shrinks from the bottom by `lift`, revealing background
+        // beneath the sheet — this is what creates the equal left/right/bottom gap.
+        clippingView.frame = CGRect(x: 0, y: 0, width: w, height: h - lift)
+
+        // outerView position: no lift subtraction needed (clippingView handles the gap).
+        let y = h - expandedHeight + banded
         outerView.frame = CGRect(x: 0, y: y, width: w, height: expandedHeight)
         // innerView fills outerView via autoresizingMask — never set .frame directly
         // while a transform may be active (undefined behavior in UIKit).
@@ -246,37 +269,56 @@ final class SheetViewController: UIViewController {
     /// Called inside UIViewPropertyAnimator.addAnimations — the animator drives
     /// the implicit CALayer animations on the mask path and transform.
     private func setProgress(_ progress: CGFloat, animated: Bool) {
-        let topRadius:    CGFloat = 36 + progress * 6      // 36 → 42
-        let bottomRadius: CGFloat = progress * 20           // 0  → 20
-        let scaleX:       CGFloat = 1.0 - progress * 0.03  // 1.0 → 0.97
-        applyCornerMask(to: innerView, top: topRadius, bottom: bottomRadius)
+        let topRadius: CGFloat = 44 + progress * 6      // 44 → 50
+        let scaleX:    CGFloat = 1.0 - progress * 0.05  // 1.0 → 0.95
+        // Bottom corners match top corners — visibleH is computed inside
+        // applyCornerMask so the arc sits exactly at the visual clip edge.
+        applyCornerMask(top: topRadius, bottom: topRadius)
         innerView.transform = CGAffineTransform(scaleX: scaleX, y: 1)
     }
 
-    /// Per-corner rounded rect mask so top and bottom radii can differ.
+    /// Updates `innerMaskLayer.path` in place with per-corner radii.
+    /// Uses `visibleH` — the portion of innerView actually visible above
+    /// clippingView's bottom edge — so bottom corners sit exactly at the
+    /// visual clip line (matching the top corner radius).
     /// Caller is responsible for wrapping in CATransaction.setDisableActions(true)
-    /// if an implicit animation should be suppressed.
-    private func applyCornerMask(to targetView: UIView, top: CGFloat, bottom: CGFloat) {
-        let w = targetView.bounds.width
-        let h = targetView.bounds.height
-        guard w > 0, h > 0 else { return }
+    /// when an implicit animation should be suppressed.
+    private func applyCornerMask(top: CGFloat, bottom: CGFloat) {
+        let w     = innerView.bounds.width
+        let fullH = innerView.bounds.height
+        guard w > 0, fullH > 0 else { return }
 
+        // Visible portion of innerView within clippingView.
+        // outerView.frame is in clippingView's coordinate space (clippingView.origin.y == 0).
+        let rawVisible = clippingView.frame.height - outerView.frame.origin.y
+        let visibleH   = max(0, min(fullH, rawVisible))
+
+        // True circular arcs — addArc produces the same geometry as CALayer
+        // corner rounding, unlike the quadBezier approximation.
         let path = UIBezierPath()
         let tl = top, tr = top, bl = bottom, br = bottom
         path.move(to: CGPoint(x: tl, y: 0))
+        // Top edge → top-right arc
         path.addLine(to: CGPoint(x: w - tr, y: 0))
-        path.addQuadCurve(to: CGPoint(x: w, y: tr), controlPoint: CGPoint(x: w, y: 0))
-        path.addLine(to: CGPoint(x: w, y: h - br))
-        path.addQuadCurve(to: CGPoint(x: w - br, y: h), controlPoint: CGPoint(x: w, y: h))
-        path.addLine(to: CGPoint(x: bl, y: h))
-        path.addQuadCurve(to: CGPoint(x: 0, y: h - bl), controlPoint: CGPoint(x: 0, y: h))
+        path.addArc(withCenter: CGPoint(x: w - tr, y: tr),
+                    radius: tr, startAngle: -.pi / 2, endAngle: 0, clockwise: true)
+        // Right edge → bottom-right arc
+        path.addLine(to: CGPoint(x: w, y: visibleH - br))
+        path.addArc(withCenter: CGPoint(x: w - br, y: visibleH - br),
+                    radius: br, startAngle: 0, endAngle: .pi / 2, clockwise: true)
+        // Bottom edge → bottom-left arc
+        path.addLine(to: CGPoint(x: bl, y: visibleH))
+        path.addArc(withCenter: CGPoint(x: bl, y: visibleH - bl),
+                    radius: bl, startAngle: .pi / 2, endAngle: .pi, clockwise: true)
+        // Left edge → top-left arc
         path.addLine(to: CGPoint(x: 0, y: tl))
-        path.addQuadCurve(to: CGPoint(x: tl, y: 0), controlPoint: CGPoint(x: 0, y: 0))
+        path.addArc(withCenter: CGPoint(x: tl, y: tl),
+                    radius: tl, startAngle: .pi, endAngle: -.pi / 2, clockwise: true)
         path.close()
 
-        let maskLayer = CAShapeLayer()
-        maskLayer.path = path.cgPath
-        targetView.layer.mask = maskLayer
+        // Updating `.path` on the existing layer (not replacing the layer) lets
+        // UIViewPropertyAnimator interpolate it as a CALayer animatable property.
+        innerMaskLayer.path = path.cgPath
     }
 
     private func rubberBand(_ raw: CGFloat) -> CGFloat {
@@ -297,7 +339,12 @@ final class SheetViewController: UIViewController {
         return min(max(0, raw), collapsedOffset) / collapsedOffset
     }
 
-    private func bottomLift(_ progress: CGFloat) -> CGFloat { progress * 12 }
+    /// How much to shrink clippingView from the bottom.
+    /// scaleX = 1 - progress*0.05  →  each side gap = progress * 0.025 * width.
+    /// Using the same value here makes left ≈ right ≈ bottom gaps visually equal.
+    private func bottomLift(_ progress: CGFloat) -> CGFloat {
+        progress * 0.025 * view.bounds.width
+    }
 
     // MARK: Snap animation
 
@@ -310,10 +357,10 @@ final class SheetViewController: UIViewController {
         let isCollapsing = target > snappedOffset + liveDelta / 2
 
         onSnapChanged?(isCollapsing)
-        UIImpactFeedbackGenerator(style: .soft).impactOccurred()
+        feedbackGenerator.impactOccurred()
 
         let params = UISpringTimingParameters(
-            dampingRatio: 0.82,
+            dampingRatio: 0.78,
             initialVelocity: CGVector(dx: 0, dy: normV)
         )
         let anim = UIViewPropertyAnimator(duration: 0.5, timingParameters: params)
@@ -332,11 +379,11 @@ final class SheetViewController: UIViewController {
             self.runningAnimator = nil
             // Re-apply mask at final size (bounds may have changed during animation).
             // Disable implicit animations since we're outside any animator context.
-            let p = self.clampedProgress(target)
+            let p    = self.clampedProgress(target)
+            let topR = 44 + p * 6
             CATransaction.begin()
             CATransaction.setDisableActions(true)
-            self.applyCornerMask(to: self.innerView,
-                                 top: 36 + p * 6, bottom: p * 20)
+            self.applyCornerMask(top: topR, bottom: topR)
             CATransaction.commit()
         }
 
@@ -348,7 +395,7 @@ final class SheetViewController: UIViewController {
 
     private func resolveSnap(velocity: CGFloat, translation: CGFloat,
                               clamped: CGFloat) -> Bool {
-        if velocity > 650  || translation > collapsedOffset * 0.46 { return true }
+        if velocity > 650  || translation > collapsedOffset * 0.50 { return true }
         if velocity < -350 || translation < -70 { return false }
         return clamped > collapsedOffset * 0.68
     }
@@ -361,11 +408,11 @@ final class SheetViewController: UIViewController {
         let progress = clampedProgress(raw)
         placeSheet(at: raw)
         // Disable CALayer implicit animations for immediate response
+        let topRadius: CGFloat = 44 + progress * 6
         CATransaction.begin()
         CATransaction.setDisableActions(true)
-        applyCornerMask(to: innerView,
-                        top: 36 + progress * 6, bottom: progress * 20)
-        innerView.transform = CGAffineTransform(scaleX: 1.0 - progress * 0.03, y: 1)
+        applyCornerMask(top: topRadius, bottom: topRadius)
+        innerView.transform = CGAffineTransform(scaleX: 1.0 - progress * 0.05, y: 1)
         CATransaction.commit()
     }
 
@@ -382,6 +429,9 @@ final class SheetViewController: UIViewController {
         let velocity    = pan.velocity(in: view).y
 
         switch pan.state {
+        case .began:
+            feedbackGenerator.prepare()
+
         case .changed:
             applyLiveDelta(translation)
 
@@ -434,6 +484,9 @@ final class SheetViewController: UIViewController {
         let atTop       = sv.contentOffset.y <= topInset + 1
 
         switch pan.state {
+        case .began:
+            feedbackGenerator.prepare()
+
         case .changed:
             // ── Collapse: at list top, pulling down ──
             if atTop && velocity > 0 {

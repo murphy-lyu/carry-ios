@@ -331,20 +331,35 @@ struct PackingListView: View {
     // MARK: Row dispatch
 
     private var mainContent: some View {
-        VStack(spacing: 0) {
-            if toastVisible {
-                toastBanner
-            }
+        ZStack(alignment: .top) {
+            contentSurface
 
-            if sections.isEmpty {
-                emptyState
-            } else {
-                packingList
+            VStack(spacing: 0) {
+                if toastVisible {
+                    toastBanner
+                }
+
+                if sections.isEmpty {
+                    emptyState
+                } else {
+                    packingList
+                }
             }
         }
         .safeAreaInset(edge: .top, spacing: 0) {
             progressHeader
         }
+    }
+
+    private var contentSurface: some View {
+        Group {
+            if colorScheme == .dark {
+                Color(UIColor.systemBackground)
+            } else {
+                Color(UIColor.systemBackground)
+            }
+        }
+        .ignoresSafeArea()
     }
 
     private var packingList: some View {
@@ -405,7 +420,7 @@ struct PackingListView: View {
         .environment(\.defaultMinListRowHeight, 0)
         .listSectionSpacing(0)
         .scrollIndicators(.hidden)
-        .safeAreaInset(edge: .bottom) { Color.clear.frame(height: 83) }
+        .safeAreaPadding(.bottom, 83)
         .safeAreaInset(edge: .top, spacing: 0) {
             VStack(spacing: 0) {
                 if showCompletionBanner {
@@ -664,68 +679,57 @@ struct PackingListView: View {
             }
 
             if !isNewTrip {
-                HStack(alignment: .firstTextBaseline, spacing: 12) {
-                    Text(tripInfoLine)
-                        .font(.caption)
-                        .foregroundColor(colorScheme == .dark ? Color.secondary.opacity(0.88) : .secondary)
-                        .lineLimit(1)
-                        .truncationMode(.tail)
-
-                    Spacer(minLength: 12)
-
-                    Button {
-                        showReminderSheet = true
-                    } label: {
-                        HStack(spacing: 6) {
-                            Image(systemName: bundle?.remindersEnabled == true ? "bell.fill" : "bell.slash")
-                                .font(.system(size: 10, weight: .semibold))
-                            Text(reminderStatusText)
-                                .font(.caption2.weight(.medium))
-                            Image(systemName: "chevron.right")
-                                .font(.system(size: 8, weight: .semibold))
-                                .foregroundStyle(.tertiary)
-                        }
-                        .foregroundStyle(colorScheme == .dark ? Color.secondary.opacity(0.9) : .secondary)
-                        .padding(.horizontal, 8)
-                        .padding(.vertical, 5)
-                        .background(
-                            Capsule(style: .continuous)
-                                .fill(colorScheme == .dark ? Color.white.opacity(0.035) : Color.black.opacity(0.025))
-                        )
-                        .overlay(
-                            Capsule(style: .continuous)
-                                .strokeBorder(Color.primary.opacity(colorScheme == .dark ? 0.025 : 0.035), lineWidth: 1)
-                        )
-                    }
-                    .buttonStyle(.plain)
-                }
-                .padding(.top, 8)
-                .padding(.bottom, 5)
+                tripInfoCard
+                    .padding(.top, 6)
             }
-
-            HStack(alignment: .firstTextBaseline) {
-                Group {
-                    if isNewTrip {
-                        Text("\(totalCount) items")
-                    } else if totalCount == 0 {
-                        Text("packing.empty.items")
-                    } else if isComplete {
-                        Text("packing.complete.short")
-                    } else {
-                        Text("\(totalCount - packedCount) left")
-                    }
-                }
-                .font(.caption)
-                .foregroundColor(colorScheme == .dark ? Color.secondary.opacity(0.88) : .secondary)
-                .animation(.easeInOut(duration: 0.3), value: isComplete)
-                Spacer()
-            }
-            .padding(.top, isNewTrip ? 0 : 6)
         }
         .zIndex(2)
         .padding(.horizontal, 16)
         .padding(.vertical, 10)
+        .background(Color(UIColor.systemBackground))
         .animation(.easeInOut(duration: 0.2), value: progress)
+    }
+
+    private var tripInfoCard: some View {
+        HStack(spacing: 8) {
+            Button {
+                showReminderSheet = true
+            } label: {
+                HStack(spacing: 4) {
+                    Image(systemName: reminderStatusIconName)
+                        .font(.system(size: 9, weight: .semibold))
+                    Text(reminderStatusText)
+                        .font(.caption2.weight(.medium))
+                    Image(systemName: "chevron.right")
+                        .font(.system(size: 7, weight: .semibold))
+                        .foregroundStyle(.tertiary)
+                }
+                .foregroundStyle(colorScheme == .dark ? Color.secondary.opacity(0.88) : .secondary)
+                .padding(.horizontal, 7)
+                .padding(.vertical, 4)
+                .background(
+                    Capsule(style: .continuous)
+                        .fill(colorScheme == .dark ? Color.white.opacity(0.04) : Color.black.opacity(0.03))
+                )
+                .overlay(
+                    Capsule(style: .continuous)
+                        .strokeBorder(Color.primary.opacity(colorScheme == .dark ? 0.02 : 0.03), lineWidth: 1)
+                )
+            }
+            .buttonStyle(.plain)
+
+            Spacer(minLength: 0)
+        }
+        .padding(.horizontal, 14)
+        .padding(.vertical, 8)
+        .background(
+            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                .fill(cardBackground)
+        )
+    }
+
+    private var cardBackground: Color {
+        Color(UIColor.secondarySystemBackground)
     }
 
     private var tripInfoLine: String {
@@ -767,10 +771,22 @@ struct PackingListView: View {
         if count == 0 {
             return NSLocalizedString("reminder.menu.item", comment: "")
         }
+        if count == 1 {
+            return NSLocalizedString("trip.reminder.count.one", comment: "")
+        }
         return String.localizedStringWithFormat(
             NSLocalizedString("trip.reminders.count", comment: ""),
             count
         )
+    }
+
+    private var reminderStatusIconName: String {
+        let count = bundle?.reminderConfigs.count ?? 0
+        let remindersEnabled = bundle?.remindersEnabled == true
+        if !remindersEnabled || count == 0 {
+            return "bell.slash"
+        }
+        return "bell.fill"
     }
 
     private var sceneEntryCard: some View {
@@ -1020,17 +1036,15 @@ struct PackingListView: View {
             .padding(.horizontal, 16)
             .padding(.top, isFirst ? 10 : 16)
             .padding(.bottom, 4)
+            .overlay(alignment: .bottom) {
+                Rectangle()
+                    .fill(colorScheme == .dark ? Color.white.opacity(0.03) : Color.primary.opacity(0.03))
+                    .frame(height: 1)
+            }
             .background(
                 Rectangle()
-                    .fill(colorScheme == .dark ? Color(UIColor.secondarySystemBackground).opacity(0.78) : Color(UIColor.systemBackground).opacity(0.92))
-                    .overlay(alignment: .bottom) {
-                        Rectangle()
-                            .fill(colorScheme == .dark ? Color.white.opacity(0.035) : Color.primary.opacity(0.03))
-                            .frame(height: 1)
-                    }
-                    .shadow(color: colorScheme == .dark ? .clear : Color.black.opacity(0.012), radius: 4, x: 0, y: 1)
+                    .fill(Color(UIColor.systemBackground))
             )
-            .padding(.horizontal, 10)
     }
 
     private func editableRow(itemId: UUID, sectionId: UUID) -> some View {
@@ -1076,26 +1090,21 @@ struct PackingListView: View {
         Button {
             appendNewItem(sectionId: sectionId)
         } label: {
-            HStack(spacing: 10) {
+            HStack(spacing: 8) {
                 Image(systemName: "plus")
-                    .font(.system(size: 10, weight: .semibold))
-                    .foregroundStyle(addItemTint)
-                    .frame(width: 16, height: 16)
-                    .background(
-                        Circle()
-                            .fill(addItemBadgeFill)
-                    )
+                    .font(.system(size: 9, weight: .semibold))
                 Text("Add item")
-                    .font(.subheadline.weight(.medium))
-                    .foregroundStyle(addItemTextTint)
-                Spacer()
+                    .font(.footnote.weight(.medium))
+                Spacer(minLength: 0)
             }
-            .frame(height: 44)
+            .foregroundStyle(addItemTextTint)
+            .frame(height: 28)
             .padding(.horizontal, 2)
-            .opacity(isComplete ? 0.7 : 1.0)
+            .opacity(isComplete ? 0.55 : 0.78)
         }
-        .buttonStyle(PressableScaleButtonStyle(scale: 0.985, pressedBrightness: -0.02, pressedOpacity: 0.95))
-        .padding(.vertical, 1)
+        .buttonStyle(.plain)
+        .padding(.vertical, 2)
+        .contentShape(Rectangle())
     }
 
     private func addSectionFromEmptyState() {
@@ -1123,9 +1132,9 @@ struct PackingListView: View {
 
     private var addItemTextTint: Color {
         if colorScheme == .dark {
-            return isComplete ? Color.primary.opacity(0.34) : Color.primary.opacity(0.66)
+            return isComplete ? Color.secondary.opacity(0.42) : Color.secondary.opacity(0.76)
         } else {
-            return isComplete ? Color.primary.opacity(0.42) : Color.primary.opacity(0.78)
+            return isComplete ? Color.secondary.opacity(0.48) : Color.secondary.opacity(0.72)
         }
     }
 

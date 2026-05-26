@@ -194,9 +194,6 @@
         }
       }
     },
-    "%lld items" : {
-
-    },
     "%lld left" : {
       "comment" : "Remaining item count",
       "extractionState" : "manual",
@@ -15272,53 +15269,6 @@
         }
       }
     },
-    "trip.reminders.count" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%lld reminders set"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "已设置 %lld 条提醒"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "已設定 %lld 條提醒"
-          }
-        }
-      }
-    },
-    "trip.reminder.count.one" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "1 reminder set"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "已设置 1 条提醒"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "已設定 1 條提醒"
-          }
-        }
-      }
-    },
-
     "reminder.permission.denied" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -22558,6 +22508,52 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "（副本）"
+          }
+        }
+      }
+    },
+    "trip.reminder.count.one" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "1 reminder set"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "已设置 1 条提醒"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "已設定 1 條提醒"
+          }
+        }
+      }
+    },
+    "trip.reminders.count" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld reminders set"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "已设置 %lld 条提醒"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "已設定 %lld 條提醒"
           }
         }
       }
