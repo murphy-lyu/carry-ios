@@ -310,13 +310,13 @@ final class SheetViewController: UIViewController {
         let banded = rubberBand(rawOffset)
         let positionProgress = clampedProgress(rawOffset)
         let shapeProgress = shapeProgressOverride ?? shapeProgressState
-        let lift = bottomLift(shapeProgress)
+        let lift = bottomLift(positionProgress)
         let w = view.bounds.width
         let h = view.bounds.height
         guard w > 0, h > 0 else { return nil }
 
         let scale = view.window?.screen.scale ?? UIScreen.main.scale
-        let sideMargin = pixelAligned(collapsedSideMargin * effectProgress(shapeProgress), scale: scale)
+        let sideMargin = pixelAligned(collapsedSideMargin * effectProgress(positionProgress), scale: scale)
         let y = pixelAligned(h - expandedHeight + banded, scale: scale)
         let width = max(0, pixelAligned(w - 2 * sideMargin, scale: scale))
         let height = max(0, pixelAligned(expandedHeight, scale: scale))
@@ -571,9 +571,6 @@ final class SheetViewController: UIViewController {
                 // visually compress mid-air, then settle to the collapsed
                 // shape at the end.
                 self.placeSheet(at: target, shapeProgressOverride: visualProgress)
-                self.applyCornerMask(top: self.topRadius(visualProgress),
-                                     bottom: self.bottomRadius(visualProgress),
-                                     progress: visualProgress)
             } else {
                 // Position channel only; shape follows via displayLink.
                 self.placeSheet(at: target)
