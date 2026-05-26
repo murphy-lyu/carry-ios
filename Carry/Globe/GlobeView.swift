@@ -137,7 +137,7 @@ struct GlobeMapView: View, Equatable {
     /// Cold launch: zoom in close so globe fills screen dramatically.
     private let nearDistance:  Double = 20_230_330
     /// Auto-zoom after 4 s: comfortable globe view while sheet is expanded.
-    private let midDistance:   Double = 24_000_000
+    private let midDistance:   Double = 25_000_000
     /// Sheet collapsed: globe recedes to reveal the full "world at a glance" layout.
     private let farDistance:   Double = 35_000_000
 
