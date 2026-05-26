@@ -107,18 +107,11 @@ struct HomeView: View {
         }
     }
 
-    /// All per-frame drag/animation state in an @Observable class.
-    /// SheetTransformModifier reads this; HomeView.body does not — so HomeView.body
-    /// stays idle during drag and spring animations.
-    @State private var liveDrag = LiveDragState()
-
     /// Opacity for GlobeMapView city dots and the map style button.
-    /// 0 = sheet expanded (dots hidden), 1 = sheet collapsed (dots visible).
-    ///
-    /// Animated once via .easeOut(0.18s) at snap time — NOT derived from
-    /// liveDrag.snappedOffset — so GlobeMapView inputs are constant during the
-    /// spring tail and MapKit never updates Annotation opacity per-frame.
+    /// Written by CarryBottomSheet.onSnapChanged via easeOut(0.18s).
     @State private var mapCityOpacity: Double = 0
+    /// Set to true to programmatically collapse the sheet (Siri, map button).
+    @State private var collapseRequest: Bool = false
 
     @AppStorage("mapStyleOption") private var mapStyleRaw: String = MapStyleOption.hybrid.rawValue
     @State private var locationPermission = LocationPermissionManager()
@@ -206,10 +199,8 @@ struct HomeView: View {
     }
 
     var body: some View {
-        ZStack(alignment: .bottom) {
-            // Globe background
-            // .equatable() lets SwiftUI skip GlobeMapView.body when inputs are stable,
-            // preventing per-frame MapKit annotation updates during the spring animation.
+        ZStack {
+            // Globe — stays completely static; only updated by mapCityOpacity easeOut
             GlobeMapView(
                 visitedCountries: visitedCountries,
                 visitedCities: visitedCities,
@@ -220,195 +211,169 @@ struct HomeView: View {
             .equatable()
             .ignoresSafeArea()
 
-
-            // Map style button — fades in as sheet collapses
+            // Map controls — fade in as sheet collapses
             mapStyleButton
                 .ignoresSafeArea(edges: .top)
 
-            // Trip list sheet
-            VStack(spacing: 0) {
-                // Drag handle — gesture lives only here so List scrolls freely
-                Capsule()
-                    .fill(Color.primary.opacity(0.18))
-                    .frame(width: 36, height: 5)
-                    .padding(.top, 10)
-                    .padding(.bottom, 6)
-                    .frame(maxWidth: .infinity)
-                    .contentShape(Rectangle())
-                    .gesture(sheetDragGesture)
+            // Bottom sheet — UIKit-driven, zero SwiftUI re-evaluates during animation
+            CarryBottomSheet(
+                expandedHeight: expandedSheetHeight,
+                collapsedOffset: collapsedSheetOffset,
+                coverColor: colorScheme == .dark
+                    ? UIColor(homeDarkBackdropBottom)
+                    : UIColor.systemBackground,
+                mapCityOpacity: $mapCityOpacity,
+                collapseRequest: $collapseRequest,
+                isListEmpty: isEffectivelyEmpty
+            ) {
+                sheetContent
+            }
+            .ignoresSafeArea()
+        }
+        .ignoresSafeArea(edges: .bottom)
+    }
+
+    // MARK: - Sheet content (hosted inside UIHostingController by CarryBottomSheet)
+
+    @ViewBuilder
+    private var sheetContent: some View {
+        VStack(spacing: 0) {
+            // Drag handle — no gesture needed; SheetViewController.sheetPan handles it
+            Capsule()
+                .fill(Color.primary.opacity(0.18))
+                .frame(width: 36, height: 5)
+                .padding(.top, 10)
+                .padding(.bottom, 6)
+                .frame(maxWidth: .infinity)
+
+            if isEffectivelyEmpty {
+                VStack(spacing: 4) {
+                    Text("home.empty.header.title")
+                        .font(.system(size: 22, weight: .semibold, design: .rounded))
+                        .foregroundStyle(.primary)
+                    Text("home.empty.header.subtitle")
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary.opacity(0.78))
+                        .multilineTextAlignment(.center)
+                }
+                .padding(.top, 8)
+                .padding(.bottom, 20)
+                .padding(.horizontal, 26)
+                .frame(maxWidth: .infinity)
+            }
+
+            ZStack {
+                List {
+                    if !isEffectivelyEmpty {
+                        heroSection
+                            .opacity(initialRevealPhase >= 1 ? 1 : 0)
+                            .offset(y: initialRevealPhase >= 1 ? 0 : 18)
+                            .scaleEffect(initialRevealPhase >= 1 ? 1 : 0.985)
+                            .blur(radius: initialRevealPhase >= 1 ? 0 : 6)
+                            .animation(.spring(response: 0.48, dampingFraction: 0.86).delay(0.02), value: initialRevealPhase)
+                            .listRowInsets(EdgeInsets(top: 2, leading: 12, bottom: 4, trailing: 12))
+                            .listRowBackground(Color.clear)
+                            .listRowSeparator(.hidden)
+
+                        upcomingSection
+                        pastSection
+
+                        listFooter
+                            .opacity(initialRevealPhase >= 3 ? 1 : 0)
+                            .offset(y: initialRevealPhase >= 3 ? 0 : 8)
+                            .blur(radius: initialRevealPhase >= 3 ? 0 : 3)
+                            .animation(.easeOut(duration: 0.24).delay(0.56), value: initialRevealPhase)
+                            .listRowInsets(EdgeInsets(top: 14, leading: 16, bottom: 4, trailing: 16))
+                            .listRowBackground(Color.clear)
+                            .listRowSeparator(.hidden)
+
+                        Color.clear
+                            .frame(height: colorScheme == .dark ? 124 : 72)
+                            .listRowBackground(Color.clear)
+                            .listRowSeparator(.hidden)
+                    }
+                }
+                .id(listIdentity)
+                .listStyle(.plain)
+                .scrollContentBackground(.hidden)
+                .scrollIndicators(.hidden)
+                .background(Color.clear)
 
                 if isEffectivelyEmpty {
-                    VStack(spacing: 4) {
-                        Text("home.empty.header.title")
-                            .font(.system(size: 22, weight: .semibold, design: .rounded))
-                            .foregroundStyle(.primary)
-                        Text("home.empty.header.subtitle")
-                            .font(.subheadline)
-                            .foregroundStyle(.secondary.opacity(0.78))
-                            .multilineTextAlignment(.center)
-                    }
-                    .padding(.top, 8)
-                    .padding(.bottom, 20)
-                    .padding(.horizontal, 26)
-                    .frame(maxWidth: .infinity)
-                    .contentShape(Rectangle())
-                    .simultaneousGesture(sheetDragGesture)
-                }
-
-                ZStack {
-                    List {
-                        if !isEffectivelyEmpty {
-                            heroSection
-                                .opacity(initialRevealPhase >= 1 ? 1 : 0)
-                                .offset(y: initialRevealPhase >= 1 ? 0 : 18)
-                                .scaleEffect(initialRevealPhase >= 1 ? 1 : 0.985)
-                                .blur(radius: initialRevealPhase >= 1 ? 0 : 6)
-                                .animation(.spring(response: 0.48, dampingFraction: 0.86).delay(0.02), value: initialRevealPhase)
-                                .listRowInsets(EdgeInsets(top: 2, leading: 12, bottom: 4, trailing: 12))
-                                .listRowBackground(Color.clear)
-                                .listRowSeparator(.hidden)
-
-                            upcomingSection
-                            pastSection
-
-                            listFooter
-                                .opacity(initialRevealPhase >= 3 ? 1 : 0)
-                                .offset(y: initialRevealPhase >= 3 ? 0 : 8)
-                                .blur(radius: initialRevealPhase >= 3 ? 0 : 3)
-                                .animation(.easeOut(duration: 0.24).delay(0.56), value: initialRevealPhase)
-                                .listRowInsets(EdgeInsets(top: 14, leading: 16, bottom: 4, trailing: 16))
-                                .listRowBackground(Color.clear)
-                                .listRowSeparator(.hidden)
-
-                            Color.clear
-                                .frame(height: colorScheme == .dark ? 124 : 72)
-                                .listRowBackground(Color.clear)
-                                .listRowSeparator(.hidden)
-                        } // end if !isEffectivelyEmpty
-                    }
-                    .id(listIdentity)
-                    .listStyle(.plain)
-                    .scrollContentBackground(.hidden)
-                    .scrollIndicators(.hidden)
-                    .background(Color.clear)
-                    .background(
-                        ListDragBridge(
-                            sheetOffset: Binding(
-                                get: { liveDrag.snappedOffset },
-                                set: { liveDrag.snappedOffset = $0 }
-                            ),
-                            listDrag: Binding(get: { liveDrag.listDrag }, set: { liveDrag.listDrag = $0 }),
-                            collapsedSheetOffset: collapsedSheetOffset,
-                            mapCityOpacity: $mapCityOpacity
-                        )
-                    )
-
-                    if isEffectivelyEmpty {
-                        emptyState
-                    }
-                }
-                .frame(maxHeight: .infinity)
-                .overlay {
-                    if revealCurtainOpacity > 0 {
-                        LinearGradient(
-                            colors: [
-                                Color(UIColor.systemBackground).opacity(revealCurtainOpacity),
-                                Color(UIColor.systemBackground).opacity(revealCurtainOpacity * 0.5),
-                                Color.clear
-                            ],
-                            startPoint: .top,
-                            endPoint: .bottom
-                        )
-                        .ignoresSafeArea()
-                        .allowsHitTesting(false)
-                    }
-                }
-                .navigationBarHidden(true)
-                .onAppear {
-                    store.refresh()
-                    store.correctMisgecodedTrips()
-                    store.geocodeMissingTrips()
-                    if !didPlayInitialReveal {
-                        didPlayInitialReveal = true
-                        initialRevealPhase = 0
-                        revealCurtainOpacity = 1
-                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.04) {
-                            withAnimation(.easeOut(duration: 0.38)) {
-                                revealCurtainOpacity = 0
-                            }
-                        }
-                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.08) {
-                            withAnimation(.spring(response: 0.48, dampingFraction: 0.88)) {
-                                initialRevealPhase = 1
-                            }
-                        }
-                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.18) {
-                            withAnimation(.spring(response: 0.44, dampingFraction: 0.84)) {
-                                initialRevealPhase = 2
-                            }
-                        }
-                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.30) {
-                            withAnimation(.spring(response: 0.44, dampingFraction: 0.84)) {
-                                initialRevealPhase = 3
-                            }
-                        }
-                    }
-                }
-                .onReceive(router.$path) { path in
-                    if path.isEmpty {
-                        store.refresh()
-                    }
-                }
-                .onChange(of: router.showMapFullscreen) { _, show in
-                    guard show else { return }
-                    router.showMapFullscreen = false
-                    animateMapOverlay(collapsed: true)
-                    withAnimation(.spring(response: 0.5, dampingFraction: 0.82)) {
-                        liveDrag.snappedOffset = collapsedSheetOffset
-                    }
-                }
-                .alert(
-                    "Delete \(tripToDelete?.name ?? "")?",
-                    isPresented: $showDeleteConfirmation
-                ) {
-                    Button("Delete", role: .destructive) {
-                        if let trip = tripToDelete {
-                            store.removeTrip(withId: trip.id)
-                        }
-                    }
-                    Button("Cancel", role: .cancel) { }
-                } message: {
-                    Text("This will permanently delete your packing list and all progress.")
+                    emptyState
                 }
             }
-            .frame(maxWidth: .infinity)
-            .frame(height: expandedSheetHeight)
-            .animation(.spring(response: 0.5, dampingFraction: 0.82), value: isEffectivelyEmpty)
-            .background(CarryAtmosphereBackground())
-            .background {
-                if colorScheme == .dark {
+            .frame(maxHeight: .infinity)
+            .overlay {
+                if revealCurtainOpacity > 0 {
                     LinearGradient(
                         colors: [
-                            homeDarkBackdropTop,
-                            homeDarkBackdropBottom
+                            Color(UIColor.systemBackground).opacity(revealCurtainOpacity),
+                            Color(UIColor.systemBackground).opacity(revealCurtainOpacity * 0.5),
+                            Color.clear
                         ],
                         startPoint: .top,
                         endPoint: .bottom
                     )
                     .ignoresSafeArea()
+                    .allowsHitTesting(false)
                 }
             }
-            // SheetTransformModifier owns ALL per-frame sheet visuals (clip, scale,
-            // corner radii, bottom lift, rubber-band offset, gap cover).
-            // HomeView.body never reads liveDrag directly, so it does NOT re-evaluate
-            // during spring animations — eliminating spring-tail jank.
-            .modifier(SheetTransformModifier(
-                liveDrag: liveDrag,
-                collapsedSheetOffset: collapsedSheetOffset,
-                coverColor: colorScheme == .dark ? homeDarkBackdropBottom : Color(UIColor.systemBackground)
-            ))
-    }
-        .ignoresSafeArea(edges: .bottom)
+            .navigationBarHidden(true)
+            .onAppear {
+                store.refresh()
+                store.correctMisgecodedTrips()
+                store.geocodeMissingTrips()
+                if !didPlayInitialReveal {
+                    didPlayInitialReveal = true
+                    initialRevealPhase = 0
+                    revealCurtainOpacity = 1
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.04) {
+                        withAnimation(.easeOut(duration: 0.38)) { revealCurtainOpacity = 0 }
+                    }
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.08) {
+                        withAnimation(.spring(response: 0.48, dampingFraction: 0.88)) { initialRevealPhase = 1 }
+                    }
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.18) {
+                        withAnimation(.spring(response: 0.44, dampingFraction: 0.84)) { initialRevealPhase = 2 }
+                    }
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.30) {
+                        withAnimation(.spring(response: 0.44, dampingFraction: 0.84)) { initialRevealPhase = 3 }
+                    }
+                }
+            }
+            .onReceive(router.$path) { path in
+                if path.isEmpty { store.refresh() }
+            }
+            .onChange(of: router.showMapFullscreen) { _, show in
+                guard show else { return }
+                router.showMapFullscreen = false
+                collapseRequest = true  // SheetViewController.snap handles the animation
+            }
+            .alert(
+                "Delete \(tripToDelete?.name ?? "")?",
+                isPresented: $showDeleteConfirmation
+            ) {
+                Button("Delete", role: .destructive) {
+                    if let trip = tripToDelete { store.removeTrip(withId: trip.id) }
+                }
+                Button("Cancel", role: .cancel) { }
+            } message: {
+                Text("This will permanently delete your packing list and all progress.")
+            }
+        }
+        .frame(maxWidth: .infinity)
+        .background(CarryAtmosphereBackground())
+        .background {
+            if colorScheme == .dark {
+                LinearGradient(
+                    colors: [homeDarkBackdropTop, homeDarkBackdropBottom],
+                    startPoint: .top,
+                    endPoint: .bottom
+                )
+                .ignoresSafeArea()
+            }
+        }
     }
 
     // MARK: - Map style button
@@ -468,283 +433,6 @@ struct HomeView: View {
         // Fade in as sheet collapses, invisible when fully expanded
         .opacity(mapCityOpacity)
         .allowsHitTesting(mapCityOpacity > 0.05)
-    }
-
-    // MARK: - Map overlay opacity
-
-    /// Animate mapCityOpacity to its target before starting the spring so that
-    /// the quick easeOut finishes (~0.18s) well before the spring's tail (~0.3s+).
-    /// During the tail, mapCityOpacity is constant → GlobeMapView.body never
-    /// re-evaluates → no MapKit Annotation updates → no tail-end jank.
-    private func animateMapOverlay(collapsed: Bool) {
-        withAnimation(.easeOut(duration: 0.18)) {
-            mapCityOpacity = collapsed ? 1.0 : 0.0
-        }
-    }
-
-    // MARK: - Shared sheet drag gesture
-    //
-    // Used by both the capsule handle and the empty-state overlay so that
-    // dragging anywhere in the sheet works consistently when there are no trips.
-
-    private var sheetDragGesture: some Gesture {
-        DragGesture(minimumDistance: 4, coordinateSpace: .global)
-            .onChanged { v in
-                liveDrag.capsuleDrag = v.translation.height
-            }
-            .onEnded { v in
-                let velocity = v.velocity.height
-                let translation = v.translation.height
-                let rawOffset = liveDrag.snappedOffset + translation
-                let currentOffset = min(max(0, rawOffset), collapsedSheetOffset)
-                let shouldCollapse: Bool
-                if velocity > 650 || translation > collapsedSheetOffset * 0.46 {
-                    shouldCollapse = true
-                } else if velocity < -350 || translation < -70 {
-                    shouldCollapse = false
-                } else {
-                    shouldCollapse = currentOffset > collapsedSheetOffset * 0.68
-                }
-                let target: CGFloat = shouldCollapse ? collapsedSheetOffset : 0
-                let travel = target - currentOffset
-                let normalizedV = abs(travel) < 1 ? 0 : max(-2.5, min(2.5, velocity / travel))
-                UIImpactFeedbackGenerator(style: .soft).impactOccurred()
-                animateMapOverlay(collapsed: shouldCollapse)
-                withAnimation(.interpolatingSpring(stiffness: 320, damping: 28, initialVelocity: normalizedV)) {
-                    liveDrag.capsuleDrag = 0
-                    liveDrag.snappedOffset = target
-                }
-            }
-    }
-
-    // MARK: - List drag bridge
-
-    private struct ListDragBridge: UIViewRepresentable {
-        @Binding var sheetOffset: CGFloat
-        @Binding var listDrag: CGFloat
-        let collapsedSheetOffset: CGFloat
-        @Binding var mapCityOpacity: Double
-
-        func makeUIView(context: Context) -> UIView { UIView(frame: .zero) }
-
-        func updateUIView(_ uiView: UIView, context: Context) {
-            context.coordinator.sheetOffset = $sheetOffset
-            context.coordinator.listDrag = $listDrag
-            context.coordinator.collapsedSheetOffset = collapsedSheetOffset
-            context.coordinator.mapCityOpacity = $mapCityOpacity
-            context.coordinator.attachIfNeeded(from: uiView)
-        }
-
-        func makeCoordinator() -> Coordinator { Coordinator() }
-
-        // Delegate proxy that intercepts two UIScrollViewDelegate methods:
-        // • scrollViewWillBeginDecelerating — cancels deceleration when cancelNext is armed
-        // • scrollViewDidScroll — locks contentOffset while lockedOffsetY is set (belt-and-suspenders)
-        // All other delegate messages are forwarded to the original delegate via forwardingTarget.
-        private class DecelerationCanceller: NSObject, UIScrollViewDelegate {
-            weak var original: AnyObject?
-            var cancelNext = false
-            var lockedOffsetY: CGFloat? = nil
-
-            func scrollViewWillBeginDecelerating(_ scrollView: UIScrollView) {
-                if cancelNext {
-                    cancelNext = false
-                    scrollView.setContentOffset(scrollView.contentOffset, animated: false)
-                }
-                (original as? UIScrollViewDelegate)?.scrollViewWillBeginDecelerating?(scrollView)
-            }
-
-            func scrollViewDidScroll(_ scrollView: UIScrollView) {
-                if let locked = lockedOffsetY, abs(scrollView.contentOffset.y - locked) > 0.5 {
-                    // Deceleration slipped through — force the offset back every frame
-                    scrollView.setContentOffset(CGPoint(x: scrollView.contentOffset.x, y: locked), animated: false)
-                }
-                (original as? UIScrollViewDelegate)?.scrollViewDidScroll?(scrollView)
-            }
-
-            override func responds(to sel: Selector!) -> Bool {
-                sel == #selector(UIScrollViewDelegate.scrollViewWillBeginDecelerating(_:))
-                    || sel == #selector(UIScrollViewDelegate.scrollViewDidScroll(_:))
-                    || (original?.responds(to: sel) ?? false)
-            }
-
-            override func forwardingTarget(for sel: Selector!) -> Any? {
-                guard sel != #selector(UIScrollViewDelegate.scrollViewWillBeginDecelerating(_:)),
-                      sel != #selector(UIScrollViewDelegate.scrollViewDidScroll(_:)) else { return nil }
-                return (original?.responds(to: sel) == true) ? original : nil
-            }
-        }
-
-        final class Coordinator: NSObject {
-            var sheetOffset: Binding<CGFloat>?
-            var listDrag: Binding<CGFloat>?
-            var collapsedSheetOffset: CGFloat = 0
-            var mapCityOpacity: Binding<Double>?
-            private weak var attachedScrollView: UIScrollView?
-            private var capturedTranslationAtTop: CGFloat? = nil
-            private var wasAtTop = false
-            private var savedScrollOffsetY: CGFloat = 0
-            private var isExpandingFromCollapsed = false
-            private var decelerationCanceller: DecelerationCanceller?
-            // Watches sv.delegate so we can reinstall the proxy if SwiftUI resets it
-            private var delegateObservation: NSKeyValueObservation?
-
-            func attachIfNeeded(from view: UIView) {
-                guard attachedScrollView == nil else { return }
-                DispatchQueue.main.async { [weak self] in
-                    guard let self, self.attachedScrollView == nil else { return }
-                    if let sv = self.findScrollView(from: view) {
-                        self.attachedScrollView = sv
-                        sv.panGestureRecognizer.addTarget(self, action: #selector(self.handleScrollPan(_:)))
-                        self.installDelegateProxy(on: sv)
-                        // SwiftUI may reset sv.delegate on each render cycle.
-                        // KVO ensures the proxy is always in place when needed.
-                        self.delegateObservation = sv.observe(\.delegate, options: []) { [weak self, weak sv] _, _ in
-                            guard let self, let sv, sv.delegate !== self.decelerationCanceller else { return }
-                            self.installDelegateProxy(on: sv)
-                        }
-                    }
-                }
-            }
-
-            private func installDelegateProxy(on sv: UIScrollView) {
-                let canceller = decelerationCanceller ?? DecelerationCanceller()
-                canceller.original = sv.delegate
-                sv.delegate = canceller
-                decelerationCanceller = canceller
-            }
-
-            private func findScrollView(from view: UIView) -> UIScrollView? {
-                var ancestor: UIView? = view.superview
-                while let parent = ancestor {
-                    for sub in parent.subviews where sub !== view {
-                        if let sv = sub as? UIScrollView { return sv }
-                        if let sv = firstScrollView(in: sub) { return sv }
-                    }
-                    ancestor = parent.superview
-                }
-                return nil
-            }
-
-            private func firstScrollView(in view: UIView) -> UIScrollView? {
-                if let sv = view as? UIScrollView { return sv }
-                for child in view.subviews {
-                    if let sv = firstScrollView(in: child) { return sv }
-                }
-                return nil
-            }
-
-            @objc private func handleScrollPan(_ pan: UIPanGestureRecognizer) {
-                guard let sv = attachedScrollView else { return }
-                let topInset = -sv.adjustedContentInset.top
-                let translation = pan.translation(in: sv).y
-                let velocity  = pan.velocity(in: sv).y
-                let atTop = sv.contentOffset.y <= topInset + 1
-                let isCollapsed = (sheetOffset?.wrappedValue ?? 0) >= collapsedSheetOffset - 1
-
-                switch pan.state {
-                case .changed:
-                    // --- Collapse: scroll is at top and moving downward ---
-                    if atTop && velocity > 0 {
-                        if !wasAtTop {
-                            // Just arrived at top mid-gesture — capture this translation as baseline
-                            capturedTranslationAtTop = translation
-                        }
-                        if let captured = capturedTranslationAtTop {
-                            let drag = max(0, translation - captured)
-                            listDrag?.wrappedValue = drag
-                            sv.contentOffset.y = topInset  // prevent overscroll
-                        }
-                    } else if capturedTranslationAtTop != nil && !atTop {
-                        // Scrolled back above top — cancel sheet drag
-                        capturedTranslationAtTop = nil
-                        listDrag?.wrappedValue = 0
-                    }
-
-                    // --- Expand: sheet is collapsed and moving upward ---
-                    // Use translation (cumulative) not velocity so slow drags are caught reliably
-                    if isCollapsed && translation < 0 {
-                        if !isExpandingFromCollapsed {
-                            // Collapsed state always shows the top of the list.
-                            // Read contentOffset only after we've locked it to topInset;
-                            // using the live value here races with UIKit's own scroll update
-                            // on fast swipes and captures a stale, already-scrolled offset.
-                            savedScrollOffsetY = topInset
-                            isExpandingFromCollapsed = true
-                            // Disable UIKit scrolling for the entire expansion gesture.
-                            // This stops UIKit from consuming the upward pan for list scrolling,
-                            // eliminating the per-frame scrollViewDidScroll cascade that was
-                            // causing frame drops near the fully-expanded position.
-                            sv.isScrollEnabled = false
-                        }
-                        listDrag?.wrappedValue = min(0, translation)
-                        decelerationCanceller?.cancelNext = true
-                    }
-
-                    // While sheet is fully collapsed and NOT actively expanding,
-                    // block list scrolling via direct contentOffset reset.
-                    // (During expansion isScrollEnabled = false handles this more efficiently.)
-                    if isCollapsed && !isExpandingFromCollapsed {
-                        sv.contentOffset.y = topInset
-                    }
-
-                    wasAtTop = atTop
-
-                case .ended, .cancelled, .failed:
-                    // Always restore scroll — safe even if isScrollEnabled was never set to false
-                    sv.isScrollEnabled = true
-                    let drag = listDrag?.wrappedValue ?? 0
-                    capturedTranslationAtTop = nil
-                    wasAtTop = false
-
-                    guard drag != 0 else {
-                        isExpandingFromCollapsed = false
-                        return
-                    }
-                    let wasExpanding = drag < 0
-                    if isExpandingFromCollapsed {
-                        let targetY = savedScrollOffsetY
-                        isExpandingFromCollapsed = false
-                        // Primary: cancel deceleration via scrollViewWillBeginDecelerating
-                        decelerationCanceller?.cancelNext = true
-                        // Backup: lock contentOffset in scrollViewDidScroll every frame in
-                        // case deceleration slips through (e.g. proxy was briefly uninstalled)
-                        decelerationCanceller?.lockedOffsetY = targetY
-                        sv.setContentOffset(CGPoint(x: sv.contentOffset.x, y: targetY), animated: false)
-                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) { [weak self] in
-                            self?.decelerationCanceller?.lockedOffsetY = nil
-                        }
-                    } else if wasExpanding {
-                        decelerationCanceller?.cancelNext = true
-                        sv.setContentOffset(CGPoint(x: sv.contentOffset.x, y: topInset), animated: false)
-                    }
-                    let shouldCollapse: Bool
-                    if drag > 0 {
-                        let current = (sheetOffset?.wrappedValue ?? 0) + drag
-                        shouldCollapse = velocity > 650 || current > collapsedSheetOffset * 0.46
-                    } else {
-                        shouldCollapse = !(velocity < -350 || drag < -70)
-                    }
-                    let currentOffset = min(max(0, (sheetOffset?.wrappedValue ?? 0) + drag), collapsedSheetOffset)  // clamped for travel calculation
-                    let target: CGFloat = shouldCollapse ? collapsedSheetOffset : 0
-                    let travel = target - currentOffset
-                    let normalizedV = abs(travel) < 1 ? 0 : max(-2.5, min(2.5, velocity / travel))
-                    UIImpactFeedbackGenerator(style: .soft).impactOccurred()
-                    // Animate map overlay separately so it finishes before the spring tail,
-                    // preventing per-frame GlobeMapView updates during the expensive tail end.
-                    let targetMapOpacity: Double = shouldCollapse ? 1.0 : 0.0
-                    withAnimation(.easeOut(duration: 0.18)) {
-                        mapCityOpacity?.wrappedValue = targetMapOpacity
-                    }
-                    withAnimation(.interpolatingSpring(stiffness: 320, damping: 28, initialVelocity: normalizedV)) {
-                        listDrag?.wrappedValue = 0
-                        sheetOffset?.wrappedValue = target
-                    }
-
-                default: break
-                }
-            }
-        }
     }
 
     @ViewBuilder
@@ -1093,10 +781,7 @@ struct HomeView: View {
             Spacer(minLength: 72)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
-        // Allow the entire empty-state area to drive the sheet up/down,
-        // just like the list content does when trips exist.
-        // simultaneousGesture preserves the CTA button's tap.
-        .simultaneousGesture(sheetDragGesture)
+        // Sheet drag in empty-state area handled by SheetViewController.sheetPan
     }
 
     @ViewBuilder
@@ -1402,99 +1087,6 @@ struct PressableScaleButtonStyle: ButtonStyle {
     }
 }
 
-
-// MARK: - Live drag state
-
-/// Holds all per-frame drag/animation state as an @Observable class so that
-/// SwiftUI's fine-grained observation (iOS 17+) only re-evaluates
-/// SheetTransformModifier — not the entire HomeView.body — on every frame.
-///
-/// snappedOffset (formerly HomeView @State sheetOffset) is moved here so that
-/// HomeView.body never reads it directly. Without this move, SwiftUI's spring
-/// animations update @State every frame, triggering a full HomeView.body
-/// re-evaluate each frame — the root cause of spring-tail jank.
-@Observable
-private final class LiveDragState {
-    var capsuleDrag: CGFloat = 0
-    var listDrag: CGFloat = 0
-    /// The snapped/animated sheet offset. Driven by withAnimation at gesture end.
-    /// Lives in LiveDragState (not HomeView @State) so only SheetTransformModifier
-    /// re-evaluates during spring animation, not HomeView.body.
-    var snappedOffset: CGFloat = 0
-}
-
-// MARK: - Sheet transform modifier
-
-/// The ONLY view modifier that re-evaluates on every drag/animation frame.
-/// Reads liveDrag properties via @Observable fine-grained tracking.
-/// HomeView.body does NOT re-evaluate during spring animations because it no
-/// longer reads liveDrag or sheetOffset directly.
-///
-/// Owns ALL per-frame sheet visuals:
-///   • rubber-band offset
-///   • top corner radius (36→42 as sheet collapses)
-///   • bottom corner radius (0→20, gives the Flighty/Tripsy floating-card look)
-///   • horizontal scale (1.0→0.97)
-///   • bottom lift (0→12pt gap between sheet bottom and screen edge)
-///   • rubber-band gap cover (fills the gap when sheet overshoots upward)
-private struct SheetTransformModifier: ViewModifier {
-    let liveDrag: LiveDragState
-    let collapsedSheetOffset: CGFloat
-    /// Matched to the sheet background colour so the rubber-band cover blends in.
-    let coverColor: Color
-
-    private func rubberBandOffset(_ raw: CGFloat) -> CGFloat {
-        let lo: CGFloat = 0
-        let hi = collapsedSheetOffset
-        guard hi > lo else { return raw }
-        if raw < lo {
-            let over = lo - raw
-            return lo - over * 0.55 / (1 + over / hi)
-        } else if raw > hi {
-            let over = raw - hi
-            return hi + over * 0.55 / (1 + over / hi)
-        }
-        return raw
-    }
-
-    func body(content: Content) -> some View {
-        // Current real position (snapped + live drag, before rubber-band)
-        let currentRaw = liveDrag.snappedOffset + liveDrag.capsuleDrag + liveDrag.listDrag
-        let banded = rubberBandOffset(currentRaw)
-
-        // Progress 0 = fully expanded, 1 = fully collapsed.
-        // Clamped to [0, 1] so rubber-band overshoots don't distort visuals.
-        let progress: CGFloat = collapsedSheetOffset > 0
-            ? min(max(0, currentRaw), collapsedSheetOffset) / collapsedSheetOffset
-            : 0
-
-        let topRadius: CGFloat    = 36 + progress * 6      // 36 → 42
-        let bottomRadius: CGFloat = progress * 20           // 0  → 20
-        let scaleX: CGFloat       = 1.0 - progress * 0.03  // 1.0 → 0.97
-        let bottomLift: CGFloat   = progress * 12           // 0  → 12 pt gap
-
-        content
-            .compositingGroup()
-            .clipShape(UnevenRoundedRectangle(
-                topLeadingRadius: topRadius,
-                bottomLeadingRadius: bottomRadius,
-                bottomTrailingRadius: bottomRadius,
-                topTrailingRadius: topRadius,
-                style: .continuous
-            ))
-            .scaleEffect(x: scaleX, y: 1.0, anchor: .bottom)
-            // Rubber-band gap cover: sits just below the sheet frame so it fills
-            // the gap when the sheet overshoots upward.  Must be after clipShape
-            // so the cover itself is not clipped away.
-            .background(alignment: .bottom) {
-                coverColor
-                    .frame(height: 150)
-                    .offset(y: 150)
-                    .allowsHitTesting(false)
-            }
-            .offset(y: banded - bottomLift)
-    }
-}
 
 // MARK: - Preview
 
