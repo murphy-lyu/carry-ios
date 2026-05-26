@@ -127,18 +127,23 @@ struct GlobeMapView: View, Equatable {
         lhs.cityOpacity == rhs.cityOpacity
             && lhs.mapStyleOption == rhs.mapStyleOption
             && lhs.showUserLocation == rhs.showUserLocation
-            && lhs.introSpinTrigger == rhs.introSpinTrigger
             && lhs.visitedCities.count == rhs.visitedCities.count
             && lhs.visitedCountries.count == rhs.visitedCountries.count
             && zip(lhs.visitedCities, rhs.visitedCities).allSatisfy { $0.id == $1.id }
             && zip(lhs.visitedCountries, rhs.visitedCountries).allSatisfy { $0.countryCode == $1.countryCode }
     }
 
-    /// Incremented once per session on the first sheet collapse to trigger the intro spin.
-    var introSpinTrigger: Int = 0
+    // MARK: - Distance stages (tunable)
+    /// Cold launch: zoom in close so globe fills screen dramatically.
+    private let nearDistance:  Double = 8_000_000
+    /// Auto-zoom after 2 s: comfortable globe view while sheet is expanded.
+    private let midDistance:   Double = 20_000_000
+    /// Sheet collapsed: globe recedes to reveal the full "world at a glance" layout.
+    private let farDistance:   Double = 35_000_000
 
     @State private var position: MapCameraPosition = .automatic
     @State private var cityDotsAppeared: Bool = false
+    @State private var hasZoomedToFar: Bool = false
     @State private var userPulseAnimating: Bool = false
     @State private var userPulseAnimating2: Bool = false
 
@@ -168,44 +173,46 @@ struct GlobeMapView: View, Equatable {
         }
         .mapStyle(mapStyleOption.mapStyle)
         .onAppear {
-            if let centroid = centroid(of: visitedCountries) {
-                position = .camera(MapCamera(
-                    centerCoordinate: centroid,
-                    distance: 30_000_000
-                ))
-            }
             guard !cityDotsAppeared else { return }
-            withAnimation(.easeOut(duration: 0.25)) {
-                cityDotsAppeared = true
+
+            let center = centroid(of: visitedCountries)
+                ?? CLLocationCoordinate2D(latitude: 25, longitude: 100)
+
+            // Stage 1 — launch: zoom in close so the globe feels large and alive.
+            position = .camera(MapCamera(centerCoordinate: center, distance: nearDistance))
+
+            withAnimation(.easeOut(duration: 0.25)) { cityDotsAppeared = true }
+
+            // Stage 2 — auto-zoom out after 2 s, giving the sheet time to settle
+            // before the globe quietly recedes to its "expanded sheet" resting distance.
+            Task { @MainActor in
+                try? await Task.sleep(for: .seconds(2))
+                withAnimation(.easeInOut(duration: 1.8)) {
+                    position = .camera(MapCamera(centerCoordinate: center, distance: midDistance))
+                }
+            }
+        }
+        .onChange(of: cityOpacity) { _, new in
+            // Stage 3 — sheet fully collapsed: globe recedes further so the small
+            // pill shape and the world map feel balanced. Fires once per session.
+            guard new >= 1, !hasZoomedToFar else { return }
+            hasZoomedToFar = true
+            let cam = position.camera
+            let center = cam.map { $0.centerCoordinate }
+                ?? CLLocationCoordinate2D(latitude: 25, longitude: 100)
+            withAnimation(.easeInOut(duration: 1.8)) {
+                position = .camera(MapCamera(
+                    centerCoordinate: center,
+                    distance: farDistance,
+                    heading: cam?.heading ?? 0,
+                    pitch: cam?.pitch ?? 0
+                ))
             }
         }
         .onChange(of: showUserLocation) { _, newValue in
             if !newValue {
                 userPulseAnimating = false
                 userPulseAnimating2 = false
-            }
-        }
-        .onChange(of: introSpinTrigger) { _, new in
-            guard new > 0 else { return }
-            // Use the current live camera position; fall back to a reasonable default.
-            let fallback = MapCamera(
-                centerCoordinate: CLLocationCoordinate2D(latitude: 25, longitude: 100),
-                distance: 30_000_000
-            )
-            let cam = position.camera ?? fallback
-            // Rotate the globe by 30° — feels alive without being distracting.
-            // Tunable parameters:
-            //   • heading offset: how far it rotates (larger = more dramatic)
-            //   • duration: speed of the spin (longer = more cinematic)
-            //   • delay: pause before spin starts (lets the sheet settle first)
-            let rotated = MapCamera(
-                centerCoordinate: cam.centerCoordinate,
-                distance: cam.distance,
-                heading: cam.heading + 30,
-                pitch: cam.pitch
-            )
-            withAnimation(.easeInOut(duration: 2.0).delay(0.15)) {
-                position = .camera(rotated)
             }
         }
     }

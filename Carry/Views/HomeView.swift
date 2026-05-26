@@ -139,10 +139,6 @@ struct HomeView: View {
     @State private var mapCityOpacity: Double = 0
     /// Set to true to programmatically collapse the sheet (Siri, map button).
     @State private var collapseRequest: Bool = false
-    /// Incremented once per session on the first sheet collapse, triggering globe intro spin.
-    @State private var globeIntroSpinTrigger: Int = 0
-    @State private var hasPlayedIntroSpin: Bool = false
-
     @AppStorage("mapStyleOption") private var mapStyleRaw: String = MapStyleOption.hybrid.rawValue
     @State private var locationPermission = LocationPermissionManager()
     private var mapStyleOption: MapStyleOption {
@@ -236,8 +232,7 @@ struct HomeView: View {
                 visitedCities: visitedCities,
                 cityOpacity: mapCityOpacity,
                 mapStyleOption: mapStyleOption,
-                showUserLocation: locationPermission.isTracking,
-                introSpinTrigger: globeIntroSpinTrigger
+                showUserLocation: locationPermission.isTracking
             )
             .equatable()
             .ignoresSafeArea()
@@ -370,12 +365,6 @@ struct HomeView: View {
             }
             .onChange(of: store.trips) { _, _ in
                 rebuildTripLists()
-            }
-            .onChange(of: mapCityOpacity) { _, new in
-                // First time the sheet collapses (opacity reaches 1), spin the globe once.
-                guard new >= 1, !hasPlayedIntroSpin else { return }
-                hasPlayedIntroSpin = true
-                globeIntroSpinTrigger += 1
             }
             .onChange(of: router.showMapFullscreen) { _, show in
                 guard show else { return }
