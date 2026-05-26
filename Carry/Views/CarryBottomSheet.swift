@@ -109,9 +109,13 @@ final class SheetViewController: UIViewController {
         return (p - threshold) / (1 - threshold)
     }
 
-    // Interpolated helpers (progress: 0 = expanded, 1 = collapsed)
-    private func topRadius(_ p: CGFloat)    -> CGFloat { expandedRadius + effectProgress(p) * (collapsedTopRadius    - expandedRadius) }
-    private func bottomRadius(_ p: CGFloat) -> CGFloat { expandedRadius + effectProgress(p) * (collapsedBottomRadius - expandedRadius) }
+    // Corner radii change linearly with progress so they stay in sync with the
+    // gesture at all times — matching Tripsy / Flighty behaviour.
+    // effectProgress is intentionally NOT used here: concentrating the change in
+    // the last 35% makes corners appear to jump when a fast snap passes through
+    // that window. Pill margins and bottom lift still use effectProgress.
+    private func topRadius(_ p: CGFloat)    -> CGFloat { expandedRadius + p * (collapsedTopRadius    - expandedRadius) }
+    private func bottomRadius(_ p: CGFloat) -> CGFloat { expandedRadius + p * (collapsedBottomRadius - expandedRadius) }
 
     /// Called on main thread when a snap animation begins.
     var onSnapChanged: ((Bool) -> Void)?
@@ -369,16 +373,55 @@ final class SheetViewController: UIViewController {
     // MARK: Snap animation
 
     private func commitSnap(to target: CGFloat, velocity: CGFloat) {
+        // ── Step 1: capture current VISUAL (presentation) offset ──────────────────
+        // stopAnimation(true) snaps the model layer to the animation's end-state, not
+        // the current visual position. Capturing the presentation frame first lets us
+        // restore the model after stopping so the new animation starts from the correct
+        // position — preventing the "sheet jumps to collapsed then re-expands" glitch.
+        let h = view.bounds.height
+        let visualOffset: CGFloat
+        if runningAnimator != nil,
+           let pf = outerView.layer.presentation()?.frame {
+            // Invert placeSheet's formula: outerView.y = h − expandedHeight + offset
+            visualOffset = pf.origin.y - (h - expandedHeight)
+        } else {
+            visualOffset = snappedOffset + liveDelta
+        }
+        let clampedVisual = min(max(0, visualOffset), collapsedOffset)
+
+        // ── Step 2: stop running animation and reset model to visual position ─────
         runningAnimator?.stopAnimation(true)
+        runningAnimator = nil   // nil immediately so viewDidLayoutSubviews won't skip
+        snappedOffset = clampedVisual
+        liveDelta = 0
+        placeSheet(at: clampedVisual)
+        let visualProgress = clampedProgress(clampedVisual)
+        CATransaction.begin()
+        CATransaction.setDisableActions(true)
+        applyCornerMask(top: topRadius(visualProgress),
+                        bottom: bottomRadius(visualProgress),
+                        progress: visualProgress)
+        CATransaction.commit()
 
-        let currentRaw = snappedOffset + liveDelta
-        let travel     = target - min(max(0, currentRaw), collapsedOffset)
-        let normV      = abs(travel) < 1 ? 0 : max(-30, min(30, velocity / max(abs(travel), 1)))
-        let isCollapsing = target > snappedOffset + liveDelta / 2
+        // ── Step 3: velocity normalisation (signed travel so expand ≡ collapse) ───
+        // Using abs(travel) gave expand a negative normV (spring fights itself at start)
+        // while collapse had positive normV — making collapse feel snappier. Fix: keep
+        // the sign so normV is always positive when velocity points toward target.
+        let travel = target - clampedVisual
+        let normV  = abs(travel) < 1 ? 0 : max(-30, min(30, velocity / travel))
 
-        onSnapChanged?(isCollapsing)
+        onSnapChanged?(target >= collapsedOffset)
         feedbackGenerator.impactOccurred()
 
+        // ── Step 4: lock scroll at top during collapse to prevent content bounce ──
+        // Released in addCompletion regardless of direction.
+        if target == collapsedOffset, let sv = listScrollView {
+            let topInset = -sv.adjustedContentInset.top
+            delegateProxy?.lockedOffsetY = topInset
+            delegateProxy?.cancelNext = true
+        }
+
+        // ── Step 5: start new spring animation ────────────────────────────────────
         let params = UISpringTimingParameters(
             dampingRatio: 0.88,
             initialVelocity: CGVector(dx: 0, dy: normV)
@@ -397,16 +440,12 @@ final class SheetViewController: UIViewController {
             self.snappedOffset = target
             self.liveDelta = 0
             self.runningAnimator = nil
-            // Re-apply mask at final size (bounds may have changed during animation).
-            // Disable implicit animations since we're outside any animator context.
             let p = self.clampedProgress(target)
             CATransaction.begin()
             CATransaction.setDisableActions(true)
             self.applyCornerMask(top: self.topRadius(p), bottom: self.bottomRadius(p), progress: p)
             CATransaction.commit()
-            // Release any scroll lock set during an expand-from-collapsed gesture.
-            // Doing this in addCompletion (not via asyncAfter) guarantees the lock
-            // is held for exactly the animation duration — no more, no less.
+            // Release scroll lock (set for both collapse and expand-from-collapsed paths).
             if let sv = self.listScrollView, self.delegateProxy?.lockedOffsetY != nil {
                 self.delegateProxy?.lockedOffsetY = nil
                 sv.isScrollEnabled = true
