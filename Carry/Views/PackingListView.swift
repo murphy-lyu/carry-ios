@@ -423,6 +423,7 @@ struct PackingListView: View {
         .listStyle(.plain)
         .scrollContentBackground(.hidden)
         .environment(\.defaultMinListRowHeight, 0)
+        .environment(\.defaultMinListHeaderHeight, 0)
         .listSectionSpacing(0)
         .scrollIndicators(.hidden)
         .safeAreaPadding(.bottom, 83)
