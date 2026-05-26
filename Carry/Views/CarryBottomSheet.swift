@@ -202,7 +202,7 @@ final class SheetViewController: UIViewController {
         // setProgress() in viewDidLoad often skips (bounds are zero at that point),
         // so we always refresh here, wrapped in disableActions to avoid implicit animations.
         let progress = clampedProgress(raw)
-        let topRadius: CGFloat = 44 + progress * 6
+        let topRadius: CGFloat = 22 + progress * 6
         CATransaction.begin()
         CATransaction.setDisableActions(true)
         applyCornerMask(top: topRadius, bottom: topRadius)
@@ -276,7 +276,7 @@ final class SheetViewController: UIViewController {
     /// Called inside UIViewPropertyAnimator.addAnimations — the animator drives
     /// the implicit CALayer animations on the mask path and transform.
     private func setProgress(_ progress: CGFloat, animated: Bool) {
-        let topRadius: CGFloat = 44 + progress * 6      // 44 → 50
+        let topRadius: CGFloat = 22 + progress * 6      // 22 → 28
         let scaleX:    CGFloat = 1.0 - progress * 0.05  // 1.0 → 0.95
         // Bottom corners match top corners — visibleH is computed inside
         // applyCornerMask so the arc sits exactly at the visual clip edge.
@@ -387,7 +387,7 @@ final class SheetViewController: UIViewController {
             // Re-apply mask at final size (bounds may have changed during animation).
             // Disable implicit animations since we're outside any animator context.
             let p    = self.clampedProgress(target)
-            let topR = 44 + p * 6
+            let topR = 22 + p * 6
             CATransaction.begin()
             CATransaction.setDisableActions(true)
             self.applyCornerMask(top: topR, bottom: topR)
@@ -415,7 +415,7 @@ final class SheetViewController: UIViewController {
         let progress = clampedProgress(raw)
         placeSheet(at: raw)
         // Disable CALayer implicit animations for immediate response
-        let topRadius: CGFloat = 44 + progress * 6
+        let topRadius: CGFloat = 22 + progress * 6
         CATransaction.begin()
         CATransaction.setDisableActions(true)
         applyCornerMask(top: topRadius, bottom: topRadius)
