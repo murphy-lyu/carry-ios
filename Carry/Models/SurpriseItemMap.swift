@@ -14,6 +14,11 @@ struct SurpriseItem: Identifiable {
     let category: ItemCategory
 }
 
+enum SurpriseRankingMode {
+    case manualFirst
+    case sceneFirst
+}
+
 // MARK: - Scene → surprise item map
 
 let surpriseItemMap: [String: [SurpriseItem]] = [
@@ -38,6 +43,12 @@ let surpriseItemMap: [String: [SurpriseItem]] = [
         SurpriseItem(name: "Steam eye mask",
                      note: "Ten minutes of warm darkness mid-flight feels like a reset — most people who try one become converts",
                      category: .toiletries),
+        SurpriseItem(name: "Blister patches",
+                     note: "机场快走和换乘很容易把脚后跟磨破，提前贴一片，第一天行程会轻松很多",
+                     category: .health),
+        SurpriseItem(name: "Mint gum",
+                     note: "落地前嚼一片，能缓解机舱口干，也会让你到达后状态更清爽",
+                     category: .essentials),
         SurpriseItem(name: "Hand cream",
                      note: "Cabin air is brutally dry — hands suffer first, and most people only notice once they're already cracked",
                      category: .toiletries),
@@ -66,7 +77,10 @@ let surpriseItemMap: [String: [SurpriseItem]] = [
         SurpriseItem(name: "Ziplock bags",
                      note: "Waterproofing documents, organising small items, separating wet clothes — endlessly useful",
                      category: .essentials),
-        SurpriseItem(name: "Headlamp",
+        SurpriseItem(name: "Mini clips",
+                     note: "很小但很万能：晾湿袜子、封零食袋、固定小物件都很好用",
+                     category: .essentials),
+        SurpriseItem(name: "Headlamp + batteries",
                      note: "Essential for hostel dorm access in the dark without waking eight strangers",
                      category: .essentials),
     ],
@@ -79,6 +93,12 @@ let surpriseItemMap: [String: [SurpriseItem]] = [
                      category: .essentials),
         SurpriseItem(name: "Collapsible insulated bag",
                      note: "For market hauls, picnic supplies, or keeping café pastries intact — packs flat when not in use",
+                     category: .essentials),
+        SurpriseItem(name: "Stain remover pen",
+                     note: "白衣服沾到咖啡或酱汁时，随手处理一下，能省掉当天很多尴尬",
+                     category: .toiletries),
+        SurpriseItem(name: "Pocket tissues",
+                     note: "公共洗手间和小店不一定随时有纸巾，这个小备份经常能救场",
                      category: .essentials),
     ],
     "tropical": [
@@ -162,6 +182,9 @@ let surpriseItemMap: [String: [SurpriseItem]] = [
         SurpriseItem(name: "Waterproof shoe covers",
                      note: "Pull on over any shoes in seconds — keeps feet dry without having to plan your footwear around the forecast",
                      category: .clothing),
+        SurpriseItem(name: "Waterproof zip pouch",
+                     note: "下大雨时把手机、卡和票据装进去，会少很多“怕淋湿”的焦虑",
+                     category: .essentials),
     ],
     "personal_period": [
         SurpriseItem(name: "Dark-coloured bottoms",
@@ -173,6 +196,9 @@ let surpriseItemMap: [String: [SurpriseItem]] = [
         SurpriseItem(name: "Brown sugar ginger tea",
                      note: "A hot cup of this does things for cramp and mood that no tablet quite matches — harder to find abroad than you'd think",
                      category: .essentials),
+        SurpriseItem(name: "Disposable toilet seat covers",
+                     note: "长时间在外移动时，遇到公共卫生间心里会更踏实一些",
+                     category: .essentials),
     ],
     "personal_medication": [
         SurpriseItem(name: "Pill organiser",
@@ -183,13 +209,136 @@ let surpriseItemMap: [String: [SurpriseItem]] = [
 
 // MARK: - Generation
 
-/// Returns surprise items for the given scene keys, excluding anything already in the packing list,
-/// sorted by category in delight-first order: toiletries → electronics → clothing → essentials → health → documents.
-func computeSurpriseItems(for sceneKeys: [String], existingNames: Set<String>) -> [SurpriseItem] {
-    let categoryOrder: [ItemCategory] = [.toiletries, .electronics, .clothing, .essentials, .health, .documents]
+private let surpriseCategoryOrder: [ItemCategory] = [.toiletries, .electronics, .clothing, .essentials, .health, .documents]
+
+private let surpriseUniversalScore: [String: Double] = [
+    "Hand cream": 0.90,
+    "Ziplock bags": 0.90,
+    "Pill organiser": 0.88,
+    "Travel steamer": 0.74,
+    "Collapsible tote bag": 0.82,
+    "Collapsible insulated bag": 0.75,
+    "Disposable rain poncho": 0.86,
+    "Waterproof shoe covers": 0.70,
+    "Headlamp + batteries": 0.78,
+]
+
+private let surpriseDelightScore: [String: Double] = [
+    "Scented candle": 0.96,
+    "Journey journal": 0.86,
+    "Instax / instant camera": 0.94,
+    "Portable electric kettle": 0.78,
+    "Car air freshener": 0.70,
+    "Car travel blanket": 0.76,
+    "Brown sugar ginger tea": 0.84,
+]
+
+private let surpriseSceneStrength: [String: Double] = [
+    "Magnetic hooks": 0.98,
+    "Acupressure wristbands": 0.92,
+    "Portable oxygen can": 0.98,
+    "Disposable rain poncho": 0.94,
+    "Waterproof shoe covers": 0.94,
+    "Reef-safe sunscreen": 0.92,
+    "Snorkel mask": 0.90,
+    "Kids headphones": 0.92,
+    "Night light": 0.90,
+]
+
+private let surpriseNichePenalty: [String: Double] = [
+    "Snorkel mask": 0.65,
+    "Portable oxygen can": 0.60,
+    "Foldable hiking stool": 0.58,
+    "Magnetic hooks": 0.52,
+    "Portable electric kettle": 0.50,
+]
+
+private let surpriseFunctionalOverlapKeywords: [String: [String]] = [
+    "Car phone mount": ["phone mount", "car mount"],
+    "Window sunshade": ["sunshade"],
+    "Steam eye mask": ["eye mask"],
+    "Hand cream": ["cream", "lotion"],
+    "Disposable slippers": ["slippers"],
+    "Flight snacks": ["snacks", "trail snacks"],
+    "Scented candle": ["candle"],
+    "Massage oil": ["massage oil", "facial oil"],
+    "Instax / instant camera": ["camera"],
+    "Journey journal": ["journal", "notebook"],
+    "Headlamp + batteries": ["headlamp", "flashlight"],
+    "Snorkel mask": ["snorkel", "swimming goggles"],
+    "Reef-safe sunscreen": ["sunscreen"],
+    "Magnetic hooks": ["hooks"],
+    "Formal accessories": ["formal wear", "tie", "scarf"],
+    "Portable fan": ["fan"],
+    "Wrinkle-release spray": ["wrinkle-release spray"],
+    "Travel steamer": ["steamer"],
+    "Shoe care kit": ["shoe care", "shoe polish"],
+    "Foldable hangers": ["hangers"],
+    "Kids headphones": ["headphones"],
+    "Night light": ["night light"],
+    "Disposable rain poncho": ["rain poncho", "rain jacket"],
+    "Waterproof shoe covers": ["waterproof shoes", "shoe covers"],
+    "Portable hot water bottle": ["hot water bottle"],
+    "Brown sugar ginger tea": ["ginger tea", "tea"],
+]
+
+private func functionalOverlapPenalty(
+    itemName: String,
+    existingNames: Set<String>
+) -> Double {
+    let lowerExisting = existingNames
+    let keys = surpriseFunctionalOverlapKeywords[itemName] ?? []
+    guard !keys.isEmpty else { return 0 }
+
+    for existing in lowerExisting {
+        for key in keys where existing.contains(key) {
+            return 0.22
+        }
+    }
+    return 0
+}
+
+private func scoreForSurpriseItem(
+    _ item: SurpriseItem,
+    mode: SurpriseRankingMode,
+    existingNames: Set<String>
+) -> Double {
+    let universal = surpriseUniversalScore[item.name] ?? 0.62
+    let delight = surpriseDelightScore[item.name] ?? 0.58
+    let sceneFit = surpriseSceneStrength[item.name] ?? 0.72
+    let niche = surpriseNichePenalty[item.name] ?? 0.20
+    let overlapPenalty = functionalOverlapPenalty(itemName: item.name, existingNames: existingNames)
+
+    switch mode {
+    case .manualFirst:
+        // For manual users, prioritize broadly useful + pleasant picks.
+        return (universal * 0.45) + (delight * 0.35) + (sceneFit * 0.20) - (niche * 0.25) - overlapPenalty
+    case .sceneFirst:
+        // For scene-driven users, prioritize contextual relevance first.
+        return (sceneFit * 0.70) + (universal * 0.20) + (delight * 0.10) - (niche * 0.30) - overlapPenalty
+    }
+}
+
+/// Returns surprise items for the given scene keys, excluding anything already in the packing list.
+/// Ranking mode:
+/// - manualFirst: universal usefulness + delight first.
+/// - sceneFirst: scene relevance first, then usefulness.
+func computeSurpriseItems(
+    for sceneKeys: [String],
+    existingNames: Set<String>,
+    rankingMode: SurpriseRankingMode = .sceneFirst
+) -> [SurpriseItem] {
     var seen = Set<String>()
     var result: [SurpriseItem] = []
-    for key in sceneKeys {
+
+    let sourceKeys: [String]
+    if sceneKeys.isEmpty, rankingMode == .manualFirst {
+        sourceKeys = Array(surpriseItemMap.keys).sorted()
+    } else {
+        sourceKeys = sceneKeys
+    }
+
+    for key in sourceKeys {
         for item in surpriseItemMap[key] ?? [] {
             let lower = item.name.lowercased()
             guard !seen.contains(lower), !existingNames.contains(lower) else { continue }
@@ -197,9 +346,32 @@ func computeSurpriseItems(for sceneKeys: [String], existingNames: Set<String>) -
             result.append(item)
         }
     }
-    return result.sorted {
-        let l = categoryOrder.firstIndex(of: $0.category) ?? categoryOrder.count
-        let r = categoryOrder.firstIndex(of: $1.category) ?? categoryOrder.count
-        return l < r
+
+    let ranked = result.sorted {
+        let ls = scoreForSurpriseItem($0, mode: rankingMode, existingNames: existingNames)
+        let rs = scoreForSurpriseItem($1, mode: rankingMode, existingNames: existingNames)
+        if ls != rs { return ls > rs }
+
+        let l = surpriseCategoryOrder.firstIndex(of: $0.category) ?? surpriseCategoryOrder.count
+        let r = surpriseCategoryOrder.firstIndex(of: $1.category) ?? surpriseCategoryOrder.count
+        if l != r { return l < r }
+
+        return $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending
     }
+
+    guard rankingMode == .sceneFirst, ranked.count > 3 else {
+        return ranked
+    }
+
+    // Top-3 guardrail: keep at least 2 strongly scene-relevant items near the front.
+    let strong = ranked.filter { (surpriseSceneStrength[$0.name] ?? 0.72) >= 0.88 }
+    guard strong.count >= 2 else { return ranked }
+
+    var top: [SurpriseItem] = Array(strong.prefix(2))
+    let topNames = Set(top.map(\.name))
+    if let bestNonStrong = ranked.first(where: { !topNames.contains($0.name) }) {
+        top.append(bestNonStrong)
+    }
+    let remaining = ranked.filter { !Set(top.map(\.name)).contains($0.name) }
+    return top + remaining
 }

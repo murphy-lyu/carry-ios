@@ -320,7 +320,11 @@ struct SuggestionPreviewView: View {
         // Surprise items (not pre-selected) — also exclude names already in regular suggestions
         let dismissed = Set(bundle.dismissedSurpriseNames.map { $0.lowercased() })
         let excludedNames = excludedLower.union(allNames.map { $0.lowercased() })
-        surpriseItems = computeSurpriseItems(for: sceneKeys, existingNames: excludedNames)
+        surpriseItems = computeSurpriseItems(
+            for: sceneKeys,
+            existingNames: excludedNames,
+            rankingMode: .sceneFirst
+        )
             .filter { !dismissed.contains($0.name.lowercased()) }
     }
 

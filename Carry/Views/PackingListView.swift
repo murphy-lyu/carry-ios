@@ -81,7 +81,12 @@ struct PackingListView: View {
             store.myItems.map { canonicalItemName($0.name).lowercased() }
         )
         let dismissed = Set(bundle.dismissedSurpriseNames.map { $0.lowercased() })
-        cachedSurpriseItems = computeSurpriseItems(for: bundle.selectedSceneKeys, existingNames: existingNames.union(myItemNames))
+        let rankingMode: SurpriseRankingMode = hasScenes ? .sceneFirst : .manualFirst
+        cachedSurpriseItems = computeSurpriseItems(
+            for: bundle.selectedSceneKeys,
+            existingNames: existingNames.union(myItemNames),
+            rankingMode: rankingMode
+        )
             .filter { !dismissed.contains($0.name.lowercased()) }
     }
 

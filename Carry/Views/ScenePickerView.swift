@@ -413,6 +413,7 @@ private let sceneSymbols: [String: String] = [
     "⛰ High altitude":        "mountain.2.fill",
     "❄️ Winter / cold":        "snowflake",
     "💼 Business":             "briefcase.fill",
+    "💻 Remote work":          "laptopcomputer",
     "👶 Travelling with kids": "figure.and.child.holdinghands",
     "🥾 Hiking / camping":     "tent.fill",
     "💍 Honeymoon":            "heart.fill",
@@ -422,6 +423,7 @@ private let sceneSymbols: [String: String] = [
     "☕ Coffee lover":          "cup.and.saucer.fill",
     "🍵 Tea lover":            "cup.and.saucer.fill",
     "💊 Daily medication":     "pill.fill",
+    "🔒 Personal (private)":   "lock.fill",
 ]
 
 struct SceneChip: View {
