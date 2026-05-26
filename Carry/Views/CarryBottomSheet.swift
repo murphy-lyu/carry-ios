@@ -8,10 +8,10 @@
 //
 //  View hierarchy inside SheetViewController.view (full-screen):
 //
-//    outerView  (clipsToBounds = false)   ← moves up/down, scales
-//      ├── coverView  (y: expandedHeight) ← rubber-band gap filler
-//      └── innerView  (clipsToBounds = true, cornerRadius animated)
-//            └── hostingView              ← UIHostingController.view
+//    clippingView (clipsToBounds = true)  ← shrinks from bottom on collapse
+//      └── outerView  (clipsToBounds = false)   ← moves up/down, scales
+//            └── innerView  (clipsToBounds = true, mask = innerMaskLayer)
+//                  └── hostingView              ← UIHostingController.view
 //
 
 import UIKit
@@ -23,8 +23,6 @@ struct CarryBottomSheet<Content: View>: UIViewControllerRepresentable {
 
     let expandedHeight: CGFloat
     let collapsedOffset: CGFloat
-    /// Colour used for the rubber-band gap cover below the sheet.
-    let coverColor: UIColor
     @Binding var mapCityOpacity: Double
     /// Set to `true` externally (Siri shortcut, map button) to collapse.
     @Binding var collapseRequest: Bool
@@ -36,7 +34,6 @@ struct CarryBottomSheet<Content: View>: UIViewControllerRepresentable {
         let vc = SheetViewController(
             expandedHeight: expandedHeight,
             collapsedOffset: collapsedOffset,
-            coverColor: coverColor,
             isListEmpty: isListEmpty
         )
         let hosting = UIHostingController(rootView: AnyView(content()))
@@ -59,7 +56,6 @@ struct CarryBottomSheet<Content: View>: UIViewControllerRepresentable {
     func updateUIViewController(_ vc: SheetViewController, context: Context) {
         context.coordinator.mapCityOpacityBinding = $mapCityOpacity
         context.coordinator.hostingVC?.rootView = AnyView(content())
-        vc.updateCoverColor(coverColor)
         vc.isListEmpty = isListEmpty
         vc.updateLayout(expandedHeight: expandedHeight, collapsedOffset: collapsedOffset)
         if collapseRequest {
@@ -87,6 +83,23 @@ final class SheetViewController: UIViewController {
     private(set) var collapsedOffset: CGFloat
     var isListEmpty: Bool = false
 
+    // MARK: Visual metrics (1:1 from Tripsy measurement, iPhone 17 Pro @3x)
+
+    /// Corner radius when fully expanded (all 4 corners).
+    private let expandedRadius:        CGFloat = 37
+    /// Top-left / top-right radius when fully collapsed.
+    private let collapsedTopRadius:    CGFloat = 36
+    /// Bottom-left / bottom-right radius when fully collapsed.
+    private let collapsedBottomRadius: CGFloat = 49
+    /// Horizontal inset on each side when collapsed.
+    private let collapsedSideMargin:   CGFloat = 8
+    /// Gap between sheet bottom and screen bottom when collapsed.
+    private let collapsedBottomMargin: CGFloat = 8
+
+    // Interpolated helpers (progress: 0 = expanded, 1 = collapsed)
+    private func topRadius(_ p: CGFloat)    -> CGFloat { expandedRadius + p * (collapsedTopRadius    - expandedRadius) }
+    private func bottomRadius(_ p: CGFloat) -> CGFloat { expandedRadius + p * (collapsedBottomRadius - expandedRadius) }
+
     /// Called on main thread when a snap animation begins.
     var onSnapChanged: ((Bool) -> Void)?
 
@@ -107,12 +120,10 @@ final class SheetViewController: UIViewController {
     /// the "ship leaving dock" gap at the bottom.
     /// PassthroughView so touches outside the sheet reach MapKit behind it.
     private let clippingView = PassthroughView()
-    /// Moves and scales; clipsToBounds = false so coverView is visible.
+    /// Moves and scales; clipsToBounds = false.
     private let outerView = UIView()
     /// Stays within outerView bounds; clips content to rounded corners.
     private let innerView = UIView()
-    /// Sits below innerView inside outerView, fills rubber-band gap.
-    private let coverView = UIView()
     /// Reused mask layer on innerView — path is updated in place so
     /// UIViewPropertyAnimator can spring-animate it automatically.
     private let innerMaskLayer = CAShapeLayer()
@@ -134,13 +145,11 @@ final class SheetViewController: UIViewController {
 
     // MARK: Init
 
-    init(expandedHeight: CGFloat, collapsedOffset: CGFloat,
-         coverColor: UIColor, isListEmpty: Bool) {
+    init(expandedHeight: CGFloat, collapsedOffset: CGFloat, isListEmpty: Bool) {
         self.expandedHeight = expandedHeight
         self.collapsedOffset = collapsedOffset
         self.isListEmpty = isListEmpty
         super.init(nibName: nil, bundle: nil)
-        coverView.backgroundColor = coverColor
     }
 
     required init?(coder: NSCoder) { fatalError() }
@@ -169,9 +178,6 @@ final class SheetViewController: UIViewController {
         // outerView: moves, scales; does NOT clip (lives inside clippingView)
         outerView.clipsToBounds = false
         clippingView.addSubview(outerView)
-
-        // coverView: rubber-band gap filler (below innerView inside outerView)
-        outerView.addSubview(coverView)
 
         // innerView: clips SwiftUI content to the animated corner radius.
         // Use autoresizingMask so its frame tracks outerView.bounds automatically —
@@ -202,10 +208,9 @@ final class SheetViewController: UIViewController {
         // setProgress() in viewDidLoad often skips (bounds are zero at that point),
         // so we always refresh here, wrapped in disableActions to avoid implicit animations.
         let progress = clampedProgress(raw)
-        let topRadius: CGFloat = 22 + progress * 6
         CATransaction.begin()
         CATransaction.setDisableActions(true)
-        applyCornerMask(top: topRadius, bottom: topRadius, progress: progress)
+        applyCornerMask(top: topRadius(progress), bottom: bottomRadius(progress), progress: progress)
         innerView.transform = CGAffineTransform(scaleX: 1.0 - progress * 0.05, y: 1)
         CATransaction.commit()
     }
@@ -229,18 +234,14 @@ final class SheetViewController: UIViewController {
         }
     }
 
-    func updateCoverColor(_ color: UIColor) {
-        coverView.backgroundColor = color
-    }
-
     func updateLayout(expandedHeight h: CGFloat, collapsedOffset c: CGFloat) {
         guard h != expandedHeight || c != collapsedOffset else { return }
         let wasCollapsed = isCollapsedState
         expandedHeight = h
         collapsedOffset = c
         // Animate the repositioning to match SwiftUI's spring on isEffectivelyEmpty
-        UIView.animate(withDuration: 0.5, delay: 0,
-                       usingSpringWithDamping: 0.82, initialSpringVelocity: 0) {
+        UIView.animate(withDuration: 0.68, delay: 0,
+                       usingSpringWithDamping: 0.88, initialSpringVelocity: 0) {
             self.snappedOffset = wasCollapsed ? c : 0
             self.placeSheet(at: self.snappedOffset)
         }
@@ -261,26 +262,23 @@ final class SheetViewController: UIViewController {
         let h = view.bounds.height
         guard w > 0, h > 0 else { return }
 
-        // clippingView shrinks from the bottom by `lift`, revealing background
-        // beneath the sheet — this is what creates the equal left/right/bottom gap.
+        // clippingView: full width, shrinks from the bottom by `lift` (bottom margin).
         clippingView.frame = CGRect(x: 0, y: 0, width: w, height: h - lift)
 
-        // outerView position: no lift subtraction needed (clippingView handles the gap).
+        // outerView: insets horizontally by sideMargin * progress (floating pill effect).
+        let sideMargin = collapsedSideMargin * progress
         let y = h - expandedHeight + banded
-        outerView.frame = CGRect(x: 0, y: y, width: w, height: expandedHeight)
+        outerView.frame = CGRect(x: sideMargin, y: y,
+                                 width: w - 2 * sideMargin, height: expandedHeight)
         // innerView fills outerView via autoresizingMask — never set .frame directly
         // while a transform may be active (undefined behavior in UIKit).
-        coverView.frame = CGRect(x: 0, y: expandedHeight, width: w, height: 200)
     }
 
     /// Called inside UIViewPropertyAnimator.addAnimations — the animator drives
     /// the implicit CALayer animations on the mask path and transform.
     private func setProgress(_ progress: CGFloat, animated: Bool) {
-        let topRadius: CGFloat = 22 + progress * 6      // 22 → 28
-        let scaleX:    CGFloat = 1.0 - progress * 0.05  // 1.0 → 0.95
-        // Bottom corners match top corners — visibleH is computed inside
-        // applyCornerMask so the arc sits exactly at the visual clip edge.
-        applyCornerMask(top: topRadius, bottom: topRadius, progress: progress)
+        let scaleX: CGFloat = 1.0 - progress * 0.05  // 1.0 → 0.95
+        applyCornerMask(top: topRadius(progress), bottom: bottomRadius(progress), progress: progress)
         innerView.transform = CGAffineTransform(scaleX: scaleX, y: 1)
     }
 
@@ -290,7 +288,6 @@ final class SheetViewController: UIViewController {
     /// visual clip line (matching the top corner radius).
     /// `progress` (0 = expanded, 1 = collapsed) drives a safe-area subtraction
     /// so bottom corners float above the home indicator when collapsed,
-    /// matching the Tripsy / Flighty aesthetic.
     /// Caller is responsible for wrapping in CATransaction.setDisableActions(true)
     /// when an implicit animation should be suppressed.
     private func applyCornerMask(top: CGFloat, bottom: CGFloat, progress: CGFloat) {
@@ -301,10 +298,7 @@ final class SheetViewController: UIViewController {
         // Visible portion of innerView within clippingView.
         // outerView.frame is in clippingView's coordinate space (clippingView.origin.y == 0).
         let rawVisible = clippingView.frame.height - outerView.frame.origin.y
-        // When collapsed, pull the mask bottom above the home indicator so
-        // bottom corners are fully visible (same pattern as Tripsy/Flighty).
-        let safeInset  = view.safeAreaInsets.bottom * progress
-        let visibleH   = max(0, min(fullH, rawVisible - safeInset))
+        let visibleH   = max(0, min(fullH, rawVisible))
 
         // True circular arcs — addArc produces the same geometry as CALayer
         // corner rounding, unlike the quadBezier approximation.
@@ -356,7 +350,7 @@ final class SheetViewController: UIViewController {
     /// scaleX = 1 - progress*0.05  →  each side gap = progress * 0.025 * width.
     /// Using the same value here makes left ≈ right ≈ bottom gaps visually equal.
     private func bottomLift(_ progress: CGFloat) -> CGFloat {
-        progress * 0.025 * view.bounds.width
+        progress * collapsedBottomMargin
     }
 
     // MARK: Snap animation
@@ -373,10 +367,10 @@ final class SheetViewController: UIViewController {
         feedbackGenerator.impactOccurred()
 
         let params = UISpringTimingParameters(
-            dampingRatio: 0.78,
+            dampingRatio: 0.88,
             initialVelocity: CGVector(dx: 0, dy: normV)
         )
-        let anim = UIViewPropertyAnimator(duration: 0.5, timingParameters: params)
+        let anim = UIViewPropertyAnimator(duration: 0.68, timingParameters: params)
 
         anim.addAnimations { [weak self] in
             guard let self else { return }
@@ -392,11 +386,10 @@ final class SheetViewController: UIViewController {
             self.runningAnimator = nil
             // Re-apply mask at final size (bounds may have changed during animation).
             // Disable implicit animations since we're outside any animator context.
-            let p    = self.clampedProgress(target)
-            let topR = 22 + p * 6
+            let p = self.clampedProgress(target)
             CATransaction.begin()
             CATransaction.setDisableActions(true)
-            self.applyCornerMask(top: topR, bottom: topR, progress: p)
+            self.applyCornerMask(top: self.topRadius(p), bottom: self.bottomRadius(p), progress: p)
             CATransaction.commit()
         }
 
@@ -421,10 +414,9 @@ final class SheetViewController: UIViewController {
         let progress = clampedProgress(raw)
         placeSheet(at: raw)
         // Disable CALayer implicit animations for immediate response
-        let topRadius: CGFloat = 22 + progress * 6
         CATransaction.begin()
         CATransaction.setDisableActions(true)
-        applyCornerMask(top: topRadius, bottom: topRadius, progress: progress)
+        applyCornerMask(top: topRadius(progress), bottom: bottomRadius(progress), progress: progress)
         innerView.transform = CGAffineTransform(scaleX: 1.0 - progress * 0.05, y: 1)
         CATransaction.commit()
     }

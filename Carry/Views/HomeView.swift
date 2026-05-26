@@ -42,6 +42,16 @@ struct HomeView: View {
         return min(max((initialRevealProgress - start) / duration, 0), 1)
     }
 
+    private func triggerUpcomingReveal(after delay: Double = 0.24) {
+        didRevealUpcoming = false
+        DispatchQueue.main.asyncAfter(deadline: .now() + delay) {
+            guard router.path.isEmpty else { return }
+            withAnimation(.easeOut(duration: 0.30)) {
+                didRevealUpcoming = true
+            }
+        }
+    }
+
     // Cached sorted trip lists — recomputed only when store.trips changes,
     // not on every body re-evaluation (e.g. initialRevealProgress animation ticks).
     @State private var cachedUpcoming: [TripBundle] = []
@@ -143,7 +153,7 @@ struct HomeView: View {
     }
 
     private var collapsedSheetOffset: CGFloat {
-        max(0, expandedSheetHeight - 144)
+        max(0, expandedSheetHeight - 188)
     }
 
     /// Unique country codes from all trips whose departure date has passed.
@@ -236,9 +246,6 @@ struct HomeView: View {
             CarryBottomSheet(
                 expandedHeight: expandedSheetHeight,
                 collapsedOffset: collapsedSheetOffset,
-                coverColor: colorScheme == .dark
-                    ? UIColor(homeDarkBackdropBottom)
-                    : UIColor.systemBackground,
                 mapCityOpacity: $mapCityOpacity,
                 collapseRequest: $collapseRequest,
                 isListEmpty: isEffectivelyEmpty
@@ -344,26 +351,17 @@ struct HomeView: View {
                     didPlayInitialReveal = true
                     initialRevealProgress = 0
                     revealCurtainOpacity = 1
-                    didRevealUpcoming = false
                     DispatchQueue.main.asyncAfter(deadline: .now() + 0.04) {
                         withAnimation(.easeOut(duration: 0.22)) { revealCurtainOpacity = 0 }
                         withAnimation(.easeOut(duration: 0.52)) { initialRevealProgress = 1 }
                     }
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.22) {
-                        withAnimation(.easeOut(duration: 0.30)) { didRevealUpcoming = true }
-                    }
+                    triggerUpcomingReveal(after: 0.28)
                 }
             }
             .onReceive(router.$path) { path in
                 if path.isEmpty {
                     store.refresh()
                     rebuildTripLists()
-                    didRevealUpcoming = false
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.02) {
-                        withAnimation(.easeOut(duration: 0.26)) {
-                            didRevealUpcoming = true
-                        }
-                    }
                 }
             }
             .onChange(of: store.trips) { _, _ in
