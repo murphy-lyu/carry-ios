@@ -135,13 +135,19 @@ struct GlobeMapView: View, Equatable {
 
     // MARK: - Distance stages (tunable)
     /// Cold launch: zoom in close so globe fills screen dramatically.
-    private let nearDistance:  Double = 10_000_000
-    /// Auto-zoom after 2 s: comfortable globe view while sheet is expanded.
-    private let midDistance:   Double = 25_000_000
+    private let nearDistance:  Double = 20_230_330
+    /// Auto-zoom after 4 s: comfortable globe view while sheet is expanded.
+    private let midDistance:   Double = 24_000_000
     /// Sheet collapsed: globe recedes to reveal the full "world at a glance" layout.
-    private let farDistance:   Double = 40_000_000
+    private let farDistance:   Double = 35_000_000
 
-    @State private var position: MapCameraPosition = .automatic
+    // Pre-set to globe level so MapKit loads the correct tiles on the very first frame,
+    // avoiding the pixel-block flicker caused by switching from .automatic (street level)
+    // to a globe-distance camera after onAppear.
+    @State private var position: MapCameraPosition = .camera(MapCamera(
+        centerCoordinate: CLLocationCoordinate2D(latitude: 25, longitude: 100),
+        distance: 20_230_330
+    ))
     @State private var cityDotsAppeared: Bool = false
     @State private var hasZoomedToFar: Bool = false
     @State private var userPulseAnimating: Bool = false
@@ -183,30 +189,40 @@ struct GlobeMapView: View, Equatable {
 
             withAnimation(.easeOut(duration: 0.25)) { cityDotsAppeared = true }
 
-            // Stage 2 — auto-zoom out after 2 s, giving the sheet time to settle
-            // before the globe quietly recedes to its "expanded sheet" resting distance.
+            // Stage 2 — auto-zoom out after 3 s with a gentle globe roll.
+            // Manual frame-by-frame interpolation bypasses MapKit's internal animation
+            // duration cap so we get full control over speed and easing.
+            let stage2Target = MapCamera(
+                centerCoordinate: CLLocationCoordinate2D(
+                    latitude: center.latitude - 5,
+                    longitude: center.longitude
+                ),
+                distance: midDistance,
+                heading: 0,
+                pitch: 0
+            )
             Task { @MainActor in
-                try? await Task.sleep(for: .seconds(2))
-                withAnimation(.easeInOut(duration: 1.8)) {
-                    position = .camera(MapCamera(centerCoordinate: center, distance: midDistance))
-                }
+                try? await Task.sleep(for: .seconds(1))
+                await animateCamera(to: stage2Target, duration: 1.0)
             }
         }
         .onChange(of: cityOpacity) { _, new in
-            // Stage 3 — sheet fully collapsed: globe recedes further so the small
-            // pill shape and the world map feel balanced. Fires once per session.
+            // Stage 3 — sheet fully collapsed: globe recedes + rolls further.
             guard new >= 1, !hasZoomedToFar else { return }
             hasZoomedToFar = true
             let cam = position.camera
-            let center = cam.map { $0.centerCoordinate }
-                ?? CLLocationCoordinate2D(latitude: 25, longitude: 100)
-            withAnimation(.easeInOut(duration: 1.8)) {
-                position = .camera(MapCamera(
-                    centerCoordinate: center,
-                    distance: farDistance,
-                    heading: cam?.heading ?? 0,
-                    pitch: cam?.pitch ?? 0
-                ))
+            let center = cam?.centerCoordinate ?? CLLocationCoordinate2D(latitude: 25, longitude: 100)
+            let stage3Target = MapCamera(
+                centerCoordinate: CLLocationCoordinate2D(
+                    latitude: center.latitude - 10,
+                    longitude: center.longitude
+                ),
+                distance: farDistance,
+                heading: cam?.heading ?? 0,
+                pitch: 0
+            )
+            Task { @MainActor in
+                await animateCamera(to: stage3Target, duration: 1.0)
             }
         }
         .onChange(of: showUserLocation) { _, newValue in
@@ -308,6 +324,46 @@ struct GlobeMapView: View, Equatable {
             .font(.system(size: 52))
             .frame(width: 44, height: 44)
             .clipShape(Circle())
+    }
+
+    // MARK: - Camera animation
+
+    /// Manually interpolates the camera from the current position to `target` over
+    /// `duration` seconds using an easeInOut curve, driven frame-by-frame via async/await.
+    /// This bypasses MapKit's internal animation duration cap which silently clamps
+    /// `withAnimation` durations to ~1-2 s regardless of the value specified.
+    ///
+    /// Tunable parameters:
+    ///   • duration  — total animation time in seconds
+    ///   • fps       — frames per second (24 is smooth enough for a slow globe zoom)
+    @MainActor
+    private func animateCamera(to target: MapCamera, duration: Double, fps: Double = 60) async {
+        guard let start = position.camera else {
+            position = .camera(target)
+            return
+        }
+        let steps = max(1, Int(duration * fps))
+        let interval = duration / Double(steps)
+
+        for step in 1...steps {
+            let t = Double(step) / Double(steps)
+            // easeInOut: slow start, fast middle, slow end
+            let eased = t < 0.5 ? 2 * t * t : 1 - pow(-2 * t + 2, 2) / 2
+
+            let distance = start.distance  + eased * (target.distance  - start.distance)
+            let lat      = start.centerCoordinate.latitude  + eased * (target.centerCoordinate.latitude  - start.centerCoordinate.latitude)
+            let lon      = start.centerCoordinate.longitude + eased * (target.centerCoordinate.longitude - start.centerCoordinate.longitude)
+            let heading  = start.heading + eased * (target.heading - start.heading)
+            let pitch    = start.pitch   + eased * (target.pitch   - start.pitch)
+
+            try? await Task.sleep(for: .milliseconds(Int(interval * 1_000)))
+            position = .camera(MapCamera(
+                centerCoordinate: CLLocationCoordinate2D(latitude: lat, longitude: lon),
+                distance: distance,
+                heading: heading,
+                pitch: pitch
+            ))
+        }
     }
 
     // MARK: - Helpers
