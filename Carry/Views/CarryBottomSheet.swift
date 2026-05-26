@@ -205,7 +205,7 @@ final class SheetViewController: UIViewController {
         let topRadius: CGFloat = 22 + progress * 6
         CATransaction.begin()
         CATransaction.setDisableActions(true)
-        applyCornerMask(top: topRadius, bottom: topRadius)
+        applyCornerMask(top: topRadius, bottom: topRadius, progress: progress)
         innerView.transform = CGAffineTransform(scaleX: 1.0 - progress * 0.05, y: 1)
         CATransaction.commit()
     }
@@ -280,7 +280,7 @@ final class SheetViewController: UIViewController {
         let scaleX:    CGFloat = 1.0 - progress * 0.05  // 1.0 → 0.95
         // Bottom corners match top corners — visibleH is computed inside
         // applyCornerMask so the arc sits exactly at the visual clip edge.
-        applyCornerMask(top: topRadius, bottom: topRadius)
+        applyCornerMask(top: topRadius, bottom: topRadius, progress: progress)
         innerView.transform = CGAffineTransform(scaleX: scaleX, y: 1)
     }
 
@@ -288,9 +288,12 @@ final class SheetViewController: UIViewController {
     /// Uses `visibleH` — the portion of innerView actually visible above
     /// clippingView's bottom edge — so bottom corners sit exactly at the
     /// visual clip line (matching the top corner radius).
+    /// `progress` (0 = expanded, 1 = collapsed) drives a safe-area subtraction
+    /// so bottom corners float above the home indicator when collapsed,
+    /// matching the Tripsy / Flighty aesthetic.
     /// Caller is responsible for wrapping in CATransaction.setDisableActions(true)
     /// when an implicit animation should be suppressed.
-    private func applyCornerMask(top: CGFloat, bottom: CGFloat) {
+    private func applyCornerMask(top: CGFloat, bottom: CGFloat, progress: CGFloat) {
         let w     = innerView.bounds.width
         let fullH = innerView.bounds.height
         guard w > 0, fullH > 0 else { return }
@@ -298,7 +301,10 @@ final class SheetViewController: UIViewController {
         // Visible portion of innerView within clippingView.
         // outerView.frame is in clippingView's coordinate space (clippingView.origin.y == 0).
         let rawVisible = clippingView.frame.height - outerView.frame.origin.y
-        let visibleH   = max(0, min(fullH, rawVisible))
+        // When collapsed, pull the mask bottom above the home indicator so
+        // bottom corners are fully visible (same pattern as Tripsy/Flighty).
+        let safeInset  = view.safeAreaInsets.bottom * progress
+        let visibleH   = max(0, min(fullH, rawVisible - safeInset))
 
         // True circular arcs — addArc produces the same geometry as CALayer
         // corner rounding, unlike the quadBezier approximation.
@@ -390,7 +396,7 @@ final class SheetViewController: UIViewController {
             let topR = 22 + p * 6
             CATransaction.begin()
             CATransaction.setDisableActions(true)
-            self.applyCornerMask(top: topR, bottom: topR)
+            self.applyCornerMask(top: topR, bottom: topR, progress: p)
             CATransaction.commit()
         }
 
@@ -418,7 +424,7 @@ final class SheetViewController: UIViewController {
         let topRadius: CGFloat = 22 + progress * 6
         CATransaction.begin()
         CATransaction.setDisableActions(true)
-        applyCornerMask(top: topRadius, bottom: topRadius)
+        applyCornerMask(top: topRadius, bottom: topRadius, progress: progress)
         innerView.transform = CGAffineTransform(scaleX: 1.0 - progress * 0.05, y: 1)
         CATransaction.commit()
     }
