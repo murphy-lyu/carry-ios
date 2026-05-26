@@ -52,7 +52,7 @@ struct AboutView: View {
 
                 moduleCard(title: "about.follow") {
                     VStack(spacing: 0) {
-                        socialRow(label: "Twitter / X", handle: "@murphy_lyu", url: "https://x.com/murphy_Iyu")
+                        socialRow(label: "Twitter / X", handle: "@murphy_latte", url: "https://x.com/murphy_latte")
                     }
                 }
 
