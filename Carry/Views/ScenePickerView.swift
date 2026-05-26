@@ -95,16 +95,9 @@ struct ScenePickerView: View {
                 VStack(alignment: .leading, spacing: 28) {
                     heroSection
 
-                    if isSuggest {
-                        Text("scenes.suggest.subtitle")
-                            .font(.subheadline)
-                            .foregroundStyle(.secondary)
-                            .padding(.horizontal, 16)
-                            .padding(.top, -10)
-                    }
-
-                    ForEach(defaultSceneGroups) { group in
+                    ForEach(Array(defaultSceneGroups.enumerated()), id: \.element.id) { index, group in
                         SceneGroupSection(group: group, selectedItems: $selectedItems)
+                            .padding(.top, index == 0 ? -16 : 0)
                     }
                 }
                 .padding(.bottom, 16)
@@ -328,7 +321,7 @@ struct SceneGroupSection: View {
         VStack(alignment: .leading, spacing: 10) {
             Text(LocalizedStringKey(group.title))
                 .font(.system(size: 11, weight: .medium))
-                .foregroundStyle(.tertiary)
+                .foregroundStyle(.secondary.opacity(0.78))
                 .kerning(1.5)
                 .textCase(.uppercase)
                 .padding(.horizontal, 16)

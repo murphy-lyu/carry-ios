@@ -51,13 +51,13 @@ struct SuggestionPreviewView: View {
         ScrollView {
             LazyVStack(alignment: .leading, spacing: 0, pinnedViews: [.sectionHeaders]) {
                 if !sections.isEmpty {
-                    ForEach(sections, id: \.title) { section in
+                    ForEach(Array(sections.enumerated()), id: \.element.title) { index, section in
                         Section {
                             ForEach(section.items, id: \.self) { item in
                                 itemRow(item)
                             }
                         } header: {
-                            sectionHeader(section.title)
+                            sectionHeader(section.title, isFirst: index == 0)
                         }
                     }
                 }
@@ -72,7 +72,7 @@ struct SuggestionPreviewView: View {
                     }
                 }
             }
-            .padding(.top, 6)
+            .padding(.top, 14)
             .padding(.bottom, 100)
         }
     }
@@ -97,10 +97,10 @@ struct SuggestionPreviewView: View {
         }
         .padding(.horizontal, 16)
         .padding(.top, 20)
-        .padding(.bottom, 4)
+        .padding(.bottom, 6)
     }
 
-    private func sectionHeader(_ title: String) -> some View {
+    private func sectionHeader(_ title: String, isFirst: Bool) -> some View {
         Text(LocalizedStringKey(title))
             .font(.caption.weight(.medium))
             .foregroundStyle(Color(.systemGray))
@@ -108,20 +108,13 @@ struct SuggestionPreviewView: View {
             .textCase(.uppercase)
             .frame(maxWidth: .infinity, alignment: .leading)
             .padding(.horizontal, 16)
-            .padding(.top, 8)
-            .padding(.bottom, 3)
-            .background(
+            .padding(.top, isFirst ? 2 : 12)
+            .padding(.bottom, 4)
+            .overlay(alignment: .bottom) {
                 Rectangle()
-                    .fill(
-                        Color(UIColor.systemBackground)
-                    )
-                    .overlay(alignment: .bottom) {
-                        Rectangle()
-                            .fill(Color.primary.opacity(0.03))
-                            .frame(height: 1)
-                    }
-            )
-            .padding(.horizontal, 10)
+                    .fill(Color.primary.opacity(0.03))
+                    .frame(height: 1)
+            }
             .zIndex(1)
     }
 
@@ -138,20 +131,13 @@ struct SuggestionPreviewView: View {
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(.horizontal, 16)
-        .padding(.top, 8)
-        .padding(.bottom, 3)
-        .background(
+        .padding(.top, 12)
+        .padding(.bottom, 4)
+        .overlay(alignment: .bottom) {
             Rectangle()
-                .fill(
-                    Color(UIColor.systemBackground)
-                )
-                .overlay(alignment: .bottom) {
-                    Rectangle()
-                        .fill(Color.primary.opacity(0.03))
-                        .frame(height: 1)
-                }
-        )
-        .padding(.horizontal, 10)
+                .fill(Color.primary.opacity(0.03))
+                .frame(height: 1)
+        }
         .zIndex(1)
     }
 
@@ -250,7 +236,7 @@ struct SuggestionPreviewView: View {
                 }
             }
             .padding(.horizontal, 20)
-            .padding(.top, 12)
+            .padding(.top, 16)
             .padding(.bottom, 16)
         }
         .background(

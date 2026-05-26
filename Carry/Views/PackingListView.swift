@@ -1067,7 +1067,7 @@ struct PackingListView: View {
             .textCase(.uppercase)
             .frame(maxWidth: .infinity, alignment: .leading)
             .padding(.horizontal, 16)
-            .padding(.top, isFirst ? 2 : 16)
+            .padding(.top, 16)
             .padding(.bottom, 4)
             .overlay(alignment: .bottom) {
                 Rectangle()
