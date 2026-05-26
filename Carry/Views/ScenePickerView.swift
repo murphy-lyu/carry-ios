@@ -316,12 +316,13 @@ struct SceneGroupSection: View {
 
     let group: SceneGroup
     @Binding var selectedItems: Set<String>
+    @Environment(\.colorScheme) private var colorScheme
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
             Text(LocalizedStringKey(group.title))
                 .font(.system(size: 11, weight: .medium))
-                .foregroundStyle(.secondary.opacity(0.78))
+                .foregroundStyle(colorScheme == .dark ? Color(.systemGray2) : Color(.systemGray))
                 .kerning(1.5)
                 .textCase(.uppercase)
                 .padding(.horizontal, 16)

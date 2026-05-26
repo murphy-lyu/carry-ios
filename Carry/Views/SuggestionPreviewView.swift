@@ -104,7 +104,7 @@ struct SuggestionPreviewView: View {
     private func sectionHeader(_ title: String, isFirst: Bool) -> some View {
         Text(LocalizedStringKey(title))
             .font(.caption.weight(.medium))
-            .foregroundStyle(Color(.systemGray))
+            .foregroundStyle(colorScheme == .dark ? Color(.systemGray2) : Color(.systemGray))
             .kerning(1.1)
             .textCase(.uppercase)
             .frame(maxWidth: .infinity, alignment: .leading)
@@ -113,7 +113,7 @@ struct SuggestionPreviewView: View {
             .padding(.bottom, 4)
             .overlay(alignment: .bottom) {
                 Rectangle()
-                    .fill(colorScheme == .dark ? Color.white.opacity(0.02) : Color.primary.opacity(0.03))
+                    .fill(colorScheme == .dark ? Color.white.opacity(0.03) : Color.primary.opacity(0.03))
                     .frame(height: 1)
             }
             .zIndex(1)
@@ -126,7 +126,7 @@ struct SuggestionPreviewView: View {
                 .foregroundStyle(.secondary)
             Text("Worth considering")
                 .font(.caption.weight(.medium))
-                .foregroundStyle(Color(.systemGray))
+                .foregroundStyle(colorScheme == .dark ? Color(.systemGray2) : Color(.systemGray))
                 .kerning(1.1)
                 .textCase(.uppercase)
         }
@@ -136,7 +136,7 @@ struct SuggestionPreviewView: View {
         .padding(.bottom, 4)
         .overlay(alignment: .bottom) {
             Rectangle()
-                .fill(colorScheme == .dark ? Color.white.opacity(0.02) : Color.primary.opacity(0.03))
+                .fill(colorScheme == .dark ? Color.white.opacity(0.03) : Color.primary.opacity(0.03))
                 .frame(height: 1)
         }
         .zIndex(1)
@@ -237,7 +237,7 @@ struct SuggestionPreviewView: View {
                 }
             }
             .padding(.horizontal, 20)
-            .padding(.top, 16)
+            .padding(.top, 12)
             .padding(.bottom, 16)
         }
         .background(
