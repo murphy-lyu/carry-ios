@@ -76,6 +76,11 @@ struct CarryBottomSheet<Content: View>: UIViewControllerRepresentable {
 // MARK: - SheetViewController
 
 final class SheetViewController: UIViewController {
+    private enum PanDriver {
+        case none
+        case sheet
+        case list
+    }
 
     // MARK: Configuration
 
@@ -104,7 +109,8 @@ final class SheetViewController: UIViewController {
     /// During expand the pill dissolves in the first 35% of travel, then the sheet
     /// rises at full width for the remaining 65%.
     private func effectProgress(_ p: CGFloat) -> CGFloat {
-        let threshold: CGFloat = 0.65
+        // Start narrowing early so width follows drag continuously.
+        let threshold: CGFloat = 0.18
         guard p > threshold else { return 0 }
         return (p - threshold) / (1 - threshold)
     }
@@ -126,9 +132,21 @@ final class SheetViewController: UIViewController {
     private var snappedOffset: CGFloat = 0
     /// Live drag delta on top of snappedOffset (non-zero only during gesture).
     private var liveDelta: CGFloat = 0
+    /// Shape state decoupled from position to prevent high-velocity jump shrink.
+    private var shapeProgressState: CGFloat = 0
+    private var shapeDisplayLink: CADisplayLink?
+    private var snapShapeStart: CGFloat = 0
+    private var snapShapeTarget: CGFloat = 0
 
     private var isCollapsedState: Bool { snappedOffset >= collapsedOffset - 1 }
     private var runningAnimator: UIViewPropertyAnimator?
+    /// Monotonic token for snap animations; stale completions must not mutate state.
+    private var animationGeneration: Int = 0
+    /// Ensures only one gesture source drives liveDelta/snap at a time.
+    private var activePanDriver: PanDriver = .none
+    private var lastGestureSource: String = "none"
+    /// Temporary switch: disable gesture-end auto snap to isolate pure manual drag behavior.
+    private let disableGestureAutoSnap: Bool = true
 
     // MARK: View hierarchy
 
@@ -164,8 +182,7 @@ final class SheetViewController: UIViewController {
 
     private var capturedTranslationAtTop: CGFloat?
     private var wasAtTop = false
-    private var isExpandingFromCollapsed = false
-    private var savedScrollOffsetY: CGFloat = 0
+    // Reserved for future snap-mode restoration.
 
     // MARK: Init
 
@@ -204,11 +221,7 @@ final class SheetViewController: UIViewController {
         clippingView.addSubview(outerView)
 
         // innerView: clips SwiftUI content to the animated corner radius.
-        // Use autoresizingMask so its frame tracks outerView.bounds automatically —
-        // this avoids setting innerView.frame directly while a transform is active
-        // (which is undefined behavior per UIKit docs).
         innerView.clipsToBounds = true
-        innerView.autoresizingMask = [.flexibleWidth, .flexibleHeight]
         // Mask handles all corner rounding; set once, path updated in place.
         innerView.layer.mask = innerMaskLayer
         outerView.addSubview(innerView)
@@ -219,6 +232,7 @@ final class SheetViewController: UIViewController {
         view.addGestureRecognizer(sheetPan)
 
         // Sync initial visual state
+        shapeProgressState = 0
         setProgress(0, animated: false)
         placeSheet(at: snappedOffset)
     }
@@ -249,7 +263,6 @@ final class SheetViewController: UIViewController {
 
     func installContent(_ hosting: UIViewController) {
         addChild(hosting)
-        hosting.view.autoresizingMask = [.flexibleWidth, .flexibleHeight]
         innerView.addSubview(hosting.view)
         hostingView = hosting.view
         hosting.didMove(toParent: self)
@@ -279,29 +292,102 @@ final class SheetViewController: UIViewController {
 
     // MARK: Layout helpers
 
-    private func placeSheet(at rawOffset: CGFloat) {
-        let banded   = rubberBand(rawOffset)
-        let progress = clampedProgress(rawOffset)
-        let lift     = bottomLift(progress)
+    private struct SheetGeometry {
+        let clippingFrame: CGRect
+        let outerFrame: CGRect
+        let positionProgress: CGFloat
+        let shapeProgress: CGFloat
+    }
+
+    private func pixelAligned(_ value: CGFloat, scale: CGFloat) -> CGFloat {
+        guard scale > 0 else { return value }
+        return (value * scale).rounded() / scale
+    }
+
+    private func geometry(for rawOffset: CGFloat, shapeProgressOverride: CGFloat? = nil) -> SheetGeometry? {
+        let banded = rubberBand(rawOffset)
+        let positionProgress = clampedProgress(rawOffset)
+        let shapeProgress = shapeProgressOverride ?? shapeProgressState
+        let lift = bottomLift(shapeProgress)
         let w = view.bounds.width
         let h = view.bounds.height
-        guard w > 0, h > 0 else { return }
+        guard w > 0, h > 0 else { return nil }
 
-        // clippingView: full width, shrinks from the bottom by `lift` (bottom margin).
-        clippingView.frame = CGRect(x: 0, y: 0, width: w, height: h - lift)
+        let scale = view.window?.screen.scale ?? UIScreen.main.scale
+        let sideMargin = pixelAligned(collapsedSideMargin * effectProgress(shapeProgress), scale: scale)
+        let y = pixelAligned(h - expandedHeight + banded, scale: scale)
+        let width = max(0, pixelAligned(w - 2 * sideMargin, scale: scale))
+        let height = max(0, pixelAligned(expandedHeight, scale: scale))
+        let clippingHeight = max(0, pixelAligned(h - lift, scale: scale))
 
-        // outerView: side margins only appear in the last 35% of travel (effectProgress),
-        // so the sheet slides down at full width before snapping into the pill shape.
-        let sideMargin = collapsedSideMargin * effectProgress(progress)
-        let y = h - expandedHeight + banded
-        outerView.frame = CGRect(x: sideMargin, y: y,
-                                 width: w - 2 * sideMargin, height: expandedHeight)
+        return SheetGeometry(
+            clippingFrame: CGRect(x: 0, y: 0, width: w, height: clippingHeight),
+            outerFrame: CGRect(x: sideMargin, y: y, width: width, height: height),
+            positionProgress: positionProgress,
+            shapeProgress: shapeProgress
+        )
+    }
+
+    private func setShapeProgress(_ value: CGFloat) {
+        shapeProgressState = min(max(0, value), 1)
+    }
+
+    private func stopShapeDisplayLink() {
+        shapeDisplayLink?.invalidate()
+        shapeDisplayLink = nil
+    }
+
+    private func startSnapShapeFollow(duration: CFTimeInterval) {
+        stopShapeDisplayLink()
+        guard duration > 0 else {
+            setShapeProgress(snapShapeTarget)
+            return
+        }
+        let startTime = CACurrentMediaTime()
+        let link = CADisplayLink(target: self, selector: #selector(handleShapeDisplayLink(_:)))
+        link.preferredFrameRateRange = CAFrameRateRange(minimum: 30, maximum: 60, preferred: 60)
+        link.add(to: .main, forMode: .common)
+        link.accessibilityLabel = "\(startTime)|\(duration)"
+        shapeDisplayLink = link
+    }
+
+    @objc private func handleShapeDisplayLink(_ link: CADisplayLink) {
+        guard let payload = link.accessibilityLabel else { return }
+        let parts = payload.split(separator: "|")
+        guard parts.count == 2,
+              let start = CFTimeInterval(parts[0]),
+              let duration = CFTimeInterval(parts[1]) else { return }
+
+        let t = min(max((CACurrentMediaTime() - start) / duration, 0), 1)
+        // Ease-out so shape follows continuously while avoiding abrupt late shrink.
+        let eased = 1 - pow(1 - t, 2)
+        let next = snapShapeStart + CGFloat(eased) * (snapShapeTarget - snapShapeStart)
+        setShapeProgress(next)
+
+        let raw: CGFloat
+        if let pf = outerView.layer.presentation()?.frame {
+            raw = pf.origin.y - (view.bounds.height - expandedHeight)
+        } else {
+            raw = snappedOffset + liveDelta
+        }
+        placeSheet(at: raw, shapeProgressOverride: shapeProgressState)
+        CATransaction.begin()
+        CATransaction.setDisableActions(true)
+        applyCornerMask(top: topRadius(shapeProgressState), bottom: bottomRadius(shapeProgressState), progress: shapeProgressState)
+        CATransaction.commit()
+
+        if t >= 1 {
+            stopShapeDisplayLink()
+        }
+    }
+
+    private func placeSheet(at rawOffset: CGFloat, shapeProgressOverride: CGFloat? = nil) {
+        guard let g = geometry(for: rawOffset, shapeProgressOverride: shapeProgressOverride) else { return }
+        clippingView.frame = g.clippingFrame
+        outerView.frame = g.outerFrame
 
         // Explicitly sync innerView + hostingView frames in the SAME runloop turn
-        // as the outerView frame change. Autoresizing propagates during the next
-        // layout pass — outside any animator transaction — which let SwiftUI see
-        // transient half-state widths during gestures and accumulate layout drift
-        // (visible as the content area sliding right with each up/down cycle).
+        // as outerView frame updates, so SwiftUI never consumes transient widths.
         let innerBounds = outerView.bounds
         innerView.frame = innerBounds
         hostingView?.frame = innerBounds
@@ -387,84 +473,105 @@ final class SheetViewController: UIViewController {
 
     // MARK: Snap animation
 
-    private func commitSnap(to target: CGFloat, velocity: CGFloat) {
+    private func currentVisualOffset() -> CGFloat {
         let h = view.bounds.height
-
-        // ── 1: capture current VISUAL position ────────────────────────────────────
-        // stopAnimation(true) can snap the model layer to the animation's end-state;
-        // reading the presentation frame first lets us restore from the actual visual
-        // position so the new animation never jumps.
-        // When no animator is running, liveDelta is the gesture delta still in flight
-        // (callers must NOT zero liveDelta before calling commitSnap — we own that reset).
-        let visualOffset: CGFloat
-        if runningAnimator != nil,
-           let pf = outerView.layer.presentation()?.frame {
-            visualOffset = pf.origin.y - (h - expandedHeight)
-        } else {
-            visualOffset = snappedOffset + liveDelta
+        if runningAnimator != nil, let pf = outerView.layer.presentation()?.frame {
+            return pf.origin.y - (h - expandedHeight)
         }
-        let clampedVisual = min(max(0, visualOffset), collapsedOffset)
+        return snappedOffset + liveDelta
+    }
 
-        // ── 2: stop running animation ─────────────────────────────────────────────
-        runningAnimator?.stopAnimation(true)
-        runningAnimator = nil
-
-        // ── 3: snap model to current visual position ──────────────────────────────
-        snappedOffset = clampedVisual
+    /// When user starts dragging, immediately take over from any running snap animation
+    /// so the sheet can follow finger 1:1 without fighting background animators.
+    private func beginInteractiveControl() {
+        stopShapeDisplayLink()
+        if let animator = runningAnimator {
+            animator.stopAnimation(false)
+            animator.finishAnimation(at: .current)
+            runningAnimator = nil
+        }
+        let visual = min(max(0, currentVisualOffset()), collapsedOffset)
+        snappedOffset = visual
         liveDelta = 0
-        placeSheet(at: clampedVisual)
-        let visualProgress = clampedProgress(clampedVisual)
+        let p = clampedProgress(visual)
+        setShapeProgress(p)
         CATransaction.begin()
         CATransaction.setDisableActions(true)
+        placeSheet(at: visual, shapeProgressOverride: p)
+        applyCornerMask(top: topRadius(p), bottom: bottomRadius(p), progress: p)
+        CATransaction.commit()
+    }
+
+    private func commitSnap(to target: CGFloat, velocity: CGFloat) {
+        let clampedVisual = min(max(0, currentVisualOffset()), collapsedOffset)
+
+        // Invalidate older completions before stopping the current animation.
+        animationGeneration += 1
+        let generation = animationGeneration
+        stopShapeDisplayLink()
+        if let animator = runningAnimator {
+            // Freeze exactly at current visual state; do not jump to end-state.
+            animator.stopAnimation(false)
+            animator.finishAnimation(at: .current)
+        }
+        runningAnimator = nil
+
+        // Converge model state to current visual state first.
+        snappedOffset = clampedVisual
+        liveDelta = 0
+        let visualProgress = clampedProgress(clampedVisual)
+        setShapeProgress(visualProgress)
+        CATransaction.begin()
+        CATransaction.setDisableActions(true)
+        placeSheet(at: clampedVisual)
         applyCornerMask(top: topRadius(visualProgress),
                         bottom: bottomRadius(visualProgress),
                         progress: visualProgress)
         CATransaction.commit()
 
-        // ── 5: velocity normalisation (signed so expand and collapse are symmetric) ─
         let travel = target - clampedVisual
         let normV  = abs(travel) < 1 ? 0 : max(-30, min(30, velocity / travel))
 
         onSnapChanged?(target >= collapsedOffset)
         feedbackGenerator.impactOccurred()
 
-        // ── 6: lock scroll at top during collapse to prevent content bounce ────────
         if target == collapsedOffset, let sv = listScrollView {
             let topInset = -sv.adjustedContentInset.top
             delegateProxy?.lockedOffsetY = topInset
             delegateProxy?.cancelNext = true
         }
 
-        // ── 7: direction-specific spring — collapse uses higher damping so it
-        //       doesn't feel faster than expand at the same gesture velocity ────────
         let isCollapsing = target >= collapsedOffset - 1
         let dampingRatio: CGFloat = isCollapsing ? 0.95 : 0.88
-        let scaledNormV            = isCollapsing ? normV * 0.5 : normV
+        let scaledNormV = isCollapsing ? normV * 0.5 : normV
         let params = UISpringTimingParameters(
             dampingRatio: dampingRatio,
             initialVelocity: CGVector(dx: 0, dy: scaledNormV)
         )
         let anim = UIViewPropertyAnimator(duration: 0.68, timingParameters: params)
-
-        // Spring drives BOTH position and mask path (single source of truth,
-        // avoids drift from running two separate animations on coupled layers).
+        let targetShapeProgress = clampedProgress(target)
+        snapShapeStart = shapeProgressState
+        snapShapeTarget = targetShapeProgress
+        startSnapShapeFollow(duration: 0.68)
         anim.addAnimations { [weak self] in
             guard let self else { return }
-            let progress = self.clampedProgress(target)
+            // Position channel only.
             self.placeSheet(at: target)
-            self.setProgress(progress, animated: true)
         }
-
         anim.addCompletion { [weak self] _ in
             guard let self else { return }
+            guard generation == self.animationGeneration else { return }
+            self.stopShapeDisplayLink()
             self.snappedOffset = target
             self.liveDelta = 0
             self.runningAnimator = nil
             let p = self.clampedProgress(target)
+            self.setShapeProgress(p)
             CATransaction.begin()
             CATransaction.setDisableActions(true)
-            self.applyCornerMask(top: self.topRadius(p), bottom: self.bottomRadius(p), progress: p)
+            self.applyCornerMask(top: self.topRadius(self.shapeProgressState), bottom: self.bottomRadius(self.shapeProgressState), progress: self.shapeProgressState)
             CATransaction.commit()
+            self.placeSheet(at: target)
             if let sv = self.listScrollView, self.delegateProxy?.lockedOffsetY != nil {
                 self.delegateProxy?.lockedOffsetY = nil
                 sv.isScrollEnabled = true
@@ -475,10 +582,41 @@ final class SheetViewController: UIViewController {
         anim.startAnimation()
     }
 
+    private func settleAtCurrentPositionWithoutSnap() {
+        stopShapeDisplayLink()
+        if let animator = runningAnimator {
+            animator.stopAnimation(false)
+            animator.finishAnimation(at: .current)
+            runningAnimator = nil
+        }
+        let visual = min(max(0, currentVisualOffset()), collapsedOffset)
+        snappedOffset = visual
+        liveDelta = 0
+        let p = clampedProgress(visual)
+        setShapeProgress(p)
+        CATransaction.begin()
+        CATransaction.setDisableActions(true)
+        placeSheet(at: visual, shapeProgressOverride: p)
+        applyCornerMask(top: topRadius(p), bottom: bottomRadius(p), progress: p)
+        CATransaction.commit()
+    }
+
+    private func finalizeGestureAndSnap(source: String, velocity: CGFloat, translation: CGFloat, rawOffset: CGFloat) {
+        let clamped = min(max(0, rawOffset), collapsedOffset)
+        let shouldCollapse = resolveSnap(velocity: velocity, translation: translation, clamped: clamped)
+        lastGestureSource = source
+        commitSnap(to: shouldCollapse ? collapsedOffset : 0, velocity: velocity)
+    }
+
     // MARK: Snap decision
 
     private func resolveSnap(velocity: CGFloat, translation: CGFloat,
                               clamped: CGFloat) -> Bool {
+        // Special-case: when starting from collapsed, allow light upward pull
+        // to commit an expand instead of immediately snapping back down.
+        if snappedOffset >= collapsedOffset - 1, translation < 0 {
+            if velocity < -220 || translation < -34 { return false }
+        }
         if velocity > 650  || translation > collapsedOffset * 0.50 { return true }
         if velocity < -350 || translation < -70 { return false }
         return clamped > collapsedOffset * 0.68
@@ -487,14 +625,16 @@ final class SheetViewController: UIViewController {
     // MARK: Live drag visual update (during gesture, no animator)
 
     private func applyLiveDelta(_ delta: CGFloat) {
+        stopShapeDisplayLink()
         liveDelta = delta
         let raw      = snappedOffset + delta
         let progress = clampedProgress(raw)
+        setShapeProgress(progress)
         placeSheet(at: raw)
         // Disable CALayer implicit animations for immediate response
         CATransaction.begin()
         CATransaction.setDisableActions(true)
-        applyCornerMask(top: topRadius(progress), bottom: bottomRadius(progress), progress: progress)
+        applyCornerMask(top: topRadius(shapeProgressState), bottom: bottomRadius(shapeProgressState), progress: shapeProgressState)
         innerView.transform = .identity
         CATransaction.commit()
     }
@@ -513,21 +653,31 @@ final class SheetViewController: UIViewController {
 
         switch pan.state {
         case .began:
+            if activePanDriver == .list {
+                pan.state = .failed
+                return
+            }
+            beginInteractiveControl()
+            activePanDriver = .sheet
             feedbackGenerator.prepare()
 
         case .changed:
+            guard activePanDriver == .sheet else { return }
             applyLiveDelta(translation)
 
         case .ended, .cancelled, .failed:
-            let rawOffset = snappedOffset + translation
-            let clamped   = min(max(0, rawOffset), collapsedOffset)
-            let should    = resolveSnap(velocity: velocity,
-                                        translation: translation,
-                                        clamped: clamped)
-            // liveDelta is intentionally NOT zeroed here.
-            // commitSnap reads (snappedOffset + liveDelta) to get the correct
-            // current visual position when no animator is running.
-            commitSnap(to: should ? collapsedOffset : 0, velocity: velocity)
+            guard activePanDriver == .sheet else { return }
+            if disableGestureAutoSnap {
+                settleAtCurrentPositionWithoutSnap()
+            } else {
+                finalizeGestureAndSnap(
+                    source: "sheetPan",
+                    velocity: velocity,
+                    translation: translation,
+                    rawOffset: snappedOffset + translation
+                )
+            }
+            activePanDriver = .none
 
         default: break
         }
@@ -561,6 +711,10 @@ final class SheetViewController: UIViewController {
         return nil
     }
 
+    deinit {
+        stopShapeDisplayLink()
+    }
+
     @objc private func handleListPan(_ pan: UIPanGestureRecognizer) {
         guard let sv = listScrollView else { return }
         let topInset    = -sv.adjustedContentInset.top
@@ -570,74 +724,69 @@ final class SheetViewController: UIViewController {
 
         switch pan.state {
         case .began:
+            if activePanDriver == .sheet {
+                return
+            }
+            beginInteractiveControl()
+            activePanDriver = .list
+            if sheetPan.state == .possible || sheetPan.state == .began || sheetPan.state == .changed {
+                sheetPan.isEnabled = false
+                sheetPan.isEnabled = true
+            }
             feedbackGenerator.prepare()
 
         case .changed:
-            // ── Collapse: at list top, pulling down ──
-            if atTop && velocity > 0 {
+            guard activePanDriver == .list else { return }
+            if isCollapsedState {
+                // Rule 3: collapsed state ignores content scrolling.
+                sv.contentOffset.y = topInset
+                if translation < 0 {
+                    // Upward pull always acts like pulling the handle up.
+                    applyLiveDelta(translation)
+                } else {
+                    applyLiveDelta(0)
+                }
+                wasAtTop = true
+                break
+            }
+
+            // Rule 1: at list top, downward pull hands off to sheet collapse.
+            if atTop && translation > 0 {
                 if !wasAtTop { capturedTranslationAtTop = translation }
                 if let captured = capturedTranslationAtTop {
                     applyLiveDelta(max(0, translation - captured))
                     sv.contentOffset.y = topInset
                 }
-            } else if capturedTranslationAtTop != nil && !atTop {
+            } else {
+                // Rule 2: otherwise keep normal list scroll behavior.
                 capturedTranslationAtTop = nil
-                applyLiveDelta(0)
-            }
-
-            // ── Expand: sheet collapsed, pulling up ──
-            if isCollapsedState && translation < 0 {
-                if !isExpandingFromCollapsed {
-                    savedScrollOffsetY = topInset
-                    isExpandingFromCollapsed = true
-                    sv.isScrollEnabled = false
-                }
-                applyLiveDelta(translation)
-                delegateProxy?.cancelNext = true
-            }
-
-            // Block list scroll while collapsed and not yet expanding
-            if isCollapsedState && !isExpandingFromCollapsed {
-                sv.contentOffset.y = topInset
+                if liveDelta != 0 { applyLiveDelta(0) }
             }
 
             wasAtTop = atTop
 
         case .ended, .cancelled, .failed:
+            guard activePanDriver == .list else { return }
             let drag = liveDelta
             capturedTranslationAtTop = nil
             wasAtTop = false
 
             guard drag != 0 else {
-                sv.isScrollEnabled = true
-                isExpandingFromCollapsed = false
+                activePanDriver = .none
                 return
             }
 
-            if isExpandingFromCollapsed {
-                isExpandingFromCollapsed = false
-                delegateProxy?.cancelNext = true
-                // Pin the content offset and keep isScrollEnabled = false.
-                // Both are released inside commitSnap's addCompletion, which fires
-                // exactly when the spring animation settles — no timer needed.
-                delegateProxy?.lockedOffsetY = savedScrollOffsetY
-                sv.setContentOffset(CGPoint(x: sv.contentOffset.x, y: savedScrollOffsetY),
-                                    animated: false)
+            if disableGestureAutoSnap {
+                settleAtCurrentPositionWithoutSnap()
             } else {
-                // Collapsing gesture, or any other case: re-enable scroll immediately.
-                sv.isScrollEnabled = true
-                if drag > 0 && !atTop {
-                    delegateProxy?.cancelNext = true
-                    sv.setContentOffset(CGPoint(x: sv.contentOffset.x, y: topInset), animated: false)
-                }
+                finalizeGestureAndSnap(
+                    source: "listPan",
+                    velocity: velocity,
+                    translation: drag,
+                    rawOffset: snappedOffset + drag
+                )
             }
-
-            let rawOffset = snappedOffset + drag
-            let clamped   = min(max(0, rawOffset), collapsedOffset)
-            let should    = resolveSnap(velocity: velocity,
-                                        translation: drag, clamped: clamped)
-            // liveDelta is intentionally NOT zeroed here — commitSnap owns that reset.
-            commitSnap(to: should ? collapsedOffset : 0, velocity: velocity)
+            activePanDriver = .none
 
         default: break
         }
@@ -650,7 +799,12 @@ extension SheetViewController: UIGestureRecognizerDelegate {
 
     func gestureRecognizer(_ gr: UIGestureRecognizer,
                            shouldRecognizeSimultaneouslyWith other: UIGestureRecognizer) -> Bool {
-        true
+        // Critical: prevent the sheet pan and list pan from driving the sheet
+        // at the same time. Concurrent recognition can trigger two gesture-end
+        // paths close together, causing a transient "hide then expand" flash.
+        if gr === sheetPan, other === listScrollView?.panGestureRecognizer { return false }
+        if other === sheetPan, gr === listScrollView?.panGestureRecognizer { return false }
+        return true
     }
 
     func gestureRecognizer(_ gr: UIGestureRecognizer,
@@ -658,10 +812,10 @@ extension SheetViewController: UIGestureRecognizerDelegate {
         guard gr === sheetPan else { return true }
         // Must be inside the sheet panel
         guard outerView.frame.contains(touch.location(in: view)) else { return false }
-        // When list is present, let UIScrollView handle touches inside it
-        // (handleListPan drives the sheet from there). Exception: collapsed state,
-        // where we need sheetPan to respond for the expand gesture as well.
-        if !isListEmpty, let sv = listScrollView, !isCollapsedState {
+        // When list is present, always let UIScrollView handle touches inside it.
+        // The list pan is the single source of truth for expand/collapse gestures
+        // in non-empty state, including collapsed -> expand.
+        if !isListEmpty, let sv = listScrollView {
             let pointInSV = touch.location(in: sv)
             if sv.bounds.contains(pointInSV) { return false }
         }
