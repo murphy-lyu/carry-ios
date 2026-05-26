@@ -347,49 +347,6 @@ final class SheetViewController: UIViewController {
         innerMaskLayer.path = path.cgPath
     }
 
-    /// Computes the visible height of innerView at a given snap target position,
-    /// matching the formula used in applyCornerMask — needed to build the target
-    /// mask path analytically (without actually moving frames).
-    private func computeTargetVisibleH(for target: CGFloat) -> CGFloat {
-        let h     = view.bounds.height
-        let fullH = innerView.bounds.height
-        guard fullH > 0 else { return fullH }
-        let tp = clampedProgress(target)
-        let ep = effectProgress(tp)
-        guard ep > 0 else { return fullH }
-        // Replicate placeSheet's frame computation at the target position.
-        let targetOuterY = h - expandedHeight + target          // rubberBand(target)=target at snap point
-        let targetClipH  = h - bottomLift(tp)
-        let rawVisible   = targetClipH - targetOuterY
-        return max(0, min(fullH, fullH + ep * (rawVisible - fullH)))
-    }
-
-    /// Builds a CGPath with per-corner radii and an explicit visible height,
-    /// using the same arc geometry as applyCornerMask.
-    private func makeMaskPath(top: CGFloat, bottom: CGFloat, visibleH: CGFloat) -> CGPath {
-        let w     = innerView.bounds.width
-        let fullH = innerView.bounds.height
-        guard w > 0, fullH > 0 else { return UIBezierPath().cgPath }
-        let vH = max(0, min(fullH, visibleH))
-        let tl = top, tr = top, bl = bottom, br = bottom
-        let path = UIBezierPath()
-        path.move(to: CGPoint(x: tl, y: 0))
-        path.addLine(to: CGPoint(x: w - tr, y: 0))
-        path.addArc(withCenter: CGPoint(x: w - tr, y: tr),
-                    radius: tr, startAngle: -.pi / 2, endAngle: 0, clockwise: true)
-        path.addLine(to: CGPoint(x: w, y: vH - br))
-        path.addArc(withCenter: CGPoint(x: w - br, y: vH - br),
-                    radius: br, startAngle: 0, endAngle: .pi / 2, clockwise: true)
-        path.addLine(to: CGPoint(x: bl, y: vH))
-        path.addArc(withCenter: CGPoint(x: bl, y: vH - bl),
-                    radius: bl, startAngle: .pi / 2, endAngle: .pi, clockwise: true)
-        path.addLine(to: CGPoint(x: 0, y: tl))
-        path.addArc(withCenter: CGPoint(x: tl, y: tl),
-                    radius: tl, startAngle: .pi, endAngle: -.pi / 2, clockwise: true)
-        path.close()
-        return path.cgPath
-    }
-
     private func rubberBand(_ raw: CGFloat) -> CGFloat {
         let lo: CGFloat = 0, hi = collapsedOffset
         guard hi > lo else { return raw }
@@ -433,15 +390,11 @@ final class SheetViewController: UIViewController {
         }
         let clampedVisual = min(max(0, visualOffset), collapsedOffset)
 
-        // ── 2: capture current VISUAL mask path (may be mid-animation) ────────────
-        let startMaskPath = innerMaskLayer.presentation()?.path ?? innerMaskLayer.path
-
-        // ── 3: stop spring + remove any in-flight mask animation ─────────────────
+        // ── 2: stop running animation ─────────────────────────────────────────────
         runningAnimator?.stopAnimation(true)
         runningAnimator = nil
-        innerMaskLayer.removeAnimation(forKey: "sheetMaskPath")
 
-        // ── 4: snap model to current visual position ──────────────────────────────
+        // ── 3: snap model to current visual position ──────────────────────────────
         snappedOffset = clampedVisual
         liveDelta = 0
         placeSheet(at: clampedVisual)
@@ -478,11 +431,13 @@ final class SheetViewController: UIViewController {
         )
         let anim = UIViewPropertyAnimator(duration: 0.68, timingParameters: params)
 
-        // Position animation: spring drives only outerView/clippingView frames.
-        // Mask path has its own independent animation below (issue 4 fix).
+        // Spring drives BOTH position and mask path (single source of truth,
+        // avoids drift from running two separate animations on coupled layers).
         anim.addAnimations { [weak self] in
             guard let self else { return }
+            let progress = self.clampedProgress(target)
             self.placeSheet(at: target)
+            self.setProgress(progress, animated: true)
         }
 
         anim.addCompletion { [weak self] _ in
@@ -503,35 +458,6 @@ final class SheetViewController: UIViewController {
 
         runningAnimator = anim
         anim.startAnimation()
-
-        // ── 8: mask path animation — decoupled from spring ────────────────────────
-        // Corner radii and visibleH animate with easeOut on expand (slow start =
-        // no visual jump at the moment of release) and easeIn on collapse (front-
-        // loaded = decisive feel). Duration is shorter than the spring so the mask
-        // always settles before the animator's addCompletion fires.
-        let targetProgress = clampedProgress(target)
-        let targetVisibleH = computeTargetVisibleH(for: target)
-        let targetMaskPath = makeMaskPath(
-            top:      topRadius(targetProgress),
-            bottom:   bottomRadius(targetProgress),
-            visibleH: targetVisibleH
-        )
-        // Set model immediately so if this animation is interrupted the layer stays
-        // in a valid state.
-        CATransaction.begin()
-        CATransaction.setDisableActions(true)
-        innerMaskLayer.path = targetMaskPath
-        CATransaction.commit()
-
-        let maskDuration: Double  = isCollapsing ? 0.28 : 0.45
-        let maskTiming = CAMediaTimingFunction(name: isCollapsing ? .easeIn : .easeOut)
-        let pathAnim = CABasicAnimation(keyPath: "path")
-        pathAnim.fromValue            = startMaskPath
-        pathAnim.toValue              = targetMaskPath
-        pathAnim.duration             = maskDuration
-        pathAnim.timingFunction       = maskTiming
-        pathAnim.isRemovedOnCompletion = true
-        innerMaskLayer.add(pathAnim, forKey: "sheetMaskPath")
     }
 
     // MARK: Snap decision
