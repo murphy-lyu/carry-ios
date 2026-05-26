@@ -15793,29 +15793,6 @@
         }
       }
     },
-    "scenes.suggest.subtitle": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Select your trip scenes and we will try to suggest extra items you might have missed."
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "选择本次出行场景，我们会尝试补充一些可能遗漏的物品供你参考。"
-          }
-        },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "選擇本次出行場景，我們會嘗試補充一些可能遺漏的物品供你參考。"
-          }
-        }
-      }
-    },
     "scenes.update": {
       "extractionState": "manual",
       "localizations": {
@@ -19829,65 +19806,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "不需要補充了"
-          }
-        }
-      }
-    },
-    "suggestions.subtitle": {
-      "extractionState": "manual",
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "needs_review",
-            "value": "These items aren't in your list yet — add what you need"
-          }
-        },
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Based on your selected scenes, here are extra items you can add as needed"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "needs_review",
-            "value": "These items aren't in your list yet — add what you need"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "needs_review",
-            "value": "These items aren't in your list yet — add what you need"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "needs_review",
-            "value": "These items aren't in your list yet — add what you need"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "needs_review",
-            "value": "These items aren't in your list yet — add what you need"
-          }
-        },
-        "pt-BR": {
-          "stringUnit": {
-            "state": "needs_review",
-            "value": "These items aren't in your list yet — add what you need"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "以下是根据本次场景给你的补充建议，按需勾选加入清单"
-          }
-        },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "以下是根據本次場景給你的補充建議，按需勾選加入清單"
           }
         }
       }
