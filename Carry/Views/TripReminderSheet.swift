@@ -156,8 +156,8 @@ struct TripReminderSheet: View {
             .contentShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
         }
         .buttonStyle(.plain)
-        .disabled(isPastDeparture || notifStatus == .denied)
-        .opacity((isPastDeparture || notifStatus == .denied) ? 0.4 : 1)
+        .disabled(notifStatus == .denied)
+        .opacity(notifStatus == .denied ? 0.4 : 1)
         .padding(.bottom, 0)
     }
 
@@ -251,7 +251,6 @@ private struct ReminderRow: View {
             // Main row
             HStack(spacing: 0) {
                 Button(action: {
-                    guard !isPastDeparture else { return }
                     onTapTime()
                 }) {
                     HStack {
@@ -263,30 +262,26 @@ private struct ReminderRow: View {
                             Text(config.timeString)
                                 .font(.subheadline)
                                 .foregroundStyle(reminderTimeColor)
-                            if !isPastDeparture {
-                                Image(systemName: isExpanded ? "chevron.up" : "chevron.down")
-                                    .font(.caption2.weight(.semibold))
-                                    .foregroundStyle(reminderChevronColor)
-                            }
+                            Image(systemName: isExpanded ? "chevron.up" : "chevron.down")
+                                .font(.caption2.weight(.semibold))
+                                .foregroundStyle(reminderChevronColor)
                         }
                     }
                     .padding(.leading, 16)
-                    .padding(.trailing, isPastDeparture ? 16 : 10)
+                    .padding(.trailing, 10)
                     .padding(.vertical, 13)
                     .frame(maxWidth: .infinity)
                 }
                 .buttonStyle(.plain)
 
-                if !isPastDeparture {
-                    Button(action: onDelete) {
-                        Image(systemName: "minus.circle.fill")
-                            .foregroundStyle(reminderDeleteColor)
-                            .font(.system(size: 18, weight: .semibold))
-                    }
-                    .buttonStyle(.plain)
-                    .padding(.trailing, 16)
-                    .padding(.vertical, 13)
+                Button(action: onDelete) {
+                    Image(systemName: "minus.circle.fill")
+                        .foregroundStyle(reminderDeleteColor)
+                        .font(.system(size: 18, weight: .semibold))
                 }
+                .buttonStyle(.plain)
+                .padding(.trailing, 16)
+                .padding(.vertical, 13)
             }
 
             // Inline time picker (expanded)

@@ -132,16 +132,25 @@ struct PackingListView: View {
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .principal) {
-                ZStack {
+                VStack(spacing: 0) {
                     Text(bundle?.name ?? "")
                         .font(.headline)
                         .foregroundStyle(.primary)
                         .lineLimit(1)
                         .truncationMode(.tail)
                         .padding(.horizontal, 8)
+
+                    if let dateRange = tripDateRangeLine {
+                        Text(dateRange)
+                            .font(.caption2)
+                            .foregroundStyle(colorScheme == .dark ? Color.secondary.opacity(0.78) : Color.secondary.opacity(0.9))
+                            .lineLimit(1)
+                            .truncationMode(.tail)
+                            .padding(.horizontal, 8)
+                    }
                 }
                 .frame(maxWidth: .infinity)
-                .frame(height: 36)
+                .frame(height: 38)
                 .contentShape(Rectangle())
                 .onTapGesture {
                     dismissInlineEditing()
@@ -667,11 +676,11 @@ struct PackingListView: View {
                 GeometryReader { geo in
                     ZStack(alignment: .leading) {
                         RoundedRectangle(cornerRadius: 1)
-                            .fill(colorScheme == .dark ? Color.white.opacity(0.12) : Color(UIColor.systemGray5))
-                            .frame(height: 2.5)
+                            .fill(colorScheme == .dark ? Color.white.opacity(0.09) : Color(UIColor.systemGray5).opacity(0.82))
+                            .frame(height: 2)
                         RoundedRectangle(cornerRadius: 1)
                             .fill(Color.primary)
-                            .frame(width: max(0, geo.size.width * progress), height: 2.5)
+                            .frame(width: max(0, geo.size.width * progress), height: 2)
                             .overlay {
                                 LinearGradient(
                                     colors: [.clear, Color(UIColor.systemBackground).opacity(0.65), .clear],
@@ -700,51 +709,62 @@ struct PackingListView: View {
     }
 
     private var tripInfoCard: some View {
-        HStack(spacing: 8) {
-            Button {
-                showReminderSheet = true
-            } label: {
-                HStack(spacing: 4) {
-                    Image(systemName: reminderStatusIconName)
-                        .font(.system(size: 9, weight: .semibold))
-                    Text(reminderStatusText)
-                        .font(.caption2.weight(.medium))
-                    Image(systemName: "chevron.right")
-                        .font(.system(size: 7, weight: .semibold))
-                        .foregroundStyle(.tertiary)
+        VStack(alignment: .leading, spacing: 4) {
+            HStack(spacing: 8) {
+                HStack(spacing: 5) {
+                    Image(systemName: "shippingbox")
+                        .font(.system(size: 10, weight: .medium))
+                        .foregroundStyle(.secondary.opacity(colorScheme == .dark ? 0.9 : 0.82))
+                    Text(packingStatusText)
+                        .font(.caption.weight(.medium))
+                        .foregroundStyle(.primary.opacity(colorScheme == .dark ? 0.75 : 0.65))
                 }
-                .foregroundStyle(colorScheme == .dark ? Color.secondary.opacity(0.88) : .secondary)
-                .padding(.horizontal, 7)
-                .padding(.vertical, 4)
-                .background(
-                    Capsule(style: .continuous)
-                        .fill(colorScheme == .dark ? Color.white.opacity(0.04) : Color.black.opacity(0.03))
-                )
-                .overlay(
-                    Capsule(style: .continuous)
-                        .strokeBorder(Color.primary.opacity(colorScheme == .dark ? 0.02 : 0.03), lineWidth: 1)
-                )
+                    .animation(.easeInOut(duration: 0.2), value: packedCount)
+                    .animation(.easeInOut(duration: 0.2), value: totalCount)
+
+                Spacer(minLength: 8)
+
+                Button {
+                    showReminderSheet = true
+                } label: {
+                    HStack(spacing: 4) {
+                        Image(systemName: reminderStatusIconName)
+                            .font(.system(size: 9, weight: .semibold))
+                        Text(reminderStatusText)
+                            .font(.caption2.weight(.medium))
+                        Image(systemName: "chevron.right")
+                            .font(.system(size: 7, weight: .semibold))
+                            .foregroundStyle(.tertiary)
+                    }
+                    .foregroundStyle(colorScheme == .dark ? Color.secondary.opacity(0.88) : .secondary)
+                    .padding(.horizontal, 7)
+                    .padding(.vertical, 4)
+                    .background(
+                        Capsule(style: .continuous)
+                            .fill(colorScheme == .dark ? Color.white.opacity(0.028) : Color.black.opacity(0.022))
+                    )
+                    .overlay(
+                        Capsule(style: .continuous)
+                            .strokeBorder(Color.primary.opacity(colorScheme == .dark ? 0.012 : 0.02), lineWidth: 1)
+                    )
+                }
+                .buttonStyle(.plain)
             }
-            .buttonStyle(.plain)
 
-            Spacer(minLength: 0)
         }
-        .padding(.horizontal, 14)
-        .padding(.vertical, 8)
-        .background(
-            RoundedRectangle(cornerRadius: 16, style: .continuous)
-                .fill(cardBackground)
-        )
-    }
-
-    private var cardBackground: Color {
-        Color(UIColor.secondarySystemBackground)
+        .padding(.horizontal, 2)
+        .padding(.vertical, 4)
     }
 
     private var tripInfoLine: String {
         [bundle?.destinationCity, bundle?.localizedDateRange]
             .compactMap { str in (str?.isEmpty == false) ? str : nil }
             .joined(separator: " · ")
+    }
+
+    private var tripDateRangeLine: String? {
+        guard let date = bundle?.localizedDateRange, !date.isEmpty else { return nil }
+        return date
     }
 
     private var completionBanner: some View {
@@ -796,6 +816,16 @@ struct PackingListView: View {
             return "bell.slash"
         }
         return "bell.fill"
+    }
+
+    private var packingStatusText: String {
+        if totalCount == 0 {
+            return NSLocalizedString("packing.empty.items", comment: "")
+        }
+        if isComplete {
+            return NSLocalizedString("packing.complete.short", comment: "")
+        }
+        return "\(totalCount - packedCount) left"
     }
 
     private var sceneEntryCard: some View {
