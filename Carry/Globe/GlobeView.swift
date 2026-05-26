@@ -127,20 +127,17 @@ struct GlobeMapView: View, Equatable {
         lhs.cityOpacity == rhs.cityOpacity
             && lhs.mapStyleOption == rhs.mapStyleOption
             && lhs.showUserLocation == rhs.showUserLocation
+            && lhs.introSpinTrigger == rhs.introSpinTrigger
             && lhs.visitedCities.count == rhs.visitedCities.count
             && lhs.visitedCountries.count == rhs.visitedCountries.count
             && zip(lhs.visitedCities, rhs.visitedCities).allSatisfy { $0.id == $1.id }
             && zip(lhs.visitedCountries, rhs.visitedCountries).allSatisfy { $0.countryCode == $1.countryCode }
     }
 
-    @State private var position: MapCameraPosition = .camera(
-        MapCamera(
-            centerCoordinate: CLLocationCoordinate2D(latitude: 25, longitude: 100),
-            distance: 30_000_000,
-            heading: 0,
-            pitch: 0
-        )
-    )
+    /// Incremented once per session on the first sheet collapse to trigger the intro spin.
+    var introSpinTrigger: Int = 0
+
+    @State private var position: MapCameraPosition = .automatic
     @State private var cityDotsAppeared: Bool = false
     @State private var userPulseAnimating: Bool = false
     @State private var userPulseAnimating2: Bool = false
@@ -186,6 +183,29 @@ struct GlobeMapView: View, Equatable {
             if !newValue {
                 userPulseAnimating = false
                 userPulseAnimating2 = false
+            }
+        }
+        .onChange(of: introSpinTrigger) { _, new in
+            guard new > 0 else { return }
+            // Use the current live camera position; fall back to a reasonable default.
+            let fallback = MapCamera(
+                centerCoordinate: CLLocationCoordinate2D(latitude: 25, longitude: 100),
+                distance: 30_000_000
+            )
+            let cam = position.camera ?? fallback
+            // Rotate the globe by 30° — feels alive without being distracting.
+            // Tunable parameters:
+            //   • heading offset: how far it rotates (larger = more dramatic)
+            //   • duration: speed of the spin (longer = more cinematic)
+            //   • delay: pause before spin starts (lets the sheet settle first)
+            let rotated = MapCamera(
+                centerCoordinate: cam.centerCoordinate,
+                distance: cam.distance,
+                heading: cam.heading + 30,
+                pitch: cam.pitch
+            )
+            withAnimation(.easeInOut(duration: 2.0).delay(0.15)) {
+                position = .camera(rotated)
             }
         }
     }

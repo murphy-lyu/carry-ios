@@ -96,9 +96,22 @@ final class SheetViewController: UIViewController {
     /// Gap between sheet bottom and screen bottom when collapsed.
     private let collapsedBottomMargin: CGFloat = 8
 
+    // MARK: Effect progress
+
+    /// Visual effects (side margins, bottom lift, corner radii) only activate in the
+    /// last 35% of the collapse travel, so the sheet slides down at full size and
+    /// snaps into the pill shape near the end — matching Tripsy / Flighty behaviour.
+    /// During expand the pill dissolves in the first 35% of travel, then the sheet
+    /// rises at full width for the remaining 65%.
+    private func effectProgress(_ p: CGFloat) -> CGFloat {
+        let threshold: CGFloat = 0.65
+        guard p > threshold else { return 0 }
+        return (p - threshold) / (1 - threshold)
+    }
+
     // Interpolated helpers (progress: 0 = expanded, 1 = collapsed)
-    private func topRadius(_ p: CGFloat)    -> CGFloat { expandedRadius + p * (collapsedTopRadius    - expandedRadius) }
-    private func bottomRadius(_ p: CGFloat) -> CGFloat { expandedRadius + p * (collapsedBottomRadius - expandedRadius) }
+    private func topRadius(_ p: CGFloat)    -> CGFloat { expandedRadius + effectProgress(p) * (collapsedTopRadius    - expandedRadius) }
+    private func bottomRadius(_ p: CGFloat) -> CGFloat { expandedRadius + effectProgress(p) * (collapsedBottomRadius - expandedRadius) }
 
     /// Called on main thread when a snap animation begins.
     var onSnapChanged: ((Bool) -> Void)?
@@ -211,7 +224,7 @@ final class SheetViewController: UIViewController {
         CATransaction.begin()
         CATransaction.setDisableActions(true)
         applyCornerMask(top: topRadius(progress), bottom: bottomRadius(progress), progress: progress)
-        innerView.transform = CGAffineTransform(scaleX: 1.0 - progress * 0.05, y: 1)
+        innerView.transform = .identity
         CATransaction.commit()
     }
 
@@ -265,8 +278,9 @@ final class SheetViewController: UIViewController {
         // clippingView: full width, shrinks from the bottom by `lift` (bottom margin).
         clippingView.frame = CGRect(x: 0, y: 0, width: w, height: h - lift)
 
-        // outerView: insets horizontally by sideMargin * progress (floating pill effect).
-        let sideMargin = collapsedSideMargin * progress
+        // outerView: side margins only appear in the last 35% of travel (effectProgress),
+        // so the sheet slides down at full width before snapping into the pill shape.
+        let sideMargin = collapsedSideMargin * effectProgress(progress)
         let y = h - expandedHeight + banded
         outerView.frame = CGRect(x: sideMargin, y: y,
                                  width: w - 2 * sideMargin, height: expandedHeight)
@@ -277,9 +291,7 @@ final class SheetViewController: UIViewController {
     /// Called inside UIViewPropertyAnimator.addAnimations — the animator drives
     /// the implicit CALayer animations on the mask path and transform.
     private func setProgress(_ progress: CGFloat, animated: Bool) {
-        let scaleX: CGFloat = 1.0 - progress * 0.05  // 1.0 → 0.95
         applyCornerMask(top: topRadius(progress), bottom: bottomRadius(progress), progress: progress)
-        innerView.transform = CGAffineTransform(scaleX: scaleX, y: 1)
     }
 
     /// Updates `innerMaskLayer.path` in place with per-corner radii.
@@ -295,10 +307,13 @@ final class SheetViewController: UIViewController {
         let fullH = innerView.bounds.height
         guard w > 0, fullH > 0 else { return }
 
-        // Visible portion of innerView within clippingView.
-        // outerView.frame is in clippingView's coordinate space (clippingView.origin.y == 0).
+        // During most of the descent the bottom corners stay off-screen (mask at fullH),
+        // so the screen edge acts as a natural clip — no visible compression.
+        // Only in the last 35% of travel (effectProgress) does visibleH transition
+        // toward rawVisible, letting the pill's bottom corners float up into view.
         let rawVisible = clippingView.frame.height - outerView.frame.origin.y
-        let visibleH   = max(0, min(fullH, rawVisible))
+        let ep         = effectProgress(progress)
+        let visibleH   = max(0, min(fullH, fullH + ep * (rawVisible - fullH)))
 
         // True circular arcs — addArc produces the same geometry as CALayer
         // corner rounding, unlike the quadBezier approximation.
@@ -346,11 +361,9 @@ final class SheetViewController: UIViewController {
         return min(max(0, raw), collapsedOffset) / collapsedOffset
     }
 
-    /// How much to shrink clippingView from the bottom.
-    /// scaleX = 1 - progress*0.05  →  each side gap = progress * 0.025 * width.
-    /// Using the same value here makes left ≈ right ≈ bottom gaps visually equal.
+    /// How much to shrink clippingView from the bottom (only in last 35% of travel).
     private func bottomLift(_ progress: CGFloat) -> CGFloat {
-        progress * collapsedBottomMargin
+        effectProgress(progress) * collapsedBottomMargin
     }
 
     // MARK: Snap animation
@@ -424,7 +437,7 @@ final class SheetViewController: UIViewController {
         CATransaction.begin()
         CATransaction.setDisableActions(true)
         applyCornerMask(top: topRadius(progress), bottom: bottomRadius(progress), progress: progress)
-        innerView.transform = CGAffineTransform(scaleX: 1.0 - progress * 0.05, y: 1)
+        innerView.transform = .identity
         CATransaction.commit()
     }
 
