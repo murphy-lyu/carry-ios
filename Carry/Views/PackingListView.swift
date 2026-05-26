@@ -121,7 +121,6 @@ struct PackingListView: View {
         .safeAreaInset(edge: .bottom) {
             if isNewTrip {
                 saveTripButton
-                    .padding(.bottom, 16)
             }
         }
         .coordinateSpace(name: "packingRoot")
@@ -1212,9 +1211,19 @@ struct PackingListView: View {
                 .animation(.easeInOut(duration: 0.2), value: isSaved)
             }
             .padding(.horizontal, 16)
-            .padding(.top, 6)
+            .padding(.top, 12)
+            .padding(.bottom, 16)
         }
-        .padding(.bottom, 4)
+        .background(
+            LinearGradient(
+                colors: [
+                    Color(UIColor.systemBackground).opacity(0.92),
+                    Color(UIColor.systemBackground).opacity(0.82)
+                ],
+                startPoint: .top,
+                endPoint: .bottom
+            )
+        )
     }
 
     private var toastBanner: some View {
