@@ -95,7 +95,7 @@ final class SheetViewController: UIViewController {
     /// Top-left / top-right radius when fully collapsed.
     private let collapsedTopRadius:    CGFloat = 36
     /// Bottom-left / bottom-right radius when fully collapsed.
-    private let collapsedBottomRadius: CGFloat = 49
+    private let collapsedBottomRadius: CGFloat = 48
     /// Horizontal inset on each side when collapsed.
     private let collapsedSideMargin:   CGFloat = 8
     /// Gap between sheet bottom and screen bottom when collapsed.
