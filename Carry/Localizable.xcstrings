@@ -26150,7 +26150,7 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Recommended items added"
+            "value": "Recommended items selected"
           }
         },
         "es": {
@@ -26186,13 +26186,13 @@
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "已补充推荐物品"
+            "value": "已为你选好推荐物品"
           }
         },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "已補充推薦物品"
+            "value": "已為你選好推薦物品"
           }
         }
       }
