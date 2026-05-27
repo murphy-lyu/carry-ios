@@ -23408,7 +23408,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Choose your travel scenarios for a more tailored list"
+            "value" : "Pick your scenes and we'll help you spot what's missing"
           }
         },
         "es" : {
@@ -23444,13 +23444,13 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "选择旅行场景，生成更贴合的清单"
+            "value" : "选好场景，帮你查漏补缺"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "選擇旅行場景，生成更貼合的清單"
+            "value" : "選好場景，幫你查漏補缺"
           }
         }
       }
@@ -33115,7 +33115,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "No extra items needed"
+            "value" : "Nothing to add"
           }
         },
         "es" : {
@@ -33151,13 +33151,13 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "不需要补充了"
+            "value" : "不用添加了"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "不需要補充了"
+            "value" : "不用新增了"
           }
         }
       }
@@ -33174,7 +33174,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Suggested extra items"
+            "value" : "You might also need"
           }
         },
         "es" : {
@@ -33210,13 +33210,13 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "推荐补充物品"
+            "value" : "你可能还需要"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "推薦補充物品"
+            "value" : "你可能還需要"
           }
         }
       }
