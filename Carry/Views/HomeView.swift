@@ -142,6 +142,8 @@ struct HomeView: View {
     /// Observes the UserDefaults key written by the Dev Options toggle.
     @AppStorage(sheetVariantDefaultsKey) private var sheetVariantRaw: String = SheetVariant.fallback.rawValue
     @AppStorage("mapStyleOption") private var mapStyleRaw: String = MapStyleOption.hybrid.rawValue
+    @AppStorage("hasShownFirstTripShimmer") private var hasShownFirstTripShimmer = false
+    @State private var shimmerTripId: UUID? = nil
     @State private var locationPermission = LocationPermissionManager()
     private var mapStyleOption: MapStyleOption {
         MapStyleOption(rawValue: mapStyleRaw) ?? .hybrid
@@ -378,6 +380,11 @@ struct HomeView: View {
                 if path.isEmpty {
                     store.refresh()
                     rebuildTripLists()
+                    if !hasShownFirstTripShimmer, store.trips.count == 1,
+                       let first = store.trips.first {
+                        hasShownFirstTripShimmer = true
+                        shimmerTripId = first.id
+                    }
                 }
             }
             .onChange(of: store.trips) { _, _ in
@@ -826,7 +833,7 @@ struct HomeView: View {
         Button {
             openTrip(bundle)
         } label: {
-            TripCard(bundle: bundle, isPast: isPast)
+            TripCard(bundle: bundle, isPast: isPast, shimmer: bundle.id == shimmerTripId)
         }
         .buttonStyle(PressableScaleButtonStyle(scale: 0.982, pressedBrightness: -0.02, pressedOpacity: 0.96))
         .id("\(bundle.id.uuidString)-\(bundle.packedCount)-\(bundle.totalCount)")
@@ -868,6 +875,10 @@ struct TripCard: View {
 
     let bundle: TripBundle
     var isPast: Bool = false
+    var shimmer: Bool = false
+
+    @State private var shimmerProgress: CGFloat = 0
+    @State private var didPlayShimmer = false
 
     private var progress: Double {
         bundle.totalCount == 0 ? 0 : Double(bundle.packedCount) / Double(bundle.totalCount)
@@ -1091,6 +1102,39 @@ struct TripCard: View {
         )
         .shadow(color: cardShadow, radius: isPast ? 10 : 14, x: 0, y: isPast ? 5 : 7)
         .contentShape(RoundedRectangle(cornerRadius: 18))
+        .overlay {
+            if shimmer {
+                GeometryReader { geo in
+                    let w = geo.size.width
+                    let stripW = w * 0.62
+                    LinearGradient(
+                        stops: [
+                            .init(color: .clear, location: 0),
+                            .init(color: .white.opacity(0.16), location: 0.3),
+                            .init(color: .white.opacity(0.28), location: 0.5),
+                            .init(color: .white.opacity(0.16), location: 0.7),
+                            .init(color: .clear, location: 1)
+                        ],
+                        startPoint: .leading,
+                        endPoint: .trailing
+                    )
+                    .frame(width: stripW)
+                    .offset(x: -stripW + (w + stripW) * shimmerProgress)
+                }
+                .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+                .allowsHitTesting(false)
+            }
+        }
+        .onAppear {
+            guard shimmer, !didPlayShimmer else { return }
+            didPlayShimmer = true
+            Task { @MainActor in
+                try? await Task.sleep(for: .milliseconds(320))
+                withAnimation(.easeInOut(duration: 0.72)) {
+                    shimmerProgress = 1
+                }
+            }
+        }
     }
 
     private func statusPill(_ text: String) -> some View {
