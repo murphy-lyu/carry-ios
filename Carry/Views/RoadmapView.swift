@@ -8,7 +8,7 @@ import Combine
 
 private enum RoadmapRemote {
     // Default remote URL. You can override this inside the app UI.
-    static let urlString = "https://raw.githubusercontent.com/your-user/your-repo/main/roadmap.json"
+    static let urlString = "https://raw.githubusercontent.com/murphy-lyu/carry-ios/main/roadmap.json"
 }
 
 private enum RoadmapL10n {
@@ -54,35 +54,38 @@ private struct RoadmapPayload: Codable {
     var sections: [RoadmapSection]
 
     static let embeddedDefault = RoadmapPayload(
-        updatedAt: "2026-05-20",
+        updatedAt: "2026-05-27",
         banner: RoadmapL10n.text(
-            en: "🚀 App Store launch, July 2026",
-            zhHans: "🚀 App Store 上线，2026年7月",
-            zhHant: "🚀 App Store 上線，2026年7月"
+            en: "🎉 Now on the App Store · Actively shipping",
+            zhHans: "🎉 已上线 App Store · 持续迭代中",
+            zhHant: "🎉 已上線 App Store · 持續迭代中"
         ),
         sections: [
             RoadmapSection(
                 id: "upcoming",
-                title: RoadmapL10n.text(
-                    en: "Upcoming",
-                    zhHans: "即将推出的更新",
-                    zhHant: "即將推出的更新"
-                ),
+                title: RoadmapL10n.text(en: "Upcoming", zhHans: "即将推出", zhHant: "即將推出"),
                 items: [
-                    RoadmapItem(id: "weather", title: RoadmapL10n.text(en: "Weather forecast", zhHans: "天气预报", zhHant: "天氣預報"), status: .inProgress, note: nil),
-                    RoadmapItem(id: "trip-stats", title: RoadmapL10n.text(en: "Trip insights", zhHans: "行程统计", zhHant: "行程統計"), status: .planned, note: nil)
+                    RoadmapItem(id: "weather", title: RoadmapL10n.text(en: "Weather forecast", zhHans: "目的地天气预报", zhHant: "目的地天氣預報"), status: .planned, note: nil),
+                    RoadmapItem(id: "destination-info", title: RoadmapL10n.text(en: "Destination info (plugs, voltage, currency)", zhHans: "目的地实用信息（充电插头、电压、货币）", zhHant: "目的地實用資訊（充電插頭、電壓、貨幣）"), status: .planned, note: nil),
+                    RoadmapItem(id: "import-itinerary", title: RoadmapL10n.text(en: "Import trips from email / bookings", zhHans: "邮件 / 订单导入行程", zhHant: "郵件 / 訂單匯入行程"), status: .planned, note: nil)
                 ]
             ),
             RoadmapSection(
                 id: "done",
                 title: RoadmapL10n.text(en: "Shipped", zhHans: "已上线", zhHant: "已上線"),
                 items: [
-                    RoadmapItem(id: "item-quantity", title: RoadmapL10n.text(en: "Item quantity", zhHans: "物品数量", zhHant: "物品數量"), status: .done, note: nil),
-                    RoadmapItem(id: "trip-duplication", title: RoadmapL10n.text(en: "Trip duplication", zhHans: "复制行程", zhHant: "複製行程"), status: .done, note: nil),
+                    RoadmapItem(id: "packing-reminder", title: RoadmapL10n.text(en: "Packing reminders", zhHans: "打包提醒", zhHant: "打包提醒"), status: .done, note: nil),
+                    RoadmapItem(id: "share-list", title: RoadmapL10n.text(en: "Share packing list", zhHans: "分享清单", zhHant: "分享清單"), status: .done, note: nil),
+                    RoadmapItem(id: "world-map", title: RoadmapL10n.text(en: "World map & visited countries", zhHans: "世界地图 & 到访国家", zhHant: "世界地圖 & 到訪國家"), status: .done, note: nil),
+                    RoadmapItem(id: "backup-restore", title: RoadmapL10n.text(en: "Backup & restore", zhHans: "备份与还原", zhHant: "備份與還原"), status: .done, note: nil),
+                    RoadmapItem(id: "app-icons", title: RoadmapL10n.text(en: "App icon themes", zhHans: "多套应用图标", zhHant: "多套應用圖示"), status: .done, note: nil),
+                    RoadmapItem(id: "siri-shortcuts", title: RoadmapL10n.text(en: "Siri shortcuts", zhHans: "Siri 快捷指令", zhHant: "Siri 捷徑"), status: .done, note: nil),
+                    RoadmapItem(id: "smart-suggestions", title: RoadmapL10n.text(en: "Smart suggestions", zhHans: "智能推荐清单", zhHant: "智能推薦清單"), status: .done, note: nil),
                     RoadmapItem(id: "worth-considering", title: RoadmapL10n.text(en: "Worth considering", zhHans: "顺手考虑一下", zhHant: "順手考慮一下"), status: .done, note: nil),
-                    RoadmapItem(id: "smart-suggestion", title: RoadmapL10n.text(en: "Smart suggestions", zhHans: "智能推荐清单", zhHant: "智能推薦清單"), status: .done, note: nil),
                     RoadmapItem(id: "custom-section", title: RoadmapL10n.text(en: "Custom sections", zhHans: "自定义分类", zhHant: "自定義分類"), status: .done, note: nil),
-                    RoadmapItem(id: "sorting", title: RoadmapL10n.text(en: "Item & section sorting", zhHans: "物品与分类排序", zhHant: "物品與分類排序"), status: .done, note: nil)
+                    RoadmapItem(id: "sorting", title: RoadmapL10n.text(en: "Item & section sorting", zhHans: "物品与分类排序", zhHant: "物品與分類排序"), status: .done, note: nil),
+                    RoadmapItem(id: "trip-duplicate", title: RoadmapL10n.text(en: "Trip duplication", zhHans: "复制行程", zhHant: "複製行程"), status: .done, note: nil),
+                    RoadmapItem(id: "item-quantity", title: RoadmapL10n.text(en: "Item quantity", zhHans: "物品数量", zhHant: "物品數量"), status: .done, note: nil)
                 ]
             )
         ]
