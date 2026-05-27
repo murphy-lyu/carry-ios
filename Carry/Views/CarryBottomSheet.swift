@@ -173,6 +173,10 @@ final class SheetViewController: UIViewController {
     /// Reused mask layer on innerView — path is updated in place so
     /// UIViewPropertyAnimator can spring-animate it automatically.
     private let innerMaskLayer = CAShapeLayer()
+    private var lastMaskW: CGFloat = -1
+    private var lastMaskTop: CGFloat = -1
+    private var lastMaskBottom: CGFloat = -1
+    private var lastMaskVisibleH: CGFloat = -1
     /// SwiftUI hosting view — referenced so placeSheet can keep its frame
     /// in lockstep with outerView/innerView. Relying on autoresizingMask
     /// alone caused SwiftUI content to drift right with each gesture: the
@@ -359,7 +363,7 @@ final class SheetViewController: UIViewController {
         stopDirectMaskSync()
         directMaskSyncProgress = fixedProgress
         let link = CADisplayLink(target: self, selector: #selector(handleDirectMaskSyncTick(_:)))
-        link.preferredFrameRateRange = CAFrameRateRange(minimum: 30, maximum: 60, preferred: 60)
+        link.preferredFrameRateRange = CAFrameRateRange(minimum: 60, maximum: 120, preferred: 120)
         link.add(to: .main, forMode: .common)
         directMaskSyncDisplayLink = link
     }
@@ -392,7 +396,7 @@ final class SheetViewController: UIViewController {
         directPositionFixedProgress = fixedProgress
         directPositionCompletion = completion
         let link = CADisplayLink(target: self, selector: #selector(handleDirectPositionTick(_:)))
-        link.preferredFrameRateRange = CAFrameRateRange(minimum: 30, maximum: 60, preferred: 60)
+        link.preferredFrameRateRange = CAFrameRateRange(minimum: 60, maximum: 120, preferred: 120)
         link.add(to: .main, forMode: .common)
         directPositionDisplayLink = link
     }
@@ -425,7 +429,7 @@ final class SheetViewController: UIViewController {
         }
         let startTime = CACurrentMediaTime()
         let link = CADisplayLink(target: self, selector: #selector(handleShapeDisplayLink(_:)))
-        link.preferredFrameRateRange = CAFrameRateRange(minimum: 30, maximum: 60, preferred: 60)
+        link.preferredFrameRateRange = CAFrameRateRange(minimum: 60, maximum: 120, preferred: 120)
         link.add(to: .main, forMode: .common)
         link.accessibilityLabel = "\(startTime)|\(duration)"
         shapeDisplayLink = link
@@ -498,6 +502,14 @@ final class SheetViewController: UIViewController {
         let ep         = bottomRevealProgress(progress)
         let visibleH   = max(0, min(fullH, fullH + ep * (rawVisible - fullH)))
 
+        // Path rebuild is expensive. Skip tiny deltas that are visually identical.
+        if abs(w - lastMaskW) < 0.25,
+           abs(top - lastMaskTop) < 0.25,
+           abs(bottom - lastMaskBottom) < 0.25,
+           abs(visibleH - lastMaskVisibleH) < 0.5 {
+            return
+        }
+
         // True circular arcs — addArc produces the same geometry as CALayer
         // corner rounding, unlike the quadBezier approximation.
         let path = UIBezierPath()
@@ -524,6 +536,10 @@ final class SheetViewController: UIViewController {
         // Updating `.path` on the existing layer (not replacing the layer) lets
         // UIViewPropertyAnimator interpolate it as a CALayer animatable property.
         innerMaskLayer.path = path.cgPath
+        lastMaskW = w
+        lastMaskTop = top
+        lastMaskBottom = bottom
+        lastMaskVisibleH = visibleH
     }
 
     private func rubberBand(_ raw: CGFloat) -> CGFloat {
