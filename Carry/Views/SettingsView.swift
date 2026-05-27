@@ -800,6 +800,25 @@ private struct DeveloperModeView: View {
 
     var body: some View {
         List {
+            Section("settings.developer.mock_group") {
+                Toggle(isOn: Binding(
+                    get: { store.isHomeEmptyStateMockEnabled },
+                    set: { newValue in
+                        store.setHomeEmptyStateMockEnabled(newValue)
+                        UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                        showToast(newValue ? String(localized: "settings.mock.home_empty_state.enabled") : String(localized: "settings.mock.home_empty_state.disabled"))
+                    }
+                )) {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("settings.mock.home_empty_state")
+                        Text("settings.mock.home_empty_state.subtitle")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+                }
+                .tint(colorScheme == .dark ? Color.accentColor.opacity(0.86) : Color.accentColor)
+            }
+
             Section("settings.developer.reset_group") {
                 actionRow(title: "settings.debug.reset_support_tone") {
                     coffeeStore.debugResetSupportCount()
@@ -819,25 +838,6 @@ private struct DeveloperModeView: View {
                     UIImpactFeedbackGenerator(style: .light).impactOccurred()
                     showToast("settings.developer.test_notifications.success")
                 }
-            }
-
-            Section("settings.developer.mock_group") {
-                Toggle(isOn: Binding(
-                    get: { store.isHomeEmptyStateMockEnabled },
-                    set: { newValue in
-                        store.setHomeEmptyStateMockEnabled(newValue)
-                        UIImpactFeedbackGenerator(style: .light).impactOccurred()
-                        showToast(newValue ? String(localized: "settings.mock.home_empty_state.enabled") : String(localized: "settings.mock.home_empty_state.disabled"))
-                    }
-                )) {
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text("settings.mock.home_empty_state")
-                        Text("settings.mock.home_empty_state.subtitle")
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                    }
-                }
-                .tint(colorScheme == .dark ? Color.accentColor.opacity(0.86) : Color.accentColor)
             }
 
             Section("settings.developer.sheet_group") {
