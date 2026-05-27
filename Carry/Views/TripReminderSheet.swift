@@ -111,7 +111,7 @@ struct TripReminderSheet: View {
                     Divider()
                         .padding(.leading, 20)
                         .padding(.trailing, 20)
-                        .opacity(colorScheme == .dark ? 0.42 : 1)
+                        .opacity(colorScheme == .dark ? 0.62 : 1)
                 }
             }
 
@@ -121,7 +121,7 @@ struct TripReminderSheet: View {
                     .padding(.trailing, 20)
                     .padding(.top, 2)
                     .padding(.bottom, 12)
-                    .opacity(colorScheme == .dark ? 0.42 : 1)
+                    .opacity(colorScheme == .dark ? 0.62 : 1)
             }
 
             addReminderRow
@@ -147,11 +147,11 @@ struct TripReminderSheet: View {
             .foregroundStyle(colorScheme == .dark ? Color.primary.opacity(0.86) : .primary)
             .background(
                 RoundedRectangle(cornerRadius: 16, style: .continuous)
-                    .fill(colorScheme == .dark ? Color(UIColor.secondarySystemBackground) : Color(UIColor.systemBackground))
+                    .fill(colorScheme == .dark ? Color(UIColor.secondarySystemBackground).opacity(0.82) : Color(UIColor.systemBackground))
             )
             .overlay(
                 RoundedRectangle(cornerRadius: 16, style: .continuous)
-                    .strokeBorder(colorScheme == .dark ? Color.white.opacity(0.03) : Color.primary.opacity(0.035), lineWidth: 1)
+                    .strokeBorder(colorScheme == .dark ? Color.white.opacity(0.055) : Color.primary.opacity(0.035), lineWidth: 1)
             )
             .contentShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
         }
