@@ -630,7 +630,8 @@ struct PackingListView: View {
         lines.append("")
         lines.append("📅 \(String(format: daysFormat, locale: Locale.current, bundle.localizedDateRange, Int64(bundle.days)))")
         if packedCount == totalCount && totalCount > 0 {
-            lines.append("📊 All packed! (\(totalCount))")
+            let allPackedFormat = NSLocalizedString("packing.share.all_packed", comment: "")
+            lines.append("📊 \(String(format: allPackedFormat, Int64(totalCount)))")
         } else {
             lines.append("📊 \(String(format: packedFormat, locale: Locale.current, Int64(packedCount), Int64(totalCount)))")
         }
@@ -638,7 +639,7 @@ struct PackingListView: View {
         // — Sections
         lines.append("")
         lines.append(sep)
-        lines.append("🧳 Packing List")
+        lines.append("🧳 \(NSLocalizedString("packing.share.list_title", comment: ""))")
         lines.append(sep)
 
         for section in sections {
@@ -657,7 +658,7 @@ struct PackingListView: View {
         // — Footer
         lines.append("")
         lines.append(sep)
-        lines.append("Shared via Carry 🧳")
+        lines.append(NSLocalizedString("packing.share.footer", comment: ""))
         lines.append(sep)
         return lines.joined(separator: "\n")
     }
