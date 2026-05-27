@@ -84,7 +84,7 @@ struct ContentView: View {
         .tint(.primary)
         .toolbarBackground(
             colorScheme == .dark
-                ? Color(red: 0.09, green: 0.09, blue: 0.10)
+                ? Color(red: 0.11, green: 0.11, blue: 0.12)
                 : Color(UIColor.systemBackground),
             for: .tabBar
         )

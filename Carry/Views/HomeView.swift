@@ -416,17 +416,7 @@ struct HomeView: View {
             }
         }
         .frame(maxWidth: .infinity)
-        .background(CarryAtmosphereBackground())
-        .background {
-            if colorScheme == .dark {
-                LinearGradient(
-                    colors: [homeDarkBackdropTop, homeDarkBackdropBottom],
-                    startPoint: .top,
-                    endPoint: .bottom
-                )
-                .ignoresSafeArea()
-            }
-        }
+        .background(CarrySubtleBackground())
     }
 
     // MARK: - Map style button
@@ -452,11 +442,11 @@ struct HomeView: View {
                             .frame(width: 48, height: 48)
                             .background(
                                 Circle()
-                                    .fill(Color(UIColor.secondarySystemBackground))
+                                    .fill(Color(UIColor.secondarySystemBackground).opacity(colorScheme == .dark ? 0.92 : 1.0))
                             )
                             .overlay(
                                 Circle()
-                                    .strokeBorder(Color.primary.opacity(colorScheme == .dark ? 0.06 : 0.05), lineWidth: 1)
+                                    .strokeBorder(Color.primary.opacity(colorScheme == .dark ? 0.045 : 0.05), lineWidth: 1)
                             )
                     }
 
@@ -470,11 +460,11 @@ struct HomeView: View {
                             .frame(width: 48, height: 48)
                             .background(
                                 Circle()
-                                    .fill(Color(UIColor.secondarySystemBackground))
+                                    .fill(Color(UIColor.secondarySystemBackground).opacity(colorScheme == .dark ? 0.92 : 1.0))
                             )
                             .overlay(
                                 Circle()
-                                    .strokeBorder(Color.primary.opacity(colorScheme == .dark ? 0.06 : 0.05), lineWidth: 1)
+                                    .strokeBorder(Color.primary.opacity(colorScheme == .dark ? 0.045 : 0.05), lineWidth: 1)
                             )
                     }
                 }
@@ -614,7 +604,7 @@ struct HomeView: View {
         )
         .overlay(
             RoundedRectangle(cornerRadius: 24, style: .continuous)
-                .strokeBorder(Color.primary.opacity(colorScheme == .dark ? 0.06 : 0.05), lineWidth: 1)
+                .strokeBorder(Color.primary.opacity(colorScheme == .dark ? 0.038 : 0.05), lineWidth: 1)
         )
         .shadow(color: Color.black.opacity(colorScheme == .dark ? 0.18 : 0.045), radius: colorScheme == .dark ? 14 : 16, x: 0, y: colorScheme == .dark ? 10 : 10)
     }
@@ -622,16 +612,16 @@ struct HomeView: View {
     private func sectionLabel(_ key: LocalizedStringKey, uppercase: Bool = false) -> some View {
         Text(key)
             .font(.system(size: 11, weight: .medium))
-            .foregroundStyle(colorScheme == .dark ? .secondary : .tertiary)
+            .foregroundStyle(colorScheme == .dark ? Color.secondary.opacity(0.9) : Color(UIColor.tertiaryLabel))
             .textCase(uppercase ? .uppercase : nil)
-            .tracking(2)
+            .tracking(1.6)
     }
 
     private func sectionLabel(verbatim: String) -> some View {
         Text(verbatim: verbatim)
             .font(.system(size: 11, weight: .medium))
-            .foregroundStyle(colorScheme == .dark ? .secondary : .tertiary)
-            .tracking(2)
+            .foregroundStyle(colorScheme == .dark ? Color.secondary.opacity(0.9) : Color(UIColor.tertiaryLabel))
+            .tracking(1.6)
     }
 
     private func pastSectionLabel(year: Int, isFirst: Bool, delay: Double) -> some View {
@@ -714,7 +704,7 @@ struct HomeView: View {
 
             Text(homeFooterText())
                 .font(.caption.weight(.medium))
-                .foregroundStyle(.secondary)
+                .foregroundStyle(colorScheme == .dark ? Color.secondary.opacity(0.9) : .secondary)
                 .multilineTextAlignment(.center)
                 .lineLimit(1)
                 .minimumScaleFactor(0.85)
@@ -1002,7 +992,10 @@ struct TripCard: View {
         if isComplete {
             return colorScheme == .dark ? Color.white.opacity(0.032) : Color(UIColor.systemGray5).opacity(0.72)
         }
-        return colorScheme == .dark ? Color.blue.opacity(0.05) : Color.blue.opacity(0.10)
+        if colorScheme == .dark {
+            return Color(red: 0.32, green: 0.43, blue: 0.58).opacity(0.13)
+        }
+        return Color.blue.opacity(0.10)
     }
 
     private var statusPillStrokeColor: Color {
@@ -1012,7 +1005,10 @@ struct TripCard: View {
         if isComplete {
             return Color.primary.opacity(colorScheme == .dark ? 0.03 : 0.025)
         }
-        return Color.blue.opacity(colorScheme == .dark ? 0.06 : 0.16)
+        if colorScheme == .dark {
+            return Color(red: 0.36, green: 0.48, blue: 0.66).opacity(0.26)
+        }
+        return Color.blue.opacity(0.16)
     }
 
     private var statusPillForeground: Color {
