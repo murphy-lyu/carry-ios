@@ -272,6 +272,7 @@ struct HomeView: View {
             .ignoresSafeArea()
         }
         .ignoresSafeArea(edges: .bottom)
+        .toolbar(.hidden, for: .navigationBar)
     }
 
     // MARK: - Sheet content (hosted inside UIHostingController by CarryBottomSheet)
@@ -358,7 +359,6 @@ struct HomeView: View {
                     .allowsHitTesting(false)
                 }
             }
-            .navigationBarHidden(true)
             .onAppear {
                 store.refresh()
                 store.correctMisgecodedTrips()
