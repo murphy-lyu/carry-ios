@@ -1,100 +1,100 @@
 {
-  "sourceLanguage" : "en",
-  "strings" : {
-    "CFBundleDisplayName" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Carry"
+  "sourceLanguage": "en",
+  "strings": {
+    "CFBundleDisplayName": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Carry"
           }
         },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "启程"
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "启程"
           }
         },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "啟程"
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "啟程"
           }
         }
       }
     },
-    "CFBundleName" : {
-      "comment" : "Bundle name",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Carry"
+    "CFBundleName": {
+      "comment": "Bundle name",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Carry"
           }
         }
       }
     },
-    "NSLocationWhenInUseUsageDescription" : {
-      "comment" : "Privacy - Location When In Use Usage Description",
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Carry uses your location to show where you are on the travel map, and to power travel features such as local weather forecasts and route planning."
+    "NSLocationWhenInUseUsageDescription": {
+      "comment": "Privacy - Location When In Use Usage Description",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Carry uses your location to show your current position on the travel map."
           }
         },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "启程使用您的位置在旅行地图上标注您的当前位置，并为目的地天气预报和路线规划等旅行功能提供支持。"
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "启程使用您的位置在旅行地图上显示您的当前位置。"
           }
         },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "啟程使用您的位置在旅行地圖上標註您目前的位置，並為目的地天氣預報和路線規劃等旅行功能提供支援。"
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "啟程使用您的位置在旅行地圖上顯示您目前的位置。"
           }
         },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "現在地をマップに表示し、目的地の天気予報やルート案内などの旅行機能を利用するために位置情報を使用します。"
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "現在地をマップに表示するために位置情報を使用します。"
           }
         },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "여행 지도에서 현재 위치를 표시하고, 목적지 날씨 예보 및 경로 안내 등의 여행 기능을 제공하기 위해 위치를 사용합니다."
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "여행 지도에서 현재 위치를 표시하기 위해 위치를 사용합니다。"
           }
         },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Carry utilise votre position pour l'afficher sur la carte de voyage, et pour des fonctionnalités comme les prévisions météo locales et la planification d'itinéraires."
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Carry utilise votre position pour l'afficher sur la carte de voyage."
           }
         },
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Carry verwendet Ihren Standort, um Sie auf der Reisekarte anzuzeigen und Reisefunktionen wie lokale Wettervorhersagen und Routenplanung zu unterstützen."
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Carry verwendet Ihren Standort, um Ihre aktuelle Position auf der Reisekarte anzuzeigen."
           }
         },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Carry usa tu ubicación para mostrarte en el mapa de viaje y para funciones como la previsión del tiempo local y la planificación de rutas."
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Carry usa tu ubicación para mostrar tu posición actual en el mapa de viaje."
           }
         },
-        "pt-BR" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "O Carry usa sua localização para exibi-la no mapa de viagem e para funcionalidades como previsão do tempo local e planejamento de rotas."
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "O Carry usa sua localização para exibir sua posição atual no mapa de viagem."
           }
         }
       }
     }
   },
-  "version" : "1.0"
+  "version": "1.0"
 }
