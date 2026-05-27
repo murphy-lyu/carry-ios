@@ -2772,7 +2772,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Worried about missing items?"
+            "value" : "Anything you might have missed?"
           }
         },
         "es" : {
@@ -2808,13 +2808,13 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "担心物品遗漏？"
+            "value" : "有什么没想到的？"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "擔心物品遺漏？"
+            "value" : "有什麼沒想到的？"
           }
         }
       }
@@ -10910,7 +10910,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Choose your trip scenes and we will try to suggest extra items you might have missed."
+            "value" : "Choose your trip type and we'll suggest items you might have missed."
           }
         },
         "es" : {
@@ -10946,13 +10946,13 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "选择本次出行场景，我们会尝试补充一些可能遗漏的物品供你参考。"
+            "value" : "选个出行场景，帮你补充可能漏掉的物品。"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "選擇本次出行場景，我們會嘗試補充一些可能遺漏的物品供你參考。"
+            "value" : "選個出行場景，幫你補充可能漏掉的物品。"
           }
         }
       }
@@ -22578,7 +22578,7 @@
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "開始打包"
+            "value" : "儲存清單"
           }
         }
       }
@@ -26183,7 +26183,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "You can use Worried about missing items? again from the top-right menu"
+            "value" : "You can use Anything you might have missed? again from the top-right menu"
           }
         },
         "es" : {
@@ -26219,13 +26219,13 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "可在右上角菜单中再次使用“担心物品遗漏？”"
+            “value” : “可在右上角菜单中再次使用「有什么没想到的？」”
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "可在右上角選單中再次使用「擔心物品遺漏？」"
+            "value" : "可在右上角選單中再次使用「有什麼沒想到的？」"
           }
         }
       }
