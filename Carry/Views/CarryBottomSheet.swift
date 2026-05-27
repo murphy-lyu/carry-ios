@@ -599,13 +599,19 @@ final class SheetViewController: UIViewController {
     private func beginInteractiveControl() {
         stopShapeDisplayLink()
         if let animator = runningAnimator {
+            animationGeneration += 1  // invalidate stale completion before stopping
             animator.stopAnimation(false)
             animator.finishAnimation(at: .current)
             runningAnimator = nil
         }
         stopDirectMaskSync()
         stopDirectPositionSync()
-        let visual = min(max(0, currentVisualOffset()), collapsedOffset)
+        var visual = min(max(0, currentVisualOffset()), collapsedOffset)
+        if visual >= collapsedOffset - expandSnapMinTranslation {
+            visual = collapsedOffset
+        } else if visual <= expandSnapMinTranslation {
+            visual = 0
+        }
         snappedOffset = visual
         liveDelta = 0
         let p = clampedProgress(visual)
