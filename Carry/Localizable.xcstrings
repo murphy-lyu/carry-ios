@@ -26726,56 +26726,56 @@
       "localizations" : {
         "de" : {
           "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Updated"
+            "state" : "translated",
+            "value" : "Vorschläge aktualisiert"
           }
         },
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Recommended items selected"
+            "value" : "Suggestions updated"
           }
         },
         "es" : {
           "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Updated"
+            "state" : "translated",
+            "value" : "Sugerencias actualizadas"
           }
         },
         "fr" : {
           "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Updated"
+            "state" : "translated",
+            "value" : "Suggestions mises à jour"
           }
         },
         "ja" : {
           "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Updated"
+            "state" : "translated",
+            "value" : "おすすめを更新しました"
           }
         },
         "ko" : {
           "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Updated"
+            "state" : "translated",
+            "value" : "추천 목록이 업데이트됐어요"
           }
         },
         "pt-BR" : {
           "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Updated"
+            "state" : "translated",
+            "value" : "Sugestões atualizadas"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "已为你选好推荐物品"
+            "value" : "推荐清单已更新"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "已為你選好推薦物品"
+            "value" : "推薦清單已更新"
           }
         }
       }
@@ -38832,55 +38832,55 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Du hast bereits alle verfügbaren Erinnerungsvoreinstellungen hinzugefügt."
+            "value" : "Alle Erinnerungen sind gesetzt."
           }
         },
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "You have already added all available reminder presets."
+            "value" : "All reminders are set."
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Ya has añadido todos los recordatorios disponibles."
+            "value" : "Todos los recordatorios están configurados."
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Vous avez déjà ajouté tous les rappels disponibles."
+            "value" : "Tous les rappels sont configurés."
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "利用可能なリマインダープリセットをすべて追加しました。"
+            "value" : "すべてのリマインダーを設定済みです。"
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "사용 가능한 모든 알림 프리셋을 추가했습니다."
+            "value" : "모든 알림이 설정되었습니다."
           }
         },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Você já adicionou todos os lembretes disponíveis."
+            "value" : "Todos os lembretes estão configurados."
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "你已经添加了所有可用的提醒预设。"
+            "value" : "所有提醒都已设置完毕"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "你已經新增了所有可用的提醒預設。"
+            "value" : "所有提醒都已設定完成"
           }
         }
       }

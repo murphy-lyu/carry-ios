@@ -39,7 +39,7 @@ struct PackingListView: View {
     @State private var hasTriggeredNudge = false
     @State private var surpriseBatchOffset: Int = 0
     @State private var showReminderSheet = false
-    @State private var showSceneCardDismissHintBanner = false
+
     @State private var draggingItemId: UUID? = nil
     @State private var dragStartIds: [UUID] = []
     @State private var dragStartIndex: Int = 0
@@ -432,7 +432,7 @@ struct PackingListView: View {
         .scrollIndicators(.hidden)
         .safeAreaPadding(.bottom, 83)
         .safeAreaInset(edge: .top, spacing: 0) {
-            if showCompletionBanner || showNudgeBanner || showSceneCardDismissHintBanner {
+            if showCompletionBanner || showNudgeBanner {
                 VStack(spacing: 0) {
                     if showCompletionBanner {
                         completionBanner
@@ -441,11 +441,6 @@ struct PackingListView: View {
                     if showNudgeBanner {
                         nudgeBanner
                             .transition(.move(edge: .top).combined(with: .opacity))
-                    }
-                    if showSceneCardDismissHintBanner {
-                        sceneCardDismissHintBanner
-                            .transition(.opacity.combined(with: .scale(scale: 0.98, anchor: .top)))
-                            .padding(.top, 4)
                     }
                 }
             }
@@ -857,15 +852,6 @@ struct PackingListView: View {
             Button {
                 store.dismissSceneCard(tripId: tripId)
                 CarryLogger.shared.log(.sceneCardDismissed)
-                withAnimation(.easeInOut(duration: 0.25)) {
-                    showSceneCardDismissHintBanner = true
-                }
-                Task {
-                    try? await Task.sleep(for: .milliseconds(3200))
-                    withAnimation(.easeIn(duration: 0.2)) {
-                        showSceneCardDismissHintBanner = false
-                    }
-                }
                 UIImpactFeedbackGenerator(style: .light).impactOccurred()
             } label: {
                 Image(systemName: "xmark")
@@ -888,31 +874,6 @@ struct PackingListView: View {
                 .background(Circle().fill(colorScheme == .dark ? Color.indigo.opacity(0.14) : Color.indigo.opacity(0.12)))
             Text("Almost there! A few things worth a second thought ↓")
                 .foregroundStyle(.primary)
-        }
-        .font(.subheadline.weight(.medium))
-        .frame(maxWidth: .infinity)
-        .padding(.vertical, 12)
-        .padding(.horizontal, 16)
-        .background(
-            RoundedRectangle(cornerRadius: 18, style: .continuous)
-                .fill(colorScheme == .dark ? Color(UIColor.secondarySystemBackground).opacity(0.88) : Color(UIColor.systemBackground).opacity(0.78))
-        )
-        .overlay(
-            RoundedRectangle(cornerRadius: 18, style: .continuous)
-                .strokeBorder(colorScheme == .dark ? Color.white.opacity(0.045) : Color.primary.opacity(0.05), lineWidth: 1)
-        )
-    }
-
-    private var sceneCardDismissHintBanner: some View {
-        HStack(spacing: 10) {
-            Image(systemName: "info.circle.fill")
-                .font(.system(size: 14, weight: .semibold))
-                .foregroundStyle(Color.secondary)
-                .frame(width: 28, height: 28)
-                .background(Circle().fill(Color.secondary.opacity(0.12)))
-            Text("scene_card.dismissed.message")
-                .foregroundStyle(.primary)
-                .lineLimit(2)
         }
         .font(.subheadline.weight(.medium))
         .frame(maxWidth: .infinity)
