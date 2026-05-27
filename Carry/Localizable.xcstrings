@@ -33516,7 +33516,7 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Buy Us a Coffee"
+            "value": "Buy Me a Coffee"
           }
         },
         "es": {
@@ -33552,13 +33552,13 @@
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "请我们喝杯咖啡"
+            "value": "请我喝杯咖啡"
           }
         },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "請我們喝杯咖啡"
+            "value": "請我喝杯咖啡"
           }
         }
       }
@@ -33693,7 +33693,7 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "If Carry has been useful, you can buy us a coffee."
+            "value": "Enjoying Carry? Buy me a coffee."
           }
         },
         "es": {
@@ -33729,13 +33729,13 @@
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "如果 Carry 对你有帮助，可以请我们喝杯咖啡。"
+            "value": "喜欢 Carry？请我喝杯咖啡。"
           }
         },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "如果 Carry 對你有幫助，可以請我們喝杯咖啡。"
+            "value": "喜歡 Carry？請我喝杯咖啡。"
           }
         }
       }
