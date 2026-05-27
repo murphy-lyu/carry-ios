@@ -19057,55 +19057,55 @@
         "de": {
           "stringUnit": {
             "state": "needs_review",
-            "value": "Your saved items will appear here after you add some."
+            "value": "Items you add will appear here"
           }
         },
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Your saved items will appear here after you add some."
+            "value": "Items you add will appear here"
           }
         },
         "es": {
           "stringUnit": {
             "state": "needs_review",
-            "value": "Your saved items will appear here after you add some."
+            "value": "Items you add will appear here"
           }
         },
         "fr": {
           "stringUnit": {
             "state": "needs_review",
-            "value": "Your saved items will appear here after you add some."
+            "value": "Items you add will appear here"
           }
         },
         "ja": {
           "stringUnit": {
             "state": "needs_review",
-            "value": "Your saved items will appear here after you add some."
+            "value": "Items you add will appear here"
           }
         },
         "ko": {
           "stringUnit": {
             "state": "needs_review",
-            "value": "Your saved items will appear here after you add some."
+            "value": "Items you add will appear here"
           }
         },
         "pt-BR": {
           "stringUnit": {
             "state": "needs_review",
-            "value": "Your saved items will appear here after you add some."
+            "value": "Items you add will appear here"
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "添加一些物品后，你保存的物品会显示在这里。"
+            "value": "你添加的物品会出现在这里"
           }
         },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "新增一些物品後，你保存的物品會顯示在這裡。"
+            "value": "你新增的物品會出現在這裡"
           }
         }
       }
@@ -19116,55 +19116,55 @@
         "de": {
           "stringUnit": {
             "state": "needs_review",
-            "value": "No saved items yet"
+            "value": "No items yet"
           }
         },
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "No saved items yet"
+            "value": "No items yet"
           }
         },
         "es": {
           "stringUnit": {
             "state": "needs_review",
-            "value": "No saved items yet"
+            "value": "No items yet"
           }
         },
         "fr": {
           "stringUnit": {
             "state": "needs_review",
-            "value": "No saved items yet"
+            "value": "No items yet"
           }
         },
         "ja": {
           "stringUnit": {
             "state": "needs_review",
-            "value": "No saved items yet"
+            "value": "No items yet"
           }
         },
         "ko": {
           "stringUnit": {
             "state": "needs_review",
-            "value": "No saved items yet"
+            "value": "No items yet"
           }
         },
         "pt-BR": {
           "stringUnit": {
             "state": "needs_review",
-            "value": "No saved items yet"
+            "value": "No items yet"
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "还没有保存的物品"
+            "value": "还没有物品"
           }
         },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "還沒有保存的物品"
+            "value": "還沒有物品"
           }
         }
       }
@@ -19221,7 +19221,7 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Create items not in Base Items"
+            "value": "Add items not found in the catalog"
           }
         },
         "es": {
@@ -19257,13 +19257,13 @@
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "创建不在基础库中的物品"
+            "value": "添加分类里没有的物品"
           }
         },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "建立不在基礎庫中的物品"
+            "value": "新增分類裡沒有的物品"
           }
         }
       }
@@ -19280,7 +19280,7 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Create custom items"
+            "value": "My Library"
           }
         },
         "es": {
@@ -19316,13 +19316,13 @@
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "创建自定义物品"
+            "value": "我的物品库"
           }
         },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "建立自訂物品"
+            "value": "我的物品庫"
           }
         }
       }
