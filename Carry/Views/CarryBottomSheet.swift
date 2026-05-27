@@ -147,6 +147,7 @@ final class SheetViewController: UIViewController {
     private var directPositionFixedProgress: CGFloat = 0
     private var directPositionCompletion: (() -> Void)?
     private var directPositionTickCount: Int = 0
+    private var directPositionCurrentOffset: CGFloat = 0
     private var snapShapeStart: CGFloat = 0
     private var snapShapeTarget: CGFloat = 0
 
@@ -397,6 +398,7 @@ final class SheetViewController: UIViewController {
         directPositionFixedProgress = fixedProgress
         directPositionCompletion = completion
         directPositionTickCount = 0
+        directPositionCurrentOffset = start
         let link = CADisplayLink(target: self, selector: #selector(handleDirectPositionTick(_:)))
         link.preferredFrameRateRange = CAFrameRateRange(minimum: 30, maximum: 60, preferred: 60)
         link.add(to: .main, forMode: .common)
@@ -405,7 +407,17 @@ final class SheetViewController: UIViewController {
 
     @objc private func handleDirectPositionTick(_ link: CADisplayLink) {
         let t = min(max((CACurrentMediaTime() - directPositionStartTime) / directPositionDuration, 0), 1)
-        let raw = directPositionStartOffset + CGFloat(t) * (directPositionTargetOffset - directPositionStartOffset)
+        let idealRaw = directPositionStartOffset + CGFloat(t) * (directPositionTargetOffset - directPositionStartOffset)
+        let dt = max(1.0 / 120.0, link.targetTimestamp - link.timestamp)
+        let totalDistance = abs(directPositionTargetOffset - directPositionStartOffset)
+        let expectedStep = totalDistance * CGFloat(dt / directPositionDuration)
+        // Clamp per-frame travel to suppress dropped-frame "jump steps"
+        // while keeping overall linear progression.
+        let maxStep = max(2, min(18, expectedStep * 1.35))
+        let delta = idealRaw - directPositionCurrentOffset
+        let step = max(-maxStep, min(maxStep, delta))
+        let raw = directPositionCurrentOffset + step
+        directPositionCurrentOffset = raw
         directPositionTickCount += 1
         CATransaction.begin()
         CATransaction.setDisableActions(true)
@@ -421,7 +433,7 @@ final class SheetViewController: UIViewController {
         snappedOffset = raw
         liveDelta = 0
 
-        if t >= 1 {
+        if t >= 1, abs(directPositionTargetOffset - directPositionCurrentOffset) <= 0.5 {
             let completion = directPositionCompletion
             stopDirectPositionSync()
             completion?()
