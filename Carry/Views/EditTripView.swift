@@ -17,6 +17,7 @@ struct EditTripView: View {
     @State private var isSaved = false
     @State private var showDatePicker = false
     @FocusState private var focusedField: FocusField?
+    @Environment(\.colorScheme) private var colorScheme
 
     private enum FocusField: Hashable {
         case tripName
@@ -94,7 +95,11 @@ struct EditTripView: View {
                                 .padding(14)
                             }
                             .buttonStyle(.plain)
-                            .background(Color(UIColor.systemBackground).opacity(0.72))
+                            .background(
+                                colorScheme == .dark
+                                    ? Color(UIColor.secondarySystemBackground)
+                                    : Color(UIColor.systemBackground)
+                            )
                             .overlay(
                                 RoundedRectangle(cornerRadius: 12, style: .continuous)
                                     .strokeBorder(Color.primary.opacity(0.05), lineWidth: 1)
@@ -195,7 +200,11 @@ struct EditTripView: View {
         }
         .frame(height: 44)
         .padding(.horizontal, 12)
-        .background(Color(UIColor.systemBackground).opacity(0.72))
+        .background(
+            colorScheme == .dark
+                ? Color(UIColor.secondarySystemBackground)
+                : Color(UIColor.systemBackground)
+        )
         .overlay(
             RoundedRectangle(cornerRadius: 12, style: .continuous)
                 .strokeBorder(Color.primary.opacity(0.05), lineWidth: 1)

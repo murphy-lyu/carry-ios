@@ -9973,7 +9973,7 @@
         }
       }
     },
-    "Everything ready. Let's go." : {
+    "Ready before you go." : {
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -9984,7 +9984,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Everything ready. Let's go."
+            "value" : "Ready before you go."
           }
         },
         "es" : {
@@ -10020,13 +10020,13 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "准备就绪，出发吧。"
+            "value" : "出发前，把一切备好"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "準備就緒，出發吧。"
+            "value" : "出發前，把一切備好"
           }
         }
       }

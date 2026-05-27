@@ -316,7 +316,7 @@ struct AppIconView: View {
     }
 
     private var cardStroke: Color {
-        colorScheme == .dark ? .white.opacity(0.045) : Color.primary.opacity(0.05)
+        colorScheme == .dark ? .white.opacity(0.045) : Color.primary.opacity(0.04)
     }
 
     private var cardShadow: Color {

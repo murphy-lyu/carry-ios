@@ -70,7 +70,7 @@ struct CoffeeSheetView: View {
                             .padding(.horizontal, 28)
                     }
                     .frame(minHeight: 86, alignment: .top)
-                    .padding(.bottom, 6)
+                    .padding(.bottom, 4)
 
                     // — Coffee cards
                     VStack(spacing: 10) {
@@ -91,8 +91,8 @@ struct CoffeeSheetView: View {
                     // — Secondary actions
                     VStack(alignment: .leading, spacing: 6) {
                         Text("support.sheet.moreActions")
-                            .font(.system(size: 11, weight: .medium))
-                            .foregroundStyle(.tertiary)
+                            .font(.system(size: 11, weight: .regular))
+                            .foregroundStyle(Color.secondary.opacity(0.6))
                             .kerning(1.3)
                             .textCase(.uppercase)
                             .padding(.leading, 16)
@@ -102,24 +102,15 @@ struct CoffeeSheetView: View {
                             secondaryButton(title: "Share with Friends", icon: "square.and.arrow.up") {
                                 shareApp()
                             }
-                            Rectangle()
-                                .fill(Color.primary.opacity(0.08))
-                                .frame(height: 0.67)
-                                .padding(.leading, 50)
                             secondaryButton(title: "support.sheet.rateApp", icon: "star") {
                                 requestReview()
                             }
-                            Rectangle()
-                                .fill(Color.primary.opacity(0.08))
-                                .frame(height: 0.67)
-                                .padding(.leading, 50)
                             secondaryButton(title: "settings.feedback", icon: "envelope") {
                                 openFeedbackMail()
                             }
                         }
                         .padding(.horizontal, 6)
-                        .padding(.top, 5)
-                        .padding(.bottom, 5)
+                        .padding(.vertical, 2)
                         .background(
                             RoundedRectangle(cornerRadius: 12, style: .continuous)
                                 .fill(Color(.secondarySystemBackground))
@@ -250,7 +241,7 @@ struct CoffeeSheetView: View {
                 Spacer()
                 Image(systemName: "chevron.right")
                     .font(.caption)
-                    .foregroundStyle(.tertiary)
+                    .foregroundStyle(Color.secondary.opacity(0.52))
             }
             .padding(.horizontal, 16)
             .frame(height: 44)

@@ -310,7 +310,7 @@ struct RoadmapView: View {
         .background(cardBackground)
         .overlay(
             RoundedRectangle(cornerRadius: 18, style: .continuous)
-                .strokeBorder(colorScheme == .dark ? Color.white.opacity(0.045) : Color.primary.opacity(0.035), lineWidth: 1)
+                .strokeBorder(colorScheme == .dark ? Color.white.opacity(0.045) : Color.primary.opacity(0.04), lineWidth: 1)
         )
         .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
     }
@@ -398,7 +398,7 @@ struct RoadmapView: View {
     private var cardBackground: Color {
         colorScheme == .dark
             ? Color(UIColor.secondarySystemGroupedBackground).opacity(0.74)
-            : Color(UIColor.systemBackground).opacity(0.82)
+            : Color(UIColor.systemBackground).opacity(0.88)
     }
 
     private func load() async {

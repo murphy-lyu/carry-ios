@@ -1225,16 +1225,7 @@ struct PackingListView: View {
             .padding(.top, 12)
             .padding(.bottom, 16)
         }
-        .background(
-            LinearGradient(
-                colors: [
-                    Color(UIColor.systemBackground).opacity(0.92),
-                    Color(UIColor.systemBackground).opacity(0.82)
-                ],
-                startPoint: .top,
-                endPoint: .bottom
-            )
-        )
+        .background(Color(UIColor.systemBackground))
     }
 
     private var toastBanner: some View {
@@ -1580,6 +1571,7 @@ struct ReorderSectionsView: View {
 
     @EnvironmentObject var store: TripStore
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.colorScheme) private var colorScheme
 
     @State private var ordered: [PackingSection] = []
     @State private var showAddAlert = false
@@ -1647,7 +1639,11 @@ struct ReorderSectionsView: View {
             }
         }
         .scrollDisabled(draggingId != nil)
-        .background(CarrySubtleBackground())
+        .background(
+            colorScheme == .dark
+                ? Color(UIColor.secondarySystemBackground)
+                : Color(UIColor.systemBackground)
+        )
         .navigationTitle("Edit sections")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {

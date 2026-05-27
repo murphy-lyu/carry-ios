@@ -25,7 +25,7 @@ struct AboutView: View {
             VStack(alignment: .leading, spacing: 14) {
                 Text("about.tagline")
                     .font(.subheadline.weight(.medium))
-                    .foregroundStyle(colorScheme == .dark ? Color.secondary.opacity(0.9) : Color.primary.opacity(0.72))
+                    .foregroundStyle(colorScheme == .dark ? Color.secondary.opacity(0.82) : Color.primary.opacity(0.7))
                     .lineSpacing(7)
                     .padding(.horizontal, 6)
                     .padding(.top, 6)
@@ -87,7 +87,7 @@ struct AboutView: View {
                     }
                 }
                 .frame(maxWidth: .infinity, alignment: .center)
-                .padding(.top, 36)
+                .padding(.top, 30)
                 .padding(.bottom, 8)
             }
             .padding(.horizontal, 16)
@@ -225,7 +225,7 @@ struct AboutView: View {
     }
 
     private var cardStroke: Color {
-        colorScheme == .dark ? Color.white.opacity(0.045) : Color.primary.opacity(0.05)
+        colorScheme == .dark ? Color.white.opacity(0.045) : Color.primary.opacity(0.04)
     }
 
     private var cardShadow: Color {

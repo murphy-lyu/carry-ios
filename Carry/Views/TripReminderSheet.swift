@@ -147,7 +147,7 @@ struct TripReminderSheet: View {
             .foregroundStyle(colorScheme == .dark ? Color.primary.opacity(0.86) : .primary)
             .background(
                 RoundedRectangle(cornerRadius: 16, style: .continuous)
-                    .fill(colorScheme == .dark ? Color(UIColor.secondarySystemBackground).opacity(0.58) : Color(UIColor.systemBackground).opacity(0.28))
+                    .fill(colorScheme == .dark ? Color(UIColor.secondarySystemBackground) : Color(UIColor.systemBackground))
             )
             .overlay(
                 RoundedRectangle(cornerRadius: 16, style: .continuous)
@@ -179,7 +179,7 @@ struct TripReminderSheet: View {
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 12)
-        .background(colorScheme == .dark ? Color(UIColor.secondarySystemBackground).opacity(0.55) : Color(UIColor.systemBackground).opacity(0.28))
+        .background(colorScheme == .dark ? Color(UIColor.secondarySystemBackground) : Color(UIColor.systemBackground))
     }
 }
 

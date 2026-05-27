@@ -757,7 +757,7 @@ private struct DataRecoveryView: View {
             .overlay(
                 RoundedRectangle(cornerRadius: 20, style: .continuous)
                     .strokeBorder(
-                        colorScheme == .dark ? Color.white.opacity(0.045) : Color.primary.opacity(0.05),
+                        colorScheme == .dark ? Color.white.opacity(0.045) : Color.primary.opacity(0.04),
                         lineWidth: 1
                     )
             )
@@ -820,6 +820,7 @@ private struct DeveloperModeView: View {
                     }
                 }
                 .tint(colorScheme == .dark ? Color.accentColor.opacity(0.86) : Color.accentColor)
+                .listRowSeparator(.hidden)
             }
 
             Section("settings.developer.mock_group") {
@@ -839,6 +840,7 @@ private struct DeveloperModeView: View {
                     }
                 }
                 .tint(colorScheme == .dark ? Color.accentColor.opacity(0.86) : Color.accentColor)
+                .listRowSeparator(.hidden)
             }
 
             Section("settings.developer.reset_group") {

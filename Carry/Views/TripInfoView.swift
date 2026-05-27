@@ -162,7 +162,7 @@ struct TripInfoView: View {
             .padding(.top, 12)
             .padding(.bottom, 16)
             .frame(maxWidth: .infinity)
-            .background(Color.clear)
+            .background(Color(UIColor.systemBackground))
         }
         .navigationTitle("")
         .navigationBarTitleDisplayMode(.inline)
