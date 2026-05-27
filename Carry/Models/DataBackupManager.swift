@@ -163,15 +163,22 @@ final class DataBackupManager {
             myItems: backupMyItems
         )
 
-        guard let data = try? encoder.encode(backup) else {
-            CarryLogger.shared.log(.backupWriteFailed, context: "reason=encode_failed")
-            return
-        }
-        do {
-            try data.write(to: url, options: .atomic)
-        } catch {
-            CarryLogger.shared.log(.backupWriteFailed,
-                context: "reason=write_failed error=\(error.localizedDescription)")
+        // @Model property access above must stay on the calling (main) thread.
+        // Only encode + disk write are offloaded — backup is a pure Codable value type.
+        Task.detached(priority: .utility) {
+            let e = JSONEncoder()
+            e.dateEncodingStrategy = .iso8601
+            e.outputFormatting = .prettyPrinted
+            guard let data = try? e.encode(backup) else {
+                CarryLogger.shared.log(.backupWriteFailed, context: "reason=encode_failed")
+                return
+            }
+            do {
+                try data.write(to: url, options: .atomic)
+            } catch {
+                CarryLogger.shared.log(.backupWriteFailed,
+                    context: "reason=write_failed error=\(error.localizedDescription)")
+            }
         }
     }
 

@@ -495,6 +495,8 @@ struct ItemPickerView: View {
             }
         }
         .onAppear {
+            // Warm up the search index so the first keystroke is instant.
+            _ = ItemPickerView.localizedSearchTermsByItem
             guard !didApplyInitialSource else { return }
             didApplyInitialSource = true
             if startInMyItems {
