@@ -1118,9 +1118,9 @@ struct TripCard: View {
                     LinearGradient(
                         stops: [
                             .init(color: .clear, location: 0),
-                            .init(color: .white.opacity(0.16), location: 0.3),
-                            .init(color: .white.opacity(0.28), location: 0.5),
-                            .init(color: .white.opacity(0.16), location: 0.7),
+                            .init(color: .white.opacity(0.26), location: 0.3),
+                            .init(color: .white.opacity(0.48), location: 0.5),
+                            .init(color: .white.opacity(0.26), location: 0.7),
                             .init(color: .clear, location: 1)
                         ],
                         startPoint: .leading,
@@ -1134,13 +1134,21 @@ struct TripCard: View {
             }
         }
         .onAppear {
-            guard shimmer, !didPlayShimmer else { return }
-            didPlayShimmer = true
-            Task { @MainActor in
-                try? await Task.sleep(for: .milliseconds(320))
-                withAnimation(.easeInOut(duration: 0.72)) {
-                    shimmerProgress = 1
-                }
+            playShimmerIfNeeded()
+        }
+        .onChange(of: shimmer) { _, newValue in
+            guard newValue else { return }
+            playShimmerIfNeeded()
+        }
+    }
+
+    private func playShimmerIfNeeded() {
+        guard shimmer, !didPlayShimmer else { return }
+        didPlayShimmer = true
+        Task { @MainActor in
+            try? await Task.sleep(for: .milliseconds(320))
+            withAnimation(.easeInOut(duration: 0.72)) {
+                shimmerProgress = 1
             }
         }
     }
