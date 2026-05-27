@@ -422,9 +422,9 @@ final class SheetViewController: UIViewController {
         CATransaction.begin()
         CATransaction.setDisableActions(true)
         placeSheet(at: raw, shapeProgressOverride: directPositionFixedProgress)
-        // Keep position fully per-frame, but update mask at half rate to reduce
-        // path rebuild pressure during direct snap.
-        if directPositionTickCount % 2 == 0 || t >= 1 {
+        // Keep position fully per-frame. Delay heavy mask path rebuilds to the
+        // tail phase to reduce mid-path hitching on direct snap.
+        if t >= 0.88 || t >= 1 {
             applyCornerMask(top: topRadius(directPositionFixedProgress),
                             bottom: bottomRadius(directPositionFixedProgress),
                             progress: directPositionFixedProgress)

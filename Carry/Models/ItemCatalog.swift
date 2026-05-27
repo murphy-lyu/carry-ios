@@ -129,7 +129,7 @@ let itemPickerCatalog: [ItemPickerCategory] = [
         "Eye drops", "Throat lozenges",
         "Feminine hygiene products",
         "Vitamin C", "Vitamin D", "Multivitamins", "Probiotics", "Melatonin",
-        "Birth control pills", "Condoms", "Anti-diarrhea",
+        "Anti-diarrhea",
         "Insect repellent",
     ]),
 ]

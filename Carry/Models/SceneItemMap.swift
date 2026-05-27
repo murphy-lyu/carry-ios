@@ -73,7 +73,6 @@ let sceneLabelToKey: [String: String] = [
     "🏨 City break":            "city_break",
     "🌸 On / near period":      "personal_period",
     "💊 Daily medication":      "personal_medication",
-    "🔒 Personal (private)":    "personal_private",
 ]
 
 // MARK: - Base items (every trip)
@@ -229,10 +228,6 @@ let sceneItemMap: [String: [SceneItem]] = [
     "personal_medication": [
         makeSceneItem("Daily medication", isAlert: true),
     ],
-    "personal_private": [
-        makeSceneItem("Birth control pills", isAlert: true),
-        makeSceneItem("Condoms", isAlert: true),
-    ],
 ]
 
 // MARK: - Scene item accessor (with locale supplements)
@@ -269,7 +264,16 @@ func generatePackingSections(selectedScenes: [String], tripDays: Int = 1) -> [Pa
     baseItems.forEach { insert($0) }
     selectedScenes.flatMap { sceneItems(for: $0) }.forEach { insert($0) }
 
-    let order: [ItemCategory] = [.documents, .clothing, .electronics, .travelAccessories, .toiletries, .essentials, .health]
+    let order: [ItemCategory] = [
+        .documents,
+        .clothing,
+        .electronics,
+        .travelAccessories,
+        .toiletries,
+        .essentials,
+        .health,
+        .healthWellness
+    ]
     var sectionIndex = 0
     var result: [PackingSection] = []
     for category in order {

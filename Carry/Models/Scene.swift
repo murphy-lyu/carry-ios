@@ -23,6 +23,6 @@ let defaultSceneGroups: [SceneGroup] = [
         "💼 Business", "💻 Remote work", "👶 Travelling with kids"
     ]),
     SceneGroup(title: "About you", items: [
-        "💊 Daily medication", "🌸 On / near period", "🔒 Personal (private)"
+        "💊 Daily medication", "🌸 On / near period"
     ]),
 ]
