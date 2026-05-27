@@ -425,6 +425,7 @@ struct PackingListView: View {
         }
         .listStyle(.plain)
         .scrollContentBackground(.hidden)
+        .contentMargins(.top, 0, for: .scrollContent)
         .environment(\.defaultMinListRowHeight, 0)
         .environment(\.defaultMinListHeaderHeight, 0)
         .listSectionSpacing(0)
