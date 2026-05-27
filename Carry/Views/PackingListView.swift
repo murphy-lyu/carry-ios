@@ -323,7 +323,7 @@ struct PackingListView: View {
         }
         .alert("New section", isPresented: $showAddSectionAlert) {
             TextField("Section name", text: $newSectionName)
-            Button("Add") {
+            Button("Create") {
                 addSectionFromEmptyState()
             }
             Button("Cancel", role: .cancel) {
@@ -1661,7 +1661,7 @@ struct ReorderSectionsView: View {
         }
         .alert("New section", isPresented: $showAddAlert) {
             TextField("Section name", text: $newSectionName)
-            Button("Add") { commitAdd() }
+            Button("Create") { commitAdd() }
             Button("Cancel", role: .cancel) { newSectionName = "" }
         }
         .alert("Rename", isPresented: showRenameAlert) {
