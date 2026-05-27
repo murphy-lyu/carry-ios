@@ -27450,7 +27450,7 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "If your trips disappeared after an app update or device restore, you can recover them from the most recent auto-save below."
+            "value": "Your trip data is backed up locally. Restore it here if anything is accidentally lost."
           }
         },
         "es": {
@@ -27486,13 +27486,13 @@
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "如果你的行程在 App 更新或设备恢复后消失了，可以从下方最近一次的自动保存中找回它们。"
+            "value": "行程数据自动备份在本地，数据意外丢失时可从这里恢复。"
           }
         },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "如果你的行程在 App 更新或裝置還原後消失了，可以從下方最近一次的自動儲存中找回它們。"
+            "value": "行程資料自動備份在本機，資料意外遺失時可從這裡還原。"
           }
         }
       }
