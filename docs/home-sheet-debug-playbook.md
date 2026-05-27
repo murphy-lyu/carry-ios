@@ -207,3 +207,17 @@
    - 终点统一在 `t>=1` 收尾，移除这两条路径对 `UIViewPropertyAnimator` 的依赖。
    用户反馈：
    - 请求提交并同步文档记录（当前步骤）。
+
+17. 改动：
+   - `currentVisualOffset()` 改为“只要有 `presentation` 就优先读取”，不再依赖 `runningAnimator != nil` 前置条件。
+   - 目的：direct displayLink 路径也能拿到真实视觉位置，避免读到旧 model 值引发中段跳变。
+   用户反馈：
+   - 现象为“上下拉中段明显卡顿一下再到位”。
+
+18. 改动：
+   - `handleDirectPositionTick(...)` 每帧同步：
+     - `snappedOffset = raw`
+     - `liveDelta = 0`
+   - 目的：避免中途状态读取落后导致的二次收敛/卡顿。
+   用户反馈：
+   - 要求“修卡顿且不能引回左右边距不一致（尤其右侧中段先偏大）”。

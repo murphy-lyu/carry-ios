@@ -407,6 +407,8 @@ final class SheetViewController: UIViewController {
                         bottom: bottomRadius(directPositionFixedProgress),
                         progress: directPositionFixedProgress)
         CATransaction.commit()
+        snappedOffset = raw
+        liveDelta = 0
 
         if t >= 1 {
             let completion = directPositionCompletion
@@ -551,7 +553,7 @@ final class SheetViewController: UIViewController {
 
     private func currentVisualOffset() -> CGFloat {
         let h = view.bounds.height
-        if runningAnimator != nil, let pf = outerView.layer.presentation()?.frame {
+        if let pf = outerView.layer.presentation()?.frame {
             return pf.origin.y - (h - expandedHeight)
         }
         return snappedOffset + liveDelta
