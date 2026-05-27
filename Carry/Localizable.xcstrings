@@ -31883,81 +31883,119 @@
       }
     },
     "shortcut.footprint.description" : {
+      "extractionState" : "manual",
       "localizations" : {
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "shortcut.footprint.description"
+            "value" : "Öffnet die besuchten Länder-Karte in Carry."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Open the visited countries map in Carry."
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "shortcut.footprint.description"
+            "value" : "Abre el mapa de países visitados en Carry."
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "shortcut.footprint.description"
+            "value" : "Ouvre la carte des pays visités dans Carry."
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "shortcut.footprint.description"
+            "value" : "Carryで訪問国マップを開きます。"
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "shortcut.footprint.description"
+            "value" : "Carry에서 방문 국가 지도를 엽니다."
           }
         },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "shortcut.footprint.description"
+            "value" : "Abre o mapa de países visitados no Carry."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "在 Carry 中打开到访国家地图。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "在 Carry 中開啟到訪國家地圖。"
           }
         }
       }
     },
     "shortcut.footprint.title" : {
+      "extractionState" : "manual",
       "localizations" : {
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "shortcut.footprint.title"
+            "value" : "Footprint anzeigen"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Show Footprint"
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "shortcut.footprint.title"
+            "value" : "Ver huella de viaje"
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "shortcut.footprint.title"
+            "value" : "Afficher les voyages"
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "shortcut.footprint.title"
+            "value" : "足跡を表示"
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "shortcut.footprint.title"
+            "value" : "발자국 보기"
           }
         },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "shortcut.footprint.title"
+            "value" : "Ver rastro de viagens"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "查看足迹"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "查看足跡"
           }
         }
       }
