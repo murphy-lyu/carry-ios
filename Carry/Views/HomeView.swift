@@ -570,7 +570,7 @@ struct HomeView: View {
                 HStack(spacing: 10) {
                     statPill(value: "\(store.trips.count)", label: "home.allTrips")
                     statPill(value: "\(upcomingTrips.count)", label: "home.upcoming")
-                    statPill(value: "\(visitedCountriesCount)", label: "home.countries")
+                    statPill(value: "\(visitedCountriesCount)", label: visitedCountriesCount == 1 ? "home.country" : "home.countries")
                 }
             }
         }
