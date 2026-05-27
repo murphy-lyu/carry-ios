@@ -2830,7 +2830,7 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Add the essentials first, then choose your items"
+            "value": "Where to this time?"
           }
         },
         "es": {
@@ -2866,13 +2866,13 @@
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "先填写基础信息，再选择要带的物品"
+            "value": "这次去哪儿？"
           }
         },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "先填寫基礎資訊，再選擇要帶的物品"
+            "value": "這次去哪裡？"
           }
         }
       }
@@ -7092,7 +7092,7 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Continue"
+            "value": "Select Items"
           }
         },
         "es": {
@@ -7128,13 +7128,13 @@
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "添加物品"
+            "value": "选择物品"
           }
         },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "添加物品"
+            "value": "選擇物品"
           }
         }
       }
