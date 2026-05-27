@@ -1115,8 +1115,8 @@ struct TripCard: View {
                 GeometryReader { geo in
                     let w = geo.size.width
                     let stripW = w * 0.62
-                    let peakOpacity: Double = colorScheme == .dark ? 0.18 : 0.48
-                    let midOpacity: Double = colorScheme == .dark ? 0.10 : 0.26
+                    let peakOpacity: Double = colorScheme == .dark ? 0.10 : 0.48
+                    let midOpacity: Double = colorScheme == .dark ? 0.05 : 0.26
                     return LinearGradient(
                         stops: [
                             .init(color: .clear, location: 0),
