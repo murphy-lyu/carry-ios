@@ -96,7 +96,6 @@ let sceneItemMap: [String: [SceneItem]] = [
     ],
     "long_haul_flight": [
         makeSceneItem("Passport", isAlert: true),
-        makeSceneItem("Flight tickets", isAlert: true),
         makeSceneItem("Neck pillow", isAlert: true),
         makeSceneItem("Noise-cancelling headphones", isAlert: true),
         makeSceneItem("Overseas SIM / portable WiFi", isAlert: false),

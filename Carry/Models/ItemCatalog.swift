@@ -67,7 +67,7 @@ let itemPickerCatalog: [ItemPickerCategory] = [
         "Driver's license", "International driving permit",
         "HK & Macao permit", "Taiwan permit",
         "Vaccination certificate",
-        "Flight tickets", "Boarding pass", "Children's passport / ID", "Photo ID copy",
+        "Boarding pass", "Children's passport / ID", "Photo ID copy",
     ]),
     ItemPickerCategory(name: "Clothing", items: [
         "Underwear", "Socks",

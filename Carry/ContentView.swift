@@ -42,6 +42,7 @@ struct ContentView: View {
                 HomeView()
                     .navigationDestination(for: UUID.self) { id in
                         PackingListView(tripId: id)
+                            .toolbar(.hidden, for: .tabBar)
                     }
                     .navigationDestination(for: CreationRoute.self) { route in
                         switch route {
