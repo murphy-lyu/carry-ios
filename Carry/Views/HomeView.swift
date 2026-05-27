@@ -404,7 +404,7 @@ struct HomeView: View {
                 collapseRequest = true  // SheetViewController.snap handles the animation
             }
             .alert(
-                "Delete \(tripToDelete?.name ?? "")?",
+                String(format: NSLocalizedString("Delete %@?", comment: ""), tripToDelete?.name ?? ""),
                 isPresented: $showDeleteConfirmation
             ) {
                 Button("Delete", role: .destructive) {

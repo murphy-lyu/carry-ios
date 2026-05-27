@@ -342,7 +342,7 @@ struct PackingListView: View {
             }
         }
         .alert(
-            "Delete \(bundle?.name ?? "")?",
+            String(format: NSLocalizedString("Delete %@?", comment: ""), bundle?.name ?? ""),
             isPresented: $showDeleteConfirmation
         ) {
             Button("Delete", role: .destructive) {
