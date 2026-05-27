@@ -75,15 +75,15 @@ struct CoffeeSheetView: View {
                     // — Coffee cards
                     VStack(spacing: 10) {
                         coffeeCard(emoji: "🥤", nameKey: "support.drink.water",
-                                   id: "com.lumastudio.carry.water",      fallback: "$0.99")
+                                   id: "com.murphy.carry.water",      fallback: "$0.99")
                         coffeeCard(emoji: "☕️", nameKey: "support.drink.americano",
-                                   id: "com.lumastudio.carry.americano",  fallback: "$1.99")
+                                   id: "com.murphy.carry.americano",  fallback: "$1.99")
                         coffeeCard(emoji: "🥛", nameKey: "support.drink.latte",
-                                   id: "com.lumastudio.carry.latte",      fallback: "$2.99")
+                                   id: "com.murphy.carry.latte",      fallback: "$2.99")
                         coffeeCard(emoji: "🫧", nameKey: "support.drink.cappuccino",
-                                   id: "com.lumastudio.carry.cappuccino", fallback: "$3.99")
+                                   id: "com.murphy.carry.cappuccino", fallback: "$3.99")
                         coffeeCard(emoji: "🍻", nameKey: "support.drink.beer",
-                                   id: "com.lumastudio.carry.beer",       fallback: "$4.99")
+                                   id: "com.murphy.carry.beer",       fallback: "$4.99")
                     }
                     .padding(.horizontal, 20)
                     .padding(.bottom, 6)

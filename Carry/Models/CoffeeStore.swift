@@ -9,11 +9,11 @@ import StoreKit
 final class CoffeeStore: ObservableObject {
 
     static let productIDs = [
-        "com.lumastudio.carry.water",
-        "com.lumastudio.carry.americano",
-        "com.lumastudio.carry.latte",
-        "com.lumastudio.carry.cappuccino",
-        "com.lumastudio.carry.beer"
+        "com.murphy.carry.water",
+        "com.murphy.carry.americano",
+        "com.murphy.carry.latte",
+        "com.murphy.carry.cappuccino",
+        "com.murphy.carry.beer"
     ]
 
     @Published var products: [Product] = []
