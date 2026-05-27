@@ -33988,7 +33988,7 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "I will keep building Carry with the same care."
+            "value": "You helped Carry get here."
           }
         },
         "es": {
@@ -34024,13 +34024,13 @@
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "这份信任我不会忘。"
+            "value": "你让 Carry 走到了今天。"
           }
         },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "這份信任我不會忘。"
+            "value": "你讓 Carry 走到了今天。"
           }
         }
       }
@@ -34047,7 +34047,7 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Thank you for your continued support ❤️"
+            "value": "You're Carry's best friend ❤️"
           }
         },
         "es": {
@@ -34083,13 +34083,13 @@
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "谢谢你的持续支持 ❤️"
+            "value": "你是 Carry 最好的朋友 ❤️"
           }
         },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "謝謝你的持續支持 ❤️"
+            "value": "你是 Carry 最好的朋友 ❤️"
           }
         }
       }
