@@ -18945,7 +18945,7 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Category"
+            "value": "Category (optional)"
           }
         },
         "es": {
@@ -18981,13 +18981,13 @@
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "分类"
+            "value": "分类（可选）"
           }
         },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "分類"
+            "value": "分類（選填）"
           }
         }
       }
@@ -19358,7 +19358,7 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Quantity"
+            "value": "Quantity (optional)"
           }
         },
         "es": {
@@ -19394,13 +19394,13 @@
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "数量"
+            "value": "数量（可选）"
           }
         },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "數量"
+            "value": "數量（選填）"
           }
         }
       }
