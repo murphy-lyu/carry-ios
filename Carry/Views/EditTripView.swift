@@ -154,7 +154,7 @@ struct EditTripView: View {
                                     .font(.system(size: 13, weight: .semibold))
                                     .transition(.scale.combined(with: .opacity))
                             }
-                            Text(isSaved ? "Saved" : "Save")
+                            Text(LocalizedStringKey(isSaved ? "Saved" : "Save"))
                                 .transition(.opacity)
                         }
                         .animation(.easeInOut(duration: 0.2), value: isSaved)
