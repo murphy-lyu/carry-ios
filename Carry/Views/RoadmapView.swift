@@ -100,9 +100,8 @@ struct RoadmapView: View {
     @State private var showSourceSheet = false
     @State private var draftURL = ""
 
-    @State private var payload: RoadmapPayload?
+    @State private var payload: RoadmapPayload? = .embeddedDefault
     @State private var isLoading = false
-    @State private var errorMessage: String?
 
     private var cacheURL: URL {
         FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask)[0]
@@ -217,9 +216,17 @@ struct RoadmapView: View {
     private var topBar: some View {
         HStack(alignment: .top, spacing: 12) {
             VStack(alignment: .leading, spacing: 2) {
-                Text(RoadmapL10n.text(en: "Roadmap", zhHans: "路线图", zhHant: "路線圖"))
-                    .font(.system(size: 28, weight: .semibold, design: .rounded))
-                    .foregroundStyle(.primary)
+                HStack(spacing: 8) {
+                    Text(RoadmapL10n.text(en: "Roadmap", zhHans: "路线图", zhHant: "路線圖"))
+                        .font(.system(size: 28, weight: .semibold, design: .rounded))
+                        .foregroundStyle(.primary)
+                    if isLoading {
+                        ProgressView()
+                            .scaleEffect(0.65)
+                            .tint(.secondary)
+                            .transition(.opacity)
+                    }
+                }
                 if let updatedAt = payload?.updatedAt, !updatedAt.isEmpty {
                     Text(RoadmapL10n.text(en: "Updated: \(updatedAt)", zhHans: "更新于：\(updatedAt)", zhHant: "更新於：\(updatedAt)"))
                         .font(.caption)
@@ -261,29 +268,10 @@ struct RoadmapView: View {
 
     @ViewBuilder
     private var content: some View {
-        if isLoading && payload == nil {
-            ProgressView().frame(maxWidth: .infinity, alignment: .center).padding(.top, 32)
-        } else if let payload {
+        if let payload {
             ForEach(payload.sections) { section in
                 sectionBlock(section)
             }
-        } else {
-            VStack(alignment: .leading, spacing: 10) {
-                Text(errorMessage ?? RoadmapL10n.text(en: "Roadmap unavailable", zhHans: "路线图暂不可用", zhHant: "路線圖暫不可用"))
-                    .font(.subheadline)
-                    .foregroundStyle(.secondary)
-                Text(RoadmapL10n.text(
-                    en: "Tap the top-right link icon to configure your GitHub raw JSON URL.",
-                    zhHans: "点击右上角链接图标，配置你的 GitHub Raw JSON 地址。",
-                    zhHant: "點擊右上角連結圖示，設定你的 GitHub Raw JSON 位址。"
-                ))
-                    .font(.caption)
-                    .foregroundStyle(colorScheme == .dark ? Color.secondary.opacity(0.68) : Color(UIColor.tertiaryLabel))
-            }
-            .padding(16)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .background(cardBackground)
-            .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
         }
     }
 
@@ -402,8 +390,7 @@ struct RoadmapView: View {
     }
 
     private func load() async {
-        isLoading = true
-        errorMessage = nil
+        withAnimation(.easeInOut(duration: 0.2)) { isLoading = true }
 
         let remoteCandidates = [remoteURL.trimmingCharacters(in: .whitespacesAndNewlines), RoadmapRemote.urlString]
             .filter { !$0.isEmpty && !$0.contains("your-user/your-repo") }
@@ -411,26 +398,21 @@ struct RoadmapView: View {
         for candidate in remoteCandidates {
             if let remote = URL(string: candidate),
                let fetched = await fetch(remote: remote) {
-                payload = fetched
+                withAnimation(.easeInOut(duration: 0.35)) { payload = fetched }
                 saveCache(fetched)
-                isLoading = false
+                withAnimation(.easeInOut(duration: 0.2)) { isLoading = false }
                 return
             }
         }
 
         if let cached = loadCache() {
-            payload = cached
-            isLoading = false
+            withAnimation(.easeInOut(duration: 0.35)) { payload = cached }
+            withAnimation(.easeInOut(duration: 0.2)) { isLoading = false }
             return
         }
 
-        payload = .embeddedDefault
-        isLoading = false
-        errorMessage = RoadmapL10n.text(
-            en: "Using built-in roadmap data.",
-            zhHans: "当前使用内置路线图数据。",
-            zhHant: "目前使用內建路線圖資料。"
-        )
+        // embeddedDefault already showing — nothing to update
+        withAnimation(.easeInOut(duration: 0.2)) { isLoading = false }
     }
 
     private func fetch(remote: URL) async -> RoadmapPayload? {
