@@ -816,7 +816,7 @@ struct PackingListView: View {
         if isComplete {
             return NSLocalizedString("packing.complete.short", comment: "")
         }
-        return String(format: NSLocalizedString("packing.items.left", comment: ""), Int64(totalCount - packedCount))
+        return String(format: NSLocalizedString("%lld left", comment: ""), Int64(totalCount - packedCount))
     }
 
     private var sceneEntryCard: some View {
