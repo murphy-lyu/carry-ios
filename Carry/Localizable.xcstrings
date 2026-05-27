@@ -18768,7 +18768,7 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Pick from the base catalog or your own library"
+            "value": "Pick what you're bringing this time."
           }
         },
         "es": {
@@ -18804,13 +18804,13 @@
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "从基础库或你的物品库里选"
+            "value": "挑选你这次要带的物品"
           }
         },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "從基礎庫或你的物品庫裡選"
+            "value": "挑選你這次要帶的物品"
           }
         }
       }
@@ -19438,7 +19438,7 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Base Items"
+            "value": "Browse"
           }
         },
         "es": {
@@ -19474,13 +19474,13 @@
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "基础物品"
+            "value": "分类挑选"
           }
         },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "基礎物品"
+            "value": "分類挑選"
           }
         }
       }
@@ -19556,7 +19556,7 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Custom Items"
+            "value": "My Items"
           }
         },
         "es": {
@@ -19592,13 +19592,13 @@
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "自定义物品"
+            "value": "我的物品"
           }
         },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "自訂物品"
+            "value": "我的物品"
           }
         }
       }
