@@ -363,7 +363,7 @@ final class SheetViewController: UIViewController {
         stopDirectMaskSync()
         directMaskSyncProgress = fixedProgress
         let link = CADisplayLink(target: self, selector: #selector(handleDirectMaskSyncTick(_:)))
-        link.preferredFrameRateRange = CAFrameRateRange(minimum: 60, maximum: 120, preferred: 120)
+        link.preferredFrameRateRange = CAFrameRateRange(minimum: 30, maximum: 60, preferred: 60)
         link.add(to: .main, forMode: .common)
         directMaskSyncDisplayLink = link
     }
@@ -396,7 +396,7 @@ final class SheetViewController: UIViewController {
         directPositionFixedProgress = fixedProgress
         directPositionCompletion = completion
         let link = CADisplayLink(target: self, selector: #selector(handleDirectPositionTick(_:)))
-        link.preferredFrameRateRange = CAFrameRateRange(minimum: 60, maximum: 120, preferred: 120)
+        link.preferredFrameRateRange = CAFrameRateRange(minimum: 30, maximum: 60, preferred: 60)
         link.add(to: .main, forMode: .common)
         directPositionDisplayLink = link
     }
@@ -429,7 +429,7 @@ final class SheetViewController: UIViewController {
         }
         let startTime = CACurrentMediaTime()
         let link = CADisplayLink(target: self, selector: #selector(handleShapeDisplayLink(_:)))
-        link.preferredFrameRateRange = CAFrameRateRange(minimum: 60, maximum: 120, preferred: 120)
+        link.preferredFrameRateRange = CAFrameRateRange(minimum: 30, maximum: 60, preferred: 60)
         link.add(to: .main, forMode: .common)
         link.accessibilityLabel = "\(startTime)|\(duration)"
         shapeDisplayLink = link
