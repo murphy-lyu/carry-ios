@@ -74,7 +74,7 @@ struct CoffeeSheetView: View {
 
                     // — Coffee cards
                     VStack(spacing: 10) {
-                        coffeeCard(emoji: "🍵", nameKey: "support.drink.water",
+                        coffeeCard(emoji: "💧", nameKey: "support.drink.water",
                                    id: "com.murphy.carry.water",      fallback: "$0.99")
                         coffeeCard(emoji: "☕️", nameKey: "support.drink.americano",
                                    id: "com.murphy.carry.americano",  fallback: "$1.99")

@@ -34072,55 +34072,55 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Schwarzer Tee"
+            "value" : "Wasser"
           }
         },
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Black Tea"
+            "value" : "Water"
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Té negro"
+            "value" : "Agua"
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Thé noir"
+            "value" : "Eau"
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "紅茶"
+            "value" : "水"
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "홍차"
+            "value" : "물"
           }
         },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Chá preto"
+            "value" : "Água"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "红茶"
+            "value" : "矿泉水"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "紅茶"
+            "value" : "礦泉水"
           }
         }
       }
