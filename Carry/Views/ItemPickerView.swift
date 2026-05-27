@@ -101,7 +101,7 @@ struct ItemPickerView: View {
     @State private var selectedItems: Set<PickerItemID> = []
     @State private var selectedMyItemIDs: Set<UUID> = []
     @State private var expandedCategories: Set<String> = []
-    @State private var showAutoPackSheet = false
+    @State private var selectedSmartSceneLabels: Set<String> = []
     @State private var toastVisible = false
     @State private var toastText = ""
     @State private var didApplyInitialSource = false
@@ -162,6 +162,7 @@ struct ItemPickerView: View {
     private enum SourceMode: String, CaseIterable {
         case preset
         case myItems
+        case smart
     }
 
     private var tripDays: Int {
@@ -272,6 +273,8 @@ struct ItemPickerView: View {
             results = baseSearchResults
         case .myItems:
             results = customSearchResults
+        case .smart:
+            results = []
         }
         return results.sorted { lhs, rhs in
             let query = normalizedForSearch(searchText)
@@ -330,7 +333,9 @@ struct ItemPickerView: View {
                 }
 
                 Group {
-                    if sourceMode == .myItems {
+                    if sourceMode == .smart {
+                        smartRecommendationView
+                    } else if sourceMode == .myItems {
                         if searchText.isEmpty {
                             let myItems = store.myItems(in: selectedMyItemCollection).sorted(by: compareMyItems(_:_:))
                             List {
@@ -471,28 +476,12 @@ struct ItemPickerView: View {
                 Button {
                     confirmSelection()
                 } label: {
-                    Label(sourceMode == .preset ? "Save" : "myitems.addToTrip", systemImage: "checkmark")
+                    Label(sourceMode == .myItems ? "myitems.addToTrip" : "Save", systemImage: "checkmark")
                         .labelStyle(.titleAndIcon)
                 }
                 .fontWeight(.semibold)
                 .disabled(!hasSelection)
                 .animation(.easeInOut(duration: 0.15), value: hasSelection)
-            }
-        }
-        .overlay(alignment: .bottomTrailing) {
-            if tripInfoForAutoPack != nil {
-                autoPackFAB
-                    .padding(.trailing, 20)
-                    .padding(.bottom, 20)
-            }
-        }
-        .sheet(isPresented: $showAutoPackSheet) {
-            if let info = tripInfoForAutoPack {
-                NavigationStack {
-                    ScenePickerView(autoPackTripInfo: info, seedSections: buildSections(), initialSceneKeys: currentSceneKeys)
-                }
-                .presentationDetents([.large])
-                .presentationDragIndicator(.visible)
             }
         }
         .onAppear {
@@ -502,6 +491,12 @@ struct ItemPickerView: View {
             didApplyInitialSource = true
             if startInMyItems {
                 sourceMode = .myItems
+            }
+            if selectedSmartSceneLabels.isEmpty {
+                let labels = sceneLabelToKey.compactMap { label, key -> String? in
+                    currentSceneKeys.contains(key) ? label : nil
+                }
+                selectedSmartSceneLabels = Set(labels)
             }
             let collections = store.myItemCollections()
             if !collections.contains(selectedMyItemCollection) {
@@ -716,6 +711,72 @@ struct ItemPickerView: View {
                 hideKeyboard()
                 CarryLogger.shared.log(.pickerSourceSwitched, context: "to=myitems")
             }
+
+            if tripInfoForAutoPack != nil {
+                Button {
+                    sourceMode = .smart
+                    isSearchFocused = false
+                    hideKeyboard()
+                    CarryLogger.shared.log(.pickerSourceSwitched, context: "to=smart_recommend")
+                } label: {
+                    VStack(spacing: 2) {
+                        HStack(spacing: 4) {
+                            Image(systemName: "sparkles")
+                                .font(.system(size: 12, weight: .semibold))
+                            Text(LocalizedStringKey("myitems.source.smart"))
+                                .font(.subheadline.weight(.semibold))
+                        }
+                        Text(LocalizedStringKey("myitems.source.smart.subtitle"))
+                            .font(.caption2)
+                            .foregroundStyle(sourceMode == .smart ? Color.white.opacity(0.88) : Color.secondary.opacity(0.78))
+                    }
+                    .foregroundStyle(sourceMode == .smart ? .white : .secondary)
+                    .frame(maxWidth: .infinity)
+                    .frame(height: 44)
+                    .background(
+                        RoundedRectangle(cornerRadius: 14, style: .continuous)
+                            .fill(
+                                sourceMode == .smart
+                                    ? LinearGradient(
+                                        colors: [
+                                            colorScheme == .dark ? Color.white.opacity(0.30) : Color.primary.opacity(1.0),
+                                            colorScheme == .dark ? Color.white.opacity(0.20) : Color.primary.opacity(0.92)
+                                        ],
+                                        startPoint: .topLeading,
+                                        endPoint: .bottomTrailing
+                                    )
+                                    : LinearGradient(
+                                        colors: [
+                                            colorScheme == .dark ? Color(UIColor.secondarySystemBackground).opacity(0.80) : Color(UIColor.systemBackground).opacity(0.78),
+                                            colorScheme == .dark ? Color(UIColor.secondarySystemBackground).opacity(0.72) : Color(UIColor.systemBackground).opacity(0.68)
+                                        ],
+                                        startPoint: .topLeading,
+                                        endPoint: .bottomTrailing
+                                    )
+                            )
+                    )
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 14, style: .continuous)
+                            .strokeBorder(
+                                Color.primary.opacity(
+                                    sourceMode == .smart
+                                        ? (colorScheme == .dark ? 0.08 : 0.04)
+                                        : (colorScheme == .dark ? 0.06 : 0.08)
+                                ),
+                                lineWidth: 1
+                            )
+                    )
+                    .shadow(
+                        color: sourceMode == .smart
+                            ? Color.black.opacity(colorScheme == .dark ? 0.12 : 0.12)
+                            : Color.black.opacity(colorScheme == .dark ? 0.08 : 0.03),
+                        radius: sourceMode == .smart ? 8 : 4,
+                        x: 0,
+                        y: 2
+                    )
+                }
+                .buttonStyle(.plain)
+            }
         }
         .padding(5)
         .background(
@@ -738,6 +799,130 @@ struct ItemPickerView: View {
         .shadow(color: Color.black.opacity(0.035), radius: 8, x: 0, y: 3)
         .frame(height: 58)
         .padding(.top, 2)
+    }
+
+    private var smartRecommendationView: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 12) {
+                searchResultsCard {
+                    VStack(alignment: .leading, spacing: 14) {
+                        Text(LocalizedStringKey("Pick travel scenes to generate a better list"))
+                            .font(.subheadline)
+                            .foregroundStyle(.secondary)
+
+                        sceneChipGrid
+
+                        Button {
+                            applySmartRecommendations()
+                        } label: {
+                            Text(LocalizedStringKey("scenes.update_list"))
+                                .font(.subheadline.weight(.semibold))
+                                .foregroundColor(smartPrimaryButtonForeground)
+                                .frame(maxWidth: .infinity)
+                                .frame(height: 44)
+                                .background(
+                                    RoundedRectangle(cornerRadius: 14, style: .continuous)
+                                        .fill(smartPrimaryButtonBackground)
+                                )
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: 14, style: .continuous)
+                                        .strokeBorder(Color(.separator).opacity(isSmartPrimaryEnabled ? 0.08 : 0.14), lineWidth: 1)
+                                )
+                        }
+                        .buttonStyle(SolidPressButtonStyle())
+                        .allowsHitTesting(isSmartPrimaryEnabled)
+                    }
+                    .padding(16)
+                }
+            }
+            .padding(.bottom, isCreateMode ? 92 : 24)
+        }
+        .scrollDismissesKeyboard(.interactively)
+    }
+
+    private var sceneChipGrid: some View {
+        let labels = sceneLabelToKey.keys.sorted()
+        return LazyVGrid(columns: [GridItem(.adaptive(minimum: 140), spacing: 8)], spacing: 8) {
+            ForEach(labels, id: \.self) { label in
+                let isSelected = selectedSmartSceneLabels.contains(label)
+                Button {
+                    if isSelected {
+                        selectedSmartSceneLabels.remove(label)
+                    } else {
+                        selectedSmartSceneLabels.insert(label)
+                    }
+                } label: {
+                    Text(LocalizedStringKey(label))
+                        .font(.subheadline.weight(.medium))
+                        .foregroundStyle(isSelected ? Color.white : Color.primary)
+                        .frame(maxWidth: .infinity)
+                        .padding(.horizontal, 10)
+                        .padding(.vertical, 10)
+                        .background(
+                            Capsule(style: .continuous)
+                                .fill(
+                                    isSelected
+                                        ? Color(UIColor { traits in
+                                            traits.userInterfaceStyle == .dark
+                                                ? UIColor(white: 0.28, alpha: 1.0)
+                                                : UIColor(white: 0.22, alpha: 1.0)
+                                        })
+                                        : Color(UIColor.secondarySystemBackground).opacity(colorScheme == .dark ? 0.44 : 0.76)
+                                )
+                        )
+                }
+                .buttonStyle(.plain)
+            }
+        }
+    }
+
+    private func applySmartRecommendations() {
+        guard let info = tripInfoForAutoPack else { return }
+        let keys = selectedSmartSceneLabels.compactMap { sceneLabelToKey[$0] }
+        guard !keys.isEmpty else { return }
+
+        let generated = generatePackingSections(selectedScenes: keys, tripDays: info.durationDays)
+        let generatedByCategory: [String: Set<String>] = Dictionary(
+            uniqueKeysWithValues: generated.map { section in
+                (section.title, Set(section.sortedItems.map { $0.name }))
+            }
+        )
+
+        var preselected = Set<PickerItemID>()
+        for category in itemPickerCatalog {
+            let generatedNames = generatedByCategory[category.name] ?? []
+            for rawKey in category.items {
+                if generatedNames.contains(canonicalItemName(rawKey)) {
+                    preselected.insert(PickerItemID(category: category.name, item: rawKey))
+                }
+            }
+        }
+
+        selectedItems = preselected
+        expandedCategories = Set(itemPickerCatalog
+            .filter { category in
+                category.items.contains { rawKey in
+                    preselected.contains(PickerItemID(category: category.name, item: rawKey))
+                }
+            }
+            .map { $0.name }
+        )
+        sourceMode = .preset
+        showToast(NSLocalizedString("scenes.updated", comment: ""))
+    }
+
+    private var isSmartPrimaryEnabled: Bool {
+        !selectedSmartSceneLabels.isEmpty
+    }
+
+    private var smartPrimaryButtonBackground: Color {
+        isSmartPrimaryEnabled
+            ? Color(UIColor.label)
+            : (colorScheme == .dark ? Color(UIColor.secondarySystemBackground) : Color(UIColor.systemGray3))
+    }
+
+    private var smartPrimaryButtonForeground: Color {
+        isSmartPrimaryEnabled ? Color(UIColor.systemBackground) : Color(UIColor.secondaryLabel)
     }
 
     private func sourceSegment(title: String, subtitle: String, isSelected: Bool, action: @escaping () -> Void) -> some View {
@@ -830,45 +1015,6 @@ struct ItemPickerView: View {
                 .strokeBorder(Color.primary.opacity(0.03), lineWidth: 1)
         )
         .shadow(color: Color.black.opacity(0.012), radius: 4, x: 0, y: 1)
-    }
-
-    // MARK: - Auto Pack FAB
-
-    private var autoPackGradient: AngularGradient {
-        AngularGradient(
-            colors: [
-                Color(red: 1.0,   green: 0.42,  blue: 0.616), // #FF6B9D
-                Color(red: 0.659, green: 0.333, blue: 0.969), // #A855F7
-                Color(red: 0.231, green: 0.51,  blue: 0.965), // #3B82F6
-                Color(red: 0.024, green: 0.714, blue: 0.831), // #06B6D4
-                Color(red: 1.0,   green: 0.42,  blue: 0.616), // #FF6B9D
-            ],
-            center: .center
-        )
-    }
-
-    private var autoPackFAB: some View {
-        Button { showAutoPackSheet = true } label: {
-            Image(systemName: "sparkles")
-                .font(.system(size: 22))
-                .foregroundColor(.primary)
-                .frame(width: 56, height: 56)
-                .background {
-                    ZStack {
-                        Circle()
-                            .fill(autoPackGradient)
-                            .blur(radius: 8)
-                            .opacity(0.5)
-                        Circle()
-                            .fill(Color(UIColor.systemBackground).opacity(0.94))
-                    }
-                }
-                .overlay {
-                    Circle()
-                        .strokeBorder(autoPackGradient, lineWidth: 1.5)
-                }
-        }
-        .buttonStyle(AutoPackFABButtonStyle())
     }
 
     private func categoryHeaderText(_ title: String) -> some View {
