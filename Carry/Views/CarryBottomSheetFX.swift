@@ -281,6 +281,12 @@ final class FXSheetViewController: UIViewController {
     // MARK: External API
 
     func installContent(_ hosting: UIViewController) {
+        if #available(iOS 16.0, *) {
+            (hosting as? UIHostingController<AnyView>)?.safeAreaRegions = []
+        } else {
+            hosting.additionalSafeAreaInsets = .zero
+        }
+
         addChild(hosting)
         innerView.addSubview(hosting.view)
         hostingView = hosting.view

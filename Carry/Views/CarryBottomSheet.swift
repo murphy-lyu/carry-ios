@@ -173,6 +173,14 @@ final class SheetViewController: UIViewController {
     // MARK: External API
 
     func installContent(_ hosting: UIViewController) {
+        // Prevent navigation bar / tab bar safe area insets from propagating into
+        // the sheet's hosting controller — the sheet manages its own layout geometry.
+        if #available(iOS 16.0, *) {
+            (hosting as? UIHostingController<AnyView>)?.safeAreaRegions = []
+        } else {
+            hosting.additionalSafeAreaInsets = .zero
+        }
+
         addChild(hosting)
         containerView.addSubview(hosting.view)
         hostingView = hosting.view
