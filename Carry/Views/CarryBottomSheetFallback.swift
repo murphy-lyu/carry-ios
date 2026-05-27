@@ -99,7 +99,7 @@ final class FallbackSheetViewController: UIViewController {
     private var snappedOffset: CGFloat = 0
     /// Live drag delta on top of snappedOffset (non-zero only during gesture).
     private var liveDelta: CGFloat = 0
-    private var isCollapsedState: Bool { snappedOffset >= collapsedOffset - 1 }
+    private var isCollapsedState: Bool { snappedOffset >= collapsedOffset - 8 }
     private var runningAnimator: UIViewPropertyAnimator?
     /// Monotonic token so stale completion closures are silently dropped.
     private var animationGeneration: Int = 0
@@ -384,7 +384,15 @@ final class FallbackSheetViewController: UIViewController {
                 if shouldExpand {
                     commitSnap(to: 0, velocity: velocity, source: "sheetPanDirectExpand")
                 } else {
-                    settleAtCurrentPositionWithoutSnap()
+                    // Near-collapsed micro-drag: snap back to collapsed rather than
+                    // leaving a floating sub-pixel position that looks identical to
+                    // collapsed but breaks isCollapsedState on the next gesture.
+                    let currentPos = snappedOffset + translation
+                    if currentPos >= collapsedOffset - expandSnapMinTranslation {
+                        commitSnap(to: collapsedOffset, velocity: velocity, source: "sheetPanDirectCollapse")
+                    } else {
+                        settleAtCurrentPositionWithoutSnap()
+                    }
                 }
             }
             activePanDriver = .none
@@ -439,12 +447,22 @@ final class FallbackSheetViewController: UIViewController {
                 sheetPan.isEnabled = false
                 sheetPan.isEnabled = true
             }
+            // Lock scroll via proxy before UIScrollView processes any touch delta.
+            // Overriding contentOffset in .changed is not enough — UIScrollView can
+            // re-apply its own offset update in the same runloop turn, causing a race.
+            // Condition: any position other than fully expanded (snappedOffset == 0)
+            // should block content scroll — sheet position takes priority.
+            if snappedOffset > 0 {
+                delegateProxy?.lockedOffsetY = topInset
+            }
             feedbackGenerator.prepare()
 
         case .changed:
             guard activePanDriver == .list else { return }
             if isCollapsedState {
                 // Rule 3: sheet at bottom → block scroll, drive sheet position.
+                // Proxy lock (set in .began) handles UIScrollView's internal updates;
+                // the direct assignment here is a first-pass guard for the same frame.
                 sv.contentOffset.y = topInset
                 if translation < 0 {
                     applyLiveDelta(translation)
@@ -477,6 +495,9 @@ final class FallbackSheetViewController: UIViewController {
             wasAtTop = false
 
             guard drag != 0 else {
+                // No sheet movement — release any collapsed-state scroll lock
+                // so subsequent gestures are not permanently blocked.
+                delegateProxy?.lockedOffsetY = nil
                 activePanDriver = .none
                 return
             }
@@ -486,9 +507,18 @@ final class FallbackSheetViewController: UIViewController {
             } else {
                 let shouldExpand = (drag <= -expandSnapMinTranslation) || (velocity <= expandSnapMinVelocity)
                 if shouldExpand {
+                    // Lock remains; commitSnap completion will clear it once expanded.
                     commitSnap(to: 0, velocity: velocity, source: "listPanUp")
                 } else {
-                    settleAtCurrentPositionWithoutSnap()
+                    let currentPos = snappedOffset + drag
+                    if currentPos >= collapsedOffset - expandSnapMinTranslation {
+                        // Near-collapsed micro-drag: snap back to collapsed.
+                        commitSnap(to: collapsedOffset, velocity: velocity, source: "sheetPanDirectCollapse")
+                    } else {
+                        // Genuinely mid-way: settle and release the scroll lock.
+                        delegateProxy?.lockedOffsetY = nil
+                        settleAtCurrentPositionWithoutSnap()
+                    }
                 }
             }
             activePanDriver = .none

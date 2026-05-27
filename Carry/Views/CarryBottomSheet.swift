@@ -150,7 +150,7 @@ final class SheetViewController: UIViewController {
     private var snapShapeStart: CGFloat = 0
     private var snapShapeTarget: CGFloat = 0
 
-    private var isCollapsedState: Bool { snappedOffset >= collapsedOffset - 1 }
+    private var isCollapsedState: Bool { snappedOffset >= collapsedOffset - 8 }
     private var runningAnimator: UIViewPropertyAnimator?
     /// Monotonic token for snap animations; stale completions must not mutate state.
     private var animationGeneration: Int = 0
@@ -817,7 +817,16 @@ final class SheetViewController: UIViewController {
                     lastGestureSource = "sheetPanDirectExpand"
                     commitSnap(to: 0, velocity: velocity, source: "sheetPanDirectExpand")
                 } else {
-                    settleAtCurrentPositionWithoutSnap()
+                    // Near-collapsed micro-drag: snap back to collapsed rather than
+                    // leaving a floating sub-pixel position that looks identical to
+                    // collapsed but breaks isCollapsedState on the next gesture.
+                    let currentPos = snappedOffset + translation
+                    if currentPos >= collapsedOffset - expandSnapMinTranslation {
+                        lastGestureSource = "sheetPanDirectCollapse"
+                        commitSnap(to: collapsedOffset, velocity: velocity, source: "sheetPanDirectCollapse")
+                    } else {
+                        settleAtCurrentPositionWithoutSnap()
+                    }
                 }
             }
             activePanDriver = .none
@@ -878,6 +887,14 @@ final class SheetViewController: UIViewController {
                 sheetPan.isEnabled = false
                 sheetPan.isEnabled = true
             }
+            // Lock scroll via proxy before UIScrollView processes any touch delta.
+            // Overriding contentOffset in .changed is not enough — UIScrollView can
+            // re-apply its own offset update in the same runloop turn, causing a race.
+            // Condition: any position other than fully expanded (snappedOffset == 0)
+            // should block content scroll — sheet position takes priority.
+            if snappedOffset > 0 {
+                delegateProxy?.lockedOffsetY = topInset
+            }
             feedbackGenerator.prepare()
 
         case .changed:
@@ -917,6 +934,9 @@ final class SheetViewController: UIViewController {
             wasAtTop = false
 
             guard drag != 0 else {
+                // No sheet movement — release any collapsed-state scroll lock
+                // so subsequent gestures are not permanently blocked.
+                delegateProxy?.lockedOffsetY = nil
                 activePanDriver = .none
                 return
             }
@@ -929,11 +949,20 @@ final class SheetViewController: UIViewController {
             } else {
                 let shouldExpand = (drag <= -expandSnapMinTranslation) || (velocity <= expandSnapMinVelocity)
                 if shouldExpand {
-                    // Content-area upward release expands the sheet.
+                    // Lock remains; commitSnap completion will clear it once expanded.
                     lastGestureSource = "listPanUp"
                     commitSnap(to: 0, velocity: velocity, source: "listPanUp")
                 } else {
-                    settleAtCurrentPositionWithoutSnap()
+                    let currentPos = snappedOffset + drag
+                    if currentPos >= collapsedOffset - expandSnapMinTranslation {
+                        // Near-collapsed micro-drag: snap back to collapsed.
+                        lastGestureSource = "sheetPanDirectCollapse"
+                        commitSnap(to: collapsedOffset, velocity: velocity, source: "sheetPanDirectCollapse")
+                    } else {
+                        // Genuinely mid-way: settle and release the scroll lock.
+                        delegateProxy?.lockedOffsetY = nil
+                        settleAtCurrentPositionWithoutSnap()
+                    }
                 }
             }
             activePanDriver = .none
