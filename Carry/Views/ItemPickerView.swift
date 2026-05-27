@@ -322,11 +322,11 @@ struct ItemPickerView: View {
 
                     searchBar
                         .padding(.horizontal, 16)
-                        .padding(.bottom, 12)
+                        .padding(.bottom, 10)
 
                     sourcePicker
                         .padding(.horizontal, 16)
-                        .padding(.bottom, 12)
+                        .padding(.bottom, 10)
                 }
 
                 Group {
@@ -688,7 +688,7 @@ struct ItemPickerView: View {
         }
         .padding(.horizontal, 16)
         .padding(.top, 8)
-        .padding(.bottom, 6)
+        .padding(.bottom, 4)
     }
 
     private var sourcePicker: some View {
@@ -733,7 +733,7 @@ struct ItemPickerView: View {
         )
         .overlay(
             RoundedRectangle(cornerRadius: 18, style: .continuous)
-                .strokeBorder(Color.primary.opacity(0.06), lineWidth: 1)
+                .strokeBorder(Color.primary.opacity(colorScheme == .dark ? 0.12 : 0.08), lineWidth: 1)
         )
         .shadow(color: Color.black.opacity(0.035), radius: 8, x: 0, y: 3)
         .frame(height: 58)
@@ -1001,7 +1001,7 @@ struct ItemPickerView: View {
         .background(Color(UIColor.systemBackground).opacity(0.84))
         .overlay(
             RoundedRectangle(cornerRadius: 12, style: .continuous)
-                .strokeBorder(Color.primary.opacity(0.05), lineWidth: 1)
+                .strokeBorder(Color.primary.opacity(colorScheme == .dark ? 0.12 : 0.08), lineWidth: 1)
         )
         .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
     }

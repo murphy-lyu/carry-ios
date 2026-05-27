@@ -425,7 +425,7 @@ struct PackingListView: View {
         }
         .listStyle(.plain)
         .scrollContentBackground(.hidden)
-        .contentMargins(.top, 0, for: .scrollContent)
+        .contentMargins(.top, isNewTrip ? 8 : 0, for: .scrollContent)
         .environment(\.defaultMinListRowHeight, 0)
         .environment(\.defaultMinListHeaderHeight, 0)
         .listSectionSpacing(0)
@@ -1416,7 +1416,7 @@ struct PackingItemRow: View {
                     .font(.callout)
                     .foregroundColor(item.isPacked ? Color(.secondaryLabel) : .primary)
                     .strikethrough(item.isPacked)
-                    .opacity(item.isPacked ? (colorScheme == .dark ? 0.72 : 0.58) : 1.0)
+                    .opacity(item.isPacked ? (colorScheme == .dark ? 0.60 : 0.52) : 1.0)
 
                 Spacer()
 

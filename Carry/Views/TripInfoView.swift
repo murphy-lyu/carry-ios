@@ -118,7 +118,10 @@ struct TripInfoView: View {
                         .background(Color(UIColor.systemBackground).opacity(0.64))
                         .overlay(
                             RoundedRectangle(cornerRadius: 12, style: .continuous)
-                                .strokeBorder(Color.primary.opacity(0.04), lineWidth: 1)
+                                .strokeBorder(
+                                    Color.primary.opacity(colorScheme == .dark ? 0.11 : 0.07),
+                                    lineWidth: 1
+                                )
                         )
                         .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
                     }
@@ -217,7 +220,10 @@ struct TripInfoView: View {
         .background(Color(UIColor.systemBackground).opacity(0.66))
         .overlay(
             RoundedRectangle(cornerRadius: 12, style: .continuous)
-                .strokeBorder(Color.primary.opacity(0.04), lineWidth: 1)
+                .strokeBorder(
+                    Color.primary.opacity(colorScheme == .dark ? 0.11 : 0.07),
+                    lineWidth: 1
+                )
         )
         .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
     }
@@ -226,7 +232,7 @@ struct TripInfoView: View {
         label: LocalizedStringKey,
         @ViewBuilder content: () -> Content
     ) -> some View {
-        VStack(alignment: .leading, spacing: 6) {
+        VStack(alignment: .leading, spacing: 4) {
             Text(label)
                 .font(.system(size: 11, weight: .medium))
                 .foregroundStyle(.tertiary.opacity(0.86))
