@@ -1,12 +1,12 @@
 //
-//  CarryBottomSheetScaled.swift
+//  CarryBottomSheetFX.swift
 //  Carry
 //
 //  High-performance bottom sheet driven entirely by UIKit.
 //  UIViewPropertyAnimator + CALayer — SwiftUI body never re-evaluates
 //  during spring animations.
 //
-//  View hierarchy inside ScaledSheetViewController.view (full-screen):
+//  View hierarchy inside FXSheetViewController.view (full-screen):
 //
 //    clippingView (clipsToBounds = true)  ← shrinks from bottom on collapse
 //      └── outerView  (clipsToBounds = false)   ← moves up/down, scales
@@ -19,7 +19,7 @@ import SwiftUI
 
 // MARK: - SwiftUI interface
 
-struct CarryBottomSheetScaled<Content: View>: UIViewControllerRepresentable {
+struct CarryBottomSheetFX<Content: View>: UIViewControllerRepresentable {
 
     let expandedHeight: CGFloat
     let collapsedOffset: CGFloat
@@ -30,8 +30,8 @@ struct CarryBottomSheetScaled<Content: View>: UIViewControllerRepresentable {
     let isListEmpty: Bool
     @ViewBuilder let content: () -> Content
 
-    func makeUIViewController(context: Context) -> ScaledSheetViewController {
-        let vc = ScaledSheetViewController(
+    func makeUIViewController(context: Context) -> FXSheetViewController {
+        let vc = FXSheetViewController(
             expandedHeight: expandedHeight,
             collapsedOffset: collapsedOffset,
             isListEmpty: isListEmpty
@@ -53,7 +53,7 @@ struct CarryBottomSheetScaled<Content: View>: UIViewControllerRepresentable {
         return vc
     }
 
-    func updateUIViewController(_ vc: ScaledSheetViewController, context: Context) {
+    func updateUIViewController(_ vc: FXSheetViewController, context: Context) {
         context.coordinator.mapCityOpacityBinding = $mapCityOpacity
         context.coordinator.hostingVC?.rootView = AnyView(content())
         vc.isListEmpty = isListEmpty
@@ -67,15 +67,15 @@ struct CarryBottomSheetScaled<Content: View>: UIViewControllerRepresentable {
     func makeCoordinator() -> Coordinator { Coordinator() }
 
     final class Coordinator {
-        weak var sheetVC: ScaledSheetViewController?
+        weak var sheetVC: FXSheetViewController?
         var hostingVC: UIHostingController<AnyView>?
         var mapCityOpacityBinding: Binding<Double>?
     }
 }
 
-// MARK: - ScaledSheetViewController
+// MARK: - FXSheetViewController
 
-final class ScaledSheetViewController: UIViewController {
+final class FXSheetViewController: UIViewController {
     private enum PanDriver {
         case none
         case sheet
@@ -166,8 +166,8 @@ final class ScaledSheetViewController: UIViewController {
     /// Clips the sheet from below: height = screenHeight - bottomLift.
     /// As the sheet collapses, this shrinks and reveals background, creating
     /// the "ship leaving dock" gap at the bottom.
-    /// ScaledPassthroughView so touches outside the sheet reach MapKit behind it.
-    private let clippingView = ScaledPassthroughView()
+    /// FXPassthroughView so touches outside the sheet reach MapKit behind it.
+    private let clippingView = FXPassthroughView()
     /// Moves and scales; clipsToBounds = false.
     private let outerView = UIView()
     /// Stays within outerView bounds; clips content to rounded corners.
@@ -191,7 +191,7 @@ final class ScaledSheetViewController: UIViewController {
 
     private var sheetPan: UIPanGestureRecognizer!
     private weak var listScrollView: UIScrollView?
-    private var delegateProxy: ScaledDecelerationCanceller?
+    private var delegateProxy: FXDecelerationCanceller?
     private var delegateObservation: NSKeyValueObservation?
 
     /// Pre-allocated so the Taptic Engine is warm before the first snap.
@@ -216,10 +216,10 @@ final class ScaledSheetViewController: UIViewController {
 
     // MARK: Lifecycle
 
-    /// Use ScaledPassthroughView as the root so touches outside the sheet panel
+    /// Use FXPassthroughView as the root so touches outside the sheet panel
     /// fall through to MapKit (or any other view behind the sheet).
     override func loadView() {
-        view = ScaledPassthroughView()
+        view = FXPassthroughView()
         view.backgroundColor = .clear
         view.clipsToBounds = false
     }
@@ -867,7 +867,7 @@ final class ScaledSheetViewController: UIViewController {
     }
 
     private func installProxy(on sv: UIScrollView) {
-        let proxy = delegateProxy ?? ScaledDecelerationCanceller()
+        let proxy = delegateProxy ?? FXDecelerationCanceller()
         proxy.original = sv.delegate
         sv.delegate = proxy
         delegateProxy = proxy
@@ -992,7 +992,7 @@ final class ScaledSheetViewController: UIViewController {
 
 // MARK: - UIGestureRecognizerDelegate
 
-extension ScaledSheetViewController: UIGestureRecognizerDelegate {
+extension FXSheetViewController: UIGestureRecognizerDelegate {
 
     func gestureRecognizer(_ gr: UIGestureRecognizer,
                            shouldRecognizeSimultaneouslyWith other: UIGestureRecognizer) -> Bool {
@@ -1020,22 +1020,22 @@ extension ScaledSheetViewController: UIGestureRecognizerDelegate {
     }
 }
 
-// MARK: - ScaledPassthroughView
+// MARK: - FXPassthroughView
 
 /// A UIView that returns nil from hitTest when no subview claims the touch,
 /// allowing gestures (e.g. MapKit pinch/pan) on views behind it to pass through.
-private final class ScaledPassthroughView: UIView {
+private final class FXPassthroughView: UIView {
     override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
         let hit = super.hitTest(point, with: event)
         return hit === self ? nil : hit
     }
 }
 
-// MARK: - ScaledDecelerationCanceller
+// MARK: - FXDecelerationCanceller
 
 /// Intercepts UIScrollViewDelegate to cancel momentum scroll when the
 /// sheet pan gesture takes over.
-private final class ScaledDecelerationCanceller: NSObject, UIScrollViewDelegate {
+private final class FXDecelerationCanceller: NSObject, UIScrollViewDelegate {
     weak var original: AnyObject?
     var cancelNext  = false
     var lockedOffsetY: CGFloat?

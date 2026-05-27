@@ -47,19 +47,24 @@ struct ContentView: View {
                         switch route {
                         case .tripInfo(let routeID, let startInMyItems):
                             TripInfoView(routeID: routeID, startInMyItems: startInMyItems)
+                                .toolbar(.hidden, for: .tabBar)
                         case .itemPicker(let info, let startInMyItems):
                             ItemPickerView(tripInfo: info, startInMyItems: startInMyItems)
+                                .toolbar(.hidden, for: .tabBar)
                         case .addItems(let tripId):
                             ItemPickerView(tripId: tripId)
                         case .scenePicker(let info):
                             ScenePickerView(tripInfo: info)
+                                .toolbar(.hidden, for: .tabBar)
                         case .packingList(let id):
                             PackingListView(tripId: id, isNewTrip: true)
+                                .toolbar(.hidden, for: .tabBar)
                         case .editScenes(let id):
                             ScenePickerView(editingTripId: id)
                         case .autoPackPicker(let info, let sceneKeys):
                             ItemPickerView(autoPackTripInfo: info, sceneKeys: sceneKeys)
                                 .id(sceneKeys.sorted().joined(separator: ","))
+                                .toolbar(.hidden, for: .tabBar)
                         }
                     }
             }

@@ -258,7 +258,7 @@ struct HomeView: View {
                         sheetContent
                     }
                 case .ultimate:
-                    CarryBottomSheetScaled(
+                    CarryBottomSheetFX(
                         expandedHeight: expandedSheetHeight,
                         collapsedOffset: collapsedSheetOffset,
                         mapCityOpacity: $mapCityOpacity,
