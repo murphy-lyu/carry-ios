@@ -1208,12 +1208,16 @@ struct PackingListView: View {
                 .foregroundColor(Color(UIColor.systemBackground))
                 .frame(maxWidth: .infinity)
                 .frame(height: 52)
-                .background {
+                .background(Color(UIColor.label))
+                .cornerRadius(14)
+                .overlay(
                     RoundedRectangle(cornerRadius: 14, style: .continuous)
-                        .fill(Color(UIColor.label))
-                }
+                        .strokeBorder(Color(.separator).opacity(0.08), lineWidth: 1)
+                )
                 .animation(.easeInOut(duration: 0.2), value: isSaved)
             }
+            .buttonStyle(SolidPressButtonStyle())
+            .allowsHitTesting(!isSaved)
             .padding(.horizontal, 16)
             .padding(.top, 12)
             .padding(.bottom, 16)

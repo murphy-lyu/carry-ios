@@ -23,6 +23,14 @@ struct SuggestionPreviewView: View {
     private var selectedCount: Int { selectedNames.count + selectedSurpriseNames.count }
     private var hasSelection: Bool { !selectedNames.isEmpty || !selectedSurpriseNames.isEmpty }
     private var hasContent: Bool { !sections.isEmpty || !surpriseItems.isEmpty }
+    private var primaryButtonBackground: Color {
+        hasSelection
+            ? Color(UIColor.label)
+            : (colorScheme == .dark ? Color(UIColor.secondarySystemBackground) : Color(UIColor.systemGray3))
+    }
+    private var primaryButtonForeground: Color {
+        hasSelection ? Color(UIColor.systemBackground) : Color(UIColor.secondaryLabel)
+    }
 
     var body: some View {
         ZStack {
@@ -102,43 +110,45 @@ struct SuggestionPreviewView: View {
     }
 
     private func sectionHeader(_ title: String, isFirst: Bool) -> some View {
-        Text(LocalizedStringKey(title))
-            .font(.caption.weight(.medium))
-            .foregroundStyle(colorScheme == .dark ? Color(.systemGray2) : Color(.systemGray))
-            .kerning(1.1)
-            .textCase(.uppercase)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(.horizontal, 16)
-            .padding(.top, isFirst ? 2 : 12)
-            .padding(.bottom, 4)
-            .overlay(alignment: .bottom) {
-                Rectangle()
-                    .fill(colorScheme == .dark ? Color.white.opacity(0.03) : Color.primary.opacity(0.03))
-                    .frame(height: 1)
-            }
-            .zIndex(1)
-    }
-
-    private var surpriseHeader: some View {
-        HStack(spacing: 6) {
-            Image(systemName: "sparkles")
-                .font(.system(size: 10, weight: .semibold))
-                .foregroundStyle(.secondary)
-            Text("Worth considering")
+        VStack(spacing: 0) {
+            Text(LocalizedStringKey(title))
                 .font(.caption.weight(.medium))
                 .foregroundStyle(colorScheme == .dark ? Color(.systemGray2) : Color(.systemGray))
                 .kerning(1.1)
                 .textCase(.uppercase)
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(.horizontal, 16)
-        .padding(.top, 12)
-        .padding(.bottom, 4)
-        .overlay(alignment: .bottom) {
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.horizontal, 16)
+                .padding(.top, isFirst ? 2 : 12)
+                .padding(.bottom, 4)
             Rectangle()
                 .fill(colorScheme == .dark ? Color.white.opacity(0.03) : Color.primary.opacity(0.03))
                 .frame(height: 1)
         }
+        .background(Color(UIColor.systemBackground))
+        .zIndex(1)
+    }
+
+    private var surpriseHeader: some View {
+        VStack(spacing: 0) {
+            HStack(spacing: 6) {
+                Image(systemName: "sparkles")
+                    .font(.system(size: 10, weight: .semibold))
+                    .foregroundStyle(.secondary)
+                Text("Worth considering")
+                    .font(.caption.weight(.medium))
+                    .foregroundStyle(colorScheme == .dark ? Color(.systemGray2) : Color(.systemGray))
+                    .kerning(1.1)
+                    .textCase(.uppercase)
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.horizontal, 16)
+            .padding(.top, 12)
+            .padding(.bottom, 4)
+            Rectangle()
+                .fill(colorScheme == .dark ? Color.white.opacity(0.03) : Color.primary.opacity(0.03))
+                .frame(height: 1)
+        }
+        .background(Color(UIColor.systemBackground))
         .zIndex(1)
     }
 
@@ -227,15 +237,17 @@ struct SuggestionPreviewView: View {
                     }
                 }
                 .font(.subheadline.weight(.medium))
-                .foregroundColor(Color(UIColor.systemBackground))
+                .foregroundColor(primaryButtonForeground)
                 .frame(maxWidth: .infinity)
                 .frame(height: 52)
-                .background {
+                .background(primaryButtonBackground)
+                .cornerRadius(14)
+                .overlay(
                     RoundedRectangle(cornerRadius: 14, style: .continuous)
-                        .fill(hasSelection ? Color(UIColor.label) : Color(UIColor.label).opacity(0.78))
-                        .animation(.easeInOut(duration: 0.15), value: hasSelection)
-                }
+                        .strokeBorder(Color(.separator).opacity(hasSelection ? 0.08 : 0.14), lineWidth: 1)
+                )
             }
+            .buttonStyle(SolidPressButtonStyle())
             .padding(.horizontal, 20)
             .padding(.top, 12)
             .padding(.bottom, 16)

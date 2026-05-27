@@ -43,6 +43,7 @@ struct ScenePickerView: View {
     @EnvironmentObject var store: TripStore
     @EnvironmentObject var router: NavigationRouter
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.colorScheme) private var colorScheme
     @State private var selectedItems: Set<String> = []
     @State private var didLoadInitialSelection = false
     @State private var isSaved = false
@@ -92,6 +93,17 @@ struct ScenePickerView: View {
         return hasSelection
     }
 
+    private var primaryButtonBackground: Color {
+        if isPrimaryButtonHighlighted {
+            return Color(UIColor.label)
+        }
+        return colorScheme == .dark ? Color(UIColor.secondarySystemBackground) : Color(UIColor.systemGray3)
+    }
+
+    private var primaryButtonForeground: Color {
+        isPrimaryButtonHighlighted ? Color(UIColor.systemBackground) : Color(UIColor.secondaryLabel)
+    }
+
     var body: some View {
         ZStack {
             CarrySubtleBackground()
@@ -122,25 +134,19 @@ struct ScenePickerView: View {
                     }
                     .font(.subheadline)
                     .fontWeight(.medium)
-                    .foregroundColor(
-                        isPrimaryButtonHighlighted
-                        ? Color(UIColor.systemBackground)
-                        : Color(UIColor.secondaryLabel)
-                    )
+                    .foregroundColor(primaryButtonForeground)
                     .frame(maxWidth: .infinity)
                     .frame(height: 52)
-                    .background {
+                    .background(primaryButtonBackground)
+                    .cornerRadius(14)
+                    .overlay(
                         RoundedRectangle(cornerRadius: 14, style: .continuous)
-                            .fill(
-                                isPrimaryButtonHighlighted
-                                ? Color(UIColor.label)
-                                : Color(UIColor.secondarySystemFill)
-                            )
-                            .animation(.easeInOut(duration: 0.15), value: isPrimaryButtonHighlighted)
-                    }
+                            .strokeBorder(Color(.separator).opacity(isPrimaryButtonHighlighted ? 0.08 : 0.14), lineWidth: 1)
+                    )
                     .animation(.easeInOut(duration: 0.2), value: isSaved)
                 }
-                .disabled(!isPrimaryButtonEnabled)
+                .buttonStyle(SolidPressButtonStyle())
+                .allowsHitTesting(isPrimaryButtonEnabled)
                 .padding(.horizontal, 20)
             }
             .padding(.top, 12)
@@ -423,7 +429,6 @@ private let sceneSymbols: [String: String] = [
     "☕ Coffee lover":          "cup.and.saucer.fill",
     "🍵 Tea lover":            "cup.and.saucer.fill",
     "💊 Daily medication":     "pill.fill",
-    "🔒 Personal (private)":   "lock.fill",
 ]
 
 struct SceneChip: View {
