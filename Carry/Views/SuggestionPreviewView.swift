@@ -23,6 +23,9 @@ struct SuggestionPreviewView: View {
     private var selectedCount: Int { selectedNames.count + selectedSurpriseNames.count }
     private var hasSelection: Bool { !selectedNames.isEmpty || !selectedSurpriseNames.isEmpty }
     private var hasContent: Bool { !sections.isEmpty || !surpriseItems.isEmpty }
+    private var chromeBackgroundColor: Color {
+        colorScheme == .dark ? Color(red: 0.08, green: 0.08, blue: 0.09) : Color(UIColor.systemBackground)
+    }
     private var primaryButtonBackground: Color {
         hasSelection
             ? Color(UIColor.label)
@@ -34,7 +37,8 @@ struct SuggestionPreviewView: View {
 
     var body: some View {
         ZStack {
-            CarrySubtleBackground()
+            Color(UIColor.systemBackground)
+                .ignoresSafeArea()
 
             VStack(spacing: 0) {
                 headerBlock
@@ -60,13 +64,13 @@ struct SuggestionPreviewView: View {
         ScrollView {
             LazyVStack(alignment: .leading, spacing: 0, pinnedViews: [.sectionHeaders]) {
                 if !sections.isEmpty {
-                    ForEach(Array(sections.enumerated()), id: \.element.title) { index, section in
+                    ForEach(Array(sections.enumerated()), id: \.element.title) { _, section in
                         Section {
                             ForEach(section.items, id: \.self) { item in
                                 itemRow(item)
                             }
                         } header: {
-                            sectionHeader(section.title, isFirst: index == 0)
+                            sectionHeader(section.title)
                         }
                     }
                 }
@@ -109,7 +113,7 @@ struct SuggestionPreviewView: View {
         .padding(.bottom, 6)
     }
 
-    private func sectionHeader(_ title: String, isFirst: Bool) -> some View {
+    private func sectionHeader(_ title: String) -> some View {
         VStack(spacing: 0) {
             Text(LocalizedStringKey(title))
                 .font(.caption.weight(.medium))
@@ -118,7 +122,7 @@ struct SuggestionPreviewView: View {
                 .textCase(.uppercase)
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .padding(.horizontal, 16)
-                .padding(.top, isFirst ? 2 : 12)
+                .padding(.top, 12)
                 .padding(.bottom, 4)
             Rectangle()
                 .fill(colorScheme == .dark ? Color.white.opacity(0.03) : Color.primary.opacity(0.03))
@@ -252,16 +256,7 @@ struct SuggestionPreviewView: View {
             .padding(.top, 12)
             .padding(.bottom, 16)
         }
-        .background(
-            LinearGradient(
-                colors: [
-                    Color(UIColor.systemBackground).opacity(0.92),
-                    Color(UIColor.systemBackground).opacity(0.82)
-                ],
-                startPoint: .top,
-                endPoint: .bottom
-            )
-        )
+        .background(Color(UIColor.systemBackground))
     }
 
     // MARK: Empty state

@@ -93,6 +93,10 @@ struct ScenePickerView: View {
         return hasSelection
     }
 
+    private var footerBackgroundColor: Color {
+        colorScheme == .dark ? Color(red: 0.08, green: 0.08, blue: 0.09) : Color(UIColor.systemBackground)
+    }
+
     private var primaryButtonBackground: Color {
         if isPrimaryButtonHighlighted {
             return Color(UIColor.label)
@@ -151,16 +155,7 @@ struct ScenePickerView: View {
             }
             .padding(.top, 12)
             .padding(.bottom, 16)
-            .background(
-                LinearGradient(
-                    colors: [
-                        Color(UIColor.systemBackground).opacity(0.92),
-                        Color(UIColor.systemBackground).opacity(0.82)
-                    ],
-                    startPoint: .top,
-                    endPoint: .bottom
-                )
-            )
+            .background(footerBackgroundColor)
         }
         .navigationTitle("")
         .navigationBarTitleDisplayMode(.inline)

@@ -3,9 +3,9 @@
 //  Carry
 //
 //  Single configuration point for sheet A/B.
-//  To ship the fallback: leave activeSheetVariant = .fallback (default).
-//  To clean up after ultimate is stable:
-//    1. Delete CarryBottomSheetFallback.swift
+//  Default is .fallback (CarryBottomSheet, no scaling).
+//  To clean up after scaled variant is stable:
+//    1. Delete CarryBottomSheetScaled.swift
 //    2. Delete this file
 //    3. Restore HomeView to call CarryBottomSheet directly
 //    4. Remove the Sheet Implementation section in DeveloperModeView
@@ -14,8 +14,8 @@
 import Foundation
 
 enum SheetVariant: String {
-    case fallback   // no scaling, stable
-    case ultimate   // side + bottom scaling effects
+    case fallback   // CarryBottomSheet — no scaling, stable default
+    case ultimate   // CarryBottomSheetScaled — side + bottom scaling effects
 }
 
 /// UserDefaults key shared by activeSheetVariant and @AppStorage in HomeView.

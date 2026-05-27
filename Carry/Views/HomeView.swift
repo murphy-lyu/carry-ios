@@ -248,7 +248,7 @@ struct HomeView: View {
             Group {
                 switch SheetVariant(rawValue: sheetVariantRaw) ?? .fallback {
                 case .fallback:
-                    CarryBottomSheetFallback(
+                    CarryBottomSheet(
                         expandedHeight: expandedSheetHeight,
                         collapsedOffset: collapsedSheetOffset,
                         mapCityOpacity: $mapCityOpacity,
@@ -258,7 +258,7 @@ struct HomeView: View {
                         sheetContent
                     }
                 case .ultimate:
-                    CarryBottomSheet(
+                    CarryBottomSheetScaled(
                         expandedHeight: expandedSheetHeight,
                         collapsedOffset: collapsedSheetOffset,
                         mapCityOpacity: $mapCityOpacity,
