@@ -21430,7 +21430,7 @@
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "%@ — fast da"
+            "value": "%@ — noch 3 Tage"
           }
         },
         "en": {
@@ -21442,31 +21442,31 @@
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "%@ — casi ahí"
+            "value": "%@ — 3 días"
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "%@ — presque là"
+            "value": "%@ — dans 3 jours"
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "%@ — もうすぐ"
+            "value": "%@ — あと3日"
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "%@ — 거의 다 왔어요"
+            "value": "%@ — 3일 남았어요"
           }
         },
         "pt-BR": {
           "stringUnit": {
             "state": "translated",
-            "value": "%@ — quase lá"
+            "value": "%@ — 3 dias restantes"
           }
         },
         "zh-Hans": {
@@ -21488,8 +21488,8 @@
       "localizations": {
         "de": {
           "stringUnit": {
-            "state": "needs_review",
-            "value": "Don't forget the things you packed."
+            "state": "translated",
+            "value": "Dein Abenteuer beginnt jetzt. Gute Reise."
           }
         },
         "en": {
@@ -21500,32 +21500,32 @@
         },
         "es": {
           "stringUnit": {
-            "state": "needs_review",
-            "value": "Don't forget the things you packed."
+            "state": "translated",
+            "value": "Tu aventura comienza ahora. ¡Buen viaje!"
           }
         },
         "fr": {
           "stringUnit": {
-            "state": "needs_review",
-            "value": "Don't forget the things you packed."
+            "state": "translated",
+            "value": "Votre aventure commence maintenant. Bon voyage !"
           }
         },
         "ja": {
           "stringUnit": {
-            "state": "needs_review",
-            "value": "Don't forget the things you packed."
+            "state": "translated",
+            "value": "旅が始まります。良い旅を。"
           }
         },
         "ko": {
           "stringUnit": {
-            "state": "needs_review",
-            "value": "Don't forget the things you packed."
+            "state": "translated",
+            "value": "모험이 시작돼요. 좋은 여행 되세요."
           }
         },
         "pt-BR": {
           "stringUnit": {
-            "state": "needs_review",
-            "value": "Don't forget the things you packed."
+            "state": "translated",
+            "value": "Sua aventura começa agora. Boa viagem!"
           }
         },
         "zh-Hans": {
@@ -21547,8 +21547,8 @@
       "localizations": {
         "de": {
           "stringUnit": {
-            "state": "needs_review",
-            "value": "Off to %@ today"
+            "state": "translated",
+            "value": "Heute — auf nach %@"
           }
         },
         "en": {
@@ -21559,32 +21559,32 @@
         },
         "es": {
           "stringUnit": {
-            "state": "needs_review",
-            "value": "Off to %@ today"
+            "state": "translated",
+            "value": "Hoy — rumbo a %@"
           }
         },
         "fr": {
           "stringUnit": {
-            "state": "needs_review",
-            "value": "Off to %@ today"
+            "state": "translated",
+            "value": "Aujourd'hui — direction %@"
           }
         },
         "ja": {
           "stringUnit": {
-            "state": "needs_review",
-            "value": "Off to %@ today"
+            "state": "translated",
+            "value": "今日 — %@へ出発"
           }
         },
         "ko": {
           "stringUnit": {
-            "state": "needs_review",
-            "value": "Off to %@ today"
+            "state": "translated",
+            "value": "오늘 — %@으로 출발"
           }
         },
         "pt-BR": {
           "stringUnit": {
-            "state": "needs_review",
-            "value": "Off to %@ today"
+            "state": "translated",
+            "value": "Hoje — rumo a %@"
           }
         },
         "zh-Hans": {
