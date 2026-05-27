@@ -23138,7 +23138,7 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Pick travel scenes to generate a better list"
+            "value": "Choose your travel scenarios for a more tailored list"
           }
         },
         "es": {
@@ -23180,7 +23180,7 @@
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "選擇旅行場景，產生更貼合的清單"
+            "value": "選擇旅行場景，生成更貼合的清單"
           }
         }
       }
@@ -26091,7 +26091,7 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Update list"
+            "value": "Pick for Me"
           }
         },
         "es": {
@@ -26127,13 +26127,13 @@
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "更新清单"
+            "value": "帮我选好"
           }
         },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "更新清單"
+            "value": "幫我選好"
           }
         }
       }
