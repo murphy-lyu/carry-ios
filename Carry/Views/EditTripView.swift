@@ -53,7 +53,8 @@ struct EditTripView: View {
     var body: some View {
         NavigationStack {
             ZStack {
-                CarrySubtleBackground()
+                Color(UIColor.systemBackground)
+                    .ignoresSafeArea()
 
                 ScrollView {
                     VStack(alignment: .leading, spacing: 24) {
@@ -73,7 +74,7 @@ struct EditTripView: View {
                                     VStack(alignment: .leading, spacing: 3) {
                                         Text("Departure")
                                             .font(.caption.weight(.semibold))
-                                            .foregroundStyle(.secondary)
+                                            .foregroundStyle(.secondary.opacity(0.82))
                                         Text(info.departureDate.formatted(date: .long, time: .omitted))
                                             .font(.subheadline)
                                             .foregroundStyle(.primary)
@@ -81,12 +82,12 @@ struct EditTripView: View {
                                     Spacer()
                                     Image(systemName: "arrow.right")
                                         .font(.caption.weight(.semibold))
-                                        .foregroundStyle(.tertiary)
+                                        .foregroundStyle(.tertiary.opacity(0.88))
                                     Spacer()
                                     VStack(alignment: .trailing, spacing: 3) {
                                         Text("Return")
                                             .font(.caption.weight(.semibold))
-                                            .foregroundStyle(.secondary)
+                                            .foregroundStyle(.secondary.opacity(0.82))
                                         Text(info.returnDate.formatted(date: .long, time: .omitted))
                                             .font(.subheadline)
                                             .foregroundStyle(.primary)
@@ -95,14 +96,13 @@ struct EditTripView: View {
                                 .padding(14)
                             }
                             .buttonStyle(.plain)
-                            .background(
-                                colorScheme == .dark
-                                    ? Color(UIColor.secondarySystemBackground)
-                                    : Color(UIColor.systemBackground)
-                            )
+                            .background(Color(UIColor.systemBackground).opacity(0.64))
                             .overlay(
                                 RoundedRectangle(cornerRadius: 12, style: .continuous)
-                                    .strokeBorder(Color.primary.opacity(0.05), lineWidth: 1)
+                                    .strokeBorder(
+                                        Color.primary.opacity(colorScheme == .dark ? 0.11 : 0.07),
+                                        lineWidth: 1
+                                    )
                             )
                             .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
                         }
@@ -173,7 +173,7 @@ struct EditTripView: View {
                 .foregroundStyle(.primary)
             Text("Update trip details without changing your list structure")
                 .font(.subheadline)
-                .foregroundStyle(.secondary)
+                .foregroundStyle(.secondary.opacity(0.86))
         }
         .padding(.horizontal, 16)
         .padding(.top, 8)
@@ -200,14 +200,13 @@ struct EditTripView: View {
         }
         .frame(height: 44)
         .padding(.horizontal, 12)
-        .background(
-            colorScheme == .dark
-                ? Color(UIColor.secondarySystemBackground)
-                : Color(UIColor.systemBackground)
-        )
+        .background(Color(UIColor.systemBackground).opacity(0.66))
         .overlay(
             RoundedRectangle(cornerRadius: 12, style: .continuous)
-                .strokeBorder(Color.primary.opacity(0.05), lineWidth: 1)
+                .strokeBorder(
+                    Color.primary.opacity(colorScheme == .dark ? 0.11 : 0.07),
+                    lineWidth: 1
+                )
         )
         .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
     }
@@ -216,10 +215,10 @@ struct EditTripView: View {
         label: LocalizedStringKey,
         @ViewBuilder content: () -> Content
     ) -> some View {
-        VStack(alignment: .leading, spacing: 6) {
+        VStack(alignment: .leading, spacing: 4) {
             Text(label)
                 .font(.system(size: 11, weight: .medium))
-                .foregroundStyle(.tertiary)
+                .foregroundStyle(.tertiary.opacity(0.86))
                 .kerning(1.5)
                 .textCase(.uppercase)
                 .padding(.horizontal, 16)

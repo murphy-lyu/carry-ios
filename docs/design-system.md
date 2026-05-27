@@ -83,6 +83,13 @@ Apple 原生风格，极简、克制、优雅。
 - 内边距：水平 12pt，垂直 10pt
 - 字体：.body
 
+### 创建/编辑行程输入容器统一（TripInfoView / EditTripView）
+- 输入框与日期框采用“描边主导”视觉，不使用厚重实心填充块。
+- 容器背景：`Color(.systemBackground).opacity(0.64~0.66)`。
+- 描边：Dark `primary.opacity(0.11)`；Light `primary.opacity(0.07)`；线宽 1。
+- 圆角：12；内容内边距：14（日期）/ 水平 12（文本输入）。
+- 标签与辅助文案：使用 `.secondary.opacity(0.82~0.86)` 层级，与 `New trip` 保持一致。
+
 ### Sheet / Modal
 - 优先用系统 .sheet()
 - 内容顶部留 20pt padding
