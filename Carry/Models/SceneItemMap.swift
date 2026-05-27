@@ -44,16 +44,6 @@ func defaultQuantity(for itemName: String, tripDays: Int) -> Int {
     return 1
 }
 
-// MARK: - Locale detection
-
-private var appPreferredLanguageCode: String {
-    (Bundle.main.preferredLocalizations.first ?? Locale.current.language.languageCode?.identifier ?? "en").lowercased()
-}
-
-var isChineseLocale: Bool {
-    appPreferredLanguageCode.hasPrefix("zh")
-}
-
 // MARK: - Chip label → scene key
 
 let sceneLabelToKey: [String: String] = [
@@ -109,6 +99,7 @@ let sceneItemMap: [String: [SceneItem]] = [
         makeSceneItem("Flight tickets", isAlert: true),
         makeSceneItem("Neck pillow", isAlert: true),
         makeSceneItem("Noise-cancelling headphones", isAlert: true),
+        makeSceneItem("Overseas SIM / portable WiFi", isAlert: false),
         makeSceneItem("Eye mask", isAlert: false),
         makeSceneItem("Earplugs", isAlert: false),
         makeSceneItem("Compression socks", isAlert: false),
@@ -166,6 +157,7 @@ let sceneItemMap: [String: [SceneItem]] = [
         makeSceneItem("Laptop charger", isAlert: true),
         makeSceneItem("Formal shirt / blouse", isAlert: true),
         makeSceneItem("Dress shoes", isAlert: true),
+        makeSceneItem("Overseas SIM / portable WiFi", isAlert: false),
         makeSceneItem("Wrinkle-release spray", isAlert: false),
     ],
     "remote_work": [
@@ -230,18 +222,10 @@ let sceneItemMap: [String: [SceneItem]] = [
     ],
 ]
 
-// MARK: - Scene item accessor (with locale supplements)
+// MARK: - Scene item accessor
 
 func sceneItems(for key: String) -> [SceneItem] {
-    var items = sceneItemMap[key] ?? []
-    guard isChineseLocale else { return items }
-    switch key {
-    case "long_haul_flight", "business":
-        items.append(makeSceneItem("Overseas SIM / portable WiFi", isAlert: false))
-    default:
-        break
-    }
-    return items
+    sceneItemMap[key] ?? []
 }
 
 // MARK: - Generation logic

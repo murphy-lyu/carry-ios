@@ -126,8 +126,8 @@ enum NotificationManager {
         let cases: [(days: Int, delay: TimeInterval)] = [
             (0, 4), (1, 9), (2, 14), (3, 19), (7, 24), (14, 29), (5, 34)
         ]
-        let tripName = isChineseLocale ? "东京之旅" : "Tokyo Trip"
-        let destination = isChineseLocale ? "东京" : "Tokyo"
+        let tripName = String(localized: "debug.notif.trip_name")
+        let destination = String(localized: "debug.notif.destination")
 
         for (days, delay) in cases {
             let (title, body) = notificationContent(
