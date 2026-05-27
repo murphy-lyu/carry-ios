@@ -21295,13 +21295,13 @@
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "想想要带什么，两周说快也快～"
+            "value": "两周说快也快，先把清单想一想？"
           }
         },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "想想要帶什麼，兩週說快也快～"
+            "value": "兩週說快也快，先把清單想一想？"
           }
         }
       }
@@ -21436,7 +21436,7 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "%@ — almost there"
+            "value": "%@ — 3 days to go"
           }
         },
         "es": {
@@ -21472,13 +21472,13 @@
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "%@，快了"
+            "value": "%@，还有 3 天"
           }
         },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "%@，快了"
+            "value": "%@，還有 3 天"
           }
         }
       }
