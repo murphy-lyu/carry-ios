@@ -27149,55 +27149,55 @@
         "de": {
           "stringUnit": {
             "state": "needs_review",
-            "value": "Import Backup File"
+            "value": "Import Backup"
           }
         },
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Import Backup File"
+            "value": "Import Backup"
           }
         },
         "es": {
           "stringUnit": {
             "state": "needs_review",
-            "value": "Import Backup File"
+            "value": "Import Backup"
           }
         },
         "fr": {
           "stringUnit": {
             "state": "needs_review",
-            "value": "Import Backup File"
+            "value": "Import Backup"
           }
         },
         "ja": {
           "stringUnit": {
             "state": "needs_review",
-            "value": "Import Backup File"
+            "value": "Import Backup"
           }
         },
         "ko": {
           "stringUnit": {
             "state": "needs_review",
-            "value": "Import Backup File"
+            "value": "Import Backup"
           }
         },
         "pt-BR": {
           "stringUnit": {
             "state": "needs_review",
-            "value": "Import Backup File"
+            "value": "Import Backup"
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "导入备份文件"
+            "value": "导入备份"
           }
         },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "匯入備份檔案"
+            "value": "匯入備份"
           }
         }
       }
@@ -28318,7 +28318,7 @@
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "資料與恢復"
+            "value": "資料與還原"
           }
         }
       }
@@ -29568,55 +29568,55 @@
         "de": {
           "stringUnit": {
             "state": "needs_review",
-            "value": "Send Feedback"
+            "value": "Feedback"
           }
         },
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Send Feedback"
+            "value": "Feedback"
           }
         },
         "es": {
           "stringUnit": {
             "state": "needs_review",
-            "value": "Send Feedback"
+            "value": "Feedback"
           }
         },
         "fr": {
           "stringUnit": {
             "state": "needs_review",
-            "value": "Send Feedback"
+            "value": "Feedback"
           }
         },
         "ja": {
           "stringUnit": {
             "state": "needs_review",
-            "value": "Send Feedback"
+            "value": "Feedback"
           }
         },
         "ko": {
           "stringUnit": {
             "state": "needs_review",
-            "value": "Send Feedback"
+            "value": "Feedback"
           }
         },
         "pt-BR": {
           "stringUnit": {
             "state": "needs_review",
-            "value": "Send Feedback"
+            "value": "Feedback"
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "反馈意见"
+            "value": "反馈"
           }
         },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "意見回饋"
+            "value": "回饋"
           }
         }
       }
