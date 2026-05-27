@@ -40,15 +40,18 @@ struct ItemPickerView: View {
 
     private let mode: Mode
     private let startInMyItems: Bool
+    private let cachedSceneRecommendedNames: Set<String>
 
     init(tripInfo: TripInfo, startInMyItems: Bool = false) {
         self.mode = .create(tripInfo)
         self.startInMyItems = startInMyItems
+        self.cachedSceneRecommendedNames = []
     }
 
     init(tripId: UUID) {
         self.mode = .merge(tripId: tripId)
         self.startInMyItems = false
+        self.cachedSceneRecommendedNames = []
     }
 
     init(autoPackTripInfo: TripInfo, sceneKeys: [String]) {
@@ -62,6 +65,9 @@ struct ItemPickerView: View {
                 (section.title, Set(section.sortedItems.map { $0.name }))
             }
         )
+        // Cache recommended names once — sceneKeys never change during this view's lifetime
+        self.cachedSceneRecommendedNames = Set(generated.flatMap { $0.sortedItems.map { canonicalItemName($0.name) } })
+
         var preselected = Set<PickerItemID>()
         for category in itemPickerCatalog {
             let generatedNames = generatedByCategory[category.name] ?? []
@@ -139,6 +145,8 @@ struct ItemPickerView: View {
         if case .autoPackReview(_, let keys) = mode { return keys }
         return []
     }
+
+    private var sceneRecommendedNames: Set<String> { cachedSceneRecommendedNames }
 
     private var myItemsCount: Int { store.myItems.count }
 
@@ -1045,7 +1053,13 @@ struct ItemPickerView: View {
 
     @ViewBuilder
     private func categoryBody(_ category: ItemPickerCategory) -> some View {
-        let selectableItems = category.items.filter {
+        let orderedItems = category.items.sorted { lhs, rhs in
+            let lScene = sceneRecommendedNames.contains(canonicalItemName(lhs))
+            let rScene = sceneRecommendedNames.contains(canonicalItemName(rhs))
+            if lScene != rScene { return lScene && !rScene } // scene picks first
+            return lhs < rhs
+        }
+        let selectableItems = orderedItems.filter {
             !existingItemNames.contains(normalizedItemName($0))
         }
         let selectedCount = selectableItems.filter {
@@ -1079,9 +1093,9 @@ struct ItemPickerView: View {
             .padding(.horizontal, 16)
             .padding(.vertical, 8)
 
-            ForEach(category.items, id: \.self) { item in
+            ForEach(orderedItems, id: \.self) { item in
                 itemRow(item, category: category.name)
-                if item != category.items.last {
+                if item != orderedItems.last {
                     Rectangle()
                         .fill(Color.primary.opacity(isDarkMode ? 0.05 : 0.03))
                         .frame(height: 1)
@@ -1098,6 +1112,7 @@ struct ItemPickerView: View {
         let id = PickerItemID(category: category, item: item)
         let isAlreadyAdded = existingItemNames.contains(normalizedItemName(item))
         let isSelected = selectedItems.contains(id)
+        let isScenePick = sceneRecommendedNames.contains(canonicalItemName(item))
         return Button {
             guard !isAlreadyAdded else { return }
             if isSelected {
@@ -1124,6 +1139,17 @@ struct ItemPickerView: View {
                         Text(LocalizedStringKey(item))
                             .font(.body)
                             .foregroundColor(.primary)
+                        if isScenePick && isAutoPackReview {
+                            Text("Scene pick")
+                                .font(.caption2.weight(.semibold))
+                                .foregroundStyle(.secondary)
+                                .padding(.horizontal, 8)
+                                .padding(.vertical, 3)
+                                .background(
+                                    Capsule(style: .continuous)
+                                        .fill(Color(UIColor.tertiarySystemFill))
+                                )
+                        }
                         if isAlreadyAdded {
                             Text(LocalizedStringKey("itempicker.already_added"))
                                 .font(.caption2.weight(.semibold))
