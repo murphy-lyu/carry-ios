@@ -800,12 +800,6 @@ private struct DeveloperModeView: View {
 
     var body: some View {
         List {
-            Section("settings.developer.danger_group") {
-                actionRow(title: "settings.developer.reset_all_data", tint: .red) {
-                    showResetAllConfirm = true
-                }
-            }
-
             Section("settings.developer.reset_group") {
                 actionRow(title: "settings.debug.reset_support_tone") {
                     coffeeStore.debugResetSupportCount()
@@ -866,6 +860,12 @@ private struct DeveloperModeView: View {
                     }
                 }
                 .tint(colorScheme == .dark ? Color.accentColor.opacity(0.86) : Color.accentColor)
+            }
+
+            Section("settings.developer.danger_group") {
+                actionRow(title: "settings.developer.reset_all_data", tint: .red) {
+                    showResetAllConfirm = true
+                }
             }
         }
         .listStyle(.insetGrouped)
