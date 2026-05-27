@@ -143,7 +143,10 @@ struct HomeView: View {
     @AppStorage(sheetVariantDefaultsKey) private var sheetVariantRaw: String = SheetVariant.fallback.rawValue
     @AppStorage("mapStyleOption") private var mapStyleRaw: String = MapStyleOption.hybrid.rawValue
     @AppStorage("hasShownFirstTripShimmer") private var hasShownFirstTripShimmer = false
+    @AppStorage("firstTripCreatedAt") private var firstTripCreatedAtInterval: Double = 0
     @State private var shimmerTripId: UUID? = nil
+
+    private static let shimmerWindowSeconds: Double = 15 * 60
     @State private var locationPermission = LocationPermissionManager()
     private var mapStyleOption: MapStyleOption {
         MapStyleOption(rawValue: mapStyleRaw) ?? .hybrid
@@ -380,15 +383,20 @@ struct HomeView: View {
                 if path.isEmpty {
                     store.refresh()
                     rebuildTripLists()
-                    if !hasShownFirstTripShimmer, store.trips.count == 1,
+                    if !hasShownFirstTripShimmer,
+                       firstTripCreatedAtInterval > 0,
+                       Date().timeIntervalSince1970 - firstTripCreatedAtInterval <= Self.shimmerWindowSeconds,
                        let first = store.trips.first {
                         hasShownFirstTripShimmer = true
                         shimmerTripId = first.id
                     }
                 }
             }
-            .onChange(of: store.trips) { _, _ in
+            .onChange(of: store.trips) { oldTrips, newTrips in
                 rebuildTripLists()
+                if !hasShownFirstTripShimmer && oldTrips.isEmpty && newTrips.count == 1 {
+                    firstTripCreatedAtInterval = Date().timeIntervalSince1970
+                }
             }
             .onChange(of: router.showMapFullscreen) { _, show in
                 guard show else { return }
