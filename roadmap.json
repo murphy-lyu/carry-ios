@@ -1,32 +1,125 @@
 {
   "updatedAt": "2026-05-27",
-  "banner": "🎉 已上线 App Store · 持续迭代中",
   "sections": [
     {
       "id": "upcoming",
       "title": "即将推出",
+      "titleEn": "Upcoming",
+      "titleZhHant": "即將推出",
       "items": [
-        { "id": "destination-info", "title": "目的地实用信息（充电插头、电压、货币）", "status": "in_progress" },
-        { "id": "weather", "title": "目的地天气预报", "status": "planned" },
-        { "id": "import-itinerary", "title": "邮件 / 订单导入行程", "status": "planned" }
+        {
+          "id": "destination-info",
+          "title": "目的地实用信息（充电插头、电压、货币）",
+          "titleEn": "Destination info (plugs, voltage, currency)",
+          "titleZhHant": "目的地實用資訊（充電插頭、電壓、貨幣）",
+          "status": "in_progress"
+        },
+        {
+          "id": "weather",
+          "title": "目的地天气预报",
+          "titleEn": "Weather forecast",
+          "titleZhHant": "目的地天氣預報",
+          "status": "planned"
+        },
+        {
+          "id": "import-itinerary",
+          "title": "邮件 / 订单导入行程",
+          "titleEn": "Import trips from email / bookings",
+          "titleZhHant": "郵件 / 訂單匯入行程",
+          "status": "planned"
+        }
       ]
     },
     {
       "id": "done",
       "title": "已上线",
+      "titleEn": "Shipped",
+      "titleZhHant": "已上線",
       "items": [
-        { "id": "smart-suggestions", "title": "智能推荐清单", "status": "done" },
-        { "id": "worth-considering", "title": "顺手考虑一下", "status": "done" },
-        { "id": "world-map", "title": "世界地图 & 到访国家", "status": "done" },
-        { "id": "packing-reminder", "title": "打包提醒", "status": "done" },
-        { "id": "share-list", "title": "分享清单", "status": "done" },
-        { "id": "custom-section", "title": "自定义分类", "status": "done" },
-        { "id": "sorting", "title": "物品与分类排序", "status": "done" },
-        { "id": "item-quantity", "title": "物品数量", "status": "done" },
-        { "id": "trip-duplicate", "title": "复制行程", "status": "done" },
-        { "id": "backup-restore", "title": "备份与还原", "status": "done" },
-        { "id": "app-icons", "title": "多套应用图标", "status": "done" },
-        { "id": "siri-shortcuts", "title": "Siri 快捷指令", "status": "done" }
+        {
+          "id": "smart-suggestions",
+          "title": "智能推荐清单",
+          "titleEn": "Smart suggestions",
+          "titleZhHant": "智能推薦清單",
+          "status": "done"
+        },
+        {
+          "id": "worth-considering",
+          "title": "顺手考虑一下",
+          "titleEn": "Worth considering",
+          "titleZhHant": "順手考慮一下",
+          "status": "done"
+        },
+        {
+          "id": "world-map",
+          "title": "世界地图 & 到访国家",
+          "titleEn": "World map & visited countries",
+          "titleZhHant": "世界地圖 & 到訪國家",
+          "status": "done"
+        },
+        {
+          "id": "packing-reminder",
+          "title": "打包提醒",
+          "titleEn": "Packing reminders",
+          "titleZhHant": "打包提醒",
+          "status": "done"
+        },
+        {
+          "id": "share-list",
+          "title": "分享清单",
+          "titleEn": "Share packing list",
+          "titleZhHant": "分享清單",
+          "status": "done"
+        },
+        {
+          "id": "custom-section",
+          "title": "自定义分类",
+          "titleEn": "Custom sections",
+          "titleZhHant": "自定義分類",
+          "status": "done"
+        },
+        {
+          "id": "sorting",
+          "title": "物品与分类排序",
+          "titleEn": "Item & section sorting",
+          "titleZhHant": "物品與分類排序",
+          "status": "done"
+        },
+        {
+          "id": "item-quantity",
+          "title": "物品数量",
+          "titleEn": "Item quantity",
+          "titleZhHant": "物品數量",
+          "status": "done"
+        },
+        {
+          "id": "trip-duplicate",
+          "title": "复制行程",
+          "titleEn": "Trip duplication",
+          "titleZhHant": "複製行程",
+          "status": "done"
+        },
+        {
+          "id": "backup-restore",
+          "title": "备份与还原",
+          "titleEn": "Backup & restore",
+          "titleZhHant": "備份與還原",
+          "status": "done"
+        },
+        {
+          "id": "app-icons",
+          "title": "多套应用图标",
+          "titleEn": "App icon themes",
+          "titleZhHant": "多套應用圖示",
+          "status": "done"
+        },
+        {
+          "id": "siri-shortcuts",
+          "title": "Siri 快捷指令",
+          "titleEn": "Siri shortcuts",
+          "titleZhHant": "Siri 捷徑",
+          "status": "done"
+        }
       ]
     }
   ]

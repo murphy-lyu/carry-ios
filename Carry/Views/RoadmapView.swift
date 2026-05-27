@@ -38,14 +38,26 @@ private enum RoadmapStatus: String, Codable {
 private struct RoadmapItem: Codable, Identifiable {
     var id: String
     var title: String
+    var titleEn: String?
+    var titleZhHant: String?
     var status: RoadmapStatus
     var note: String?
+
+    var localizedTitle: String {
+        RoadmapL10n.text(en: titleEn ?? title, zhHans: title, zhHant: titleZhHant)
+    }
 }
 
 private struct RoadmapSection: Codable, Identifiable {
     var id: String
     var title: String
+    var titleEn: String?
+    var titleZhHant: String?
     var items: [RoadmapItem]
+
+    var localizedTitle: String {
+        RoadmapL10n.text(en: titleEn ?? title, zhHans: title, zhHant: titleZhHant)
+    }
 }
 
 private struct RoadmapPayload: Codable {
@@ -277,7 +289,7 @@ struct RoadmapView: View {
 
     private func sectionBlock(_ section: RoadmapSection) -> some View {
         VStack(alignment: .leading, spacing: 8) {
-            Text(section.title)
+            Text(section.localizedTitle)
                 .font(.system(size: 11, weight: .medium))
                 .foregroundStyle(colorScheme == .dark ? Color.secondary.opacity(0.68) : Color(UIColor.tertiaryLabel))
                 .kerning(1.4)
@@ -331,7 +343,7 @@ struct RoadmapView: View {
 
             VStack(alignment: .leading, spacing: 3) {
                 HStack(spacing: 6) {
-                    Text(item.title)
+                    Text(item.localizedTitle)
                         .font(.body.weight(.semibold))
                         .foregroundStyle(.primary)
 
