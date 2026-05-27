@@ -19170,41 +19170,60 @@
       }
     },
     "myitems.name": {
+      "extractionState": "manual",
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "myitems.name"
+            "value": "Artikelname"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Item name"
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "myitems.name"
+            "value": "Nombre del artículo"
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "myitems.name"
+            "value": "Nom de l'article"
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "myitems.name"
+            "value": "アイテム名"
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "myitems.name"
+            "value": "물품 이름"
           }
         },
         "pt-BR": {
           "stringUnit": {
             "state": "translated",
-            "value": "myitems.name"
+            "value": "Nome do item"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "物品名称"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "物品名稱"
           }
         }
       }
@@ -19328,41 +19347,60 @@
       }
     },
     "myitems.quantity": {
+      "extractionState": "manual",
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "myitems.quantity"
+            "value": "Anzahl"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Quantity"
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "myitems.quantity"
+            "value": "Cantidad"
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "myitems.quantity"
+            "value": "Quantité"
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "myitems.quantity"
+            "value": "数量"
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "myitems.quantity"
+            "value": "수량"
           }
         },
         "pt-BR": {
           "stringUnit": {
             "state": "translated",
-            "value": "myitems.quantity"
+            "value": "Quantidade"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "数量"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "數量"
           }
         }
       }
