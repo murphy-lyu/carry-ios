@@ -885,10 +885,9 @@ private struct DeveloperModeView: View {
             }
         }
         .animation(.easeInOut(duration: 0.2), value: toastMessage != nil)
-        .confirmationDialog(
+        .alert(
             "settings.developer.reset_all_data.confirm.title",
-            isPresented: $showResetAllConfirm,
-            titleVisibility: .visible
+            isPresented: $showResetAllConfirm
         ) {
             Button("settings.developer.reset_all_data.confirm.action", role: .destructive) {
                 store.resetAllData()
