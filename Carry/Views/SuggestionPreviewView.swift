@@ -37,7 +37,8 @@ struct SuggestionPreviewView: View {
 
     var body: some View {
         ZStack {
-            CarrySubtleBackground()
+            chromeBackgroundColor
+                .ignoresSafeArea()
 
             VStack(spacing: 0) {
                 headerBlock
@@ -87,6 +88,7 @@ struct SuggestionPreviewView: View {
             .padding(.top, 14)
             .padding(.bottom, 100)
         }
+        .background(chromeBackgroundColor)
     }
 
     private var headerBlock: some View {
@@ -124,10 +126,10 @@ struct SuggestionPreviewView: View {
                 .padding(.top, 12)
                 .padding(.bottom, 4)
             Rectangle()
-                .fill(colorScheme == .dark ? Color.white.opacity(0.03) : Color.primary.opacity(0.03))
+                .fill(colorScheme == .dark ? Color.white.opacity(0.02) : Color.primary.opacity(0.02))
                 .frame(height: 1)
         }
-        .background(Color(UIColor.systemBackground))
+        .background(chromeBackgroundColor)
         .zIndex(1)
     }
 
@@ -148,10 +150,10 @@ struct SuggestionPreviewView: View {
             .padding(.top, 12)
             .padding(.bottom, 4)
             Rectangle()
-                .fill(colorScheme == .dark ? Color.white.opacity(0.03) : Color.primary.opacity(0.03))
+                .fill(colorScheme == .dark ? Color.white.opacity(0.02) : Color.primary.opacity(0.02))
                 .frame(height: 1)
         }
-        .background(Color(UIColor.systemBackground))
+        .background(chromeBackgroundColor)
         .zIndex(1)
     }
 
