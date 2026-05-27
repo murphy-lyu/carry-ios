@@ -7,6 +7,7 @@ import Foundation
 import Combine
 import SwiftData
 import CoreLocation
+import UserNotifications
 
 // MARK: - DestinationEntry
 
@@ -261,6 +262,29 @@ final class TripStore: ObservableObject {
     private func normalizedCollectionName(_ name: String) -> String {
         let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
         return trimmed.isEmpty ? defaultMyItemCollection : trimmed
+    }
+
+    // MARK: - Dev Tools
+
+    /// Wipes all SwiftData records, UserDefaults, and pending notifications —
+    /// equivalent to a fresh install. Call only from developer mode.
+    func resetAllData() {
+        do {
+            try context.delete(model: TripBundle.self)
+            try context.delete(model: MyItem.self)
+            try context.save()
+        } catch {
+            CarryLogger.shared.log(.persistFailed, context: "resetAllData")
+        }
+        if let bundleId = Bundle.main.bundleIdentifier {
+            defaults.removePersistentDomain(forName: bundleId)
+        }
+        UNUserNotificationCenter.current().removeAllPendingNotificationRequests()
+        trips = []
+        myItems = []
+        draftTrip = nil
+        isSceneCardDismissedGlobally = false
+        isHomeEmptyStateMockEnabled = false
     }
 
     // MARK: - Mutations

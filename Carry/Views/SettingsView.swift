@@ -796,9 +796,16 @@ private struct DeveloperModeView: View {
     @Environment(\.colorScheme) private var colorScheme
     @StateObject private var coffeeStore = CoffeeStore()
     @State private var toastMessage: String?
+    @State private var showResetAllConfirm = false
 
     var body: some View {
         List {
+            Section("settings.developer.danger_group") {
+                actionRow(title: "settings.developer.reset_all_data", tint: .red) {
+                    showResetAllConfirm = true
+                }
+            }
+
             Section("settings.developer.reset_group") {
                 actionRow(title: "settings.debug.reset_support_tone") {
                     coffeeStore.debugResetSupportCount()
@@ -878,13 +885,29 @@ private struct DeveloperModeView: View {
             }
         }
         .animation(.easeInOut(duration: 0.2), value: toastMessage != nil)
+        .confirmationDialog(
+            "settings.developer.reset_all_data.confirm.title",
+            isPresented: $showResetAllConfirm,
+            titleVisibility: .visible
+        ) {
+            Button("settings.developer.reset_all_data.confirm.action", role: .destructive) {
+                store.resetAllData()
+                UINotificationFeedbackGenerator().notificationOccurred(.warning)
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) {
+                    exit(0)
+                }
+            }
+            Button("common.cancel", role: .cancel) {}
+        } message: {
+            Text("settings.developer.reset_all_data.confirm.message")
+        }
     }
 
-    private func actionRow(title: LocalizedStringKey, action: @escaping () -> Void) -> some View {
+    private func actionRow(title: LocalizedStringKey, tint: Color = .primary, action: @escaping () -> Void) -> some View {
         Button(action: action) {
             HStack {
                 Text(title)
-                    .foregroundStyle(.primary)
+                    .foregroundStyle(tint)
                 Spacer()
             }
             .frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)

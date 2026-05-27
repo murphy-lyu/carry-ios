@@ -18443,6 +18443,46 @@
         }
       }
     },
+    "settings.developer.danger_group" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Danger Zone" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "危险操作" } },
+        "zh-Hant" : { "stringUnit" : { "state" : "translated", "value" : "危險操作" } }
+      }
+    },
+    "settings.developer.reset_all_data" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Reset All Data" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "清空所有数据" } },
+        "zh-Hant" : { "stringUnit" : { "state" : "translated", "value" : "清空所有資料" } }
+      }
+    },
+    "settings.developer.reset_all_data.confirm.title" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Reset All Data?" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "清空所有数据？" } },
+        "zh-Hant" : { "stringUnit" : { "state" : "translated", "value" : "清空所有資料？" } }
+      }
+    },
+    "settings.developer.reset_all_data.confirm.message" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "All trips, items, and settings will be deleted. The app will exit and relaunch clean." } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "所有行程、物品和设置将被删除，App 将退出并以全新状态启动。" } },
+        "zh-Hant" : { "stringUnit" : { "state" : "translated", "value" : "所有行程、物品和設定將被刪除，App 將退出並以全新狀態啟動。" } }
+      }
+    },
+    "settings.developer.reset_all_data.confirm.action" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Delete Everything" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "清空并退出" } },
+        "zh-Hant" : { "stringUnit" : { "state" : "translated", "value" : "清空並退出" } }
+      }
+    },
     "settings.developer.reset_group" : {
       "extractionState" : "manual",
       "localizations" : {
