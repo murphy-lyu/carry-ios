@@ -22396,13 +22396,13 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "标记为已完成"
+            "value" : "标为完成"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "標記為已完成"
+            "value" : "標為完成"
           }
         }
       }
