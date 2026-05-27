@@ -162,15 +162,25 @@ struct HomeView: View {
         max(0, expandedSheetHeight - 188)
     }
 
+    /// Normalizes country codes so that HK, MO, and TW are treated as CN.
+    /// This ensures Hong Kong, Macau, and Taiwan are not counted as
+    /// independent countries in trip statistics or globe highlights.
+    private static func normalizedCountryCode(_ code: String) -> String {
+        switch code.uppercased() {
+        case "HK", "MO", "TW": return "CN"
+        default: return code.uppercased()
+        }
+    }
+
     /// Unique country codes from all trips whose departure date has passed.
     /// Includes both the primary destination and any additional destinations
     /// stored for multi-city trips.
     private var visitedCountriesCount: Int {
         var codes = Set<String>()
         for trip in store.trips where trip.departureDate <= Date() {
-            if !trip.countryCode.isEmpty { codes.insert(trip.countryCode.uppercased()) }
+            if !trip.countryCode.isEmpty { codes.insert(Self.normalizedCountryCode(trip.countryCode)) }
             for dest in trip.additionalDestinations where !dest.countryCode.isEmpty {
-                codes.insert(dest.countryCode.uppercased())
+                codes.insert(Self.normalizedCountryCode(dest.countryCode))
             }
         }
         return codes.count
@@ -201,16 +211,24 @@ struct HomeView: View {
 
     private var visitedCountries: [VisitedCountry] {
         // For each country code, keep the coordinates from the most-recent trip that includes it.
-        // Accepts both primary and additional destinations from multi-city trips.
+        // HK/MO/TW are normalized to CN so they appear as a single China pin on the globe.
         var best: [String: (lat: Double, lon: Double, date: Date)] = [:]
 
         func consider(code: String, lat: Double, lon: Double, date: Date) {
             guard !code.isEmpty, lat != 0 else { return }
-            let key = code.uppercased()
-            if let existing = best[key] {
-                if date > existing.date { best[key] = (lat, lon, date) }
+            let normalized = Self.normalizedCountryCode(code)
+            // When normalizing to CN, use the China centroid so the pin lands correctly.
+            let (pinLat, pinLon): (Double, Double) = {
+                if normalized != code.uppercased(),
+                   let centroid = GeocodingData.countryCentroid(for: normalized) {
+                    return (centroid.lat, centroid.lon)
+                }
+                return (lat, lon)
+            }()
+            if let existing = best[normalized] {
+                if date > existing.date { best[normalized] = (pinLat, pinLon, date) }
             } else {
-                best[key] = (lat, lon, date)
+                best[normalized] = (pinLat, pinLon, date)
             }
         }
 
