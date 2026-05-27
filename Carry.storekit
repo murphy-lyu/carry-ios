@@ -10,18 +10,18 @@
       "internalID" : "A1B2C3D4-E5F6-7890-ABCD-EF1234560010",
       "localizations" : [
         {
-          "description" : "Buy the developer a Cola",
-          "displayName" : "Cola",
+          "description" : "Buy the developer a Juice",
+          "displayName" : "Juice",
           "locale" : "en_US"
         },
         {
-          "description" : "请开发者喝杯可乐",
-          "displayName" : "可乐",
+          "description" : "请开发者喝杯果汁",
+          "displayName" : "果汁",
           "locale" : "zh_CN"
         }
       ],
-      "productID" : "com.murphy.carry.water",
-      "referenceName" : "Cola",
+      "productID" : "com.murphy.carry.juice",
+      "referenceName" : "Juice",
       "type" : "Consumable"
     },
     {

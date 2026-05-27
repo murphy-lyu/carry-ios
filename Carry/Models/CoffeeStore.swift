@@ -9,7 +9,7 @@ import StoreKit
 final class CoffeeStore: ObservableObject {
 
     static let productIDs = [
-        "com.murphy.carry.water",
+        "com.murphy.carry.juice",
         "com.murphy.carry.americano",
         "com.murphy.carry.latte",
         "com.murphy.carry.cappuccino",
