@@ -689,9 +689,13 @@ final class TripStore: ObservableObject {
     /// Adds scene keys to a trip and merges the supplied sections.
     /// Used by the suggestion preview flow so scene context is saved alongside the items.
     func addScenesAndMerge(tripId: UUID, keys: [String], sections: [PackingSection]) {
-        guard let trip = trips.first(where: { $0.id == tripId }) else { return }
+        guard let trip = bundle(for: tripId) else { return }
         let existing = Set(trip.selectedSceneKeys)
         trip.selectedSceneKeys.append(contentsOf: keys.filter { !existing.contains($0) })
+        if draftTrip?.id == tripId {
+            // Force @Published emission for draft preview flows.
+            draftTrip = trip
+        }
         mergeItems(tripId: tripId, sections: sections)
     }
 
@@ -699,7 +703,8 @@ final class TripStore: ObservableObject {
     /// Sections with a matching title have items appended (skipping name duplicates).
     /// Sections with no matching title are appended as new sections.
     func mergeItems(tripId: UUID, sections newSections: [PackingSection]) {
-        guard let trip = trips.first(where: { $0.id == tripId }) else { return }
+        guard let trip = bundle(for: tripId) else { return }
+        let isDraftTarget = (draftTrip?.id == tripId)
         let existing = trip.safeSections
         var nextSectionOrder = (existing.map(\.sortOrder).max() ?? -1) + 1
 
@@ -712,21 +717,26 @@ final class TripStore: ObservableObject {
                     guard !existingNames.contains(item.name.lowercased()) else { continue }
                     item.sortOrder = maxOrder + 1 + offset
                     offset += 1
-                    context.insert(item)
+                    if !isDraftTarget { context.insert(item) }
                     existingSection.items?.append(item)
                 }
             } else {
                 newSection.sortOrder = nextSectionOrder
                 nextSectionOrder += 1
-                context.insert(newSection)
+                if !isDraftTarget { context.insert(newSection) }
                 for item in newSection.items ?? [] {
-                    context.insert(item)
+                    if !isDraftTarget { context.insert(item) }
                 }
                 if trip.sections == nil { trip.sections = [] }
                 trip.sections?.append(newSection)
             }
         }
-        save()
+        if isDraftTarget {
+            // Force @Published emission for draft preview flows.
+            draftTrip = trip
+        } else {
+            save()
+        }
     }
 
     func dismissSurpriseItem(tripId: UUID, itemName: String) {
@@ -1671,7 +1681,13 @@ final class TripStore: ObservableObject {
                 if geocodedCount > 0 { try? await Task.sleep(for: .milliseconds(400)) }
                 geocodedCount += 1
                 guard let placemark = try? await geocoder.geocodeAddressString(token).first else {
-                    await MainActor.run { CarryLogger.shared.log(.geocodeFailed, context: "city=\(token)") }
+                    await MainActor.run {
+                        #if DEBUG
+                        CarryLogger.shared.log(.geocodeFailed, context: "city=\(token)")
+                        #else
+                        CarryLogger.shared.log(.geocodeFailed, context: "city_len=\(token.count)")
+                        #endif
+                    }
                     continue
                 }
                 let code = placemark.isoCountryCode ?? ""
@@ -1756,7 +1772,13 @@ final class TripStore: ObservableObject {
                 if geocodedCount > 0 { try? await Task.sleep(for: .milliseconds(400)) }
                 geocodedCount += 1
                 guard let placemark = try? await geocoder.geocodeAddressString(token).first else {
-                    await MainActor.run { CarryLogger.shared.log(.geocodeFailed, context: "city=\(token)") }
+                    await MainActor.run {
+                        #if DEBUG
+                        CarryLogger.shared.log(.geocodeFailed, context: "city=\(token)")
+                        #else
+                        CarryLogger.shared.log(.geocodeFailed, context: "city_len=\(token.count)")
+                        #endif
+                    }
                     return nil
                 }
                 let code = placemark.isoCountryCode ?? ""
