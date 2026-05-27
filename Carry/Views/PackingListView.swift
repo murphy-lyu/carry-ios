@@ -1639,11 +1639,7 @@ struct ReorderSectionsView: View {
             }
         }
         .scrollDisabled(draggingId != nil)
-        .background(
-            colorScheme == .dark
-                ? Color(UIColor.secondarySystemBackground)
-                : Color(UIColor.systemBackground)
-        )
+        .background(CarrySubtleBackground())
         .navigationTitle("Edit sections")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
@@ -1698,7 +1694,7 @@ struct ReorderSectionsView: View {
                 renameName = current
                 renamingSection = section
             } label: {
-                HStack(spacing: 8) {
+                HStack(spacing: 12) {
                     Text(LocalizedStringKey(pendingRenames[section.id] ?? section.title))
                         .font(.body.weight(.semibold))
                         .foregroundStyle(.primary)
@@ -1713,22 +1709,26 @@ struct ReorderSectionsView: View {
             }
             .buttonStyle(.plain)
 
-            Image(systemName: "line.3.horizontal")
-                .font(.system(size: 15, weight: .medium))
-                .foregroundStyle(.secondary)
-                .frame(width: 48, height: rowH)
-                .contentShape(Rectangle())
-                .highPriorityGesture(dragGesture(for: section))
+            HStack(spacing: 18) {
+                Image(systemName: "line.3.horizontal")
+                    .font(.system(size: 15, weight: .medium))
+                    .foregroundStyle(.secondary)
+            }
+            .frame(width: 48, height: rowH)
+            .contentShape(Rectangle())
+            .highPriorityGesture(dragGesture(for: section))
         }
         .padding(.horizontal, 6)
         .padding(.vertical, 2)
         .background(
             RoundedRectangle(cornerRadius: 16, style: .continuous)
-                .fill(Color(UIColor.systemBackground).opacity(0.72))
+                .fill(colorScheme == .dark
+                    ? Color(UIColor.secondarySystemBackground).opacity(0.64)
+                    : Color(UIColor.systemBackground).opacity(0.82))
         )
         .overlay(
             RoundedRectangle(cornerRadius: 16, style: .continuous)
-                .strokeBorder(Color.primary.opacity(0.05), lineWidth: 1)
+                .strokeBorder(Color.primary.opacity(colorScheme == .dark ? 0.04 : 0.05), lineWidth: 1)
         )
         .shadow(
             color: isDragging ? Color.black.opacity(0.13) : Color.black.opacity(0.06),
