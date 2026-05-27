@@ -6,7 +6,7 @@
 
 ## 问题汇总
 
-### 🔴 P1 — save() 触发全量 fetch + 同步磁盘备份
+### ✅ P1 — save() 触发全量 fetch + 同步磁盘备份（已修复 2026-05-27）
 
 **位置：** `TripStore.save()` → `fetchTrips()` → `DataBackupManager.backup()`
 
@@ -20,7 +20,7 @@
 
 **影响范围：** 所有写操作路径。
 
-**建议方向：** 将 `backup()` 改为 background Task 异步执行，与主线程 SwiftData 操作解耦。风险：需确认 `TripBundle` 数据在异步访问时的安全性（建议先将数据转换为 Codable 镜像类型再 offload）。
+**修复方案：** `DataBackupManager.backup()` 里，`@Model` 属性映射（`TripBundle` → `BackupTrip`）保留在主线程（SwiftData 关系属性必须在主线程访问）；JSON encode + 磁盘写入改为 `Task.detached(priority: .utility)` 异步执行。`CarryBackup` 是纯 Codable 值类型，跨线程安全。每次写操作不再阻塞主线程等待磁盘 I/O。
 
 ---
 
@@ -40,14 +40,14 @@ var totalCount:  Int { safeSections.flatMap { $0.items ?? [] }.filter { !$0.name
 
 ---
 
-### 🟡 P3 — localizedSearchTermsByItem 搜索冷启动
+### ✅ P3 — localizedSearchTermsByItem 搜索冷启动（已修复 2026-05-27）
 
 **位置：** `ItemPickerView.localizedSearchTermsByItem`（静态 lazy 初始化）
 
 **描述：**
 `static let` 在用户首次输入搜索词时执行，遍历所有 lproj bundle（8 种语言），为全部物品建立多语言搜索索引。第一次搜索可能有几十毫秒延迟，之后永久缓存，无问题。
 
-**建议方向：** 在 `ItemPickerView.onAppear` 时提前 touch 这个属性，将冷启动从"用户输入第一个字"提前到"界面打开时"，用户无感知。零风险。
+**修复方案：** 在 `ItemPickerView.onAppear` 里加 `_ = ItemPickerView.localizedSearchTermsByItem`，将冷启动时机从"用户输入第一个字"提前到"界面打开时"，用户无感知。
 
 ---
 
@@ -69,9 +69,9 @@ var totalCount:  Int { safeSections.flatMap { $0.items ?? [] }.filter { !$0.name
 
 ## 待跟进优化项
 
-- [ ] P1：backup() 异步化（评估 SwiftData 镜像类型线程安全后实施）
-- [ ] P2：packedCount/totalCount 缓存方案设计
-- [ ] P3：ItemPickerView.onAppear 提前 warm-up localizedSearchTermsByItem（零风险，可直接实施）
+- [x] P1：backup() 异步化 — 已于 2026-05-27 实施
+- [ ] P2：packedCount/totalCount 缓存方案设计（待评估）
+- [x] P3：ItemPickerView.onAppear 提前 warm-up localizedSearchTermsByItem — 已于 2026-05-27 实施
 
 ---
 
