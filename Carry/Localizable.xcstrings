@@ -16128,55 +16128,55 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Keine passenden Szenarien"
+            "value" : "Keine Szenen gefunden"
           }
         },
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "No matching scenes"
+            "value" : "No scenes found"
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "No hay escenas coincidentes"
+            "value" : "No se encontraron escenas"
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Aucune scène correspondante"
+            "value" : "Aucune scène trouvée"
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "一致するシーンがありません"
+            "value" : "シーンが見つかりません"
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "일치하는 장면이 없습니다"
+            "value" : "장면을 찾을 수 없습니다"
           }
         },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Nenhuma cena correspondente"
+            "value" : "Nenhuma cena encontrada"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "没有匹配的场景"
+            "value" : "找不到相关场景"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "沒有符合的場景"
+            "value" : "找不到相關場景"
           }
         }
       }
