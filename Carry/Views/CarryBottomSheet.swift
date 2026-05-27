@@ -91,7 +91,7 @@ final class SheetViewController: UIViewController {
     // MARK: Visual metrics (1:1 from Tripsy measurement, iPhone 17 Pro @3x)
 
     /// Corner radius when fully expanded (all 4 corners).
-    private let expandedRadius:        CGFloat = 37
+    private let expandedRadius:        CGFloat = 36
     /// Top-left / top-right radius when fully collapsed.
     private let collapsedTopRadius:    CGFloat = 36
     /// Bottom-left / bottom-right radius when fully collapsed.
@@ -146,6 +146,7 @@ final class SheetViewController: UIViewController {
     private var directPositionStartTime: CFTimeInterval = 0
     private var directPositionFixedProgress: CGFloat = 0
     private var directPositionCompletion: (() -> Void)?
+    private var directPositionTickCount: Int = 0
     private var snapShapeStart: CGFloat = 0
     private var snapShapeTarget: CGFloat = 0
 
@@ -395,6 +396,7 @@ final class SheetViewController: UIViewController {
         directPositionStartTime = CACurrentMediaTime()
         directPositionFixedProgress = fixedProgress
         directPositionCompletion = completion
+        directPositionTickCount = 0
         let link = CADisplayLink(target: self, selector: #selector(handleDirectPositionTick(_:)))
         link.preferredFrameRateRange = CAFrameRateRange(minimum: 30, maximum: 60, preferred: 60)
         link.add(to: .main, forMode: .common)
@@ -404,12 +406,17 @@ final class SheetViewController: UIViewController {
     @objc private func handleDirectPositionTick(_ link: CADisplayLink) {
         let t = min(max((CACurrentMediaTime() - directPositionStartTime) / directPositionDuration, 0), 1)
         let raw = directPositionStartOffset + CGFloat(t) * (directPositionTargetOffset - directPositionStartOffset)
+        directPositionTickCount += 1
         CATransaction.begin()
         CATransaction.setDisableActions(true)
         placeSheet(at: raw, shapeProgressOverride: directPositionFixedProgress)
-        applyCornerMask(top: topRadius(directPositionFixedProgress),
-                        bottom: bottomRadius(directPositionFixedProgress),
-                        progress: directPositionFixedProgress)
+        // Keep position fully per-frame, but update mask at half rate to reduce
+        // path rebuild pressure during direct snap.
+        if directPositionTickCount % 2 == 0 || t >= 1 {
+            applyCornerMask(top: topRadius(directPositionFixedProgress),
+                            bottom: bottomRadius(directPositionFixedProgress),
+                            progress: directPositionFixedProgress)
+        }
         CATransaction.commit()
         snappedOffset = raw
         liveDelta = 0

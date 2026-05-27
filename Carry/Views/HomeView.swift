@@ -139,6 +139,8 @@ struct HomeView: View {
     @State private var mapCityOpacity: Double = 0
     /// Set to true to programmatically collapse the sheet (Siri, map button).
     @State private var collapseRequest: Bool = false
+    /// Observes the UserDefaults key written by the Dev Options toggle.
+    @AppStorage(sheetVariantDefaultsKey) private var sheetVariantRaw: String = SheetVariant.fallback.rawValue
     @AppStorage("mapStyleOption") private var mapStyleRaw: String = MapStyleOption.hybrid.rawValue
     @State private var locationPermission = LocationPermissionManager()
     private var mapStyleOption: MapStyleOption {
@@ -241,15 +243,31 @@ struct HomeView: View {
             mapStyleButton
                 .ignoresSafeArea(edges: .top)
 
-            // Bottom sheet — UIKit-driven, zero SwiftUI re-evaluates during animation
-            CarryBottomSheet(
-                expandedHeight: expandedSheetHeight,
-                collapsedOffset: collapsedSheetOffset,
-                mapCityOpacity: $mapCityOpacity,
-                collapseRequest: $collapseRequest,
-                isListEmpty: isEffectivelyEmpty
-            ) {
-                sheetContent
+            // Bottom sheet — UIKit-driven, zero SwiftUI re-evaluates during animation.
+            // Variant is controlled by SheetFeatureFlag / Dev Options toggle.
+            Group {
+                switch SheetVariant(rawValue: sheetVariantRaw) ?? .fallback {
+                case .fallback:
+                    CarryBottomSheetFallback(
+                        expandedHeight: expandedSheetHeight,
+                        collapsedOffset: collapsedSheetOffset,
+                        mapCityOpacity: $mapCityOpacity,
+                        collapseRequest: $collapseRequest,
+                        isListEmpty: isEffectivelyEmpty
+                    ) {
+                        sheetContent
+                    }
+                case .ultimate:
+                    CarryBottomSheet(
+                        expandedHeight: expandedSheetHeight,
+                        collapsedOffset: collapsedSheetOffset,
+                        mapCityOpacity: $mapCityOpacity,
+                        collapseRequest: $collapseRequest,
+                        isListEmpty: isEffectivelyEmpty
+                    ) {
+                        sheetContent
+                    }
+                }
             }
             .ignoresSafeArea()
         }
