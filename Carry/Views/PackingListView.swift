@@ -431,19 +431,21 @@ struct PackingListView: View {
         .scrollIndicators(.hidden)
         .safeAreaPadding(.bottom, 83)
         .safeAreaInset(edge: .top, spacing: 0) {
-            VStack(spacing: 0) {
-                if showCompletionBanner {
-                    completionBanner
-                        .transition(.move(edge: .top).combined(with: .opacity))
-                }
-                if showNudgeBanner {
-                    nudgeBanner
-                        .transition(.move(edge: .top).combined(with: .opacity))
-                }
-                if showSceneCardDismissHintBanner {
-                    sceneCardDismissHintBanner
-                        .transition(.opacity.combined(with: .scale(scale: 0.98, anchor: .top)))
-                        .padding(.top, 4)
+            if showCompletionBanner || showNudgeBanner || showSceneCardDismissHintBanner {
+                VStack(spacing: 0) {
+                    if showCompletionBanner {
+                        completionBanner
+                            .transition(.move(edge: .top).combined(with: .opacity))
+                    }
+                    if showNudgeBanner {
+                        nudgeBanner
+                            .transition(.move(edge: .top).combined(with: .opacity))
+                    }
+                    if showSceneCardDismissHintBanner {
+                        sceneCardDismissHintBanner
+                            .transition(.opacity.combined(with: .scale(scale: 0.98, anchor: .top)))
+                            .padding(.top, 4)
+                    }
                 }
             }
         }
@@ -1908,7 +1910,12 @@ private struct LongPressDragBridge: UIViewRepresentable {
     let onChanged: (CGFloat) -> Void
     let onEnded: () -> Void
 
-    func makeUIView(context: Context) -> UIView { UIView() }
+    func makeUIView(context: Context) -> UIView {
+        let view = UIView()
+        view.backgroundColor = .clear
+        view.isOpaque = false
+        return view
+    }
 
     func updateUIView(_ uiView: UIView, context: Context) {
         context.coordinator.onBegan = onBegan

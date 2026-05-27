@@ -37,8 +37,7 @@ struct SuggestionPreviewView: View {
 
     var body: some View {
         ZStack {
-            Color(UIColor.systemBackground)
-                .ignoresSafeArea()
+            CarrySubtleBackground()
 
             VStack(spacing: 0) {
                 headerBlock
@@ -256,7 +255,7 @@ struct SuggestionPreviewView: View {
             .padding(.top, 12)
             .padding(.bottom, 16)
         }
-        .background(Color(UIColor.systemBackground))
+        .background(chromeBackgroundColor)
     }
 
     // MARK: Empty state

@@ -88,6 +88,32 @@ Apple 原生风格，极简、克制、优雅。
 - 内容顶部留 20pt padding
 - 有标题栏时用 .navigationTitle + .navigationBarTitleDisplayMode(.inline)
 
+### 背景与底部主按钮容器一致性（2026-05 更新）
+- 页面背景分层：
+- 一级页面（如清单预览）：使用 `Color(.systemBackground)` 实心基底。
+- 弹层页面（如 `Choose scenes`、`Suggested extra items`）：统一使用 `CarrySubtleBackground()` 作为页面基底。
+- 同一层级页面不得出现多套不同底色体系。
+- 底部主按钮容器（`safeAreaInset(.bottom)`）：
+- 必须使用实心不透明背景，不使用透明/半透明渐变透出列表内容。
+- 背景色需与当前页面基底同色系（一级页跟随 `systemBackground`，弹层页使用统一的深色实心 chrome）。
+- 分类标题吸顶（Section Header）：
+- 使用实心遮挡层（`background` 为不透明色），避免内容穿透。
+- 该遮挡层颜色需与当前页面基底一致，不可用纹理背景直接贴在 header 上，避免条带感。
+
+### 分层背景规范（Light / Dark）
+- 一级创建流程页面（`New trip` / `Add item` / `List preview`）：
+- 背景统一使用 `CarrySubtleBackground()`（Light 与 Dark 都走同一套语义背景组件）。
+- 吸顶分类标题背景统一使用 `Color(.systemBackground)` 实心遮挡层。
+- 二级弹层页面（`Choose scenes` / `Suggested extra items`）：
+- 背景统一使用 `CarrySubtleBackground()`。
+- 分类标题背景使用“弹层 chrome 实心底色”（Dark: `Color(red: 0.08, green: 0.08, blue: 0.09)`，Light: `Color(.systemBackground)`）。
+- 底部主按钮容器：
+- 一级页面：`Color(.systemBackground)` 实心不透明。
+- 二级弹层：与弹层 chrome 同色系实心不透明（Dark 同上，Light `Color(.systemBackground)`）。
+- 禁止项：
+- 禁止同一界面内混用“纹理背景 + 透明 header/footer”导致穿透或条带。
+- 禁止一级流程页面中出现与同流程其它页面不同的基底组件。
+
 ## Icon 使用
 - 全部使用 SF Symbols
 - 尺寸与文字对齐时用 .imageScale(.medium)
