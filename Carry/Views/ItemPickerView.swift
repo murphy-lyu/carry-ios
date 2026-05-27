@@ -305,6 +305,10 @@ struct ItemPickerView: View {
         normalizedForSearch(canonicalItemName(name))
     }
 
+    private var searchPlaceholderText: String {
+        sourceMode == .smart ? "搜索场景..." : "搜索物品..."
+    }
+
     private func hideKeyboard() {
         UIApplication.shared.sendAction(
             #selector(UIResponder.resignFirstResponder),
@@ -648,10 +652,10 @@ struct ItemPickerView: View {
             }
 
             VStack(spacing: 4) {
-                Text("No results")
+                Text(LocalizedStringKey("itempicker.search.empty.title"))
                     .font(.subheadline.weight(.semibold))
                     .foregroundStyle(.primary)
-                Text("Try a different keyword")
+                Text(LocalizedStringKey("itempicker.search.empty.subtitle"))
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
@@ -797,7 +801,9 @@ struct ItemPickerView: View {
     }
 
     private var smartRecommendationView: some View {
-        ScrollView {
+        let labels = filteredSmartSceneLabels
+
+        return ScrollView {
             VStack(alignment: .leading, spacing: 12) {
                 searchResultsCard {
                     VStack(alignment: .leading, spacing: 14) {
@@ -805,7 +811,11 @@ struct ItemPickerView: View {
                             .font(.subheadline)
                             .foregroundStyle(.secondary)
 
-                        sceneChipGrid
+                        if labels.isEmpty {
+                            smartSearchEmptyState
+                        } else {
+                            sceneChipGrid(labels: labels)
+                        }
 
                         Button {
                             applySmartRecommendations()
@@ -836,7 +846,17 @@ struct ItemPickerView: View {
     }
 
     private var sceneChipGrid: some View {
-        let labels = sceneLabelToKey.keys.sorted()
+        sceneChipGrid(labels: filteredSmartSceneLabels)
+    }
+
+    private var filteredSmartSceneLabels: [String] {
+        let allLabels = sceneLabelToKey.keys.sorted()
+        let query = normalizedForSearch(searchText)
+        guard !query.isEmpty else { return allLabels }
+        return allLabels.filter { normalizedForSearch(NSLocalizedString($0, comment: "")).contains(query) }
+    }
+
+    private func sceneChipGrid(labels: [String]) -> some View {
         return LazyVGrid(columns: [GridItem(.adaptive(minimum: 140), spacing: 8)], spacing: 8) {
             ForEach(labels, id: \.self) { label in
                 let isSelected = selectedSmartSceneLabels.contains(label)
@@ -869,6 +889,22 @@ struct ItemPickerView: View {
                 .buttonStyle(.plain)
             }
         }
+    }
+
+    private var smartSearchEmptyState: some View {
+        VStack(spacing: 10) {
+            Image(systemName: "magnifyingglass")
+                .font(.system(size: 18, weight: .semibold))
+                .foregroundStyle(.secondary)
+            Text(LocalizedStringKey("itempicker.search.smart.empty.title"))
+                .font(.subheadline.weight(.semibold))
+                .foregroundStyle(.primary)
+            Text(LocalizedStringKey("itempicker.search.smart.empty.subtitle"))
+                .font(.caption)
+                .foregroundStyle(.secondary)
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, 24)
     }
 
     private func applySmartRecommendations() {
@@ -1121,7 +1157,7 @@ struct ItemPickerView: View {
                 .font(.subheadline)
             ZStack(alignment: .leading) {
                 if searchText.isEmpty {
-            Text("Search items...")
+                    Text(searchPlaceholderText)
                         .font(.subheadline)
                         .foregroundColor(Color(UIColor.placeholderText))
                         .allowsHitTesting(false)
