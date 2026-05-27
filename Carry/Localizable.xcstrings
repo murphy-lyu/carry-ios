@@ -22455,13 +22455,13 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "标记为未完成"
+            "value" : "标为未完成"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "標記為未完成"
+            "value" : "標為未完成"
           }
         }
       }
