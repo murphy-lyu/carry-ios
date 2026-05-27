@@ -33204,7 +33204,7 @@
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "美式"
+            "value": "美式咖啡"
           }
         }
       }
@@ -33392,25 +33392,25 @@
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Cola"
+            "value": "Black Tea"
           }
         },
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Cola"
+            "value": "Black Tea"
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Cola"
+            "value": "Black Tea"
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Cola"
+            "value": "Black Tea"
           }
         },
         "ja": {
@@ -33428,19 +33428,19 @@
         "pt-BR": {
           "stringUnit": {
             "state": "translated",
-            "value": "Cola"
+            "value": "Black Tea"
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "可乐"
+            "value": "红茶"
           }
         },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "可樂"
+            "value": "紅茶"
           }
         }
       }
@@ -38697,6 +38697,52 @@
           "stringUnit": {
             "state": "translated",
             "value": "東京"
+          }
+        }
+      }
+    },
+    "myitems.source.smart": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Smart picks"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "智能推荐"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "智慧推薦"
+          }
+        }
+      }
+    },
+    "myitems.source.smart.subtitle": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "By travel scenes"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "按场景推荐"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "按場景推薦"
           }
         }
       }
