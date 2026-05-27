@@ -6,8 +6,8 @@
       "id": "upcoming",
       "title": "即将推出",
       "items": [
+        { "id": "destination-info", "title": "目的地实用信息（充电插头、电压、货币）", "status": "in_progress" },
         { "id": "weather", "title": "目的地天气预报", "status": "planned" },
-        { "id": "destination-info", "title": "目的地实用信息（充电插头、电压、货币）", "status": "planned" },
         { "id": "import-itinerary", "title": "邮件 / 订单导入行程", "status": "planned" }
       ]
     },
@@ -15,18 +15,18 @@
       "id": "done",
       "title": "已上线",
       "items": [
-        { "id": "packing-reminder", "title": "打包提醒", "status": "done" },
-        { "id": "share-list", "title": "分享清单", "status": "done" },
-        { "id": "world-map", "title": "世界地图 & 到访国家", "status": "done" },
-        { "id": "backup-restore", "title": "备份与还原", "status": "done" },
-        { "id": "app-icons", "title": "多套应用图标", "status": "done" },
-        { "id": "siri-shortcuts", "title": "Siri 快捷指令", "status": "done" },
         { "id": "smart-suggestions", "title": "智能推荐清单", "status": "done" },
         { "id": "worth-considering", "title": "顺手考虑一下", "status": "done" },
+        { "id": "world-map", "title": "世界地图 & 到访国家", "status": "done" },
+        { "id": "packing-reminder", "title": "打包提醒", "status": "done" },
+        { "id": "share-list", "title": "分享清单", "status": "done" },
         { "id": "custom-section", "title": "自定义分类", "status": "done" },
         { "id": "sorting", "title": "物品与分类排序", "status": "done" },
+        { "id": "item-quantity", "title": "物品数量", "status": "done" },
         { "id": "trip-duplicate", "title": "复制行程", "status": "done" },
-        { "id": "item-quantity", "title": "物品数量", "status": "done" }
+        { "id": "backup-restore", "title": "备份与还原", "status": "done" },
+        { "id": "app-icons", "title": "多套应用图标", "status": "done" },
+        { "id": "siri-shortcuts", "title": "Siri 快捷指令", "status": "done" }
       ]
     }
   ]
