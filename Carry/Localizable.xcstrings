@@ -22078,55 +22078,55 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Alles gepackt — du bist bereit! 🎉"
+            "value" : "Alles gepackt — bald geht's los! 🎉"
           }
         },
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "All packed — you're ready to go! 🎉"
+            "value" : "All packed — just waiting to go! 🎉"
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Todo listo — estás preparado! 🎉"
+            "value" : "Todo listo — ¡solo falta salir! 🎉"
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Tout emballé — vous êtes prêt ! 🎉"
+            "value" : "Tout emballé — plus qu'à partir ! 🎉"
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "すべてパック完了 — 準備OK！🎉"
+            "value" : "荷造り完了 — あとは出発を待つだけ！🎉"
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "모두 챙겼어요 — 출발 준비 완료! 🎉"
+            "value" : "짐 다 쌌어요 — 이제 출발만 남았어요! 🎉"
           }
         },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Tudo arrumado — você está pronto! 🎉"
+            "value" : "Tudo arrumado — só falta partir! 🎉"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "已全部打包，准备出发啦！🎉"
+            "value" : "打包完成，就差出发了！🎉"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "已全部打包，準備出發啦！🎉"
+            "value" : "打包完成，就差出發了！🎉"
           }
         }
       }
