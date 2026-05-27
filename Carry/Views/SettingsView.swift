@@ -800,6 +800,28 @@ private struct DeveloperModeView: View {
 
     var body: some View {
         List {
+            Section("settings.developer.sheet_group") {
+                Toggle(isOn: Binding(
+                    get: { (UserDefaults.standard.string(forKey: sheetVariantDefaultsKey).flatMap(SheetVariant.init) ?? .fallback) == .ultimate },
+                    set: { useScaling in
+                        UserDefaults.standard.set(
+                            (useScaling ? SheetVariant.ultimate : SheetVariant.fallback).rawValue,
+                            forKey: sheetVariantDefaultsKey
+                        )
+                        UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                        showToast(useScaling ? "settings.developer.sheet_fallback_toast_on" : "settings.developer.sheet_fallback_toast_off")
+                    }
+                )) {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("settings.developer.sheet_fallback_toggle")
+                        Text("settings.developer.sheet_fallback_toggle.subtitle")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+                }
+                .tint(colorScheme == .dark ? Color.accentColor.opacity(0.86) : Color.accentColor)
+            }
+
             Section("settings.developer.mock_group") {
                 Toggle(isOn: Binding(
                     get: { store.isHomeEmptyStateMockEnabled },
@@ -838,28 +860,6 @@ private struct DeveloperModeView: View {
                     UIImpactFeedbackGenerator(style: .light).impactOccurred()
                     showToast("settings.developer.test_notifications.success")
                 }
-            }
-
-            Section("settings.developer.sheet_group") {
-                Toggle(isOn: Binding(
-                    get: { (UserDefaults.standard.string(forKey: sheetVariantDefaultsKey).flatMap(SheetVariant.init) ?? .fallback) == .ultimate },
-                    set: { useScaling in
-                        UserDefaults.standard.set(
-                            (useScaling ? SheetVariant.ultimate : SheetVariant.fallback).rawValue,
-                            forKey: sheetVariantDefaultsKey
-                        )
-                        UIImpactFeedbackGenerator(style: .light).impactOccurred()
-                        showToast(useScaling ? "settings.developer.sheet_fallback_toast_on" : "settings.developer.sheet_fallback_toast_off")
-                    }
-                )) {
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text("settings.developer.sheet_fallback_toggle")
-                        Text("settings.developer.sheet_fallback_toggle.subtitle")
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                    }
-                }
-                .tint(colorScheme == .dark ? Color.accentColor.opacity(0.86) : Color.accentColor)
             }
 
             Section("settings.developer.danger_group") {
