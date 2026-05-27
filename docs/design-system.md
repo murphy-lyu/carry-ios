@@ -90,8 +90,8 @@ Apple 原生风格，极简、克制、优雅。
 
 ### 背景与底部主按钮容器一致性（2026-05 更新）
 - 页面背景分层：
-- 一级页面（如清单预览）：使用 `Color(.systemBackground)` 实心基底。
-- 弹层页面（如 `Choose scenes`、`Suggested extra items`）：统一使用 `CarrySubtleBackground()` 作为页面基底。
+- 一级页面（如 `New trip` / `Add item` / `List preview`）：统一使用 `Color(.systemBackground)` 实心基底。
+- 二级弹层页面（如 `Choose scenes`、`Suggested extra items`）：统一使用 `CarrySubtleBackground()` 作为页面基底。
 - 同一层级页面不得出现多套不同底色体系。
 - 底部主按钮容器（`safeAreaInset(.bottom)`）：
 - 必须使用实心不透明背景，不使用透明/半透明渐变透出列表内容。
@@ -102,7 +102,7 @@ Apple 原生风格，极简、克制、优雅。
 
 ### 分层背景规范（Light / Dark）
 - 一级创建流程页面（`New trip` / `Add item` / `List preview`）：
-- 背景统一使用 `CarrySubtleBackground()`（Light 与 Dark 都走同一套语义背景组件）。
+- 背景统一使用 `Color(.systemBackground)`（Light / Dark 均为系统语义实心底色）。
 - 吸顶分类标题背景统一使用 `Color(.systemBackground)` 实心遮挡层。
 - 二级弹层页面（`Choose scenes` / `Suggested extra items`）：
 - 背景统一使用 `CarrySubtleBackground()`。

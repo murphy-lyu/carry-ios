@@ -71,7 +71,8 @@ struct TripInfoView: View {
 
     var body: some View {
         ZStack {
-            CarrySubtleBackground()
+            Color(UIColor.systemBackground)
+                .ignoresSafeArea()
 
             ScrollView {
                 VStack(alignment: .leading, spacing: 24) {

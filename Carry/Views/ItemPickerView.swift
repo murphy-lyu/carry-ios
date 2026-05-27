@@ -313,7 +313,8 @@ struct ItemPickerView: View {
 
     var body: some View {
         ZStack {
-            CarrySubtleBackground()
+            Color(UIColor.systemBackground)
+                .ignoresSafeArea()
 
             VStack(spacing: 0) {
                 VStack(alignment: .leading, spacing: 0) {
