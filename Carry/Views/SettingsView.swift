@@ -701,15 +701,14 @@ private struct DataRecoveryView: View {
         }
         .navigationTitle(Text("settings.data.local_backup"))
         .navigationBarTitleDisplayMode(.inline)
-        .confirmationDialog(
+        .alert(
             Text("settings.data.restore.confirm.title"),
-            isPresented: $showConfirmation,
-            titleVisibility: .visible
+            isPresented: $showConfirmation
         ) {
             Button(role: .destructive) {
                 do {
                     let result = try store.restoreFromBackup()
-                    loadBackupInfo()   // 还原后刷新缓存
+                    loadBackupInfo()
                     showRecoveryToast(count: result.trips)
                 } catch {
                     showRecoveryToast(message: error.localizedDescription)
@@ -717,6 +716,7 @@ private struct DataRecoveryView: View {
             } label: {
                 Text("settings.data.restore.action")
             }
+            Button("common.cancel", role: .cancel) {}
         } message: {
             Text("settings.data.restore.confirm.message")
         }
