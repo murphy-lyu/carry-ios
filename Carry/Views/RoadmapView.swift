@@ -118,7 +118,6 @@ struct RoadmapView: View {
 
             ScrollView {
                 VStack(alignment: .leading, spacing: 14) {
-                    header
                     content
                     footerNote
                 }
@@ -216,11 +215,18 @@ struct RoadmapView: View {
     }
 
     private var topBar: some View {
-        HStack(spacing: 12) {
-            Text(RoadmapL10n.text(en: "Roadmap", zhHans: "路线图", zhHant: "路線圖"))
-                .font(.system(size: 28, weight: .semibold, design: .rounded))
-                .foregroundStyle(.primary)
-                .frame(maxWidth: .infinity, alignment: .leading)
+        HStack(alignment: .top, spacing: 12) {
+            VStack(alignment: .leading, spacing: 2) {
+                Text(RoadmapL10n.text(en: "Roadmap", zhHans: "路线图", zhHant: "路線圖"))
+                    .font(.system(size: 28, weight: .semibold, design: .rounded))
+                    .foregroundStyle(.primary)
+                if let updatedAt = payload?.updatedAt, !updatedAt.isEmpty {
+                    Text(RoadmapL10n.text(en: "Updated: \(updatedAt)", zhHans: "更新于：\(updatedAt)", zhHant: "更新於：\(updatedAt)"))
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
 
             HStack(spacing: 8) {
 #if DEBUG
@@ -251,22 +257,6 @@ struct RoadmapView: View {
                 }
             }
         }
-    }
-
-    private var header: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            if let banner = payload?.banner, !banner.isEmpty {
-                Text(banner)
-                    .font(.subheadline.weight(.semibold))
-                    .foregroundStyle(.primary)
-            }
-            if let updatedAt = payload?.updatedAt, !updatedAt.isEmpty {
-                Text(RoadmapL10n.text(en: "Updated: \(updatedAt)", zhHans: "更新于：\(updatedAt)", zhHant: "更新於：\(updatedAt)"))
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-            }
-        }
-        .padding(.horizontal, 4)
     }
 
     @ViewBuilder
