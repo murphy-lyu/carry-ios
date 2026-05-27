@@ -85,7 +85,7 @@ struct ContentView: View {
         .toolbarBackground(
             colorScheme == .dark
                 ? Color(red: 0.11, green: 0.11, blue: 0.12)
-                : Color(UIColor.systemBackground),
+                : Color.white.opacity(0.98),
             for: .tabBar
         )
         .toolbarBackground(.visible, for: .tabBar)

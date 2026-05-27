@@ -995,7 +995,7 @@ struct TripCard: View {
         if colorScheme == .dark {
             return Color(red: 0.32, green: 0.43, blue: 0.58).opacity(0.13)
         }
-        return Color.blue.opacity(0.10)
+        return Color(red: 0.58, green: 0.72, blue: 0.90).opacity(0.14)
     }
 
     private var statusPillStrokeColor: Color {
@@ -1008,7 +1008,7 @@ struct TripCard: View {
         if colorScheme == .dark {
             return Color(red: 0.36, green: 0.48, blue: 0.66).opacity(0.26)
         }
-        return Color.blue.opacity(0.16)
+        return Color(red: 0.56, green: 0.71, blue: 0.89).opacity(0.28)
     }
 
     private var statusPillForeground: Color {
