@@ -38420,56 +38420,56 @@
       "localizations" : {
         "de" : {
           "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Worth considering"
+            "state" : "translated",
+            "value" : "Kleine Reisefreuden"
           }
         },
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Worth considering"
+            "value" : "Little joys"
           }
         },
         "es" : {
           "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Worth considering"
+            "state" : "translated",
+            "value" : "Pequeñas alegrías"
           }
         },
         "fr" : {
           "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Worth considering"
+            "state" : "translated",
+            "value" : "Petits bonheurs"
           }
         },
         "ja" : {
           "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Worth considering"
+            "state" : "translated",
+            "value" : "旅の小さな幸せ"
           }
         },
         "ko" : {
           "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Worth considering"
+            "state" : "translated",
+            "value" : "여행의 작은 행복"
           }
         },
         "pt-BR" : {
           "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Worth considering"
+            "state" : "translated",
+            "value" : "Pequenas alegrias"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "顺手考虑一下"
+            "value" : "旅途小幸福"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "順手考慮一下"
+            "value" : "旅途小幸福"
           }
         }
       }
