@@ -37231,7 +37231,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Update trip details without changing your list structure"
+            "value" : "Update trip details without affecting your packing list"
           }
         },
         "es" : {
@@ -37267,13 +37267,13 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "更新行程信息，不改变你的清单结构"
+            "value" : "更新行程信息，不影响已有的物品清单"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "更新行程資訊，不改變你的清單結構"
+            "value" : "更新行程資訊，不影響已有的物品清單"
           }
         }
       }
