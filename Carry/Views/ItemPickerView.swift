@@ -690,7 +690,6 @@ struct ItemPickerView: View {
         HStack(spacing: 4) {
             sourceSegment(
                 title: "myitems.source.base",
-                subtitle: "myitems.source.base.subtitle",
                 isSelected: sourceMode == .preset
             ) {
                 sourceMode = .preset
@@ -702,7 +701,6 @@ struct ItemPickerView: View {
 
             sourceSegment(
                 title: "myitems.source.custom",
-                subtitle: "myitems.source.custom.subtitle",
                 isSelected: sourceMode == .myItems
             ) {
                 sourceMode = .myItems
@@ -726,9 +724,6 @@ struct ItemPickerView: View {
                             Text(LocalizedStringKey("myitems.source.smart"))
                                 .font(.subheadline.weight(.semibold))
                         }
-                        Text(LocalizedStringKey("myitems.source.smart.subtitle"))
-                            .font(.caption2)
-                            .foregroundStyle(sourceMode == .smart ? Color.white.opacity(0.88) : Color.secondary.opacity(0.78))
                     }
                     .foregroundStyle(sourceMode == .smart ? .white : .secondary)
                     .frame(maxWidth: .infinity)
@@ -739,8 +734,8 @@ struct ItemPickerView: View {
                                 sourceMode == .smart
                                     ? LinearGradient(
                                         colors: [
-                                            colorScheme == .dark ? Color.white.opacity(0.30) : Color.primary.opacity(1.0),
-                                            colorScheme == .dark ? Color.white.opacity(0.20) : Color.primary.opacity(0.92)
+                                            colorScheme == .dark ? Color(white: 0.28) : Color.primary.opacity(1.0),
+                                            colorScheme == .dark ? Color(white: 0.22) : Color.primary.opacity(0.92)
                                         ],
                                         startPoint: .topLeading,
                                         endPoint: .bottomTrailing
@@ -925,15 +920,17 @@ struct ItemPickerView: View {
         isSmartPrimaryEnabled ? Color(UIColor.systemBackground) : Color(UIColor.secondaryLabel)
     }
 
-    private func sourceSegment(title: String, subtitle: String, isSelected: Bool, action: @escaping () -> Void) -> some View {
+    private func sourceSegment(title: String, subtitle: String? = nil, isSelected: Bool, action: @escaping () -> Void) -> some View {
         let isDarkMode = colorScheme == .dark
         return Button(action: action) {
             VStack(spacing: 2) {
                 Text(LocalizedStringKey(title))
                     .font(.subheadline.weight(isSelected ? .semibold : .medium))
-                Text(LocalizedStringKey(subtitle))
-                    .font(.caption2)
-                    .foregroundStyle(isSelected ? Color.white.opacity(0.88) : Color.secondary.opacity(0.78))
+                if let subtitle {
+                    Text(LocalizedStringKey(subtitle))
+                        .font(.caption2)
+                        .foregroundStyle(isSelected ? Color.white.opacity(0.80) : Color.secondary.opacity(0.78))
+                }
             }
             .foregroundStyle(isSelected ? Color.white : Color.secondary)
             .frame(maxWidth: .infinity)
@@ -944,8 +941,8 @@ struct ItemPickerView: View {
                         isSelected
                             ? LinearGradient(
                                 colors: [
-                                    isDarkMode ? Color(UIColor.secondarySystemBackground).opacity(0.99) : Color.primary.opacity(0.98),
-                                    isDarkMode ? Color(UIColor.tertiarySystemBackground).opacity(0.98) : Color.primary.opacity(0.84)
+                                    isDarkMode ? Color(white: 0.28) : Color.primary.opacity(0.98),
+                                    isDarkMode ? Color(white: 0.22) : Color.primary.opacity(0.84)
                                 ],
                                 startPoint: .topLeading,
                                 endPoint: .bottomTrailing
