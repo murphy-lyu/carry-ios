@@ -34,7 +34,7 @@ struct BackupTrip: Codable {
     var createdAt: Date
     var selectedSceneKeys: [String]
     var dismissedSurpriseNames: [String]
-    var nudgeShown: Bool
+
     var sceneCardDismissed: Bool
     var remindersEnabled: Bool
     var reminderConfigData: Data
@@ -130,7 +130,7 @@ final class DataBackupManager {
                 createdAt: trip.createdAt,
                 selectedSceneKeys: trip.selectedSceneKeys,
                 dismissedSurpriseNames: trip.dismissedSurpriseNames,
-                nudgeShown: trip.nudgeShown,
+
                 sceneCardDismissed: trip.sceneCardDismissed,
                 remindersEnabled: trip.remindersEnabled,
                 reminderConfigData: trip.reminderConfigData,
@@ -265,7 +265,7 @@ final class DataBackupManager {
                 selectedSceneKeys: bt.selectedSceneKeys
             )
             trip.dismissedSurpriseNames = bt.dismissedSurpriseNames
-            trip.nudgeShown = bt.nudgeShown
+
             trip.sceneCardDismissed = bt.sceneCardDismissed
             trip.remindersEnabled = bt.remindersEnabled
             trip.reminderConfigData = bt.reminderConfigData

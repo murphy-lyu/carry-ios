@@ -32,7 +32,7 @@ final class TripBundle {
     var createdAt: Date = Date()
     var selectedSceneKeys: [String] = []
     var dismissedSurpriseNames: [String] = []
-    var nudgeShown: Bool = false
+
     var sceneCardDismissed: Bool = false
     var remindersEnabled: Bool = true
     var reminderConfigData: Data = Data()
@@ -746,11 +746,6 @@ final class TripStore: ObservableObject {
         save()
     }
 
-    func markNudgeShown(tripId: UUID) {
-        guard let trip = trips.first(where: { $0.id == tripId }) else { return }
-        trip.nudgeShown = true
-        save()
-    }
 
     func dismissSceneCard(tripId: UUID) {
         guard let trip = trips.first(where: { $0.id == tripId }) else { return }

@@ -35,8 +35,7 @@ struct PackingListView: View {
     @State private var showCompletionBanner = false
     @State private var hasTriggeredCompletion = false
     @State private var shimmerPhase: CGFloat = -1
-    @State private var showNudgeBanner = false
-    @State private var hasTriggeredNudge = false
+
     @State private var surpriseBatchOffset: Int = 0
     @State private var showReminderSheet = false
 
@@ -274,22 +273,6 @@ struct PackingListView: View {
                 commitEdit(itemId: id)
             }
         }
-        .onChange(of: progress) { _, newProgress in
-            guard newProgress >= 0.85,
-                  isNewTrip,
-                  !hasTriggeredNudge,
-                  !(bundle?.nudgeShown ?? true),
-                  !surpriseItems.isEmpty else { return }
-            hasTriggeredNudge = true
-            store.markNudgeShown(tripId: tripId)
-            withAnimation(.spring(response: 0.4, dampingFraction: 0.8)) {
-                showNudgeBanner = true
-            }
-            Task {
-                try? await Task.sleep(for: .milliseconds(3500))
-                withAnimation(.easeIn(duration: 0.3)) { showNudgeBanner = false }
-            }
-        }
         .onChange(of: store.trips) { _, _ in
             rebuildSurpriseItems()
         }
@@ -432,17 +415,9 @@ struct PackingListView: View {
         .scrollIndicators(.hidden)
         .safeAreaPadding(.bottom, 83)
         .safeAreaInset(edge: .top, spacing: 0) {
-            if showCompletionBanner || showNudgeBanner {
-                VStack(spacing: 0) {
-                    if showCompletionBanner {
-                        completionBanner
-                            .transition(.move(edge: .top).combined(with: .opacity))
-                    }
-                    if showNudgeBanner {
-                        nudgeBanner
-                            .transition(.move(edge: .top).combined(with: .opacity))
-                    }
-                }
+            if showCompletionBanner {
+                completionBanner
+                    .transition(.move(edge: .top).combined(with: .opacity))
             }
         }
     }
@@ -863,30 +838,6 @@ struct PackingListView: View {
             .buttonStyle(.plain)
             .padding(.trailing, 6)
         }
-    }
-
-    private var nudgeBanner: some View {
-        HStack(spacing: 10) {
-            Image(systemName: "sparkles")
-                .font(.system(size: 14, weight: .semibold))
-                .foregroundStyle(colorScheme == .dark ? Color.indigo.opacity(0.88) : Color.indigo)
-                .frame(width: 28, height: 28)
-                .background(Circle().fill(colorScheme == .dark ? Color.indigo.opacity(0.14) : Color.indigo.opacity(0.12)))
-            Text("Almost there! A few things worth a second thought ↓")
-                .foregroundStyle(.primary)
-        }
-        .font(.subheadline.weight(.medium))
-        .frame(maxWidth: .infinity)
-        .padding(.vertical, 12)
-        .padding(.horizontal, 16)
-        .background(
-            RoundedRectangle(cornerRadius: 18, style: .continuous)
-                .fill(colorScheme == .dark ? Color(UIColor.secondarySystemBackground).opacity(0.88) : Color(UIColor.systemBackground).opacity(0.78))
-        )
-        .overlay(
-            RoundedRectangle(cornerRadius: 18, style: .continuous)
-                .strokeBorder(colorScheme == .dark ? Color.white.opacity(0.045) : Color.primary.opacity(0.05), lineWidth: 1)
-        )
     }
 
     private var surpriseSectionHeader: some View {
