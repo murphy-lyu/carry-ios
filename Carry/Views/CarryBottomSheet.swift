@@ -137,6 +137,15 @@ final class SheetViewController: UIViewController {
     /// Shape state decoupled from position to prevent high-velocity jump shrink.
     private var shapeProgressState: CGFloat = 0
     private var shapeDisplayLink: CADisplayLink?
+    private var directMaskSyncDisplayLink: CADisplayLink?
+    private var directMaskSyncProgress: CGFloat = 0
+    private var directPositionDisplayLink: CADisplayLink?
+    private var directPositionStartOffset: CGFloat = 0
+    private var directPositionTargetOffset: CGFloat = 0
+    private var directPositionDuration: CFTimeInterval = 0
+    private var directPositionStartTime: CFTimeInterval = 0
+    private var directPositionFixedProgress: CGFloat = 0
+    private var directPositionCompletion: (() -> Void)?
     private var snapShapeStart: CGFloat = 0
     private var snapShapeTarget: CGFloat = 0
 
@@ -184,6 +193,8 @@ final class SheetViewController: UIViewController {
 
     private var capturedTranslationAtTop: CGFloat?
     private var wasAtTop = false
+    private let expandSnapMinTranslation: CGFloat = 26
+    private let expandSnapMinVelocity: CGFloat = -260
     // Reserved for future snap-mode restoration.
 
     // MARK: Init
@@ -339,6 +350,71 @@ final class SheetViewController: UIViewController {
         shapeDisplayLink = nil
     }
 
+    private func stopDirectMaskSync() {
+        directMaskSyncDisplayLink?.invalidate()
+        directMaskSyncDisplayLink = nil
+    }
+
+    private func startDirectMaskSync(fixedProgress: CGFloat) {
+        stopDirectMaskSync()
+        directMaskSyncProgress = fixedProgress
+        let link = CADisplayLink(target: self, selector: #selector(handleDirectMaskSyncTick(_:)))
+        link.preferredFrameRateRange = CAFrameRateRange(minimum: 30, maximum: 60, preferred: 60)
+        link.add(to: .main, forMode: .common)
+        directMaskSyncDisplayLink = link
+    }
+
+    @objc private func handleDirectMaskSyncTick(_ link: CADisplayLink) {
+        CATransaction.begin()
+        CATransaction.setDisableActions(true)
+        applyCornerMask(top: topRadius(directMaskSyncProgress),
+                        bottom: bottomRadius(directMaskSyncProgress),
+                        progress: directMaskSyncProgress)
+        CATransaction.commit()
+    }
+
+    private func stopDirectPositionSync() {
+        directPositionDisplayLink?.invalidate()
+        directPositionDisplayLink = nil
+        directPositionCompletion = nil
+    }
+
+    private func startDirectPositionSync(from start: CGFloat,
+                                         to target: CGFloat,
+                                         duration: CFTimeInterval,
+                                         fixedProgress: CGFloat,
+                                         completion: @escaping () -> Void) {
+        stopDirectPositionSync()
+        directPositionStartOffset = start
+        directPositionTargetOffset = target
+        directPositionDuration = max(0.001, duration)
+        directPositionStartTime = CACurrentMediaTime()
+        directPositionFixedProgress = fixedProgress
+        directPositionCompletion = completion
+        let link = CADisplayLink(target: self, selector: #selector(handleDirectPositionTick(_:)))
+        link.preferredFrameRateRange = CAFrameRateRange(minimum: 30, maximum: 60, preferred: 60)
+        link.add(to: .main, forMode: .common)
+        directPositionDisplayLink = link
+    }
+
+    @objc private func handleDirectPositionTick(_ link: CADisplayLink) {
+        let t = min(max((CACurrentMediaTime() - directPositionStartTime) / directPositionDuration, 0), 1)
+        let raw = directPositionStartOffset + CGFloat(t) * (directPositionTargetOffset - directPositionStartOffset)
+        CATransaction.begin()
+        CATransaction.setDisableActions(true)
+        placeSheet(at: raw, shapeProgressOverride: directPositionFixedProgress)
+        applyCornerMask(top: topRadius(directPositionFixedProgress),
+                        bottom: bottomRadius(directPositionFixedProgress),
+                        progress: directPositionFixedProgress)
+        CATransaction.commit()
+
+        if t >= 1 {
+            let completion = directPositionCompletion
+            stopDirectPositionSync()
+            completion?()
+        }
+    }
+
     private func startSnapShapeFollow(duration: CFTimeInterval) {
         stopShapeDisplayLink()
         guard duration > 0 else {
@@ -490,6 +566,8 @@ final class SheetViewController: UIViewController {
             animator.finishAnimation(at: .current)
             runningAnimator = nil
         }
+        stopDirectMaskSync()
+        stopDirectPositionSync()
         let visual = min(max(0, currentVisualOffset()), collapsedOffset)
         snappedOffset = visual
         liveDelta = 0
@@ -544,42 +622,60 @@ final class SheetViewController: UIViewController {
         let isCollapsing = target >= collapsedOffset - 1
         // Fast handle-down release should be one-way and non-bouncy.
         let isDirectHandleCollapse = (source == "sheetPanDirectCollapse")
-        let anim: UIViewPropertyAnimator
-        if isDirectHandleCollapse {
-            anim = UIViewPropertyAnimator(duration: 0.34, curve: .easeIn)
-        } else {
-            let dampingRatio: CGFloat = isCollapsing ? 0.95 : 0.88
-            let scaledNormV = isCollapsing ? normV * 0.5 : normV
-            let params = UISpringTimingParameters(
-                dampingRatio: dampingRatio,
-                initialVelocity: CGVector(dx: 0, dy: scaledNormV)
-            )
-            anim = UIViewPropertyAnimator(duration: 0.68, timingParameters: params)
-        }
-        let targetShapeProgress = clampedProgress(target)
-        if isDirectHandleCollapse {
+        let isDirectExpand = (source == "sheetPanDirectExpand" || source == "listPanUp")
+        if isDirectHandleCollapse || isDirectExpand {
             stopShapeDisplayLink()
-        } else {
-            snapShapeStart = shapeProgressState
-            snapShapeTarget = targetShapeProgress
-            startSnapShapeFollow(duration: 0.68)
+            stopDirectMaskSync()
+            stopDirectPositionSync()
+            startDirectPositionSync(
+                from: clampedVisual,
+                to: target,
+                duration: 0.42,
+                fixedProgress: visualProgress
+            ) { [weak self] in
+                guard let self else { return }
+                guard generation == self.animationGeneration else { return }
+                self.snappedOffset = target
+                self.liveDelta = 0
+                self.runningAnimator = nil
+                let p = self.clampedProgress(target)
+                self.setShapeProgress(p)
+                CATransaction.begin()
+                CATransaction.setDisableActions(true)
+                self.placeSheet(at: target)
+                self.applyCornerMask(top: self.topRadius(p), bottom: self.bottomRadius(p), progress: p)
+                CATransaction.commit()
+                if let sv = self.listScrollView, self.delegateProxy?.lockedOffsetY != nil {
+                    self.delegateProxy?.lockedOffsetY = nil
+                    sv.isScrollEnabled = true
+                }
+            }
+            return
         }
+        let anim: UIViewPropertyAnimator
+        let dampingRatio: CGFloat = isCollapsing ? 0.95 : 0.88
+        let scaledNormV = isCollapsing ? normV * 0.5 : normV
+        let params = UISpringTimingParameters(
+            dampingRatio: dampingRatio,
+            initialVelocity: CGVector(dx: 0, dy: scaledNormV)
+        )
+        anim = UIViewPropertyAnimator(duration: 0.68, timingParameters: params)
+        let targetShapeProgress = clampedProgress(target)
+        stopDirectMaskSync()
+        snapShapeStart = shapeProgressState
+        snapShapeTarget = targetShapeProgress
+        startSnapShapeFollow(duration: 0.68)
         anim.addAnimations { [weak self] in
             guard let self else { return }
-            if isDirectHandleCollapse {
-                // Keep the current shape during travel so the sheet does not
-                // visually compress mid-air, then settle to the collapsed
-                // shape at the end.
-                self.placeSheet(at: target, shapeProgressOverride: visualProgress)
-            } else {
-                // Position channel only; shape follows via displayLink.
-                self.placeSheet(at: target)
-            }
+            // Position channel only; shape follows via displayLink.
+            self.placeSheet(at: target)
         }
         anim.addCompletion { [weak self] _ in
             guard let self else { return }
             guard generation == self.animationGeneration else { return }
             self.stopShapeDisplayLink()
+            self.stopDirectMaskSync()
+            self.stopDirectPositionSync()
             self.snappedOffset = target
             self.liveDelta = 0
             self.runningAnimator = nil
@@ -688,15 +784,16 @@ final class SheetViewController: UIViewController {
             if translation > 0 || velocity > 0 {
                 lastGestureSource = "sheetPanDirectCollapse"
                 commitSnap(to: collapsedOffset, velocity: velocity, source: "sheetPanDirectCollapse")
-            } else if disableGestureAutoSnap {
-                settleAtCurrentPositionWithoutSnap()
             } else {
-                finalizeGestureAndSnap(
-                    source: "sheetPan",
-                    velocity: velocity,
-                    translation: translation,
-                    rawOffset: snappedOffset + translation
-                )
+                let shouldExpand = (translation <= -expandSnapMinTranslation) || (velocity <= expandSnapMinVelocity)
+                if shouldExpand {
+                    // Handle upward release explicitly so handle-up uses the same
+                    // controlled snap pipeline as direct collapse.
+                    lastGestureSource = "sheetPanDirectExpand"
+                    commitSnap(to: 0, velocity: velocity, source: "sheetPanDirectExpand")
+                } else {
+                    settleAtCurrentPositionWithoutSnap()
+                }
             }
             activePanDriver = .none
 
@@ -734,6 +831,8 @@ final class SheetViewController: UIViewController {
 
     deinit {
         stopShapeDisplayLink()
+        stopDirectMaskSync()
+        stopDirectPositionSync()
     }
 
     @objc private func handleListPan(_ pan: UIPanGestureRecognizer) {
@@ -797,15 +896,20 @@ final class SheetViewController: UIViewController {
                 return
             }
 
-            if disableGestureAutoSnap {
-                settleAtCurrentPositionWithoutSnap()
+            if drag > 0 || velocity > 0 {
+                // Content-area downward release must be behavior-identical to
+                // handle-down direct collapse.
+                lastGestureSource = "sheetPanDirectCollapse"
+                commitSnap(to: collapsedOffset, velocity: velocity, source: "sheetPanDirectCollapse")
             } else {
-                finalizeGestureAndSnap(
-                    source: "listPan",
-                    velocity: velocity,
-                    translation: drag,
-                    rawOffset: snappedOffset + drag
-                )
+                let shouldExpand = (drag <= -expandSnapMinTranslation) || (velocity <= expandSnapMinVelocity)
+                if shouldExpand {
+                    // Content-area upward release expands the sheet.
+                    lastGestureSource = "listPanUp"
+                    commitSnap(to: 0, velocity: velocity, source: "listPanUp")
+                } else {
+                    settleAtCurrentPositionWithoutSnap()
+                }
             }
             activePanDriver = .none
 

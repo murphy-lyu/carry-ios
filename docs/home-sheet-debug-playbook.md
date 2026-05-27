@@ -167,3 +167,43 @@
    - 动画层面：direct collapse 的动画 block 里移除每帧 `applyCornerMask(...)`，降低卡顿风险。
    用户反馈（最近一条）：
    - 要求把每次改动与反馈写入文档（即本节），便于后续对话继承上下文。
+
+11. 改动：
+   - 新增上拉自动吸附触发阈值：
+     - `expandSnapMinTranslation = 26`
+     - `expandSnapMinVelocity = -260`
+   - 应用到把手上拉释放与内容区上拉释放。
+   用户反馈：
+   - 目的是修复“上滑过于灵敏，轻微偏移就自动上弹”。
+
+12. 改动：
+   - 内容区在顶部下拉释放不再走 `finalizeGestureAndSnap(listPanDown)`。
+   - 改为与把手下拉同源：`commitSnap(..., source:"sheetPanDirectCollapse")`。
+   用户反馈：
+   - 原因是两者表现不一致，且内容区路径会复发“先冲顶再下落”。
+
+13. 改动：
+   - 上拉展开路径（`sheetPanDirectExpand` / `listPanUp`）改为非弹簧直达动画，避免 spring 反向超调。
+   用户反馈：
+   - 目标是修复“先掉到底部甚至屏外，再突然冒到顶部”。
+
+14. 改动：
+   - 为提升丝滑度，直升/直降统一为 `duration: 0.42 + curve: .linear`。
+   用户反馈：
+   - 目标是从“1->3->5->7”改善到更接近像素级线性推进。
+
+15. 改动（无效，已记录）：
+   - 引入 `directMaskSyncDisplayLink` 仅做 direct 路径 mask 同步。
+   用户反馈：
+   - “没有生效”。
+   结论：
+   - 该方案未解决“左右边距不一致”，不能作为根解。
+
+16. 改动（当前最新）：
+   - direct collapse / direct expand 改为 `directPositionDisplayLink` 单驱动逐帧位置推进。
+   - 每帧同入口调用：
+     - `placeSheet(at: raw, shapeProgressOverride: fixedProgress)`
+     - `applyCornerMask(...)`
+   - 终点统一在 `t>=1` 收尾，移除这两条路径对 `UIViewPropertyAnimator` 的依赖。
+   用户反馈：
+   - 请求提交并同步文档记录（当前步骤）。
