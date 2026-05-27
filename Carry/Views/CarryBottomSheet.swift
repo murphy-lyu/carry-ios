@@ -632,7 +632,7 @@ final class SheetViewController: UIViewController {
             startDirectPositionSync(
                 from: clampedVisual,
                 to: target,
-                duration: 0.42,
+                duration: 0.48,
                 fixedProgress: visualProgress
             ) { [weak self] in
                 guard let self else { return }
