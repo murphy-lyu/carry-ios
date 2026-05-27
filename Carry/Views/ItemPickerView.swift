@@ -133,14 +133,6 @@ struct ItemPickerView: View {
         return false
     }
 
-    private var tripInfoForAutoPack: TripInfo? {
-        switch mode {
-        case .create(let info): return info
-        case .autoPackReview(let info, _): return info
-        case .merge: return nil
-        }
-    }
-
     private var currentSceneKeys: [String] {
         if case .autoPackReview(_, let keys) = mode { return keys }
         return []
@@ -714,68 +706,66 @@ struct ItemPickerView: View {
                 CarryLogger.shared.log(.pickerSourceSwitched, context: "to=myitems")
             }
 
-            if tripInfoForAutoPack != nil {
-                Button {
-                    sourceMode = .smart
-                    isSearchFocused = false
-                    hideKeyboard()
-                    CarryLogger.shared.log(.pickerSourceSwitched, context: "to=smart_recommend")
-                } label: {
-                    VStack(spacing: 2) {
-                        HStack(spacing: 4) {
-                            Image(systemName: "sparkles")
-                                .font(.system(size: 12, weight: .semibold))
-                            Text(LocalizedStringKey("myitems.source.smart"))
-                                .font(.subheadline.weight(.semibold))
-                        }
+            Button {
+                sourceMode = .smart
+                isSearchFocused = false
+                hideKeyboard()
+                CarryLogger.shared.log(.pickerSourceSwitched, context: "to=smart_recommend")
+            } label: {
+                VStack(spacing: 2) {
+                    HStack(spacing: 4) {
+                        Image(systemName: "sparkles")
+                            .font(.system(size: 12, weight: .semibold))
+                        Text(LocalizedStringKey("myitems.source.smart"))
+                            .font(.subheadline.weight(.semibold))
                     }
-                    .foregroundStyle(sourceMode == .smart ? .white : .secondary)
-                    .frame(maxWidth: .infinity)
-                    .frame(height: 44)
-                    .background(
-                        RoundedRectangle(cornerRadius: 14, style: .continuous)
-                            .fill(
-                                sourceMode == .smart
-                                    ? LinearGradient(
-                                        colors: [
-                                            colorScheme == .dark ? Color(white: 0.28) : Color.primary.opacity(1.0),
-                                            colorScheme == .dark ? Color(white: 0.22) : Color.primary.opacity(0.92)
-                                        ],
-                                        startPoint: .topLeading,
-                                        endPoint: .bottomTrailing
-                                    )
-                                    : LinearGradient(
-                                        colors: [
-                                            colorScheme == .dark ? Color(UIColor.secondarySystemBackground).opacity(0.80) : Color(UIColor.systemBackground).opacity(0.78),
-                                            colorScheme == .dark ? Color(UIColor.secondarySystemBackground).opacity(0.72) : Color(UIColor.systemBackground).opacity(0.68)
-                                        ],
-                                        startPoint: .topLeading,
-                                        endPoint: .bottomTrailing
-                                    )
-                            )
-                    )
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 14, style: .continuous)
-                            .strokeBorder(
-                                Color.primary.opacity(
-                                    sourceMode == .smart
-                                        ? (colorScheme == .dark ? 0.08 : 0.04)
-                                        : (colorScheme == .dark ? 0.06 : 0.08)
-                                ),
-                                lineWidth: 1
-                            )
-                    )
-                    .shadow(
-                        color: sourceMode == .smart
-                            ? Color.black.opacity(colorScheme == .dark ? 0.12 : 0.12)
-                            : Color.black.opacity(colorScheme == .dark ? 0.08 : 0.03),
-                        radius: sourceMode == .smart ? 8 : 4,
-                        x: 0,
-                        y: 2
-                    )
                 }
-                .buttonStyle(.plain)
+                .foregroundStyle(sourceMode == .smart ? .white : .secondary)
+                .frame(maxWidth: .infinity)
+                .frame(height: 44)
+                .background(
+                    RoundedRectangle(cornerRadius: 14, style: .continuous)
+                        .fill(
+                            sourceMode == .smart
+                                ? LinearGradient(
+                                    colors: [
+                                        colorScheme == .dark ? Color(white: 0.28) : Color.primary.opacity(1.0),
+                                        colorScheme == .dark ? Color(white: 0.22) : Color.primary.opacity(0.92)
+                                    ],
+                                    startPoint: .topLeading,
+                                    endPoint: .bottomTrailing
+                                )
+                                : LinearGradient(
+                                    colors: [
+                                        colorScheme == .dark ? Color(UIColor.secondarySystemBackground).opacity(0.80) : Color(UIColor.systemBackground).opacity(0.78),
+                                        colorScheme == .dark ? Color(UIColor.secondarySystemBackground).opacity(0.72) : Color(UIColor.systemBackground).opacity(0.68)
+                                    ],
+                                    startPoint: .topLeading,
+                                    endPoint: .bottomTrailing
+                                )
+                        )
+                )
+                .overlay(
+                    RoundedRectangle(cornerRadius: 14, style: .continuous)
+                        .strokeBorder(
+                            Color.primary.opacity(
+                                sourceMode == .smart
+                                    ? (colorScheme == .dark ? 0.08 : 0.04)
+                                    : (colorScheme == .dark ? 0.06 : 0.08)
+                            ),
+                            lineWidth: 1
+                        )
+                )
+                .shadow(
+                    color: sourceMode == .smart
+                        ? Color.black.opacity(colorScheme == .dark ? 0.12 : 0.12)
+                        : Color.black.opacity(colorScheme == .dark ? 0.08 : 0.03),
+                    radius: sourceMode == .smart ? 8 : 4,
+                    x: 0,
+                    y: 2
+                )
             }
+            .buttonStyle(.plain)
         }
         .padding(5)
         .background(
@@ -908,11 +898,10 @@ struct ItemPickerView: View {
     }
 
     private func applySmartRecommendations() {
-        guard let info = tripInfoForAutoPack else { return }
         let keys = selectedSmartSceneLabels.compactMap { sceneLabelToKey[$0] }
         guard !keys.isEmpty else { return }
 
-        let generated = generatePackingSections(selectedScenes: keys, tripDays: info.durationDays)
+        let generated = generatePackingSections(selectedScenes: keys, tripDays: tripDays)
         let generatedByCategory: [String: Set<String>] = Dictionary(
             uniqueKeysWithValues: generated.map { section in
                 (section.title, Set(section.sortedItems.map { $0.name }))
@@ -1190,8 +1179,9 @@ struct ItemPickerView: View {
     @ViewBuilder
     private func categoryHeader(_ category: ItemPickerCategory) -> some View {
         let isExpanded = expandedCategories.contains(category.name)
-        let selectedCount = category.items.filter {
-            selectedItems.contains(PickerItemID(category: category.name, item: $0))
+        let selectedCount = category.items.filter { item in
+            selectedItems.contains(PickerItemID(category: category.name, item: item))
+                || existingItemNames.contains(normalizedItemName(item))
         }.count
 
         Button {
@@ -1241,13 +1231,15 @@ struct ItemPickerView: View {
             if lScene != rScene { return lScene && !rScene } // scene picks first
             return lhs < rhs
         }
+        let totalCount = orderedItems.count
+        let resolvedSelectedCount = orderedItems.filter { item in
+            selectedItems.contains(PickerItemID(category: category.name, item: item))
+                || existingItemNames.contains(normalizedItemName(item))
+        }.count
         let selectableItems = orderedItems.filter {
             !existingItemNames.contains(normalizedItemName($0))
         }
-        let selectedCount = selectableItems.filter {
-            selectedItems.contains(PickerItemID(category: category.name, item: $0))
-        }.count
-        let allSelected = !selectableItems.isEmpty && selectedCount == selectableItems.count
+        let allSelected = totalCount > 0 && resolvedSelectedCount == totalCount
         let isDarkMode = colorScheme == .dark
 
         VStack(spacing: 0) {

@@ -69,13 +69,17 @@ struct TripReminderSheet: View {
     // MARK: - Sections
 
     private var heroSection: some View {
-        VStack(alignment: .leading, spacing: 12) {
+        VStack(spacing: 12) {
             Text(LocalizedStringKey("reminder.sheet.title"))
                 .font(.system(size: 30, weight: .bold, design: .rounded))
                 .foregroundStyle(.primary)
+                .frame(maxWidth: .infinity, alignment: .center)
+                .multilineTextAlignment(.center)
             Text("reminder.sheet.subtitle")
                 .font(.subheadline)
                 .foregroundStyle(colorScheme == .dark ? Color.secondary.opacity(0.88) : .secondary)
+                .frame(maxWidth: .infinity, alignment: .center)
+                .multilineTextAlignment(.center)
         }
         .padding(.horizontal, 16)
         .padding(.top, 8)
