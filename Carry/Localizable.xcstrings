@@ -18827,7 +18827,7 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Add Item"
+            "value": "New Item"
           }
         },
         "es": {
@@ -18863,7 +18863,7 @@
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "添加物品"
+            "value": "新建物品"
           }
         },
         "zh-Hant": {
