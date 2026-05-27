@@ -25750,7 +25750,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Get notified before your departure"
+            "value" : "Pack ahead and leave with peace of mind"
           }
         },
         "es" : {
@@ -25786,13 +25786,13 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "出发前自动提醒你打包"
+            "value" : "提前提醒你打包，出发更从容"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "出發前自動提醒你打包"
+            "value" : "提前提醒你打包，出發更從容"
           }
         }
       }
