@@ -726,16 +726,16 @@ struct PackingListView: View {
                             .font(.system(size: 7, weight: .semibold))
                             .foregroundStyle(.tertiary)
                     }
-                    .foregroundStyle(colorScheme == .dark ? Color.secondary.opacity(0.88) : .secondary)
+                    .foregroundStyle(colorScheme == .dark ? Color.secondary.opacity(0.94) : .secondary)
                     .padding(.horizontal, 7)
                     .padding(.vertical, 4)
                     .background(
                         Capsule(style: .continuous)
-                            .fill(colorScheme == .dark ? Color.white.opacity(0.028) : Color.black.opacity(0.022))
+                            .fill(colorScheme == .dark ? Color.white.opacity(0.055) : Color.black.opacity(0.022))
                     )
                     .overlay(
                         Capsule(style: .continuous)
-                            .strokeBorder(Color.primary.opacity(colorScheme == .dark ? 0.012 : 0.02), lineWidth: 1)
+                            .strokeBorder(Color.primary.opacity(colorScheme == .dark ? 0.045 : 0.02), lineWidth: 1)
                     )
                 }
                 .buttonStyle(.plain)
