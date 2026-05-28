@@ -84,9 +84,6 @@ Painkillers, Cold & flu medicine, Stomach medicine, Motion sickness tablets, Ant
 | Sunglasses | 🔴 | |
 | Water bottle | | |
 | Snacks | | |
-| Nuts | | |
-| Foldable chair | | |
-| Picnic mat | | |
 
 ### ✈️ Long-haul flight
 
@@ -95,10 +92,8 @@ Painkillers, Cold & flu medicine, Stomach medicine, Motion sickness tablets, Ant
 | Passport | 🔴 | ✈️ |
 | Neck pillow | 🔴 | |
 | Noise-cancelling headphones | 🔴 | |
-| Portable WiFi device | | |
+| Portable WiFi device | | ✈️ |
 | Eye mask | | |
-| Earplugs | | |
-| Lip balm | | |
 | Water bottle | | |
 
 ### 🚢 Cruise
@@ -124,9 +119,6 @@ Painkillers, Cold & flu medicine, Stomach medicine, Motion sickness tablets, Ant
 | Flip flops | | |
 | After-sun lotion | | |
 | Waterproof bag | | |
-| Rash guard | | |
-| Swimming goggles | | |
-| Light rain jacket | | |
 
 ### 🌧 Rainy city
 
@@ -135,8 +127,6 @@ Painkillers, Cold & flu medicine, Stomach medicine, Motion sickness tablets, Ant
 | Umbrella | 🔴 | |
 | Waterproof jacket | 🔴 | |
 | Waterproof shoes | 🔴 | |
-| Waterproof phone case | | |
-| Quick-dry towel | | |
 
 ### ⛰ High altitude
 
@@ -161,7 +151,6 @@ Painkillers, Cold & flu medicine, Stomach medicine, Motion sickness tablets, Ant
 | Beanie / hat | 🔴 | |
 | Scarf | | |
 | Hand warmers | | |
-| Heat patches | | |
 | Thermal socks | | |
 | Snow boots | | |
 
@@ -169,14 +158,13 @@ Painkillers, Cold & flu medicine, Stomach medicine, Motion sickness tablets, Ant
 
 | 物品 | isAlert | internationalOnly |
 |------|---------|-------------------|
-| Business cards | 🔴 | |
+| Business cards | | |
 | Laptop | 🔴 | |
 | Laptop charger | 🔴 | |
 | Formal shirt / blouse | 🔴 | |
 | Formal wear | 🔴 | |
 | Dress shoes | 🔴 | |
-| Overseas SIM / portable WiFi | | |
-| Wrinkle-release spray | | |
+| Portable WiFi device | | ✈️ |
 
 ### 💻 Remote work
 
@@ -187,9 +175,7 @@ Painkillers, Cold & flu medicine, Stomach medicine, Motion sickness tablets, Ant
 | Travel adapter | 🔴 | ✈️ |
 | Laptop charger | 🔴 | |
 | Noise-cancelling headphones | 🔴 | |
-| Portable charger | 🔴 | |
-| Earphones | | |
-| Power strip | | |
+| Portable charger | | |
 
 ### 👶 Travelling with kids
 
@@ -200,7 +186,6 @@ Painkillers, Cold & flu medicine, Stomach medicine, Motion sickness tablets, Ant
 | Wet wipes | 🔴 | |
 | Snacks for kids | 🔴 | |
 | Favourite toy / comfort item | 🔴 | |
-| Travel board game | | |
 | Change of clothes (extra) | | |
 | Sunscreen for kids | | |
 
@@ -213,7 +198,6 @@ Painkillers, Cold & flu medicine, Stomach medicine, Motion sickness tablets, Ant
 | Headlamp + batteries | 🔴 | |
 | Sunscreen SPF 50+ | 🔴 | |
 | Water bottle | 🔴 | |
-| Trekking poles | | |
 | Trail snacks / energy bars | | |
 
 ### 💍 Honeymoon
@@ -226,7 +210,6 @@ Painkillers, Cold & flu medicine, Stomach medicine, Motion sickness tablets, Ant
 | Travel adapter | 🔴 | ✈️ |
 | Swimsuit | | |
 | Camera / extra memory card | | |
-| Bluetooth speaker | | |
 | Perfume | | |
 
 ### 🎒 Backpacking
