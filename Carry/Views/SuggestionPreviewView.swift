@@ -323,7 +323,7 @@ struct SuggestionPreviewView: View {
         let excludedLower = existingLower.union(myItemLower)
 
         // Regular suggestions (default unselected)
-        let generated = generatePackingSections(selectedScenes: sceneKeys, tripDays: bundle.days)
+        let generated = generatePackingSections(selectedScenes: sceneKeys, tripDays: bundle.days, isInternational: bundle.isInternational)
         var result: [(title: String, items: [String])] = []
         var allNames = Set<String>()
         for section in generated {

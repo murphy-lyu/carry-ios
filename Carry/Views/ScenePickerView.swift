@@ -259,7 +259,7 @@ struct ScenePickerView: View {
 
     @discardableResult
     private func buildTrip(info: TripInfo, keys: [String], seedSections: [PackingSection] = []) -> UUID {
-        var sections = generatePackingSections(selectedScenes: keys, tripDays: info.durationDays)
+        var sections = generatePackingSections(selectedScenes: keys, tripDays: info.durationDays, isInternational: nil)
         if !seedSections.isEmpty {
             mergeSeedSections(seedSections, into: &sections)
         }

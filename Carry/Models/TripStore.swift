@@ -92,6 +92,16 @@ final class TripBundle {
         self.sections = sections
     }
 
+    /// `true` = at least one destination is outside China, `false` = all destinations are China, `nil` = unknown (geocoding pending or no destination set).
+    var isInternational: Bool? {
+        let allCodes = ([countryCode] + additionalDestinations.map(\.countryCode))
+            .filter { !$0.isEmpty }
+        guard !allCodes.isEmpty else { return nil }
+        if allCodes.contains(where: { $0 != "CN" }) { return true }
+        if allCodes.allSatisfy({ $0 == "CN" }) { return false }
+        return nil
+    }
+
     var safeSections: [PackingSection] { (sections ?? []).sorted { $0.sortOrder < $1.sortOrder } }
     var packedCount: Int { safeSections.flatMap { $0.items ?? [] }.filter { $0.isPacked && !$0.name.isEmpty }.count }
     var totalCount:  Int { safeSections.flatMap { $0.items ?? [] }.filter { !$0.name.isEmpty }.count }
@@ -569,7 +579,7 @@ final class TripStore: ObservableObject {
         }
 
         // Build fresh sections (sortOrder assigned by generatePackingSections position)
-        let newSections = generatePackingSections(selectedScenes: keys, tripDays: trip.days)
+        let newSections = generatePackingSections(selectedScenes: keys, tripDays: trip.days, isInternational: trip.isInternational)
         for (index, section) in newSections.enumerated() { section.sortOrder = index }
 
         // Restore packed states + append custom items to matching section

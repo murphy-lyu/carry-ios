@@ -9,12 +9,13 @@ struct SceneItem {
     let name: String
     let category: ItemCategory
     let isAlert: Bool
+    var internationalOnly: Bool = false
 }
 
-private func makeSceneItem(_ name: String, isAlert: Bool) -> SceneItem {
+private func makeSceneItem(_ name: String, isAlert: Bool, internationalOnly: Bool = false) -> SceneItem {
     let canonicalName = canonicalItemName(name)
     let category = categoryForCatalogItem(canonicalName) ?? .essentials
-    return SceneItem(name: canonicalName, category: category, isAlert: isAlert)
+    return SceneItem(name: canonicalName, category: category, isAlert: isAlert, internationalOnly: internationalOnly)
 }
 
 func defaultQuantity(for itemName: String, tripDays: Int) -> Int {
@@ -68,7 +69,7 @@ let sceneLabelToKey: [String: String] = [
 // MARK: - Base items (every trip)
 
 let baseItems: [SceneItem] = [
-    makeSceneItem("Passport", isAlert: true),
+    makeSceneItem("Passport", isAlert: true, internationalOnly: true),
     makeSceneItem("Wallet", isAlert: false),
     makeSceneItem("Cash (local currency)", isAlert: false),
     makeSceneItem("Phone charger", isAlert: false),
@@ -95,10 +96,10 @@ let sceneItemMap: [String: [SceneItem]] = [
         makeSceneItem("Picnic mat", isAlert: false),
     ],
     "long_haul_flight": [
-        makeSceneItem("Passport", isAlert: true),
+        makeSceneItem("Passport", isAlert: true, internationalOnly: true),
         makeSceneItem("Neck pillow", isAlert: true),
         makeSceneItem("Noise-cancelling headphones", isAlert: true),
-        makeSceneItem("Overseas SIM / portable WiFi", isAlert: false),
+        makeSceneItem("Overseas SIM / portable WiFi", isAlert: false, internationalOnly: true),
         makeSceneItem("Eye mask", isAlert: false),
         makeSceneItem("Earplugs", isAlert: false),
         makeSceneItem("Compression socks", isAlert: false),
@@ -106,11 +107,11 @@ let sceneItemMap: [String: [SceneItem]] = [
         makeSceneItem("Water bottle", isAlert: false),
     ],
     "cruise": [
-        makeSceneItem("Passport", isAlert: true),
+        makeSceneItem("Passport", isAlert: true, internationalOnly: true),
         makeSceneItem("Boarding pass", isAlert: true),
         makeSceneItem("Motion sickness tablets", isAlert: true),
         makeSceneItem("Formal dinner outfit", isAlert: true),
-        makeSceneItem("Travel adapter", isAlert: true),
+        makeSceneItem("Travel adapter", isAlert: true, internationalOnly: true),
         makeSceneItem("Swimsuit", isAlert: false),
         makeSceneItem("Sunscreen SPF 50+", isAlert: false),
     ],
@@ -162,13 +163,13 @@ let sceneItemMap: [String: [SceneItem]] = [
         makeSceneItem("Formal shirt / blouse", isAlert: true),
         makeSceneItem("Formal wear", isAlert: true),
         makeSceneItem("Dress shoes", isAlert: true),
-        makeSceneItem("Overseas SIM / portable WiFi", isAlert: false),
+        makeSceneItem("Overseas SIM / portable WiFi", isAlert: false, internationalOnly: true),
         makeSceneItem("Wrinkle-release spray", isAlert: false),
     ],
     "remote_work": [
         makeSceneItem("Laptop", isAlert: true),
         makeSceneItem("Portable WiFi device", isAlert: true),
-        makeSceneItem("Travel adapter", isAlert: true),
+        makeSceneItem("Travel adapter", isAlert: true, internationalOnly: true),
         makeSceneItem("Laptop charger", isAlert: true),
         makeSceneItem("Earphones", isAlert: false),
         makeSceneItem("Noise-cancelling headphones", isAlert: true),
@@ -195,10 +196,10 @@ let sceneItemMap: [String: [SceneItem]] = [
         makeSceneItem("Trail snacks / energy bars", isAlert: false),
     ],
     "honeymoon": [
-        makeSceneItem("Passport", isAlert: true),
+        makeSceneItem("Passport", isAlert: true, internationalOnly: true),
         makeSceneItem("Formal wear", isAlert: true),
         makeSceneItem("Dress shoes", isAlert: true),
-        makeSceneItem("Travel adapter", isAlert: true),
+        makeSceneItem("Travel adapter", isAlert: true, internationalOnly: true),
         makeSceneItem("Swimsuit", isAlert: false),
         makeSceneItem("Camera / extra memory card", isAlert: false),
         makeSceneItem("Bluetooth speaker", isAlert: false),
@@ -239,11 +240,13 @@ func sceneItems(for key: String) -> [SceneItem] {
 
 /// Merges base items + selected scene items, deduplicates by name (alert wins),
 /// then groups by category in a fixed order.
-func generatePackingSections(selectedScenes: [String], tripDays: Int = 1) -> [PackingSection] {
+/// - Parameter isInternational: `true` = international trip, `false` = domestic, `nil` = unknown (show all).
+func generatePackingSections(selectedScenes: [String], tripDays: Int = 1, isInternational: Bool? = nil) -> [PackingSection] {
     var merged: [(name: String, category: ItemCategory, isAlert: Bool)] = []
     var nameIndex: [String: Int] = [:]
 
     func insert(_ item: SceneItem) {
+        if let intl = isInternational, !intl, item.internationalOnly { return }
         if let idx = nameIndex[item.name] {
             if item.isAlert { merged[idx] = (item.name, item.category, true) }
         } else {

@@ -80,7 +80,7 @@ struct ItemPickerView: View {
         self.startInMyItems = false
 
         // Pre-select items generated from scenes, matched back to catalog raw keys
-        let generated = generatePackingSections(selectedScenes: sceneKeys, tripDays: autoPackTripInfo.durationDays)
+        let generated = generatePackingSections(selectedScenes: sceneKeys, tripDays: autoPackTripInfo.durationDays, isInternational: nil)
         let generatedByCategory: [String: Set<String>] = Dictionary(
             uniqueKeysWithValues: generated.map { section in
                 (section.title, Set(section.sortedItems.map { $0.name }))
@@ -193,6 +193,13 @@ struct ItemPickerView: View {
             return info.durationDays
         case .merge(let tripId):
             return store.bundle(for: tripId)?.days ?? 1
+        }
+    }
+
+    private var tripIsInternational: Bool? {
+        switch mode {
+        case .create(_), .autoPackReview(_, _): return nil
+        case .merge(let tripId): return store.bundle(for: tripId)?.isInternational
         }
     }
 
@@ -900,7 +907,7 @@ struct ItemPickerView: View {
     private var smartPreviewItemNames: [String] {
         let keys = selectedSmartSceneLabels.compactMap { sceneLabelToKey[$0] }
         guard !keys.isEmpty else { return [] }
-        let sections = generatePackingSections(selectedScenes: keys, tripDays: tripDays)
+        let sections = generatePackingSections(selectedScenes: keys, tripDays: tripDays, isInternational: tripIsInternational)
         let names = sections.flatMap { $0.sortedItems.map { canonicalItemName($0.name) } }
         let unique = Array(Set(names)).sorted()
         return unique.filter { name in
@@ -1026,7 +1033,7 @@ struct ItemPickerView: View {
         let keys = selectedSmartSceneLabels.compactMap { sceneLabelToKey[$0] }
         guard !keys.isEmpty else { return }
 
-        let generated = generatePackingSections(selectedScenes: keys, tripDays: tripDays)
+        let generated = generatePackingSections(selectedScenes: keys, tripDays: tripDays, isInternational: tripIsInternational)
         let generatedByCategory: [String: Set<String>] = Dictionary(
             uniqueKeysWithValues: generated.map { section in
                 (section.title, Set(section.sortedItems.map { $0.name }))
