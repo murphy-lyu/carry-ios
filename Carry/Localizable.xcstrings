@@ -2112,55 +2112,55 @@
         "de": {
           "stringUnit": {
             "state": "needs_review",
-            "value": "Follow us"
+            "value": "Follow me"
           }
         },
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Follow us"
+            "value": "Follow me"
           }
         },
         "es": {
           "stringUnit": {
             "state": "needs_review",
-            "value": "Follow us"
+            "value": "Follow me"
           }
         },
         "fr": {
           "stringUnit": {
             "state": "needs_review",
-            "value": "Follow us"
+            "value": "Follow me"
           }
         },
         "ja": {
           "stringUnit": {
             "state": "needs_review",
-            "value": "Follow us"
+            "value": "Follow me"
           }
         },
         "ko": {
           "stringUnit": {
             "state": "needs_review",
-            "value": "Follow us"
+            "value": "Follow me"
           }
         },
         "pt-BR": {
           "stringUnit": {
             "state": "needs_review",
-            "value": "Follow us"
+            "value": "Follow me"
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "关注我们"
+            "value": "关注我"
           }
         },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "關注我們"
+            "value": "關注我"
           }
         }
       }
