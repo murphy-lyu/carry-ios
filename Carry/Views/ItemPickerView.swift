@@ -1678,7 +1678,7 @@ private struct ItemPickerMyItemEditorView: View {
         self.onSave = onSave
         _name = State(initialValue: initialName)
         _category = State(initialValue: initialCategory)
-        _quantity = State(initialValue: String(initialQuantity))
+        _quantity = State(initialValue: initialQuantity == 1 ? "" : String(initialQuantity))
     }
 
     var body: some View {
@@ -1688,6 +1688,10 @@ private struct ItemPickerMyItemEditorView: View {
                 TextField("myitems.category", text: $category)
                 TextField("myitems.quantity", text: $quantity)
                     .keyboardType(.numberPad)
+                    .onChange(of: quantity) { _, newValue in
+                        let filtered = newValue.filter(\.isNumber)
+                        if filtered != newValue { quantity = filtered }
+                    }
             }
         }
         .navigationTitle(titleKey)
