@@ -900,33 +900,28 @@ private struct CalendarSettingsView: View {
                     .padding(.horizontal, 18)
                     .frame(height: 58)
 
-                    if calendarSyncEnabled {
-                        Rectangle()
-                            .fill(Color.primary.opacity(colorScheme == .dark ? 0.06 : 0.03))
-                            .frame(height: 1)
-                            .transition(.opacity)
+                    Rectangle()
+                        .fill(Color.primary.opacity(colorScheme == .dark ? 0.06 : 0.03))
+                        .frame(height: 1)
 
-                        DatePicker(
-                            LocalizedStringKey("settings.calendar.packtime"),
-                            selection: packTimeBinding,
-                            displayedComponents: .hourAndMinute
-                        )
-                        .datePickerStyle(.compact)
-                        .labelsHidden()
-                        .frame(maxWidth: .infinity, alignment: .trailing)
-                        .padding(.horizontal, 18)
-                        .frame(height: 58)
-                        .overlay(alignment: .leading) {
-                            Text("settings.calendar.packtime")
-                                .font(.body)
-                                .foregroundStyle(.primary)
-                                .padding(.leading, 18)
-                        }
-                        .transition(.asymmetric(
-                            insertion: .move(edge: .top).combined(with: .opacity),
-                            removal: .opacity
-                        ))
+                    DatePicker(
+                        LocalizedStringKey("settings.calendar.packtime"),
+                        selection: packTimeBinding,
+                        displayedComponents: .hourAndMinute
+                    )
+                    .datePickerStyle(.compact)
+                    .labelsHidden()
+                    .frame(maxWidth: .infinity, alignment: .trailing)
+                    .padding(.horizontal, 18)
+                    .frame(height: 58)
+                    .overlay(alignment: .leading) {
+                        Text("settings.calendar.packtime")
+                            .font(.body)
+                            .foregroundStyle(.primary)
+                            .padding(.leading, 18)
                     }
+                    .opacity(calendarSyncEnabled ? 1 : (colorScheme == .dark ? 0.45 : 0.5))
+                    .allowsHitTesting(calendarSyncEnabled)
                 }
                 .background(
                     RoundedRectangle(cornerRadius: 28, style: .continuous)
@@ -938,6 +933,13 @@ private struct CalendarSettingsView: View {
                 )
                 .shadow(color: groupShadow, radius: colorScheme == .dark ? 10 : 12, x: 0, y: colorScheme == .dark ? 3 : 4)
                 .padding(.horizontal, 16)
+
+                Text("settings.calendar.packtime.hint")
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+                    .padding(.horizontal, 32)
+                    .padding(.top, 8)
+                    .frame(maxWidth: .infinity, alignment: .leading)
             }
             .padding(.bottom, 24)
         }

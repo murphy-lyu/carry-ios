@@ -29665,6 +29665,20 @@
         "zh-Hant": { "stringUnit": { "state": "translated", "value": "加入即將出發的行程？" } }
       }
     },
+    "settings.calendar.packtime.hint": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": { "stringUnit": { "state": "translated", "value": "Die Erinnerung wird am Tag vor der Abreise zu dieser Uhrzeit gesendet." } },
+        "en": { "stringUnit": { "state": "translated", "value": "The pack reminder will be sent at this time on the day before your departure." } },
+        "es": { "stringUnit": { "state": "translated", "value": "El recordatorio se enviará a esta hora el día anterior a tu salida." } },
+        "fr": { "stringUnit": { "state": "translated", "value": "Le rappel sera envoyé à cette heure la veille de votre départ." } },
+        "ja": { "stringUnit": { "state": "translated", "value": "出発前日のこの時間に荷造りリマインダーが届きます。" } },
+        "ko": { "stringUnit": { "state": "translated", "value": "출발 전날 이 시간에 짐 꾸리기 알림이 전송됩니다." } },
+        "pt-BR": { "stringUnit": { "state": "translated", "value": "O lembrete será enviado neste horário no dia anterior à sua partida." } },
+        "zh-Hans": { "stringUnit": { "state": "translated", "value": "将在出发前一天的该时间发送打包提醒。" } },
+        "zh-Hant": { "stringUnit": { "state": "translated", "value": "將在出發前一天的該時間發送打包提醒。" } }
+      }
+    },
     "settings.calendar.packtime": {
       "extractionState": "manual",
       "localizations": {
