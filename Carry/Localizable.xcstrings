@@ -29752,15 +29752,15 @@
     "settings.calendar.entry": {
       "extractionState": "manual",
       "localizations": {
-        "de": { "stringUnit": { "state": "translated", "value": "Kalender" } },
-        "en": { "stringUnit": { "state": "translated", "value": "Calendar" } },
-        "es": { "stringUnit": { "state": "translated", "value": "Calendario" } },
-        "fr": { "stringUnit": { "state": "translated", "value": "Calendrier" } },
-        "ja": { "stringUnit": { "state": "translated", "value": "カレンダー" } },
-        "ko": { "stringUnit": { "state": "translated", "value": "캘린더" } },
-        "pt-BR": { "stringUnit": { "state": "translated", "value": "Calendário" } },
-        "zh-Hans": { "stringUnit": { "state": "translated", "value": "日历" } },
-        "zh-Hant": { "stringUnit": { "state": "translated", "value": "行事曆" } }
+        "de": { "stringUnit": { "state": "translated", "value": "Kalender-Sync" } },
+        "en": { "stringUnit": { "state": "translated", "value": "Calendar Sync" } },
+        "es": { "stringUnit": { "state": "translated", "value": "Sincronización de calendario" } },
+        "fr": { "stringUnit": { "state": "translated", "value": "Sync calendrier" } },
+        "ja": { "stringUnit": { "state": "translated", "value": "カレンダー同期" } },
+        "ko": { "stringUnit": { "state": "translated", "value": "캘린더 동기화" } },
+        "pt-BR": { "stringUnit": { "state": "translated", "value": "Sincronização de calendário" } },
+        "zh-Hans": { "stringUnit": { "state": "translated", "value": "日历同步" } },
+        "zh-Hant": { "stringUnit": { "state": "translated", "value": "行事曆同步" } }
       }
     },
     "settings.calendar.status.on": {

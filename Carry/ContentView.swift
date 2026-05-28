@@ -36,8 +36,64 @@ struct ContentView: View {
     @State private var selectedTab = 0
     @State private var didApplyStartupReset = false
     @State private var didRefreshOnLaunch = false
+    @State private var showSettingsOnMac = false
 
     var body: some View {
+        #if targetEnvironment(macCatalyst)
+        macLayout
+        #else
+        iPhoneLayout
+        #endif
+    }
+
+    // MARK: - Mac layout
+
+    @ViewBuilder
+    private var macLayout: some View {
+        HStack(spacing: 0) {
+            NavigationStack(path: $router.path) {
+                HomeView()
+                    .navigationDestination(for: UUID.self) { id in
+                        PackingListView(tripId: id)
+                    }
+                    .navigationDestination(for: CreationRoute.self) { route in
+                        routeDestination(route)
+                    }
+                    .toolbar {
+                        ToolbarItem(placement: .topBarTrailing) {
+                            Button { showSettingsOnMac = true } label: {
+                                Image(systemName: "gear")
+                                    .foregroundStyle(.primary)
+                            }
+                        }
+                    }
+            }
+            .frame(width: 390)
+            .sheet(isPresented: $showSettingsOnMac) {
+                NavigationStack { SettingsView() }
+                    .frame(minWidth: 420, minHeight: 560)
+            }
+
+            Divider()
+
+            MacGlobePanel()
+                .ignoresSafeArea()
+        }
+        .tint(.primary)
+        .environmentObject(store)
+        .environmentObject(router)
+        .onAppear { onAppearCommon() }
+        .onChange(of: router.pendingTripId) { _, tripId in handlePendingTripId(tripId) }
+        .onChange(of: scenePhase) { _, phase in onScenePhaseChange(phase) }
+        .onReceive(NotificationCenter.default.publisher(for: UserDefaults.didChangeNotification)) { _ in
+            if didApplyStartupReset { handlePendingShortcut() }
+        }
+    }
+
+    // MARK: - iPhone layout
+
+    @ViewBuilder
+    private var iPhoneLayout: some View {
         TabView(selection: $selectedTab) {
             NavigationStack(path: $router.path) {
                 HomeView()
@@ -46,41 +102,17 @@ struct ContentView: View {
                             .toolbar(.hidden, for: .tabBar)
                     }
                     .navigationDestination(for: CreationRoute.self) { route in
-                        switch route {
-                        case .tripInfo(let routeID, let startInMyItems):
-                            TripInfoView(routeID: routeID, startInMyItems: startInMyItems)
-                                .toolbar(.hidden, for: .tabBar)
-                        case .itemPicker(let info, let startInMyItems):
-                            ItemPickerView(tripInfo: info, startInMyItems: startInMyItems)
-                                .toolbar(.hidden, for: .tabBar)
-                        case .addItems(let tripId):
-                            ItemPickerView(tripId: tripId)
-                        case .scenePicker(let info):
-                            ScenePickerView(tripInfo: info)
-                                .toolbar(.hidden, for: .tabBar)
-                        case .packingList(let id):
-                            PackingListView(tripId: id, isNewTrip: true)
-                                .toolbar(.hidden, for: .tabBar)
-                        case .editScenes(let id):
-                            ScenePickerView(editingTripId: id)
-                        case .autoPackPicker(let info, let sceneKeys):
-                            ItemPickerView(autoPackTripInfo: info, sceneKeys: sceneKeys)
-                                .id(sceneKeys.sorted().joined(separator: ","))
-                                .toolbar(.hidden, for: .tabBar)
-                        }
+                        routeDestination(route)
+                            .toolbar(.hidden, for: .tabBar)
                     }
             }
-            .tabItem {
-                Label("Trips", systemImage: "suitcase")
-            }
+            .tabItem { Label("Trips", systemImage: "suitcase") }
             .tag(0)
 
             NavigationStack {
                 SettingsView()
             }
-            .tabItem {
-                Label("Settings", systemImage: "gear")
-            }
+            .tabItem { Label("Settings", systemImage: "gear") }
             .tag(1)
         }
         .tint(.primary)
@@ -93,13 +125,7 @@ struct ContentView: View {
         .toolbarBackground(.visible, for: .tabBar)
         .environmentObject(store)
         .environmentObject(router)
-        .onAppear {
-            applyStartupResetIfNeeded()
-            if !didRefreshOnLaunch {
-                didRefreshOnLaunch = true
-                store.refresh()
-            }
-        }
+        .onAppear { onAppearCommon() }
         .onChange(of: router.pendingTripId) { _, tripId in
             guard let tripId else { return }
             selectedTab = 0
@@ -107,23 +133,56 @@ struct ContentView: View {
             router.path.append(tripId)
             router.pendingTripId = nil
         }
-        .onChange(of: scenePhase) { _, phase in
-            if phase == .active {
-                applyStartupResetIfNeeded()
-                store.refresh()
-                if didApplyStartupReset {
-                    handlePendingShortcut()
-                }
-            }
+        .onChange(of: scenePhase) { _, phase in onScenePhaseChange(phase) }
+        .onReceive(NotificationCenter.default.publisher(for: UserDefaults.didChangeNotification)) { _ in
+            if didApplyStartupReset { handlePendingShortcut() }
         }
-        // React to UserDefaults changes written by an AppIntent perform(),
-        // which can arrive slightly after scenePhase turns .active.
-        .onReceive(NotificationCenter.default.publisher(
-            for: UserDefaults.didChangeNotification)
-        ) { _ in
-            if didApplyStartupReset {
-                handlePendingShortcut()
-            }
+    }
+
+    // MARK: - Shared helpers
+
+    @ViewBuilder
+    private func routeDestination(_ route: CreationRoute) -> some View {
+        switch route {
+        case .tripInfo(let routeID, let startInMyItems):
+            TripInfoView(routeID: routeID, startInMyItems: startInMyItems)
+        case .itemPicker(let info, let startInMyItems):
+            ItemPickerView(tripInfo: info, startInMyItems: startInMyItems)
+        case .addItems(let tripId):
+            ItemPickerView(tripId: tripId)
+        case .scenePicker(let info):
+            ScenePickerView(tripInfo: info)
+        case .packingList(let id):
+            PackingListView(tripId: id, isNewTrip: true)
+        case .editScenes(let id):
+            ScenePickerView(editingTripId: id)
+        case .autoPackPicker(let info, let sceneKeys):
+            ItemPickerView(autoPackTripInfo: info, sceneKeys: sceneKeys)
+                .id(sceneKeys.sorted().joined(separator: ","))
+        }
+    }
+
+    private func onAppearCommon() {
+        applyStartupResetIfNeeded()
+        if !didRefreshOnLaunch {
+            didRefreshOnLaunch = true
+            store.refresh()
+        }
+    }
+
+    private func handlePendingTripId(_ tripId: UUID?) {
+        guard let tripId else { return }
+        selectedTab = 0
+        router.path = NavigationPath()
+        router.path.append(tripId)
+        router.pendingTripId = nil
+    }
+
+    private func onScenePhaseChange(_ phase: ScenePhase) {
+        if phase == .active {
+            applyStartupResetIfNeeded()
+            store.refresh()
+            if didApplyStartupReset { handlePendingShortcut() }
         }
     }
 

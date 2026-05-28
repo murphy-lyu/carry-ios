@@ -277,6 +277,9 @@ struct HomeView: View {
     }
 
     var body: some View {
+        #if targetEnvironment(macCatalyst)
+        macBody
+        #else
         ZStack {
             // Globe — stays completely static; only updated by mapCityOpacity easeOut
             GlobeMapView(
@@ -322,7 +325,63 @@ struct HomeView: View {
             .ignoresSafeArea()
         }
         .ignoresSafeArea(edges: .bottom)
+        #endif
     }
+
+    // MARK: - Mac Catalyst layout
+
+    #if targetEnvironment(macCatalyst)
+    private var macBody: some View {
+        List {
+            if !isEffectivelyEmpty {
+                heroSection
+                    .listRowInsets(EdgeInsets(top: 8, leading: 12, bottom: 4, trailing: 12))
+                    .listRowBackground(Color.clear)
+                    .listRowSeparator(.hidden)
+                upcomingSection
+                pastSection
+                listFooter
+                    .listRowInsets(EdgeInsets(top: 14, leading: 16, bottom: 4, trailing: 16))
+                    .listRowBackground(Color.clear)
+                    .listRowSeparator(.hidden)
+                Color.clear.frame(height: 20)
+                    .listRowBackground(Color.clear)
+                    .listRowSeparator(.hidden)
+            }
+        }
+        .listStyle(.plain)
+        .scrollContentBackground(.hidden)
+        .overlay {
+            if isEffectivelyEmpty { emptyState }
+        }
+        .onAppear {
+            initialRevealProgress = 1.0
+            didRevealUpcoming = true
+            store.refresh()
+            store.correctMisgecodedTrips()
+            store.geocodeMissingTrips()
+            rebuildTripLists()
+        }
+        .onReceive(router.$path) { path in
+            if path.isEmpty {
+                store.refresh()
+                rebuildTripLists()
+            }
+        }
+        .onChange(of: store.trips) { _, _ in rebuildTripLists() }
+        .alert(
+            String(format: NSLocalizedString("Delete %@?", comment: ""), tripToDelete?.name ?? ""),
+            isPresented: $showDeleteConfirmation
+        ) {
+            Button("Delete", role: .destructive) {
+                if let trip = tripToDelete { store.removeTrip(withId: trip.id) }
+            }
+            Button("Cancel", role: .cancel) { }
+        } message: {
+            Text("This will permanently delete your packing list and all progress.")
+        }
+    }
+    #endif
 
     // MARK: - Sheet content (hosted inside UIHostingController by CarryBottomSheet)
 
