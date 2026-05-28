@@ -288,7 +288,6 @@ struct SettingsView: View {
                                 settingsRow(title: "settings.about.language", valueText: currentLanguageDisplay) {
                                     openSystemSettings()
                                 }
-                                Divider().padding(.leading, 18)
                                 HStack(spacing: 14) {
                                     VStack(alignment: .leading, spacing: 2) {
                                         Text("settings.calendar.toggle")
@@ -315,7 +314,6 @@ struct SettingsView: View {
                                 .padding(.horizontal, 18)
                                 .frame(minHeight: 58)
                                 if calendarSyncEnabled {
-                                    Divider().padding(.leading, 18)
                                     HStack(spacing: 14) {
                                         Text("settings.calendar.packtime")
                                             .font(.body)
