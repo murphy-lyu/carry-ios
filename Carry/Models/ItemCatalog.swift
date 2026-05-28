@@ -114,7 +114,6 @@ let itemPickerCatalog: [ItemPickerCategory] = [
         "Sunglasses", "Umbrella", "Water bottle",
         "Travel pillow", "Neck pillow", "Eye mask", "Earplugs",
         "Pen", "Packing cubes", "Laundry bag", "Travel towel", "Quick-dry towel",
-        "Luggage tag", "Luggage lock", "Luggage scale",
         "Transit card / app",
     ]),
     ItemPickerCategory(name: "Makeup", items: [

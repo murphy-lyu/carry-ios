@@ -191,7 +191,6 @@ let sceneItemMap: [String: [SceneItem]] = [
         makeSceneItem("Microfibre towel", isAlert: true),
         makeSceneItem("Quick-dry clothing", isAlert: true),
         makeSceneItem("First aid kit", isAlert: true),
-        makeSceneItem("Padlock", isAlert: true),
         makeSceneItem("Travel adapter", isAlert: true, internationalOnly: true),
         makeSceneItem("Water bottle", isAlert: false),
         makeSceneItem("Portable charger", isAlert: false),
