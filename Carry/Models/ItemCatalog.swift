@@ -83,6 +83,12 @@ let itemPickerCatalog: [ItemPickerCategory] = [
         "Formal wear", "Sweater", "Rain jacket", "Swimsuit", "Nipple covers",
         "Comfortable walking shoes", "Flip flops", "Sun shirt",
         "Scarf",
+        "Thermal underwear", "Heavy winter coat", "Gloves", "Beanie", "Sun hat",
+        "Windproof jacket", "Waterproof jacket", "Waterproof shoes",
+        "Hiking boots", "Snow boots",
+        "Compression socks", "Thermal socks",
+        "Rash guard", "Quick-dry clothing",
+        "Formal shirt / blouse",
     ]),
     ItemPickerCategory(name: "Electronics", items: [
         "Phone charger", "Charging cable", "Portable charger", "Smart watch charger", "Travel adapter",
