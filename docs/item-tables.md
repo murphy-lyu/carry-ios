@@ -143,7 +143,7 @@ Painkillers, Cold & flu medicine, Stomach medicine, Motion sickness tablets, Ant
 | 物品 | isAlert | internationalOnly |
 |------|---------|-------------------|
 | Altitude sickness pills | 🔴 | |
-| Warm base layer | 🔴 | |
+| Thermal underwear | 🔴 | |
 | Sunscreen SPF 50+ | 🔴 | |
 | Sunglasses | 🔴 | |
 | Water bottle | | |
@@ -238,7 +238,10 @@ Painkillers, Cold & flu medicine, Stomach medicine, Motion sickness tablets, Ant
 | Quick-dry clothing | 🔴 | |
 | First aid kit | 🔴 | |
 | Padlock | 🔴 | |
+| Travel adapter | 🔴 | ✈️ |
 | Water bottle | | |
+| Portable charger | | |
+| Laundry bag | | |
 
 ### 🏨 City break
 
@@ -249,6 +252,7 @@ Painkillers, Cold & flu medicine, Stomach medicine, Motion sickness tablets, Ant
 | Portable charger | 🔴 | |
 | Photo ID copy | 🔴 | |
 | Transit card / app | | |
+| Sunscreen | | |
 | Umbrella | | |
 
 ### 🌸 On / near period

@@ -135,7 +135,7 @@ let sceneItemMap: [String: [SceneItem]] = [
     ],
     "high_altitude": [
         makeSceneItem("Altitude sickness pills", isAlert: true),
-        makeSceneItem("Warm base layer", isAlert: true),
+        makeSceneItem("Thermal underwear", isAlert: true),
         makeSceneItem("Sunscreen SPF 50+", isAlert: true),
         makeSceneItem("Sunglasses", isAlert: true),
         makeSceneItem("Water bottle", isAlert: false),
@@ -209,14 +209,18 @@ let sceneItemMap: [String: [SceneItem]] = [
         makeSceneItem("Quick-dry clothing", isAlert: true),
         makeSceneItem("First aid kit", isAlert: true),
         makeSceneItem("Padlock", isAlert: true),
+        makeSceneItem("Travel adapter", isAlert: true, internationalOnly: true),
         makeSceneItem("Water bottle", isAlert: false),
+        makeSceneItem("Portable charger", isAlert: false),
+        makeSceneItem("Laundry bag", isAlert: false),
     ],
     "city_break": [
         makeSceneItem("Comfortable walking shoes", isAlert: true),
         makeSceneItem("Crossbody bag", isAlert: true),
         makeSceneItem("Portable charger", isAlert: true),
-        makeSceneItem("Transit card / app", isAlert: false),
         makeSceneItem("Photo ID copy", isAlert: true),
+        makeSceneItem("Transit card / app", isAlert: false),
+        makeSceneItem("Sunscreen", isAlert: false),
         makeSceneItem("Umbrella", isAlert: false),
     ],
     "personal_period": [
