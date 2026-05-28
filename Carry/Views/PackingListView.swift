@@ -186,11 +186,6 @@ struct PackingListView: View {
                     }
                     if !isNewTrip {
                         Button {
-                            showSuggestSheet = true
-                        } label: {
-                            Label("Add recommended items", systemImage: "sparkles")
-                        }
-                        Button {
                             let activityVC = UIActivityViewController(
                                 activityItems: [shareText],
                                 applicationActivities: nil
