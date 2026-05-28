@@ -14,8 +14,6 @@ fileprivate let homeDarkStatTop = Color(red: 0.15, green: 0.15, blue: 0.16)
 fileprivate let homeDarkStatBottom = Color(red: 0.20, green: 0.20, blue: 0.21)
 fileprivate let homeDarkCardTop = Color(red: 0.10, green: 0.10, blue: 0.11)
 fileprivate let homeDarkCardBottom = Color(red: 0.14, green: 0.14, blue: 0.15)
-fileprivate let homeDarkPastCardTop = Color(red: 0.09, green: 0.09, blue: 0.10)
-fileprivate let homeDarkPastCardBottom = Color(red: 0.12, green: 0.12, blue: 0.13)
 
 // MARK: - HomeView
 
@@ -941,27 +939,6 @@ struct TripCard: View {
     }
 
     private var cardFill: LinearGradient {
-        if isPast {
-            if colorScheme == .dark {
-                return LinearGradient(
-                    colors: [
-                        homeDarkPastCardTop,
-                        homeDarkPastCardBottom
-                    ],
-                    startPoint: .topLeading,
-                    endPoint: .bottomTrailing
-                )
-            }
-            return LinearGradient(
-                colors: [
-                    Color(UIColor.systemBackground).opacity(colorScheme == .dark ? 0.82 : 0.90),
-                    Color(UIColor.systemBackground).opacity(colorScheme == .dark ? 0.76 : 0.84)
-                ],
-                startPoint: .topLeading,
-                endPoint: .bottomTrailing
-            )
-        }
-
         if colorScheme == .dark {
             return LinearGradient(
                 colors: [
@@ -985,9 +962,9 @@ struct TripCard: View {
 
     private var cardShadow: Color {
         if colorScheme == .dark {
-            return Color.black.opacity(isPast ? 0.16 : 0.22)
+            return Color.black.opacity(0.22)
         }
-        return isPast ? Color.black.opacity(0.048) : Color.black.opacity(0.068)
+        return Color.black.opacity(0.068)
     }
 
     private var statusPillText: String? {
@@ -1120,9 +1097,9 @@ struct TripCard: View {
         )
         .overlay(
             RoundedRectangle(cornerRadius: 18, style: .continuous)
-                .strokeBorder(Color.primary.opacity(isPast ? 0.035 : 0.05), lineWidth: 1)
+                .strokeBorder(Color.primary.opacity(0.05), lineWidth: 1)
         )
-        .shadow(color: cardShadow, radius: isPast ? 10 : 14, x: 0, y: isPast ? 5 : 7)
+        .shadow(color: cardShadow, radius: 14, x: 0, y: 7)
         .contentShape(RoundedRectangle(cornerRadius: 18))
         .overlay {
             if shimmer {
