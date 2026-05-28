@@ -50,7 +50,12 @@ struct ContentView: View {
 
     @ViewBuilder
     private var macLayout: some View {
-        HStack(spacing: 0) {
+        ZStack(alignment: .leading) {
+            // Globe fills the entire window background
+            MacGlobePanel()
+                .ignoresSafeArea()
+
+            // Left panel floats over the globe with a frosted-glass sidebar
             NavigationStack(path: $router.path) {
                 HomeView()
                     .navigationDestination(for: UUID.self) { id in
@@ -69,15 +74,11 @@ struct ContentView: View {
                     }
             }
             .frame(width: 390)
+            .background(.ultraThinMaterial)
             .sheet(isPresented: $showSettingsOnMac) {
                 NavigationStack { SettingsView() }
                     .frame(minWidth: 420, minHeight: 560)
             }
-
-            Divider()
-
-            MacGlobePanel()
-                .ignoresSafeArea()
         }
         .tint(.primary)
         .environmentObject(store)
