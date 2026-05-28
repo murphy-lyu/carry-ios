@@ -306,6 +306,7 @@ struct SettingsView: View {
                                                 Task { await handleCalendarToggleOn() }
                                             } else {
                                                 calendarSyncEnabled = false
+                                                CalendarManager.shared.clearAddedIds()
                                             }
                                         }
                                     ))

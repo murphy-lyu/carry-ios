@@ -99,6 +99,9 @@ final class CarryLogger {
         case coffeePurchased        = "coffee_purchased"
         case coffeePurchaseFailed   = "coffee_purchase_failed"
         case coffeeProductsFetchFailed = "coffee_products_fetch_failed"
+
+        // 日历同步
+        case calendarSaveFailed     = "calendar_save_failed"
     }
 
     private static let errorEvents: Set<Event> = [
@@ -110,6 +113,7 @@ final class CarryLogger {
         .iconSwitchFailed, .backupRestoreFailed, .backupWriteFailed, .reminderPermissionDenied,
         .abnormalTermination, .geocodeFailed,
         .destinationDecodeFailed, .coffeePurchaseFailed, .coffeeProductsFetchFailed,
+        .calendarSaveFailed,
     ]
 
     private let sessionActiveKey = "carry_session_active"
