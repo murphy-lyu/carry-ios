@@ -740,7 +740,7 @@ final class TripStore: ObservableObject {
     }
 
     func dismissSurpriseItem(tripId: UUID, itemName: String) {
-        guard let trip = trips.first(where: { $0.id == tripId }),
+        guard let trip = bundle(for: tripId),
               !trip.dismissedSurpriseNames.contains(itemName) else { return }
         trip.dismissedSurpriseNames.append(itemName)
         save()
@@ -776,7 +776,7 @@ final class TripStore: ObservableObject {
 
     /// Adds a surprise item to the most relevant existing section, or creates a new one.
     func addSurpriseItem(tripId: UUID, item: SurpriseItem) {
-        guard let trip = trips.first(where: { $0.id == tripId }) else { return }
+        guard let trip = bundle(for: tripId) else { return }
         let categoryTitle = item.category.rawValue
         if let section = trip.safeSections.first(where: { $0.title == categoryTitle }) {
             let existing = section.items ?? []
