@@ -24044,55 +24044,55 @@
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Ein letzter Check, bevor du die Tür schließt."
+            "value": "Was dir erst nach dem Türschließen einfällt, ist meistens das Wichtigste."
           }
         },
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "One last check before you close the door."
+            "value": "What you remember after closing the door is usually what matters most."
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Una última revisión antes de cerrar la puerta."
+            "value": "Lo que recuerdas después de cerrar la puerta suele ser lo más importante."
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Un dernier coup d'œil avant de fermer la porte."
+            "value": "Ce dont tu te souviens après avoir fermé la porte est souvent ce qui compte le plus."
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "ドアを閉める前に、もう一度だけ。"
+            "value": "ドアを閉めてから思い出すのは、たいてい一番大切なもの。"
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "문을 닫기 전에, 마지막으로 한 번 더."
+            "value": "문을 닫고 나서야 생각나는 것이, 대개 가장 중요한 것이에요."
           }
         },
         "pt-BR": {
           "stringUnit": {
             "state": "translated",
-            "value": "Uma última verificação antes de fechar a porta."
+            "value": "O que você lembra depois de fechar a porta costuma ser o mais importante."
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "关上门前，再想一遍。"
+            "value": "关上门之后才想起来的，往往是最重要的。"
           }
         },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "關上門前，再想一遍。"
+            "value": "關上門之後才想起來的，往往是最重要的。"
           }
         }
       }
