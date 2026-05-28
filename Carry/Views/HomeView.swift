@@ -952,8 +952,8 @@ struct TripCard: View {
 
         return LinearGradient(
             colors: [
-                Color(red: 0.99, green: 0.98, blue: 0.95),
-                Color(UIColor.systemBackground).opacity(colorScheme == .dark ? 0.82 : 0.94)
+                Color(UIColor.systemBackground).opacity(0.90),
+                Color(UIColor.systemBackground).opacity(0.84)
             ],
             startPoint: .topLeading,
             endPoint: .bottomTrailing
