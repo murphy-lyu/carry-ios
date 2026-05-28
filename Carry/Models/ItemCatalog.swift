@@ -86,7 +86,7 @@ let itemPickerCatalog: [ItemPickerCategory] = [
         "Thermal underwear", "Heavy winter coat", "Gloves", "Beanie", "Sun hat",
         "Windproof jacket", "Waterproof jacket", "Waterproof shoes",
         "Hiking boots", "Snow boots",
-        "Compression socks", "Thermal socks",
+        "Thermal socks",
         "Rash guard", "Quick-dry clothing",
         "Formal shirt / blouse",
     ]),
