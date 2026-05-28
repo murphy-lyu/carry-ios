@@ -22,7 +22,9 @@ final class CalendarManager {
     /// Requests full calendar access. Returns true if granted.
     func requestAccess() async -> Bool {
         do {
-            return try await store.requestFullAccessToEvents()
+            let granted = try await store.requestFullAccessToEvents()
+            if granted { store.reset() }
+            return granted
         } catch {
             return false
         }
@@ -104,14 +106,20 @@ final class CalendarManager {
     // MARK: - Event writing
 
     private func writeEvents(for trip: TripBundle, to cal: EKCalendar, packHour: Int, packMinute: Int) {
+        let cal_ = Calendar.current
+
         // 1. Full-day trip event
+        // Normalize startDate to midnight — EventKit requires exact midnight for isAllDay events.
+        // endDate is exclusive: a 3-day trip starting June 1 needs endDate = June 4 (not June 3).
+        let startComps = cal_.dateComponents([.year, .month, .day], from: trip.departureDate)
+        guard let dayStart = cal_.date(from: startComps),
+              let dayEnd   = cal_.date(byAdding: .day, value: max(trip.days, 1), to: dayStart) else { return }
+
         let tripEvent = EKEvent(eventStore: store)
         tripEvent.title = trip.name
         tripEvent.isAllDay = true
-        tripEvent.startDate = trip.departureDate
-        tripEvent.endDate = Calendar.current.date(
-            byAdding: .day, value: max(trip.days - 1, 0), to: trip.departureDate
-        ) ?? trip.departureDate
+        tripEvent.startDate = dayStart
+        tripEvent.endDate   = dayEnd
 
         var notes: [String] = []
         if !trip.destinationCity.isEmpty { notes.append(trip.destinationCity) }
