@@ -1372,12 +1372,7 @@ struct ItemPickerView: View {
 
     @ViewBuilder
     private func categoryBody(_ category: ItemPickerCategory) -> some View {
-        let orderedItems = category.items.sorted { lhs, rhs in
-            let lScene = sceneRecommendedNames.contains(canonicalItemName(lhs))
-            let rScene = sceneRecommendedNames.contains(canonicalItemName(rhs))
-            if lScene != rScene { return lScene && !rScene } // scene picks first
-            return lhs < rhs
-        }
+        let orderedItems = category.items
         let totalCount = orderedItems.count
         let resolvedSelectedCount = orderedItems.filter { item in
             selectedItems.contains(PickerItemID(category: category.name, item: item))
