@@ -1497,13 +1497,14 @@ struct ItemPickerView: View {
 
         switch mode {
         case .create(let info):
+            let pickedSceneKeys = selectedSmartSceneLabels.compactMap { sceneLabelToKey[$0] }
             let bundle = TripBundle(
                 name: info.name,
                 destinationCity: info.destinationCity,
                 days: info.durationDays,
                 dateRange: info.dateRangeDisplay,
                 departureDate: info.departureDate,
-                selectedSceneKeys: [],
+                selectedSceneKeys: pickedSceneKeys,
                 sections: sections
             )
             store.setDraftTrip(bundle)

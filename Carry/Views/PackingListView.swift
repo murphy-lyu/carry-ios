@@ -45,14 +45,14 @@ struct PackingListView: View {
     @State private var toastVisible = false
     @State private var toastText = ""
 
+    @State private var surpriseItems: [SurpriseItem] = []
+    @State private var selectedSurpriseNames: Set<String> = []
+
     private var bundle: TripBundle? { store.bundle(for: tripId) }
     private var sections: [PackingSection] {
         bundle?.safeSections ?? []
     }
     private var hasScenes: Bool { !(bundle?.selectedSceneKeys.isEmpty ?? true) }
-    private var sceneCardDismissed: Bool {
-        store.isSceneCardDismissedGlobally || (bundle?.sceneCardDismissed ?? false)
-    }
     private var totalCount: Int  { bundle?.totalCount  ?? 0 }
     private var packedCount: Int { bundle?.packedCount ?? 0 }
     private var progress: Double {
@@ -201,6 +201,7 @@ struct PackingListView: View {
             }
         }
         .onAppear {
+            if isNewTrip { loadSurpriseItems() }
             CarryLogger.shared.log(.tripOpened)
             // Remember this trip so "Continue Packing" shortcut can reopen it.
             UserDefaults.standard.set(tripId.uuidString, forKey: "carry_last_opened_trip")
@@ -278,6 +279,10 @@ struct PackingListView: View {
             guard newValue else { return }
             router.path.append(CreationRoute.addItems(tripId))
             showAddItemsRoute = false
+        }
+        .onChange(of: showSuggestSheet) { _, isShowing in
+            guard !isShowing, isNewTrip else { return }
+            loadSurpriseItems()
         }
         .sheet(isPresented: $showReminderSheet) {
             if let bundle = bundle {
@@ -357,16 +362,20 @@ struct PackingListView: View {
                 .listSectionSeparator(.hidden)
             }
 
-            if isNewTrip && !sceneCardDismissed {
+            if isNewTrip && !surpriseItems.isEmpty {
                 Section {
-                    sceneEntryCard
-                        .listRowInsets(EdgeInsets(top: 8, leading: 16, bottom: 16, trailing: 16))
-                        .listRowSeparator(.hidden)
-                        .listRowBackground(Color.clear)
+                    ForEach(surpriseItems) { item in
+                        surpriseItemRow(item)
+                            .listRowInsets(EdgeInsets(top: 4, leading: 16, bottom: 4, trailing: 16))
+                            .listRowSeparator(.hidden)
+                            .listRowBackground(Color.clear)
+                    }
+                } header: {
+                    surpriseSectionHeader
+                        .listRowInsets(EdgeInsets())
                 }
                 .listSectionSeparator(.hidden)
             }
-
 
         }
         .listStyle(.plain)
@@ -479,6 +488,25 @@ struct PackingListView: View {
     }
 
     // MARK: Actions
+
+    private func loadSurpriseItems() {
+        guard let bundle = bundle else { return }
+        let existingLower = Set(
+            bundle.safeSections.flatMap { $0.items ?? [] }
+                .filter { !$0.name.isEmpty }
+                .map { $0.name.lowercased() }
+        )
+        let sceneKeys = bundle.selectedSceneKeys
+        let mode: SurpriseRankingMode = sceneKeys.isEmpty ? .manualFirst : .sceneFirst
+        let dismissed = Set(bundle.dismissedSurpriseNames.map { $0.lowercased() })
+        surpriseItems = computeSurpriseItems(
+            for: sceneKeys,
+            existingNames: existingLower,
+            rankingMode: mode
+        )
+        .filter { !dismissed.contains($0.name.lowercased()) }
+        selectedSurpriseNames = []
+    }
 
     private func toggleItem(itemId: UUID) {
         guard !isNewTrip else { return }
@@ -752,55 +780,63 @@ struct PackingListView: View {
         return String(format: NSLocalizedString("%lld left", comment: ""), Int64(totalCount - packedCount))
     }
 
-    private var sceneEntryCard: some View {
-        Button { showSuggestSheet = true } label: {
+    private var surpriseSectionHeader: some View {
+        HStack(spacing: 5) {
+            Image(systemName: "sparkles")
+                .font(.system(size: 10, weight: .semibold))
+                .foregroundStyle(colorScheme == .dark ? Color(.systemGray2) : Color(.systemGray))
+            Text("Worth considering")
+                .font(.caption.weight(.medium))
+                .foregroundStyle(colorScheme == .dark ? Color(.systemGray2) : Color(.systemGray))
+                .kerning(1.2)
+                .textCase(.uppercase)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(.horizontal, 16)
+        .padding(.top, 16)
+        .padding(.bottom, 4)
+        .overlay(alignment: .bottom) {
+            Rectangle()
+                .fill(colorScheme == .dark ? Color.white.opacity(0.03) : Color.primary.opacity(0.03))
+                .frame(height: 1)
+        }
+        .background(Rectangle().fill(Color(UIColor.systemBackground)))
+    }
+
+    private func surpriseItemRow(_ item: SurpriseItem) -> some View {
+        let isSelected = selectedSurpriseNames.contains(item.name)
+        return Button {
+            withAnimation(.easeInOut(duration: 0.12)) {
+                if isSelected { selectedSurpriseNames.remove(item.name) } else { selectedSurpriseNames.insert(item.name) }
+            }
+            UIImpactFeedbackGenerator(style: .light).impactOccurred()
+        } label: {
             HStack(spacing: 12) {
-                Image(systemName: "sparkles")
-                    .font(.system(size: 15, weight: .semibold))
-                    .foregroundStyle(colorScheme == .dark ? Color.orange.opacity(0.88) : Color.orange)
-                    .frame(width: 34, height: 34)
-                    .background(Circle().fill(colorScheme == .dark ? Color.orange.opacity(0.14) : Color.orange.opacity(0.12)))
-                VStack(alignment: .leading, spacing: 2) {
-                    Text("Add recommended items")
-                        .font(.subheadline.weight(.medium))
+                ZStack {
+                    Circle().fill(isSelected ? Color.primary : Color.clear)
+                    Circle().strokeBorder(isSelected ? Color.primary : Color.secondary.opacity(0.4), lineWidth: 1.5)
+                    if isSelected {
+                        Image(systemName: "checkmark")
+                            .font(.system(size: 11, weight: .bold))
+                            .foregroundColor(Color(UIColor.systemBackground))
+                    }
+                }
+                .frame(width: 24, height: 24)
+                VStack(alignment: .leading, spacing: 3) {
+                    Text(LocalizedStringKey(item.name))
+                        .font(.subheadline)
                         .foregroundStyle(.primary)
-                    Text("packing.scene_card.subtitle")
+                    Text(LocalizedStringKey(item.note))
                         .font(.caption)
                         .foregroundStyle(.secondary)
-                        .lineLimit(2)
-                        .frame(maxWidth: 220, alignment: .leading)
+                        .fixedSize(horizontal: false, vertical: true)
                 }
-                Spacer(minLength: 8)
+                Spacer()
             }
-            .padding(.horizontal, 14)
-            .padding(.trailing, 30)
-            .padding(.vertical, 12)
+            .frame(minHeight: 56)
+            .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
-        .background(
-            RoundedRectangle(cornerRadius: 18, style: .continuous)
-                .fill(colorScheme == .dark ? Color(UIColor.secondarySystemBackground).opacity(0.82) : Color(UIColor.systemBackground).opacity(0.62))
-        )
-        .overlay(
-            RoundedRectangle(cornerRadius: 18, style: .continuous)
-                .strokeBorder(colorScheme == .dark ? Color.white.opacity(0.035) : Color.primary.opacity(0.035), lineWidth: 1)
-        )
-        .padding(.vertical, 2)
-        .overlay(alignment: .trailing) {
-            Button {
-                store.dismissSceneCard(tripId: tripId)
-                CarryLogger.shared.log(.sceneCardDismissed)
-                UIImpactFeedbackGenerator(style: .light).impactOccurred()
-            } label: {
-                Image(systemName: "xmark")
-                    .font(.system(size: 10, weight: .semibold))
-                    .foregroundStyle(Color(UIColor.tertiaryLabel))
-                    .frame(width: 36, height: 36)
-                    .contentShape(Rectangle())
-            }
-            .buttonStyle(.plain)
-            .padding(.trailing, 6)
-        }
     }
 
     private var emptyState: some View {
@@ -849,11 +885,6 @@ struct PackingListView: View {
             .padding(.top, 6)
 
             Spacer()
-            if isNewTrip && !sceneCardDismissed {
-                sceneEntryCard
-                    .padding(.horizontal, 16)
-                    .padding(.bottom, 24)
-            }
         }
         .padding(.horizontal, 32)
         .frame(maxWidth: .infinity)
@@ -978,9 +1009,18 @@ struct PackingListView: View {
                 if let id = editingItemId { commitEdit(itemId: id) }
                 isSaved = true
                 UINotificationFeedbackGenerator().notificationOccurred(.success)
+                let surpriseSnapshot = surpriseItems
+                let selectedSnapshot = selectedSurpriseNames
                 Task {
                     try? await Task.sleep(for: .milliseconds(700))
                     if isNewTrip {
+                        for item in surpriseSnapshot {
+                            if selectedSnapshot.contains(item.name) {
+                                store.addSurpriseItem(tripId: tripId, item: item)
+                            } else {
+                                store.dismissSurpriseItem(tripId: tripId, itemName: item.name)
+                            }
+                        }
                         let city = store.bundle(for: tripId)?.destinationCity ?? ""
                         store.commitDraftTrip()
                         if !city.isEmpty {
