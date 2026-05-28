@@ -14,7 +14,7 @@ enum ItemCategory: String, CaseIterable {
     case essentials = "Essentials"
     case health = "Health"
     case makeup = "Makeup"
-    case jewellery = "Jewellery"
+    case jewellery = "Jewelry"
 
     case healthWellness = "Health & Wellness"
     case winterTravel = "Winter Travel"
@@ -30,7 +30,7 @@ enum ItemCategory: String, CaseIterable {
         case "Essentials": return .essentials
         case "Health": return .health
         case "Makeup": return .makeup
-        case "Jewellery": return .jewellery
+        case "Jewelry": return .jewellery
 
         case "Health & Wellness": return .healthWellness
         case "Winter Travel": return .winterTravel
@@ -117,7 +117,7 @@ let itemPickerCatalog: [ItemPickerCategory] = [
         "Eyelash curler", "False eyelashes",
         "Coloured contacts",
     ]),
-    ItemPickerCategory(name: "Jewellery", items: [
+    ItemPickerCategory(name: "Jewelry", items: [
         "Earrings", "Necklace", "Ring", "Bracelet", "Watch", "Hair clip",
     ]),
     ItemPickerCategory(name: "Health & Wellness", items: [
