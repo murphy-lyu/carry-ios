@@ -357,13 +357,12 @@ struct ItemPickerView: View {
                     } else if sourceMode == .myItems {
                         if searchText.isEmpty {
                             let myItems = store.myItems(in: selectedMyItemCollection).sorted(by: compareMyItems(_:_:))
-                            List {
-                                myItemsHeader(isCompact: myItems.isEmpty)
-                                    .listRowBackground(Color.clear)
-                                    .listRowSeparator(.hidden)
-                                    .listRowInsets(EdgeInsets(top: 0, leading: 16, bottom: 8, trailing: 16))
-
-                                if myItems.isEmpty {
+                            if myItems.isEmpty {
+                                VStack(spacing: 0) {
+                                    myItemsHeader(isCompact: true)
+                                        .padding(.horizontal, 16)
+                                        .padding(.bottom, 6)
+                                    Spacer(minLength: 0)
                                     VStack(spacing: 8) {
                                         Image(systemName: "shippingbox")
                                             .font(.system(size: 20, weight: .semibold))
@@ -378,12 +377,18 @@ struct ItemPickerView: View {
                                             .multilineTextAlignment(.center)
                                             .lineSpacing(1.5)
                                     }
-                                    .frame(maxWidth: .infinity)
-                                    .padding(.top, 16)
                                     .padding(.horizontal, 24)
-                                    .listRowBackground(Color.clear)
-                                    .listRowSeparator(.hidden)
-                                } else {
+                                    .offset(y: -2)
+                                    Spacer(minLength: 0)
+                                }
+                                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+                                .padding(.bottom, isCreateMode ? 96 : 24)
+                            } else {
+                                List {
+                                    myItemsHeader(isCompact: false)
+                                        .listRowBackground(Color.clear)
+                                        .listRowSeparator(.hidden)
+                                        .listRowInsets(EdgeInsets(top: 0, leading: 16, bottom: 8, trailing: 16))
                                     ForEach(myItems) { item in
                                         myItemRow(item)
                                             .listRowInsets(EdgeInsets(top: 0, leading: 16, bottom: 0, trailing: 16))
@@ -399,11 +404,11 @@ struct ItemPickerView: View {
                                             }
                                     }
                                 }
+                                .listStyle(.plain)
+                                .scrollContentBackground(.hidden)
+                                .background(Color.clear)
+                                .padding(.bottom, 0)
                             }
-                            .listStyle(.plain)
-                            .scrollContentBackground(.hidden)
-                            .background(Color.clear)
-                            .padding(.bottom, 0)
                         } else {
                             let searchResults = orderedSearchResults
                             ScrollView {
@@ -698,7 +703,7 @@ struct ItemPickerView: View {
 
     private var heroSection: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text(LocalizedStringKey(isAutoPackReview ? "autopick.review.title" : "myitems.add.title"))
+            Text(LocalizedStringKey(isAutoPackReview ? "autopick.review.title" : "itempicker.hero.title"))
                 .font(.system(size: 30, weight: .bold, design: .rounded))
                 .foregroundStyle(.primary)
             Text(LocalizedStringKey(isAutoPackReview ? "autopick.review.subtitle" : "myitems.add.subtitle"))
@@ -1051,15 +1056,16 @@ struct ItemPickerView: View {
     }
 
     private func myItemsHeader(isCompact: Bool) -> some View {
-        HStack(alignment: .center, spacing: 12) {
-            VStack(alignment: .leading, spacing: 4) {
+        let isDarkMode = colorScheme == .dark
+        let fill = isDarkMode
+            ? Color(UIColor.secondarySystemBackground).opacity(0.50)
+            : Color(UIColor.systemBackground).opacity(0.88)
+
+        return HStack(alignment: .center, spacing: 12) {
+            VStack(alignment: .leading, spacing: 0) {
                 Text(LocalizedStringKey("myitems.panel.subtitle"))
-                    .font(.caption.weight(.medium))
-                    .foregroundStyle(.secondary)
-                Text(LocalizedStringKey("myitems.panel.hint"))
-                    .font(.caption2)
-                    .foregroundStyle(.tertiary)
-                    .lineLimit(1)
+                    .font(.headline)
+                    .foregroundStyle(.primary)
             }
             Spacer(minLength: 12)
             Button {
@@ -1069,33 +1075,32 @@ struct ItemPickerView: View {
                     Image(systemName: "plus")
                         .font(.system(size: 12, weight: .semibold))
                     Text(LocalizedStringKey("myitems.custom.new"))
-                        .font(.subheadline.weight(.semibold))
+                        .font(.subheadline.weight(.medium))
                 }
                 .foregroundStyle(.primary)
                 .padding(.horizontal, 12)
-                .padding(.vertical, 8)
+                .padding(.vertical, 7)
                 .background(
                     Capsule(style: .continuous)
-                        .fill(Color(UIColor.systemBackground).opacity(isCompact ? 0.82 : 0.88))
+                        .fill(Color(UIColor.systemBackground).opacity(isCompact ? 0.86 : 0.90))
                 )
                 .overlay(
                     Capsule(style: .continuous)
-                        .strokeBorder(Color.primary.opacity(0.06), lineWidth: 1)
+                        .strokeBorder(Color.primary.opacity(isDarkMode ? 0.07 : 0.05), lineWidth: 1)
                 )
             }
             .buttonStyle(.plain)
         }
         .padding(.horizontal, 16)
-        .padding(.vertical, 12)
+        .frame(height: 52)
         .background(
             RoundedRectangle(cornerRadius: 18, style: .continuous)
-                .fill(Color(UIColor.systemBackground).opacity(0.60))
+                .fill(fill)
         )
         .overlay(
             RoundedRectangle(cornerRadius: 18, style: .continuous)
-                .strokeBorder(Color.primary.opacity(0.03), lineWidth: 1)
+                .strokeBorder(Color.primary.opacity(isDarkMode ? 0.05 : 0.03), lineWidth: 1)
         )
-        .shadow(color: Color.black.opacity(0.012), radius: 4, x: 0, y: 1)
     }
 
     private func categoryHeaderText(_ title: String) -> some View {
