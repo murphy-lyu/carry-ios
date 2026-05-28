@@ -310,6 +310,7 @@ struct SettingsView: View {
                                         }
                                     ))
                                     .labelsHidden()
+                                    .tint(colorScheme == .dark ? Color(.systemGray2) : Color(.label))
                                 }
                                 .padding(.horizontal, 18)
                                 .frame(minHeight: 58)
@@ -930,7 +931,7 @@ private struct DeveloperModeView: View {
                             .foregroundStyle(.secondary)
                     }
                 }
-                .tint(colorScheme == .dark ? Color.accentColor.opacity(0.86) : Color.accentColor)
+                .tint(colorScheme == .dark ? Color(.systemGray2) : Color(.label))
                 .listRowSeparator(.hidden)
             }
 
@@ -950,7 +951,7 @@ private struct DeveloperModeView: View {
                             .foregroundStyle(.secondary)
                     }
                 }
-                .tint(colorScheme == .dark ? Color.accentColor.opacity(0.86) : Color.accentColor)
+                .tint(colorScheme == .dark ? Color(.systemGray2) : Color(.label))
                 .listRowSeparator(.hidden)
             }
 
