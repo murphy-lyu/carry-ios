@@ -66,7 +66,7 @@ private struct RoadmapPayload: Codable {
     var sections: [RoadmapSection]
 
     static let embeddedDefault = RoadmapPayload(
-        updatedAt: "2026-05-27",
+        updatedAt: "2026-05-29",
         banner: RoadmapL10n.text(
             en: "🎉 Now on the App Store · Actively shipping",
             zhHans: "🎉 已上线 App Store · 持续迭代中",
@@ -86,6 +86,7 @@ private struct RoadmapPayload: Codable {
                 id: "done",
                 title: RoadmapL10n.text(en: "Shipped", zhHans: "已上线", zhHant: "已上線"),
                 items: [
+                    RoadmapItem(id: "calendar-sync", title: RoadmapL10n.text(en: "Calendar sync", zhHans: "日历同步", zhHant: "行事曆同步"), status: .done, note: nil),
                     RoadmapItem(id: "smart-suggestions", title: RoadmapL10n.text(en: "Smart suggestions", zhHans: "智能推荐清单", zhHant: "智能推薦清單"), status: .done, note: nil),
                     RoadmapItem(id: "worth-considering", title: RoadmapL10n.text(en: "Worth considering", zhHans: "顺手考虑一下", zhHant: "順手考慮一下"), status: .done, note: nil),
                     RoadmapItem(id: "world-map", title: RoadmapL10n.text(en: "World map & visited countries", zhHans: "世界地图 & 到访国家", zhHant: "世界地圖 & 到訪國家"), status: .done, note: nil),
