@@ -46,7 +46,7 @@ struct PackingListView: View {
     @State private var toastVisible = false
     @State private var toastText = ""
 
-    private let surpriseBatchSize = 1
+    private let surpriseBatchSize = 3
 
     // Cached — recomputed only when store.trips or store.myItems changes,
     // not on every body re-evaluation (inline edit keystrokes, toggle taps, etc.)
@@ -186,6 +186,11 @@ struct PackingListView: View {
                     }
                     if !isNewTrip {
                         Button {
+                            showSuggestSheet = true
+                        } label: {
+                            Label("Add recommended items", systemImage: "sparkles")
+                        }
+                        Button {
                             let activityVC = UIActivityViewController(
                                 activityItems: [shareText],
                                 applicationActivities: nil
@@ -219,7 +224,7 @@ struct PackingListView: View {
                         Button {
                             showSuggestSheet = true
                         } label: {
-                            Label("Add recommended items", systemImage: "tag")
+                            Label("Add recommended items", systemImage: "sparkles")
                         }
                     }
                 } label: {

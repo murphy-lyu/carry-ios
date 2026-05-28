@@ -60,6 +60,7 @@ struct ItemPickerView: View {
     private let mode: Mode
     private let startInMyItems: Bool
     private let cachedSceneRecommendedNames: Set<String>
+    @State private var appliedSceneRecommendedNames: Set<String> = []
 
     init(tripInfo: TripInfo, startInMyItems: Bool = false) {
         self.mode = .create(tripInfo)
@@ -158,7 +159,9 @@ struct ItemPickerView: View {
         return []
     }
 
-    private var sceneRecommendedNames: Set<String> { cachedSceneRecommendedNames }
+    private var sceneRecommendedNames: Set<String> {
+        cachedSceneRecommendedNames.isEmpty ? appliedSceneRecommendedNames : cachedSceneRecommendedNames
+    }
 
     private var myItemsCount: Int { store.myItems.count }
 
@@ -953,6 +956,7 @@ struct ItemPickerView: View {
         }
 
         selectedItems = preselected
+        appliedSceneRecommendedNames = Set(generated.flatMap { $0.sortedItems.map { canonicalItemName($0.name) } })
         expandedCategories = Set(itemPickerCatalog
             .filter { category in
                 category.items.contains { rawKey in
@@ -962,7 +966,8 @@ struct ItemPickerView: View {
             .map { $0.name }
         )
         sourceMode = .preset
-        showToast(NSLocalizedString("scenes.updated", comment: ""))
+        let msg = String(format: NSLocalizedString("scenes.updated.count", comment: ""), preselected.count)
+        showToast(msg)
     }
 
     private var isSmartPrimaryEnabled: Bool {
@@ -1347,7 +1352,7 @@ struct ItemPickerView: View {
                         Text(LocalizedStringKey(item))
                             .font(.body)
                             .foregroundColor(.primary)
-                        if isScenePick && isAutoPackReview {
+                        if isScenePick && !sceneRecommendedNames.isEmpty {
                             Text("Scene pick")
                                 .font(.caption2.weight(.semibold))
                                 .foregroundStyle(.secondary)
