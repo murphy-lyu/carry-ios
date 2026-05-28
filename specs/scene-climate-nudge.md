@@ -30,20 +30,20 @@
 
 ### Tropical（热带/海滩）
 
-目标国家几乎全境属于热带气候，无论季节均适合推荐热带场景物品。
+目标国家几乎全境属于热带气候，或以海滩/阳光度假为主要旅游形态。
 
 ```
-SE Asia: TH, ID, PH, MY, SG, VN, KH, LA, BN
+SE Asia: TH, ID, PH, MY, SG, VN, KH, LA, BN, TL
 Indian Ocean: MV, LK
-Pacific islands: FJ, WS, TO, VU, PF, SB, PW, FM, MH, KI
-Caribbean: CU, DO, JM, BS, BB, TT, LC, VC, GD, KN, AG
+African/Indian Ocean islands: MG, MU, SC, CV, RE, KM
+Middle East beach/sun: AE, QA, BH, OM
+Red Sea beach: EG
+Pacific: FJ, WS, TO, VU, PF, SB, PW, FM, MH, KI, NC, CK, GU, MP
+Caribbean: CU, DO, JM, HT, BS, BB, TT, LC, VC, GD, KN, AG, AW, CW, MQ, GP, TC
 Central America: CR, PA, GT, BZ, HN, NI, SV
-African islands: MU, SC, CV
 ```
 
 ### Winter（冬季/寒冷）
-
-分两类：
 
 **全年寒冷**（任意出发日期均推荐）：
 ```
@@ -55,18 +55,22 @@ IS (Iceland), GL (Greenland)
 East Asia: JP, KR, MN
 Scandinavia: NO, SE, FI, DK
 Baltics: EE, LV, LT
-Central Europe: PL, CZ, SK, HU, AT, CH, DE
-Eastern Europe: RU, UA, BY
+Central Europe: PL, CZ, SK, HU, AT, CH, DE, SI
+Western Europe: FR, GB, NL, BE, IT
+Balkans: HR, RO, BG
+Eastern Europe / Central Asia: RU, UA, BY, KZ
 North America: CA
 ```
 
 ### High Altitude（高海拔）
 
-全境以高海拔著称的国家，无论季节均推荐：
+全境以高海拔著称，高反风险真实存在：
 ```
 NP, BT (Himalayas)
-PE, BO, EC (Andes)
-CO (Bogotá 2600m)
+PE, BO (Andes - Machu Picchu, Titicaca)
+EC, CO (Quito 2850m, Bogotá 2600m)
+ET (Addis Ababa 2355m)
+KG, TJ (Kyrgyzstan / Tajikistan - Pamir)
 ```
 
 ## 推断结果过滤
