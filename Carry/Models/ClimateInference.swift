@@ -10,16 +10,15 @@ enum ClimateInference {
     // MARK: - Country sets
 
     private static let tropicalCountries: Set<String> = [
-        "TH", "ID", "PH", "MY", "SG", "VN", "KH", "LA", "BN", "TL", // SE Asia
-        "MV", "LK",                                                     // Indian Ocean
-        "MG", "MU", "SC", "CV", "RE", "KM",                            // African/Indian Ocean islands
-        "EG",                                                            // Red Sea beach tourism
-        "AE", "QA", "BH", "OM",                                         // Middle East (hot/sunny, beach)
-        "FJ", "WS", "TO", "VU", "PF", "SB", "PW", "FM", "MH", "KI",   // Pacific
-        "NC", "CK", "GU", "MP",                                         // Pacific (New Caledonia, Cook Is., Guam, Saipan)
-        "CU", "DO", "JM", "HT", "BS", "BB", "TT",                      // Caribbean
-        "LC", "VC", "GD", "KN", "AG", "AW", "CW", "MQ", "GP", "TC",   // Caribbean (cont.)
-        "CR", "PA", "GT", "BZ", "HN", "NI", "SV",                      // Central America
+        "TH", "ID", "PH", "MY", "SG", "VN", "KH", "LA", "BN",   // SE Asia
+        "MV", "LK",                                                // Indian Ocean
+        "MG", "MU", "SC", "CV", "RE",                             // African/Indian Ocean islands
+        "AE", "OM",                                                // Middle East (Dubai/Oman beach tourism)
+        "FJ", "WS", "TO", "VU", "PF", "SB", "PW", "FM", "MH", "KI", // Pacific
+        "NC", "GU", "MP",                                          // Pacific (New Caledonia, Guam, Saipan)
+        "CU", "DO", "JM", "BS", "BB", "TT",                       // Caribbean
+        "LC", "VC", "GD", "KN", "AG", "AW", "CW", "MQ", "GP", "TC", // Caribbean (cont.)
+        "CR", "PA", "GT", "BZ", "HN", "NI", "SV",                 // Central America
     ]
 
     private static let alwaysColdCountries: Set<String> = [
@@ -33,7 +32,7 @@ enum ClimateInference {
         "EE", "LV", "LT",                        // Baltics
         "PL", "CZ", "SK", "HU", "AT", "CH", "DE", "SI", // Central Europe
         "FR", "GB", "NL", "BE", "IT",            // Western Europe
-        "HR", "RO", "BG",                        // Balkans / Eastern Europe
+        "RO", "BG",                              // Eastern Europe / Balkans ski
         "RU", "UA", "BY", "KZ",                  // Eastern Europe / Central Asia
         "CA",                                     // Canada
     ]

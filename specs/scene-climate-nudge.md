@@ -33,15 +33,16 @@
 目标国家几乎全境属于热带气候，或以海滩/阳光度假为主要旅游形态。
 
 ```
-SE Asia: TH, ID, PH, MY, SG, VN, KH, LA, BN, TL
+SE Asia: TH, ID, PH, MY, SG, VN, KH, LA, BN
 Indian Ocean: MV, LK
-African/Indian Ocean islands: MG, MU, SC, CV, RE, KM
-Middle East beach/sun: AE, QA, BH, OM
-Red Sea beach: EG
-Pacific: FJ, WS, TO, VU, PF, SB, PW, FM, MH, KI, NC, CK, GU, MP
-Caribbean: CU, DO, JM, HT, BS, BB, TT, LC, VC, GD, KN, AG, AW, CW, MQ, GP, TC
+African/Indian Ocean islands: MG, MU, SC, CV, RE
+Middle East beach: AE, OM  (Dubai/Oman; QA/BH 主要是商务旅游，不加)
+Pacific: FJ, WS, TO, VU, PF, SB, PW, FM, MH, KI, NC, GU, MP
+Caribbean: CU, DO, JM, BS, BB, TT, LC, VC, GD, KN, AG, AW, CW, MQ, GP, TC
 Central America: CR, PA, GT, BZ, HN, NI, SV
 ```
+
+有意排除：EG（金字塔旅游 ≠ 海滩热带）、QA/BH（商务/城市为主）、HT（无显著旅游流量）、KM/CK/TL（极小众）
 
 ### Winter（冬季/寒冷）
 
@@ -57,7 +58,7 @@ Scandinavia: NO, SE, FI, DK
 Baltics: EE, LV, LT
 Central Europe: PL, CZ, SK, HU, AT, CH, DE, SI
 Western Europe: FR, GB, NL, BE, IT
-Balkans: HR, RO, BG
+Balkans: RO, BG  (HR 海岸冬季偏暖，不加)
 Eastern Europe / Central Asia: RU, UA, BY, KZ
 North America: CA
 ```
