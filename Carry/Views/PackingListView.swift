@@ -405,6 +405,21 @@ struct PackingListView: View {
                 }
                 .listSectionSeparator(.hidden)
             }
+
+            if !visibleSurpriseItems.isEmpty {
+                Section {
+                    ForEach(visibleSurpriseItems) { item in
+                        surpriseRow(for: item)
+                            .listRowInsets(EdgeInsets(top: 0, leading: 16, bottom: 0, trailing: 16))
+                            .listRowSeparator(.hidden)
+                            .listRowBackground(Color.clear)
+                    }
+                } header: {
+                    surpriseSectionHeader
+                        .listRowInsets(EdgeInsets())
+                }
+                .listSectionSeparator(.hidden)
+            }
         }
         .listStyle(.plain)
         .scrollContentBackground(.hidden)

@@ -129,7 +129,7 @@ struct ItemPickerView: View {
     @State private var selectedMyItemCollection: String = "Default"
     @State private var didLogSearch = false
     @State private var isConfirmingSelection = false
-    @AppStorage("itempicker.last_source_mode") private var lastSourceModeRawValue: String = SourceMode.preset.rawValue
+    @AppStorage("itempicker.last_source_mode") private var lastSourceModeRawValue: String = SourceMode.smart.rawValue
 
     private var existingItemNames: Set<String> {
         guard case .merge(let tripId) = mode,
@@ -818,6 +818,24 @@ struct ItemPickerView: View {
         .padding(.top, 2)
     }
 
+    private var groupedSmartScenesView: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            ForEach(defaultSceneGroups) { group in
+                let groupLabels = group.items.filter { sceneLabelToKey[$0] != nil }
+                if !groupLabels.isEmpty {
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text(LocalizedStringKey(group.title))
+                            .font(.caption.weight(.medium))
+                            .foregroundStyle(colorScheme == .dark ? Color(.systemGray2) : Color(.systemGray))
+                            .kerning(1.0)
+                            .textCase(.uppercase)
+                        sceneChipGrid(labels: groupLabels)
+                    }
+                }
+            }
+        }
+    }
+
     private var smartRecommendationView: some View {
         let labels = filteredSmartSceneLabels
 
@@ -830,7 +848,9 @@ struct ItemPickerView: View {
                             .foregroundStyle(.secondary.opacity(0.92))
                             .padding(.bottom, 2)
 
-                        if labels.isEmpty {
+                        if searchText.isEmpty {
+                            groupedSmartScenesView
+                        } else if labels.isEmpty {
                             smartSearchEmptyState
                         } else {
                             sceneChipGrid(labels: labels)

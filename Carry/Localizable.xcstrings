@@ -1552,6 +1552,65 @@
         }
       }
     },
+    "A cup of hot chocolate in a cold room after a day in the snow is one of those small things that makes a trip feel complete": {
+      "extractionState": "stale",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Eine Tasse heißer Schokolade in einem kalten Zimmer nach einem Tag im Schnee gehört zu den kleinen Dingen, die eine Reise vollständig machen"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "A cup of hot chocolate in a cold room after a day in the snow is one of those small things that makes a trip feel complete"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Una taza de chocolate caliente en una habitación fría después de un día en la nieve es una de esas pequeñas cosas que hacen que un viaje se sienta completo"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Une tasse de chocolat chaud dans une chambre froide après une journée dans la neige est une de ces petites choses qui donnent le sentiment que le voyage est complet"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "雪の中で一日過ごした後、寒い部屋でホットチョコレートを飲む。旅を完結させる小さなことのひとつです"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "눈 속에서 하루를 보낸 후 차가운 방에서 마시는 핫초코 한 잔은 여행을 완성시키는 작은 것들 중 하나입니다"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Uma xícara de chocolate quente em um quarto frio após um dia na neve é uma dessas pequenas coisas que fazem uma viagem parecer completa"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "雪地里玩了一整天，回到房间喝一杯热可可——就是这样一件小事，让一段旅程感觉圆满了"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "雪地裡玩了一整天，回到房間喝一杯熱可可——就是這樣一件小事，讓一段旅程感覺圓滿了"
+          }
+        }
+      }
+    },
     "A full-face snorkel mask changes the experience entirely — clear vision, easy breathing, no learning curve": {
       "extractionState": "manual",
       "localizations": {
@@ -1813,6 +1872,65 @@
           "stringUnit": {
             "state": "translated",
             "value": "一点熟悉的香气，能让酒店房间更有旅行记忆感"
+          }
+        }
+      }
+    },
+    "A small roller of lavender or peppermint does two things: eases tension headaches mid-flight, and marks the moment you apply it at the gate as the real start of the trip": {
+      "extractionState": "stale",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ein kleiner Roller mit Lavendel oder Pfefferminze hilft doppelt: lindert Spannungskopfschmerzen im Flug und markiert den Moment am Gate als echten Reisebeginn"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "A small roller of lavender or peppermint does two things: eases tension headaches mid-flight, and marks the moment you apply it at the gate as the real start of the trip"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Un pequeño roller de lavanda o menta hace dos cosas: alivia los dolores de cabeza a mitad del vuelo y convierte el momento en que te lo aplicas en la puerta en el verdadero inicio del viaje"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Un petit roller de lavande ou de menthe poivrée a deux vertus : il soulage les maux de tête en vol et fait du moment où on l'applique à la porte d'embarquement le vrai début du voyage"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ラベンダーかペパーミントの小さなロールオンが二つのことをしてくれます。フライト中の緊張性頭痛を和らげ、搭乗口で塗る瞬間を旅の本当の始まりにしてくれます"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "라벤더나 페퍼민트 롤러는 두 가지 역할을 합니다. 비행 중 긴장성 두통을 완화하고, 탑승구에서 바르는 순간을 진짜 여행의 시작으로 만들어줍니다"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Um pequeno roller de lavanda ou hortelã-pimenta faz duas coisas: alivia dores de cabeça tensionais durante o voo e marca o momento em que você aplica no portão como o verdadeiro início da viagem"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "薰衣草或薄荷精油各有妙用：缓解飞机上的头痛，也会让你在登机口涂抹的那一刻，感觉旅程真正开始了"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "薰衣草或薄荷精油各有妙用：緩解飛機上的頭痛，也會讓你在登機口塗抹的那一刻，感覺旅程真正開始了"
           }
         }
       }
@@ -2877,6 +2995,124 @@
         }
       }
     },
+    "After-sun gel": {
+      "extractionState": "stale",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "After-Sun-Gel"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "After-sun gel"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gel after sun"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gel après-soleil"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "アフターサンジェル"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "선번 후 젤"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gel pós-sol"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "晒后修复啫喱"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "曬後修復啫喱"
+          }
+        }
+      }
+    },
+    "After-sun lotion": {
+      "extractionState": "stale",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "After-Sun-Lotion"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "After-sun lotion"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Loción after sun"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Lotion après-soleil"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "アフターサンローション"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "선번 후 로션"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Loção pós-sol"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "晒后修复乳"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "曬後修復乳"
+          }
+        }
+      }
+    },
     "Airline food timing rarely matches when you're actually hungry": {
       "extractionState": "manual",
       "localizations": {
@@ -3761,6 +3997,124 @@
         }
       }
     },
+    "Band-aids": {
+      "extractionState": "stale",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pflaster"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Band-aids"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tiritas"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pansements adhésifs"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "絆創膏"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "반창고"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Curativos"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "创可贴"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "OK繃"
+          }
+        }
+      }
+    },
+    "Bath salts": {
+      "extractionState": "stale",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Badesalz"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bath salts"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sales de baño"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sels de bain"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "バスソルト"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "목욕 소금"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sais de banho"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "浴盐"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "浴鹽"
+          }
+        }
+      }
+    },
     "Beach & Outdoor": {
       "extractionState": "manual",
       "localizations": {
@@ -4164,6 +4518,65 @@
           "stringUnit": {
             "state": "translated",
             "value": "防磨脚贴"
+          }
+        }
+      }
+    },
+    "Blotting paper": {
+      "extractionState": "stale",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mattierungstücher"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Blotting paper"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Papel matificante"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Papier matifiant"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "あぶらとり紙"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "기름종이"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Papel matificante"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "吸油纸"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "吸油紙"
           }
         }
       }
@@ -6085,6 +6498,65 @@
           "stringUnit": {
             "state": "translated",
             "value": "城市遊一天可能走兩萬步以上——鞋墊能在第二天前救你的腳"
+          }
+        }
+      }
+    },
+    "Clip it on and take your phone into the water — suddenly every boat trip, beach swim, or waterfall is fully documented": {
+      "extractionState": "stale",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Einfach befestigen und das Handy ins Wasser mitnehmen — plötzlich kann jede Bootsfahrt, jeder Strandschwimm oder Wasserfall vollständig dokumentiert werden"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Clip it on and take your phone into the water — suddenly every boat trip, beach swim, or waterfall is fully documented"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ponlo y lleva tu teléfono al agua — de repente cada paseo en bote, nado en la playa o cascada queda completamente documentado"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Attachez-le et emmenez votre téléphone dans l'eau — soudain, chaque sortie en bateau, baignade ou cascade est entièrement documentée"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "つけてスマホを水に持ち込もう。ボートトリップ、海水浴、滝など、すべての瞬間が記録できるようになります"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "클립으로 고정하고 폰을 물에 가져가세요. 보트 여행, 해수욕, 폭포 등 모든 순간이 완전히 기록됩니다"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Coloque e leve seu celular para a água — de repente, cada passeio de barco, mergulho na praia ou cachoeira fica completamente documentado"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "套上它，把手机带进水里——从此每一次船游、泳池、瀑布，都有了完整的记录"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "套上它，把手機帶進水裡——從此每一次船遊、游泳、瀑布，都有了完整的記錄"
           }
         }
       }
@@ -8357,6 +8829,65 @@
         }
       }
     },
+    "Digestive enzymes": {
+      "extractionState": "stale",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Verdauungsenzyme"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Digestive enzymes"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Enzimas digestivas"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Enzymes digestives"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "消化酵素"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "소화 효소"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Enzimas digestivas"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "消化酶"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "消化酵素"
+          }
+        }
+      }
+    },
     "Dismiss": {
       "extractionState": "manual",
       "localizations": {
@@ -9808,6 +10339,65 @@
         }
       }
     },
+    "Electrolyte tablets": {
+      "extractionState": "stale",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Elektrolyttabletten"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Electrolyte tablets"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tabletas de electrolitos"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Comprimés d'électrolytes"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "電解質タブレット"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "전해질 정제"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Comprimidos de eletrólitos"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "电解质片"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "電解質片"
+          }
+        }
+      }
+    },
     "Electronics": {
       "extractionState": "manual",
       "localizations": {
@@ -9975,6 +10565,65 @@
           "stringUnit": {
             "state": "translated",
             "value": "在不吵醒八個陌生人的情況下夜間進入青旅宿舍的必備品"
+          }
+        }
+      }
+    },
+    "Essential oil roller": {
+      "extractionState": "stale",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ätherisches Öl Roller"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Essential oil roller"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Roll-on de aceite esencial"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Roll-on d'huile essentielle"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "アロマロールオン"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "에센셜 오일 롤러"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Roll-on de óleo essencial"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "精油滚珠"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "精油滾珠"
           }
         }
       }
@@ -10506,6 +11155,65 @@
           "stringUnit": {
             "state": "translated",
             "value": "面膜"
+          }
+        }
+      }
+    },
+    "Face mist": {
+      "extractionState": "stale",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gesichtssprühwasser"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Face mist"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bruma facial"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Brume visage"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "フェイスミスト"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "페이스 미스트"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Névoa facial"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "保湿喷雾"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "保濕噴霧"
           }
         }
       }
@@ -13991,6 +14699,65 @@
           "stringUnit": {
             "state": "translated",
             "value": "連帽衫"
+          }
+        }
+      }
+    },
+    "Hot chocolate sachets": {
+      "extractionState": "stale",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Heiße-Schokolade-Beutel"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hot chocolate sachets"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sobres de chocolate caliente"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sachets de chocolat chaud"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ホットチョコレートの素"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "핫초코 스틱"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sachês de chocolate quente"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "热可可冲剂"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "熱可可沖劑"
           }
         }
       }
@@ -17604,6 +18371,183 @@
           "stringUnit": {
             "state": "translated",
             "value": "乳液"
+          }
+        }
+      }
+    },
+    "Luggage lock": {
+      "extractionState": "stale",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gepäckschloss"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Luggage lock"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Candado de equipaje"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cadenas de bagages"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "スーツケースロック"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "수하물 자물쇠"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cadeado para bagagem"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "行李锁"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "行李鎖"
+          }
+        }
+      }
+    },
+    "Luggage scale": {
+      "extractionState": "stale",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gepäckwaage"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Luggage scale"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Báscula de equipaje"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pèse-bagage"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "荷物用はかり"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "수하물 저울"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Balança de bagagem"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "行李秤"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "行李磅"
+          }
+        }
+      }
+    },
+    "Luggage tag": {
+      "extractionState": "stale",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gepäckanhänger"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Luggage tag"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Etiqueta de equipaje"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Étiquette de bagage"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ネームタグ"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "수하물 태그"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Etiqueta de bagagem"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "行李牌"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "行李牌"
           }
         }
       }
@@ -21777,6 +22721,65 @@
         }
       }
     },
+    "One evening, run a bath — it is a small decision that can make a whole trip feel like it was properly lived": {
+      "extractionState": "stale",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Einen Abend lang ein Bad einlaufen lassen — eine kleine Entscheidung, die die ganze Reise wie richtig gelebt erscheinen lässt"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "One evening, run a bath — it is a small decision that can make a whole trip feel like it was properly lived"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Una noche, date un baño — es una pequeña decisión que puede hacer que todo el viaje se sienta realmente vivido"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Un soir, faites couler un bain — c'est une petite décision qui peut donner à tout un voyage le sentiment d'avoir été vécu pleinement"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ある晩、お風呂をゆっくり楽しんで。その小さな選択が、旅全体を本当に大切にされた時間に変えてくれます"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "어느 저녁, 욕조에 물을 채워 보세요. 그 작은 결정이 여행 전체를 제대로 살아낸 느낌으로 만들어줄 수 있습니다"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Uma noite, encha a banheira — é uma pequena decisão que pode fazer toda a viagem parecer verdadeiramente vivida"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "某个晚上，好好泡个澡——就这一个决定，能让整段旅程都多一点被好好对待的感觉"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "某個晚上，好好泡個澡——就這一個決定，能讓整段旅程都多一點被好好對待的感覺"
+          }
+        }
+      }
+    },
     "One pair of dark trousers or a dark skirt — a quiet confidence on heavier days": {
       "extractionState": "manual",
       "localizations": {
@@ -23475,6 +24478,65 @@
         }
       }
     },
+    "Personal Care": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Körperpflege"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Personal Care"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cuidado personal"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Soin personnel"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "パーソナルケア"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "개인 위생"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cuidados pessoais"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "个人护理"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "個人護理"
+          }
+        }
+      }
+    },
     "Phone charger": {
       "extractionState": "manual",
       "localizations": {
@@ -25026,6 +26088,65 @@
           "stringUnit": {
             "state": "translated",
             "value": "长上坡时很容易突然饿，一点高能量补给会很关键"
+          }
+        }
+      }
+    },
+    "Rechargeable hand warmer": {
+      "extractionState": "stale",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wiederaufladbarer Handwärmer"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Rechargeable hand warmer"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Calentador de manos recargable"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Chauffe-mains rechargeable"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "充電式カイロ"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "충전식 손난로"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aquecedor de mãos recarregável"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "充电暖手宝"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "充電暖手寶"
           }
         }
       }
@@ -26717,6 +27838,64 @@
           "stringUnit": {
             "state": "translated",
             "value": "推薦清單已更新"
+          }
+        }
+      }
+    },
+    "scenes.updated.count": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld Artikel ausgewählt"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld items selected"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld artículos seleccionados"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld éléments sélectionnés"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld 件を選びました"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld개 항목이 선택됐어요"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld itens selecionados"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "已为你选好 %lld 件物品"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "已為你選好 %lld 件物品"
           }
         }
       }
@@ -31304,6 +32483,65 @@
         }
       }
     },
+    "Sheet mask": {
+      "extractionState": "stale",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tuchmaske"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sheet mask"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mascarilla de tela"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Masque en tissu"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "シートマスク"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "시트 마스크"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Máscara facial em folha"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "片状面膜"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "片狀面膜"
+          }
+        }
+      }
+    },
     "Shirt": {
       "extractionState": "stale",
       "localizations": {
@@ -32177,6 +33415,124 @@
         }
       }
     },
+    "Silk sleep mask": {
+      "extractionState": "stale",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Seiden-Schlafmaske"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Silk sleep mask"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Antifaz de seda"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Masque de sommeil en soie"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "シルクアイマスク"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "실크 수면 안대"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Máscara de dormir de seda"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "丝质睡眠眼罩"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "絲質睡眠眼罩"
+          }
+        }
+      }
+    },
+    "Skin that's had a good day in the sun deserves this in the evening — the difference between waking up glowing and waking up sore": {
+      "extractionState": "stale",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Haut, die einen schönen Tag in der Sonne hatte, verdient das abends — der Unterschied zwischen strahlend und schmerzhaft aufwachen"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Skin that's had a good day in the sun deserves this in the evening — the difference between waking up glowing and waking up sore"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "La piel que ha tenido un buen día al sol merece esto por la noche — la diferencia entre despertar radiante y despertar adolorida"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "La peau qui a passé une belle journée au soleil mérite ça le soir — la différence entre se réveiller lumineuse et se réveiller douloureuse"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "日光を浴びた肌は夜にこれを使う価値があります。輝いて目覚めるか、痛みで目覚めるかの違いはここにあります"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "햇볕 아래서 좋은 하루를 보낸 피부는 저녁에 이것을 받을 자격이 있습니다. 빛나게 일어나는 것과 따갑게 일어나는 것의 차이입니다"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "A pele que passou um bom dia ao sol merece isso à noite — a diferença entre acordar radiante e acordar dolorida"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "在阳光下度过美好一天的皮肤，值得在晚上被这样对待——醒来焕发光彩和醒来红痛刺痛，就差这一步"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "在陽光下度過美好一天的皮膚，值得在晚上被這樣對待——醒來煥發光彩和醒來紅痛刺痛，就差這一步"
+          }
+        }
+      }
+    },
     "Skirt": {
       "extractionState": "stale",
       "localizations": {
@@ -32757,6 +34113,65 @@
           "stringUnit": {
             "state": "translated",
             "value": "襪子"
+          }
+        }
+      }
+    },
+    "Softer and cooler than a regular eye mask — a small upgrade that makes the nights feel like they belong to the trip": {
+      "extractionState": "stale",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Weicher und kühler als eine normale Schlafmaske — ein kleines Upgrade, das die Nächte wie zum Reisegefühl gehörig erscheinen lässt"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Softer and cooler than a regular eye mask — a small upgrade that makes the nights feel like they belong to the trip"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Más suave y fresca que un antifaz normal — una pequeña mejora que hace que las noches parezcan pertenecer al viaje"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Plus douce et plus fraîche qu'un masque ordinaire — une petite amélioration qui donne aux nuits le sentiment d'appartenir vraiment au voyage"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "普通のアイマスクより柔らかくて涼しい。小さなグレードアップが、旅の夜を本当にその旅に属する時間にしてくれます"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "일반 안대보다 부드럽고 시원한 — 작은 업그레이드가 모든 밤을 여행에 온전히 속한 시간처럼 만들어줍니다"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mais macio e fresco que uma máscara comum — uma pequena melhoria que faz as noites parecerem pertencer à viagem"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "比普通眼罩更柔软也更凉爽——一个小小的升级，让每一个夜晚都有种真正属于这段旅程的感觉"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "比普通眼罩更柔軟也更涼爽——一個小小的升級，讓每一個夜晚都有種真正屬於這段旅程的感覺"
           }
         }
       }
@@ -33514,6 +34929,65 @@
         }
       }
     },
+    "Sun-protective clothing": {
+      "extractionState": "stale",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "UV-Schutzkleidung"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sun-protective clothing"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ropa de protección solar"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Vêtements anti-UV"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "UVカット服"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "자외선 차단 의류"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Roupa de proteção UV"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "防晒衣"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "防曬衣"
+          }
+        }
+      }
+    },
     "Sunglasses": {
       "extractionState": "manual",
       "localizations": {
@@ -33986,65 +35460,6 @@
         }
       }
     },
-    "support.drink.latte": {
-      "extractionState": "manual",
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Latte"
-          }
-        },
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Latte"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Latte"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Latte"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "ラテ"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "라떼"
-          }
-        },
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Latte"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "拿铁"
-          }
-        },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "拿鐵"
-          }
-        }
-      }
-    },
     "support.drink.juice": {
       "extractionState": "manual",
       "localizations": {
@@ -34100,6 +35515,65 @@
           "stringUnit": {
             "state": "translated",
             "value": "果汁"
+          }
+        }
+      }
+    },
+    "support.drink.latte": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Latte"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Latte"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Latte"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Latte"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ラテ"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "라떼"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Latte"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "拿铁"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "拿鐵"
           }
         }
       }
@@ -36104,6 +37578,65 @@
         }
       }
     },
+    "Travel Documents": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Reisedokumente"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Travel Documents"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Documentos de viaje"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Documents de voyage"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "旅行書類"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "여행 서류"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Documentos de viagem"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "旅行证件"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "旅行證件"
+          }
+        }
+      }
+    },
     "Travel insurance": {
       "extractionState": "manual",
       "localizations": {
@@ -37665,6 +39198,65 @@
         }
       }
     },
+    "Warm hands change everything in the cold — and unlike disposable ones, this one charges your phone in a pinch too": {
+      "extractionState": "stale",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Warme Hände verändern alles in der Kälte — und im Gegensatz zu Einwegwärmern lädt dieser im Notfall auch dein Handy auf"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Warm hands change everything in the cold — and unlike disposable ones, this one charges your phone in a pinch too"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Las manos cálidas lo cambian todo en el frío — y a diferencia de los desechables, este también carga tu teléfono en un apuro"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Des mains chaudes changent tout dans le froid — et contrairement aux modèles jetables, celui-ci peut aussi recharger votre téléphone en cas de besoin"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "冷たい中で温かい手はすべてを変えます。使い捨てと違い、緊急時にはスマホの充電もできます"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "추운 날씨에 따뜻한 손은 모든 것을 바꿉니다. 일회용과 달리 급할 때 폰도 충전할 수 있습니다"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mãos quentes mudam tudo no frio — e ao contrário dos descartáveis, este também carrega seu celular em uma emergência"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "暖手在寒冷中改变一切——而且它不只是暖手宝，紧急时还能给手机充电"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "暖手在寒冷中改變一切——而且它不只是暖手寶，緊急時還能給手機充電"
+          }
+        }
+      }
+    },
     "Watch": {
       "extractionState": "stale",
       "localizations": {
@@ -37956,6 +39548,65 @@
           "stringUnit": {
             "state": "translated",
             "value": "防水手機殼"
+          }
+        }
+      }
+    },
+    "Waterproof phone pouch": {
+      "extractionState": "stale",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wasserdichte Handytasche"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Waterproof phone pouch"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Funda impermeable para teléfono"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pochette imperméable pour téléphone"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "防水スマホポーチ"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "방수 폰 파우치"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bolsa impermeável para celular"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "手机防水袋"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "手機防水袋"
           }
         }
       }
@@ -39256,1628 +40907,466 @@
         }
       }
     },
-    "Travel Documents": {
-      "extractionState": "manual",
+    "Disposable camera": {
       "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Reisedokumente"
-          }
-        },
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Travel Documents"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Documentos de viaje"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Documents de voyage"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "旅行書類"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "여행 서류"
-          }
-        },
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Documentos de viagem"
+            "value": "Disposable camera"
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "旅行证件"
+            "value": "一次性相机"
           }
         },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "旅行證件"
+            "value": "一次性相機"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Einwegkamera"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cámara desechable"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Appareil jetable"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "使い捨てカメラ"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "일회용 카메라"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Câmera descartável"
           }
         }
       }
     },
-    "Personal Care": {
-      "extractionState": "manual",
+    "Your phone will capture everything perfectly. Which is exactly why a disposable feels different — the grain, the not-knowing, the waiting": {
       "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Körperpflege"
-          }
-        },
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Personal Care"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Cuidado personal"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Soin personnel"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "パーソナルケア"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "개인 위생"
-          }
-        },
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Cuidados pessoais"
+            "value": "Your phone will capture everything perfectly. Which is exactly why a disposable feels different — the grain, the not-knowing, the waiting"
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "个人护理"
+            "value": "你的手机能把一切都拍得完美。正因如此，一次性相机才感觉不同——那些颗粒感，那种不知道拍成什么样，那段等待"
           }
         },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "個人護理"
+            "value": "你的手機能把一切都拍得完美。正因如此，一次性相機才感覺不同——那些顆粒感，那種不知道拍成什麼樣，那段等待"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dein Handy würde alles perfekt festhalten. Genau deshalb fühlt sich eine Einwegkamera anders an — das Korn, das Nichtwissen, das Warten"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tu teléfono capturará todo perfectamente. Por eso una desechable se siente diferente — el grano, la incertidumbre, la espera"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ton téléphone saisira tout parfaitement. C'est exactement pourquoi un jetable est différent — le grain, l'incertitude, l'attente"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "スマホなら完璧に撮れる。だからこそ使い捨てカメラは違う感覚がある——フィルムの粒子感、どんな風に撮れたかわからないこと、現像を待つ時間"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "스마트폰은 모든 걸 완벽하게 담아낼 것이다. 바로 그래서 일회용 카메라는 다르게 느껴진다 — 필름 입자, 모르는 채로 기다림, 그 기다림 자체"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Seu celular vai capturar tudo perfeitamente. É exatamente por isso que uma câmera descartável parece diferente — o grão, o não saber, a espera"
           }
         }
       }
     },
-    "scenes.updated.count": {
+    "Blue light glasses": {
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "%lld items selected"
+            "value": "Blue light glasses"
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "已为你选好 %lld 件物品"
+            "value": "防蓝光眼镜"
           }
         },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "已為你選好 %lld 件物品"
+            "value": "防藍光眼鏡"
           }
         },
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "%lld Artikel ausgewählt"
+            "value": "Blaulichtbrille"
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "%lld artículos seleccionados"
+            "value": "Gafas de luz azul"
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "%lld éléments sélectionnés"
+            "value": "Lunettes anti-lumière bleue"
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "%lld 件を選びました"
+            "value": "ブルーライトカットメガネ"
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "%lld개 항목이 선택됐어요"
+            "value": "블루라이트 차단 안경"
           }
         },
         "pt-BR": {
           "stringUnit": {
             "state": "translated",
-            "value": "%lld itens selecionados"
+            "value": "Óculos de luz azul"
           }
         }
       }
     },
-    "Sun-protective clothing": {
+    "Eight hours at a screen in a new place. A small defence against the slow headache that builds through the afternoon": {
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Sun-protective clothing"
+            "value": "Eight hours at a screen in a new place. A small defence against the slow headache that builds through the afternoon"
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "防晒衣"
+            "value": "在陌生的地方盯着屏幕八个小时。这个小小的防护，能让你少一点下午慢慢积累的头疼"
           }
         },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "防曬衣"
+            "value": "在陌生的地方盯著螢幕八個小時。這個小小的防護，能讓你少一點下午慢慢積累的頭疼"
           }
         },
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "UV-Schutzkleidung"
+            "value": "Acht Stunden am Bildschirm an einem neuen Ort. Ein kleiner Schutz gegen den Kopfschmerz, der sich nachmittags aufbaut"
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Ropa de protección solar"
+            "value": "Ocho horas frente a una pantalla en un lugar nuevo. Una pequeña defensa contra el dolor de cabeza que se acumula por la tarde"
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Vêtements anti-UV"
+            "value": "Huit heures devant un écran dans un nouvel endroit. Une petite protection contre le mal de tête qui s'installe dans l'après-midi"
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "UVカット服"
+            "value": "新しい場所でスクリーンの前に8時間。午後になるにつれてじわじわと積み重なる頭痛への、小さな防御"
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "자외선 차단 의류"
+            "value": "낯선 곳에서 화면 앞에서 8시간. 오후가 될수록 서서히 쌓이는 두통에 대한 작은 방어"
           }
         },
         "pt-BR": {
           "stringUnit": {
             "state": "translated",
-            "value": "Roupa de proteção UV"
+            "value": "Oito horas em uma tela num lugar novo. Uma pequena defesa contra a dor de cabeça que se acumula ao longo da tarde"
           }
         }
       }
     },
-    "Sheet mask": {
+    "A good notebook": {
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Sheet mask"
+            "value": "A good notebook"
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "片状面膜"
+            "value": "一本好的笔记本"
           }
         },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "片狀面膜"
+            "value": "一本好的筆記本"
           }
         },
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Tuchmaske"
+            "value": "Ein gutes Notizbuch"
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Mascarilla de tela"
+            "value": "Un buen cuaderno"
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Masque en tissu"
+            "value": "Un bon carnet"
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "シートマスク"
+            "value": "いいノート"
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "시트 마스크"
+            "value": "좋은 노트"
           }
         },
         "pt-BR": {
           "stringUnit": {
             "state": "translated",
-            "value": "Máscara facial em folha"
+            "value": "Um bom caderno"
           }
         }
       }
     },
-    "Face mist": {
+    "For thinking that doesn't belong in a doc. Keep it on the desk, not buried in the bag": {
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Face mist"
+            "value": "For thinking that doesn't belong in a doc. Keep it on the desk, not buried in the bag"
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "保湿喷雾"
+            "value": "有些想法，放不进文档里。把它放在桌上，不要藏进包里"
           }
         },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "保濕噴霧"
+            "value": "有些想法，放不進文件裡。把它放在桌上，不要藏進包裡"
           }
         },
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Gesichtssprühwasser"
+            "value": "Für Gedanken, die nicht in ein Dokument gehören. Lass es auf dem Tisch liegen, nicht in der Tasche"
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Bruma facial"
+            "value": "Para ideas que no caben en un documento. Mantenlo sobre la mesa, no enterrado en la mochila"
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Brume visage"
+            "value": "Pour les pensées qui n'ont pas leur place dans un document. Garde-le sur le bureau, pas enfoui dans le sac"
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "フェイスミスト"
+            "value": "ドキュメントに収まらない思考のために。バッグの奥じゃなく、デスクの上に置いておいて"
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "페이스 미스트"
+            "value": "문서에 담기지 않는 생각을 위해. 가방 속에 묻지 말고 책상 위에 두어라"
           }
         },
         "pt-BR": {
           "stringUnit": {
             "state": "translated",
-            "value": "Névoa facial"
+            "value": "Para pensamentos que não cabem em um documento. Mantenha-o na mesa, não enterrado na bolsa"
           }
         }
       }
     },
-    "Blotting paper": {
+    "Portable desk pad": {
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Blotting paper"
+            "value": "Portable desk pad"
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "吸油纸"
+            "value": "便携桌垫"
           }
         },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "吸油紙"
+            "value": "便攜桌墊"
           }
         },
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Mattierungstücher"
+            "value": "Tragbare Schreibtischunterlage"
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Papel matificante"
+            "value": "Alfombrilla de escritorio portátil"
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Papier matifiant"
+            "value": "Sous-main portable"
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "あぶらとり紙"
+            "value": "ポータブルデスクマット"
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "기름종이"
+            "value": "휴대용 데스크 패드"
           }
         },
         "pt-BR": {
           "stringUnit": {
             "state": "translated",
-            "value": "Papel matificante"
+            "value": "Tapete de mesa portátil"
           }
         }
       }
     },
-    "Luggage tag": {
+    "Any surface becomes a workspace with a desk pad under your hands — a simple trick that makes rented rooms feel like yours": {
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Luggage tag"
+            "value": "Any surface becomes a workspace with a desk pad under your hands — a simple trick that makes rented rooms feel like yours"
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "行李牌"
+            "value": "桌垫铺上去，任何桌面都能变成工位——一个让租来的房间感觉是自己的小技巧"
           }
         },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "行李牌"
+            "value": "桌墊鋪上去，任何桌面都能變成工位——一個讓租來的房間感覺是自己的小技巧"
           }
         },
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Gepäckanhänger"
+            "value": "Jede Oberfläche wird mit einer Schreibtischunterlage zum Arbeitsplatz — ein einfacher Trick, der Mieträume wie deinen eigenen wirken lässt"
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Etiqueta de equipaje"
+            "value": "Cualquier superficie se convierte en espacio de trabajo con una alfombrilla — un truco simple que hace que las habitaciones de alquiler se sientan tuyas"
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Étiquette de bagage"
+            "value": "N'importe quelle surface devient un espace de travail avec un sous-main — une astuce simple qui fait se sentir chez soi dans une chambre louée"
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "ネームタグ"
+            "value": "デスクマットを敷けば、どんな表面もワークスペースに変わる——借りた部屋を自分のものにする小さなコツ"
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "수하물 태그"
+            "value": "데스크 패드 하나로 어떤 표면이든 작업 공간이 된다 — 임시 공간을 내 공간처럼 느끼게 해주는 간단한 방법"
           }
         },
         "pt-BR": {
           "stringUnit": {
             "state": "translated",
-            "value": "Etiqueta de bagagem"
-          }
-        }
-      }
-    },
-    "Luggage lock": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Luggage lock"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "行李锁"
-          }
-        },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "行李鎖"
-          }
-        },
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Gepäckschloss"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Candado de equipaje"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Cadenas de bagages"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "スーツケースロック"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "수하물 자물쇠"
-          }
-        },
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Cadeado para bagagem"
-          }
-        }
-      }
-    },
-    "Luggage scale": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Luggage scale"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "行李秤"
-          }
-        },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "行李磅"
-          }
-        },
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Gepäckwaage"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Báscula de equipaje"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Pèse-bagage"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "荷物用はかり"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "수하물 저울"
-          }
-        },
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Balança de bagagem"
-          }
-        }
-      }
-    },
-    "Band-aids": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Band-aids"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "创可贴"
-          }
-        },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "OK繃"
-          }
-        },
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Pflaster"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Tiritas"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Pansements adhésifs"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "絆創膏"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "반창고"
-          }
-        },
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Curativos"
-          }
-        }
-      }
-    },
-    "Digestive enzymes": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Digestive enzymes"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "消化酶"
-          }
-        },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "消化酵素"
-          }
-        },
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Verdauungsenzyme"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Enzimas digestivas"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Enzymes digestives"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "消化酵素"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "소화 효소"
-          }
-        },
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Enzimas digestivas"
-          }
-        }
-      }
-    },
-    "After-sun lotion": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "After-sun lotion"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "晒后修复乳"
-          }
-        },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "曬後修復乳"
-          }
-        },
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "After-Sun-Lotion"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Loción after sun"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Lotion après-soleil"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "アフターサンローション"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "선번 후 로션"
-          }
-        },
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Loção pós-sol"
-          }
-        }
-      }
-    },
-    "Electrolyte tablets": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Electrolyte tablets"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "电解质片"
-          }
-        },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "電解質片"
-          }
-        },
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Elektrolyttabletten"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Tabletas de electrolitos"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Comprimés d'électrolytes"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "電解質タブレット"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "전해질 정제"
-          }
-        },
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Comprimidos de eletrólitos"
-          }
-        }
-      }
-    },
-    "Essential oil roller": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Essential oil roller"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "精油滚珠"
-          }
-        },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "精油滾珠"
-          }
-        },
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Ätherisches Öl Roller"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Roll-on de aceite esencial"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Roll-on d'huile essentielle"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "アロマロールオン"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "에센셜 오일 롤러"
-          }
-        },
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Roll-on de óleo essencial"
-          }
-        }
-      }
-    },
-    "After-sun gel": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "After-sun gel"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "晒后修复啫喱"
-          }
-        },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "曬後修復啫喱"
-          }
-        },
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "After-Sun-Gel"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Gel after sun"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Gel après-soleil"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "アフターサンジェル"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "선번 후 젤"
-          }
-        },
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Gel pós-sol"
-          }
-        }
-      }
-    },
-    "Waterproof phone pouch": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Waterproof phone pouch"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "手机防水袋"
-          }
-        },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "手機防水袋"
-          }
-        },
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Wasserdichte Handytasche"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Funda impermeable para teléfono"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Pochette imperméable pour téléphone"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "防水スマホポーチ"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "방수 폰 파우치"
-          }
-        },
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Bolsa impermeável para celular"
-          }
-        }
-      }
-    },
-    "Bath salts": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Bath salts"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "浴盐"
-          }
-        },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "浴鹽"
-          }
-        },
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Badesalz"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Sales de baño"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Sels de bain"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "バスソルト"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "목욕 소금"
-          }
-        },
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Sais de banho"
-          }
-        }
-      }
-    },
-    "Silk sleep mask": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Silk sleep mask"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "丝质睡眠眼罩"
-          }
-        },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "絲質睡眠眼罩"
-          }
-        },
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Seiden-Schlafmaske"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Antifaz de seda"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Masque de sommeil en soie"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "シルクアイマスク"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "실크 수면 안대"
-          }
-        },
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Máscara de dormir de seda"
-          }
-        }
-      }
-    },
-    "Rechargeable hand warmer": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Rechargeable hand warmer"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "充电暖手宝"
-          }
-        },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "充電暖手寶"
-          }
-        },
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Wiederaufladbarer Handwärmer"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Calentador de manos recargable"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Chauffe-mains rechargeable"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "充電式カイロ"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "충전식 손난로"
-          }
-        },
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Aquecedor de mãos recarregável"
-          }
-        }
-      }
-    },
-    "Hot chocolate sachets": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Hot chocolate sachets"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "热可可冲剂"
-          }
-        },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "熱可可沖劑"
-          }
-        },
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Heiße-Schokolade-Beutel"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Sobres de chocolate caliente"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Sachets de chocolat chaud"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "ホットチョコレートの素"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "핫초코 스틱"
-          }
-        },
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Sachês de chocolate quente"
-          }
-        }
-      }
-    },
-    "A small roller of lavender or peppermint does two things: eases tension headaches mid-flight, and marks the moment you apply it at the gate as the real start of the trip": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "A small roller of lavender or peppermint does two things: eases tension headaches mid-flight, and marks the moment you apply it at the gate as the real start of the trip"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "薰衣草或薄荷精油各有妙用：缓解飞机上的头痛，也会让你在登机口涂抹的那一刻，感觉旅程真正开始了"
-          }
-        },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "薰衣草或薄荷精油各有妙用：緩解飛機上的頭痛，也會讓你在登機口塗抹的那一刻，感覺旅程真正開始了"
-          }
-        },
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Ein kleiner Roller mit Lavendel oder Pfefferminze hilft doppelt: lindert Spannungskopfschmerzen im Flug und markiert den Moment am Gate als echten Reisebeginn"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Un pequeño roller de lavanda o menta hace dos cosas: alivia los dolores de cabeza a mitad del vuelo y convierte el momento en que te lo aplicas en la puerta en el verdadero inicio del viaje"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Un petit roller de lavande ou de menthe poivrée a deux vertus : il soulage les maux de tête en vol et fait du moment où on l'applique à la porte d'embarquement le vrai début du voyage"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "ラベンダーかペパーミントの小さなロールオンが二つのことをしてくれます。フライト中の緊張性頭痛を和らげ、搭乗口で塗る瞬間を旅の本当の始まりにしてくれます"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "라벤더나 페퍼민트 롤러는 두 가지 역할을 합니다. 비행 중 긴장성 두통을 완화하고, 탑승구에서 바르는 순간을 진짜 여행의 시작으로 만들어줍니다"
-          }
-        },
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Um pequeno roller de lavanda ou hortelã-pimenta faz duas coisas: alivia dores de cabeça tensionais durante o voo e marca o momento em que você aplica no portão como o verdadeiro início da viagem"
-          }
-        }
-      }
-    },
-    "One evening, run a bath — it is a small decision that can make a whole trip feel like it was properly lived": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "One evening, run a bath — it is a small decision that can make a whole trip feel like it was properly lived"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "某个晚上，好好泡个澡——就这一个决定，能让整段旅程都多一点被好好对待的感觉"
-          }
-        },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "某個晚上，好好泡個澡——就這一個決定，能讓整段旅程都多一點被好好對待的感覺"
-          }
-        },
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Einen Abend lang ein Bad einlaufen lassen — eine kleine Entscheidung, die die ganze Reise wie richtig gelebt erscheinen lässt"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Una noche, date un baño — es una pequeña decisión que puede hacer que todo el viaje se sienta realmente vivido"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Un soir, faites couler un bain — c'est une petite décision qui peut donner à tout un voyage le sentiment d'avoir été vécu pleinement"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "ある晩、お風呂をゆっくり楽しんで。その小さな選択が、旅全体を本当に大切にされた時間に変えてくれます"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "어느 저녁, 욕조에 물을 채워 보세요. 그 작은 결정이 여행 전체를 제대로 살아낸 느낌으로 만들어줄 수 있습니다"
-          }
-        },
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Uma noite, encha a banheira — é uma pequena decisão que pode fazer toda a viagem parecer verdadeiramente vivida"
-          }
-        }
-      }
-    },
-    "Softer and cooler than a regular eye mask — a small upgrade that makes the nights feel like they belong to the trip": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Softer and cooler than a regular eye mask — a small upgrade that makes the nights feel like they belong to the trip"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "比普通眼罩更柔软也更凉爽——一个小小的升级，让每一个夜晚都有种真正属于这段旅程的感觉"
-          }
-        },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "比普通眼罩更柔軟也更涼爽——一個小小的升級，讓每一個夜晚都有種真正屬於這段旅程的感覺"
-          }
-        },
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Weicher und kühler als eine normale Schlafmaske — ein kleines Upgrade, das die Nächte wie zum Reisegefühl gehörig erscheinen lässt"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Más suave y fresca que un antifaz normal — una pequeña mejora que hace que las noches parezcan pertenecer al viaje"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Plus douce et plus fraîche qu'un masque ordinaire — une petite amélioration qui donne aux nuits le sentiment d'appartenir vraiment au voyage"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "普通のアイマスクより柔らかくて涼しい。小さなグレードアップが、旅の夜を本当にその旅に属する時間にしてくれます"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "일반 안대보다 부드럽고 시원한 — 작은 업그레이드가 모든 밤을 여행에 온전히 속한 시간처럼 만들어줍니다"
-          }
-        },
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Mais macio e fresco que uma máscara comum — uma pequena melhoria que faz as noites parecerem pertencer à viagem"
-          }
-        }
-      }
-    },
-    "Skin that's had a good day in the sun deserves this in the evening — the difference between waking up glowing and waking up sore": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Skin that's had a good day in the sun deserves this in the evening — the difference between waking up glowing and waking up sore"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "在阳光下度过美好一天的皮肤，值得在晚上被这样对待——醒来焕发光彩和醒来红痛刺痛，就差这一步"
-          }
-        },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "在陽光下度過美好一天的皮膚，值得在晚上被這樣對待——醒來煥發光彩和醒來紅痛刺痛，就差這一步"
-          }
-        },
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Haut, die einen schönen Tag in der Sonne hatte, verdient das abends — der Unterschied zwischen strahlend und schmerzhaft aufwachen"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "La piel que ha tenido un buen día al sol merece esto por la noche — la diferencia entre despertar radiante y despertar adolorida"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "La peau qui a passé une belle journée au soleil mérite ça le soir — la différence entre se réveiller lumineuse et se réveiller douloureuse"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "日光を浴びた肌は夜にこれを使う価値があります。輝いて目覚めるか、痛みで目覚めるかの違いはここにあります"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "햇볕 아래서 좋은 하루를 보낸 피부는 저녁에 이것을 받을 자격이 있습니다. 빛나게 일어나는 것과 따갑게 일어나는 것의 차이입니다"
-          }
-        },
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "A pele que passou um bom dia ao sol merece isso à noite — a diferença entre acordar radiante e acordar dolorida"
-          }
-        }
-      }
-    },
-    "Clip it on and take your phone into the water — suddenly every boat trip, beach swim, or waterfall is fully documented": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Clip it on and take your phone into the water — suddenly every boat trip, beach swim, or waterfall is fully documented"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "套上它，把手机带进水里——从此每一次船游、泳池、瀑布，都有了完整的记录"
-          }
-        },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "套上它，把手機帶進水裡——從此每一次船遊、游泳、瀑布，都有了完整的記錄"
-          }
-        },
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Einfach befestigen und das Handy ins Wasser mitnehmen — plötzlich kann jede Bootsfahrt, jeder Strandschwimm oder Wasserfall vollständig dokumentiert werden"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Ponlo y lleva tu teléfono al agua — de repente cada paseo en bote, nado en la playa o cascada queda completamente documentado"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Attachez-le et emmenez votre téléphone dans l'eau — soudain, chaque sortie en bateau, baignade ou cascade est entièrement documentée"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "つけてスマホを水に持ち込もう。ボートトリップ、海水浴、滝など、すべての瞬間が記録できるようになります"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "클립으로 고정하고 폰을 물에 가져가세요. 보트 여행, 해수욕, 폭포 등 모든 순간이 완전히 기록됩니다"
-          }
-        },
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Coloque e leve seu celular para a água — de repente, cada passeio de barco, mergulho na praia ou cachoeira fica completamente documentado"
-          }
-        }
-      }
-    },
-    "Warm hands change everything in the cold — and unlike disposable ones, this one charges your phone in a pinch too": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Warm hands change everything in the cold — and unlike disposable ones, this one charges your phone in a pinch too"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "暖手在寒冷中改变一切——而且它不只是暖手宝，紧急时还能给手机充电"
-          }
-        },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "暖手在寒冷中改變一切——而且它不只是暖手寶，緊急時還能給手機充電"
-          }
-        },
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Warme Hände verändern alles in der Kälte — und im Gegensatz zu Einwegwärmern lädt dieser im Notfall auch dein Handy auf"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Las manos cálidas lo cambian todo en el frío — y a diferencia de los desechables, este también carga tu teléfono en un apuro"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Des mains chaudes changent tout dans le froid — et contrairement aux modèles jetables, celui-ci peut aussi recharger votre téléphone en cas de besoin"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "冷たい中で温かい手はすべてを変えます。使い捨てと違い、緊急時にはスマホの充電もできます"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "추운 날씨에 따뜻한 손은 모든 것을 바꿉니다. 일회용과 달리 급할 때 폰도 충전할 수 있습니다"
-          }
-        },
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Mãos quentes mudam tudo no frio — e ao contrário dos descartáveis, este também carrega seu celular em uma emergência"
-          }
-        }
-      }
-    },
-    "A cup of hot chocolate in a cold room after a day in the snow is one of those small things that makes a trip feel complete": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "A cup of hot chocolate in a cold room after a day in the snow is one of those small things that makes a trip feel complete"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "雪地里玩了一整天，回到房间喝一杯热可可——就是这样一件小事，让一段旅程感觉圆满了"
-          }
-        },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "雪地裡玩了一整天，回到房間喝一杯熱可可——就是這樣一件小事，讓一段旅程感覺圓滿了"
-          }
-        },
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Eine Tasse heißer Schokolade in einem kalten Zimmer nach einem Tag im Schnee gehört zu den kleinen Dingen, die eine Reise vollständig machen"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Una taza de chocolate caliente en una habitación fría después de un día en la nieve es una de esas pequeñas cosas que hacen que un viaje se sienta completo"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Une tasse de chocolat chaud dans une chambre froide après une journée dans la neige est une de ces petites choses qui donnent le sentiment que le voyage est complet"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "雪の中で一日過ごした後、寒い部屋でホットチョコレートを飲む。旅を完結させる小さなことのひとつです"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "눈 속에서 하루를 보낸 후 차가운 방에서 마시는 핫초코 한 잔은 여행을 완성시키는 작은 것들 중 하나입니다"
-          }
-        },
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Uma xícara de chocolate quente em um quarto frio após um dia na neve é uma dessas pequenas coisas que fazem uma viagem parecer completa"
+            "value": "Qualquer superfície se torna um espaço de trabalho com um tapete de mesa — um truque simples que faz quartos alugados parecerem seus"
           }
         }
       }

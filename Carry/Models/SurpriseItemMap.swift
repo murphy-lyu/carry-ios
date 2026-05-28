@@ -38,12 +38,9 @@ let surpriseItemMap: [String: [SurpriseItem]] = [
         SurpriseItem(name: "Car travel blanket",
                      note: "Passenger-seat naps are so much better with a real blanket — one that lives in the boot ready to go",
                      category: .essentials),
-        SurpriseItem(name: "Instant coffee",
-                     note: "Rest stops rarely have good coffee — a sachet and a thermos of hot water from the last service station keeps the driver going",
-                     category: .essentials),
-        SurpriseItem(name: "Tea bags",
-                     note: "A few teabags take up no space and make a thermos of hot water feel far more considered than plain water on a long drive",
-                     category: .essentials),
+        SurpriseItem(name: "Disposable camera",
+                     note: "Your phone will capture everything perfectly. Which is exactly why a disposable feels different — the grain, the not-knowing, the waiting",
+                     category: .electronics),
     ],
     "long_haul_flight": [
         SurpriseItem(name: "Steam eye mask",
@@ -241,6 +238,17 @@ let surpriseItemMap: [String: [SurpriseItem]] = [
                      note: "Easier and lighter than carrying full bottles — one for each day",
                      category: .health),
     ],
+    "remote_work": [
+        SurpriseItem(name: "Blue light glasses",
+                     note: "Eight hours at a screen in a new place. A small defence against the slow headache that builds through the afternoon",
+                     category: .essentials),
+        SurpriseItem(name: "A good notebook",
+                     note: "For thinking that doesn't belong in a doc. Keep it on the desk, not buried in the bag",
+                     category: .essentials),
+        SurpriseItem(name: "Portable desk pad",
+                     note: "Any surface becomes a workspace with a desk pad under your hands — a simple trick that makes rented rooms feel like yours",
+                     category: .essentials),
+    ],
 ]
 
 // MARK: - Generation
@@ -248,6 +256,8 @@ let surpriseItemMap: [String: [SurpriseItem]] = [
 private let surpriseCategoryOrder: [ItemCategory] = [.toiletries, .electronics, .clothing, .essentials, .health, .documents]
 
 private let surpriseUniversalScore: [String: Double] = [
+    "Blue light glasses": 0.78,
+    "A good notebook": 0.72,
     "Hand cream": 0.90,
     "Ziplock bags": 0.90,
     "Pill organiser": 0.88,
@@ -273,6 +283,10 @@ private let surpriseDelightScore: [String: Double] = [
 ]
 
 private let surpriseSceneStrength: [String: Double] = [
+    "Disposable camera": 0.88,
+    "Blue light glasses": 0.92,
+    "A good notebook": 0.82,
+    "Portable desk pad": 0.86,
     "Magnetic hooks": 0.98,
     "Acupressure wristbands": 0.92,
     "Portable oxygen can": 0.98,
@@ -329,6 +343,10 @@ private let surpriseFunctionalOverlapKeywords: [String: [String]] = [
     "Essential oil roller": ["essential oil"],
     "Rechargeable hand warmer": ["hand warmer"],
     "Hot chocolate sachets": ["hot chocolate"],
+    "Disposable camera": ["camera", "disposable camera"],
+    "Blue light glasses": ["blue light", "glasses", "spectacles"],
+    "A good notebook": ["notebook", "journal"],
+    "Portable desk pad": ["desk pad", "desk mat"],
 ]
 
 private func functionalOverlapPenalty(
