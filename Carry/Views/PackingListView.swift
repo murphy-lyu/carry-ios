@@ -832,7 +832,7 @@ struct PackingListView: View {
                 Image(systemName: "sparkles")
                     .font(.system(size: 10, weight: .semibold))
                     .foregroundStyle(colorScheme == .dark ? Color(.systemGray2) : Color(.systemGray))
-                Text("Worth considering")
+                Text("Nice to have")
                     .font(.caption.weight(.medium))
                     .foregroundStyle(colorScheme == .dark ? Color(.systemGray2) : Color(.systemGray))
                     .kerning(1.2)
