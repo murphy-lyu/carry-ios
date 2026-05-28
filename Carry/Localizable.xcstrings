@@ -24708,55 +24708,55 @@
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Aus Bibliothek hinzufügen"
+            "value": "Artikel schnell hinzufügen"
           }
         },
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Add from Library"
+            "value": "Quick-add Items"
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Añadir desde la biblioteca"
+            "value": "Añadir rápidamente"
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Ajouter depuis la bibliothèque"
+            "value": "Ajout rapide"
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "ライブラリから追加"
+            "value": "クイック追加"
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "라이브러리에서 추가"
+            "value": "빠르게 추가"
           }
         },
         "pt-BR": {
           "stringUnit": {
             "state": "translated",
-            "value": "Adicionar da biblioteca"
+            "value": "Adicionar rápido"
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "从物品库添加"
+            "value": "快速添加物品"
           }
         },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "從物品庫添加"
+            "value": "快速新增物品"
           }
         }
       }
