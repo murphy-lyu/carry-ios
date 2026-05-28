@@ -863,25 +863,27 @@ struct ItemPickerView: View {
                             sceneChipGrid(labels: labels)
                         }
 
-                        Button {
-                            applySmartRecommendations()
-                        } label: {
-                            Text(LocalizedStringKey("scenes.update_list"))
-                                .font(.subheadline.weight(.semibold))
-                                .foregroundColor(smartPrimaryButtonForeground)
-                                .frame(maxWidth: .infinity)
-                                .frame(height: 44)
-                                .background(
-                                    RoundedRectangle(cornerRadius: 14, style: .continuous)
-                                        .fill(smartPrimaryButtonBackground)
-                                )
-                                .overlay(
-                                    RoundedRectangle(cornerRadius: 14, style: .continuous)
-                                        .strokeBorder(Color(.separator).opacity(isSmartPrimaryEnabled ? 0.08 : 0.14), lineWidth: 1)
-                                )
+                        if !labels.isEmpty || searchText.isEmpty {
+                            Button {
+                                applySmartRecommendations()
+                            } label: {
+                                Text(LocalizedStringKey("scenes.update_list"))
+                                    .font(.subheadline.weight(.semibold))
+                                    .foregroundColor(smartPrimaryButtonForeground)
+                                    .frame(maxWidth: .infinity)
+                                    .frame(height: 44)
+                                    .background(
+                                        RoundedRectangle(cornerRadius: 14, style: .continuous)
+                                            .fill(smartPrimaryButtonBackground)
+                                    )
+                                    .overlay(
+                                        RoundedRectangle(cornerRadius: 14, style: .continuous)
+                                            .strokeBorder(Color(.separator).opacity(isSmartPrimaryEnabled ? 0.08 : 0.14), lineWidth: 1)
+                                    )
+                            }
+                            .buttonStyle(SolidPressButtonStyle())
+                            .allowsHitTesting(isSmartPrimaryEnabled)
                         }
-                        .buttonStyle(SolidPressButtonStyle())
-                        .allowsHitTesting(isSmartPrimaryEnabled)
                     }
                     .padding(16)
                 }
