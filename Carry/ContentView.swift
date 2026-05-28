@@ -55,7 +55,7 @@ struct ContentView: View {
             MacGlobePanel()
                 .ignoresSafeArea()
 
-            // Left panel floats over the globe with a frosted-glass sidebar
+            // Left panel floats over the globe as a card with breathing room
             NavigationStack(path: $router.path) {
                 HomeView()
                     .navigationDestination(for: UUID.self) { id in
@@ -73,8 +73,17 @@ struct ContentView: View {
                         }
                     }
             }
-            .frame(width: 390)
-            .background(.ultraThinMaterial)
+            .frame(width: 360)
+            .background(
+                RoundedRectangle(cornerRadius: 18, style: .continuous)
+                    .fill(colorScheme == .dark
+                        ? Color(red: 0.09, green: 0.09, blue: 0.10)
+                        : Color(UIColor.systemBackground))
+            )
+            .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+            .shadow(color: .black.opacity(colorScheme == .dark ? 0.45 : 0.18), radius: 32, x: 0, y: 8)
+            .padding(.leading, 16)
+            .padding(.vertical, 16)
             .sheet(isPresented: $showSettingsOnMac) {
                 NavigationStack { SettingsView() }
                     .frame(minWidth: 420, minHeight: 560)
