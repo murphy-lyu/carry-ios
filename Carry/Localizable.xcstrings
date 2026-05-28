@@ -24850,55 +24850,55 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Noch eine letzte Prüfung, bevor du die Tür schließt."
+            "value" : "Dinge, die man selten mitnimmt, vergisst man leicht."
           }
         },
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "One last check before you close the door."
+            "value" : "Easy to overlook things you don't usually travel with."
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Una última revisión antes de cerrar la puerta."
+            "value" : "Fácil olvidar lo que no sueles llevar de viaje."
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Une dernière vérification avant de fermer la porte."
+            "value" : "On oublie facilement ce qu'on n'emporte pas d'habitude."
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "ドアを閉める前に、もう一度確認を。"
+            "value" : "いつも持ち歩かないものは、つい忘れがち。"
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "문을 닫기 전, 마지막으로 한 번 더 확인해요."
+            "value" : "평소에 안 챙기는 것들은 빠뜨리기 쉬워요."
           }
         },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Uma última verificação antes de fechar a porta."
+            "value" : "Fácil esquecer o que você não costuma levar em viagens."
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "关门之前，再确认一遍。"
+            "value" : "平时不带的东西，出门前最容易忘。"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "關門之前，再確認一遍。"
+            "value" : "平時不帶的東西，出門前最容易忘。"
           }
         }
       }
