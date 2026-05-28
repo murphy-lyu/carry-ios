@@ -321,7 +321,9 @@ struct ItemPickerView: View {
     }
 
     private var searchPlaceholderText: String {
-        sourceMode == .smart ? "搜索场景..." : "搜索物品..."
+        sourceMode == .smart
+            ? NSLocalizedString("itempicker.search.placeholder.scenes", comment: "")
+            : NSLocalizedString("itempicker.search.placeholder.items", comment: "")
     }
 
     private func hideKeyboard() {
@@ -960,6 +962,10 @@ struct ItemPickerView: View {
     }
 
     private func applySmartRecommendations() {
+        applySmartRecommendations(shouldSwitchToPreset: true, shouldShowToast: true)
+    }
+
+    private func applySmartRecommendations(shouldSwitchToPreset: Bool, shouldShowToast: Bool) {
         let keys = selectedSmartSceneLabels.compactMap { sceneLabelToKey[$0] }
         guard !keys.isEmpty else { return }
 
@@ -990,9 +996,13 @@ struct ItemPickerView: View {
             }
             .map { $0.name }
         )
-        sourceMode = .preset
-        let msg = String(format: NSLocalizedString("scenes.updated.count", comment: ""), preselected.count)
-        showToast(msg)
+        if shouldSwitchToPreset {
+            sourceMode = .preset
+        }
+        if shouldShowToast {
+            let msg = String(format: NSLocalizedString("scenes.updated.count", comment: ""), preselected.count)
+            showToast(msg)
+        }
     }
 
     private var isSmartPrimaryEnabled: Bool {
@@ -1062,10 +1072,15 @@ struct ItemPickerView: View {
             : Color(UIColor.systemBackground).opacity(0.88)
 
         return HStack(alignment: .center, spacing: 12) {
-            VStack(alignment: .leading, spacing: 0) {
+            VStack(alignment: .leading, spacing: 1) {
                 Text(LocalizedStringKey("myitems.panel.subtitle"))
-                    .font(.headline)
+                    .font(.subheadline.weight(.semibold))
                     .foregroundStyle(.primary)
+                    .lineLimit(1)
+                Text(LocalizedStringKey("myitems.panel.hint"))
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
+                    .lineLimit(1)
             }
             Spacer(minLength: 12)
             Button {
@@ -1441,6 +1456,11 @@ struct ItemPickerView: View {
     // MARK: - Actions
 
     private func confirmSelection() {
+        if sourceMode == .smart && !selectedSmartSceneLabels.isEmpty {
+            // Safety net: user may tap top-right done without pressing smart CTA.
+            applySmartRecommendations(shouldSwitchToPreset: false, shouldShowToast: false)
+        }
+
         let sections = combinedSelectedSections()
         guard !sections.isEmpty else { return }
         let presetCount = selectedItems.count
