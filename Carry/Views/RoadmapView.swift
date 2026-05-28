@@ -88,7 +88,7 @@ private struct RoadmapPayload: Codable {
                 items: [
                     RoadmapItem(id: "calendar-sync", title: RoadmapL10n.text(en: "Calendar sync", zhHans: "日历同步", zhHant: "行事曆同步"), status: .done, note: nil),
                     RoadmapItem(id: "smart-suggestions", title: RoadmapL10n.text(en: "Smart suggestions", zhHans: "智能推荐清单", zhHant: "智能推薦清單"), status: .done, note: nil),
-                    RoadmapItem(id: "worth-considering", title: RoadmapL10n.text(en: "Worth considering", zhHans: "顺手考虑一下", zhHant: "順手考慮一下"), status: .done, note: nil),
+                    RoadmapItem(id: "worth-considering", title: RoadmapL10n.text(en: "Little Joys", zhHans: "小确幸", zhHant: "小確幸"), status: .done, note: nil),
                     RoadmapItem(id: "world-map", title: RoadmapL10n.text(en: "World map & visited countries", zhHans: "世界地图 & 到访国家", zhHant: "世界地圖 & 到訪國家"), status: .done, note: nil),
                     RoadmapItem(id: "packing-reminder", title: RoadmapL10n.text(en: "Packing reminders", zhHans: "打包提醒", zhHant: "打包提醒"), status: .done, note: nil),
                     RoadmapItem(id: "share-list", title: RoadmapL10n.text(en: "Share packing list", zhHans: "分享清单", zhHant: "分享清單"), status: .done, note: nil),
