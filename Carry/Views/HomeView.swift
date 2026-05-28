@@ -217,13 +217,20 @@ struct HomeView: View {
         }
 
         for trip in store.trips where trip.departureDate <= Date() {
-            let primaryName = trip.destinationCity
-                .components(separatedBy: CharacterSet(charactersIn: ",，/／+＋&＆"))
-                .first
-                .map { $0.trimmingCharacters(in: .whitespaces) } ?? ""
-            addCoordinate(lat: trip.latitude, lon: trip.longitude, name: primaryName)
-            for dest in trip.additionalDestinations {
-                addCoordinate(lat: dest.latitude, lon: dest.longitude)
+            // Split using the same separators as geocoding so token[n] aligns with destination[n]
+            var raw = [trip.destinationCity]
+            for sep in [" and ", " And ", " AND ", " 和 "] {
+                raw = raw.flatMap { $0.components(separatedBy: sep) }
+            }
+            for sep in [",", "，", "、", "/", "／", "&", "＆", "+", "＋"] {
+                raw = raw.flatMap { $0.components(separatedBy: sep) }
+            }
+            let tokens = raw.map { $0.trimmingCharacters(in: .whitespaces) }.filter { !$0.isEmpty }
+
+            addCoordinate(lat: trip.latitude, lon: trip.longitude, name: tokens.first ?? "")
+            for (idx, dest) in trip.additionalDestinations.enumerated() {
+                addCoordinate(lat: dest.latitude, lon: dest.longitude,
+                              name: (idx + 1) < tokens.count ? tokens[idx + 1] : "")
             }
         }
         return cities
