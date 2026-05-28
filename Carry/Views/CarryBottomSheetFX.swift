@@ -571,8 +571,7 @@ final class FXSheetViewController: UIViewController {
         let lo: CGFloat = 0, hi = collapsedOffset
         guard hi > lo else { return raw }
         if raw < lo {
-            let over = lo - raw
-            return lo - over * 0.55 / (1 + over / hi)
+            return lo
         } else if raw > hi {
             let over = raw - hi
             return hi + over * 0.55 / (1 + over / hi)

@@ -61,6 +61,7 @@ struct ItemPickerView: View {
     private let startInMyItems: Bool
     private let cachedSceneRecommendedNames: Set<String>
     @State private var appliedSceneRecommendedNames: Set<String> = []
+    @State private var lastAppliedSceneLabels: Set<String> = []
 
     init(tripInfo: TripInfo, startInMyItems: Bool = false) {
         self.mode = .create(tripInfo)
@@ -499,6 +500,9 @@ struct ItemPickerView: View {
                     .transition(.move(edge: .bottom).combined(with: .opacity))
             }
         }
+        .safeAreaInset(edge: .bottom) {
+            smartPreviewStickyBar
+        }
         .navigationTitle("")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
@@ -551,7 +555,7 @@ struct ItemPickerView: View {
             lastSourceModeRawValue = newValue.rawValue
             if oldValue == .smart && newValue != .smart
                 && !selectedSmartSceneLabels.isEmpty
-                && appliedSceneRecommendedNames.isEmpty {
+                && selectedSmartSceneLabels != lastAppliedSceneLabels {
                 applySmartRecommendations(shouldSwitchToPreset: false, shouldShowToast: false)
             }
         }
@@ -841,9 +845,9 @@ struct ItemPickerView: View {
                 if !groupLabels.isEmpty {
                     VStack(alignment: .leading, spacing: 4) {
                         Text(LocalizedStringKey(group.title))
-                            .font(.caption.weight(.medium))
-                            .foregroundStyle(colorScheme == .dark ? Color(.systemGray) : Color(.systemGray))
-                            .kerning(1.0)
+                            .font(.system(size: 11, weight: .medium))
+                            .foregroundStyle(colorScheme == .dark ? Color(.systemGray2) : Color(.systemGray))
+                            .kerning(1.5)
                             .textCase(.uppercase)
                         sceneChipGrid(labels: groupLabels)
                     }
@@ -872,38 +876,12 @@ struct ItemPickerView: View {
                             sceneChipGrid(labels: labels)
                         }
 
-                        if !selectedSmartSceneLabels.isEmpty {
-                            let preview = smartPreviewItemNames
-                            HStack(spacing: 6) {
-                                Image(systemName: "wand.and.stars")
-                                    .font(.caption.weight(.semibold))
-                                if preview.isEmpty {
-                                    Text(LocalizedStringKey("itempicker.smart.preview.none"))
-                                        .font(.caption)
-                                } else {
-                                    let names = preview.prefix(3).joined(separator: "、")
-                                    let suffix = preview.count > 3 ? "…" : ""
-                                    Text(
-                                        String(
-                                            format: NSLocalizedString("itempicker.smart.preview.adding", comment: ""),
-                                            preview.count,
-                                            names,
-                                            suffix
-                                        )
-                                    )
-                                        .font(.caption)
-                                }
-                            }
-                            .foregroundStyle(colorScheme == .dark ? Color.secondary : Color.secondary.opacity(0.90))
-                            .padding(.top, 2)
-                        }
-
                     }
                     .padding(.horizontal, 16)
                     .padding(.vertical, 14)
                 }
             }
-            .padding(.bottom, isCreateMode ? 88 : 24)
+            .padding(.bottom, isCreateMode ? 120 : 36)
         }
         .scrollDismissesKeyboard(.interactively)
     }
@@ -930,6 +908,58 @@ struct ItemPickerView: View {
         }
     }
 
+    @ViewBuilder
+    private var smartPreviewStickyBar: some View {
+        if sourceMode == .smart && !selectedSmartSceneLabels.isEmpty {
+            let preview = smartPreviewItemNames
+            Button {
+                sourceMode = .preset
+            } label: {
+                HStack(spacing: 6) {
+                    Image(systemName: "wand.and.stars")
+                        .font(.caption.weight(.semibold))
+                    if preview.isEmpty {
+                        Text(LocalizedStringKey("itempicker.smart.preview.none"))
+                    } else {
+                        let localizedNames = preview.prefix(3).map { NSLocalizedString($0, comment: "") }
+                        let names = localizedNames.joined(separator: "、")
+                        let suffix = preview.count > 3 ? "…" : ""
+                        Text(
+                            String(
+                                format: NSLocalizedString("itempicker.smart.preview.adding", comment: ""),
+                                preview.count,
+                                names,
+                                suffix
+                            )
+                        )
+                    }
+                    Spacer(minLength: 0)
+                    Image(systemName: "chevron.right")
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(colorScheme == .dark ? Color.secondary.opacity(0.5) : Color.secondary.opacity(0.45))
+                }
+                .font(.subheadline.weight(.medium))
+                .foregroundStyle(colorScheme == .dark ? Color.secondary : Color.secondary.opacity(0.92))
+                .lineLimit(1)
+                .truncationMode(.tail)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.horizontal, 14)
+                .padding(.vertical, 8)
+                .background(
+                    RoundedRectangle(cornerRadius: 14, style: .continuous)
+                        .fill(Color(UIColor.systemBackground).opacity(colorScheme == .dark ? 0.86 : 0.94))
+                )
+                .overlay(
+                    RoundedRectangle(cornerRadius: 14, style: .continuous)
+                        .strokeBorder(Color.primary.opacity(colorScheme == .dark ? 0.12 : 0.07), lineWidth: 1)
+                )
+            }
+            .buttonStyle(PressableScaleButtonStyle(scale: 0.985, pressedBrightness: -0.01, pressedOpacity: 0.95))
+            .padding(.horizontal, 16)
+            .padding(.bottom, 10)
+        }
+    }
+
     private func sceneChipGrid(labels: [String]) -> some View {
         return LazyVGrid(columns: [GridItem(.adaptive(minimum: 140), spacing: 8)], spacing: 6) {
             ForEach(labels, id: \.self) { label in
@@ -945,26 +975,29 @@ struct ItemPickerView: View {
                         if let symbol = smartSceneSymbols[label] {
                             Image(systemName: symbol)
                                 .font(.system(size: 13, weight: .semibold))
-                                .frame(width: 14, height: 14)
-                                .foregroundStyle(isSelected ? Color.white : Color.primary.opacity(0.9))
+                                .frame(width: 16, height: 16)
+                                .foregroundStyle(isSelected ? Color(UIColor.systemBackground) : .primary)
                         }
                         Text(LocalizedStringKey(label))
-                            .font(.subheadline.weight(.medium))
-                            .foregroundStyle(isSelected ? Color.white : Color.primary)
+                            .font(.caption.weight(.medium))
+                            .foregroundStyle(isSelected ? Color(UIColor.systemBackground) : .primary)
                     }
                     .frame(maxWidth: .infinity)
                     .padding(.horizontal, 10)
-                    .padding(.vertical, 7)
+                    .padding(.vertical, 6)
                     .background(
                         Capsule(style: .continuous)
                             .fill(
                                 isSelected
-                                    ? Color(UIColor { traits in
-                                        traits.userInterfaceStyle == .dark
-                                            ? UIColor(white: 0.26, alpha: 1.0)
-                                            : UIColor(white: 0.22, alpha: 1.0)
-                                    })
-                                    : Color(UIColor.secondarySystemBackground).opacity(colorScheme == .dark ? 0.44 : 0.76)
+                                    ? Color.primary
+                                    : Color.clear
+                            )
+                    )
+                    .overlay(
+                        Capsule(style: .continuous)
+                            .stroke(
+                                Color.secondary.opacity(isSelected ? 0 : (colorScheme == .dark ? 0.5 : 0.44)),
+                                lineWidth: 0.5
                             )
                     )
                 }
@@ -1012,6 +1045,7 @@ struct ItemPickerView: View {
 
         selectedItems = preselected
         appliedSceneRecommendedNames = Set(generated.flatMap { $0.sortedItems.map { canonicalItemName($0.name) } })
+        lastAppliedSceneLabels = selectedSmartSceneLabels
         expandedCategories = Set(itemPickerCatalog
             .filter { category in
                 category.items.contains { rawKey in

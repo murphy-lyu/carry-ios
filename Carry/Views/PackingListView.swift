@@ -46,6 +46,7 @@ struct PackingListView: View {
     @State private var toastText = ""
 
     @State private var surpriseItems: [SurpriseItem] = []
+    @State private var surpriseItemPool: [SurpriseItem] = []
     @State private var selectedSurpriseNames: Set<String> = []
 
     private var bundle: TripBundle? { store.bundle(for: tripId) }
@@ -495,15 +496,23 @@ struct PackingListView: View {
         let sceneKeys = bundle.selectedSceneKeys
         let mode: SurpriseRankingMode = sceneKeys.isEmpty ? .manualFirst : .sceneFirst
         let dismissed = Set(bundle.dismissedSurpriseNames.map { $0.lowercased() })
-        surpriseItems = computeSurpriseItems(
+        let pool = computeSurpriseItems(
             for: sceneKeys,
             existingNames: existingLower,
             rankingMode: mode
         )
         .filter { !dismissed.contains($0.name.lowercased()) }
-        .prefix(3)
-        .map { $0 }
+        surpriseItemPool = pool
+        surpriseItems = Array(pool.prefix(3))
         selectedSurpriseNames = []
+    }
+
+    private func shuffleSurpriseItems() {
+        let currentNames = Set(surpriseItems.map(\.name))
+        let remaining = surpriseItemPool.filter { !currentNames.contains($0.name) }
+        guard !remaining.isEmpty else { return }
+        surpriseItems = Array(remaining.shuffled().prefix(3))
+        UIImpactFeedbackGenerator(style: .light).impactOccurred()
     }
 
     private func toggleItem(itemId: UUID) {
@@ -818,17 +827,34 @@ struct PackingListView: View {
     }
 
     private var surpriseSectionHeader: some View {
-        HStack(spacing: 5) {
-            Image(systemName: "sparkles")
-                .font(.system(size: 10, weight: .semibold))
-                .foregroundStyle(colorScheme == .dark ? Color(.systemGray2) : Color(.systemGray))
-            Text("Worth considering")
-                .font(.caption.weight(.medium))
-                .foregroundStyle(colorScheme == .dark ? Color(.systemGray2) : Color(.systemGray))
-                .kerning(1.2)
-                .textCase(.uppercase)
+        HStack(spacing: 0) {
+            HStack(spacing: 5) {
+                Image(systemName: "sparkles")
+                    .font(.system(size: 10, weight: .semibold))
+                    .foregroundStyle(colorScheme == .dark ? Color(.systemGray2) : Color(.systemGray))
+                Text("Worth considering")
+                    .font(.caption.weight(.medium))
+                    .foregroundStyle(colorScheme == .dark ? Color(.systemGray2) : Color(.systemGray))
+                    .kerning(1.2)
+                    .textCase(.uppercase)
+            }
+            Spacer()
+            if surpriseItemPool.count > 3 {
+                Button {
+                    withAnimation(.easeInOut(duration: 0.2)) {
+                        shuffleSurpriseItems()
+                    }
+                } label: {
+                    Image(systemName: "shuffle")
+                        .font(.system(size: 12, weight: .medium))
+                        .foregroundStyle(colorScheme == .dark ? Color(.systemGray2) : Color(.systemGray))
+                        .frame(width: 28, height: 28)
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+            }
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
+        .frame(maxWidth: .infinity)
         .padding(.horizontal, 16)
         .padding(.top, 16)
         .padding(.bottom, 4)

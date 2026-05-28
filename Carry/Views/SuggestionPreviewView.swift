@@ -24,27 +24,9 @@ struct SuggestionPreviewView: View {
     private var hasSelection: Bool { !selectedNames.isEmpty || !selectedSurpriseNames.isEmpty }
     private var hasContent: Bool { !sections.isEmpty || !surpriseItems.isEmpty }
 
-    // Selected surprise items are merged into the main sections by category.
-    private var displaySections: [(title: String, items: [String])] {
-        guard !selectedSurpriseNames.isEmpty else { return sections }
-        var result = sections
-        for item in surpriseItems where selectedSurpriseNames.contains(item.name) {
-            let sectionTitle = item.category.rawValue
-            if let idx = result.firstIndex(where: { $0.title == sectionTitle }) {
-                if !result[idx].items.contains(item.name) {
-                    result[idx].items.append(item.name)
-                }
-            } else {
-                result.append((title: sectionTitle, items: [item.name]))
-            }
-        }
-        return result
-    }
+    private var displaySections: [(title: String, items: [String])] { sections }
 
-    // Only show unselected surprise items in the surprise section.
-    private var displaySurpriseItems: [SurpriseItem] {
-        surpriseItems.filter { !selectedSurpriseNames.contains($0.name) }
-    }
+    private var displaySurpriseItems: [SurpriseItem] { surpriseItems }
 
     private var surpriseItemNames: Set<String> { Set(surpriseItems.map(\.name)) }
     private var chromeBackgroundColor: Color {
@@ -334,10 +316,10 @@ struct SuggestionPreviewView: View {
             newItems.forEach { allNames.insert($0) }
         }
         sections = result
-        selectedNames.removeAll()
+        selectedNames = allNames
         selectedSurpriseNames.removeAll()
 
-        // Surprise items (not pre-selected) — also exclude names already in regular suggestions
+        // Surprise items (not pre-selected) — exclude names already in regular suggestions, cap at 3
         let dismissed = Set(bundle.dismissedSurpriseNames.map { $0.lowercased() })
         let excludedNames = excludedLower.union(allNames.map { $0.lowercased() })
         surpriseItems = computeSurpriseItems(
@@ -345,7 +327,9 @@ struct SuggestionPreviewView: View {
             existingNames: excludedNames,
             rankingMode: .sceneFirst
         )
-            .filter { !dismissed.contains($0.name.lowercased()) }
+        .filter { !dismissed.contains($0.name.lowercased()) }
+        .prefix(3)
+        .map { $0 }
     }
 
     private func confirm() {
