@@ -82,8 +82,9 @@ struct ContentView: View {
             )
             .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
             .shadow(color: .black.opacity(colorScheme == .dark ? 0.45 : 0.18), radius: 32, x: 0, y: 8)
-            .padding(.leading, 16)
-            .padding(.vertical, 16)
+            .padding(.leading, 32)
+            .padding(.top, 24)
+            .padding(.bottom, 48)
             .sheet(isPresented: $showSettingsOnMac) {
                 NavigationStack { SettingsView() }
                     .frame(minWidth: 420, minHeight: 560)
