@@ -112,6 +112,57 @@ Carry/
 - SwiftData 变更必须考虑 migration，不能直接改 model schema
 - 新功能开发前先写 specs/ 下的 spec 文件，确认后再实现
 
+## 本地化规范
+
+### 硬编码文案：零容忍
+所有面向用户的文案（标题、按钮、提示语、错误、空状态、placeholder 等）**必须**通过 `Localizable.xcstrings` 管理。禁止在 Swift 代码中直接写死任何语言的字符串——包括中文，也包括英文。
+
+合法写法：
+- `Text(LocalizedStringKey("some.key"))`
+- `NSLocalizedString("some.key", comment: "")`
+
+非法写法（无论什么语言）：
+- `Text("搜索物品...")` ← 硬编码中文
+- `Text("Add items")` ← 硬编码英文
+- `placeholder: "Search..."` ← 硬编码英文
+
+例外：仅允许技术性常量（日志 tag、内部调试标记、协议字段），且不得直接面向用户展示。
+
+### 结构化 key 必须显式写 "en"
+xcstrings 中有两类 key：
+
+- **语义性 key**（key 本身就是英文原文）：如 `"Add items"`、`"One last check before you close the door."`——key 即为英文值，无需 `"en"` 条目
+- **结构化 key**（如 `itempicker.hero.title`、`packing.scene_card.subtitle`）：**必须**在 localizations 中包含 `"en"` 显式条目，否则英文设备显示的是 key 名本身
+
+### 新增文案：同步补全所有语言
+每次新增或修改面向用户的文案，必须在同一次改动中完成全部 9 种语言，不允许"先占位后补"：
+
+`en` / `zh-Hans` / `zh-Hant` / `de` / `es` / `fr` / `ja` / `ko` / `pt-BR`
+
+### 文化适配，不是字面翻译
+翻译的目标是让母语用户读起来自然，而不是把英文逐词搬过来，也不是把简体中文用工具转成繁体就完事。
+
+**zh-Hans 与 zh-Hant 不是简繁转换关系**，词汇和表达有实质差异，以台湾/香港用语为基准：
+
+| 概念 | zh-Hans（大陆） | zh-Hant（台湾/香港） |
+|------|----------------|-------------------|
+| 哪里 | 哪儿 / 哪里 | 哪裡（不用「哪儿」） |
+| 应用/软件 | 应用、软件 | 應用程式、軟體 |
+| 视频 | 视频 | 影片 |
+| 文件夹 | 文件夹 | 資料夾 |
+| 优化 | 优化 | 最佳化 |
+| 防晒衣 | 防晒衣 | 防曬衣 |
+| 冲浪衣 | 冲浪衣 | 衝浪衣 |
+
+其他语言同理：德语名词首字母大写；法语冒号/问号前有空格；日语优先用常体（だ/である）而非敬体（です/ます）；韩语界面文案通常用해요体而非합니다体。
+
+### 已知错误模式（不要重犯）
+- placeholder 写死中文字符串 → 英文设备看到中文
+- 结构化 key 漏写 `"en"` → 英文设备显示 key 名
+- `ItemPickerCategory.name` 与 xcstrings key 名不一致 → 分类标题 fallback 回英文原文
+- xcstrings key 已更新但 Swift 数据源未同步 → UI 渲染旧字符串（如 `"Documents"` vs `"Travel Documents"`）
+- 用简繁转换工具替代真实翻译 → zh-Hant 出现大陆用语或错误字形
+
 ## 文件索引
 - docs/design-system.md：视觉规范与组件标准
 - docs/architecture.md：架构与模块说明
