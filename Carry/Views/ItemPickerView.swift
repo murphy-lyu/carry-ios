@@ -142,6 +142,10 @@ struct ItemPickerView: View {
         !selectedItems.isEmpty || !selectedMyItemIDs.isEmpty
     }
 
+    private var canConfirm: Bool {
+        hasSelection || (sourceMode == .smart && !selectedSmartSceneLabels.isEmpty)
+    }
+
     private var isCreateMode: Bool {
         switch mode {
         case .create, .autoPackReview: return true
@@ -506,8 +510,8 @@ struct ItemPickerView: View {
                         .labelStyle(.titleAndIcon)
                 }
                 .fontWeight(.semibold)
-                .disabled(!hasSelection)
-                .animation(.easeInOut(duration: 0.15), value: hasSelection)
+                .disabled(!canConfirm)
+                .animation(.easeInOut(duration: 0.15), value: canConfirm)
             }
         }
         .onAppear {
@@ -889,27 +893,6 @@ struct ItemPickerView: View {
                             .padding(.top, 2)
                         }
 
-                        if !labels.isEmpty || searchText.isEmpty {
-                            Button {
-                                applySmartRecommendations()
-                            } label: {
-                                Text(LocalizedStringKey("scenes.update_list"))
-                                    .font(.subheadline.weight(.semibold))
-                                    .foregroundColor(smartPrimaryButtonForeground)
-                                    .frame(maxWidth: .infinity)
-                                    .frame(height: 44)
-                                    .background(
-                                        RoundedRectangle(cornerRadius: 14, style: .continuous)
-                                            .fill(smartPrimaryButtonBackground)
-                                    )
-                                    .overlay(
-                                        RoundedRectangle(cornerRadius: 14, style: .continuous)
-                                            .strokeBorder(Color(.separator).opacity(isSmartPrimaryEnabled ? 0.08 : 0.14), lineWidth: 1)
-                                    )
-                            }
-                            .buttonStyle(SolidPressButtonStyle())
-                            .allowsHitTesting(isSmartPrimaryEnabled)
-                        }
                     }
                     .padding(16)
                 }
@@ -1059,20 +1042,6 @@ struct ItemPickerView: View {
                 )
             }
         }
-    }
-
-    private var isSmartPrimaryEnabled: Bool {
-        !selectedSmartSceneLabels.isEmpty
-    }
-
-    private var smartPrimaryButtonBackground: Color {
-        isSmartPrimaryEnabled
-            ? Color(UIColor.label)
-            : (colorScheme == .dark ? Color(UIColor.secondarySystemBackground) : Color(UIColor.systemGray3))
-    }
-
-    private var smartPrimaryButtonForeground: Color {
-        isSmartPrimaryEnabled ? Color(UIColor.systemBackground) : Color(UIColor.secondaryLabel)
     }
 
     private func sourceSegment(title: String, subtitle: String? = nil, isSelected: Bool, action: @escaping () -> Void) -> some View {
