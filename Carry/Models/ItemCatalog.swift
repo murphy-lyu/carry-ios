@@ -77,20 +77,20 @@ let itemPickerCatalog: [ItemPickerCategory] = [
         "Shorts",
         "Dress", "Skirt", "Hat", "Belt",
         "Formal wear", "Sweater", "Rain jacket", "Swimsuit", "Nipple covers",
-        "Comfortable walking shoes",
+        "Comfortable walking shoes", "Flip flops", "Sun-protective clothing",
     ]),
     ItemPickerCategory(name: "Electronics", items: [
         "Phone charger", "Charging cable", "Portable charger", "Smart watch charger", "Travel adapter",
         "Car charger", "Earphones", "Noise-cancelling headphones",
         "Tablet", "Laptop", "Laptop charger", "E-reader",
         "Camera", "Camera charger", "Pocket camera", "Action camera", "Drone", "Memory card",
-        "Selfie stick", "Tripod", "Power strip", "Bluetooth speaker", "Portable Bluetooth speaker",
+        "Selfie stick", "Tripod", "Power strip", "Bluetooth speaker",
         "Portable WiFi device",
     ]),
     ItemPickerCategory(name: "Toiletries", items: [
-        "Makeup remover / cleansing oil", "Cotton pads", "Face wash", "Face mask", "Toner", "Serum", "Eye cream", "Facial oil", "Lotion", "Moisturiser",
+        "Makeup remover / cleansing oil", "Cotton pads", "Face wash", "Face mask", "Sheet mask", "Face mist", "Toner", "Serum", "Eye cream", "Facial oil", "Lotion", "Moisturiser",
         "Body lotion",
-        "Lip balm", "Sunscreen",
+        "Lip balm", "Sunscreen", "Blotting paper",
         "Hair ties", "Comb", "Hair straightener", "Dry shampoo", "Perfume",
         "Dental floss", "Toothbrush", "Toothpaste", "Mouthwash",
         "Shampoo", "Conditioner", "Body wash",
@@ -102,6 +102,7 @@ let itemPickerCatalog: [ItemPickerCategory] = [
         "Sunglasses", "Umbrella", "Water bottle",
         "Travel pillow", "Neck pillow", "Eye mask", "Earplugs",
         "Pen", "Packing cubes", "Laundry bag", "Travel towel", "Quick-dry towel",
+        "Luggage tag", "Luggage lock", "Luggage scale",
         "Transit card / app",
     ]),
     ItemPickerCategory(name: "Makeup", items: [
@@ -127,6 +128,7 @@ let itemPickerCatalog: [ItemPickerCategory] = [
         "Vitamin C", "Vitamin D", "Multivitamins", "Probiotics", "Melatonin",
         "Anti-diarrhea",
         "Insect repellent",
+        "Band-aids", "Digestive enzymes", "After-sun lotion", "Electrolyte tablets",
     ]),
 ]
 
