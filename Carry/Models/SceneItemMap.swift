@@ -102,7 +102,6 @@ let sceneItemMap: [String: [SceneItem]] = [
         makeSceneItem("Overseas SIM / portable WiFi", isAlert: false),
         makeSceneItem("Eye mask", isAlert: false),
         makeSceneItem("Earplugs", isAlert: false),
-        makeSceneItem("Compression socks", isAlert: false),
         makeSceneItem("Lip balm", isAlert: false),
         makeSceneItem("Water bottle", isAlert: false),
     ],
