@@ -14,6 +14,8 @@ fileprivate let homeDarkStatTop = Color(red: 0.15, green: 0.15, blue: 0.16)
 fileprivate let homeDarkStatBottom = Color(red: 0.20, green: 0.20, blue: 0.21)
 fileprivate let homeDarkCardTop = Color(red: 0.10, green: 0.10, blue: 0.11)
 fileprivate let homeDarkCardBottom = Color(red: 0.14, green: 0.14, blue: 0.15)
+fileprivate let homeDarkCardTopRefined = Color(red: 0.09, green: 0.09, blue: 0.10)
+fileprivate let homeDarkCardBottomRefined = Color(red: 0.12, green: 0.12, blue: 0.13)
 
 // MARK: - HomeView
 
@@ -599,8 +601,8 @@ struct HomeView: View {
                     ? AnyShapeStyle(
                         LinearGradient(
                             colors: [
-                                homeDarkHeroTop.opacity(0.98),
-                                homeDarkHeroBottom.opacity(0.94)
+                                homeDarkHeroTop.opacity(0.92),
+                                homeDarkHeroBottom.opacity(0.88)
                             ],
                             startPoint: .topLeading,
                             endPoint: .bottomTrailing
@@ -620,15 +622,15 @@ struct HomeView: View {
         )
         .overlay(
             RoundedRectangle(cornerRadius: 24, style: .continuous)
-                .strokeBorder(Color.primary.opacity(colorScheme == .dark ? 0.038 : 0.05), lineWidth: 1)
+                .strokeBorder(Color.primary.opacity(colorScheme == .dark ? 0.03 : 0.05), lineWidth: 1)
         )
-        .shadow(color: Color.black.opacity(colorScheme == .dark ? 0.18 : 0.045), radius: colorScheme == .dark ? 14 : 16, x: 0, y: colorScheme == .dark ? 10 : 10)
+        .shadow(color: Color.black.opacity(colorScheme == .dark ? 0.14 : 0.045), radius: colorScheme == .dark ? 12 : 16, x: 0, y: colorScheme == .dark ? 8 : 10)
     }
 
     private func sectionLabel(_ key: LocalizedStringKey, uppercase: Bool = false) -> some View {
         Text(key)
             .font(.system(size: 11, weight: .medium))
-            .foregroundStyle(colorScheme == .dark ? Color.secondary.opacity(0.9) : Color(UIColor.tertiaryLabel))
+            .foregroundStyle(colorScheme == .dark ? Color.secondary.opacity(0.98) : Color(UIColor.tertiaryLabel))
             .textCase(uppercase ? .uppercase : nil)
             .tracking(1.6)
     }
@@ -636,7 +638,7 @@ struct HomeView: View {
     private func sectionLabel(verbatim: String) -> some View {
         Text(verbatim: verbatim)
             .font(.system(size: 11, weight: .medium))
-            .foregroundStyle(colorScheme == .dark ? Color.secondary.opacity(0.9) : Color(UIColor.tertiaryLabel))
+            .foregroundStyle(colorScheme == .dark ? Color.secondary.opacity(0.98) : Color(UIColor.tertiaryLabel))
             .tracking(1.6)
     }
 
@@ -934,7 +936,7 @@ struct TripCard: View {
 
     private var progressTrackColor: Color {
         colorScheme == .dark
-            ? Color.white.opacity(0.06)
+            ? Color.white.opacity(0.05)
             : Color(uiColor: .systemGray5)
     }
 
@@ -942,8 +944,8 @@ struct TripCard: View {
         if colorScheme == .dark {
             return LinearGradient(
                 colors: [
-                    homeDarkCardTop,
-                    homeDarkCardBottom
+                    homeDarkCardTopRefined,
+                    homeDarkCardBottomRefined
                 ],
                 startPoint: .topLeading,
                 endPoint: .bottomTrailing
@@ -962,7 +964,7 @@ struct TripCard: View {
 
     private var cardShadow: Color {
         if colorScheme == .dark {
-            return Color.black.opacity(0.22)
+            return Color.black.opacity(0.16)
         }
         return Color.black.opacity(0.068)
     }
