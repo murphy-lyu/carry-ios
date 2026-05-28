@@ -25,7 +25,7 @@ struct TripDateRangePickerSheet: View {
         self.today = now
         let monthStart = cal.date(from: cal.dateComponents([.year, .month], from: now))!
         var ms: [Date] = []
-        for i in -36...36 {
+        for i in -120...120 {
             if let m = cal.date(byAdding: .month, value: i, to: monthStart) {
                 ms.append(m)
             }
