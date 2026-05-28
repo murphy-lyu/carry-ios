@@ -64,11 +64,11 @@ struct ItemPickerCategory {
 let itemPickerCatalog: [ItemPickerCategory] = [
     ItemPickerCategory(name: "Travel Documents", items: [
         "Passport", "ID card", "Visa",
-        "Hotel booking", "Travel insurance", "Itinerary",
+        "Itinerary", "Travel insurance", "Hotel booking",
         "Driver's license", "International driving permit",
         "HK & Macao permit", "Taiwan permit",
-        "Vaccination certificate",
         "Children's passport / ID", "Photo ID copy",
+        "Vaccination certificate",
     ]),
     ItemPickerCategory(name: "Clothing", items: [
         "Underwear", "Socks",
