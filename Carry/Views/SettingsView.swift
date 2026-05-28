@@ -301,10 +301,9 @@ struct SettingsView: View {
                             }
                             .padding(.horizontal, 16)
                             .padding(.bottom, 18)
-                            .confirmationDialog(
+                            .alert(
                                 Text("settings.data.import.confirm.title"),
-                                isPresented: $showImportConfirmation,
-                                titleVisibility: .visible
+                                isPresented: $showImportConfirmation
                             ) {
                                 Button(role: .destructive) {
                                     guard let data = pendingImportData else { return }
@@ -321,6 +320,11 @@ struct SettingsView: View {
                                     pendingImportData = nil
                                 } label: {
                                     Text("settings.data.import.action")
+                                }
+                                Button(role: .cancel) {
+                                    pendingImportData = nil
+                                } label: {
+                                    Text("Cancel")
                                 }
                             } message: {
                                 Text("settings.data.import.confirm.message")
