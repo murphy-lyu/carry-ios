@@ -7199,19 +7199,13 @@
         }
       }
     },
-    "Coloured contacts" : {
-      "extractionState" : "stale",
+    "Colored contacts" : {
+      "extractionState" : "manual",
       "localizations" : {
         "de" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "Farbige Kontaktlinsen"
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Coloured contacts"
           }
         },
         "es" : {
@@ -13920,49 +13914,43 @@
         }
       }
     },
-    "Hand sanitiser" : {
+    "Hand sanitizer" : {
       "extractionState" : "manual",
       "localizations" : {
         "de" : {
           "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Hand sanitiser"
-          }
-        },
-        "en" : {
-          "stringUnit" : {
             "state" : "translated",
-            "value" : "Hand sanitiser"
+            "value" : "Desinfektionsgel"
           }
         },
         "es" : {
           "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Hand sanitiser"
+            "state" : "translated",
+            "value" : "Gel desinfectante de manos"
           }
         },
         "fr" : {
           "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Hand sanitiser"
+            "state" : "translated",
+            "value" : "Gel hydroalcoolique"
           }
         },
         "ja" : {
           "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Hand sanitiser"
+            "state" : "translated",
+            "value" : "手指消毒ジェル"
           }
         },
         "ko" : {
           "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Hand sanitiser"
+            "state" : "translated",
+            "value" : "손 소독제"
           }
         },
         "pt-BR" : {
           "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Hand sanitiser"
+            "state" : "translated",
+            "value" : "Álcool em gel"
           }
         },
         "zh-Hans" : {
@@ -20887,49 +20875,43 @@
         }
       }
     },
-    "Moisturiser" : {
+    "Moisturizer" : {
       "extractionState" : "manual",
       "localizations" : {
         "de" : {
           "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Moisturiser"
-          }
-        },
-        "en" : {
-          "stringUnit" : {
             "state" : "translated",
-            "value" : "Moisturiser"
+            "value" : "Feuchtigkeitscreme"
           }
         },
         "es" : {
           "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Moisturiser"
+            "state" : "translated",
+            "value" : "Crema hidratante"
           }
         },
         "fr" : {
           "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Moisturiser"
+            "state" : "translated",
+            "value" : "Crème hydratante"
           }
         },
         "ja" : {
           "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Moisturiser"
+            "state" : "translated",
+            "value" : "保湿クリーム"
           }
         },
         "ko" : {
           "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Moisturiser"
+            "state" : "translated",
+            "value" : "보습 크림"
           }
         },
         "pt-BR" : {
           "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Moisturiser"
+            "state" : "translated",
+            "value" : "Hidratante"
           }
         },
         "zh-Hans" : {
@@ -36542,49 +36524,43 @@
         }
       }
     },
-    "Sun-protective clothing" : {
-      "extractionState" : "stale",
+    "Sun shirt" : {
+      "extractionState" : "manual",
       "localizations" : {
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "UV-Schutzkleidung"
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Sun-protective clothing"
+            "value" : "UV-Schutz-Shirt"
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Ropa de protección solar"
+            "value" : "Camiseta solar"
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Vêtements anti-UV"
+            "value" : "Vêtement anti-UV"
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "UVカット服"
+            "value" : "UVカットウェア"
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "자외선 차단 의류"
+            "value" : "자외선 차단 셔츠"
           }
         },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Roupa de proteção UV"
+            "value" : "Camisa de proteção UV"
           }
         },
         "zh-Hans" : {

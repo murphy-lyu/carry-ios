@@ -49,7 +49,10 @@ private let itemNameAliases: [String: String] = [
     "Pain relievers": "Painkillers",
     "Sanitary pads / tampons": "Feminine hygiene products",
     "Overseas SIM / portable WiFi": "Portable WiFi device",
-    "Colored contacts": "Coloured contacts",
+    "Coloured contacts": "Colored contacts",
+    "Moisturiser": "Moisturizer",
+    "Hand sanitiser": "Hand sanitizer",
+    "Sun-protective clothing": "Sun shirt",
 ]
 
 func canonicalItemName(_ name: String) -> String {
@@ -78,7 +81,7 @@ let itemPickerCatalog: [ItemPickerCategory] = [
         "Shorts",
         "Dress", "Skirt", "Hat", "Belt",
         "Formal wear", "Sweater", "Rain jacket", "Swimsuit", "Nipple covers",
-        "Comfortable walking shoes", "Flip flops", "Sun-protective clothing",
+        "Comfortable walking shoes", "Flip flops", "Sun shirt",
         "Scarf",
     ]),
     ItemPickerCategory(name: "Electronics", items: [
@@ -90,7 +93,7 @@ let itemPickerCatalog: [ItemPickerCategory] = [
         "Portable WiFi device",
     ]),
     ItemPickerCategory(name: "Personal Care", items: [
-        "Makeup remover / cleansing oil", "Cotton pads", "Face wash", "Face mask", "Sheet mask", "Face mist", "Toner", "Serum", "Eye cream", "Facial oil", "Lotion", "Moisturiser",
+        "Makeup remover / cleansing oil", "Cotton pads", "Face wash", "Face mask", "Sheet mask", "Face mist", "Toner", "Serum", "Eye cream", "Facial oil", "Lotion", "Moisturizer",
         "Body lotion",
         "Lip balm", "Sunscreen", "Blotting paper",
         "Hair ties", "Comb", "Hair straightener", "Dry shampoo", "Perfume",
@@ -115,7 +118,7 @@ let itemPickerCatalog: [ItemPickerCategory] = [
         "Setting powder",
         "Makeup brushes", "Makeup sponge",
         "Eyelash curler", "False eyelashes",
-        "Coloured contacts",
+        "Colored contacts",
     ]),
     ItemPickerCategory(name: "Jewelry", items: [
         "Earrings", "Necklace", "Ring", "Bracelet", "Watch", "Hair clip",
@@ -125,7 +128,7 @@ let itemPickerCatalog: [ItemPickerCategory] = [
         "Motion sickness tablets", "Antihistamines",
         "Prescription medication", "Daily medication",
         "Contact lenses",
-        "Disposable face masks", "Hand sanitiser", "First aid kit", "Wet wipes",
+        "Disposable face masks", "Hand sanitizer", "First aid kit", "Wet wipes",
         "Eye drops", "Throat lozenges",
         "Feminine hygiene products",
         "Vitamin C", "Vitamin D", "Multivitamins", "Probiotics", "Melatonin",
