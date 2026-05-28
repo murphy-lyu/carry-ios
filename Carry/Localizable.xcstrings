@@ -41540,56 +41540,56 @@
       "localizations": {
         "en": {
           "stringUnit": {
-            "type": "translation",
-            "value": "Based on your destination"
+            "value": "Based on your destination",
+            "state": "translated"
           }
         },
         "zh-Hans": {
           "stringUnit": {
-            "type": "translation",
-            "value": "根据你的目的地"
+            "value": "根据你的目的地",
+            "state": "translated"
           }
         },
         "zh-Hant": {
           "stringUnit": {
-            "type": "translation",
-            "value": "根據你的目的地"
+            "value": "根據你的目的地",
+            "state": "translated"
           }
         },
         "de": {
           "stringUnit": {
-            "type": "translation",
-            "value": "Basierend auf deinem Ziel"
+            "value": "Basierend auf deinem Ziel",
+            "state": "translated"
           }
         },
         "es": {
           "stringUnit": {
-            "type": "translation",
-            "value": "Según tu destino"
+            "value": "Según tu destino",
+            "state": "translated"
           }
         },
         "fr": {
           "stringUnit": {
-            "type": "translation",
-            "value": "Selon votre destination"
+            "value": "Selon votre destination",
+            "state": "translated"
           }
         },
         "ja": {
           "stringUnit": {
-            "type": "translation",
-            "value": "目的地に基づく提案"
+            "value": "目的地に基づく提案",
+            "state": "translated"
           }
         },
         "ko": {
           "stringUnit": {
-            "type": "translation",
-            "value": "목적지 기반 추천"
+            "value": "목적지 기반 추천",
+            "state": "translated"
           }
         },
         "pt-BR": {
           "stringUnit": {
-            "type": "translation",
-            "value": "Com base no seu destino"
+            "value": "Com base no seu destino",
+            "state": "translated"
           }
         }
       }
