@@ -1664,6 +1664,65 @@
         }
       }
     },
+    "A good notebook": {
+      "extractionState": "stale",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ein gutes Notizbuch"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "A good notebook"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Un buen cuaderno"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Un bon carnet"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "いいノート"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "좋은 노트"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Um bom caderno"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "一本好的笔记本"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "一本好的筆記本"
+          }
+        }
+      }
+    },
     "A hot cup of this does things for cramp and mood that no tablet quite matches — harder to find abroad than you'd think": {
       "extractionState": "manual",
       "localizations": {
@@ -3113,6 +3172,65 @@
         }
       }
     },
+    "Airline food timing rarely matches when you're actually hungry — keep something in your bag for the gap": {
+      "extractionState": "stale",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Die Mahlzeiten im Flugzeug passen selten mit dem echten Hunger zusammen — halte etwas in deiner Tasche für die Lücke"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Airline food timing rarely matches when you're actually hungry — keep something in your bag for the gap"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "La comida del avión rara vez coincide con cuando realmente tienes hambre — lleva algo en la mochila para ese hueco"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Les repas en avion ne coïncident jamais avec ta vraie faim — garde quelque chose dans ton sac pour le creux"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "機内食のタイミングは本当に空腹になる時間と合わない——その隙間のために、バッグに何か入れておいて"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "기내식 타이밍은 진짜 배고픈 시간과 맞지 않는다 — 그 공백을 위해 가방에 뭔가 챙겨두어라"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "A comida do avião raramente coincide com quando você realmente está com fome — guarde algo na bolsa para o intervalo"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "航班餐的时间总跟你真正饿的时候对不上——包里备一点，备的就是那段空档"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "航班餐的時間總跟你真正餓的時候對不上——包裡備一點，備的就是那段空檔"
+          }
+        }
+      }
+    },
     "All reminders added": {
       "localizations": {
         "de": {
@@ -3462,6 +3580,65 @@
           "stringUnit": {
             "state": "translated",
             "value": "抗過敏藥"
+          }
+        }
+      }
+    },
+    "Any surface becomes a workspace with a desk pad under your hands — a simple trick that makes rented rooms feel like yours": {
+      "extractionState": "stale",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Jede Oberfläche wird mit einer Schreibtischunterlage zum Arbeitsplatz — ein einfacher Trick, der Mieträume wie deinen eigenen wirken lässt"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Any surface becomes a workspace with a desk pad under your hands — a simple trick that makes rented rooms feel like yours"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cualquier superficie se convierte en espacio de trabajo con una alfombrilla — un truco simple que hace que las habitaciones de alquiler se sientan tuyas"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "N'importe quelle surface devient un espace de travail avec un sous-main — une astuce simple qui fait se sentir chez soi dans une chambre louée"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "デスクマットを敷けば、どんな表面もワークスペースに変わる——借りた部屋を自分のものにする小さなコツ"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "데스크 패드 하나로 어떤 표면이든 작업 공간이 된다 — 임시 공간을 내 공간처럼 느끼게 해주는 간단한 방법"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Qualquer superfície se torna um espaço de trabalho com um tapete de mesa — um truque simples que faz quartos alugados parecerem seus"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "桌垫铺上去，任何桌面都能变成工位——一个让租来的房间感觉是自己的小技巧"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "桌墊鋪上去，任何桌面都能變成工位——一個讓租來的房間感覺是自己的小技巧"
           }
         }
       }
@@ -4518,6 +4695,65 @@
           "stringUnit": {
             "state": "translated",
             "value": "吸油紙"
+          }
+        }
+      }
+    },
+    "Blue light glasses": {
+      "extractionState": "stale",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Blaulichtbrille"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Blue light glasses"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gafas de luz azul"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Lunettes anti-lumière bleue"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ブルーライトカットメガネ"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "블루라이트 차단 안경"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Óculos de luz azul"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "防蓝光眼镜"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "防藍光眼鏡"
           }
         }
       }
@@ -8888,6 +9124,65 @@
         }
       }
     },
+    "Disposable camera": {
+      "extractionState": "stale",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Einwegkamera"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Disposable camera"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cámara desechable"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Appareil jetable"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "使い捨てカメラ"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "일회용 카메라"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Câmera descartável"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "一次性相机"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "一次性相機"
+          }
+        }
+      }
+    },
     "Disposable face masks": {
       "extractionState": "stale",
       "localizations": {
@@ -10276,6 +10571,65 @@
           "stringUnit": {
             "state": "translated",
             "value": "編輯行程"
+          }
+        }
+      }
+    },
+    "Eight hours at a screen in a new place. A small defence against the slow headache that builds through the afternoon": {
+      "extractionState": "stale",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Acht Stunden am Bildschirm an einem neuen Ort. Ein kleiner Schutz gegen den Kopfschmerz, der sich nachmittags aufbaut"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Eight hours at a screen in a new place. A small defence against the slow headache that builds through the afternoon"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ocho horas frente a una pantalla en un lugar nuevo. Una pequeña defensa contra el dolor de cabeza que se acumula por la tarde"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Huit heures devant un écran dans un nouvel endroit. Une petite protection contre le mal de tête qui s'installe dans l'après-midi"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "新しい場所でスクリーンの前に8時間。午後になるにつれてじわじわと積み重なる頭痛への、小さな防御"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "낯선 곳에서 화면 앞에서 8시간. 오후가 될수록 서서히 쌓이는 두통에 대한 작은 방어"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Oito horas em uma tela num lugar novo. Uma pequena defesa contra a dor de cabeça que se acumula ao longo da tarde"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "在陌生的地方盯着屏幕八个小时。这个小小的防护，能让你少一点下午慢慢积累的头疼"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "在陌生的地方盯著螢幕八個小時。這個小小的防護，能讓你少一點下午慢慢積累的頭疼"
           }
         }
       }
@@ -12227,6 +12581,65 @@
           "stringUnit": {
             "state": "translated",
             "value": "應對不可避免的等待——餐廳、機場、長途汽車"
+          }
+        }
+      }
+    },
+    "For thinking that doesn't belong in a doc. Keep it on the desk, not buried in the bag": {
+      "extractionState": "stale",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Für Gedanken, die nicht in ein Dokument gehören. Lass es auf dem Tisch liegen, nicht in der Tasche"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "For thinking that doesn't belong in a doc. Keep it on the desk, not buried in the bag"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Para ideas que no caben en un documento. Mantenlo sobre la mesa, no enterrado en la mochila"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pour les pensées qui n'ont pas leur place dans un document. Garde-le sur le bureau, pas enfoui dans le sac"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ドキュメントに収まらない思考のために。バッグの奥じゃなく、デスクの上に置いておいて"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "문서에 담기지 않는 생각을 위해. 가방 속에 묻지 말고 책상 위에 두어라"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Para pensamentos que não cabem em um documento. Mantenha-o na mesa, não enterrado na bolsa"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "有些想法，放不进文档里。把它放在桌上，不要藏进包里"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "有些想法，放不進文件裡。把它放在桌上，不要藏進包裡"
           }
         }
       }
@@ -23428,6 +23841,64 @@
         }
       }
     },
+    "packing.scene_card.subtitle": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ein letzter Check, bevor du die Tür schließt."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "One last check before you close the door."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Una última revisión antes de cerrar la puerta."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Un dernier coup d'œil avant de fermer la porte."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ドアを閉める前に、もう一度だけ。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "문을 닫기 전에, 마지막으로 한 번 더."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Uma última verificação antes de fechar a porta."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "关上门前，再想一遍。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "關上門前，再想一遍。"
+          }
+        }
+      }
+    },
     "packing.share.all_packed": {
       "extractionState": "manual",
       "localizations": {
@@ -25002,6 +25473,65 @@
         }
       }
     },
+    "Portable desk pad": {
+      "extractionState": "stale",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tragbare Schreibtischunterlage"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Portable desk pad"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Alfombrilla de escritorio portátil"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sous-main portable"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ポータブルデスクマット"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "휴대용 데스크 패드"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tapete de mesa portátil"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "便携桌垫"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "便攜桌墊"
+          }
+        }
+      }
+    },
     "Portable electric kettle": {
       "extractionState": "manual",
       "localizations": {
@@ -25793,13 +26323,13 @@
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "防晒衣"
+            "value": "冲浪衣"
           }
         },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "防曬衣"
+            "value": "衝浪衣"
           }
         }
       }
@@ -40359,6 +40889,65 @@
         }
       }
     },
+    "Your phone will capture everything perfectly. Which is exactly why a disposable feels different — the grain, the not-knowing, the waiting": {
+      "extractionState": "stale",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dein Handy würde alles perfekt festhalten. Genau deshalb fühlt sich eine Einwegkamera anders an — das Korn, das Nichtwissen, das Warten"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Your phone will capture everything perfectly. Which is exactly why a disposable feels different — the grain, the not-knowing, the waiting"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tu teléfono capturará todo perfectamente. Por eso una desechable se siente diferente — el grano, la incertidumbre, la espera"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ton téléphone saisira tout parfaitement. C'est exactement pourquoi un jetable est différent — le grain, l'incertitude, l'attente"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "スマホなら完璧に撮れる。だからこそ使い捨てカメラは違う感覚がある——フィルムの粒子感、どんな風に撮れたかわからないこと、現像を待つ時間"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "스마트폰은 모든 걸 완벽하게 담아낼 것이다. 바로 그래서 일회용 카메라는 다르게 느껴진다 — 필름 입자, 모르는 채로 기다림, 그 기다림 자체"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Seu celular vai capturar tudo perfeitamente. É exatamente por isso que uma câmera descartável parece diferente — o grão, o não saber, a espera"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "你的手机能把一切都拍得完美。正因如此，一次性相机才感觉不同——那些颗粒感，那种不知道拍成什么样，那段等待"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "你的手機能把一切都拍得完美。正因如此，一次性相機才感覺不同——那些顆粒感，那種不知道拍成什麼樣，那段等待"
+          }
+        }
+      }
+    },
     "Ziplock bags": {
       "extractionState": "manual",
       "localizations": {
@@ -40789,582 +41378,61 @@
         }
       }
     },
-    "Disposable camera": {
+    "Coloured contacts": {
+      "extractionState": "stale",
       "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Disposable camera"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "一次性相机"
-          }
-        },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "一次性相機"
-          }
-        },
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Einwegkamera"
+            "value": "Farbige Kontaktlinsen"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Coloured contacts"
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Cámara desechable"
+            "value": "Lentes de contacto de colores"
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Appareil jetable"
+            "value": "Lentilles de contact colorées"
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "使い捨てカメラ"
+            "value": "カラーコンタクト"
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "일회용 카메라"
+            "value": "컬러 렌즈"
           }
         },
         "pt-BR": {
           "stringUnit": {
             "state": "translated",
-            "value": "Câmera descartável"
-          }
-        }
-      }
-    },
-    "Your phone will capture everything perfectly. Which is exactly why a disposable feels different — the grain, the not-knowing, the waiting": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Your phone will capture everything perfectly. Which is exactly why a disposable feels different — the grain, the not-knowing, the waiting"
+            "value": "Lentes de contato coloridas"
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "你的手机能把一切都拍得完美。正因如此，一次性相机才感觉不同——那些颗粒感，那种不知道拍成什么样，那段等待"
+            "value": "美瞳"
           }
         },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "你的手機能把一切都拍得完美。正因如此，一次性相機才感覺不同——那些顆粒感，那種不知道拍成什麼樣，那段等待"
-          }
-        },
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Dein Handy würde alles perfekt festhalten. Genau deshalb fühlt sich eine Einwegkamera anders an — das Korn, das Nichtwissen, das Warten"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Tu teléfono capturará todo perfectamente. Por eso una desechable se siente diferente — el grano, la incertidumbre, la espera"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Ton téléphone saisira tout parfaitement. C'est exactement pourquoi un jetable est différent — le grain, l'incertitude, l'attente"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "スマホなら完璧に撮れる。だからこそ使い捨てカメラは違う感覚がある——フィルムの粒子感、どんな風に撮れたかわからないこと、現像を待つ時間"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "스마트폰은 모든 걸 완벽하게 담아낼 것이다. 바로 그래서 일회용 카메라는 다르게 느껴진다 — 필름 입자, 모르는 채로 기다림, 그 기다림 자체"
-          }
-        },
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Seu celular vai capturar tudo perfeitamente. É exatamente por isso que uma câmera descartável parece diferente — o grão, o não saber, a espera"
-          }
-        }
-      }
-    },
-    "Blue light glasses": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Blue light glasses"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "防蓝光眼镜"
-          }
-        },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "防藍光眼鏡"
-          }
-        },
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Blaulichtbrille"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Gafas de luz azul"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Lunettes anti-lumière bleue"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "ブルーライトカットメガネ"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "블루라이트 차단 안경"
-          }
-        },
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Óculos de luz azul"
-          }
-        }
-      }
-    },
-    "Eight hours at a screen in a new place. A small defence against the slow headache that builds through the afternoon": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Eight hours at a screen in a new place. A small defence against the slow headache that builds through the afternoon"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "在陌生的地方盯着屏幕八个小时。这个小小的防护，能让你少一点下午慢慢积累的头疼"
-          }
-        },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "在陌生的地方盯著螢幕八個小時。這個小小的防護，能讓你少一點下午慢慢積累的頭疼"
-          }
-        },
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Acht Stunden am Bildschirm an einem neuen Ort. Ein kleiner Schutz gegen den Kopfschmerz, der sich nachmittags aufbaut"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Ocho horas frente a una pantalla en un lugar nuevo. Una pequeña defensa contra el dolor de cabeza que se acumula por la tarde"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Huit heures devant un écran dans un nouvel endroit. Une petite protection contre le mal de tête qui s'installe dans l'après-midi"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "新しい場所でスクリーンの前に8時間。午後になるにつれてじわじわと積み重なる頭痛への、小さな防御"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "낯선 곳에서 화면 앞에서 8시간. 오후가 될수록 서서히 쌓이는 두통에 대한 작은 방어"
-          }
-        },
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Oito horas em uma tela num lugar novo. Uma pequena defesa contra a dor de cabeça que se acumula ao longo da tarde"
-          }
-        }
-      }
-    },
-    "A good notebook": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "A good notebook"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "一本好的笔记本"
-          }
-        },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "一本好的筆記本"
-          }
-        },
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Ein gutes Notizbuch"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Un buen cuaderno"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Un bon carnet"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "いいノート"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "좋은 노트"
-          }
-        },
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Um bom caderno"
-          }
-        }
-      }
-    },
-    "For thinking that doesn't belong in a doc. Keep it on the desk, not buried in the bag": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "For thinking that doesn't belong in a doc. Keep it on the desk, not buried in the bag"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "有些想法，放不进文档里。把它放在桌上，不要藏进包里"
-          }
-        },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "有些想法，放不進文件裡。把它放在桌上，不要藏進包裡"
-          }
-        },
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Für Gedanken, die nicht in ein Dokument gehören. Lass es auf dem Tisch liegen, nicht in der Tasche"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Para ideas que no caben en un documento. Mantenlo sobre la mesa, no enterrado en la mochila"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Pour les pensées qui n'ont pas leur place dans un document. Garde-le sur le bureau, pas enfoui dans le sac"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "ドキュメントに収まらない思考のために。バッグの奥じゃなく、デスクの上に置いておいて"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "문서에 담기지 않는 생각을 위해. 가방 속에 묻지 말고 책상 위에 두어라"
-          }
-        },
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Para pensamentos que não cabem em um documento. Mantenha-o na mesa, não enterrado na bolsa"
-          }
-        }
-      }
-    },
-    "Portable desk pad": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Portable desk pad"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "便携桌垫"
-          }
-        },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "便攜桌墊"
-          }
-        },
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Tragbare Schreibtischunterlage"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Alfombrilla de escritorio portátil"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Sous-main portable"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "ポータブルデスクマット"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "휴대용 데스크 패드"
-          }
-        },
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Tapete de mesa portátil"
-          }
-        }
-      }
-    },
-    "Any surface becomes a workspace with a desk pad under your hands — a simple trick that makes rented rooms feel like yours": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Any surface becomes a workspace with a desk pad under your hands — a simple trick that makes rented rooms feel like yours"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "桌垫铺上去，任何桌面都能变成工位——一个让租来的房间感觉是自己的小技巧"
-          }
-        },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "桌墊鋪上去，任何桌面都能變成工位——一個讓租來的房間感覺是自己的小技巧"
-          }
-        },
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Jede Oberfläche wird mit einer Schreibtischunterlage zum Arbeitsplatz — ein einfacher Trick, der Mieträume wie deinen eigenen wirken lässt"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Cualquier superficie se convierte en espacio de trabajo con una alfombrilla — un truco simple que hace que las habitaciones de alquiler se sientan tuyas"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "N'importe quelle surface devient un espace de travail avec un sous-main — une astuce simple qui fait se sentir chez soi dans une chambre louée"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "デスクマットを敷けば、どんな表面もワークスペースに変わる——借りた部屋を自分のものにする小さなコツ"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "데스크 패드 하나로 어떤 표면이든 작업 공간이 된다 — 임시 공간을 내 공간처럼 느끼게 해주는 간단한 방법"
-          }
-        },
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Qualquer superfície se torna um espaço de trabalho com um tapete de mesa — um truque simples que faz quartos alugados parecerem seus"
-          }
-        }
-      }
-    },
-    "packing.scene_card.subtitle": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "One last check before you close the door."
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "关上门前，再想一遍。"
-          }
-        },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "關上門前，再想一遍。"
-          }
-        },
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Ein letzter Check, bevor du die Tür schließt."
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Una última revisión antes de cerrar la puerta."
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Un dernier coup d'œil avant de fermer la porte."
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "ドアを閉める前に、もう一度だけ。"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "문을 닫기 전에, 마지막으로 한 번 더."
-          }
-        },
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Uma última verificação antes de fechar a porta."
-          }
-        }
-      }
-    },
-    "Airline food timing rarely matches when you're actually hungry — keep something in your bag for the gap": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Airline food timing rarely matches when you're actually hungry — keep something in your bag for the gap"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "航班餐的时间总跟你真正饿的时候对不上——包里备一点，备的就是那段空档"
-          }
-        },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "航班餐的時間總跟你真正餓的時候對不上——包裡備一點，備的就是那段空檔"
-          }
-        },
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Die Mahlzeiten im Flugzeug passen selten mit dem echten Hunger zusammen — halte etwas in deiner Tasche für die Lücke"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "La comida del avión rara vez coincide con cuando realmente tienes hambre — lleva algo en la mochila para ese hueco"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Les repas en avion ne coïncident jamais avec ta vraie faim — garde quelque chose dans ton sac pour le creux"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "機内食のタイミングは本当に空腹になる時間と合わない——その隙間のために、バッグに何か入れておいて"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "기내식 타이밍은 진짜 배고픈 시간과 맞지 않는다 — 그 공백을 위해 가방에 뭔가 챙겨두어라"
-          }
-        },
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "A comida do avião raramente coincide com quando você realmente está com fome — guarde algo na bolsa para o intervalo"
+            "value": "美瞳"
           }
         }
       }

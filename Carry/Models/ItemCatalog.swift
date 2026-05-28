@@ -49,6 +49,7 @@ private let itemNameAliases: [String: String] = [
     "Pain relievers": "Painkillers",
     "Sanitary pads / tampons": "Feminine hygiene products",
     "Overseas SIM / portable WiFi": "Portable WiFi device",
+    "Colored contacts": "Coloured contacts",
 ]
 
 func canonicalItemName(_ name: String) -> String {
@@ -78,6 +79,7 @@ let itemPickerCatalog: [ItemPickerCategory] = [
         "Dress", "Skirt", "Hat", "Belt",
         "Formal wear", "Sweater", "Rain jacket", "Swimsuit", "Nipple covers",
         "Comfortable walking shoes", "Flip flops", "Sun-protective clothing",
+        "Scarf",
     ]),
     ItemPickerCategory(name: "Electronics", items: [
         "Phone charger", "Charging cable", "Portable charger", "Smart watch charger", "Travel adapter",
@@ -99,6 +101,7 @@ let itemPickerCatalog: [ItemPickerCategory] = [
     ]),
     ItemPickerCategory(name: "Travel Accessories", items: [
         "Card holder", "Wallet", "Cash",
+        "Crossbody bag",
         "Sunglasses", "Umbrella", "Water bottle",
         "Travel pillow", "Neck pillow", "Eye mask", "Earplugs",
         "Pen", "Packing cubes", "Laundry bag", "Travel towel", "Quick-dry towel",
@@ -112,7 +115,7 @@ let itemPickerCatalog: [ItemPickerCategory] = [
         "Setting powder",
         "Makeup brushes", "Makeup sponge",
         "Eyelash curler", "False eyelashes",
-        "Colored contacts",
+        "Coloured contacts",
     ]),
     ItemPickerCategory(name: "Jewellery", items: [
         "Earrings", "Necklace", "Ring", "Bracelet", "Watch", "Hair clip",
