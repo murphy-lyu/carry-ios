@@ -1611,59 +1611,6 @@
         }
       }
     },
-    "A few teabags weigh almost nothing and turn any hostel kettle into a proper ritual — one of the smallest luxuries worth packing": {
-      "extractionState": "manual",
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Ein paar Teebeutel wiegen fast nichts und machen aus jedem Jugendherbergenwasserkocher ein echtes Ritual — einer der kleinsten Luxusgüter, die es wert sind, eingepackt zu werden"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Unos pocos sobres de té no pesan casi nada y convierten cualquier hervidor de albergue en un ritual — uno de los lujos más pequeños que merece la pena llevar"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Quelques sachets de thé ne pèsent presque rien et transforment la bouilloire de n'importe quelle auberge en un vrai rituel — l'un des plus petits luxes qui vaut la peine d'être emporté"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "ティーバッグ数枚はほぼ無重量で、どんなホステルのケトルも本物の儀式に変えてくれる——荷物に入れる価値のある最小の贅沢のひとつ"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "티백 몇 개는 무게가 거의 없고 어떤 호스텔 주전자도 진짜 의식으로 만들어줘요 — 챙길 가치 있는 가장 작은 사치 중 하나예요"
-          }
-        },
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Alguns saquinhos de chá pesam quase nada e transformam qualquer chaleira de albergue em um ritual de verdade — um dos menores luxos que vale a pena embalar"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "几个茶包几乎没有分量，却能把任何青旅的烧水壶变成一段仪式——值得装进包里的最小奢侈之一"
-          }
-        },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "幾個茶包幾乎沒有分量，卻能把任何青旅的燒水壺變成一段儀式——值得裝進包裡的最小奢侈之一"
-          }
-        }
-      }
-    },
     "A full-face snorkel mask changes the experience entirely — clear vision, easy breathing, no learning curve": {
       "extractionState": "manual",
       "localizations": {
@@ -1837,65 +1784,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "熱熱喝一杯，對狀態和情緒都很友好，出境時也不一定好買"
-          }
-        }
-      }
-    },
-    "A long drive in a stale car is draining — a subtle scent changes the whole atmosphere": {
-      "extractionState": "manual",
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Eine lange Fahrt in einem muffigen Auto zehrt — ein dezenter Duft verändert die gesamte Atmosphäre"
-          }
-        },
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "A long drive in a stale car is draining — a subtle scent changes the whole atmosphere"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Un viaje largo en un coche con olor viciado agota — un aroma sutil cambia toda la atmósfera"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Un long trajet dans une voiture qui sent le renfermé est épuisant — un léger parfum change toute l'atmosphère"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "こもった車での長距離ドライブは疲れる — ほんのりした香りが車内の雰囲気を一変させる"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "탁한 차 안에서의 장거리 드라이브는 지칩니다 — 은은한 향기 하나가 분위기 전체를 바꿔줘요"
-          }
-        },
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Uma longa viagem num carro com cheiro ruim é desgastante — um aroma sutil muda toda a atmosfera"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "长途行车时，车内闷味会让人更疲惫，一点淡香能明显改善体感"
-          }
-        },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "長途行車時，車內悶味會讓人更疲憊，一點淡香能明顯改善體感"
           }
         }
       }
@@ -3196,65 +3084,6 @@
         }
       }
     },
-    "After-sun gel": {
-      "extractionState": "stale",
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "After-Sun-Gel"
-          }
-        },
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "After-sun gel"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Gel after sun"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Gel après-soleil"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "アフターサンジェル"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "선번 후 젤"
-          }
-        },
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Gel pós-sol"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "晒后修复啫喱"
-          }
-        },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "曬後修復啫喱"
-          }
-        }
-      }
-    },
     "After-sun lotion": {
       "extractionState": "stale",
       "localizations": {
@@ -3310,65 +3139,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "曬後修復乳"
-          }
-        }
-      }
-    },
-    "Airline food timing rarely matches when you're actually hungry — keep something in your bag for the gap": {
-      "extractionState": "stale",
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Die Mahlzeiten im Flugzeug passen selten mit dem echten Hunger zusammen — halte etwas in deiner Tasche für die Lücke"
-          }
-        },
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Airline food timing rarely matches when you're actually hungry — keep something in your bag for the gap"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "La comida del avión rara vez coincide con cuando realmente tienes hambre — lleva algo en la mochila para ese hueco"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Les repas en avion ne coïncident jamais avec ta vraie faim — garde quelque chose dans ton sac pour le creux"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "機内食のタイミングは本当に空腹になる時間と合わない——その隙間のために、バッグに何か入れておいて"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "기내식 타이밍은 진짜 배고픈 시간과 맞지 않는다 — 그 공백을 위해 가방에 뭔가 챙겨두어라"
-          }
-        },
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "A comida do avião raramente coincide com quando você realmente está com fome — guarde algo na bolsa para o intervalo"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "航班餐的时间总跟你真正饿的时候对不上——包里备一点，备的就是那段空档"
-          }
-        },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "航班餐的時間總跟你真正餓的時候對不上——包裡備一點，備的就是那段空檔"
           }
         }
       }
@@ -5732,65 +5502,6 @@
         }
       }
     },
-    "Car air freshener": {
-      "extractionState": "manual",
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Auto-Lufterfrischer"
-          }
-        },
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Car air freshener"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Ambientador de coche"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Désodorisant de voiture"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "車用芳香剤"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "차량용 방향제"
-          }
-        },
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Aromatizante de carro"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "车载香薰"
-          }
-        },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "車載香薰"
-          }
-        }
-      }
-    },
     "Car charger": {
       "extractionState": "manual",
       "localizations": {
@@ -6440,59 +6151,6 @@
         }
       }
     },
-    "Chewing one before landing helps with dry cabin mouth and makes you feel fresher on arrival": {
-      "extractionState": "manual",
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Eines vor der Landung kauen hilft gegen Mundtrockenheit in der Kabine und lässt einen frischer ankommen"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Masticar uno antes de aterrizar alivia la sequedad bucal en cabina y te hace sentir más fresco al llegar"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "En mâcher un avant l'atterrissage aide contre la bouche sèche en cabine et vous fait sentir plus frais à l'arrivée"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "着陸前に一粒噛むと機内の口の乾燥が和らぎ、到着時にすっきりした気分になれる"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "착륙 전에 하나 씹으면 건조한 기내 구강을 해소하고 도착 시 더 상쾌해져요"
-          }
-        },
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Mastigar um antes de pousar ajuda com a boca seca na cabine e faz você se sentir mais disposto na chegada"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "落地前嚼一片，缓解机舱口干，到达时更精神"
-          }
-        },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "落地前嚼一片，緩解機艙口乾，到達時更精神"
-          }
-        }
-      }
-    },
     "Children's medication": {
       "extractionState": "manual",
       "localizations": {
@@ -6959,65 +6617,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "感冒藥"
-          }
-        }
-      }
-    },
-    "Collapsible insulated bag": {
-      "extractionState": "manual",
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Faltbare Kühltasche"
-          }
-        },
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Collapsible insulated bag"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Bolsa isotérmica plegable"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Sac isotherme pliable"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "折りたたみ保冷バッグ"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "접이식 보온 가방"
-          }
-        },
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Bolsa térmica dobrável"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "折叠保温袋"
-          }
-        },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "折疊保溫袋"
           }
         }
       }
@@ -11001,65 +10600,6 @@
         }
       }
     },
-    "Essential for hostel dorm access in the dark without waking eight strangers": {
-      "extractionState": "manual",
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Unverzichtbar für den Zugang zum Hostel-Schlafsaal im Dunkeln, ohne acht Fremde zu wecken"
-          }
-        },
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Essential for hostel dorm access in the dark without waking eight strangers"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Imprescindible para acceder al dormitorio del albergue en la oscuridad sin despertar a ocho desconocidos"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Indispensable pour accéder au dortoir de l'auberge de jeunesse dans le noir sans réveiller huit inconnus"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "ホステルの相部屋で暗闇の中8人の見知らぬ人を起こさずに動くために不可欠"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "어둠 속에서 여덟 명의 낯선 사람을 깨우지 않고 호스텔 기숙사에 접근하기 위해 필수적입니다"
-          }
-        },
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Essencial para acessar o dormitório do hostel no escuro sem acordar oito desconhecidos"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "青旅夜间进出时非常实用，不打扰别人也更安全"
-          }
-        },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "在不吵醒八個陌生人的情況下夜間進入青旅宿舍的必備品"
-          }
-        }
-      }
-    },
     "Essential oil roller": {
       "extractionState": "stale",
       "localizations": {
@@ -12848,65 +12388,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "無需出門的夜晚——合適的香氣能以別的東西難以匹敵的方式，改變整個房間的氛圍"
-          }
-        }
-      }
-    },
-    "For market hauls, picnic supplies, or keeping café pastries intact — packs flat when not in use": {
-      "extractionState": "manual",
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Für Markteinkäufe, Picknickbedarf oder um Café-Gebäck heil zu halten — flach zusammenfaltbar wenn nicht in Gebrauch"
-          }
-        },
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "For market hauls, picnic supplies, or keeping café pastries intact — packs flat when not in use"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Para compras en el mercado, provisiones de picnic o para llevar intactas las pastas de la cafetería — se pliega plano cuando no se usa"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Pour les emplettes au marché, les provisions de pique-nique ou garder les viennoiseries du café intactes — se plie à plat quand il n'est pas utilisé"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "市場での買い物、ピクニックの荷物、カフェのパンを潰さずに持ち運ぶのに最適 — 使わないときは平らに収納"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "시장 쇼핑, 피크닉 물품, 카페 빵을 온전히 옮기는 데 완벽합니다 — 쓰지 않을 때는 납작하게 접혀요"
-          }
-        },
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Para compras no mercado, suprimentos de piquenique ou preservar doces da cafeteria — dobra plano quando não está em uso"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "买伴手礼、带野餐食物都很方便，不用时也不占空间"
-          }
-        },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "買伴手禮、帶野餐食物都很方便，不用時也不佔空間"
           }
         }
       }
@@ -20581,65 +20062,6 @@
         }
       }
     },
-    "Mint gum": {
-      "extractionState": "manual",
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Pfefferminzkaugummi"
-          }
-        },
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Mint gum"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Chicle de menta"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Chewing-gum à la menthe"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "ミントガム"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "민트 껌"
-          }
-        },
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Chiclete de menta"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "薄荷口香糖"
-          }
-        },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "薄荷口香糖"
-          }
-        }
-      }
-    },
     "Mock": {
       "localizations": {
         "de": {
@@ -26170,65 +25592,6 @@
         }
       }
     },
-    "Pocket tissues": {
-      "extractionState": "manual",
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Taschentücher"
-          }
-        },
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Pocket tissues"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Pañuelos de bolsillo"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Mouchoirs"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "ポケットティッシュ"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "포켓 휴지"
-          }
-        },
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Lenços de bolso"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "便携纸巾"
-          }
-        },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "便攜紙巾"
-          }
-        }
-      }
-    },
     "Portable Bluetooth speaker": {
       "extractionState": "manual",
       "localizations": {
@@ -26933,59 +26296,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "益生菌"
-          }
-        }
-      }
-    },
-    "Public restrooms and small shops do not always have tissues — this tiny backup saves the moment more often than you think": {
-      "extractionState": "manual",
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Öffentliche Toiletten und kleine Läden haben nicht immer Taschentücher — dieses kleine Backup hilft öfter als man denkt"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Los baños públicos y las tiendas pequeñas no siempre tienen pañuelos — este pequeño recurso salva el momento más a menudo de lo que crees"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Les toilettes publiques et les petits commerces n'ont pas toujours de mouchoirs — ce petit filet de sécurité rend service plus souvent qu'on ne le croit"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "公衆トイレや小さな店には常にティッシュがあるとは限らない——この小さな予備は、思う以上によく役に立つ"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "공중화장실과 작은 가게에는 항상 화장지가 있지 않아요 — 이 작은 비상용이 생각보다 훨씬 자주 필요해요"
-          }
-        },
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Banheiros públicos e pequenas lojas nem sempre têm lenços — esse pequeno backup salva o momento com mais frequência do que você imagina"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "公厕和小店不一定有纸巾——这个小备品出手的次数，比你以为的多"
-          }
-        },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "公廁和小店不一定有紙巾——這個小備品出手的次數，比你以為的多"
           }
         }
       }
@@ -34809,124 +34119,6 @@
         }
       }
     },
-    "Silk sleep mask": {
-      "extractionState": "stale",
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Seiden-Schlafmaske"
-          }
-        },
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Silk sleep mask"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Antifaz de seda"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Masque de sommeil en soie"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "シルクアイマスク"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "실크 수면 안대"
-          }
-        },
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Máscara de dormir de seda"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "丝质睡眠眼罩"
-          }
-        },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "絲質睡眠眼罩"
-          }
-        }
-      }
-    },
-    "Skin that's had a good day in the sun deserves this in the evening — the difference between waking up glowing and waking up sore": {
-      "extractionState": "stale",
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Haut, die einen schönen Tag in der Sonne hatte, verdient das abends — der Unterschied zwischen strahlend und schmerzhaft aufwachen"
-          }
-        },
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Skin that's had a good day in the sun deserves this in the evening — the difference between waking up glowing and waking up sore"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "La piel que ha tenido un buen día al sol merece esto por la noche — la diferencia entre despertar radiante y despertar adolorida"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "La peau qui a passé une belle journée au soleil mérite ça le soir — la différence entre se réveiller lumineuse et se réveiller douloureuse"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "日光を浴びた肌は夜にこれを使う価値があります。輝いて目覚めるか、痛みで目覚めるかの違いはここにあります"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "햇볕 아래서 좋은 하루를 보낸 피부는 저녁에 이것을 받을 자격이 있습니다. 빛나게 일어나는 것과 따갑게 일어나는 것의 차이입니다"
-          }
-        },
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "A pele que passou um bom dia ao sol merece isso à noite — a diferença entre acordar radiante e acordar dolorida"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "在阳光下度过美好一天的皮肤，值得在晚上被这样对待——醒来焕发光彩和醒来红痛刺痛，就差这一步"
-          }
-        },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "在陽光下度過美好一天的皮膚，值得在晚上被這樣對待——醒來煥發光彩和醒來紅痛刺痛，就差這一步"
-          }
-        }
-      }
-    },
     "Skirt": {
       "extractionState": "stale",
       "localizations": {
@@ -35513,65 +34705,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "襪子"
-          }
-        }
-      }
-    },
-    "Softer and cooler than a regular eye mask — a small upgrade that makes the nights feel like they belong to the trip": {
-      "extractionState": "stale",
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Weicher und kühler als eine normale Schlafmaske — ein kleines Upgrade, das die Nächte wie zum Reisegefühl gehörig erscheinen lässt"
-          }
-        },
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Softer and cooler than a regular eye mask — a small upgrade that makes the nights feel like they belong to the trip"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Más suave y fresca que un antifaz normal — una pequeña mejora que hace que las noches parezcan pertenecer al viaje"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Plus douce et plus fraîche qu'un masque ordinaire — une petite amélioration qui donne aux nuits le sentiment d'appartenir vraiment au voyage"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "普通のアイマスクより柔らかくて涼しい。小さなグレードアップが、旅の夜を本当にその旅に属する時間にしてくれます"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "일반 안대보다 부드럽고 시원한 — 작은 업그레이드가 모든 밤을 여행에 온전히 속한 시간처럼 만들어줍니다"
-          }
-        },
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Mais macio e fresco que uma máscara comum — uma pequena melhoria que faz as noites parecerem pertencer à viagem"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "比普通眼罩更柔软也更凉爽——一个小小的升级，让每一个夜晚都有种真正属于这段旅程的感觉"
-          }
-        },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "比普通眼罩更柔軟也更涼爽——一個小小的升級，讓每一個夜晚都有種真正屬於這段旅程的感覺"
           }
         }
       }
@@ -42457,6 +41590,526 @@
           "stringUnit": {
             "type": "translation",
             "value": "Com base no seu destino"
+          }
+        }
+      }
+    },
+    "Saline nasal spray": {
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "生理盐水鼻腔喷雾"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "生理食鹽水鼻腔噴霧"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nasenspüllösung"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Spray nasal salino"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Spray nasal salin"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "生理食塩水点鼻スプレー"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "식염수 코 스프레이"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Spray nasal salino"
+          }
+        }
+      }
+    },
+    "Sarong / pareo": {
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "纱笼 / 沙滩巾"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "沙龍 / 海灘巾"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sarong / Pareo"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pareo / sarong"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sarong / paréo"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "サロン / パレオ"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "사롱 / 파레오"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sarong / pareo"
+          }
+        }
+      }
+    },
+    "Portable white noise machine": {
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "便携式白噪音机"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "攜帶式白噪音機"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tragbares Weißrauschgerät"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Máquina de ruido blanco portátil"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Machine à bruit blanc portable"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ポータブルホワイトノイズマシン"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "휴대용 화이트 노이즈 머신"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Máquina de ruído branco portátil"
+          }
+        }
+      }
+    },
+    "Thermos": {
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "保温壶"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "保溫壺"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Thermoskanne"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Termo"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Thermos"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "魔法瓶"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "보온병"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Garrafa térmica"
+          }
+        }
+      }
+    },
+    "Cabin air is drier than most deserts — your nose bears the brunt silently. A few sprays keep things comfortable and meaningfully reduce that heavy-headed feeling after landing": {
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "机舱空气比大多数沙漠还干燥——鼻腔是最先感受到的地方，只是通常悄无声息。几次喷雾能让整个飞行舒适很多，也能明显减轻落地后那种沉重感"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "機艙空氣比大多數沙漠還乾燥——鼻腔是最先感受到的地方，只是通常悄無聲息。幾次噴霧能讓整趟飛行舒適很多，也能明顯減輕落地後那種沉重感"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Die Kabinenluft ist trockener als die meisten Wüsten — die Nase leidet still darunter. Ein paar Sprühstöße halten alles angenehm feucht und können das dumpfe Gefühl nach der Landung spürbar mindern"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "El aire de cabina es más seco que la mayoría de los desiertos — la nariz lo sufre en silencio. Unos pocos sprays mantienen la comodidad y reducen notablemente esa sensación de pesadez al llegar"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "L'air de cabine est plus sec que la plupart des déserts — votre nez en pâtit sans que vous vous en rendiez compte. Quelques sprays suffisent à rester à l'aise et à réduire sensiblement la lourdeur ressentie à l'atterrissage"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "機内の空気はほとんどの砂漠より乾燥しています――鼻が静かに影響を受けています。数回スプレーするだけで快適さが保たれ、着陸後の頭の重さが明らかに和らぎます"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "기내 공기는 대부분의 사막보다 건조합니다 — 코가 조용히 그 영향을 받습니다. 몇 번 뿌리는 것만으로도 편안함을 유지하고 착륙 후 머리가 무거운 느낌을 크게 줄일 수 있습니다"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "O ar da cabine é mais seco que a maioria dos desertos — seu nariz sente os efeitos em silêncio. Alguns sprays mantêm tudo confortável e reduzem notavelmente aquela sensação de peso após o desembarque"
+          }
+        }
+      }
+    },
+    "One lightweight cloth that works as a beach cover-up, a towel, a picnic blanket, a makeshift shade, or a bag — it never takes up meaningful space and gets used every single day": {
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "一块轻薄的布，可以当沙滩裙、毛巾、野餐垫、临时遮阳布，也可以当袋子——几乎不占空间，却几乎每天都会用到"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "一塊輕薄的布，可以當沙灘裙、毛巾、野餐墊、臨時遮陽布，也可以當袋子——幾乎不占空間，卻幾乎每天都會用到"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ein leichtes Tuch, das als Strandkleid, Handtuch, Picknickdecke, improvisierten Sonnenschutz oder Tasche dient — nimmt kaum Platz ein und wird täglich benutzt"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Una tela ligera que funciona como cubreplaya, toalla, manta de picnic, improvisada sombra o bolsa — no ocupa casi nada y se usa todos los días"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Un simple tissu léger qui sert de paréo, serviette, nappe de pique-nique, pare-soleil ou sac — il ne prend presque pas de place et s'utilise chaque jour"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ビーチカバーアップ、タオル、ピクニックシート、日よけ、バッグとして使える一枚の軽い布——ほとんどスペースを取らず、毎日使えます"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "비치 커버업, 수건, 피크닉 담요, 임시 그늘막, 가방으로 쓸 수 있는 가벼운 천 한 장 — 공간을 거의 차지하지 않으면서 매일 활용됩니다"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Um tecido leve que serve como cobertura de praia, toalha, manta de piquenique, sombra improvisada ou sacola — quase não ocupa espaço e é usado todos os dias"
+          }
+        }
+      }
+    },
+    "Most cruise cabins have one or two outlets for an entire room. A compact power strip solves this immediately and quietly — most people only realise they need one after the first night": {
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "大多数邮轮客舱整个房间只有一两个插座。一个小型排插立刻解决这个问题，而且悄无声息——大多数人只有在第一晚之后才意识到自己需要它"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "大多數郵輪客艙整個房間只有一兩個插座。一個小型排插立刻解決這個問題，而且悄無聲息——大多數人只有在第一晚之後才意識到自己需要它"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Die meisten Kreuzfahrtkabinen haben für das ganze Zimmer nur eine oder zwei Steckdosen. Eine kompakte Steckdosenleiste löst das sofort und geräuschlos — die meisten merken erst nach der ersten Nacht, dass sie eine brauchen"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "La mayoría de los camarotes de crucero tienen una o dos tomas de corriente para toda la habitación. Una regleta compacta lo resuelve de inmediato — la mayoría solo se da cuenta de que la necesita después de la primera noche"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "La plupart des cabines de croisière n'ont qu'une ou deux prises pour toute la pièce. Une multiprise compacte règle ça immédiatement — la plupart des gens s'en rendent compte seulement après la première nuit"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "クルーズ船のキャビンは、部屋全体でコンセントが1〜2個しかないことがほとんどです。コンパクトな電源タップがすぐに解決してくれます——ほとんどの人は最初の夜が過ぎてから必要性に気づきます"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "대부분의 크루즈 선실에는 방 전체에 콘센트가 한두 개뿐입니다. 소형 멀티탭이 즉시 이 문제를 해결합니다 — 대부분의 사람들은 첫날 밤이 지나서야 필요하다는 것을 깨닫습니다"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "A maioria dos camarotes de cruzeiro tem uma ou duas tomadas para o quarto inteiro. Uma régua de tomadas compacta resolve isso imediatamente — a maioria só percebe que precisa depois da primeira noite"
+          }
+        }
+      }
+    },
+    "Dorm rooms are never as quiet as the listing suggests — a pair of earplugs is the difference between sleeping through and lying awake until 7am listening to someone else's alarm": {
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "宿舍间从来不像简介里描述的那么安静——一副耳塞，就是睡到自然醒和躺到早上七点听别人闹钟的区别"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "宿舍間從來不像介紹裡描述的那樣安靜——一副耳塞，就是睡到自然醒和躺到早上七點聽別人鬧鐘的差別"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Schlafsäle sind nie so ruhig wie in der Beschreibung versprochen — ein Paar Ohrstöpsel entscheidet darüber, ob man durchschläft oder bis 7 Uhr morgens wach liegt und den Wecker eines Fremden hört"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Los dormitorios compartidos nunca son tan silenciosos como indica el anuncio — unos tapones para los oídos marcan la diferencia entre dormir toda la noche y quedarse despierto hasta las 7 de la mañana escuchando la alarma de otro"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Les dortoirs ne sont jamais aussi calmes que la description le laisse entendre — une paire de bouchons d'oreilles fait toute la différence entre dormir d'une traite et rester éveillé jusqu'à 7h du matin en écoutant le réveil de quelqu'un d'autre"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ドミトリーは説明文ほど静かではありません——耳栓一つで、朝まで眠れるか、他人のアラームを聞きながら7時まで横になっているかが決まります"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "도미토리는 설명에 나와 있는 것만큼 조용하지 않습니다 — 귀마개 한 쌍이 숙면과 오전 7시까지 다른 사람의 알람 소리를 들으며 누워 있는 것의 차이를 만들어냅니다"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Os quartos compartilhados nunca são tão silenciosos quanto o anúncio sugere — um par de protetores auriculares é a diferença entre dormir a noite toda e ficar acordado até as 7h ouvindo o alarme de outra pessoa"
+          }
+        }
+      }
+    },
+    "New rooms sound different at night — unfamiliar air conditioning, thinner walls, street noise. A loop of familiar white noise gives a child something constant to fall asleep to, wherever the room is": {
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "陌生的房间在夜里听起来就是不一样——不熟悉的空调声、更薄的墙壁、窗外的街道噪音。一段熟悉的白噪音循环，给孩子一个不管在哪里都能依赖的入睡信号"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "陌生的房間在夜裡聽起來就是不一樣——不熟悉的冷氣聲、更薄的牆壁、窗外的街道噪音。一段熟悉的白噪音循環，給孩子一個不管在哪裡都能依賴的入睡信號"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Neue Zimmer klingen nachts anders — unbekannte Klimaanlage, dünnere Wände, Straßenlärm. Eine vertraute Schleife weißen Rauschens gibt einem Kind etwas Konstantes, das es überall einschlafen lässt"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Las habitaciones nuevas suenan diferente por la noche — aire acondicionado desconocido, paredes más delgadas, ruido de la calle. Un bucle de ruido blanco familiar da al niño algo constante para quedarse dormido, sea donde sea"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Les chambres inconnues sonnent différemment la nuit — climatisation étrange, murs plus fins, bruit de la rue. Une boucle de bruit blanc familier donne à l'enfant quelque chose de constant pour s'endormir, où qu'il soit"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "新しい部屋は夜に違って聞こえます——慣れないエアコンの音、薄い壁、外の街の騒音。聞き慣れたホワイトノイズのループが、どこにいても子どもが眠りにつくための安定したよりどころになります"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "새로운 방은 밤에 다르게 들립니다 — 낯선 에어컨 소리, 더 얇은 벽, 거리의 소음. 익숙한 화이트 노이즈 루프는 아이가 어디에 있든 잠들 수 있는 일정한 소리를 제공합니다"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Quartos novos soam diferente à noite — ar-condicionado desconhecido, paredes mais finas, barulho da rua. Um loop de ruído branco familiar dá à criança algo constante para adormecer, em qualquer lugar"
+          }
+        }
+      }
+    },
+    "At altitude, water boils below 90°C and cools in minutes. A thermos keeps hot drinks hot for the whole day out — and at high elevation, drinking something warm regularly genuinely helps": {
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "在高海拔地区，水在不到90°C时就开了，而且几分钟就凉透。保温壶能让热饮在整个出行过程中保持温度——在高原上，定时喝点热的确实有实际的帮助"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "在高海拔地區，水不到90°C就沸騰了，而且幾分鐘就涼透。保溫壺能讓熱飲在整個出行過程中保持溫度——在高原上，定時喝點熱的確實有實際的幫助"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "In der Höhe kocht Wasser unter 90°C und kühlt in Minuten ab. Eine Thermoskanne hält heiße Getränke den ganzen Tag warm — und in großer Höhe hilft regelmäßiges Trinken von etwas Warmem wirklich"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "En altitud, el agua hierve por debajo de 90°C y se enfría en minutos. Un termo mantiene las bebidas calientes todo el día — y a gran altitud, beber algo caliente con regularidad realmente ayuda"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "En altitude, l'eau bout en dessous de 90°C et refroidit en quelques minutes. Un thermos garde les boissons chaudes toute la journée — et en haute altitude, boire quelque chose de chaud régulièrement aide vraiment"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "高地では水が90°C以下で沸騰し、数分で冷めてしまいます。魔法瓶があれば温かい飲み物を一日中保温できます——高標高では定期的に温かいものを飲むことが本当に助けになります"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "고도에서는 물이 90°C 이하에서 끓고 몇 분 만에 식습니다. 보온병은 하루 종일 따뜻한 음료를 유지해줍니다 — 고도가 높은 곳에서는 따뜻한 것을 규칙적으로 마시는 것이 실질적으로 도움이 됩니다"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Na altitude, a água ferve abaixo de 90°C e esfria em minutos. Uma garrafa térmica mantém as bebidas quentes durante o dia todo — e em grandes altitudes, beber algo quente regularmente realmente ajuda"
           }
         }
       }
