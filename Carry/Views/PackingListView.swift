@@ -36,6 +36,7 @@ struct PackingListView: View {
     @State private var shimmerPhase: CGFloat = -1
 
     @State private var showReminderSheet = false
+    @State private var showSuggestSheet = false
 
     @State private var draggingItemId: UUID? = nil
     @State private var dragStartIds: [UUID] = []
@@ -240,6 +241,14 @@ struct PackingListView: View {
             ScenePickerView(editingTripId: tripId)
                 .presentationDragIndicator(.visible)
         }
+        .sheet(isPresented: $showSuggestSheet) {
+            ScenePickerView(suggestForTripId: tripId)
+                .presentationDragIndicator(.visible)
+        }
+        .onChange(of: showSuggestSheet) { _, isShowing in
+            guard !isShowing, isNewTrip else { return }
+            loadSurpriseItems()
+        }
         .sheet(isPresented: $showReorderSheet) {
             NavigationStack {
                 ReorderSectionsView(tripId: tripId) { newOrder in
@@ -339,7 +348,7 @@ struct PackingListView: View {
                 .listSectionSeparator(.hidden)
             }
 
-            if isNewTrip && !surpriseItems.isEmpty {
+            if isNewTrip && hasScenes && !surpriseItems.isEmpty {
                 Section {
                     ForEach(surpriseItems) { item in
                         surpriseItemRow(item)
@@ -350,6 +359,16 @@ struct PackingListView: View {
                 } header: {
                     surpriseSectionHeader
                         .listRowInsets(EdgeInsets())
+                }
+                .listSectionSeparator(.hidden)
+            }
+
+            if isNewTrip && !hasScenes {
+                Section {
+                    scenePromptCard
+                        .listRowInsets(EdgeInsets(top: 4, leading: 16, bottom: 16, trailing: 16))
+                        .listRowSeparator(.hidden)
+                        .listRowBackground(Color.clear)
                 }
                 .listSectionSeparator(.hidden)
             }
@@ -757,6 +776,45 @@ struct PackingListView: View {
             return NSLocalizedString("packing.complete.short", comment: "")
         }
         return String(format: NSLocalizedString("%lld left", comment: ""), Int64(totalCount - packedCount))
+    }
+
+    private var scenePromptCard: some View {
+        Button {
+            showSuggestSheet = true
+        } label: {
+            HStack(spacing: 12) {
+                Image(systemName: "sparkles")
+                    .font(.system(size: 16, weight: .semibold))
+                    .foregroundStyle(colorScheme == .dark ? Color.secondary.opacity(0.7) : Color.secondary)
+                    .frame(width: 24)
+                VStack(alignment: .leading, spacing: 3) {
+                    Text("Add recommended items")
+                        .font(.subheadline.weight(.medium))
+                        .foregroundStyle(.primary)
+                    Text("packing.scene_card.subtitle")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+                Spacer()
+                Image(systemName: "chevron.right")
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(colorScheme == .dark ? Color.secondary.opacity(0.5) : Color.secondary.opacity(0.45))
+            }
+            .padding(.horizontal, 14)
+            .padding(.vertical, 14)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .background(
+            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                .fill(colorScheme == .dark
+                    ? Color(UIColor.secondarySystemBackground).opacity(0.6)
+                    : Color(UIColor.systemBackground).opacity(0.9))
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                .strokeBorder(Color.primary.opacity(colorScheme == .dark ? 0.07 : 0.06), lineWidth: 1)
+        )
     }
 
     private var surpriseSectionHeader: some View {
