@@ -36,7 +36,6 @@ struct PackingListView: View {
     @State private var hasTriggeredCompletion = false
     @State private var shimmerPhase: CGFloat = -1
 
-    @State private var surpriseBatchOffset: Int = 0
     @State private var showReminderSheet = false
 
     @State private var draggingItemId: UUID? = nil
@@ -45,12 +44,6 @@ struct PackingListView: View {
     @State private var currentDragIndex: Int = 0
     @State private var toastVisible = false
     @State private var toastText = ""
-
-    private let surpriseBatchSize = 3
-
-    // Cached — recomputed only when store.trips or store.myItems changes,
-    // not on every body re-evaluation (inline edit keystrokes, toggle taps, etc.)
-    @State private var cachedSurpriseItems: [SurpriseItem] = []
 
     private var bundle: TripBundle? { store.bundle(for: tripId) }
     private var sections: [PackingSection] {
@@ -69,34 +62,6 @@ struct PackingListView: View {
         totalCount > 0 && packedCount == totalCount
     }
 
-    private var surpriseItems: [SurpriseItem] { cachedSurpriseItems }
-
-    private func rebuildSurpriseItems() {
-        guard let bundle else { cachedSurpriseItems = []; return }
-        let existingNames = Set(
-            bundle.safeSections.flatMap { $0.items ?? [] }.map { canonicalItemName($0.name).lowercased() }
-        )
-        let myItemNames = Set(
-            store.myItems.map { canonicalItemName($0.name).lowercased() }
-        )
-        let dismissed = Set(bundle.dismissedSurpriseNames.map { $0.lowercased() })
-        let rankingMode: SurpriseRankingMode = hasScenes ? .sceneFirst : .manualFirst
-        cachedSurpriseItems = computeSurpriseItems(
-            for: bundle.selectedSceneKeys,
-            existingNames: existingNames.union(myItemNames),
-            rankingMode: rankingMode
-        )
-            .filter { !dismissed.contains($0.name.lowercased()) }
-    }
-
-    private var visibleSurpriseItems: [SurpriseItem] {
-        guard !cachedSurpriseItems.isEmpty else { return [] }
-        let total = cachedSurpriseItems.count
-        guard total > surpriseBatchSize else { return cachedSurpriseItems }
-        return (0..<surpriseBatchSize).map { i in cachedSurpriseItems[(surpriseBatchOffset + i) % total] }
-    }
-
-    private var canShuffle: Bool { cachedSurpriseItems.count > surpriseBatchSize }
 
     var body: some View {
         ZStack {
@@ -236,7 +201,6 @@ struct PackingListView: View {
             }
         }
         .onAppear {
-            rebuildSurpriseItems()
             CarryLogger.shared.log(.tripOpened)
             // Remember this trip so "Continue Packing" shortcut can reopen it.
             UserDefaults.standard.set(tripId.uuidString, forKey: "carry_last_opened_trip")
@@ -272,9 +236,6 @@ struct PackingListView: View {
             if newValue == nil, let id = editingItemId, !isAdvancingEdit {
                 commitEdit(itemId: id)
             }
-        }
-        .onChange(of: store.trips) { _, _ in
-            rebuildSurpriseItems()
         }
         .onDisappear {
             store.refresh()
@@ -406,20 +367,7 @@ struct PackingListView: View {
                 .listSectionSeparator(.hidden)
             }
 
-            if !visibleSurpriseItems.isEmpty {
-                Section {
-                    ForEach(visibleSurpriseItems) { item in
-                        surpriseRow(for: item)
-                            .listRowInsets(EdgeInsets(top: 0, leading: 16, bottom: 0, trailing: 16))
-                            .listRowSeparator(.hidden)
-                            .listRowBackground(Color.clear)
-                    }
-                } header: {
-                    surpriseSectionHeader
-                        .listRowInsets(EdgeInsets())
-                }
-                .listSectionSeparator(.hidden)
-            }
+
         }
         .listStyle(.plain)
         .scrollContentBackground(.hidden)
@@ -852,88 +800,6 @@ struct PackingListView: View {
             }
             .buttonStyle(.plain)
             .padding(.trailing, 6)
-        }
-    }
-
-    private var surpriseSectionHeader: some View {
-        HStack(spacing: 6) {
-            Image(systemName: "sparkles")
-                .font(.system(size: 10, weight: .semibold))
-                .foregroundStyle(.secondary)
-            Text("Worth considering")
-                .font(.caption.bold())
-                .foregroundStyle(colorScheme == .dark ? Color(.systemGray2) : Color(.systemGray))
-                .kerning(1.5)
-                .textCase(.uppercase)
-            Spacer()
-            if canShuffle {
-                Button {
-                    var t = Transaction()
-                    t.disablesAnimations = true
-                    withTransaction(t) {
-                        surpriseBatchOffset = (surpriseBatchOffset + surpriseBatchSize) % surpriseItems.count
-                    }
-                    UIImpactFeedbackGenerator(style: .light).impactOccurred()
-                } label: {
-                    Text("surprise.shuffle")
-                        .font(.caption.weight(.medium))
-                        .foregroundStyle(.secondary)
-                }
-                .buttonStyle(.plain)
-            }
-        }
-        .padding(.horizontal, 16)
-        .padding(.top, 16)
-        .padding(.bottom, 8)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .overlay(alignment: .bottom) {
-            Rectangle()
-                .fill(colorScheme == .dark ? Color.white.opacity(0.03) : Color.primary.opacity(0.03))
-                .frame(height: 1)
-        }
-        .background(
-            Rectangle()
-                .fill(Color(UIColor.systemBackground))
-        )
-        .zIndex(1)
-    }
-
-    private func surpriseRow(for item: SurpriseItem) -> some View {
-        HStack(alignment: .top, spacing: 12) {
-            VStack(alignment: .leading, spacing: 3) {
-                Text(LocalizedStringKey(item.name))
-                    .font(.subheadline)
-                    .foregroundStyle(.primary)
-                Text(LocalizedStringKey(item.note))
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                    .fixedSize(horizontal: false, vertical: true)
-            }
-            Spacer(minLength: 8)
-            Button {
-                store.addSurpriseItem(tripId: tripId, item: item)
-                CarryLogger.shared.log(.surpriseItemAdded, context: "item=\(item.name)")
-                UIImpactFeedbackGenerator(style: .light).impactOccurred()
-            } label: {
-                Text("Add")
-                    .font(.caption.weight(.semibold))
-                    .foregroundStyle(.primary)
-                    .padding(.horizontal, 12)
-                    .padding(.vertical, 6)
-                    .background(Color(UIColor.secondarySystemFill))
-                    .clipShape(Capsule())
-            }
-            .buttonStyle(.plain)
-        }
-        .padding(.vertical, 10)
-        .swipeActions(edge: .trailing, allowsFullSwipe: true) {
-            Button {
-                store.dismissSurpriseItem(tripId: tripId, itemName: item.name)
-                CarryLogger.shared.log(.surpriseItemDismissed, context: "item=\(item.name)")
-            } label: {
-                Label("Dismiss", systemImage: "xmark")
-            }
-            .tint(Color(UIColor.systemGray3))
         }
     }
 
