@@ -48,6 +48,7 @@ struct PackingListView: View {
     @State private var surpriseItems: [SurpriseItem] = []
     @State private var surpriseItemPool: [SurpriseItem] = []
     @State private var selectedSurpriseNames: Set<String> = []
+    @State private var shownSurpriseNames: Set<String> = []
 
     private var bundle: TripBundle? { store.bundle(for: tripId) }
     private var sections: [PackingSection] {
@@ -505,13 +506,16 @@ struct PackingListView: View {
         surpriseItemPool = pool
         surpriseItems = Array(pool.prefix(3))
         selectedSurpriseNames = []
+        shownSurpriseNames = Set(surpriseItems.map(\.name))
     }
 
     private func shuffleSurpriseItems() {
         let currentNames = Set(surpriseItems.map(\.name))
         let remaining = surpriseItemPool.filter { !currentNames.contains($0.name) }
         guard !remaining.isEmpty else { return }
-        surpriseItems = Array(remaining.shuffled().prefix(3))
+        let picks = Array(remaining.shuffled().prefix(3))
+        surpriseItems = picks
+        shownSurpriseNames.formUnion(picks.map(\.name))
         UIImpactFeedbackGenerator(style: .light).impactOccurred()
     }
 
@@ -1072,15 +1076,16 @@ struct PackingListView: View {
                 if let id = editingItemId { commitEdit(itemId: id) }
                 isSaved = true
                 UINotificationFeedbackGenerator().notificationOccurred(.success)
-                let surpriseSnapshot = surpriseItems
+                let poolSnapshot = surpriseItemPool
                 let selectedSnapshot = selectedSurpriseNames
+                let shownSnapshot = shownSurpriseNames
                 Task {
                     try? await Task.sleep(for: .milliseconds(700))
                     if isNewTrip {
-                        for item in surpriseSnapshot {
+                        for item in poolSnapshot {
                             if selectedSnapshot.contains(item.name) {
                                 store.addSurpriseItem(tripId: tripId, item: item)
-                            } else {
+                            } else if shownSnapshot.contains(item.name) {
                                 store.dismissSurpriseItem(tripId: tripId, itemName: item.name)
                             }
                         }

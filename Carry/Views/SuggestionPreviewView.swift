@@ -18,7 +18,9 @@ struct SuggestionPreviewView: View {
     @State private var selectedNames: Set<String> = []
     @State private var sections: [(title: String, items: [String])] = []
     @State private var surpriseItems: [SurpriseItem] = []
+    @State private var surpriseItemPool: [SurpriseItem] = []
     @State private var selectedSurpriseNames: Set<String> = []
+    @State private var shownSurpriseNames: Set<String> = []
 
     private var selectedCount: Int { selectedNames.count + selectedSurpriseNames.count }
     private var hasSelection: Bool { !selectedNames.isEmpty || !selectedSurpriseNames.isEmpty }
@@ -141,17 +143,34 @@ struct SuggestionPreviewView: View {
 
     private var surpriseHeader: some View {
         VStack(spacing: 0) {
-            HStack(spacing: 6) {
-                Image(systemName: "sparkles")
-                    .font(.system(size: 10, weight: .semibold))
-                    .foregroundStyle(.secondary)
-                Text("Nice to have")
-                    .font(.caption.weight(.medium))
-                    .foregroundStyle(colorScheme == .dark ? Color(.systemGray2) : Color(.systemGray))
-                    .kerning(1.1)
-                    .textCase(.uppercase)
+            HStack(spacing: 0) {
+                HStack(spacing: 6) {
+                    Image(systemName: "sparkles")
+                        .font(.system(size: 10, weight: .semibold))
+                        .foregroundStyle(.secondary)
+                    Text("Nice to have")
+                        .font(.caption.weight(.medium))
+                        .foregroundStyle(colorScheme == .dark ? Color(.systemGray2) : Color(.systemGray))
+                        .kerning(1.1)
+                        .textCase(.uppercase)
+                }
+                Spacer()
+                if surpriseItemPool.count > 3 {
+                    Button {
+                        withAnimation(.easeInOut(duration: 0.2)) {
+                            shuffleSurpriseItems()
+                        }
+                    } label: {
+                        Image(systemName: "shuffle")
+                            .font(.system(size: 12, weight: .medium))
+                            .foregroundStyle(colorScheme == .dark ? Color(.systemGray2) : Color(.systemGray))
+                            .frame(width: 28, height: 28)
+                            .contentShape(Rectangle())
+                    }
+                    .buttonStyle(.plain)
+                }
             }
-            .frame(maxWidth: .infinity, alignment: .leading)
+            .frame(maxWidth: .infinity)
             .padding(.horizontal, 16)
             .padding(.top, 12)
             .padding(.bottom, 4)
@@ -322,14 +341,25 @@ struct SuggestionPreviewView: View {
         // Surprise items (not pre-selected) — exclude names already in regular suggestions, cap at 3
         let dismissed = Set(bundle.dismissedSurpriseNames.map { $0.lowercased() })
         let excludedNames = excludedLower.union(allNames.map { $0.lowercased() })
-        surpriseItems = computeSurpriseItems(
+        let pool = computeSurpriseItems(
             for: sceneKeys,
             existingNames: excludedNames,
             rankingMode: .sceneFirst
         )
         .filter { !dismissed.contains($0.name.lowercased()) }
-        .prefix(3)
-        .map { $0 }
+        surpriseItemPool = pool
+        surpriseItems = Array(pool.prefix(3))
+        shownSurpriseNames = Set(surpriseItems.map(\.name))
+    }
+
+    private func shuffleSurpriseItems() {
+        let currentNames = Set(surpriseItems.map(\.name))
+        let remaining = surpriseItemPool.filter { !currentNames.contains($0.name) }
+        guard !remaining.isEmpty else { return }
+        let picks = Array(remaining.shuffled().prefix(3))
+        surpriseItems = picks
+        shownSurpriseNames.formUnion(picks.map(\.name))
+        UIImpactFeedbackGenerator(style: .light).impactOccurred()
     }
 
     private func confirm() {
@@ -347,10 +377,10 @@ struct SuggestionPreviewView: View {
         }
         store.addScenesAndMerge(tripId: tripId, keys: sceneKeys, sections: newSections)
 
-        for item in surpriseItems {
+        for item in surpriseItemPool {
             if selectedSurpriseNames.contains(item.name) {
                 store.addSurpriseItem(tripId: tripId, item: item)
-            } else {
+            } else if shownSurpriseNames.contains(item.name) {
                 store.dismissSurpriseItem(tripId: tripId, itemName: item.name)
             }
         }
