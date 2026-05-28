@@ -99,7 +99,7 @@ let sceneItemMap: [String: [SceneItem]] = [
         makeSceneItem("Passport", isAlert: true, internationalOnly: true),
         makeSceneItem("Neck pillow", isAlert: true),
         makeSceneItem("Noise-cancelling headphones", isAlert: true),
-        makeSceneItem("Overseas SIM / portable WiFi", isAlert: false, internationalOnly: true),
+        makeSceneItem("Overseas SIM / portable WiFi", isAlert: false),
         makeSceneItem("Eye mask", isAlert: false),
         makeSceneItem("Earplugs", isAlert: false),
         makeSceneItem("Compression socks", isAlert: false),
@@ -163,7 +163,7 @@ let sceneItemMap: [String: [SceneItem]] = [
         makeSceneItem("Formal shirt / blouse", isAlert: true),
         makeSceneItem("Formal wear", isAlert: true),
         makeSceneItem("Dress shoes", isAlert: true),
-        makeSceneItem("Overseas SIM / portable WiFi", isAlert: false, internationalOnly: true),
+        makeSceneItem("Overseas SIM / portable WiFi", isAlert: false),
         makeSceneItem("Wrinkle-release spray", isAlert: false),
     ],
     "remote_work": [
