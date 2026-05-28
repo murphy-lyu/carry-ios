@@ -115,9 +115,9 @@
         },
         {
           "id": "app-icons",
-          "title": "多套应用图标",
-          "titleEn": "App icon themes",
-          "titleZhHant": "多套應用圖示",
+          "title": "主题",
+          "titleEn": "Themes",
+          "titleZhHant": "主題",
           "status": "done"
         },
         {

@@ -97,7 +97,7 @@ private struct RoadmapPayload: Codable {
                     RoadmapItem(id: "item-quantity", title: RoadmapL10n.text(en: "Item quantity", zhHans: "物品数量", zhHant: "物品數量"), status: .done, note: nil),
                     RoadmapItem(id: "trip-duplicate", title: RoadmapL10n.text(en: "Trip duplication", zhHans: "复制行程", zhHant: "複製行程"), status: .done, note: nil),
                     RoadmapItem(id: "backup-restore", title: RoadmapL10n.text(en: "Backup & restore", zhHans: "备份与还原", zhHant: "備份與還原"), status: .done, note: nil),
-                    RoadmapItem(id: "app-icons", title: RoadmapL10n.text(en: "App icon themes", zhHans: "多套应用图标", zhHant: "多套應用圖示"), status: .done, note: nil),
+                    RoadmapItem(id: "app-icons", title: RoadmapL10n.text(en: "Themes", zhHans: "主题", zhHant: "主題"), status: .done, note: nil),
                     RoadmapItem(id: "siri-shortcuts", title: RoadmapL10n.text(en: "Siri shortcuts", zhHans: "Siri 快捷指令", zhHant: "Siri 捷徑"), status: .done, note: nil)
                 ]
             )
