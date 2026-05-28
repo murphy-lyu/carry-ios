@@ -363,11 +363,19 @@ final class TripStore: ObservableObject {
 
     func updateTripInfo(tripId: UUID, info: TripInfo) {
         guard let trip = trips.first(where: { $0.id == tripId }) else { return }
+        let cityChanged = trip.destinationCity != info.destinationCity
         trip.name = info.name
         trip.destinationCity = info.destinationCity
         trip.departureDate = info.departureDate
         trip.days = info.durationDays
         trip.dateRange = info.dateRangeDisplay
+        if cityChanged {
+            // Clear stale coordinates immediately so the map doesn't show the old location
+            trip.countryCode = ""
+            trip.latitude = 0
+            trip.longitude = 0
+            trip.additionalDestinations = []
+        }
         do {
             try context.save()
         } catch {
@@ -376,6 +384,9 @@ final class TripStore: ObservableObject {
         fetchTrips()
         if trip.remindersEnabled {
             NotificationManager.scheduleReminders(for: trip)
+        }
+        if cityChanged && !info.destinationCity.isEmpty {
+            updateCountryCode(for: tripId, city: info.destinationCity)
         }
     }
 
