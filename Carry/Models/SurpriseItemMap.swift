@@ -38,6 +38,12 @@ let surpriseItemMap: [String: [SurpriseItem]] = [
         SurpriseItem(name: "Car travel blanket",
                      note: "Passenger-seat naps are so much better with a real blanket — one that lives in the boot ready to go",
                      category: .essentials),
+        SurpriseItem(name: "Instant coffee",
+                     note: "Rest stops rarely have good coffee — a sachet and a thermos of hot water from the last service station keeps the driver going",
+                     category: .essentials),
+        SurpriseItem(name: "Tea bags",
+                     note: "A few teabags take up no space and make a thermos of hot water feel far more considered than plain water on a long drive",
+                     category: .essentials),
     ],
     "long_haul_flight": [
         SurpriseItem(name: "Steam eye mask",
