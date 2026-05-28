@@ -116,6 +116,11 @@ struct ScenePickerView: View {
                 VStack(alignment: .leading, spacing: 28) {
                     heroSection
 
+                    if !nudgeSceneKeys.isEmpty {
+                        climateNudgeSection
+                            .padding(.top, -16)
+                    }
+
                     ForEach(Array(defaultSceneGroups.enumerated()), id: \.element.id) { index, group in
                         SceneGroupSection(group: group, selectedItems: $selectedItems)
                             .padding(.top, index == 0 ? -16 : 0)
@@ -172,6 +177,61 @@ struct ScenePickerView: View {
             if finished { dismiss() }
         }
     }
+
+    // MARK: - Climate nudge
+
+    private var tripBundle: TripBundle? {
+        switch mode {
+        case .edit(let id), .suggest(let id): return store.bundle(for: id)
+        default: return nil
+        }
+    }
+
+    private var nudgeSceneKeys: [String] {
+        guard let bundle = tripBundle,
+              !bundle.countryCode.isEmpty else { return [] }
+        let inferred = ClimateInference.inferredSceneKeys(
+            countryCode: bundle.countryCode,
+            departureDate: bundle.departureDate
+        )
+        let selectedKeys = Set(selectedItems.compactMap { sceneLabelToKey[$0] })
+        return inferred.filter { !selectedKeys.contains($0) }
+    }
+
+    private static let sceneKeyToLabel: [String: String] = Dictionary(
+        uniqueKeysWithValues: sceneLabelToKey.map { ($1, $0) }
+    )
+
+    private var climateNudgeSection: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Text("scenepicker.nudge.title")
+                .font(.system(size: 11, weight: .medium))
+                .foregroundStyle(Color(.systemGray))
+                .kerning(1.5)
+                .textCase(.uppercase)
+                .padding(.horizontal, 16)
+
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 8) {
+                    ForEach(nudgeSceneKeys, id: \.self) { key in
+                        if let label = Self.sceneKeyToLabel[key] {
+                            SceneChip(
+                                label: label,
+                                isSelected: selectedItems.contains(label)
+                            ) {
+                                selectedItems.insert(label)
+                                UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                            }
+                        }
+                    }
+                }
+                .padding(.horizontal, 16)
+            }
+            .padding(.bottom, 6)
+        }
+    }
+
+    // MARK: - Hero
 
     private var heroSection: some View {
         VStack(alignment: .leading, spacing: 12) {

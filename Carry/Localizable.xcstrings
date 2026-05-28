@@ -42519,6 +42519,65 @@
           }
         }
       }
+    },
+    "scenepicker.nudge.title": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "type": "translation",
+            "value": "Based on your destination"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "type": "translation",
+            "value": "根据你的目的地"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "type": "translation",
+            "value": "根據你的目的地"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "type": "translation",
+            "value": "Basierend auf deinem Ziel"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "type": "translation",
+            "value": "Según tu destino"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "type": "translation",
+            "value": "Selon votre destination"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "type": "translation",
+            "value": "目的地に基づく提案"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "type": "translation",
+            "value": "목적지 기반 추천"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "type": "translation",
+            "value": "Com base no seu destino"
+          }
+        }
+      }
     }
   },
   "version": "1.0"
