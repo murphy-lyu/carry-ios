@@ -23,6 +23,30 @@ struct SuggestionPreviewView: View {
     private var selectedCount: Int { selectedNames.count + selectedSurpriseNames.count }
     private var hasSelection: Bool { !selectedNames.isEmpty || !selectedSurpriseNames.isEmpty }
     private var hasContent: Bool { !sections.isEmpty || !surpriseItems.isEmpty }
+
+    // Selected surprise items are merged into the main sections by category.
+    private var displaySections: [(title: String, items: [String])] {
+        guard !selectedSurpriseNames.isEmpty else { return sections }
+        var result = sections
+        for item in surpriseItems where selectedSurpriseNames.contains(item.name) {
+            let sectionTitle = item.category.rawValue
+            if let idx = result.firstIndex(where: { $0.title == sectionTitle }) {
+                if !result[idx].items.contains(item.name) {
+                    result[idx].items.append(item.name)
+                }
+            } else {
+                result.append((title: sectionTitle, items: [item.name]))
+            }
+        }
+        return result
+    }
+
+    // Only show unselected surprise items in the surprise section.
+    private var displaySurpriseItems: [SurpriseItem] {
+        surpriseItems.filter { !selectedSurpriseNames.contains($0.name) }
+    }
+
+    private var surpriseItemNames: Set<String> { Set(surpriseItems.map(\.name)) }
     private var chromeBackgroundColor: Color {
         colorScheme == .dark ? Color(red: 0.08, green: 0.08, blue: 0.09) : Color(UIColor.systemBackground)
     }
@@ -63,8 +87,8 @@ struct SuggestionPreviewView: View {
     private var list: some View {
         ScrollView {
             LazyVStack(alignment: .leading, spacing: 0, pinnedViews: [.sectionHeaders]) {
-                if !sections.isEmpty {
-                    ForEach(Array(sections.enumerated()), id: \.element.title) { _, section in
+                if !displaySections.isEmpty {
+                    ForEach(Array(displaySections.enumerated()), id: \.element.title) { _, section in
                         Section {
                             ForEach(section.items, id: \.self) { item in
                                 itemRow(item)
@@ -75,9 +99,9 @@ struct SuggestionPreviewView: View {
                     }
                 }
 
-                if !surpriseItems.isEmpty {
+                if !displaySurpriseItems.isEmpty {
                     Section {
-                        ForEach(surpriseItems) { item in
+                        ForEach(displaySurpriseItems) { item in
                             surpriseItemRow(item)
                         }
                     } header: {
@@ -158,10 +182,15 @@ struct SuggestionPreviewView: View {
     }
 
     private func itemRow(_ name: String) -> some View {
-        let isSelected = selectedNames.contains(name)
+        let isSurprise = surpriseItemNames.contains(name)
+        let isSelected = selectedNames.contains(name) || selectedSurpriseNames.contains(name)
         return Button {
             withAnimation(.easeInOut(duration: 0.12)) {
-                if isSelected { selectedNames.remove(name) } else { selectedNames.insert(name) }
+                if isSurprise {
+                    if isSelected { selectedSurpriseNames.remove(name) } else { selectedSurpriseNames.insert(name) }
+                } else {
+                    if isSelected { selectedNames.remove(name) } else { selectedNames.insert(name) }
+                }
             }
             UIImpactFeedbackGenerator(style: .light).impactOccurred()
         } label: {
