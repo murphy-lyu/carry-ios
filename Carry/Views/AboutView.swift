@@ -148,6 +148,7 @@ struct AboutView: View {
             }
             .padding(.horizontal, 16)
             .frame(height: 44)
+            .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
     }
@@ -202,9 +203,9 @@ struct AboutView: View {
             }
             .padding(.horizontal, 16)
             .frame(height: 44)
+            .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
-        .contentShape(Rectangle())
     }
 
     private var cardFill: some ShapeStyle {
