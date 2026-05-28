@@ -190,18 +190,30 @@ struct HomeView: View {
     /// Rounded to ~1 km precision so multiple trips to the same city collapse to one dot.
     /// Includes additional destinations from multi-city trips.
     private var visitedCities: [VisitedCity] {
-        var seen = Set<String>()
+        // key → index in cities array
+        var keyIndex: [String: Int] = [:]
         var cities: [VisitedCity] = []
 
         func addCoordinate(lat: Double, lon: Double, name: String = "") {
             guard lat != 0 else { return }
             let key = "\(Int(lat * 100)),\(Int(lon * 100))"
-            guard seen.insert(key).inserted else { return }
-            cities.append(VisitedCity(
-                id: key,
-                coordinate: CLLocationCoordinate2D(latitude: lat, longitude: lon),
-                cityName: name
-            ))
+            if let idx = keyIndex[key] {
+                // Already seen this coordinate — upgrade the name if we now have one
+                if !name.isEmpty && cities[idx].cityName.isEmpty {
+                    cities[idx] = VisitedCity(
+                        id: key,
+                        coordinate: cities[idx].coordinate,
+                        cityName: name
+                    )
+                }
+            } else {
+                keyIndex[key] = cities.count
+                cities.append(VisitedCity(
+                    id: key,
+                    coordinate: CLLocationCoordinate2D(latitude: lat, longitude: lon),
+                    cityName: name
+                ))
+            }
         }
 
         for trip in store.trips where trip.departureDate <= Date() {
