@@ -1689,7 +1689,11 @@ private struct ItemPickerMyItemEditorView: View {
                 TextField("myitems.quantity", text: $quantity)
                     .keyboardType(.numberPad)
                     .onChange(of: quantity) { _, newValue in
-                        let filtered = newValue.filter(\.isNumber)
+                        var filtered = newValue.filter(\.isNumber)
+                        if let num = Int(filtered) {
+                            if num < 1 { filtered = "1" }
+                            else if num > 9999 { filtered = "9999" }
+                        }
                         if filtered != newValue { quantity = filtered }
                     }
             }
