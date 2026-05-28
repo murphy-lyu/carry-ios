@@ -193,15 +193,23 @@ struct HomeView: View {
         var seen = Set<String>()
         var cities: [VisitedCity] = []
 
-        func addCoordinate(lat: Double, lon: Double) {
+        func addCoordinate(lat: Double, lon: Double, name: String = "") {
             guard lat != 0 else { return }
             let key = "\(Int(lat * 100)),\(Int(lon * 100))"
             guard seen.insert(key).inserted else { return }
-            cities.append(VisitedCity(id: key, coordinate: CLLocationCoordinate2D(latitude: lat, longitude: lon)))
+            cities.append(VisitedCity(
+                id: key,
+                coordinate: CLLocationCoordinate2D(latitude: lat, longitude: lon),
+                cityName: name
+            ))
         }
 
         for trip in store.trips where trip.departureDate <= Date() {
-            addCoordinate(lat: trip.latitude, lon: trip.longitude)
+            let primaryName = trip.destinationCity
+                .components(separatedBy: CharacterSet(charactersIn: ",，/／+＋&＆"))
+                .first
+                .map { $0.trimmingCharacters(in: .whitespaces) } ?? ""
+            addCoordinate(lat: trip.latitude, lon: trip.longitude, name: primaryName)
             for dest in trip.additionalDestinations {
                 addCoordinate(lat: dest.latitude, lon: dest.longitude)
             }

@@ -18,6 +18,7 @@ struct VisitedCountry: Identifiable {
 struct VisitedCity: Identifiable {
     let id: String          // dedup key based on rounded coordinate
     let coordinate: CLLocationCoordinate2D
+    var cityName: String = ""
 }
 
 // MARK: - Map style
@@ -152,13 +153,19 @@ struct GlobeMapView: View, Equatable {
     @State private var hasZoomedToFar: Bool = false
     @State private var userPulseAnimating: Bool = false
     @State private var userPulseAnimating2: Bool = false
+    @State private var cameraDistance: Double = 20_230_330
+
+    /// City labels appear when zoomed in past this distance (~regional level).
+    private let labelVisibleDistance: Double = 8_000_000
+
+    private var showCityLabels: Bool { cameraDistance < labelVisibleDistance }
 
     var body: some View {
         Map(position: $position) {
-            // City dots — subtle, fade in as sheet collapses
+            // City dots — subtle, fade in as sheet collapses; label appears on close zoom
             ForEach(visitedCities) { city in
                 Annotation("", coordinate: city.coordinate, anchor: .center) {
-                    cityDot
+                    cityAnnotation(city: city)
                         .scaleEffect(cityDotsAppeared ? 1.0 : 0.95)
                         .opacity(cityDotsAppeared ? cityOpacity : 0)
                 }
@@ -178,6 +185,11 @@ struct GlobeMapView: View, Equatable {
             }
         }
         .mapStyle(mapStyleOption.mapStyle)
+        .onMapCameraChange(frequency: .onEnd) { context in
+            withAnimation(.easeInOut(duration: 0.2)) {
+                cameraDistance = context.camera.distance
+            }
+        }
         .onAppear {
             guard !cityDotsAppeared else { return }
 
@@ -231,6 +243,24 @@ struct GlobeMapView: View, Equatable {
                 userPulseAnimating2 = false
             }
         }
+    }
+
+    // MARK: - City annotation (dot + optional label)
+
+    private func cityAnnotation(city: VisitedCity) -> some View {
+        VStack(spacing: 3) {
+            cityDot
+            if showCityLabels && !city.cityName.isEmpty {
+                Text(city.cityName)
+                    .font(.system(size: 9, weight: .semibold))
+                    .foregroundStyle(.white)
+                    .lineLimit(1)
+                    .padding(.horizontal, 5)
+                    .padding(.vertical, 2)
+                    .background(Capsule().fill(Color.black.opacity(0.45)))
+            }
+        }
+        .animation(.easeInOut(duration: 0.2), value: showCityLabels)
     }
 
     // MARK: - City dot
