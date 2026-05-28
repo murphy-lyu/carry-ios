@@ -547,8 +547,11 @@ struct ItemPickerView: View {
             didLogSearch = true
             CarryLogger.shared.log(.pickerSearchUsed, context: "source=\(sourceMode.rawValue)")
         }
-        .onChange(of: sourceMode) { _, newValue in
+        .onChange(of: sourceMode) { oldValue, newValue in
             lastSourceModeRawValue = newValue.rawValue
+            if oldValue == .smart && newValue != .smart && !selectedSmartSceneLabels.isEmpty {
+                applySmartRecommendations(shouldSwitchToPreset: false, shouldShowToast: false)
+            }
         }
     }
 

@@ -119,37 +119,29 @@ struct PackingListView: View {
                     dismissInlineEditing()
                 }
             }
-            ToolbarItem(placement: .navigationBarTrailing) {
-                Menu {
-                    if !isNewTrip {
+            if !isNewTrip {
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Menu {
                         Button {
                             showEditSheet = true
                         } label: {
                             Label("Edit trip", systemImage: "pencil")
                         }
-                    }
-                    if !isNewTrip {
                         Button {
                             router.path.append(CreationRoute.addItems(tripId))
                         } label: {
                             Label("packing.menu.add_from_library", systemImage: "shippingbox")
                         }
-                    }
-                    if !isNewTrip {
                         Button {
                             showReorderSheet = true
                         } label: {
                             Label("Edit sections", systemImage: "arrow.up.arrow.down")
                         }
-                    }
-                    if !isNewTrip {
                         Button {
                             showReminderSheet = true
                         } label: {
                             Label("reminder.menu.item", systemImage: bundle?.remindersEnabled == true ? "bell" : "bell.slash")
                         }
-                    }
-                    if !isNewTrip {
                         Button {
                             let activityVC = UIActivityViewController(
                                 activityItems: [shareText],
@@ -180,17 +172,11 @@ struct PackingListView: View {
                         } label: {
                             Label("Delete trip", systemImage: "trash")
                         }
-                    } else {
-                        Button {
-                            showSuggestSheet = true
-                        } label: {
-                            Label("Add recommended items", systemImage: "sparkles")
-                        }
+                    } label: {
+                        Image(systemName: "ellipsis")
+                            .font(.system(size: 14, weight: .medium))
+                            .foregroundColor(.primary)
                     }
-                } label: {
-                    Image(systemName: "ellipsis")
-                        .font(.system(size: 14, weight: .medium))
-                        .foregroundColor(.primary)
                 }
             }
         }
@@ -505,6 +491,8 @@ struct PackingListView: View {
             rankingMode: mode
         )
         .filter { !dismissed.contains($0.name.lowercased()) }
+        .prefix(3)
+        .map { $0 }
         selectedSurpriseNames = []
     }
 
