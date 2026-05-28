@@ -80,7 +80,7 @@ let itemPickerCatalog: [ItemPickerCategory] = [
         "Bra", "Sports bra", "Leggings", "Tights", "Disposable underwear",
         "Shorts",
         "Dress", "Skirt", "Hat", "Belt",
-        "Formal wear", "Sweater", "Rain jacket", "Swimsuit", "Nipple covers",
+        "Formal wear", "Sweater", "Rain jacket", "Swimsuit",
         "Comfortable walking shoes", "Flip flops", "Sun shirt",
         "Scarf",
         "Thermal underwear", "Heavy winter coat", "Gloves", "Beanie", "Sun hat",
