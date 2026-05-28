@@ -1,100 +1,112 @@
 {
-  "sourceLanguage": "en",
-  "strings": {
-    "CFBundleDisplayName": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Carry"
+  "sourceLanguage" : "en",
+  "strings" : {
+    "CFBundleDisplayName" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Carry"
           }
         },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "启程"
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "启程"
           }
         },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "啟程"
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "啟程"
           }
         }
       }
     },
-    "CFBundleName": {
-      "comment": "Bundle name",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Carry"
+    "CFBundleName" : {
+      "comment" : "Bundle name",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Carry"
           }
         }
       }
     },
-    "NSLocationWhenInUseUsageDescription": {
-      "comment": "Privacy - Location When In Use Usage Description",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Carry uses your location to show your current position on the travel map."
+    "NSCalendarsFullAccessUsageDescription" : {
+      "comment" : "Privacy - Calendars Full Access Usage Description",
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Carry adds your trips and a pack reminder to your calendar so you never miss a departure."
+          }
+        }
+      }
+    },
+    "NSLocationWhenInUseUsageDescription" : {
+      "comment" : "Privacy - Location When In Use Usage Description",
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Carry verwendet Ihren Standort, um Ihre aktuelle Position auf der Reisekarte anzuzeigen."
           }
         },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "启程使用您的位置在旅行地图上显示您的当前位置。"
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Carry uses your location to show your current position on the travel map."
           }
         },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "啟程使用您的位置在旅行地圖上顯示您目前的位置。"
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Carry usa tu ubicación para mostrar tu posición actual en el mapa de viaje."
           }
         },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "現在地をマップに表示するために位置情報を使用します。"
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Carry utilise votre position pour l'afficher sur la carte de voyage."
           }
         },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "여행 지도에서 현재 위치를 표시하기 위해 위치를 사용합니다。"
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "現在地をマップに表示するために位置情報を使用します。"
           }
         },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Carry utilise votre position pour l'afficher sur la carte de voyage."
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "여행 지도에서 현재 위치를 표시하기 위해 위치를 사용합니다。"
           }
         },
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Carry verwendet Ihren Standort, um Ihre aktuelle Position auf der Reisekarte anzuzeigen."
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "O Carry usa sua localização para exibir sua posição atual no mapa de viagem."
           }
         },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Carry usa tu ubicación para mostrar tu posición actual en el mapa de viaje."
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "启程使用您的位置在旅行地图上显示您的当前位置。"
           }
         },
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "O Carry usa sua localização para exibir sua posição atual no mapa de viagem."
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "啟程使用您的位置在旅行地圖上顯示您目前的位置。"
           }
         }
       }
     }
   },
-  "version": "1.0"
+  "version" : "1.0"
 }

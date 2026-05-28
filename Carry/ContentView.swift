@@ -23,6 +23,7 @@ enum CreationRoute: Hashable {
 final class NavigationRouter: ObservableObject {
     @Published var path = NavigationPath()
     @Published var showMapFullscreen = false
+    @Published var pendingTripId: UUID? = nil
 }
 
 // MARK: - ContentView
@@ -98,6 +99,13 @@ struct ContentView: View {
                 didRefreshOnLaunch = true
                 store.refresh()
             }
+        }
+        .onChange(of: router.pendingTripId) { _, tripId in
+            guard let tripId else { return }
+            selectedTab = 0
+            router.path = NavigationPath()
+            router.path.append(tripId)
+            router.pendingTripId = nil
         }
         .onChange(of: scenePhase) { _, phase in
             if phase == .active {

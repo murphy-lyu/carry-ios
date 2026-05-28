@@ -1,5 +1,5 @@
 {
-  "updatedAt": "2026-05-27",
+  "updatedAt": "2026-05-29",
   "sections": [
     {
       "id": "upcoming",
@@ -36,6 +36,13 @@
       "titleEn": "Shipped",
       "titleZhHant": "已上線",
       "items": [
+        {
+          "id": "calendar-sync",
+          "title": "日历同步",
+          "titleEn": "Calendar sync",
+          "titleZhHant": "行事曆同步",
+          "status": "done"
+        },
         {
           "id": "smart-suggestions",
           "title": "智能推荐清单",

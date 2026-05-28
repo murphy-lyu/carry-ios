@@ -49,6 +49,14 @@ struct CarryApp: App {
                     // Register App Shortcuts with Siri / Spotlight.
                     CarryAppShortcuts.updateAppShortcutParameters()
                 }
+                .onOpenURL { url in
+                    // carry://trip/{uuid}
+                    guard url.scheme == "carry",
+                          url.host == "trip",
+                          let uuidString = url.pathComponents.dropFirst().first,
+                          let id = UUID(uuidString: uuidString) else { return }
+                    router.pendingTripId = id
+                }
                 .onReceive(NotificationCenter.default.publisher(
                     for: UIApplication.didReceiveMemoryWarningNotification)
                 ) { _ in

@@ -80,6 +80,12 @@ final class CalendarManager {
         return written
     }
 
+    /// Debug: returns "title (source)" of the calendar we write to.
+    var carryCalendarDebugInfo: String {
+        guard let cal = carryCalendar else { return "nil" }
+        return "\(cal.title) · \(cal.source?.title ?? "?") · \(cal.calendarIdentifier.prefix(8))"
+    }
+
     func pendingCount(from trips: [TripBundle]) -> Int {
         let today = Calendar.current.startOfDay(for: Date())
         let addedIds = loadAddedIds()
@@ -131,8 +137,12 @@ final class CalendarManager {
             throw CalendarError.dateNormalizationFailed
         }
 
+        #if DEBUG
+        print("[CalendarManager] '\(trip.name)' departureDate=\(trip.departureDate) → dayStart=\(dayStart) dayEnd=\(dayEnd)")
+        #endif
+
         let tripEvent = EKEvent(eventStore: store)
-        tripEvent.title     = trip.name
+        tripEvent.title     = "🗺️ \(trip.name)"
         tripEvent.isAllDay  = true
         tripEvent.startDate = dayStart
         tripEvent.endDate   = dayEnd
@@ -140,8 +150,14 @@ final class CalendarManager {
         if !trip.destinationCity.isEmpty { notes.append(trip.destinationCity) }
         if !trip.dateRange.isEmpty        { notes.append(trip.dateRange) }
         if !notes.isEmpty { tripEvent.notes = notes.joined(separator: "\n") }
+        tripEvent.url      = URL(string: "carry://trip/\(trip.id.uuidString)")
         tripEvent.calendar = cal
-        try store.save(tripEvent, span: .thisEvent, commit: true)
+        do {
+            try store.save(tripEvent, span: .thisEvent, commit: true)
+        } catch {
+            CarryLogger.shared.log(.calendarSaveFailed, context: "tripEvent '\(trip.name)' dayStart=\(dayStart) dayEnd=\(dayEnd): \(error.localizedDescription)")
+            throw error
+        }
 
         // Pack reminder: day before departure at user-set time.
         guard let packDay = greg.date(byAdding: .day, value: -1, to: dayStart) else { return }
@@ -155,9 +171,31 @@ final class CalendarManager {
         packEvent.title     = String(format: NSLocalizedString("calendar.event.pack.title", comment: ""), trip.name)
         packEvent.startDate = packStart
         packEvent.endDate   = packEnd
+        packEvent.notes     = packingListNotes(for: trip)
         packEvent.addAlarm(EKAlarm(relativeOffset: 0))
-        packEvent.calendar  = cal
-        try store.save(packEvent, span: .thisEvent, commit: true)
+        packEvent.url      = URL(string: "carry://trip/\(trip.id.uuidString)")
+        packEvent.calendar = cal
+        do {
+            try store.save(packEvent, span: .thisEvent, commit: true)
+        } catch {
+            CarryLogger.shared.log(.calendarSaveFailed, context: "packEvent '\(trip.name)' packStart=\(packStart): \(error.localizedDescription)")
+            throw error
+        }
+    }
+
+    private func packingListNotes(for trip: TripBundle) -> String? {
+        let sections = (trip.sections ?? [])
+            .sorted { $0.sortOrder < $1.sortOrder }
+            .compactMap { section -> String? in
+                let items = section.sortedItems.map { item in
+                    "· \(item.name) × \(item.quantity)"
+                }
+                guard !items.isEmpty else { return nil }
+                return section.title.isEmpty
+                    ? items.joined(separator: "\n")
+                    : "\(section.title)\n" + items.joined(separator: "\n")
+            }
+        return sections.isEmpty ? nil : sections.joined(separator: "\n\n")
     }
 
     // MARK: - Persistence

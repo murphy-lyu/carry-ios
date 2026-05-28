@@ -29584,15 +29584,15 @@
     "calendar.event.pack.title": {
       "extractionState": "manual",
       "localizations": {
-        "de": { "stringUnit": { "state": "translated", "value": "Packen für %@" } },
-        "en": { "stringUnit": { "state": "translated", "value": "Pack for %@" } },
-        "es": { "stringUnit": { "state": "translated", "value": "Empacar para %@" } },
-        "fr": { "stringUnit": { "state": "translated", "value": "Préparer pour %@" } },
-        "ja": { "stringUnit": { "state": "translated", "value": "%@の荷造り" } },
-        "ko": { "stringUnit": { "state": "translated", "value": "%@ 짐 꾸리기" } },
-        "pt-BR": { "stringUnit": { "state": "translated", "value": "Fazer mala para %@" } },
-        "zh-Hans": { "stringUnit": { "state": "translated", "value": "为「%@」打包" } },
-        "zh-Hant": { "stringUnit": { "state": "translated", "value": "為「%@」打包" } }
+        "de": { "stringUnit": { "state": "translated", "value": "🧳 Packen für %@" } },
+        "en": { "stringUnit": { "state": "translated", "value": "🧳 Pack for %@" } },
+        "es": { "stringUnit": { "state": "translated", "value": "🧳 Empacar para %@" } },
+        "fr": { "stringUnit": { "state": "translated", "value": "🧳 Préparer pour %@" } },
+        "ja": { "stringUnit": { "state": "translated", "value": "🧳 %@の荷造り" } },
+        "ko": { "stringUnit": { "state": "translated", "value": "🧳 %@ 짐 꾸리기" } },
+        "pt-BR": { "stringUnit": { "state": "translated", "value": "🧳 Fazer mala para %@" } },
+        "zh-Hans": { "stringUnit": { "state": "translated", "value": "🧳 为「%@」打包" } },
+        "zh-Hant": { "stringUnit": { "state": "translated", "value": "🧳 為「%@」打包" } }
       }
     },
     "settings.calendar.bulk.added_toast": {
@@ -29733,6 +29733,48 @@
         "pt-BR": { "stringUnit": { "state": "translated", "value": "Próximas viagens são adicionadas automaticamente" } },
         "zh-Hans": { "stringUnit": { "state": "translated", "value": "即将出发的行程将自动添加" } },
         "zh-Hant": { "stringUnit": { "state": "translated", "value": "即將出發的行程將自動加入" } }
+      }
+    },
+    "settings.calendar.entry": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": { "stringUnit": { "state": "translated", "value": "Kalender" } },
+        "en": { "stringUnit": { "state": "translated", "value": "Calendar" } },
+        "es": { "stringUnit": { "state": "translated", "value": "Calendario" } },
+        "fr": { "stringUnit": { "state": "translated", "value": "Calendrier" } },
+        "ja": { "stringUnit": { "state": "translated", "value": "カレンダー" } },
+        "ko": { "stringUnit": { "state": "translated", "value": "캘린더" } },
+        "pt-BR": { "stringUnit": { "state": "translated", "value": "Calendário" } },
+        "zh-Hans": { "stringUnit": { "state": "translated", "value": "日历" } },
+        "zh-Hant": { "stringUnit": { "state": "translated", "value": "行事曆" } }
+      }
+    },
+    "settings.calendar.status.on": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": { "stringUnit": { "state": "translated", "value": "Ein" } },
+        "en": { "stringUnit": { "state": "translated", "value": "On" } },
+        "es": { "stringUnit": { "state": "translated", "value": "Activado" } },
+        "fr": { "stringUnit": { "state": "translated", "value": "Activé" } },
+        "ja": { "stringUnit": { "state": "translated", "value": "オン" } },
+        "ko": { "stringUnit": { "state": "translated", "value": "켜짐" } },
+        "pt-BR": { "stringUnit": { "state": "translated", "value": "Ativado" } },
+        "zh-Hans": { "stringUnit": { "state": "translated", "value": "已开启" } },
+        "zh-Hant": { "stringUnit": { "state": "translated", "value": "已開啟" } }
+      }
+    },
+    "settings.calendar.status.off": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": { "stringUnit": { "state": "translated", "value": "Aus" } },
+        "en": { "stringUnit": { "state": "translated", "value": "Off" } },
+        "es": { "stringUnit": { "state": "translated", "value": "Desactivado" } },
+        "fr": { "stringUnit": { "state": "translated", "value": "Désactivé" } },
+        "ja": { "stringUnit": { "state": "translated", "value": "オフ" } },
+        "ko": { "stringUnit": { "state": "translated", "value": "꺼짐" } },
+        "pt-BR": { "stringUnit": { "state": "translated", "value": "Desativado" } },
+        "zh-Hans": { "stringUnit": { "state": "translated", "value": "已关闭" } },
+        "zh-Hant": { "stringUnit": { "state": "translated", "value": "已關閉" } }
       }
     },
     "settings.calendar.toggle": {
@@ -31458,6 +31500,48 @@
             "value": "已重置支持感謝等級"
           }
         }
+      }
+    },
+    "settings.developer.calendar_group": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": { "stringUnit": { "state": "translated", "value": "Calendar Sync" } },
+        "en": { "stringUnit": { "state": "translated", "value": "Calendar Sync" } },
+        "es": { "stringUnit": { "state": "translated", "value": "Calendar Sync" } },
+        "fr": { "stringUnit": { "state": "translated", "value": "Calendar Sync" } },
+        "ja": { "stringUnit": { "state": "translated", "value": "Calendar Sync" } },
+        "ko": { "stringUnit": { "state": "translated", "value": "Calendar Sync" } },
+        "pt-BR": { "stringUnit": { "state": "translated", "value": "Calendar Sync" } },
+        "zh-Hans": { "stringUnit": { "state": "translated", "value": "日历同步" } },
+        "zh-Hant": { "stringUnit": { "state": "translated", "value": "行事曆同步" } }
+      }
+    },
+    "settings.developer.clear_calendar_ids": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": { "stringUnit": { "state": "translated", "value": "Reset Calendar Sync State" } },
+        "en": { "stringUnit": { "state": "translated", "value": "Reset Calendar Sync State" } },
+        "es": { "stringUnit": { "state": "translated", "value": "Reset Calendar Sync State" } },
+        "fr": { "stringUnit": { "state": "translated", "value": "Reset Calendar Sync State" } },
+        "ja": { "stringUnit": { "state": "translated", "value": "Reset Calendar Sync State" } },
+        "ko": { "stringUnit": { "state": "translated", "value": "Reset Calendar Sync State" } },
+        "pt-BR": { "stringUnit": { "state": "translated", "value": "Reset Calendar Sync State" } },
+        "zh-Hans": { "stringUnit": { "state": "translated", "value": "重置日历同步记录" } },
+        "zh-Hant": { "stringUnit": { "state": "translated", "value": "重置行事曆同步記錄" } }
+      }
+    },
+    "settings.developer.clear_calendar_ids.success": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": { "stringUnit": { "state": "translated", "value": "Calendar sync state cleared" } },
+        "en": { "stringUnit": { "state": "translated", "value": "Calendar sync state cleared" } },
+        "es": { "stringUnit": { "state": "translated", "value": "Calendar sync state cleared" } },
+        "fr": { "stringUnit": { "state": "translated", "value": "Calendar sync state cleared" } },
+        "ja": { "stringUnit": { "state": "translated", "value": "Calendar sync state cleared" } },
+        "ko": { "stringUnit": { "state": "translated", "value": "Calendar sync state cleared" } },
+        "pt-BR": { "stringUnit": { "state": "translated", "value": "Calendar sync state cleared" } },
+        "zh-Hans": { "stringUnit": { "state": "translated", "value": "日历同步记录已清除" } },
+        "zh-Hant": { "stringUnit": { "state": "translated", "value": "行事曆同步記錄已清除" } }
       }
     },
     "settings.developer.danger_group": {

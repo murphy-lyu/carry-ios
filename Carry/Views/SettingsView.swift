@@ -27,11 +27,6 @@ struct SettingsView: View {
     @EnvironmentObject private var store: TripStore
     @AppStorage("appearance_mode") private var appearanceModeRaw = AppearanceMode.system.rawValue
     @AppStorage("calendar_sync_enabled") private var calendarSyncEnabled = false
-    @AppStorage("calendar_pack_hour") private var calendarPackHour = 20
-    @AppStorage("calendar_pack_minute") private var calendarPackMinute = 0
-    @State private var showCalendarPermissionAlert = false
-    @State private var showCalendarBulkAlert = false
-    @State private var calendarPendingCount = 0
 
     private var currentAppearance: AppearanceMode {
         AppearanceMode(rawValue: appearanceModeRaw) ?? .system
@@ -71,37 +66,6 @@ struct SettingsView: View {
 
     private func refreshNotificationStatus() async {
         notificationStatus = await NotificationManager.authorizationStatus()
-    }
-
-    private func handleCalendarToggleOn() async {
-        let granted = await CalendarManager.shared.requestAccess()
-        if granted {
-            calendarSyncEnabled = true
-            let count = CalendarManager.shared.pendingCount(from: store.trips)
-            if count > 0 {
-                calendarPendingCount = count
-                showCalendarBulkAlert = true
-            }
-        } else {
-            calendarSyncEnabled = false
-            showCalendarPermissionAlert = true
-        }
-    }
-
-    private var packTimeBinding: Binding<Date> {
-        Binding(
-            get: {
-                var comps = Calendar.current.dateComponents([.year, .month, .day], from: Date())
-                comps.hour = calendarPackHour
-                comps.minute = calendarPackMinute
-                return Calendar.current.date(from: comps) ?? Date()
-            },
-            set: { newDate in
-                let comps = Calendar.current.dateComponents([.hour, .minute], from: newDate)
-                calendarPackHour = comps.hour ?? 20
-                calendarPackMinute = comps.minute ?? 0
-            }
-        )
     }
 
     private func openFeedbackMail() {
@@ -288,38 +252,11 @@ struct SettingsView: View {
                                 settingsRow(title: "settings.about.language", valueText: currentLanguageDisplay) {
                                     openSystemSettings()
                                 }
-                                HStack(spacing: 14) {
-                                    Text("settings.calendar.toggle")
-                                        .font(.body)
-                                        .foregroundStyle(.primary)
-                                    Spacer()
-                                    Toggle("", isOn: Binding(
-                                        get: { calendarSyncEnabled },
-                                        set: { newValue in
-                                            if newValue {
-                                                Task { await handleCalendarToggleOn() }
-                                            } else {
-                                                calendarSyncEnabled = false
-                                                CalendarManager.shared.clearAddedIds()
-                                            }
-                                        }
-                                    ))
-                                    .labelsHidden()
-                                    .tint(colorScheme == .dark ? Color(.systemGray2) : Color(.label))
-                                }
-                                .padding(.horizontal, 18)
-                                .frame(minHeight: 58)
-                                if calendarSyncEnabled {
-                                    HStack(spacing: 14) {
-                                        Text("settings.calendar.packtime")
-                                            .font(.body)
-                                            .foregroundStyle(.primary)
-                                        Spacer()
-                                        DatePicker("", selection: packTimeBinding, displayedComponents: .hourAndMinute)
-                                            .labelsHidden()
-                                    }
-                                    .padding(.horizontal, 18)
-                                    .frame(height: 58)
+                                settingsNavigationRow(
+                                    title: "settings.calendar.entry",
+                                    valueText: calendarSyncEnabled ? NSLocalizedString("settings.calendar.status.on", comment: "") : NSLocalizedString("settings.calendar.status.off", comment: "")
+                                ) {
+                                    CalendarSettingsView()
                                 }
                                 // TODO: re-enable once icon designs are ready
 //                                settingsNavigationRow(title: "settings.appicon.entry") {
@@ -438,29 +375,6 @@ struct SettingsView: View {
             }
         }
         .animation(.easeInOut(duration: 0.2), value: restoreToastMessage != nil)
-        .alert(LocalizedStringKey("settings.calendar.permission.denied.title"), isPresented: $showCalendarPermissionAlert) {
-            Button("settings.calendar.permission.open_settings") { openSystemSettings() }
-            Button("Cancel", role: .cancel) {}
-        } message: {
-            Text("settings.calendar.permission.denied.message")
-        }
-        .alert(LocalizedStringKey("settings.calendar.bulk.title"), isPresented: $showCalendarBulkAlert) {
-            Button("settings.calendar.bulk.confirm") {
-                let written = CalendarManager.shared.addAllUpcoming(
-                    store.trips,
-                    packHour: calendarPackHour,
-                    packMinute: calendarPackMinute
-                )
-                if written > 0 {
-                    showToast(String(format: NSLocalizedString("settings.calendar.bulk.added_toast", comment: ""), written))
-                } else {
-                    showToast(NSLocalizedString("settings.calendar.bulk.failed_toast", comment: ""))
-                }
-            }
-            Button("Cancel", role: .cancel) {}
-        } message: {
-            Text(String(format: NSLocalizedString("settings.calendar.bulk.message", comment: ""), calendarPendingCount))
-        }
         .fileImporter(
             isPresented: $showImporter,
             allowedContentTypes: [.json],
@@ -884,6 +798,196 @@ private struct DataRecoveryView: View {
     }
 }
 
+// MARK: - CalendarSettingsView
+
+private struct CalendarSettingsView: View {
+    @EnvironmentObject private var store: TripStore
+    @Environment(\.colorScheme) private var colorScheme
+
+    @AppStorage("calendar_sync_enabled") private var calendarSyncEnabled = false
+    @AppStorage("calendar_pack_hour")    private var calendarPackHour    = 20
+    @AppStorage("calendar_pack_minute") private var calendarPackMinute  = 0
+
+    @State private var showPermissionAlert = false
+    @State private var showBulkAlert       = false
+    @State private var pendingCount        = 0
+    @State private var toastMessage: String?
+
+    private var groupFill: Color {
+        colorScheme == .dark
+            ? Color(UIColor.secondarySystemGroupedBackground).opacity(0.72)
+            : Color(UIColor.secondarySystemGroupedBackground)
+    }
+
+    private var groupStroke: Color {
+        colorScheme == .dark
+            ? Color.white.opacity(0.045)
+            : Color.primary.opacity(0.05)
+    }
+
+    private var groupShadow: Color {
+        colorScheme == .dark
+            ? Color.black.opacity(0.16)
+            : Color.black.opacity(0.03)
+    }
+
+    private var packTimeBinding: Binding<Date> {
+        Binding(
+            get: {
+                var comps = Calendar.current.dateComponents([.year, .month, .day], from: Date())
+                comps.hour   = calendarPackHour
+                comps.minute = calendarPackMinute
+                return Calendar.current.date(from: comps) ?? Date()
+            },
+            set: { newDate in
+                let comps    = Calendar.current.dateComponents([.hour, .minute], from: newDate)
+                calendarPackHour   = comps.hour   ?? 20
+                calendarPackMinute = comps.minute  ?? 0
+            }
+        )
+    }
+
+    private func handleToggleOn() async {
+        let granted = await CalendarManager.shared.requestAccess()
+        if granted {
+            calendarSyncEnabled = true
+            let count = CalendarManager.shared.pendingCount(from: store.trips)
+            if count > 0 {
+                pendingCount = count
+                showBulkAlert = true
+            }
+        } else {
+            calendarSyncEnabled = false
+            showPermissionAlert = true
+        }
+    }
+
+    private func showToast(_ message: String) {
+        withAnimation(.easeInOut(duration: 0.2)) { toastMessage = message }
+        Task {
+            try? await Task.sleep(for: .milliseconds(2000))
+            await MainActor.run {
+                withAnimation(.easeIn(duration: 0.2)) { toastMessage = nil }
+            }
+        }
+    }
+
+    var body: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 14) {
+                Text("settings.calendar.toggle")
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundStyle(colorScheme == .dark ? Color.secondary.opacity(0.9) : Color.secondary)
+                    .padding(.horizontal, 16)
+                    .padding(.top, 10)
+
+                VStack(spacing: 0) {
+                    HStack(spacing: 12) {
+                        Text("settings.calendar.toggle")
+                            .font(.body)
+                            .foregroundStyle(.primary)
+                        Spacer()
+                        Toggle("", isOn: Binding(
+                            get: { calendarSyncEnabled },
+                            set: { newValue in
+                                if newValue { Task { await handleToggleOn() } }
+                                else { calendarSyncEnabled = false }
+                            }
+                        ))
+                        .labelsHidden()
+                        .tint(colorScheme == .dark ? Color(.systemGray2) : Color(.label))
+                    }
+                    .padding(.horizontal, 18)
+                    .frame(height: 58)
+
+                    if calendarSyncEnabled {
+                        Rectangle()
+                            .fill(Color.primary.opacity(colorScheme == .dark ? 0.06 : 0.03))
+                            .frame(height: 1)
+                            .transition(.opacity)
+
+                        DatePicker(
+                            LocalizedStringKey("settings.calendar.packtime"),
+                            selection: packTimeBinding,
+                            displayedComponents: .hourAndMinute
+                        )
+                        .datePickerStyle(.compact)
+                        .labelsHidden()
+                        .frame(maxWidth: .infinity, alignment: .trailing)
+                        .padding(.horizontal, 18)
+                        .frame(height: 58)
+                        .overlay(alignment: .leading) {
+                            Text("settings.calendar.packtime")
+                                .font(.body)
+                                .foregroundStyle(.primary)
+                                .padding(.leading, 18)
+                        }
+                        .transition(.asymmetric(
+                            insertion: .move(edge: .top).combined(with: .opacity),
+                            removal: .opacity
+                        ))
+                    }
+                }
+                .background(
+                    RoundedRectangle(cornerRadius: 28, style: .continuous)
+                        .fill(groupFill)
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 28, style: .continuous)
+                                .strokeBorder(groupStroke, lineWidth: 1)
+                        )
+                )
+                .shadow(color: groupShadow, radius: colorScheme == .dark ? 10 : 12, x: 0, y: colorScheme == .dark ? 3 : 4)
+                .padding(.horizontal, 16)
+            }
+            .padding(.bottom, 24)
+        }
+        .background(Color(.systemGroupedBackground).ignoresSafeArea())
+        .navigationTitle(Text("settings.calendar.entry"))
+        .navigationBarTitleDisplayMode(.inline)
+        .overlay(alignment: .bottom) {
+            if let msg = toastMessage {
+                Text(msg)
+                    .font(.subheadline.weight(.medium))
+                    .foregroundStyle(.white)
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 10)
+                    .background(Color.black.opacity(0.88))
+                    .clipShape(Capsule())
+                    .padding(.bottom, 32)
+                    .transition(.move(edge: .bottom).combined(with: .opacity))
+            }
+        }
+        .animation(.easeInOut(duration: 0.2), value: toastMessage != nil)
+        .animation(.easeInOut(duration: 0.2), value: calendarSyncEnabled)
+        .alert(LocalizedStringKey("settings.calendar.permission.denied.title"), isPresented: $showPermissionAlert) {
+            Button("settings.calendar.permission.open_settings") {
+                guard let url = URL(string: UIApplication.openSettingsURLString) else { return }
+                UIApplication.shared.open(url)
+            }
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            Text("settings.calendar.permission.denied.message")
+        }
+        .alert(LocalizedStringKey("settings.calendar.bulk.title"), isPresented: $showBulkAlert) {
+            Button("settings.calendar.bulk.confirm") {
+                let written = CalendarManager.shared.addAllUpcoming(
+                    store.trips,
+                    packHour: calendarPackHour,
+                    packMinute: calendarPackMinute
+                )
+                if written > 0 {
+                    showToast(String(format: NSLocalizedString("settings.calendar.bulk.added_toast", comment: ""), written))
+                } else {
+                    showToast(NSLocalizedString("settings.calendar.bulk.failed_toast", comment: ""))
+                }
+            }
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            Text(String(format: NSLocalizedString("settings.calendar.bulk.message", comment: ""), pendingCount))
+        }
+    }
+}
+
 #Preview {
     SettingsView()
         .environmentObject(TripStore())
@@ -960,6 +1064,15 @@ private struct DeveloperModeView: View {
                     NotificationManager.scheduleTestNotifications()
                     UIImpactFeedbackGenerator(style: .light).impactOccurred()
                     showToast("settings.developer.test_notifications.success")
+                }
+            }
+
+            Section("settings.developer.calendar_group") {
+                actionRow(title: "settings.developer.clear_calendar_ids") {
+                    CalendarManager.shared.clearAddedIds()
+                    UserDefaults.standard.set(false, forKey: "calendar_sync_enabled")
+                    UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                    showToast("settings.developer.clear_calendar_ids.success")
                 }
             }
 

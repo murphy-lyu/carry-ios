@@ -1,9 +1,10 @@
 # 项目进度
 
 ## 最后更新
-2026-05-27
+2026-05-29
 
 ## 已上线功能
+- [x] 日历同步（CalendarManager / EventKit）
 - [x] 行程创建与管理（TripBundle）
 - [x] 打包清单（PackingList）
 - [x] 场景选择与智能推荐清单
