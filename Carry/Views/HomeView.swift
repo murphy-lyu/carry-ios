@@ -317,7 +317,7 @@ struct HomeView: View {
                         .foregroundStyle(.primary)
                     Text("home.empty.header.subtitle")
                         .font(.subheadline)
-                        .foregroundStyle(.secondary.opacity(0.78))
+                        .foregroundStyle(.secondary.opacity(colorScheme == .dark ? 0.97 : 0.89))
                         .multilineTextAlignment(.center)
                 }
                 .padding(.top, 8)
@@ -778,7 +778,7 @@ struct HomeView: View {
                     Text("home.empty.title")
                         .font(.title2.weight(.semibold))
                         .foregroundStyle(.primary)
-                        .padding(.top, -2)
+                        .padding(.top, -1)
                         .padding(.horizontal, 26)
                 }
 
@@ -816,7 +816,7 @@ struct HomeView: View {
                 .buttonStyle(PressableScaleButtonStyle(scale: 0.97, pressedBrightness: -0.02, pressedOpacity: 0.95))
                 .padding(.horizontal, 26)
             }
-            .padding(.vertical, 24)
+            .padding(.vertical, 22)
             .padding(.horizontal, 22)
             .frame(maxWidth: .infinity)
             .background(
@@ -824,8 +824,8 @@ struct HomeView: View {
                     .fill(
                         LinearGradient(
                             colors: [
-                                Color(UIColor.systemBackground).opacity(colorScheme == .dark ? 0.46 : 0.82),
-                                Color(UIColor.systemBackground).opacity(colorScheme == .dark ? 0.34 : 0.70)
+                                Color(UIColor.systemBackground).opacity(colorScheme == .dark ? 0.60 : 0.86),
+                                Color(UIColor.systemBackground).opacity(colorScheme == .dark ? 0.48 : 0.74)
                             ],
                             startPoint: .topLeading,
                             endPoint: .bottomTrailing
@@ -834,7 +834,7 @@ struct HomeView: View {
             )
             .overlay(
                 RoundedRectangle(cornerRadius: 30, style: .continuous)
-                    .strokeBorder(Color.primary.opacity(colorScheme == .dark ? 0.04 : 0.05), lineWidth: 1)
+                    .strokeBorder(Color.primary.opacity(colorScheme == .dark ? 0.08 : 0.035), lineWidth: 1)
             )
             .shadow(color: Color.black.opacity(colorScheme == .dark ? 0.10 : 0.08), radius: 14, x: 0, y: 8)
             .padding(.horizontal, 22)
