@@ -24845,59 +24845,60 @@
       }
     },
     "packing.scene_card.subtitle" : {
+      "extractionState" : "manual",
       "localizations" : {
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Was dir erst nach dem Türschließen einfällt, ist meistens das Wichtigste."
+            "value" : "Noch eine letzte Prüfung, bevor du die Tür schließt."
           }
         },
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "What you remember after closing the door is usually what matters most."
+            "value" : "One last check before you close the door."
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Lo que recuerdas después de cerrar la puerta suele ser lo más importante."
+            "value" : "Una última revisión antes de cerrar la puerta."
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Ce dont tu te souviens après avoir fermé la porte est souvent ce qui compte le plus."
+            "value" : "Une dernière vérification avant de fermer la porte."
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "ドアを閉めてから思い出すのは、たいてい一番大切なもの。"
+            "value" : "ドアを閉める前に、もう一度確認を。"
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "문을 닫고 나서야 생각나는 것이, 대개 가장 중요한 것이에요."
+            "value" : "문을 닫기 전, 마지막으로 한 번 더 확인해요."
           }
         },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "O que você lembra depois de fechar a porta costuma ser o mais importante."
+            "value" : "Uma última verificação antes de fechar a porta."
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "关上门之后才想起来的，往往是最重要的。"
+            "value" : "关门之前，再确认一遍。"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "關上門之後才想起來的，往往是最重要的。"
+            "value" : "關門之前，再確認一遍。"
           }
         }
       }
