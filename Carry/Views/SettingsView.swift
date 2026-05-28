@@ -250,9 +250,10 @@ struct SettingsView: View {
                                 settingsRow(title: "settings.about.language", valueText: currentLanguageDisplay) {
                                     openSystemSettings()
                                 }
-                                settingsNavigationRow(title: "settings.appicon.entry") {
-                                    AppIconView()
-                                }
+                                // TODO: re-enable once icon designs are ready
+//                                settingsNavigationRow(title: "settings.appicon.entry") {
+//                                    AppIconView()
+//                                }
                             }
                             .padding(.horizontal, 16)
                             .padding(.bottom, 18)
