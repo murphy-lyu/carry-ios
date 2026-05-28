@@ -549,7 +549,9 @@ struct ItemPickerView: View {
         }
         .onChange(of: sourceMode) { oldValue, newValue in
             lastSourceModeRawValue = newValue.rawValue
-            if oldValue == .smart && newValue != .smart && !selectedSmartSceneLabels.isEmpty {
+            if oldValue == .smart && newValue != .smart
+                && !selectedSmartSceneLabels.isEmpty
+                && appliedSceneRecommendedNames.isEmpty {
                 applySmartRecommendations(shouldSwitchToPreset: false, shouldShowToast: false)
             }
         }
@@ -984,10 +986,6 @@ struct ItemPickerView: View {
         }
         .frame(maxWidth: .infinity)
         .padding(.vertical, 24)
-    }
-
-    private func applySmartRecommendations() {
-        applySmartRecommendations(shouldSwitchToPreset: true, shouldShowToast: true)
     }
 
     private func applySmartRecommendations(shouldSwitchToPreset: Bool, shouldShowToast: Bool) {

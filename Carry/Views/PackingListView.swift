@@ -24,7 +24,6 @@ struct PackingListView: View {
 
     @State private var showEditSheet = false
     @State private var showEditScenesSheet = false
-    @State private var showSuggestSheet = false
     @State private var showReorderSheet = false
     @State private var showDeleteConfirmation = false
     @State private var showAddSectionAlert = false
@@ -241,10 +240,6 @@ struct PackingListView: View {
             ScenePickerView(editingTripId: tripId)
                 .presentationDragIndicator(.visible)
         }
-        .sheet(isPresented: $showSuggestSheet) {
-            ScenePickerView(suggestForTripId: tripId)
-                .presentationDragIndicator(.visible)
-        }
         .sheet(isPresented: $showReorderSheet) {
             NavigationStack {
                 ReorderSectionsView(tripId: tripId) { newOrder in
@@ -265,10 +260,6 @@ struct PackingListView: View {
             guard newValue else { return }
             router.path.append(CreationRoute.addItems(tripId))
             showAddItemsRoute = false
-        }
-        .onChange(of: showSuggestSheet) { _, isShowing in
-            guard !isShowing, isNewTrip else { return }
-            loadSurpriseItems()
         }
         .sheet(isPresented: $showReminderSheet) {
             if let bundle = bundle {
