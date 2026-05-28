@@ -287,6 +287,7 @@
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = Carry/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = Carry;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.travel";
 				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "Carry uses your location to show your current position on the travel map.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
@@ -325,6 +326,7 @@
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = Carry/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = Carry;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.travel";
 				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "Carry uses your location to show your current position on the travel map.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
