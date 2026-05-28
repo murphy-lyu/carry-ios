@@ -182,6 +182,11 @@ final class TripStore: ObservableObject {
         draftTrip = nil
         fetchTrips()
         NotificationManager.scheduleReminders(for: trip)
+        if defaults.bool(forKey: "calendar_sync_enabled") {
+            let hour   = defaults.object(forKey: "calendar_pack_hour")   as? Int ?? 20
+            let minute = defaults.object(forKey: "calendar_pack_minute") as? Int ?? 0
+            Task { await CalendarManager.shared.addTrip(trip, packHour: hour, packMinute: minute) }
+        }
         CarryLogger.shared.log(.tripCreated)
     }
 
