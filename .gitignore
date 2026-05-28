@@ -1,3 +1,5 @@
+.DS_Store
+
 # Xcode user-specific state
 Carry.xcodeproj/xcuserdata/
 *.xcuserstate
