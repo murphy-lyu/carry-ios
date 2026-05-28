@@ -1661,6 +1661,12 @@
             "state": "translated",
             "value": "浮潜时视野更清晰、呼吸更轻松，上手也更快"
           }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "浮潛時視野更清晰、呼吸更輕鬆，上手也更快"
+          }
         }
       }
     },
@@ -1773,6 +1779,12 @@
             "state": "translated",
             "value": "热热喝一杯，对状态和情绪都很友好，出境时也不一定好买"
           }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "熱熱喝一杯，對狀態和情緒都很友好，出境時也不一定好買"
+          }
         }
       }
     },
@@ -1825,6 +1837,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "长途行车时，车内闷味会让人更疲惫，一点淡香能明显改善体感"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "長途行車時，車內悶味會讓人更疲憊，一點淡香能明顯改善體感"
           }
         }
       }
@@ -1879,6 +1897,12 @@
             "state": "translated",
             "value": "即时成像的照片，会让当下记忆更有温度"
           }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "即時成像的照片，會讓當下記憶更有溫度"
+          }
         }
       }
     },
@@ -1931,6 +1955,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "一点熟悉的香气，能让酒店房间更有旅行记忆感"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "一點熟悉的香氣，能讓酒店房間更有旅行記憶感"
           }
         }
       }
@@ -2043,6 +2073,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "领带夹或丝巾这类细节，会让正式场合穿搭更完整"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "領帶夾或絲巾這類細節，會讓正式場合穿搭更完整"
           }
         }
       }
@@ -4637,6 +4673,12 @@
             "state": "translated",
             "value": "防磨脚贴"
           }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "防磨腳貼"
+          }
         }
       }
     },
@@ -5280,6 +5322,12 @@
             "state": "translated",
             "value": "红糖姜茶"
           }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "紅糖薑茶"
+          }
         }
       }
     },
@@ -5391,6 +5439,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "机舱空气偏干，手最容易先不舒服，提前护理会好很多"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "機艙空氣偏乾，手最容易先不舒服，提前護理會好很多"
           }
         }
       }
@@ -5740,6 +5794,12 @@
             "state": "translated",
             "value": "车载香薰"
           }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "車載香薰"
+          }
         }
       }
     },
@@ -5969,6 +6029,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "车用小毯子"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "車用小毯子"
           }
         }
       }
@@ -6906,6 +6972,12 @@
             "state": "translated",
             "value": "折叠保温袋"
           }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "折疊保溫袋"
+          }
         }
       }
     },
@@ -7371,6 +7443,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "体积小，放随身包里，高海拔时会更安心"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "體積小，放隨身包裡，高海拔時會更安心"
           }
         }
       }
@@ -8427,6 +8505,12 @@
             "state": "translated",
             "value": "两分钟快速整理褶皱，省时又不占空间"
           }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "兩分鐘快速整理褶皺，省時又不佔空間"
+          }
         }
       }
     },
@@ -9292,6 +9376,12 @@
             "state": "translated",
             "value": "一次性雨披"
           }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "一次性雨披"
+          }
         }
       }
     },
@@ -9341,6 +9431,12 @@
           }
         },
         "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "一次性拖鞋"
+          }
+        },
+        "zh-Hant": {
           "stringUnit": {
             "state": "translated",
             "value": "一次性拖鞋"
@@ -9397,6 +9493,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "一次性马桶垫"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "一次性馬桶墊"
           }
         }
       }
@@ -9863,6 +9965,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "穿高跟鞋开车会影响脚感和反应，准备一双平底鞋，长途驾驶会轻松很多"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "穿高跟鞋開車會影響腳感和反應，準備一雙平底鞋，長途駕駛會輕鬆很多"
           }
         }
       }
@@ -10801,6 +10909,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "能量胶 / 黑巧克力"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "能量膠 / 黑巧克力"
           }
         }
       }
@@ -11917,6 +12031,12 @@
             "state": "translated",
             "value": "酒店烧水后就能用，很多时候是最直接有效的舒缓方式"
           }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "酒店燒水後就能用，很多時候是最直接有效的舒緩方式"
+          }
         }
       }
     },
@@ -12084,6 +12204,12 @@
           }
         },
         "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "平底鞋"
+          }
+        },
+        "zh-Hant": {
           "stringUnit": {
             "state": "translated",
             "value": "平底鞋"
@@ -12377,6 +12503,12 @@
             "state": "translated",
             "value": "折叠衣架"
           }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "折疊衣架"
+          }
         }
       }
     },
@@ -12429,6 +12561,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "折叠登山凳"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "折疊登山凳"
           }
         }
       }
@@ -12522,6 +12660,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "买伴手礼、带野餐食物都很方便，不用时也不占空间"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "買伴手禮、帶野餐食物都很方便，不用時也不佔空間"
           }
         }
       }
@@ -12693,6 +12837,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "正式配饰"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "正式配飾"
           }
         }
       }
@@ -15107,6 +15257,12 @@
             "state": "translated",
             "value": "酒店房间里随时有热水，夜宵和早茶都会方便很多"
           }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "酒店房間裡隨時有熱水，宵夜和早茶都會方便很多"
+          }
         }
       }
     },
@@ -15218,6 +15374,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "酒店衣架常常不够，带几个折叠衣架会省很多麻烦"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "酒店衣架常常不夠，帶幾個折疊衣架會省很多麻煩"
           }
         }
       }
@@ -17082,6 +17244,12 @@
             "state": "translated",
             "value": "拍立得/即时相机"
           }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "拍立得／即時相機"
+          }
         }
       }
     },
@@ -17781,6 +17949,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "儿童耳机"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "兒童耳機"
           }
         }
       }
@@ -18897,6 +19071,12 @@
             "state": "translated",
             "value": "磁性画板"
           }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "磁性畫板"
+          }
         }
       }
     },
@@ -19717,6 +19897,12 @@
             "state": "translated",
             "value": "不脏手、可反复用，长途路上很能安抚孩子"
           }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "不髒手、可反覆用，長途路上很能安撫孩子"
+          }
         }
       }
     },
@@ -19829,6 +20015,12 @@
             "state": "translated",
             "value": "迷你夹子"
           }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "迷你夾子"
+          }
         }
       }
     },
@@ -19878,6 +20070,12 @@
           }
         },
         "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "薄荷口香糖"
+          }
+        },
+        "zh-Hant": {
           "stringUnit": {
             "state": "translated",
             "value": "薄荷口香糖"
@@ -24244,6 +24442,12 @@
             "state": "translated",
             "value": "体积小、价格低，临时下雨时很实用"
           }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "體積小、價格低，臨時下雨時很實用"
+          }
         }
       }
     },
@@ -24591,6 +24795,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "副驾小睡时有一条顺手的小毯子，舒适度会明显提升"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "副駕小睡時有一條順手的小毯子，舒適度會明顯提升"
           }
         }
       }
@@ -25352,6 +25562,12 @@
             "state": "translated",
             "value": "便携纸巾"
           }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "便攜紙巾"
+          }
         }
       }
     },
@@ -25582,6 +25798,12 @@
             "state": "translated",
             "value": "便携电热水壶"
           }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "便攜電熱水壺"
+          }
         }
       }
     },
@@ -25694,6 +25916,12 @@
             "state": "translated",
             "value": "便携热水袋"
           }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "便攜熱水袋"
+          }
         }
       }
     },
@@ -25746,6 +25974,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "便携氧气罐"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "便攜氧氣罐"
           }
         }
       }
@@ -26094,6 +26328,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "套上就能防雨，不用为天气专门换鞋"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "套上就能防雨，不用為天氣專門換鞋"
           }
         }
       }
@@ -26500,6 +26740,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "长上坡时很容易突然饿，一点高能量补给会很关键"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "長上坡時很容易突然餓，一點高能量補給會很關鍵"
           }
         }
       }
@@ -28362,6 +28608,12 @@
             "state": "translated",
             "value": "香薰蜡烛"
           }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "香薰蠟燭"
+          }
         }
       }
     },
@@ -28414,6 +28666,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "鞋面有划痕会影响整体状态，见面前快速处理很加分"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "鞋面有劃痕會影響整體狀態，見面前快速處理很加分"
           }
         }
       }
@@ -33063,6 +33321,12 @@
             "state": "translated",
             "value": "鞋履护理套装"
           }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "鞋履護理套裝"
+          }
         }
       }
     },
@@ -33115,6 +33379,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "长途飞行换上拖鞋，体感会更放松"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "長途飛行換上拖鞋，體感會更放鬆"
           }
         }
       }
@@ -34349,6 +34619,12 @@
             "state": "translated",
             "value": "浮潜面罩"
           }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "浮潛面罩"
+          }
         }
       }
     },
@@ -34638,6 +34914,12 @@
             "state": "translated",
             "value": "观景点能坐下来休息，体验会从“赶路”变成“享受”"
           }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "觀景點能坐下來休息，體驗會從「趕路」變成「享受」"
+          }
         }
       }
     },
@@ -34809,6 +35091,12 @@
             "state": "translated",
             "value": "便携去渍笔"
           }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "便攜去漬筆"
+          }
         }
       }
     },
@@ -34858,6 +35146,12 @@
           }
         },
         "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "蒸汽眼罩"
+          }
+        },
+        "zh-Hant": {
           "stringUnit": {
             "state": "translated",
             "value": "蒸汽眼罩"
@@ -37220,6 +37514,12 @@
             "state": "translated",
             "value": "飞行中来一段温热放松，往往能明显缓解疲惫"
           }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "飛行中來一段溫熱放鬆，往往能明顯緩解疲憊"
+          }
         }
       }
     },
@@ -38216,6 +38516,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "便携挂烫机"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "便攜掛燙機"
           }
         }
       }
@@ -39489,6 +39795,12 @@
             "state": "translated",
             "value": "音量限制更安心，也能让孩子安静看内容不打扰别人"
           }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "音量限制更安心，也能讓孩子安靜看內容不打擾別人"
+          }
         }
       }
     },
@@ -40073,6 +40385,12 @@
             "state": "translated",
             "value": "防水鞋套"
           }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "防水鞋套"
+          }
         }
       }
     },
@@ -40184,6 +40502,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "防水拉链袋"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "防水拉鏈袋"
           }
         }
       }
@@ -40650,6 +40974,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "戴在手腕穴位上，外观低调，对轻度晕船人群友好"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "戴在手腕穴位上，外觀低調，對輕度暈船人群友好"
           }
         }
       }
@@ -41433,6 +41763,695 @@
           "stringUnit": {
             "state": "translated",
             "value": "美瞳"
+          }
+        }
+      }
+    },
+    "Fast airport transfers and long terminal walks can shred your heels — applying one early can save your first day": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "快速转机和长途步行会磨破脚跟——提早贴上，可以救你的第一天"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "快速轉機和長途步行會磨破腳跟——提早貼上，可以救你的第一天"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Schnelle Umsteigetransfers und lange Terminalwege können die Fersen aufscheuern — frühzeitig aufgetragen kann das den ersten Tag retten"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Los traslados rápidos en el aeropuerto y los largos paseos por la terminal pueden destrozarte los talones — aplicarlos pronto puede salvarte el primer día"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Les transferts rapides et les longues marches en aéroport peuvent meurtrir vos talons — en appliquer un tôt peut sauver votre premier jour"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "急いだ乗り換えや長いターミナルの歩行でかかとが擦り切れることがある——早めに貼れば初日を救える"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "빠른 환승과 긴 터미널 이동은 발뒤꿈치를 망가뜨릴 수 있어요 — 미리 붙이면 첫날을 구할 수 있어요"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Transferências rápidas e longas caminhadas no terminal podem rasgar seus calcanhares — aplicar um cedo pode salvar seu primeiro dia"
+          }
+        }
+      }
+    },
+    "Chewing one before landing helps with dry cabin mouth and makes you feel fresher on arrival": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "落地前嚼一片，缓解机舱口干，到达时更精神"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "落地前嚼一片，緩解機艙口乾，到達時更精神"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Eines vor der Landung kauen hilft gegen Mundtrockenheit in der Kabine und lässt einen frischer ankommen"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Masticar uno antes de aterrizar alivia la sequedad bucal en cabina y te hace sentir más fresco al llegar"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "En mâcher un avant l'atterrissage aide contre la bouche sèche en cabine et vous fait sentir plus frais à l'arrivée"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "着陸前に一粒噛むと機内の口の乾燥が和らぎ、到着時にすっきりした気分になれる"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "착륙 전에 하나 씹으면 건조한 기내 구강을 해소하고 도착 시 더 상쾌해져요"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mastigar um antes de pousar ajuda com a boca seca na cabine e faz você se sentir mais disposto na chegada"
+          }
+        }
+      }
+    },
+    "A physical book for long-haul — no battery anxiety, no glare, and you will actually finish it away from notifications": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "长途飞行，拿本实体书——不用担心没电，没有屏幕反光，远离消息才真能读完"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "長途飛行，拿本實體書——不用擔心沒電，沒有螢幕反光，遠離消息才真能讀完"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ein gedrucktes Buch für Langstrecken — kein Akku, keine Reflexionen, und ohne Benachrichtigungen liest man es wirklich zu Ende"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Un libro físico para vuelos largos — sin batería, sin reflejos, y sin notificaciones realmente lo terminas"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Un livre physique pour les long-courriers — sans batterie, sans reflets, et loin des notifications on le finit vraiment"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "長距離フライトには紙の本を——バッテリー不要、反射なし、通知から離れてしっかり読み終えられる"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "장거리 비행엔 종이책이 딱해요 — 배터리 걱정 없고, 눈부심도 없고, 알림 없이 끝까지 읽을 수 있어요"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Um livro físico para voos longos — sem bateria, sem reflexo, e sem notificações você vai realmente terminar de ler"
+          }
+        }
+      }
+    },
+    "Tiny but surprisingly versatile: clip wet socks to dry, seal snack bags, or secure loose small items": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "小但出奇好用：晾湿袜子、封零食袋、固定小东西"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "小但出奇好用：晾濕襪子、封零食袋、固定小東西"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Klein, aber erstaunlich vielseitig: nasse Socken trocknen, Snack-Beutel verschließen, kleine Teile sichern"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pequeños pero sorprendentemente versátiles: cuelga calcetines húmedos, sella bolsas de snacks o sujeta pequeños objetos"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Petits mais étonnamment polyvalents : faire sécher des chaussettes mouillées, fermer des sachets de snacks ou fixer de petits objets"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "小さいのに驚くほど多用途：濡れた靴下を干す、お菓子袋を閉じる、小物を固定する"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "작지만 놀랍도록 활용도가 높아요: 젖은 양말 말리기, 과자 봉지 봉하기, 작은 물건 고정하기"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pequenos mas surpreendentemente versáteis: pendure meias molhadas para secar, feche sacos de lanche ou prenda pequenos objetos soltos"
+          }
+        }
+      }
+    },
+    "For early mornings before the café opens — one sachet weighs nothing and can save a slow start anywhere in the world": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "咖啡馆还没开的清晨——一小包几乎没分量，却能在世界任何地方救你于迟缓的开始"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "咖啡館還沒開的清晨——一小包幾乎沒分量，卻能在世界任何地方救你於遲緩的開始"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Für frühe Morgen, bevor das Café öffnet — ein Päckchen wiegt fast nichts und rettet einen trägen Start überall auf der Welt"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Para las mañanas tempranas antes de que abra la cafetería — un sobre no pesa nada y puede salvarte de un inicio lento en cualquier lugar del mundo"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pour les matins avant l'ouverture du café — un sachet ne pèse rien et peut sauver un départ lent n'importe où dans le monde"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "カフェが開く前の早朝に——一袋はほぼ無重量で、世界中どこでも遅い朝の始まりを救ってくれる"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "카페가 열기 전 이른 아침을 위해 — 한 봉지는 무게가 거의 없고 세계 어디서든 늦은 시작을 구해줄 수 있어요"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Para as manhãs cedo antes de o café abrir — um sachê não pesa quase nada e pode salvar um começo lento em qualquer lugar do mundo"
+          }
+        }
+      }
+    },
+    "A few teabags weigh almost nothing and turn any hostel kettle into a proper ritual — one of the smallest luxuries worth packing": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "几个茶包几乎没有分量，却能把任何青旅的烧水壶变成一段仪式——值得装进包里的最小奢侈之一"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "幾個茶包幾乎沒有分量，卻能把任何青旅的燒水壺變成一段儀式——值得裝進包裡的最小奢侈之一"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ein paar Teebeutel wiegen fast nichts und machen aus jedem Jugendherbergenwasserkocher ein echtes Ritual — einer der kleinsten Luxusgüter, die es wert sind, eingepackt zu werden"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Unos pocos sobres de té no pesan casi nada y convierten cualquier hervidor de albergue en un ritual — uno de los lujos más pequeños que merece la pena llevar"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Quelques sachets de thé ne pèsent presque rien et transforment la bouilloire de n'importe quelle auberge en un vrai rituel — l'un des plus petits luxes qui vaut la peine d'être emporté"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ティーバッグ数枚はほぼ無重量で、どんなホステルのケトルも本物の儀式に変えてくれる——荷物に入れる価値のある最小の贅沢のひとつ"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "티백 몇 개는 무게가 거의 없고 어떤 호스텔 주전자도 진짜 의식으로 만들어줘요 — 챙길 가치 있는 가장 작은 사치 중 하나예요"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Alguns saquinhos de chá pesam quase nada e transformam qualquer chaleira de albergue em um ritual de verdade — um dos menores luxos que vale a pena embalar"
+          }
+        }
+      }
+    },
+    "When coffee or sauce lands on light clothes, a quick swipe can save you from a whole day of awkward stains": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "咖啡或酱料滴到浅色衣服时，快速擦一下，能避免一整天的尴尬"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "咖啡或醬料滴到淺色衣服時，快速擦一下，能避免一整天的尷尬"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wenn Kaffee oder Sauce auf helle Kleidung fällt, kann ein schneller Wisch einen ganzen Tag peinlicher Flecken ersparen"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cuando el café o la salsa cae sobre ropa clara, un rápido pase puede ahorrarte un día entero de manchas incómodas"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Quand le café ou la sauce tombe sur des vêtements clairs, un coup rapide peut vous éviter une journée entière de taches gênantes"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "淡い服にコーヒーやソースが垂れたとき、さっとひと拭きで一日中恥ずかしいシミを防げる"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "커피나 소스가 밝은 색 옷에 묻었을 때, 빠르게 한 번 닦으면 하루 종일 어색한 얼룩에서 벗어날 수 있어요"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Quando café ou molho cai em roupas claras, uma rápida passada pode te salvar de um dia inteiro com manchas constrangedoras"
+          }
+        }
+      }
+    },
+    "Public restrooms and small shops do not always have tissues — this tiny backup saves the moment more often than you think": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "公厕和小店不一定有纸巾——这个小备品出手的次数，比你以为的多"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "公廁和小店不一定有紙巾——這個小備品出手的次數，比你以為的多"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Öffentliche Toiletten und kleine Läden haben nicht immer Taschentücher — dieses kleine Backup hilft öfter als man denkt"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Los baños públicos y las tiendas pequeñas no siempre tienen pañuelos — este pequeño recurso salva el momento más a menudo de lo que crees"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Les toilettes publiques et les petits commerces n'ont pas toujours de mouchoirs — ce petit filet de sécurité rend service plus souvent qu'on ne le croit"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "公衆トイレや小さな店には常にティッシュがあるとは限らない——この小さな予備は、思う以上によく役に立つ"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "공중화장실과 작은 가게에는 항상 화장지가 있지 않아요 — 이 작은 비상용이 생각보다 훨씬 자주 필요해요"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Banheiros públicos e pequenas lojas nem sempre têm lenços — esse pequeno backup salva o momento com mais frequência do que você imagina"
+          }
+        }
+      }
+    },
+    "In heavy rain, putting your phone, cards, and tickets inside removes a lot of avoidable stress": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "大雨时，把手机、银行卡和票据放进去，能减少很多本可避免的焦虑"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "大雨時，把手機、銀行卡和票據放進去，能減少很多本可避免的焦慮"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bei starkem Regen nimmt das Verstauen von Handy, Karten und Tickets darin viel vermeidbaren Stress"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "En lluvia intensa, meter el teléfono, las tarjetas y los billetes dentro elimina mucho estrés evitable"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Par forte pluie, y glisser son téléphone, ses cartes et ses billets supprime beaucoup de stress évitable"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "大雨のとき、スマートフォン、カード、チケットを中に入れると、避けられたはずのストレスがかなり減る"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "폭우 속에서 핸드폰, 카드, 티켓을 안에 넣으면 피할 수 있었던 스트레스를 많이 줄일 수 있어요"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Na chuva forte, colocar celular, cartões e ingressos dentro elimina muito estresse evitável"
+          }
+        }
+      }
+    },
+    "During long days out, these make unfamiliar public restrooms feel much more comfortable": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "长时间在外时，让陌生的公共洗手间用起来舒适很多"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "長時間在外時，讓陌生的公共洗手間用起來舒適很多"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bei langen Tagen unterwegs machen sie unbekannte öffentliche Toiletten viel angenehmer"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Durante los días largos fuera de casa, hacen que los baños públicos desconocidos se sientan mucho más cómodos"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Lors de longues journées dehors, ceux-ci rendent les toilettes publiques inconnues bien plus confortables"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "長い外出の日は、見知らぬ公衆トイレがずっと快適に感じられるようになる"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "오랜 외출 중에, 낯선 공중화장실을 훨씬 더 편하게 만들어줘요"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Durante longos dias de passeio, esses tornam os banheiros públicos desconhecidos muito mais confortáveis"
+          }
+        }
+      }
+    },
+    "Pocket notebook": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "便携笔记本"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "便攜筆記本"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kleines Notizbuch"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Libreta de bolsillo"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Carnet de poche"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ポケットノート"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "포켓 노트북"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Caderninho de bolso"
+          }
+        }
+      }
+    },
+    "For evenings with nowhere to be — the right scent shifts the whole mood of a room in a way that nothing else quite does": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "无需出门的夜晚——合适的香气能以别的东西难以匹敌的方式，改变整个房间的氛围"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "無需出門的夜晚——合適的香氣能以別的東西難以匹敵的方式，改變整個房間的氛圍"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Für Abende ohne Verpflichtungen — der richtige Duft verändert die ganze Stimmung eines Zimmers auf eine Weise, wie es sonst nichts tut"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Para las noches sin planes — el aroma adecuado cambia todo el ambiente de una habitación de una manera que nada más consigue"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pour les soirées sans obligation — le bon parfum change toute l'atmosphère d'une pièce d'une manière qu'aucune autre chose ne peut faire"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "どこにも行く必要のない夜に——適切な香りは、他の何にも真似できない方法で、部屋全体の雰囲気を変える"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "아무 데도 갈 필요 없는 저녁을 위해 — 적절한 향이 다른 어떤 것도 할 수 없는 방식으로 방 전체의 분위기를 바꿔줘요"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Para as noites sem compromisso — o aroma certo muda todo o clima de um quarto de uma forma que nada mais consegue"
+          }
+        }
+      }
+    },
+    "Cruise cabin walls are magnetic, and most people don't know until they've already unpacked — a few hooks can completely change how the room works": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "邮轮船舱墙壁是磁性的，很多人入住后才发现——几个磁钩能彻底改变房间的整洁程度"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "郵輪船艙牆壁是磁性的，很多人入住後才發現——幾個磁鉤能徹底改變房間的整潔程度"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kreuzfahrtkabinenwände sind magnetisch, aber die meisten wissen das erst nach dem Auspacken — ein paar Haken können die ganze Raumnutzung verändern"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Las paredes de las cabinas de crucero son magnéticas, y la mayoría no lo sabe hasta que ya ha deshecho el equipaje — unos ganchos pueden cambiar completamente cómo funciona la habitación"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Les murs des cabines de croisière sont magnétiques, et la plupart des gens ne le savent qu'après avoir défait leurs valises — quelques crochets peuvent complètement changer l'organisation de la pièce"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "クルーズ船のキャビンの壁は磁石になっていて、多くの人は荷物を解いてから気づく——いくつかのフックが部屋の使い勝手を完全に変えてくれる"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "크루즈 선실 벽은 자석이에요, 대부분의 사람들은 짐을 풀고 나서야 알게 되죠 — 후크 몇 개가 방 전체 사용 방식을 완전히 바꿔줄 수 있어요"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "As paredes das cabines de cruzeiro são magnéticas, e a maioria das pessoas não sabe até já ter desfeito as malas — alguns ganchos podem mudar completamente como o quarto funciona"
           }
         }
       }

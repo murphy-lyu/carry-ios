@@ -73,7 +73,7 @@ let surpriseItemMap: [String: [SurpriseItem]] = [
                      note: "A small candle transforms a hotel room — that smell will mean 'the honeymoon' for years afterwards",
                      category: .toiletries),
         SurpriseItem(name: "Massage oil",
-                     note: "Small, travel-friendly, and creates its own atmosphere — worth the space",
+                     note: "For evenings with nowhere to be — the right scent shifts the whole mood of a room in a way that nothing else quite does",
                      category: .toiletries),
         SurpriseItem(name: "Bath salts",
                      note: "One evening, run a bath — it is a small decision that can make a whole trip feel like it was properly lived",
@@ -160,7 +160,7 @@ let surpriseItemMap: [String: [SurpriseItem]] = [
     ],
     "cruise": [
         SurpriseItem(name: "Magnetic hooks",
-                     note: "Cruise cabin walls are magnetic — hang bags and coats with no damage",
+                     note: "Cruise cabin walls are magnetic, and most people don't know until they've already unpacked — a few hooks can completely change how the room works",
                      category: .essentials),
         SurpriseItem(name: "Formal accessories",
                      note: "A tie clip or silk scarf — the details that make a formal dinner outfit feel considered rather than thrown together",
@@ -242,7 +242,7 @@ let surpriseItemMap: [String: [SurpriseItem]] = [
         SurpriseItem(name: "Blue light glasses",
                      note: "Eight hours at a screen in a new place. A small defence against the slow headache that builds through the afternoon",
                      category: .essentials),
-        SurpriseItem(name: "A good notebook",
+        SurpriseItem(name: "Pocket notebook",
                      note: "For thinking that doesn't belong in a doc. Keep it on the desk, not buried in the bag",
                      category: .essentials),
         SurpriseItem(name: "Portable desk pad",
@@ -257,7 +257,7 @@ private let surpriseCategoryOrder: [ItemCategory] = [.toiletries, .electronics, 
 
 private let surpriseUniversalScore: [String: Double] = [
     "Blue light glasses": 0.78,
-    "A good notebook": 0.72,
+    "Pocket notebook": 0.72,
     "Hand cream": 0.90,
     "Ziplock bags": 0.90,
     "Pill organiser": 0.88,
@@ -285,7 +285,7 @@ private let surpriseDelightScore: [String: Double] = [
 private let surpriseSceneStrength: [String: Double] = [
     "Disposable camera": 0.88,
     "Blue light glasses": 0.92,
-    "A good notebook": 0.82,
+    "Pocket notebook": 0.82,
     "Portable desk pad": 0.86,
     "Magnetic hooks": 0.98,
     "Acupressure wristbands": 0.92,
@@ -345,7 +345,7 @@ private let surpriseFunctionalOverlapKeywords: [String: [String]] = [
     "Hot chocolate sachets": ["hot chocolate"],
     "Disposable camera": ["camera", "disposable camera"],
     "Blue light glasses": ["blue light", "glasses", "spectacles"],
-    "A good notebook": ["notebook", "journal"],
+    "Pocket notebook": ["notebook", "journal"],
     "Portable desk pad": ["desk pad", "desk mat"],
 ]
 
