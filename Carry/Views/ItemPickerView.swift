@@ -766,15 +766,15 @@ struct ItemPickerView: View {
                 }
                 .foregroundStyle(sourceMode == .smart ? .white : .secondary)
                 .frame(maxWidth: .infinity)
-                .frame(height: 44)
+                .frame(height: 40)
                 .background(
-                    RoundedRectangle(cornerRadius: 14, style: .continuous)
+                    RoundedRectangle(cornerRadius: 12, style: .continuous)
                         .fill(
                             sourceMode == .smart
                                 ? LinearGradient(
                                     colors: [
-                                        colorScheme == .dark ? Color(white: 0.28) : Color.primary.opacity(1.0),
-                                        colorScheme == .dark ? Color(white: 0.22) : Color.primary.opacity(0.92)
+                                        colorScheme == .dark ? Color(white: 0.26) : Color.primary.opacity(1.0),
+                                        colorScheme == .dark ? Color(white: 0.21) : Color.primary.opacity(0.92)
                                     ],
                                     startPoint: .topLeading,
                                     endPoint: .bottomTrailing
@@ -790,30 +790,30 @@ struct ItemPickerView: View {
                         )
                 )
                 .overlay(
-                    RoundedRectangle(cornerRadius: 14, style: .continuous)
+                    RoundedRectangle(cornerRadius: 12, style: .continuous)
                         .strokeBorder(
                             Color.primary.opacity(
                                 sourceMode == .smart
-                                    ? (colorScheme == .dark ? 0.08 : 0.04)
-                                    : (colorScheme == .dark ? 0.06 : 0.08)
+                                    ? (colorScheme == .dark ? 0.065 : 0.04)
+                                    : (colorScheme == .dark ? 0.05 : 0.08)
                             ),
                             lineWidth: 1
                         )
                 )
                 .shadow(
                     color: sourceMode == .smart
-                        ? Color.black.opacity(colorScheme == .dark ? 0.12 : 0.12)
-                        : Color.black.opacity(colorScheme == .dark ? 0.08 : 0.03),
-                    radius: sourceMode == .smart ? 8 : 4,
+                        ? Color.black.opacity(colorScheme == .dark ? 0.10 : 0.12)
+                        : Color.black.opacity(colorScheme == .dark ? 0.06 : 0.03),
+                    radius: sourceMode == .smart ? 6 : 3,
                     x: 0,
-                    y: 2
+                    y: 1
                 )
             }
             .buttonStyle(.plain)
         }
-        .padding(5)
+        .padding(4)
         .background(
-            RoundedRectangle(cornerRadius: 18, style: .continuous)
+            RoundedRectangle(cornerRadius: 16, style: .continuous)
                 .fill(
                     LinearGradient(
                         colors: [
@@ -826,23 +826,23 @@ struct ItemPickerView: View {
                 )
         )
         .overlay(
-            RoundedRectangle(cornerRadius: 18, style: .continuous)
-                .strokeBorder(Color.primary.opacity(colorScheme == .dark ? 0.12 : 0.08), lineWidth: 1)
+            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                .strokeBorder(Color.primary.opacity(colorScheme == .dark ? 0.09 : 0.072), lineWidth: 1)
         )
-        .shadow(color: Color.black.opacity(0.035), radius: 8, x: 0, y: 3)
-        .frame(height: 58)
-        .padding(.top, 2)
+        .shadow(color: Color.black.opacity(0.03), radius: 6, x: 0, y: 2)
+        .frame(height: 52)
+        .padding(.top, 1)
     }
 
     private var groupedSmartScenesView: some View {
-        VStack(alignment: .leading, spacing: 16) {
+        VStack(alignment: .leading, spacing: 12) {
             ForEach(defaultSceneGroups) { group in
                 let groupLabels = group.items.filter { sceneLabelToKey[$0] != nil }
                 if !groupLabels.isEmpty {
-                    VStack(alignment: .leading, spacing: 8) {
+                    VStack(alignment: .leading, spacing: 4) {
                         Text(LocalizedStringKey(group.title))
                             .font(.caption.weight(.medium))
-                            .foregroundStyle(colorScheme == .dark ? Color(.systemGray2) : Color(.systemGray))
+                            .foregroundStyle(colorScheme == .dark ? Color(.systemGray) : Color(.systemGray))
                             .kerning(1.0)
                             .textCase(.uppercase)
                         sceneChipGrid(labels: groupLabels)
@@ -894,12 +894,13 @@ struct ItemPickerView: View {
                                         .font(.caption)
                                 }
                             }
-                            .foregroundStyle(.secondary)
+                            .foregroundStyle(colorScheme == .dark ? Color.secondary : Color.secondary.opacity(0.90))
                             .padding(.top, 2)
                         }
 
                     }
-                    .padding(16)
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 14)
                 }
             }
             .padding(.bottom, isCreateMode ? 88 : 24)
@@ -930,7 +931,7 @@ struct ItemPickerView: View {
     }
 
     private func sceneChipGrid(labels: [String]) -> some View {
-        return LazyVGrid(columns: [GridItem(.adaptive(minimum: 140), spacing: 8)], spacing: 8) {
+        return LazyVGrid(columns: [GridItem(.adaptive(minimum: 140), spacing: 8)], spacing: 6) {
             ForEach(labels, id: \.self) { label in
                 let isSelected = selectedSmartSceneLabels.contains(label)
                 Button {
@@ -953,14 +954,14 @@ struct ItemPickerView: View {
                     }
                     .frame(maxWidth: .infinity)
                     .padding(.horizontal, 10)
-                    .padding(.vertical, 10)
+                    .padding(.vertical, 7)
                     .background(
                         Capsule(style: .continuous)
                             .fill(
                                 isSelected
                                     ? Color(UIColor { traits in
                                         traits.userInterfaceStyle == .dark
-                                            ? UIColor(white: 0.30, alpha: 1.0)
+                                            ? UIColor(white: 0.26, alpha: 1.0)
                                             : UIColor(white: 0.22, alpha: 1.0)
                                     })
                                     : Color(UIColor.secondarySystemBackground).opacity(colorScheme == .dark ? 0.44 : 0.76)
@@ -1059,9 +1060,9 @@ struct ItemPickerView: View {
             }
             .foregroundStyle(isSelected ? Color.white : Color.secondary)
             .frame(maxWidth: .infinity)
-            .frame(height: 44)
+            .frame(height: 40)
             .background(
-                RoundedRectangle(cornerRadius: 14, style: .continuous)
+                RoundedRectangle(cornerRadius: 12, style: .continuous)
                     .fill(
                         isSelected
                             ? LinearGradient(
@@ -1083,7 +1084,7 @@ struct ItemPickerView: View {
                     )
             )
             .overlay(
-                RoundedRectangle(cornerRadius: 14, style: .continuous)
+                RoundedRectangle(cornerRadius: 12, style: .continuous)
                     .strokeBorder(Color.primary.opacity(isSelected ? (isDarkMode ? 0.06 : 0.02) : (isDarkMode ? 0.06 : 0.08)), lineWidth: 1)
             )
             .shadow(color: isSelected ? Color.black.opacity(isDarkMode ? 0.10 : 0.10) : Color.black.opacity(isDarkMode ? 0.08 : 0.03), radius: isSelected ? 7 : 4, x: 0, y: 2)
