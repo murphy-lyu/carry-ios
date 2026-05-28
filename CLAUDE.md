@@ -156,8 +156,49 @@ xcstrings 中有两类 key：
 
 其他语言同理：德语名词首字母大写；法语冒号/问号前有空格；日语优先用常体（だ/である）而非敬体（です/ます）；韩语界面文案通常用해요体而非합니다体。
 
+### Key 命名规范
+两类 key，用途不同，选型也不同：
+
+**结构化 key**：用于有明确界面归属的 UI 文案（标题、按钮、Tab 名、错误提示、空状态等）。格式为 `screen.component.purpose`，全小写，点分隔。例：
+- `itempicker.hero.title`
+- `packing.scene_card.subtitle`
+- `myitems.empty.title`
+
+必须在 xcstrings 中显式写 `"en"` 条目。
+
+**语义 key**：用于内容型文案（Surprise Item 的 note、较长的描述文案等）。直接用英文原文作为 key，key 本身即为英文展示值，无需 `"en"` 条目。例：
+- `"One last check before you close the door."`
+- `"For evenings with nowhere to be — the right scent shifts the whole mood of a room…"`
+
+语义 key 的优点是在代码中可读、自文档化；结构化 key 的优点是与界面层级对应、便于批量管理。
+
+### 修改语义 key 的文案
+语义 key 的 key 名就是英文原文，修改英文等于 key 本身变了。正确流程：
+
+1. 在 xcstrings 中**新增** key（新英文文案），同步补全所有 9 种语言
+2. 在 Swift 代码中将引用切换到新 key
+3. 将旧 key 从 xcstrings 中**删除**
+
+禁止直接在旧 key 的 `"en"` locale 下修改 value——语义 key 没有 `"en"` 条目，且这样做会造成 key 与实际展示文案不一致，埋下难以发现的 bug。
+
 ### 修改现有文案：同步更新所有语言
 修改任何已有文案（改措辞、调语气、重写 copy）时，所有语言版本必须同步更新，不允许只改英文或只改中文，让其他语言停留在旧版本。旧文案的 key 如果不再使用，应从 xcstrings 中一并删除，避免产生无效条目。
+
+### 物品库维护规范
+
+**重命名物品时必须保留向后兼容**
+`itemPickerCatalog` 中的物品名是用户清单数据的存储 key。改名后，已有用户的清单里仍然存着旧名字，若找不到对应条目会导致数据异常。正确做法：在 `ItemCatalog.swift` 的 `itemNameAliases` 字典中添加 `旧名 → 新名` 的映射，不得删除已有 alias。
+
+```swift
+// 示例
+private let itemNameAliases: [String: String] = [
+    "Colored contacts": "Coloured contacts",  // 改过的别名，永久保留
+    // ...
+]
+```
+
+**`ItemPickerCategory.name` 必须与 xcstrings key 完全一致**
+该字段在 UI 中作为 `LocalizedStringKey` 使用。任何不一致（如 `"Documents"` vs `"Travel Documents"`）都会导致所有语言的分类标题 fallback 回英文原文，且只在非英文设备上才能发现。修改分类名时，`ItemPickerCategory.name`、对应 `ItemCategory` enum 的 rawValue、`catalogCategory(named:)` 的 case、以及 xcstrings key 必须四处同步更新。
 
 ### 已知错误模式（不要重犯）
 - placeholder 写死中文字符串 → 英文设备看到中文
