@@ -48,6 +48,7 @@ struct ContentView: View {
 
     // MARK: - Mac layout
 
+    #if targetEnvironment(macCatalyst)
     @ViewBuilder
     private var macLayout: some View {
         ZStack(alignment: .leading) {
@@ -100,6 +101,7 @@ struct ContentView: View {
             if didApplyStartupReset { handlePendingShortcut() }
         }
     }
+    #endif
 
     // MARK: - iPhone layout
 
