@@ -62,7 +62,7 @@ struct ItemPickerCategory {
 }
 
 let itemPickerCatalog: [ItemPickerCategory] = [
-    ItemPickerCategory(name: "Documents", items: [
+    ItemPickerCategory(name: "Travel Documents", items: [
         "Passport", "ID card", "Visa",
         "Hotel booking", "Travel insurance", "Itinerary",
         "Driver's license", "International driving permit",
@@ -89,7 +89,7 @@ let itemPickerCatalog: [ItemPickerCategory] = [
         "Selfie stick", "Tripod", "Power strip", "Bluetooth speaker",
         "Portable WiFi device",
     ]),
-    ItemPickerCategory(name: "Toiletries", items: [
+    ItemPickerCategory(name: "Personal Care", items: [
         "Makeup remover / cleansing oil", "Cotton pads", "Face wash", "Face mask", "Sheet mask", "Face mist", "Toner", "Serum", "Eye cream", "Facial oil", "Lotion", "Moisturiser",
         "Body lotion",
         "Lip balm", "Sunscreen", "Blotting paper",
