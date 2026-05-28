@@ -108,7 +108,6 @@ let sceneItemMap: [String: [SceneItem]] = [
     ],
     "cruise": [
         makeSceneItem("Passport", isAlert: true, internationalOnly: true),
-        makeSceneItem("Boarding pass", isAlert: true),
         makeSceneItem("Motion sickness tablets", isAlert: true),
         makeSceneItem("Formal dinner outfit", isAlert: true),
         makeSceneItem("Travel adapter", isAlert: true, internationalOnly: true),
