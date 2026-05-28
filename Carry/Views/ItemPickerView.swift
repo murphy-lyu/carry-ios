@@ -863,6 +863,32 @@ struct ItemPickerView: View {
                             sceneChipGrid(labels: labels)
                         }
 
+                        if !selectedSmartSceneLabels.isEmpty {
+                            let preview = smartPreviewItemNames
+                            HStack(spacing: 6) {
+                                Image(systemName: "wand.and.stars")
+                                    .font(.caption.weight(.semibold))
+                                if preview.isEmpty {
+                                    Text(LocalizedStringKey("itempicker.smart.preview.none"))
+                                        .font(.caption)
+                                } else {
+                                    let names = preview.prefix(3).joined(separator: "、")
+                                    let suffix = preview.count > 3 ? "…" : ""
+                                    Text(
+                                        String(
+                                            format: NSLocalizedString("itempicker.smart.preview.adding", comment: ""),
+                                            preview.count,
+                                            names,
+                                            suffix
+                                        )
+                                    )
+                                        .font(.caption)
+                                }
+                            }
+                            .foregroundStyle(.secondary)
+                            .padding(.top, 2)
+                        }
+
                         if !labels.isEmpty || searchText.isEmpty {
                             Button {
                                 applySmartRecommendations()
@@ -902,6 +928,17 @@ struct ItemPickerView: View {
         let query = normalizedForSearch(searchText)
         guard !query.isEmpty else { return allLabels }
         return allLabels.filter { normalizedForSearch(NSLocalizedString($0, comment: "")).contains(query) }
+    }
+
+    private var smartPreviewItemNames: [String] {
+        let keys = selectedSmartSceneLabels.compactMap { sceneLabelToKey[$0] }
+        guard !keys.isEmpty else { return [] }
+        let sections = generatePackingSections(selectedScenes: keys, tripDays: tripDays)
+        let names = sections.flatMap { $0.sortedItems.map { canonicalItemName($0.name) } }
+        let unique = Array(Set(names)).sorted()
+        return unique.filter { name in
+            !existingItemNames.contains(normalizedItemName(name))
+        }
     }
 
     private func sceneChipGrid(labels: [String]) -> some View {
@@ -1002,8 +1039,25 @@ struct ItemPickerView: View {
             sourceMode = .preset
         }
         if shouldShowToast {
-            let msg = String(format: NSLocalizedString("scenes.updated.count", comment: ""), preselected.count)
-            showToast(msg)
+            let newNames = preselected
+                .map(\.item)
+                .map(canonicalItemName)
+                .filter { !existingItemNames.contains(normalizedItemName($0)) }
+                .sorted()
+            if newNames.isEmpty {
+                showToast(NSLocalizedString("itempicker.smart.toast.none", comment: ""))
+            } else {
+                let preview = newNames.prefix(3).joined(separator: "、")
+                let suffix = newNames.count > 3 ? "…" : ""
+                showToast(
+                    String(
+                        format: NSLocalizedString("itempicker.smart.toast.added", comment: ""),
+                        newNames.count,
+                        preview,
+                        suffix
+                    )
+                )
+            }
         }
     }
 

@@ -17606,6 +17606,98 @@
         }
       }
     },
+    "itempicker.smart.preview.adding": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Will add %1$lld items: %2$@%3$@"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "将新增 %1$lld 件：%2$@%3$@"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "將新增 %1$lld 件：%2$@%3$@"
+          }
+        }
+      }
+    },
+    "itempicker.smart.preview.none": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Already up to date, no new items to add"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "已是最新，无需新增物品"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "已是最新，無需新增物品"
+          }
+        }
+      }
+    },
+    "itempicker.smart.toast.added": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Added %1$lld items: %2$@%3$@"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "已新增 %1$lld 件：%2$@%3$@"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "已新增 %1$lld 件：%2$@%3$@"
+          }
+        }
+      }
+    },
+    "itempicker.smart.toast.none": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Already up to date, no new items to add"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "已是最新，无需新增物品"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "已是最新，無需新增物品"
+          }
+        }
+      }
+    },
     "itempicker.toast.added_to_list": {
       "localizations": {
         "de": {
@@ -18184,13 +18276,13 @@
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "Carry 将所有数据保存在你的设备上。我们不收集、不传输、也不与任何第三方共享你的信息。\n\n我们没有服务器,也没有任何数据分析、追踪、广告 SDK。我们不知道你是谁、你去过哪里、你打包了什么。\n\n当你启用 iCloud 同步(未来版本),行程会通过 Apple 的 CloudKit 进入你自己的 iCloud 账户,这部分受 Apple 隐私政策约束——我们同样无法访问。\n\n所有本地通知的调度与触发都在你的设备上完成。\n\n当你点击地图上的定位按钮时,App 会通过 Apple MapKit 框架读取你的设备位置以显示当前位置。该数据仅在设备本地处理,不会发送给我们。\n\n卸载 Carry,本地数据会一并被 iOS 删除。如需清空 iCloud 副本,前往「设置 → Apple ID → iCloud → 管理账户存储 → Carry」。\n\n本页未尽事宜以完整版为准。"
+            "value": "Carry 将所有数据保存在你的设备上。我们不收集、不传输、也不与任何第三方共享你的信息。\n\n我们没有服务器，也没有任何数据分析、追踪、广告 SDK。我们不知道你是谁、你去过哪里、你打包了什么。\n\n当你启用 iCloud 同步（未来版本），行程会通过 Apple 的 CloudKit 进入你自己的 iCloud 账户，这部分受 Apple 隐私政策约束——我们同样无法访问。\n\n所有本地通知的调度与触发都在你的设备上完成。\n\n当你点击地图上的定位按钮时，App 会通过 Apple MapKit 框架读取你的设备位置以显示当前位置。该数据仅在设备本地处理，不会发送给我们。\n\n卸载 Carry，本地数据会一并被 iOS 删除。如需清空 iCloud 副本，前往「设置 → Apple ID → iCloud → 管理账户存储 → Carry」。\n\n本页未尽事宜以完整版为准。"
           }
         },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "Carry 將所有資料保存在你的裝置上。我們不收集、不傳輸、也不與任何第三方共享你的資訊。\n\n我們沒有伺服器,也沒有任何資料分析、追蹤、廣告 SDK。我們不知道你是誰、你去過哪裡、你打包了什麼。\n\n當你啟用 iCloud 同步(未來版本),行程會透過 Apple 的 CloudKit 進入你自己的 iCloud 帳戶,這部分受 Apple 隱私政策約束——我們同樣無法存取。\n\n所有本機通知的排程與觸發都在你的裝置上完成。\n\n解除安裝 Carry,本機資料會一併被 iOS 刪除。如需清空 iCloud 副本,前往「設定 → Apple ID → iCloud → 管理帳戶儲存空間 → Carry」。\n\n本頁未盡事宜以完整版為準。"
+            "value": "Carry 將所有資料保存在你的裝置上。我們不收集、不傳輸、也不與任何第三方共享你的資訊。\n\n我們沒有伺服器，也沒有任何資料分析、追蹤、廣告 SDK。我們不知道你是誰、你去過哪裡、你打包了什麼。\n\n當你啟用 iCloud 同步（未來版本），行程會透過 Apple 的 CloudKit 進入你自己的 iCloud 帳戶，這部分受 Apple 隱私政策約束——我們同樣無法存取。\n\n所有本機通知的排程與觸發都在你的裝置上完成。\n\n當你點擊地圖上的定位按鈕時，App 會透過 Apple MapKit 框架讀取你的裝置位置以顯示當前位置。該資料僅在裝置本機處理，不會傳送給我們。\n\n解除安裝 Carry，本機資料會一併被 iOS 刪除。如需清空 iCloud 副本，前往「設定 → Apple ID → iCloud → 管理帳戶儲存空間 → Carry」。\n\n本頁未盡事宜以完整版為準。"
           }
         }
       }
@@ -18243,13 +18335,13 @@
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "使用 Carry,即表示你同意将其用于个人、非商业用途,运行在你拥有的设备上。\n\nCarry 按「现状」提供。我们尽力让它好用、可靠,但无法保证它没有 bug,也无法保证每条预设建议都适合你这次出行。涉及证件、药品等关键物品,请务必自行核对——我们不对因物品遗漏或通知未按预期触发造成的损失负责。\n\n你的数据是你自己的。请定期通过 iOS 备份你的设备,也请不要把 Carry 当作重要信息的唯一保存方式。\n\n我们可能在未来版本中调整功能、设计或本条款。继续使用即视为你接受这些变更。\n\n本页未尽事宜以完整版为准。"
+            "value": "使用 Carry，即表示你同意将其用于个人、非商业用途，运行在你拥有的设备上。\n\nCarry 按「现状」提供。我们尽力让它好用、可靠，但无法保证它没有 bug，也无法保证每条预设建议都适合你这次出行。涉及证件、药品等关键物品，请务必自行核对——我们不对因物品遗漏或通知未按预期触发造成的损失负责。\n\n你的数据是你自己的。请定期通过 iOS 备份你的设备，也请不要把 Carry 当作重要信息的唯一保存方式。\n\n我们可能在未来版本中调整功能、设计或本条款。继续使用即视为你接受这些变更。\n\n本页未尽事宜以完整版为准。"
           }
         },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "使用 Carry,即表示你同意將其用於個人、非商業用途,運行在你擁有的裝置上。\n\nCarry 按「現狀」提供。我們盡力讓它好用、可靠,但無法保證它沒有 bug,也無法保證每條預設建議都適合你這次出行。涉及證件、藥品等關鍵物品,請務必自行核對——我們不對因物品遺漏或通知未按預期觸發造成的損失負責。\n\n你的資料是你自己的。請定期透過 iOS 備份你的裝置,也請不要把 Carry 當作重要資訊的唯一保存方式。\n\n我們可能在未來版本中調整功能、設計或本條款。繼續使用即視為你接受這些變更。\n\n本頁未盡事宜以完整版為準。"
+            "value": "使用 Carry，即表示你同意將其用於個人、非商業用途，運行在你擁有的裝置上。\n\nCarry 按「現狀」提供。我們盡力讓它好用、可靠，但無法保證它沒有 bug，也無法保證每條預設建議都適合你這次出行。涉及證件、藥品等關鍵物品，請務必自行核對——我們不對因物品遺漏或通知未按預期觸發造成的損失負責。\n\n你的資料是你自己的。請定期透過 iOS 備份你的裝置，也請不要把 Carry 當作重要資訊的唯一保存方式。\n\n我們可能在未來版本中調整功能、設計或本條款。繼續使用即視為你接受這些變更。\n\n本頁未盡事宜以完整版為準。"
           }
         }
       }
@@ -20734,58 +20826,58 @@
     "myitems.empty.subtitle": {
       "extractionState": "manual",
       "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "needs_review",
-            "value": "Items you add will appear here"
-          }
-        },
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Items you add will appear here"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "needs_review",
-            "value": "Items you add will appear here"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "needs_review",
-            "value": "Items you add will appear here"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "needs_review",
-            "value": "Items you add will appear here"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "needs_review",
-            "value": "Items you add will appear here"
-          }
-        },
-        "pt-BR": {
-          "stringUnit": {
-            "state": "needs_review",
-            "value": "Items you add will appear here"
+            "value": "Items you create will appear here"
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "你添加的物品会出现在这里"
+            "value": "你新建的物品会出现在这里"
           }
         },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "你新增的物品會出現在這裡"
+            "value": "你建立的物品會出現在這裡"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hier erscheinen die Artikel, die du erstellt hast"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Los artículos que crees aparecerán aquí"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Les articles que tu crées apparaîtront ici"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "作成したアイテムがここに表示されます"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "새로 만든 항목이 여기에 표시됩니다"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Os itens que você criar aparecerão aqui"
           }
         }
       }
