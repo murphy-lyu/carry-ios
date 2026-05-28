@@ -105,13 +105,13 @@ Painkillers, Cold & flu medicine, Stomach medicine, Motion sickness tablets, Ant
 | Formal dinner outfit | 🔴 | |
 | Travel adapter | 🔴 | ✈️ |
 | Swimsuit | | |
-| Sunscreen SPF 50+ | | |
+| Sunscreen | | |
 
 ### ☀️ Tropical / beach
 
 | 物品 | isAlert | internationalOnly |
 |------|---------|-------------------|
-| Sunscreen SPF 50+ | 🔴 | |
+| Sunscreen | 🔴 | |
 | Sunglasses | 🔴 | |
 | Sun hat | 🔴 | |
 | Insect repellent | 🔴 | |
@@ -134,7 +134,7 @@ Painkillers, Cold & flu medicine, Stomach medicine, Motion sickness tablets, Ant
 |------|---------|-------------------|
 | Altitude sickness pills | 🔴 | |
 | Thermal underwear | 🔴 | |
-| Sunscreen SPF 50+ | 🔴 | |
+| Sunscreen | 🔴 | |
 | Sunglasses | 🔴 | |
 | Water bottle | | |
 | Electrolyte tablets | | |
@@ -148,7 +148,7 @@ Painkillers, Cold & flu medicine, Stomach medicine, Motion sickness tablets, Ant
 | Thermal underwear | 🔴 | |
 | Heavy winter coat | 🔴 | |
 | Gloves | 🔴 | |
-| Beanie / hat | 🔴 | |
+| Beanie | 🔴 | |
 | Scarf | | |
 | Hand warmers | | |
 | Thermal socks | | |
@@ -196,7 +196,7 @@ Painkillers, Cold & flu medicine, Stomach medicine, Motion sickness tablets, Ant
 | Hiking boots | 🔴 | |
 | First aid kit | 🔴 | |
 | Headlamp + batteries | 🔴 | |
-| Sunscreen SPF 50+ | 🔴 | |
+| Sunscreen | 🔴 | |
 | Water bottle | 🔴 | |
 | Trail snacks / energy bars | | |
 
