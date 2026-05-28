@@ -6,32 +6,32 @@
 import Foundation
 
 enum ItemCategory: String, CaseIterable {
-    case documents = "Documents"
+    case documents = "Travel Documents"
     case clothing = "Clothing"
     case electronics = "Electronics"
-    case toiletries = "Toiletries"
+    case toiletries = "Personal Care"
     case travelAccessories = "Travel Accessories"
     case essentials = "Essentials"
     case health = "Health"
     case makeup = "Makeup"
     case jewellery = "Jewellery"
-    case leisure = "Leisure"
+
     case healthWellness = "Health & Wellness"
     case winterTravel = "Winter Travel"
     case beachOutdoor = "Beach & Outdoor"
 
     static func catalogCategory(named name: String) -> ItemCategory? {
         switch name {
-        case "Documents": return .documents
+        case "Travel Documents": return .documents
         case "Clothing": return .clothing
         case "Electronics": return .electronics
-        case "Toiletries": return .toiletries
+        case "Personal Care": return .toiletries
         case "Travel Accessories": return .travelAccessories
         case "Essentials": return .essentials
         case "Health": return .health
         case "Makeup": return .makeup
         case "Jewellery": return .jewellery
-        case "Leisure": return .leisure
+
         case "Health & Wellness": return .healthWellness
         case "Winter Travel": return .winterTravel
         case "Beach & Outdoor": return .beachOutdoor
@@ -115,10 +115,6 @@ let itemPickerCatalog: [ItemPickerCategory] = [
     ]),
     ItemPickerCategory(name: "Jewellery", items: [
         "Earrings", "Necklace", "Ring", "Bracelet", "Watch", "Hair clip",
-    ]),
-    ItemPickerCategory(name: "Leisure", items: [
-        "Book",
-        "Gum", "Instant coffee", "Tea bags",
     ]),
     ItemPickerCategory(name: "Health & Wellness", items: [
         "Painkillers", "Cold & flu medicine", "Stomach medicine",

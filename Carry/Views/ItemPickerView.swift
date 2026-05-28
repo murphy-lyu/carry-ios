@@ -28,6 +28,25 @@ private struct SearchResultItem: Identifiable, Hashable {
     let isAlreadyAdded: Bool
 }
 
+private let smartSceneSymbols: [String: String] = [
+    "🚗 Road trip":            "car.fill",
+    "✈️ Long-haul flight":     "airplane",
+    "🚢 Cruise":               "ferry.fill",
+    "☀️ Tropical / beach":     "sun.max.fill",
+    "🌧 Rainy city":           "cloud.rain.fill",
+    "⛰ High altitude":        "mountain.2.fill",
+    "❄️ Winter / cold":        "snowflake",
+    "💼 Business":             "briefcase.fill",
+    "💻 Remote work":          "laptopcomputer",
+    "👶 Travelling with kids": "figure.and.child.holdinghands",
+    "🥾 Hiking / camping":     "tent.fill",
+    "💍 Honeymoon":            "heart.fill",
+    "🎒 Backpacking":          "backpack.fill",
+    "🏨 City break":           "building.2.fill",
+    "🌸 On / near period":     "leaf.fill",
+    "💊 Daily medication":     "pill.fill",
+]
+
 // MARK: - ItemPickerView
 
 struct ItemPickerView: View {
@@ -796,10 +815,11 @@ struct ItemPickerView: View {
         return ScrollView {
             VStack(alignment: .leading, spacing: 12) {
                 searchResultsCard {
-                    VStack(alignment: .leading, spacing: 14) {
+                    VStack(alignment: .leading, spacing: 12) {
                         Text(LocalizedStringKey("Pick travel scenes to generate a better list"))
-                            .font(.subheadline)
-                            .foregroundStyle(.secondary)
+                            .font(.caption)
+                            .foregroundStyle(.secondary.opacity(0.92))
+                            .padding(.bottom, 2)
 
                         if labels.isEmpty {
                             smartSearchEmptyState
@@ -830,7 +850,7 @@ struct ItemPickerView: View {
                     .padding(16)
                 }
             }
-            .padding(.bottom, isCreateMode ? 92 : 24)
+            .padding(.bottom, isCreateMode ? 88 : 24)
         }
         .scrollDismissesKeyboard(.interactively)
     }
@@ -857,24 +877,32 @@ struct ItemPickerView: View {
                         selectedSmartSceneLabels.insert(label)
                     }
                 } label: {
-                    Text(LocalizedStringKey(label))
-                        .font(.subheadline.weight(.medium))
-                        .foregroundStyle(isSelected ? Color.white : Color.primary)
-                        .frame(maxWidth: .infinity)
-                        .padding(.horizontal, 10)
-                        .padding(.vertical, 10)
-                        .background(
-                            Capsule(style: .continuous)
-                                .fill(
-                                    isSelected
-                                        ? Color(UIColor { traits in
-                                            traits.userInterfaceStyle == .dark
-                                                ? UIColor(white: 0.28, alpha: 1.0)
-                                                : UIColor(white: 0.22, alpha: 1.0)
-                                        })
-                                        : Color(UIColor.secondarySystemBackground).opacity(colorScheme == .dark ? 0.44 : 0.76)
-                                )
-                        )
+                    HStack(spacing: 6) {
+                        if let symbol = smartSceneSymbols[label] {
+                            Image(systemName: symbol)
+                                .font(.system(size: 13, weight: .semibold))
+                                .frame(width: 14, height: 14)
+                                .foregroundStyle(isSelected ? Color.white : Color.primary.opacity(0.9))
+                        }
+                        Text(LocalizedStringKey(label))
+                            .font(.subheadline.weight(.medium))
+                            .foregroundStyle(isSelected ? Color.white : Color.primary)
+                    }
+                    .frame(maxWidth: .infinity)
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 10)
+                    .background(
+                        Capsule(style: .continuous)
+                            .fill(
+                                isSelected
+                                    ? Color(UIColor { traits in
+                                        traits.userInterfaceStyle == .dark
+                                            ? UIColor(white: 0.30, alpha: 1.0)
+                                            : UIColor(white: 0.22, alpha: 1.0)
+                                    })
+                                    : Color(UIColor.secondarySystemBackground).opacity(colorScheme == .dark ? 0.44 : 0.76)
+                            )
+                    )
                 }
                 .buttonStyle(.plain)
             }

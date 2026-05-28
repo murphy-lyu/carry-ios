@@ -58,6 +58,9 @@ let surpriseItemMap: [String: [SurpriseItem]] = [
         SurpriseItem(name: "Flight snacks",
                      note: "Airline food timing rarely matches when you're actually hungry",
                      category: .essentials),
+        SurpriseItem(name: "Book",
+                     note: "A physical book for long-haul — no battery anxiety, no glare, and you will actually finish it away from notifications",
+                     category: .essentials),
     ],
     "honeymoon": [
         SurpriseItem(name: "Scented candle",
@@ -82,6 +85,12 @@ let surpriseItemMap: [String: [SurpriseItem]] = [
                      category: .essentials),
         SurpriseItem(name: "Headlamp + batteries",
                      note: "Essential for hostel dorm access in the dark without waking eight strangers",
+                     category: .essentials),
+        SurpriseItem(name: "Instant coffee",
+                     note: "For early mornings before the café opens — one sachet weighs nothing and can save a slow start anywhere in the world",
+                     category: .essentials),
+        SurpriseItem(name: "Tea bags",
+                     note: "A few teabags weigh almost nothing and turn any hostel kettle into a proper ritual — one of the smallest luxuries worth packing",
                      category: .essentials),
     ],
     "city_break": [
@@ -221,6 +230,9 @@ private let surpriseUniversalScore: [String: Double] = [
     "Disposable rain poncho": 0.86,
     "Waterproof shoe covers": 0.70,
     "Headlamp + batteries": 0.78,
+    "Book": 0.72,
+    "Instant coffee": 0.68,
+    "Tea bags": 0.66,
 ]
 
 private let surpriseDelightScore: [String: Double] = [
@@ -280,6 +292,9 @@ private let surpriseFunctionalOverlapKeywords: [String: [String]] = [
     "Waterproof shoe covers": ["waterproof shoes", "shoe covers"],
     "Portable hot water bottle": ["hot water bottle"],
     "Brown sugar ginger tea": ["ginger tea", "tea"],
+    "Tea bags": ["tea bags", "tea"],
+    "Instant coffee": ["instant coffee", "coffee"],
+    "Book": ["book", "e-reader"],
 ]
 
 private func functionalOverlapPenalty(
