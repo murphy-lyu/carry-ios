@@ -252,7 +252,7 @@ struct GlobeMapView: View, Equatable {
             cityDot
             if showCityLabels && !city.cityName.isEmpty {
                 Text(city.cityName)
-                    .font(.system(size: 9, weight: .semibold))
+                    .font(.system(size: 11, weight: .semibold))
                     .foregroundStyle(.white)
                     .lineLimit(1)
                     .padding(.horizontal, 5)
