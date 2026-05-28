@@ -19,12 +19,9 @@ final class CalendarManager {
 
     // MARK: - Permission
 
-    /// Requests full calendar access. Returns true if granted.
     func requestAccess() async -> Bool {
         do {
-            let granted = try await store.requestFullAccessToEvents()
-            if granted { store.reset() }
-            return granted
+            return try await store.requestFullAccessToEvents()
         } catch {
             return false
         }
@@ -36,34 +33,53 @@ final class CalendarManager {
 
     // MARK: - Add trips
 
-    /// Adds calendar events for a single trip (skips if already added).
-    func addTrip(_ trip: TripBundle, packHour: Int, packMinute: Int) {
-        guard trip.departureDate >= Calendar.current.startOfDay(for: Date()) else { return }
+    /// Adds events for a single upcoming trip. Returns true if written (or already added).
+    @discardableResult
+    func addTrip(_ trip: TripBundle, packHour: Int, packMinute: Int) -> Bool {
+        guard trip.departureDate >= Calendar.current.startOfDay(for: Date()) else { return false }
         var addedIds = loadAddedIds()
         let idString = trip.id.uuidString
-        guard !addedIds.contains(idString) else { return }
-        guard let cal = carryCalendar else { return }
-
-        writeEvents(for: trip, to: cal, packHour: packHour, packMinute: packMinute)
-        addedIds.insert(idString)
-        saveAddedIds(addedIds)
+        guard !addedIds.contains(idString) else { return true }
+        guard let cal = carryCalendar else {
+            CarryLogger.shared.log(.calendarSaveFailed, context: "carryCalendar=nil")
+            return false
+        }
+        do {
+            try writeEvents(for: trip, to: cal, packHour: packHour, packMinute: packMinute)
+            addedIds.insert(idString)
+            saveAddedIds(addedIds)
+            return true
+        } catch {
+            CarryLogger.shared.log(.calendarSaveFailed, context: "addTrip: \(error.localizedDescription)")
+            return false
+        }
     }
 
-    /// Adds calendar events for all upcoming trips not yet added.
-    func addAllUpcoming(_ trips: [TripBundle], packHour: Int, packMinute: Int) {
+    /// Adds events for all upcoming trips not yet added. Returns count of trips written.
+    @discardableResult
+    func addAllUpcoming(_ trips: [TripBundle], packHour: Int, packMinute: Int) -> Int {
         let today = Calendar.current.startOfDay(for: Date())
-        guard let cal = carryCalendar else { return }
+        guard let cal = carryCalendar else {
+            CarryLogger.shared.log(.calendarSaveFailed, context: "carryCalendar=nil in addAllUpcoming")
+            return 0
+        }
         var addedIds = loadAddedIds()
+        var written = 0
         for trip in trips where trip.departureDate >= today {
             let idString = trip.id.uuidString
             guard !addedIds.contains(idString) else { continue }
-            writeEvents(for: trip, to: cal, packHour: packHour, packMinute: packMinute)
-            addedIds.insert(idString)
+            do {
+                try writeEvents(for: trip, to: cal, packHour: packHour, packMinute: packMinute)
+                addedIds.insert(idString)
+                written += 1
+            } catch {
+                CarryLogger.shared.log(.calendarSaveFailed, context: "\(trip.name): \(error.localizedDescription)")
+            }
         }
         saveAddedIds(addedIds)
+        return written
     }
 
-    /// Returns count of upcoming trips not yet added to calendar.
     func pendingCount(from trips: [TripBundle]) -> Int {
         let today = Calendar.current.startOfDay(for: Date())
         let addedIds = loadAddedIds()
@@ -74,12 +90,14 @@ final class CalendarManager {
 
     // MARK: - Carry calendar
 
-    /// Returns the existing "Carry" calendar, or creates it if needed.
     private var carryCalendar: EKCalendar? {
         if let existing = store.calendars(for: .event).first(where: { $0.title == Self.calendarTitle }) {
             return existing
         }
-        guard let source = bestSource() else { return nil }
+        guard let source = bestSource() else {
+            CarryLogger.shared.log(.calendarSaveFailed, context: "no EKSource available; sources=\(store.sources.map { "\($0.title)/\($0.sourceType.rawValue)" })")
+            return nil
+        }
         let cal = EKCalendar(for: .event, eventStore: store)
         cal.title = Self.calendarTitle
         cal.source = source
@@ -88,87 +106,75 @@ final class CalendarManager {
             try store.saveCalendar(cal, commit: true)
             return cal
         } catch {
-            CarryLogger.shared.log(.calendarSaveFailed, context: error.localizedDescription)
+            CarryLogger.shared.log(.calendarSaveFailed, context: "saveCalendar: \(error.localizedDescription)")
             return nil
         }
     }
 
-    /// Picks the best EKSource to attach a new calendar to.
-    /// Prefer iCloud (calDAV titled "iCloud"), then any calDAV, then local.
     private func bestSource() -> EKSource? {
-        let sources = store.sources
-        return sources.first(where: { $0.sourceType == .calDAV && $0.title.lowercased().contains("icloud") })
-            ?? sources.first(where: { $0.sourceType == .calDAV })
-            ?? sources.first(where: { $0.sourceType == .local })
+        store.sources.first(where: { $0.sourceType == .calDAV && $0.title.lowercased().contains("icloud") })
+            ?? store.sources.first(where: { $0.sourceType == .calDAV })
+            ?? store.sources.first(where: { $0.sourceType == .local })
             ?? store.defaultCalendarForNewEvents?.source
     }
 
     // MARK: - Event writing
 
-    private func writeEvents(for trip: TripBundle, to cal: EKCalendar, packHour: Int, packMinute: Int) {
-        let cal_ = Calendar.current
+    private func writeEvents(for trip: TripBundle, to cal: EKCalendar, packHour: Int, packMinute: Int) throws {
+        let greg = Calendar.current
 
-        // 1. Full-day trip event
-        // Normalize startDate to midnight — EventKit requires exact midnight for isAllDay events.
-        // endDate is exclusive: a 3-day trip starting June 1 needs endDate = June 4 (not June 3).
-        let startComps = cal_.dateComponents([.year, .month, .day], from: trip.departureDate)
-        guard let dayStart = cal_.date(from: startComps),
-              let dayEnd   = cal_.date(byAdding: .day, value: max(trip.days, 1), to: dayStart) else { return }
+        // All-day trip event.
+        // startDate must be exact midnight; endDate is exclusive (3-day trip = +3 days).
+        let startComps = greg.dateComponents([.year, .month, .day], from: trip.departureDate)
+        guard let dayStart = greg.date(from: startComps),
+              let dayEnd   = greg.date(byAdding: .day, value: max(trip.days, 1), to: dayStart) else {
+            throw CalendarError.dateNormalizationFailed
+        }
 
         let tripEvent = EKEvent(eventStore: store)
-        tripEvent.title = trip.name
-        tripEvent.isAllDay = true
+        tripEvent.title     = trip.name
+        tripEvent.isAllDay  = true
         tripEvent.startDate = dayStart
         tripEvent.endDate   = dayEnd
-
         var notes: [String] = []
         if !trip.destinationCity.isEmpty { notes.append(trip.destinationCity) }
-        if !trip.dateRange.isEmpty { notes.append(trip.dateRange) }
+        if !trip.dateRange.isEmpty        { notes.append(trip.dateRange) }
         if !notes.isEmpty { tripEvent.notes = notes.joined(separator: "\n") }
         tripEvent.calendar = cal
+        try store.save(tripEvent, span: .thisEvent, commit: true)
 
-        do {
-            try store.save(tripEvent, span: .thisEvent, commit: true)
-        } catch {
-            CarryLogger.shared.log(.calendarSaveFailed, context: "trip_event: \(error.localizedDescription)")
-        }
-
-        // 2. Pack reminder event (day before departure at user-set time)
-        guard let packDay = Calendar.current.date(byAdding: .day, value: -1, to: trip.departureDate) else { return }
-        var comps = Calendar.current.dateComponents([.year, .month, .day], from: packDay)
-        comps.hour = packHour
+        // Pack reminder: day before departure at user-set time.
+        guard let packDay = greg.date(byAdding: .day, value: -1, to: dayStart) else { return }
+        var comps = greg.dateComponents([.year, .month, .day], from: packDay)
+        comps.hour   = packHour
         comps.minute = packMinute
-        guard let packStart = Calendar.current.date(from: comps),
-              let packEnd = Calendar.current.date(byAdding: .minute, value: 30, to: packStart) else { return }
+        guard let packStart = greg.date(from: comps),
+              let packEnd   = greg.date(byAdding: .minute, value: 30, to: packStart) else { return }
 
-        let packTitle = String(format: NSLocalizedString("calendar.event.pack.title", comment: ""), trip.name)
         let packEvent = EKEvent(eventStore: store)
-        packEvent.title = packTitle
+        packEvent.title     = String(format: NSLocalizedString("calendar.event.pack.title", comment: ""), trip.name)
         packEvent.startDate = packStart
-        packEvent.endDate = packEnd
+        packEvent.endDate   = packEnd
         packEvent.addAlarm(EKAlarm(relativeOffset: 0))
-        packEvent.calendar = cal
-
-        do {
-            try store.save(packEvent, span: .thisEvent, commit: true)
-        } catch {
-            CarryLogger.shared.log(.calendarSaveFailed, context: "pack_event: \(error.localizedDescription)")
-        }
+        packEvent.calendar  = cal
+        try store.save(packEvent, span: .thisEvent, commit: true)
     }
 
     // MARK: - Persistence
 
-    /// Clears the dedup record so all trips can be re-added on next enable.
     func clearAddedIds() {
         defaults.removeObject(forKey: Self.addedIdsKey)
     }
 
     private func loadAddedIds() -> Set<String> {
-        let array = defaults.stringArray(forKey: Self.addedIdsKey) ?? []
-        return Set(array)
+        Set(defaults.stringArray(forKey: Self.addedIdsKey) ?? [])
     }
 
     private func saveAddedIds(_ ids: Set<String>) {
         defaults.set(Array(ids), forKey: Self.addedIdsKey)
     }
+}
+
+private enum CalendarError: Error {
+    case dateNormalizationFailed
 }

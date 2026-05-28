@@ -446,11 +446,16 @@ struct SettingsView: View {
         }
         .alert(LocalizedStringKey("settings.calendar.bulk.title"), isPresented: $showCalendarBulkAlert) {
             Button("settings.calendar.bulk.confirm") {
-                CalendarManager.shared.addAllUpcoming(
+                let written = CalendarManager.shared.addAllUpcoming(
                     store.trips,
                     packHour: calendarPackHour,
                     packMinute: calendarPackMinute
                 )
+                if written > 0 {
+                    showToast(String(format: NSLocalizedString("settings.calendar.bulk.added_toast", comment: ""), written))
+                } else {
+                    showToast(NSLocalizedString("settings.calendar.bulk.failed_toast", comment: ""))
+                }
             }
             Button("Cancel", role: .cancel) {}
         } message: {
