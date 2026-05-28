@@ -71,7 +71,7 @@ let sceneLabelToKey: [String: String] = [
 let baseItems: [SceneItem] = [
     makeSceneItem("Passport", isAlert: true, internationalOnly: true),
     makeSceneItem("Wallet", isAlert: false),
-    makeSceneItem("Cash (local currency)", isAlert: false),
+    makeSceneItem("Cash", isAlert: false),
     makeSceneItem("Phone charger", isAlert: false),
     makeSceneItem("Underwear", isAlert: false),
     makeSceneItem("Socks", isAlert: false),
@@ -99,7 +99,7 @@ let sceneItemMap: [String: [SceneItem]] = [
         makeSceneItem("Passport", isAlert: true, internationalOnly: true),
         makeSceneItem("Neck pillow", isAlert: true),
         makeSceneItem("Noise-cancelling headphones", isAlert: true),
-        makeSceneItem("Overseas SIM / portable WiFi", isAlert: false),
+        makeSceneItem("Portable WiFi device", isAlert: false, internationalOnly: true),
         makeSceneItem("Eye mask", isAlert: false),
         makeSceneItem("Earplugs", isAlert: false),
         makeSceneItem("Lip balm", isAlert: false),
@@ -111,7 +111,7 @@ let sceneItemMap: [String: [SceneItem]] = [
         makeSceneItem("Formal dinner outfit", isAlert: true),
         makeSceneItem("Travel adapter", isAlert: true, internationalOnly: true),
         makeSceneItem("Swimsuit", isAlert: false),
-        makeSceneItem("Sunscreen SPF 50+", isAlert: false),
+        makeSceneItem("Sunscreen SPF 50+", isAlert: true),
     ],
     "tropical": [
         makeSceneItem("Sunscreen SPF 50+", isAlert: true),
@@ -161,7 +161,7 @@ let sceneItemMap: [String: [SceneItem]] = [
         makeSceneItem("Formal shirt / blouse", isAlert: true),
         makeSceneItem("Formal wear", isAlert: true),
         makeSceneItem("Dress shoes", isAlert: true),
-        makeSceneItem("Overseas SIM / portable WiFi", isAlert: false),
+        makeSceneItem("Portable WiFi device", isAlert: false, internationalOnly: true),
         makeSceneItem("Wrinkle-release spray", isAlert: false),
     ],
     "remote_work": [
