@@ -438,37 +438,24 @@ struct SettingsView: View {
             }
         }
         .animation(.easeInOut(duration: 0.2), value: restoreToastMessage != nil)
-        .overlay {
-            if showCalendarPermissionAlert {
-                CarryConfirmationDialog(
-                    title: "settings.calendar.permission.denied.title",
-                    message: NSLocalizedString("settings.calendar.permission.denied.message", comment: ""),
-                    confirmLabel: "settings.calendar.permission.open_settings",
-                    onConfirm: { showCalendarPermissionAlert = false; openSystemSettings() },
-                    onCancel:  { showCalendarPermissionAlert = false }
+        .alert(LocalizedStringKey("settings.calendar.permission.denied.title"), isPresented: $showCalendarPermissionAlert) {
+            Button("settings.calendar.permission.open_settings") { openSystemSettings() }
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            Text("settings.calendar.permission.denied.message")
+        }
+        .alert(LocalizedStringKey("settings.calendar.bulk.title"), isPresented: $showCalendarBulkAlert) {
+            Button("settings.calendar.bulk.confirm") {
+                CalendarManager.shared.addAllUpcoming(
+                    store.trips,
+                    packHour: calendarPackHour,
+                    packMinute: calendarPackMinute
                 )
             }
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            Text(String(format: NSLocalizedString("settings.calendar.bulk.message", comment: ""), calendarPendingCount))
         }
-        .animation(.spring(duration: 0.3, bounce: 0.2), value: showCalendarPermissionAlert)
-        .overlay {
-            if showCalendarBulkAlert {
-                CarryConfirmationDialog(
-                    title: "settings.calendar.bulk.title",
-                    message: String(format: NSLocalizedString("settings.calendar.bulk.message", comment: ""), calendarPendingCount),
-                    confirmLabel: "settings.calendar.bulk.confirm",
-                    onConfirm: {
-                        showCalendarBulkAlert = false
-                        CalendarManager.shared.addAllUpcoming(
-                            store.trips,
-                            packHour: calendarPackHour,
-                            packMinute: calendarPackMinute
-                        )
-                    },
-                    onCancel: { showCalendarBulkAlert = false }
-                )
-            }
-        }
-        .animation(.spring(duration: 0.3, bounce: 0.2), value: showCalendarBulkAlert)
         .fileImporter(
             isPresented: $showImporter,
             allowedContentTypes: [.json],
