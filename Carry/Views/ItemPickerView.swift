@@ -128,6 +128,7 @@ struct ItemPickerView: View {
     @State private var selectedMyItemCollection: String = "Default"
     @State private var didLogSearch = false
     @State private var isConfirmingSelection = false
+    @AppStorage("itempicker.last_source_mode") private var lastSourceModeRawValue: String = SourceMode.preset.rawValue
 
     private var existingItemNames: Set<String> {
         guard case .merge(let tripId) = mode,
@@ -506,6 +507,8 @@ struct ItemPickerView: View {
             didApplyInitialSource = true
             if startInMyItems {
                 sourceMode = .myItems
+            } else if let lastMode = SourceMode(rawValue: lastSourceModeRawValue) {
+                sourceMode = lastMode
             }
             if selectedSmartSceneLabels.isEmpty {
                 let labels = sceneLabelToKey.compactMap { label, key -> String? in
@@ -529,6 +532,9 @@ struct ItemPickerView: View {
             guard !newValue.isEmpty, !didLogSearch else { return }
             didLogSearch = true
             CarryLogger.shared.log(.pickerSearchUsed, context: "source=\(sourceMode.rawValue)")
+        }
+        .onChange(of: sourceMode) { _, newValue in
+            lastSourceModeRawValue = newValue.rawValue
         }
     }
 
