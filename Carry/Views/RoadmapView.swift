@@ -130,7 +130,6 @@ struct RoadmapView: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: 14) {
                     content
-                    footerNote
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .padding(.horizontal, 16)
@@ -313,19 +312,6 @@ struct RoadmapView: View {
                 .strokeBorder(colorScheme == .dark ? Color.white.opacity(0.045) : Color.primary.opacity(0.04), lineWidth: 1)
         )
         .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
-    }
-
-    private var footerNote: some View {
-        HStack {
-            Spacer()
-            Text("about.madeWith")
-                .font(.footnote)
-                .foregroundStyle(.secondary)
-            Text("❤️")
-                .font(.footnote)
-            Spacer()
-        }
-        .padding(.top, 4)
     }
 
     private func roadmapRow(item: RoadmapItem, isLast: Bool, showLatestBadge: Bool) -> some View {
