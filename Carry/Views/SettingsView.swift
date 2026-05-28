@@ -289,14 +289,9 @@ struct SettingsView: View {
                                     openSystemSettings()
                                 }
                                 HStack(spacing: 14) {
-                                    VStack(alignment: .leading, spacing: 2) {
-                                        Text("settings.calendar.toggle")
-                                            .font(.body)
-                                            .foregroundStyle(.primary)
-                                        Text("settings.calendar.subtitle")
-                                            .font(.caption)
-                                            .foregroundStyle(.secondary)
-                                    }
+                                    Text("settings.calendar.toggle")
+                                        .font(.body)
+                                        .foregroundStyle(.primary)
                                     Spacer()
                                     Toggle("", isOn: Binding(
                                         get: { calendarSyncEnabled },
