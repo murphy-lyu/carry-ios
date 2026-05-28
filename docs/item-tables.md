@@ -12,28 +12,28 @@
 源文件：`Carry/Models/ItemCatalog.swift`
 
 ### Travel Documents
-Passport, ID card, Visa, Hotel booking, Travel insurance, Itinerary, Driver's license, International driving permit, HK & Macao permit, Taiwan permit, Vaccination certificate, Boarding pass, Children's passport / ID, Photo ID copy
+Passport, ID card, Visa, Itinerary, Travel insurance, Hotel booking, Driver's license, International driving permit, HK & Macao permit, Taiwan permit, Children's passport / ID, Photo ID copy, Vaccination certificate
 
 ### Clothing
-Underwear, Socks, T-shirt, Jeans, Long pants, Pajamas, Shirt, Cardigan, Hoodie, Bra, Sports bra, Leggings, Tights, Disposable underwear, Shorts, Dress, Skirt, Hat, Belt, Formal wear, Sweater, Rain jacket, Swimsuit, Nipple covers, Comfortable walking shoes, Flip flops, Sun-protective clothing, Scarf
+Underwear, Socks, T-shirt, Jeans, Long pants, Pajamas, Shirt, Cardigan, Hoodie, Bra, Sports bra, Leggings, Tights, Disposable underwear, Shorts, Dress, Skirt, Hat, Belt, Formal wear, Sweater, Rain jacket, Swimsuit, Nipple covers, Comfortable walking shoes, Flip flops, Sun shirt, Scarf, Thermal underwear, Heavy winter coat, Gloves, Beanie, Sun hat, Windproof jacket, Waterproof jacket, Waterproof shoes, Hiking boots, Snow boots, Thermal socks, Rash guard, Quick-dry clothing, Formal shirt / blouse
 
 ### Electronics
 Phone charger, Charging cable, Portable charger, Smart watch charger, Travel adapter, Car charger, Earphones, Noise-cancelling headphones, Tablet, Laptop, Laptop charger, E-reader, Camera, Camera charger, Pocket camera, Action camera, Drone, Memory card, Selfie stick, Tripod, Power strip, Bluetooth speaker, Portable WiFi device
 
 ### Personal Care
-Makeup remover / cleansing oil, Cotton pads, Face wash, Face mask, Sheet mask, Face mist, Toner, Serum, Eye cream, Facial oil, Lotion, Moisturiser, Body lotion, Lip balm, Sunscreen, Blotting paper, Hair ties, Comb, Hair straightener, Dry shampoo, Perfume, Dental floss, Toothbrush, Toothpaste, Mouthwash, Shampoo, Conditioner, Body wash, Razor, Nail clippers, Acne patches, Deodorant
+Makeup remover / cleansing oil, Cotton pads, Face wash, Face mask, Sheet mask, Face mist, Toner, Serum, Eye cream, Facial oil, Lotion, Moisturizer, Body lotion, Lip balm, Sunscreen, Blotting paper, Hair ties, Comb, Hair straightener, Dry shampoo, Perfume, Dental floss, Toothbrush, Toothpaste, Mouthwash, Shampoo, Conditioner, Body wash, Razor, Nail clippers, Acne patches, Deodorant
 
 ### Travel Accessories
 Card holder, Wallet, Cash, Crossbody bag, Sunglasses, Umbrella, Water bottle, Travel pillow, Neck pillow, Eye mask, Earplugs, Pen, Packing cubes, Laundry bag, Travel towel, Quick-dry towel, Luggage tag, Luggage lock, Luggage scale, Transit card / app
 
 ### Makeup
-Primer, Foundation, Concealer, Eyebrow pencil, Mascara, Lipstick / Lip gloss, Eyeliner, Eyeshadow, Blush, Highlighter, Setting powder, Makeup brushes, Makeup sponge, Eyelash curler, False eyelashes, Coloured contacts
+Primer, Foundation, Concealer, Eyebrow pencil, Mascara, Lipstick / Lip gloss, Eyeliner, Eyeshadow, Blush, Highlighter, Setting powder, Makeup brushes, Makeup sponge, Eyelash curler, False eyelashes, Colored contacts
 
 ### Jewelry
 Earrings, Necklace, Ring, Bracelet, Watch, Hair clip
 
 ### Health & Wellness
-Painkillers, Cold & flu medicine, Stomach medicine, Motion sickness tablets, Antihistamines, Prescription medication, Daily medication, Contact lenses, Disposable face masks, Hand sanitiser, First aid kit, Wet wipes, Eye drops, Throat lozenges, Feminine hygiene products, Vitamin C, Vitamin D, Multivitamins, Probiotics, Melatonin, Anti-diarrhea, Insect repellent, Band-aids, Digestive enzymes, After-sun lotion, Electrolyte tablets
+Painkillers, Cold & flu medicine, Stomach medicine, Motion sickness tablets, Antihistamines, Prescription medication, Daily medication, Contact lenses, Disposable face masks, Hand sanitizer, First aid kit, Wet wipes, Eye drops, Throat lozenges, Feminine hygiene products, Vitamin C, Vitamin D, Multivitamins, Probiotics, Melatonin, Anti-diarrhea, Insect repellent, Band-aids, Digestive enzymes, After-sun lotion, Electrolyte tablets
 
 ### 名称别名（itemNameAliases）
 
@@ -47,7 +47,10 @@ Painkillers, Cold & flu medicine, Stomach medicine, Motion sickness tablets, Ant
 | Pain relievers | Painkillers |
 | Sanitary pads / tampons | Feminine hygiene products |
 | Overseas SIM / portable WiFi | Portable WiFi device |
-| Colored contacts | Coloured contacts |
+| Coloured contacts | Colored contacts |
+| Moisturiser | Moisturizer |
+| Hand sanitiser | Hand sanitizer |
+| Sun-protective clothing | Sun shirt |
 
 ---
 
@@ -92,10 +95,9 @@ Painkillers, Cold & flu medicine, Stomach medicine, Motion sickness tablets, Ant
 | Passport | 🔴 | ✈️ |
 | Neck pillow | 🔴 | |
 | Noise-cancelling headphones | 🔴 | |
-| Overseas SIM / portable WiFi | | |
+| Portable WiFi device | | |
 | Eye mask | | |
 | Earplugs | | |
-| Compression socks | | |
 | Lip balm | | |
 | Water bottle | | |
 
@@ -104,7 +106,6 @@ Painkillers, Cold & flu medicine, Stomach medicine, Motion sickness tablets, Ant
 | 物品 | isAlert | internationalOnly |
 |------|---------|-------------------|
 | Passport | 🔴 | ✈️ |
-| Boarding pass | 🔴 | |
 | Motion sickness tablets | 🔴 | |
 | Formal dinner outfit | 🔴 | |
 | Travel adapter | 🔴 | ✈️ |
@@ -419,5 +420,6 @@ Painkillers, Cold & flu medicine, Stomach medicine, Motion sickness tablets, Ant
 
 ## 备注
 
-- SceneItemMap 里部分物品未收录在 ItemCatalog（如 Snacks、Nuts、Car insurance docs、Foldable chair、Picnic mat、Backpack rain cover、Microfibre towel、Quick-dry clothing、Padlock、Sun hat、Rash guard、Swimming goggles、Waterproof bag、Waterproof jacket、Waterproof shoes、Waterproof phone case、Altitude sickness pills、Warm base layer、Windproof jacket、Thermal socks、Compression socks、Business cards、Formal shirt / blouse、Formal dinner outfit、Dress shoes、Wrinkle-release spray、Trail snacks / energy bars、Trekking poles、Change of clothes (extra)、Snacks for kids），这些物品只能通过场景推荐进入清单，用户无法在分类挑选里手动找到。
+- SceneItemMap 里部分物品未收录在 ItemCatalog（如 Snacks、Nuts、Car insurance docs、Foldable chair、Picnic mat、Backpack rain cover、Microfibre towel、Padlock、Swimming goggles、Waterproof bag、Waterproof phone case、Altitude sickness pills、Warm base layer、Business cards、Formal dinner outfit、Dress shoes、Wrinkle-release spray、Trail snacks / energy bars、Trekking poles、Change of clothes (extra)、Snacks for kids、Hand warmers、Heat patches、Light rain jacket），这些物品只能通过场景推荐进入清单，用户无法在分类挑选里手动找到。
+- Quick-dry clothing、Sun hat、Rash guard、Waterproof jacket、Waterproof shoes、Windproof jacket、Thermal socks、Formal shirt / blouse 已收录在 ItemCatalog Clothing 分类。
 - SurpriseItemMap 里的物品同样大多数不在 ItemCatalog 中，属于独立数据。
