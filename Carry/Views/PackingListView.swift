@@ -816,7 +816,7 @@ struct PackingListView: View {
                     Text("Add recommended items")
                         .font(.subheadline.weight(.medium))
                         .foregroundStyle(.primary)
-                    Text("Fill gaps with smart suggestions for this trip")
+                    Text("packing.scene_card.subtitle")
                         .font(.caption)
                         .foregroundStyle(.secondary)
                         .lineLimit(2)

@@ -59,7 +59,7 @@ let surpriseItemMap: [String: [SurpriseItem]] = [
                      note: "Shoes off, slippers on — a small ritual that makes a long flight feel far more civilised",
                      category: .essentials),
         SurpriseItem(name: "Flight snacks",
-                     note: "Airline food timing rarely matches when you're actually hungry",
+                     note: "Airline food timing rarely matches when you're actually hungry — keep something in your bag for the gap",
                      category: .essentials),
         SurpriseItem(name: "Book",
                      note: "A physical book for long-haul — no battery anxiety, no glare, and you will actually finish it away from notifications",

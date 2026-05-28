@@ -3113,65 +3113,6 @@
         }
       }
     },
-    "Airline food timing rarely matches when you're actually hungry": {
-      "extractionState": "manual",
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "needs_review",
-            "value": "Airline food timing rarely matches when you're actually hungry"
-          }
-        },
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Airline food timing rarely matches when you're actually hungry"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "needs_review",
-            "value": "Airline food timing rarely matches when you're actually hungry"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "needs_review",
-            "value": "Airline food timing rarely matches when you're actually hungry"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "needs_review",
-            "value": "Airline food timing rarely matches when you're actually hungry"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "needs_review",
-            "value": "Airline food timing rarely matches when you're actually hungry"
-          }
-        },
-        "pt-BR": {
-          "stringUnit": {
-            "state": "needs_review",
-            "value": "Airline food timing rarely matches when you're actually hungry"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "航空餐时间不一定刚好，备点小零食更稳妥"
-          }
-        },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "航空餐上的時間往往和你真正餓的時間對不上"
-          }
-        }
-      }
-    },
     "All reminders added": {
       "localizations": {
         "de": {
@@ -11621,65 +11562,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "酒店烧水后就能用，很多时候是最直接有效的舒缓方式"
-          }
-        }
-      }
-    },
-    "Fill gaps with smart suggestions for this trip": {
-      "extractionState": "manual",
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Noch einmal nachdenken, bevor du die Tür schließt."
-          }
-        },
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "One last check before you close the door."
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Un último repaso antes de cerrar la puerta."
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Une dernière vérification avant de fermer la porte."
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "ドアを閉める前に、もう一度確認。"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "문 닫기 전에 한 번 더 확인해 보세요."
-          }
-        },
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Uma última verificação antes de fechar a porta."
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "关上门前，再想一遍"
-          }
-        },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "關上門前，再想一遍"
           }
         }
       }
@@ -41367,6 +41249,122 @@
           "stringUnit": {
             "state": "translated",
             "value": "Qualquer superfície se torna um espaço de trabalho com um tapete de mesa — um truque simples que faz quartos alugados parecerem seus"
+          }
+        }
+      }
+    },
+    "packing.scene_card.subtitle": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "One last check before you close the door."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "关上门前，再想一遍。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "關上門前，再想一遍。"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ein letzter Check, bevor du die Tür schließt."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Una última revisión antes de cerrar la puerta."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Un dernier coup d'œil avant de fermer la porte."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ドアを閉める前に、もう一度だけ。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "문을 닫기 전에, 마지막으로 한 번 더."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Uma última verificação antes de fechar a porta."
+          }
+        }
+      }
+    },
+    "Airline food timing rarely matches when you're actually hungry — keep something in your bag for the gap": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Airline food timing rarely matches when you're actually hungry — keep something in your bag for the gap"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "航班餐的时间总跟你真正饿的时候对不上——包里备一点，备的就是那段空档"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "航班餐的時間總跟你真正餓的時候對不上——包裡備一點，備的就是那段空檔"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Die Mahlzeiten im Flugzeug passen selten mit dem echten Hunger zusammen — halte etwas in deiner Tasche für die Lücke"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "La comida del avión rara vez coincide con cuando realmente tienes hambre — lleva algo en la mochila para ese hueco"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Les repas en avion ne coïncident jamais avec ta vraie faim — garde quelque chose dans ton sac pour le creux"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "機内食のタイミングは本当に空腹になる時間と合わない——その隙間のために、バッグに何か入れておいて"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "기내식 타이밍은 진짜 배고픈 시간과 맞지 않는다 — 그 공백을 위해 가방에 뭔가 챙겨두어라"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "A comida do avião raramente coincide com quando você realmente está com fome — guarde algo na bolsa para o intervalo"
           }
         }
       }
