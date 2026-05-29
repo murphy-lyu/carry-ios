@@ -1531,6 +1531,8 @@ struct ItemPickerView: View {
         CarryLogger.shared.log(.pickerConfirmed,
             context: "items=\(presetCount + myItemCount) source=\(sourceLabel)")
 
+        let totalAdded = presetCount + myItemCount
+
         switch mode {
         case .create(let info):
             let pickedSceneKeys = selectedSmartSceneLabels.compactMap { sceneLabelToKey[$0] }
@@ -1544,7 +1546,7 @@ struct ItemPickerView: View {
                 sections: sections
             )
             store.setDraftTrip(bundle)
-            router.path.append(CreationRoute.packingList(bundle.id))
+            router.path.append(CreationRoute.packingList(bundle.id, initialItemCount: totalAdded))
 
         case .autoPackReview(let info, let sceneKeys):
             let bundle = TripBundle(
@@ -1557,13 +1559,15 @@ struct ItemPickerView: View {
                 sections: sections
             )
             store.setDraftTrip(bundle)
-            router.path.append(CreationRoute.packingList(bundle.id))
+            router.path.append(CreationRoute.packingList(bundle.id, initialItemCount: totalAdded))
 
         case .merge(let tripId):
             store.mergeItems(tripId: tripId, sections: sections)
             guard !isConfirmingSelection else { return }
             isConfirmingSelection = true
-            showToast(NSLocalizedString("itempicker.toast.added_to_list", comment: ""))
+            if totalAdded > 0 {
+                showToast(String(format: NSLocalizedString("itempicker.toast.added_count", comment: ""), totalAdded))
+            }
             Task { @MainActor in
                 try? await Task.sleep(for: .milliseconds(600))
                 router.path.removeLast()

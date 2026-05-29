@@ -12,6 +12,7 @@ struct PackingListView: View {
 
     let tripId: UUID
     var isNewTrip: Bool = false
+    var initialItemCount: Int = 0
 
     @EnvironmentObject var store: TripStore
     @EnvironmentObject var router: NavigationRouter
@@ -193,6 +194,9 @@ struct PackingListView: View {
         .onAppear {
             if isNewTrip { loadSurpriseItems() }
             if !isNewTrip { fetchDestinationWeather() }
+            if initialItemCount > 0 {
+                showToastMessage(String(format: NSLocalizedString("itempicker.toast.added_count", comment: ""), initialItemCount))
+            }
             CarryLogger.shared.log(.tripOpened)
             // Remember this trip so "Continue Packing" shortcut can reopen it.
             UserDefaults.standard.set(tripId.uuidString, forKey: "carry_last_opened_trip")
@@ -1171,6 +1175,15 @@ struct PackingListView: View {
             )
             .padding(.top, 10)
             .transition(.move(edge: .top).combined(with: .opacity))
+    }
+
+    private func showToastMessage(_ message: String) {
+        toastText = message
+        withAnimation(.easeInOut(duration: 0.2)) { toastVisible = true }
+        Task {
+            try? await Task.sleep(for: .seconds(2))
+            withAnimation(.easeInOut(duration: 0.2)) { toastVisible = false }
+        }
     }
 
     private func showToast(_ messageKey: String) {
