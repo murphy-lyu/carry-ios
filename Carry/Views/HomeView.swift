@@ -624,7 +624,7 @@ struct HomeView: View {
                 Image(systemName: "airplane.departure")
                     .font(.system(size: 11, weight: .semibold))
                     .foregroundStyle(.secondary)
-                Text("Trip overview")
+                Text("home.overview.title")
                     .font(.caption.weight(.semibold))
                     .foregroundStyle(.secondary)
                     .textCase(.uppercase)
