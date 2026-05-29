@@ -327,6 +327,16 @@ struct PackingListView: View {
 
     private var packingList: some View {
         List {
+            if !isNewTrip, let trip = bundle {
+                Section {
+                    DestinationInfoView(trip: trip, weatherManager: weatherManager)
+                        .listRowInsets(EdgeInsets(top: 8, leading: 0, bottom: 8, trailing: 0))
+                        .listRowSeparator(.hidden)
+                        .listRowBackground(Color.clear)
+                }
+                .listSectionSeparator(.hidden)
+            }
+
             ForEach(Array(sections.enumerated()), id: \.element.id) { index, section in
                 Section {
                     if isNewTrip {
@@ -381,7 +391,7 @@ struct PackingListView: View {
         }
         .listStyle(.plain)
         .scrollContentBackground(.hidden)
-        .contentMargins(.top, isNewTrip ? 8 : 0, for: .scrollContent)
+        .contentMargins(.top, isNewTrip ? 8 : -8, for: .scrollContent)
         .environment(\.defaultMinListRowHeight, 0)
         .environment(\.defaultMinListHeaderHeight, 0)
         .listSectionSpacing(0)
@@ -682,15 +692,10 @@ struct PackingListView: View {
                 .padding(.top, 6)
                 .padding(.horizontal, 16)
 
-            if let trip = bundle {
-                DestinationInfoView(trip: trip, weatherManager: weatherManager)
-                    .padding(.top, 8)
-                    .padding(.bottom, 4)
-            }
         }
         .zIndex(2)
         .padding(.top, 10)
-        .padding(.bottom, 4)
+        .padding(.bottom, 0)
         .background(Color(UIColor.systemBackground))
         .animation(.easeInOut(duration: 0.2), value: progress)
     }
@@ -1000,6 +1005,10 @@ struct PackingListView: View {
                 Rectangle()
                     .fill(Color(UIColor.systemBackground))
             )
+            // Keep internal spacing unchanged; only nudge the whole pinned header up
+            // to eliminate the 1pt seam between top bar and section header layer.
+            .offset(y: -1)
+            .zIndex(3)
     }
 
     private func editableRow(itemId: UUID, sectionId: UUID) -> some View {
