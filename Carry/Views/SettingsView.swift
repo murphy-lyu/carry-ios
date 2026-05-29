@@ -202,23 +202,8 @@ struct SettingsView: View {
 
     var body: some View {
         ZStack {
-            VStack(spacing: 0) {
-                // ── Fixed large title — stays pinned above the scroll area ──
-                HStack {
-                    Text("settings.title")
-                        .font(.largeTitle)
-                        .fontWeight(.bold)
-                        .foregroundStyle(.primary)
-                    Spacer()
-                }
-                .padding(.horizontal, 16)
-                .padding(.top, 8)
-                .padding(.bottom, 8)
-                .background(Color(.systemGroupedBackground))
-
-                // ── Scrollable content with sticky section headers ──
-                ScrollView {
-                    LazyVStack(alignment: .leading, spacing: 0, pinnedViews: [.sectionHeaders]) {
+            ScrollView {
+                LazyVStack(alignment: .leading, spacing: 0) {
 
                         Section {
                             settingsCard {
@@ -357,8 +342,7 @@ struct SettingsView: View {
                     }
                     .padding(.bottom, 20)
                 }
-            }
-            .background(Color(.systemGroupedBackground).ignoresSafeArea())
+                .background(Color(.systemGroupedBackground).ignoresSafeArea())
         }
         .overlay(alignment: .bottom) {
             if let msg = restoreToastMessage {
@@ -398,7 +382,8 @@ struct SettingsView: View {
                     context: "reason=picker_failed error=\(error.localizedDescription)")
             }
         }
-        .navigationBarHidden(true)
+        .navigationTitle(Text("settings.title"))
+        .navigationBarTitleDisplayMode(.large)
         .task { await refreshNotificationStatus() }
         .onAppear { refreshBackupCache() }
         .onChange(of: scenePhase) { _, phase in
@@ -427,7 +412,6 @@ struct SettingsView: View {
         }
     }
 
-    /// Sticky section header with opaque background so content scrolls behind it cleanly.
     private func sectionHeader(_ title: LocalizedStringKey) -> some View {
         Text(title)
             .font(.system(size: 13, weight: .semibold))
@@ -436,7 +420,6 @@ struct SettingsView: View {
             .padding(.top, 18)
             .padding(.bottom, 8)
             .frame(maxWidth: .infinity, alignment: .leading)
-            .background(Color(.systemGroupedBackground))
     }
 
     /// Card-only container (no title). Used with Section headers for sticky behaviour.
