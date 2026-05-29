@@ -60,11 +60,19 @@ final class LocationPermissionManager: NSObject, CLLocationManagerDelegate {
     private(set) var isTracking = false
 
     private let manager = CLLocationManager()
+    private static let trackingKey = "globe_show_user_location"
 
     override init() {
         super.init()
         manager.delegate = self
         authStatus = manager.authorizationStatus
+
+        // 恢复上次状态：有权限且上次是开启的，才自动启动
+        let wasTracking = UserDefaults.standard.object(forKey: Self.trackingKey) as? Bool ?? true
+        if (authStatus == .authorizedWhenInUse || authStatus == .authorizedAlways) && wasTracking {
+            isTracking = true
+            manager.startUpdatingLocation()
+        }
     }
 
     /// Call when the user taps the location button.
@@ -75,6 +83,7 @@ final class LocationPermissionManager: NSObject, CLLocationManagerDelegate {
             manager.requestWhenInUseAuthorization()
         case .authorizedWhenInUse, .authorizedAlways:
             isTracking.toggle()
+            UserDefaults.standard.set(isTracking, forKey: Self.trackingKey)
             if isTracking {
                 manager.startUpdatingLocation()
             } else {
@@ -94,10 +103,14 @@ final class LocationPermissionManager: NSObject, CLLocationManagerDelegate {
 
     func locationManagerDidChangeAuthorization(_ manager: CLLocationManager) {
         authStatus = manager.authorizationStatus
-        // Automatically start tracking once the user grants permission
         if authStatus == .authorizedWhenInUse || authStatus == .authorizedAlways {
-            isTracking = true
-            manager.startUpdatingLocation()
+            // 首次授权（key 还不存在）→ 默认开启并记录
+            if UserDefaults.standard.object(forKey: Self.trackingKey) == nil {
+                UserDefaults.standard.set(true, forKey: Self.trackingKey)
+            }
+            let shouldTrack = UserDefaults.standard.bool(forKey: Self.trackingKey)
+            isTracking = shouldTrack
+            if shouldTrack { manager.startUpdatingLocation() }
         } else {
             isTracking = false
             manager.stopUpdatingLocation()
