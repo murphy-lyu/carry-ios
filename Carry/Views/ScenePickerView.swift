@@ -112,21 +112,22 @@ struct ScenePickerView: View {
         ZStack {
             CarrySubtleBackground()
 
-            ScrollView {
-                VStack(alignment: .leading, spacing: 28) {
-                    heroSection
+            VStack(spacing: 0) {
+                heroSection
 
-                    if !nudgeSceneKeys.isEmpty {
-                        climateNudgeSection
-                            .padding(.top, -16)
-                    }
+                ScrollView {
+                    VStack(alignment: .leading, spacing: 28) {
+                        if !nudgeSceneKeys.isEmpty {
+                            climateNudgeSection
+                        }
 
-                    ForEach(Array(defaultSceneGroups.enumerated()), id: \.element.id) { index, group in
-                        SceneGroupSection(group: group, selectedItems: $selectedItems)
-                            .padding(.top, index == 0 ? -16 : 0)
+                        ForEach(Array(defaultSceneGroups.enumerated()), id: \.element.id) { index, group in
+                            SceneGroupSection(group: group, selectedItems: $selectedItems)
+                        }
                     }
+                    .padding(.top, 4)
+                    .padding(.bottom, 16)
                 }
-                .padding(.bottom, 16)
             }
         }
         .safeAreaInset(edge: .bottom) {
