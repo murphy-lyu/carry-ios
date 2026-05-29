@@ -40,20 +40,7 @@ enum ItemCategory: String, CaseIterable {
     }
 }
 
-private let itemNameAliases: [String: String] = [
-    "Driver's licence": "Driver's license",
-    "Cash (local currency)": "Cash",
-    "Reusable water bottle": "Water bottle",
-    "Portable Bluetooth speaker": "Bluetooth speaker",
-    "Motion sickness pills": "Motion sickness tablets",
-    "Pain relievers": "Painkillers",
-    "Sanitary pads / tampons": "Feminine hygiene products",
-    "Overseas SIM / portable WiFi": "Portable WiFi device",
-    "Coloured contacts": "Colored contacts",
-    "Moisturiser": "Moisturizer",
-    "Hand sanitiser": "Hand sanitizer",
-    "Sun-protective clothing": "Sun shirt",
-]
+private let itemNameAliases: [String: String] = [:]
 
 func canonicalItemName(_ name: String) -> String {
     itemNameAliases[name] ?? name
