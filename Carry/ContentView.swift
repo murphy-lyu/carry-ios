@@ -112,13 +112,12 @@ struct ContentView: View {
                 HomeView()
                     .navigationDestination(for: UUID.self) { id in
                         PackingListView(tripId: id)
-                            .toolbar(.hidden, for: .tabBar)
                     }
                     .navigationDestination(for: CreationRoute.self) { route in
                         routeDestination(route)
-                            .toolbar(.hidden, for: .tabBar)
                     }
             }
+            .toolbar(router.path.isEmpty ? .visible : .hidden, for: .tabBar)
             .tabItem { Label("Trips", systemImage: "suitcase") }
             .tag(0)
 
