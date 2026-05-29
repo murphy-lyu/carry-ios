@@ -53,6 +53,7 @@ private let itemNameAliases: [String: String] = [
     "Moisturiser": "Moisturizer",
     "Hand sanitiser": "Hand sanitizer",
     "Sun-protective clothing": "Sun shirt",
+    "Sheet mask": "Face mask",
 ]
 
 func canonicalItemName(_ name: String) -> String {
@@ -99,7 +100,7 @@ let itemPickerCatalog: [ItemPickerCategory] = [
         "Portable WiFi device",
     ]),
     ItemPickerCategory(name: "Personal Care", items: [
-        "Makeup remover / cleansing oil", "Cotton pads", "Face wash", "Face mask", "Sheet mask", "Face mist", "Toner", "Serum", "Eye cream", "Facial oil", "Lotion", "Moisturizer",
+        "Makeup remover / cleansing oil", "Cotton pads", "Face wash", "Face mask", "Face mist", "Toner", "Serum", "Eye cream", "Facial oil", "Lotion", "Moisturizer",
         "Body lotion",
         "Lip balm", "Sunscreen", "Blotting paper",
         "Hair ties", "Comb", "Hair straightener", "Dry shampoo", "Perfume",
