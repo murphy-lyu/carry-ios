@@ -420,6 +420,7 @@
         }
       }
     },
+    "+%lld": {},
     "☀️ Tropical / beach": {
       "extractionState": "manual",
       "localizations": {
@@ -43256,6 +43257,74 @@
           "stringUnit": {
             "state": "translated",
             "value": "长时间在外移动时，遇到公共卫生间会更安心"
+          }
+        }
+      }
+    },
+    "settings.mock.weather_preview": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Weather preview"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "天气预览"
+          }
+        }
+      }
+    },
+    "settings.mock.weather_preview.subtitle": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Show mock weather data when WeatherKit is unavailable"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "当 WeatherKit 不可用时显示模拟天气数据"
+          }
+        }
+      }
+    },
+    "settings.mock.weather_preview.enabled": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Weather preview enabled"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "已开启天气预览"
+          }
+        }
+      }
+    },
+    "settings.mock.weather_preview.disabled": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Weather preview disabled"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "已关闭天气预览"
           }
         }
       }

@@ -120,7 +120,7 @@ final class WeatherManager: ObservableObject {
                 dayWeather.date <= tripEndDate
             }
 
-            let infos = days.prefix(10).map { day in
+            let infos = days.prefix(7).map { day in
                 DayWeatherInfo(
                     date: day.date,
                     symbolName: day.symbolName,

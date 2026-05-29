@@ -997,6 +997,7 @@ private struct DeveloperModeView: View {
     @StateObject private var coffeeStore = CoffeeStore()
     @State private var toastMessage: String?
     @State private var showResetAllConfirm = false
+    @AppStorage("debug_mock_weather_enabled") private var debugMockWeatherEnabled = false
 
     var body: some View {
         List {
@@ -1035,6 +1036,24 @@ private struct DeveloperModeView: View {
                     VStack(alignment: .leading, spacing: 2) {
                         Text("settings.mock.home_empty_state")
                         Text("settings.mock.home_empty_state.subtitle")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+                }
+                .tint(colorScheme == .dark ? Color(.systemGray2) : Color(.label))
+                .listRowSeparator(.hidden)
+
+                Toggle(isOn: Binding(
+                    get: { debugMockWeatherEnabled },
+                    set: { newValue in
+                        debugMockWeatherEnabled = newValue
+                        UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                        showToast(newValue ? String(localized: "settings.mock.weather_preview.enabled") : String(localized: "settings.mock.weather_preview.disabled"))
+                    }
+                )) {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("settings.mock.weather_preview")
+                        Text("settings.mock.weather_preview.subtitle")
                             .font(.caption)
                             .foregroundStyle(.secondary)
                     }

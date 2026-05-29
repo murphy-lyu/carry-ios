@@ -14,9 +14,11 @@ struct DestinationInfoView: View {
     let trip: TripBundle
     @ObservedObject var weatherManager: WeatherManager
     @StateObject private var exchangeRateManager = ExchangeRateManager()
+    @AppStorage("debug_mock_weather_enabled") private var debugMockWeatherEnabled = false
 
     @Environment(\.colorScheme) private var colorScheme
     @State private var selectedDestIndex = 0
+    private let cardHeight: CGFloat = 112
 
     // MARK: - Destinations
 
@@ -80,6 +82,20 @@ struct DestinationInfoView: View {
         weatherManager.weatherByDestination[selectedDestIndex]
     }
 
+    private var displayWeather: [DayWeatherInfo]? {
+        if let currentWeather, !currentWeather.isEmpty {
+            return currentWeather
+        }
+#if DEBUG
+        if debugMockWeatherEnabled {
+            return debugMockWeather
+        }
+        return currentWeather
+#else
+        return currentWeather
+#endif
+    }
+
     private var allCountryCodes: [String] {
         destinations.map(\.countryCode)
     }
@@ -123,39 +139,36 @@ struct DestinationInfoView: View {
         let hasWeather = !destinations.isEmpty
 
         if hasWeather || hasPlug || hasCurrency {
-            let cardCount = (hasWeather ? 1 : 0) + (hasPlug ? 1 : 0) + (hasCurrency ? 1 : 0)
             GeometryReader { proxy in
-                // 单张卡片：全宽居中；多张：露出右侧约 28pt 提示可横划
-                let isSingle = cardCount == 1
-                let cardWidth = isSingle
-                    ? proxy.size.width - 32
-                    : max(220, proxy.size.width - 16 - 28)
+                // 无论几张卡，都保持固定左右边距 16pt。
+                // 吸附到任意卡片时，其左侧都与屏幕左边距对齐，避免三卡同时露出。
+                let cardWidth = proxy.size.width - 32
                 ScrollView(.horizontal, showsIndicators: false) {
                     HStack(spacing: 12) {
                         if hasWeather {
                             weatherCard
                                 .frame(width: cardWidth)
-                                .frame(maxHeight: .infinity)
+                                .frame(height: cardHeight)
                         }
                         if hasPlug {
                             plugCard
                                 .frame(width: cardWidth)
-                                .frame(maxHeight: .infinity)
+                                .frame(height: cardHeight)
                         }
                         if hasCurrency {
                             currencyCard
                                 .frame(width: cardWidth)
-                                .frame(maxHeight: .infinity)
+                                .frame(height: cardHeight)
                         }
                     }
                     .scrollTargetLayout()
-                    .frame(minHeight: proxy.size.height)
                     .padding(.leading, 16)
-                    .padding(.trailing, isSingle ? 16 : 8)
+                    .padding(.trailing, 16)
+                    .padding(.vertical, 1)
                 }
                 .scrollTargetBehavior(.viewAligned)
             }
-            .frame(height: 128)
+            .frame(height: cardHeight + 2)
         }
     }
 
@@ -164,55 +177,99 @@ struct DestinationInfoView: View {
     @ViewBuilder
     private var weatherCard: some View {
         card {
-            VStack(alignment: .leading, spacing: 8) {
+            VStack(alignment: .leading, spacing: 12) {
                 // Header: city name + destination dots
                 HStack(alignment: .center, spacing: 6) {
                     let cityName = destinations.indices.contains(selectedDestIndex)
                         ? destinations[selectedDestIndex].name : ""
                     HStack(spacing: 4) {
                         Image(systemName: "cloud.sun")
-                            .font(.system(size: 11, weight: .medium))
+                            .font(.system(size: 12, weight: .medium))
                             .foregroundStyle(.secondary)
                         Text(cityName)
-                            .font(.caption.weight(.semibold))
+                            .font(.subheadline.weight(.semibold))
                             .foregroundStyle(.primary)
                             .lineLimit(1)
                     }
 
                     Spacer(minLength: 0)
 
-                    // Multi-destination dot indicator
-                    if destinations.count > 1 {
-                        HStack(spacing: 4) {
-                            ForEach(destinations.indices, id: \.self) { i in
-                                Circle()
-                                    .fill(i == selectedDestIndex
-                                          ? Color.primary
-                                          : Color.primary.opacity(0.2))
-                                    .frame(width: 5, height: 5)
-                                    .onTapGesture { withAnimation(.spring(duration: 0.2)) { selectDestination(i) } }
+                    HStack(spacing: 8) {
+                        // Multi-destination dot indicator
+                        if destinations.count > 1 {
+                            HStack(spacing: 4) {
+                                ForEach(destinations.indices, id: \.self) { i in
+                                    Circle()
+                                        .fill(i == selectedDestIndex
+                                              ? Color.primary
+                                              : Color.primary.opacity(0.2))
+                                        .frame(width: 5, height: 5)
+                                        .onTapGesture { withAnimation(.spring(duration: 0.2)) { selectDestination(i) } }
+                                }
+                            }
+                        }
+
+                        if let attribution = weatherManager.attribution {
+                            Link(destination: attribution.legalPageURL) {
+                                AsyncImage(url: colorScheme == .dark
+                                           ? attribution.combinedMarkDarkURL
+                                           : attribution.combinedMarkLightURL) { image in
+                                    image.resizable().scaledToFit()
+                                } placeholder: {
+                                    Color.clear
+                                }
+                                .frame(height: 7)
+                                .opacity(0.66)
+                                .offset(y: -1)
                             }
                         }
                     }
                 }
 
-                Divider()
+                dividerLine
 
                 // Weather content
                 if isTripInFuture {
                     Text(LocalizedStringKey("destination.weather.unavailable"))
-                        .font(.caption2)
+                        .font(.footnote)
                         .foregroundStyle(.secondary)
                         .frame(maxWidth: .infinity, alignment: .leading)
 
-                } else if let days = currentWeather, !days.isEmpty {
-                    ScrollView(.horizontal, showsIndicators: false) {
-                        HStack(spacing: 10) {
-                            ForEach(days) { day in
-                                dayChip(day)
+                } else if let days = displayWeather, !days.isEmpty {
+                    GeometryReader { rowGeo in
+                        let chipWidth: CGFloat = 28
+                        let edgeInset: CGFloat = 6
+                        let count = max(days.count, 1)
+                        let totalChipWidth = CGFloat(count) * chipWidth
+                        let availableWidth = max(rowGeo.size.width, 0)
+                        let innerWidth = max(availableWidth - (edgeInset * 2), 0)
+                        let autoSpacing = count > 1
+                            ? (innerWidth - totalChipWidth) / CGFloat(count - 1)
+                            : 0
+                        let spacing = max(autoSpacing, 4)
+                        let requiredWidth = totalChipWidth + CGFloat(max(count - 1, 0)) * spacing
+
+                        if requiredWidth <= innerWidth {
+                            HStack(spacing: spacing) {
+                                ForEach(days) { day in
+                                    dayChip(day, width: chipWidth)
+                                }
+                            }
+                            .padding(.horizontal, edgeInset)
+                            .frame(width: availableWidth, alignment: .center)
+                            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
+                        } else {
+                            ScrollView(.horizontal, showsIndicators: false) {
+                                HStack(spacing: spacing) {
+                                    ForEach(days) { day in
+                                        dayChip(day, width: chipWidth)
+                                    }
+                                }
+                                .padding(.horizontal, edgeInset)
                             }
                         }
                     }
+                    .frame(height: 40)
                 } else if currentWeather == nil {
                     // Loading skeleton
                     HStack(spacing: 10) {
@@ -222,20 +279,6 @@ struct DestinationInfoView: View {
                     }
                 }
                 // currentWeather == [] → card is hidden (handled in body via hasWeather)
-
-                // WeatherKit attribution (required by Apple)
-                if let attribution = weatherManager.attribution {
-                    Link(destination: attribution.legalPageURL) {
-                        AsyncImage(url: colorScheme == .dark
-                                   ? attribution.combinedMarkDarkURL
-                                   : attribution.combinedMarkLightURL) { image in
-                            image.resizable().scaledToFit()
-                        } placeholder: {
-                            Color.clear
-                        }
-                        .frame(height: 10)
-                    }
-                }
             }
         }
         .onTapGesture {} // Absorb taps so dots don't bubble up
@@ -252,10 +295,27 @@ struct DestinationInfoView: View {
                         withAnimation(.spring(duration: 0.2)) {
                             selectDestination(max(selectedDestIndex - 1, 0))
                         }
-                    }
                 }
+            }
         )
     }
+
+#if DEBUG
+    private var debugMockWeather: [DayWeatherInfo] {
+        let symbols = ["cloud.sun.fill", "cloud.rain.fill", "sun.max.fill", "wind", "cloud.bolt.rain.fill"]
+        let tripStart = tripDates.start
+        let calendar = Calendar.current
+        let baseTemp = 16 + (selectedDestIndex * 2)
+        return (0..<7).compactMap { offset in
+            guard let date = calendar.date(byAdding: .day, value: offset, to: tripStart) else { return nil }
+            return DayWeatherInfo(
+                date: date,
+                symbolName: symbols[offset % symbols.count],
+                highTemp: "\(baseTemp + offset)°"
+            )
+        }
+    }
+#endif
 
     private func selectDestination(_ index: Int) {
         selectedDestIndex = index
@@ -271,25 +331,26 @@ struct DestinationInfoView: View {
         )
     }
 
-    private func dayChip(_ day: DayWeatherInfo) -> some View {
+    private func dayChip(_ day: DayWeatherInfo, width: CGFloat = 30) -> some View {
         let calendar = Calendar.current
         let isToday = calendar.isDateInToday(day.date)
         let dayAbbrev = isToday
             ? NSLocalizedString("destination.weather.today", comment: "")
             : day.date.formatted(.dateTime.weekday(.abbreviated))
 
-        return VStack(spacing: 4) {
+        return VStack(spacing: 3) {
             Text(dayAbbrev)
-                .font(.system(size: 9, weight: .medium))
+                .font(.caption2.weight(.medium))
                 .foregroundStyle(.secondary)
             Image(systemName: day.symbolName)
-                .font(.system(size: 14))
+                .font(.system(size: 13))
                 .foregroundStyle(.primary.opacity(0.8))
-                .frame(width: 20, height: 16)
+                .frame(width: 20, height: 14)
             Text(day.highTemp)
-                .font(.system(size: 11, weight: .semibold))
+                .font(.caption.weight(.semibold))
                 .foregroundStyle(.primary)
         }
+        .frame(width: width)
     }
 
     private var skeletonChip: some View {
@@ -310,37 +371,38 @@ struct DestinationInfoView: View {
 
     private var plugCard: some View {
         card {
-            VStack(alignment: .leading, spacing: 8) {
+            VStack(alignment: .leading, spacing: 12) {
                 HStack(spacing: 4) {
                     Image(systemName: "powerplug")
-                        .font(.system(size: 11, weight: .medium))
+                        .font(.system(size: 12, weight: .medium))
                         .foregroundStyle(.secondary)
                     Text(LocalizedStringKey("destination.plug.section_title"))
-                        .font(.caption.weight(.semibold))
+                        .font(.subheadline.weight(.semibold))
                         .foregroundStyle(.primary)
                 }
 
-                Divider()
-
-                Spacer(minLength: 0)
+                dividerLine
 
                 VStack(alignment: .leading, spacing: 6) {
                     let typesLabel = plugUnion.map { "Type \($0)" }.joined(separator: " · ")
                     Text(typesLabel)
-                        .font(.system(size: 13, weight: .semibold))
+                        .font(.headline.weight(.semibold))
                         .foregroundStyle(.primary)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.85)
 
                     let voltageLabel = voltages
                         .map { "\($0.voltage)V / \($0.frequency)Hz" }
                         .joined(separator: " · ")
                     if !voltageLabel.isEmpty {
                         Text(voltageLabel)
-                            .font(.system(size: 11))
+                            .font(.footnote)
                             .foregroundStyle(.secondary)
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.9)
                     }
                 }
-
-                Spacer(minLength: 0)
+                .frame(maxWidth: .infinity, alignment: .leading)
             }
             .frame(maxHeight: .infinity)
         }
@@ -350,36 +412,40 @@ struct DestinationInfoView: View {
 
     private var currencyCard: some View {
         card {
-            VStack(alignment: .leading, spacing: 8) {
+            VStack(alignment: .leading, spacing: 12) {
                 HStack(spacing: 4) {
                     Image(systemName: "banknote")
-                        .font(.system(size: 11, weight: .medium))
+                        .font(.system(size: 12, weight: .medium))
                         .foregroundStyle(.secondary)
                     Text(LocalizedStringKey("destination.currency.section_title"))
-                        .font(.caption.weight(.semibold))
+                        .font(.subheadline.weight(.semibold))
                         .foregroundStyle(.primary)
                 }
 
-                Divider()
-
-                Spacer(minLength: 0)
+                dividerLine
 
                 VStack(alignment: .leading, spacing: 8) {
-                    ForEach(foreignCurrencies, id: \.code) { currency in
+                    ForEach(Array(foreignCurrencies.prefix(2)), id: \.code) { currency in
                         VStack(alignment: .leading, spacing: 2) {
                             Text("\(currency.code) \(currency.symbol)")
-                                .font(.system(size: 13, weight: .semibold))
+                                .font(.headline.weight(.semibold))
                                 .foregroundStyle(.primary)
                             if let rate = exchangeRateManager.formattedRate(for: currency.code) {
                                 Text("1 \(exchangeRateManager.baseCurrencyCode) ≈ \(rate) \(currency.symbol)")
-                                    .font(.system(size: 10))
+                                    .font(.footnote)
                                     .foregroundStyle(.secondary)
+                                    .lineLimit(1)
+                                    .minimumScaleFactor(0.8)
                             }
                         }
                     }
+                    if foreignCurrencies.count > 2 {
+                        Text("+\(foreignCurrencies.count - 2)")
+                            .font(.footnote.weight(.semibold))
+                            .foregroundStyle(.secondary)
+                    }
                 }
-
-                Spacer(minLength: 0)
+                .frame(maxWidth: .infinity, alignment: .leading)
             }
             .frame(maxHeight: .infinity)
         }
@@ -394,20 +460,36 @@ struct DestinationInfoView: View {
     private func card<Content: View>(@ViewBuilder content: () -> Content) -> some View {
         VStack(alignment: .leading, spacing: 0) {
             content()
-            Spacer(minLength: 0)
         }
-        .padding(12)
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+        .padding(.horizontal, 14)
+        .padding(.vertical, 12)
         .background(
-                RoundedRectangle(cornerRadius: 14, style: .continuous)
-                    .fill(Color(UIColor.secondarySystemBackground))
+                RoundedRectangle(cornerRadius: 16, style: .continuous)
+                    .fill(cardFillColor)
             )
             .overlay(
-                RoundedRectangle(cornerRadius: 14, style: .continuous)
-                    .strokeBorder(Color.primary.opacity(colorScheme == .dark ? 0.06 : 0.04), lineWidth: 1)
+                RoundedRectangle(cornerRadius: 16, style: .continuous)
+                    .strokeBorder(cardStrokeColor, lineWidth: 1)
             )
-            .shadow(
-                color: colorScheme == .dark ? .clear : .black.opacity(0.05),
-                radius: 6, x: 0, y: 2
-            )
+            .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+    }
+
+    private var dividerLine: some View {
+        Rectangle()
+            .fill(Color(UIColor.separator).opacity(colorScheme == .dark ? 0.3 : 0.2))
+            .frame(height: 1)
+    }
+
+    private var cardFillColor: Color {
+        colorScheme == .dark
+            ? Color(UIColor.secondarySystemBackground).opacity(0.56)
+            : Color(UIColor.secondarySystemBackground).opacity(0.40)
+    }
+
+    private var cardStrokeColor: Color {
+        colorScheme == .dark
+            ? Color.white.opacity(0.11)
+            : Color(UIColor.separator).opacity(0.1)
     }
 }
