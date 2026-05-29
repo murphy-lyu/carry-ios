@@ -256,27 +256,6 @@ struct SettingsView: View {
 
                         Section {
                             settingsCard {
-                                settingsNavigationRow(title: "settings.about.entry") {
-                                    AboutView()
-                                }
-                                settingsRow(title: "settings.section.support", valueText: "☕️") {
-                                    showCoffeeSheet = true
-                                }
-                                settingsRow(titleText: roadmapTitle) {
-                                    showRoadmapSheet = true
-                                }
-                                settingsRow(title: "settings.feedback") {
-                                    openFeedbackMail()
-                                }
-                            }
-                            .padding(.horizontal, 16)
-                            .padding(.bottom, 18)
-                        } header: {
-                            sectionHeader("settings.section.about")
-                        }
-
-                        Section {
-                            settingsCard {
                                 settingsRow(
                                     title: "settings.data.export",
                                     valueText: cachedBackupDate != nil ? nil : NSLocalizedString("settings.data.restore.no_backup", comment: "")
@@ -324,6 +303,27 @@ struct SettingsView: View {
                             }
                         } header: {
                             sectionHeader("settings.data.title")
+                        }
+
+                        Section {
+                            settingsCard {
+                                settingsNavigationRow(title: "settings.about.entry") {
+                                    AboutView()
+                                }
+                                settingsRow(title: "settings.section.support", valueText: "☕️") {
+                                    showCoffeeSheet = true
+                                }
+                                settingsRow(titleText: roadmapTitle) {
+                                    showRoadmapSheet = true
+                                }
+                                settingsRow(title: "settings.feedback") {
+                                    openFeedbackMail()
+                                }
+                            }
+                            .padding(.horizontal, 16)
+                            .padding(.bottom, 18)
+                        } header: {
+                            sectionHeader("settings.section.about")
                         }
 
 #if DEBUG
