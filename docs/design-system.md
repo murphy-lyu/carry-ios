@@ -138,3 +138,20 @@ Apple 原生风格，极简、克制、优雅。
 - 全部使用 SF Symbols
 - 尺寸与文字对齐时用 .imageScale(.medium)
 - 独立展示图标用 font(.system(size: N)) 控制大小
+
+## Mac Catalyst 专项规范
+
+### 浮层卡片（NavigationStack 容器）
+- 宽度：360pt（固定，`.frame(width: 360)`）
+- 圆角：18pt，`.continuous` style
+- 背景：Dark `Color(red: 0.09, green: 0.09, blue: 0.10)`；Light `Color(UIColor.systemBackground)`
+- 阴影：Dark `shadow(color: .black.opacity(0.45), radius: 32, x: 0, y: 8)`；Light `shadow(color: .black.opacity(0.18), radius: 32, x: 0, y: 8)`
+- 与窗口边缘的间距：leading 32pt、top 24pt、bottom 48pt
+
+### 背景
+- `MacGlobePanel().ignoresSafeArea()` 铺满整个窗口
+- Tab Bar 在 Mac 上不显示；Settings 通过 toolbar 齿轮按钮打开 sheet
+
+### List 内容区
+- `HomeView.macBody` 使用 `.listStyle(.plain)` + `.scrollContentBackground(.hidden)` 实现透明背景
+- List row 内容区背景用 `.listRowBackground(Color.clear)`，分隔线用 `.listRowSeparator(.hidden)`

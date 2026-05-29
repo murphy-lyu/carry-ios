@@ -1,5 +1,7 @@
 # Calendar Sync
 
+> **Status: Shipped ✅**（2026-05 上线，decisions.md 中有对应决策记录）
+
 ## 功能定位
 
 轻量级"一键加入"，不做双向同步。

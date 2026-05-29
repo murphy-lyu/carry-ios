@@ -1,0 +1,174 @@
+//
+//  CurrencyCatalog.swift
+//  Carry
+//
+
+import Foundation
+
+// MARK: - CurrencyInfo
+
+struct CurrencyInfo {
+    /// ISO 4217 currency code, e.g. "JPY"
+    let code: String
+    /// Common symbol, e.g. "¥"
+    let symbol: String
+}
+
+// MARK: - CurrencyCatalog
+
+/// Static country-code → currency lookup.
+/// Displays code + symbol only. Full localised names deferred to a future update
+/// (can be automated via Locale rather than manual xcstrings maintenance).
+/// Coverage: ~110 common travel destinations.
+enum CurrencyCatalog {
+    static func info(for countryCode: String) -> CurrencyInfo? {
+        return catalog[countryCode.uppercased()]
+    }
+
+    /// Returns de-duplicated currency infos for a list of country codes.
+    static func merged(for countryCodes: [String]) -> [CurrencyInfo] {
+        var seen = Set<String>()
+        return countryCodes
+            .compactMap { catalog[$0.uppercased()] }
+            .filter { seen.insert($0.code).inserted }
+    }
+
+    // MARK: - Data
+
+    private static let catalog: [String: CurrencyInfo] = [
+
+        // ── East Asia ──────────────────────────────────────────────────────────
+        "CN": CurrencyInfo(code: "CNY", symbol: "¥"),
+        "JP": CurrencyInfo(code: "JPY", symbol: "¥"),
+        "KR": CurrencyInfo(code: "KRW", symbol: "₩"),
+        "TW": CurrencyInfo(code: "TWD", symbol: "NT$"),
+        "HK": CurrencyInfo(code: "HKD", symbol: "HK$"),
+        "MO": CurrencyInfo(code: "MOP", symbol: "MOP$"),
+        "MN": CurrencyInfo(code: "MNT", symbol: "₮"),
+
+        // ── Southeast Asia ─────────────────────────────────────────────────────
+        "TH": CurrencyInfo(code: "THB", symbol: "฿"),
+        "VN": CurrencyInfo(code: "VND", symbol: "₫"),
+        "SG": CurrencyInfo(code: "SGD", symbol: "S$"),
+        "MY": CurrencyInfo(code: "MYR", symbol: "RM"),
+        "ID": CurrencyInfo(code: "IDR", symbol: "Rp"),
+        "PH": CurrencyInfo(code: "PHP", symbol: "₱"),
+        "BN": CurrencyInfo(code: "BND", symbol: "B$"),
+        "KH": CurrencyInfo(code: "KHR", symbol: "៛"),
+        "LA": CurrencyInfo(code: "LAK", symbol: "₭"),
+        "MM": CurrencyInfo(code: "MMK", symbol: "K"),
+
+        // ── South Asia ─────────────────────────────────────────────────────────
+        "IN": CurrencyInfo(code: "INR",  symbol: "₹"),
+        "LK": CurrencyInfo(code: "LKR",  symbol: "Rs"),
+        "NP": CurrencyInfo(code: "NPR",  symbol: "Rs"),
+        "PK": CurrencyInfo(code: "PKR",  symbol: "Rs"),
+        "BD": CurrencyInfo(code: "BDT",  symbol: "৳"),
+        "BT": CurrencyInfo(code: "BTN",  symbol: "Nu"),
+        "MV": CurrencyInfo(code: "MVR",  symbol: "Rf"),
+
+        // ── Middle East ────────────────────────────────────────────────────────
+        "AE": CurrencyInfo(code: "AED", symbol: "د.إ"),
+        "SA": CurrencyInfo(code: "SAR", symbol: "﷼"),
+        "QA": CurrencyInfo(code: "QAR", symbol: "﷼"),
+        "KW": CurrencyInfo(code: "KWD", symbol: "د.ك"),
+        "BH": CurrencyInfo(code: "BHD", symbol: ".د.ب"),
+        "OM": CurrencyInfo(code: "OMR", symbol: "﷼"),
+        "JO": CurrencyInfo(code: "JOD", symbol: "JD"),
+        "IL": CurrencyInfo(code: "ILS", symbol: "₪"),
+        "TR": CurrencyInfo(code: "TRY", symbol: "₺"),
+
+        // ── Central Asia ───────────────────────────────────────────────────────
+        "KZ": CurrencyInfo(code: "KZT", symbol: "₸"),
+        "KG": CurrencyInfo(code: "KGS", symbol: "с"),
+        "TJ": CurrencyInfo(code: "TJS", symbol: "SM"),
+        "UZ": CurrencyInfo(code: "UZS", symbol: "so'm"),
+
+        // ── Eurozone ───────────────────────────────────────────────────────────
+        "FR": CurrencyInfo(code: "EUR", symbol: "€"),
+        "DE": CurrencyInfo(code: "EUR", symbol: "€"),
+        "IT": CurrencyInfo(code: "EUR", symbol: "€"),
+        "ES": CurrencyInfo(code: "EUR", symbol: "€"),
+        "PT": CurrencyInfo(code: "EUR", symbol: "€"),
+        "NL": CurrencyInfo(code: "EUR", symbol: "€"),
+        "BE": CurrencyInfo(code: "EUR", symbol: "€"),
+        "AT": CurrencyInfo(code: "EUR", symbol: "€"),
+        "LU": CurrencyInfo(code: "EUR", symbol: "€"),
+        "SE": CurrencyInfo(code: "SEK", symbol: "kr"),
+        "FI": CurrencyInfo(code: "EUR", symbol: "€"),
+        "GR": CurrencyInfo(code: "EUR", symbol: "€"),
+        "IE": CurrencyInfo(code: "EUR", symbol: "€"),
+        "SI": CurrencyInfo(code: "EUR", symbol: "€"),
+        "SK": CurrencyInfo(code: "EUR", symbol: "€"),
+        "EE": CurrencyInfo(code: "EUR", symbol: "€"),
+        "LV": CurrencyInfo(code: "EUR", symbol: "€"),
+        "LT": CurrencyInfo(code: "EUR", symbol: "€"),
+        "HR": CurrencyInfo(code: "EUR", symbol: "€"),
+
+        // ── Non-Eurozone Europe ────────────────────────────────────────────────
+        "GB": CurrencyInfo(code: "GBP", symbol: "£"),
+        "CH": CurrencyInfo(code: "CHF", symbol: "Fr"),
+        "NO": CurrencyInfo(code: "NOK", symbol: "kr"),
+        "DK": CurrencyInfo(code: "DKK", symbol: "kr"),
+        "IS": CurrencyInfo(code: "ISK", symbol: "kr"),
+        "PL": CurrencyInfo(code: "PLN", symbol: "zł"),
+        "CZ": CurrencyInfo(code: "CZK", symbol: "Kč"),
+        "HU": CurrencyInfo(code: "HUF", symbol: "Ft"),
+        "RO": CurrencyInfo(code: "RON", symbol: "lei"),
+        "BG": CurrencyInfo(code: "BGN", symbol: "лв"),
+        "RS": CurrencyInfo(code: "RSD", symbol: "din"),
+        "UA": CurrencyInfo(code: "UAH", symbol: "₴"),
+        "BY": CurrencyInfo(code: "BYN", symbol: "Br"),
+
+        // ── Russia ─────────────────────────────────────────────────────────────
+        "RU": CurrencyInfo(code: "RUB", symbol: "₽"),
+
+        // ── North America ──────────────────────────────────────────────────────
+        "US": CurrencyInfo(code: "USD", symbol: "$"),
+        "CA": CurrencyInfo(code: "CAD", symbol: "CA$"),
+        "MX": CurrencyInfo(code: "MXN", symbol: "$"),
+
+        // ── Central America & Caribbean ────────────────────────────────────────
+        "CR": CurrencyInfo(code: "CRC", symbol: "₡"),
+        "PA": CurrencyInfo(code: "PAB", symbol: "B/."),
+        "GT": CurrencyInfo(code: "GTQ", symbol: "Q"),
+        "BZ": CurrencyInfo(code: "BZD", symbol: "BZ$"),
+        "CU": CurrencyInfo(code: "CUP", symbol: "$"),
+        "DO": CurrencyInfo(code: "DOP", symbol: "RD$"),
+        "JM": CurrencyInfo(code: "JMD", symbol: "J$"),
+        "BS": CurrencyInfo(code: "BSD", symbol: "B$"),
+        "BB": CurrencyInfo(code: "BBD", symbol: "Bds$"),
+        "TT": CurrencyInfo(code: "TTD", symbol: "TT$"),
+
+        // ── South America ──────────────────────────────────────────────────────
+        "BR": CurrencyInfo(code: "BRL", symbol: "R$"),
+        "AR": CurrencyInfo(code: "ARS", symbol: "$"),
+        "CL": CurrencyInfo(code: "CLP", symbol: "$"),
+        "CO": CurrencyInfo(code: "COP", symbol: "$"),
+        "PE": CurrencyInfo(code: "PEN", symbol: "S/."),
+        "EC": CurrencyInfo(code: "USD", symbol: "$"),
+        "BO": CurrencyInfo(code: "BOB", symbol: "Bs."),
+        "UY": CurrencyInfo(code: "UYU", symbol: "$U"),
+
+        // ── Oceania ────────────────────────────────────────────────────────────
+        "AU": CurrencyInfo(code: "AUD", symbol: "A$"),
+        "NZ": CurrencyInfo(code: "NZD", symbol: "NZ$"),
+        "FJ": CurrencyInfo(code: "FJD", symbol: "FJ$"),
+        "PF": CurrencyInfo(code: "XPF", symbol: "Fr"),
+
+        // ── Africa ─────────────────────────────────────────────────────────────
+        "ZA": CurrencyInfo(code: "ZAR", symbol: "R"),
+        "EG": CurrencyInfo(code: "EGP", symbol: "£"),
+        "MA": CurrencyInfo(code: "MAD", symbol: "د.م."),
+        "TN": CurrencyInfo(code: "TND", symbol: "DT"),
+        "KE": CurrencyInfo(code: "KES", symbol: "KSh"),
+        "TZ": CurrencyInfo(code: "TZS", symbol: "TSh"),
+        "ET": CurrencyInfo(code: "ETB", symbol: "Br"),
+        "GH": CurrencyInfo(code: "GHS", symbol: "₵"),
+        "NG": CurrencyInfo(code: "NGN", symbol: "₦"),
+        "MU": CurrencyInfo(code: "MUR", symbol: "Rs"),
+        "SC": CurrencyInfo(code: "SCR", symbol: "Rs"),
+        "MG": CurrencyInfo(code: "MGA", symbol: "Ar"),
+        "CV": CurrencyInfo(code: "CVE", symbol: "$"),
+    ]
+}

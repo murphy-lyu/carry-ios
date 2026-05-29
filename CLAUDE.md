@@ -213,3 +213,24 @@ private let itemNameAliases: [String: String] = [
 - docs/decisions.md：决策日志
 - docs/progress.md：进度追踪
 - specs/：功能 spec 文件目录
+
+## 文档按需读取索引
+
+> 本节告诉 Claude 在什么场景下读取哪个文档，避免每次都加载全部内容。
+
+| 场景 | 需要读取 |
+|------|---------|
+| 每次会话开始（建议） | `docs/progress.md` — 了解当前进度与上次改动 |
+| 实现任何 UI / 视觉需求 | `docs/design-system.md` — Color Token、组件规范、Mac Catalyst 面板规格 |
+| 触碰 `CarryBottomSheet.swift` | `docs/home-sheet-debug-playbook.md` — 必读，避免重踩已知问题 |
+| 架构新增或模块重构 | `docs/architecture.md` |
+| 遇到可能重复讨论的设计决策 | `docs/decisions.md` — 确认是否已有定论 |
+| 发布前 | `docs/release-checklist.md` |
+| 性能相关改动 | `docs/performance-audit-2026-05-27.md` |
+| 开发某个 spec 功能前 | 对应 `specs/*.md`（注意看 Status 标记是否已 Shipped）|
+
+### 会话结束时更新
+每次会话结束后，更新以下文件保持上下文连续：
+1. `docs/progress.md` → `## 上次改动摘要` 区块（3-5 条最新改动）
+2. `docs/decisions.md` → 如有新的架构/设计决策，追加记录
+3. `docs/architecture.md` / `docs/design-system.md` → 如有结构或规范变化，同步更新

@@ -3,6 +3,12 @@
 ## 最后更新
 2026-05-29
 
+## 上次改动摘要
+- 目的地实用信息卡片组完成：天气（WeatherKit，待开启 entitlement）、充电插头/电压、货币+实时汇率
+- 新增 `DestinationInfoView`：GeometryReader 动态宽度、iOS 17 `.scrollTargetBehavior(.viewAligned)` 自动回弹分页、等高卡片
+- 新增 `ExchangeRateManager`：从 jsDelivr CDN 拉取汇率，按天缓存在 UserDefaults，自动读取设备 locale 作为基准货币
+- 货币卡片展示：币种代码 + 符号 + `1 USD ≈ 149.8 ¥` 汇率参考行
+
 ## 已上线功能
 - [x] 日历同步（CalendarManager / EventKit）
 - [x] 行程创建与管理（TripBundle）
@@ -14,18 +20,21 @@
 - [x] 复制行程
 - [x] "顺手考虑一下"功能
 - [x] 3D 地球视图（GlobeView）
+- [x] Mac Catalyst 支持（浮层卡片面板 + 地球背景 + macBody）
 - [x] 多套 App Icon 切换
 - [x] Siri/Spotlight 快捷指令（创建行程、打开行程、显示地图）
 - [x] 行程提醒（本地通知）
 - [x] 数据备份
 - [x] 打赏（CoffeeStore / StoreKit）
 - [x] 产品路线图页面（支持远程更新）
-- [x] 本地化（Localizable.xcstrings）
+- [x] 本地化（Localizable.xcstrings，9 种语言全程维护）
 - [x] 外观模式切换（深色/浅色/跟随系统）
 
 ## 待开发（按优先级）
-1. [ ] 目的地天气预报（暂缓，后续继续）
-2. [ ] 目的地实用信息（充电插头、电压、货币）
+1. [ ] 目的地实用信息 — UI 已完成，待开启 WeatherKit
+   - ✅ 插头/电压卡片、货币+汇率卡片均已可用
+   - ⚠️ 天气卡片待开启 WeatherKit：开发者账号注册后 → Xcode Signing & Capabilities 添加 WeatherKit → Developer Portal App ID 勾选 WeatherKit → 重新下载 Profile
+2. [ ] 个人资料（性别等字段，提升推荐精准度）— spec 待写
 3. [ ] 邮件 / 订单导入行程
 4. [ ] 行程统计增强
 

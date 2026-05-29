@@ -17,6 +17,8 @@ struct PackingListView: View {
     @EnvironmentObject var router: NavigationRouter
     @Environment(\.colorScheme) private var colorScheme
 
+    @StateObject private var weatherManager = WeatherManager()
+
     @State private var editingItemId: UUID? = nil
     @State private var editingText: String = ""
     @State private var isAdvancingEdit = false
@@ -190,6 +192,7 @@ struct PackingListView: View {
         }
         .onAppear {
             if isNewTrip { loadSurpriseItems() }
+            if !isNewTrip { fetchDestinationWeather() }
             CarryLogger.shared.log(.tripOpened)
             // Remember this trip so "Continue Packing" shortcut can reopen it.
             UserDefaults.standard.set(tripId.uuidString, forKey: "carry_last_opened_trip")
@@ -487,6 +490,19 @@ struct PackingListView: View {
 
     // MARK: Actions
 
+    private func fetchDestinationWeather() {
+        guard let trip = bundle, trip.latitude != 0 else { return }
+        let start = trip.departureDate
+        let end = Calendar.current.date(byAdding: .day, value: max(trip.days - 1, 0), to: start) ?? start
+        var dests: [(index: Int, lat: Double, lon: Double)] = [
+            (index: 0, lat: trip.latitude, lon: trip.longitude)
+        ]
+        for (i, extra) in trip.additionalDestinations.enumerated() where extra.latitude != 0 {
+            dests.append((index: i + 1, lat: extra.latitude, lon: extra.longitude))
+        }
+        weatherManager.fetchAll(destinations: dests, tripStartDate: start, tripEndDate: end)
+    }
+
     private func loadSurpriseItems() {
         guard let bundle = bundle else { return }
         let existingLower = Set(
@@ -660,13 +676,21 @@ struct PackingListView: View {
                 }
             }
             .frame(height: 2.5)
+            .padding(.horizontal, 16)
 
             tripInfoCard
                 .padding(.top, 6)
+                .padding(.horizontal, 16)
+
+            if let trip = bundle {
+                DestinationInfoView(trip: trip, weatherManager: weatherManager)
+                    .padding(.top, 8)
+                    .padding(.bottom, 4)
+            }
         }
         .zIndex(2)
-        .padding(.horizontal, 16)
-        .padding(.vertical, 10)
+        .padding(.top, 10)
+        .padding(.bottom, 4)
         .background(Color(UIColor.systemBackground))
         .animation(.easeInOut(duration: 0.2), value: progress)
     }

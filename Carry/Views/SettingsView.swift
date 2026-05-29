@@ -883,7 +883,7 @@ private struct CalendarSettingsView: View {
 
                 VStack(spacing: 0) {
                     HStack(spacing: 12) {
-                        Text("settings.calendar.toggle")
+                        Text("settings.calendar.add_trips")
                             .font(.body)
                             .foregroundStyle(.primary)
                         Spacer()

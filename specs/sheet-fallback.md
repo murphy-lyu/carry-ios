@@ -1,5 +1,7 @@
 # Sheet Fallback Implementation — Spec
 
+> **Status: Active** — 手势/吸附逻辑持续调优中，调试历史详见 `docs/home-sheet-debug-playbook.md`
+
 ## 背景
 
 HomeView 底部 Sheet 的终极方案（含两侧/底部缩放视觉效果）尚有未解决的疑难杂症。

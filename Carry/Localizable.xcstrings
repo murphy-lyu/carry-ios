@@ -159,6 +159,16 @@
         }
       }
     },
+    "%@ %@": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "new",
+            "value": "%1$@ %2$@"
+          }
+        }
+      }
+    },
     "%lld": {
       "localizations": {
         "de": {
@@ -1548,6 +1558,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "郵輪"
+          }
+        }
+      }
+    },
+    "1 %@ ≈ %@ %@": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "new",
+            "value": "1 %1$@ ≈ %2$@ %3$@"
           }
         }
       }
@@ -5372,6 +5392,65 @@
         }
       }
     },
+    "calendar.event.pack.title": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "🧳 Packen für %@"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "🧳 Pack for %@"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "🧳 Empacar para %@"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "🧳 Préparer pour %@"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "🧳 %@の荷造り"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "🧳 %@ 짐 꾸리기"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "🧳 Fazer mala para %@"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "🧳 为「%@」打包"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "🧳 為「%@」打包"
+          }
+        }
+      }
+    },
     "Camera": {
       "extractionState": "manual",
       "localizations": {
@@ -8820,6 +8899,297 @@
           "stringUnit": {
             "state": "translated",
             "value": "目的地城市"
+          }
+        }
+      }
+    },
+    "destination.currency.section_title": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Währung"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Currency"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Moneda"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Devise"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "通貨"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "통화"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Moeda"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "货币"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "貨幣"
+          }
+        }
+      }
+    },
+    "destination.plug.section_title": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Stecker & Spannung"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Plug & Voltage"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Enchufe & Voltaje"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Prise & Tension"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "プラグ & 電圧"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "플러그 & 전압"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tomada & Voltagem"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "插头 & 电压"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "插頭 & 電壓"
+          }
+        }
+      }
+    },
+    "destination.weather.section_title": {
+      "extractionState": "stale",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wetter"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Weather"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tiempo"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Météo"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "天気"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "날씨"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Clima"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "天气"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "天氣"
+          }
+        }
+      }
+    },
+    "destination.weather.today": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Heute"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Today"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hoy"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Auj."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "今日"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "오늘"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hoje"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "今日"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "今日"
+          }
+        }
+      }
+    },
+    "destination.weather.unavailable": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Vorhersage näher am Abreisedatum verfügbar"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Forecast available closer to departure"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pronóstico disponible cerca de la fecha de salida"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Prévisions disponibles à l'approche du départ"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "出発日に近づくと予報が表示されます"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "출발일이 가까워지면 예보가 제공됩니다"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Previsão disponível mais próximo da partida"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "临近出发日期时将显示天气预报"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "接近出發日期時將顯示天氣預報"
           }
         }
       }
@@ -22391,55 +22761,55 @@
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "%@ ist morgen"
+            "value": "「%@」 ist morgen"
           }
         },
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "%@ is tomorrow"
+            "value": "「%@」 is tomorrow"
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "%@ es mañana"
+            "value": "「%@」 es mañana"
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "%@ c'est demain"
+            "value": "「%@」 c'est demain"
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "%@は明日です"
+            "value": "「%@」は明日です"
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "%@이(가) 내일입니다"
+            "value": "「%@」이(가) 내일입니다"
           }
         },
         "pt-BR": {
           "stringUnit": {
             "state": "translated",
-            "value": "%@ é amanhã"
+            "value": "「%@」 é amanhã"
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "%@，明天见"
+            "value": "「%@」，明天见"
           }
         },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "%@，明天見"
+            "value": "「%@」，明天見"
           }
         }
       }
@@ -22509,55 +22879,55 @@
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "%@ — noch eine Woche"
+            "value": "「%@」 — noch eine Woche"
           }
         },
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "%@ — one week away"
+            "value": "「%@」 — one week away"
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "%@ — una semana más"
+            "value": "「%@」 — una semana más"
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "%@ — dans une semaine"
+            "value": "「%@」 — dans une semaine"
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "%@ — あと1週間"
+            "value": "「%@」 — あと1週間"
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "%@ — 1주 남았어요"
+            "value": "「%@」 — 1주 남았어요"
           }
         },
         "pt-BR": {
           "stringUnit": {
             "state": "translated",
-            "value": "%@ — uma semana restante"
+            "value": "「%@」 — uma semana restante"
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "%@ 还有一周"
+            "value": "「%@」，还有一周"
           }
         },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "%@ 還有一週"
+            "value": "「%@」，還有一週"
           }
         }
       }
@@ -22627,55 +22997,55 @@
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "%@ — noch 2 Tage"
+            "value": "「%@」 — noch 2 Tage"
           }
         },
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "%@ — 2 days to go"
+            "value": "「%@」 — 2 days to go"
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "%@ — 2 días para ir"
+            "value": "「%@」 — 2 días para ir"
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "%@ — dans 2 jours"
+            "value": "「%@」 — dans 2 jours"
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "%@ — あと2日"
+            "value": "「%@」 — あと2日"
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "%@ — 2일 남았어요"
+            "value": "「%@」 — 2일 남았어요"
           }
         },
         "pt-BR": {
           "stringUnit": {
             "state": "translated",
-            "value": "%@ — 2 dias restantes"
+            "value": "「%@」 — 2 dias restantes"
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "%@，后天见"
+            "value": "「%@」，后天见"
           }
         },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "%@，後天見"
+            "value": "「%@」，後天見"
           }
         }
       }
@@ -22745,55 +23115,55 @@
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "%@ — zwei Wochen weg"
+            "value": "「%@」 — zwei Wochen weg"
           }
         },
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "%@ — two weeks away"
+            "value": "「%@」 — two weeks away"
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "%@ — dos semanas"
+            "value": "「%@」 — dos semanas"
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "%@ — dans deux semaines"
+            "value": "「%@」 — dans deux semaines"
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "%@ — あと2週間"
+            "value": "「%@」 — あと2週間"
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "%@ — 2주 남았어요"
+            "value": "「%@」 — 2주 남았어요"
           }
         },
         "pt-BR": {
           "stringUnit": {
             "state": "translated",
-            "value": "%@ — duas semanas restantes"
+            "value": "「%@」 — duas semanas restantes"
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "%@ 还有两周"
+            "value": "「%@」，还有两周"
           }
         },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "%@ 還有兩週"
+            "value": "「%@」，還有兩週"
           }
         }
       }
@@ -22863,55 +23233,55 @@
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "%@ — noch 3 Tage"
+            "value": "「%@」 — noch 3 Tage"
           }
         },
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "%@ — 3 days to go"
+            "value": "「%@」 — 3 days to go"
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "%@ — 3 días"
+            "value": "「%@」 — 3 días"
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "%@ — dans 3 jours"
+            "value": "「%@」 — dans 3 jours"
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "%@ — あと3日"
+            "value": "「%@」 — あと3日"
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "%@ — 3일 남았어요"
+            "value": "「%@」 — 3일 남았어요"
           }
         },
         "pt-BR": {
           "stringUnit": {
             "state": "translated",
-            "value": "%@ — 3 dias restantes"
+            "value": "「%@」 — 3 dias restantes"
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "%@，还有 3 天"
+            "value": "「%@」，还有 3 天"
           }
         },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "%@，還有 3 天"
+            "value": "「%@」，還有 3 天"
           }
         }
       }
@@ -22981,55 +23351,55 @@
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Heute — auf nach %@"
+            "value": "Heute — auf nach 「%@」"
           }
         },
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Today — off to %@"
+            "value": "Today — off to 「%@」"
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Hoy — rumbo a %@"
+            "value": "Hoy — rumbo a 「%@」"
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Aujourd'hui — direction %@"
+            "value": "Aujourd'hui — direction 「%@」"
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "今日 — %@へ出発"
+            "value": "今日 — 「%@」へ出発"
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "오늘 — %@으로 출발"
+            "value": "오늘 — 「%@」으로 출발"
           }
         },
         "pt-BR": {
           "stringUnit": {
             "state": "translated",
-            "value": "Hoje — rumo a %@"
+            "value": "Hoje — rumo a 「%@」"
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "今天，去 %@"
+            "value": "今天，去「%@」"
           }
         },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "今天，去 %@"
+            "value": "今天，去「%@」"
           }
         }
       }
@@ -23099,55 +23469,55 @@
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "%1$@ — noch %2$lld Tage"
+            "value": "「%1$@」 — noch %2$lld Tage"
           }
         },
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "%1$@ — %2$lld days away"
+            "value": "「%1$@」 — %2$lld days away"
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "%1$@ — %2$lld días"
+            "value": "「%1$@」 — %2$lld días"
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "%1$@ — dans %2$lld jours"
+            "value": "「%1$@」 — dans %2$lld jours"
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "%1$@ — あと%2$lld日"
+            "value": "「%1$@」 — あと%2$lld日"
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "%1$@ — %2$lld일 남았어요"
+            "value": "「%1$@」 — %2$lld일 남았어요"
           }
         },
         "pt-BR": {
           "stringUnit": {
             "state": "translated",
-            "value": "%1$@ — %2$lld dias restantes"
+            "value": "「%1$@」 — %2$lld dias restantes"
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "%1$@ 还有 %2$lld 天"
+            "value": "「%1$@」，还有 %2$lld 天"
           }
         },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "%1$@ 還有 %2$lld 天"
+            "value": "「%1$@」，還有 %2$lld 天"
           }
         }
       }
@@ -29581,61 +29951,237 @@
         }
       }
     },
-    "calendar.event.pack.title": {
+    "settings.about.language": {
       "extractionState": "manual",
       "localizations": {
         "de": {
           "stringUnit": {
-            "state": "translated",
-            "value": "🧳 Packen für %@"
+            "state": "needs_review",
+            "value": "Language"
           }
         },
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "🧳 Pack for %@"
+            "value": "Language"
           }
         },
         "es": {
           "stringUnit": {
-            "state": "translated",
-            "value": "🧳 Empacar para %@"
+            "state": "needs_review",
+            "value": "Language"
           }
         },
         "fr": {
           "stringUnit": {
-            "state": "translated",
-            "value": "🧳 Préparer pour %@"
+            "state": "needs_review",
+            "value": "Language"
           }
         },
         "ja": {
           "stringUnit": {
-            "state": "translated",
-            "value": "🧳 %@の荷造り"
+            "state": "needs_review",
+            "value": "Language"
           }
         },
         "ko": {
           "stringUnit": {
-            "state": "translated",
-            "value": "🧳 %@ 짐 꾸리기"
+            "state": "needs_review",
+            "value": "Language"
           }
         },
         "pt-BR": {
           "stringUnit": {
-            "state": "translated",
-            "value": "🧳 Fazer mala para %@"
+            "state": "needs_review",
+            "value": "Language"
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "🧳 为「%@」打包"
+            "value": "语言"
           }
         },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "🧳 為「%@」打包"
+            "value": "語言"
+          }
+        }
+      }
+    },
+    "settings.about.version": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Version"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Version"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Version"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Version"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Version"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Version"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Version"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "应用版本"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "版本"
+          }
+        }
+      }
+    },
+    "settings.appicon.entry": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "App-Symbol"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "App Icon"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Icono de la app"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Icône de l'app"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "アプリアイコン"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "앱 아이콘"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ícone do app"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "应用图标"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "應用程式圖示"
+          }
+        }
+      }
+    },
+    "settings.calendar.add_trips": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Reisen automatisch zum Kalender hinzufügen"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Automatically add trips to Calendar"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Añadir viajes al Calendario automáticamente"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ajouter automatiquement les voyages au Calendrier"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "旅行を自動的にカレンダーへ追加"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "여행을 캘린더에 자동으로 추가"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Adicionar viagens ao Calendário automaticamente"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "自动添加行程到日历"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "自動加入行程到日曆"
           }
         }
       }
@@ -29699,65 +30245,6 @@
         }
       }
     },
-    "settings.calendar.bulk.failed_toast": {
-      "extractionState": "manual",
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Hinzufügen fehlgeschlagen"
-          }
-        },
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Failed to add trips to Calendar"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "No se pudieron añadir los viajes"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Impossible d'ajouter les voyages"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "カレンダーへの追加に失敗しました"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "캘린더 추가에 실패했습니다"
-          }
-        },
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Falha ao adicionar viagens"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "添加到日历失败"
-          }
-        },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "加入日曆失敗"
-          }
-        }
-      }
-    },
     "settings.calendar.bulk.confirm": {
       "extractionState": "manual",
       "localizations": {
@@ -29813,6 +30300,65 @@
           "stringUnit": {
             "state": "translated",
             "value": "加入"
+          }
+        }
+      }
+    },
+    "settings.calendar.bulk.failed_toast": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hinzufügen fehlgeschlagen"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Failed to add trips to Calendar"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No se pudieron añadir los viajes"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Impossible d'ajouter les voyages"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "カレンダーへの追加に失敗しました"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "캘린더 추가에 실패했습니다"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Falha ao adicionar viagens"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "添加到日历失败"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "加入日曆失敗"
           }
         }
       }
@@ -29935,31 +30481,78 @@
         }
       }
     },
-    "settings.calendar.packtime": {
+    "settings.calendar.entry": {
       "extractionState": "manual",
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kalender-Sync"
+          }
+        },
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Day-before packing reminder"
+            "value": "Calendar Sync"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sincronización de calendario"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sync calendrier"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "カレンダー同期"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "캘린더 동기화"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sincronização de calendário"
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "出发前一天打包提醒"
+            "value": "日历同步"
           }
         },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "出發前一天打包提醒"
+            "value": "行事曆同步"
           }
-        },
+        }
+      }
+    },
+    "settings.calendar.packtime": {
+      "extractionState": "manual",
+      "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
             "value": "Erinnerung am Vortag zum Packen"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Day-before packing reminder"
           }
         },
         "es": {
@@ -29990,6 +30583,18 @@
           "stringUnit": {
             "state": "translated",
             "value": "Lembrete de mala no dia anterior"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "出发前一天打包提醒"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "出發前一天打包提醒"
           }
         }
       }
@@ -30171,120 +30776,61 @@
         }
       }
     },
-    "settings.calendar.subtitle": {
+    "settings.calendar.status.off": {
       "extractionState": "manual",
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Bevorstehende Reisen werden automatisch hinzugefügt"
+            "value": "Aus"
           }
         },
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Upcoming trips are added automatically"
+            "value": "Off"
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Los próximos viajes se añaden automáticamente"
+            "value": "Desactivado"
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Les voyages à venir sont ajoutés automatiquement"
+            "value": "Désactivé"
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "今後の旅行が自動的に追加されます"
+            "value": "オフ"
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "예정된 여행이 자동으로 추가됩니다"
+            "value": "꺼짐"
           }
         },
         "pt-BR": {
           "stringUnit": {
             "state": "translated",
-            "value": "Próximas viagens são adicionadas automaticamente"
+            "value": "Desativado"
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "即将出发的行程将自动添加"
+            "value": "已关闭"
           }
         },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "即將出發的行程將自動加入"
-          }
-        }
-      }
-    },
-    "settings.calendar.entry": {
-      "extractionState": "manual",
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Kalender-Sync"
-          }
-        },
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Calendar Sync"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Sincronización de calendario"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Sync calendrier"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "カレンダー同期"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "캘린더 동기화"
-          }
-        },
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Sincronização de calendário"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "日历同步"
-          }
-        },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "行事曆同步"
+            "value": "已關閉"
           }
         }
       }
@@ -30348,61 +30894,61 @@
         }
       }
     },
-    "settings.calendar.status.off": {
+    "settings.calendar.subtitle": {
       "extractionState": "manual",
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Aus"
+            "value": "Bevorstehende Reisen werden automatisch hinzugefügt"
           }
         },
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Off"
+            "value": "Upcoming trips are added automatically"
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Desactivado"
+            "value": "Los próximos viajes se añaden automáticamente"
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Désactivé"
+            "value": "Les voyages à venir sont ajoutés automatiquement"
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "オフ"
+            "value": "今後の旅行が自動的に追加されます"
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "꺼짐"
+            "value": "예정된 여행이 자동으로 추가됩니다"
           }
         },
         "pt-BR": {
           "stringUnit": {
             "state": "translated",
-            "value": "Desativado"
+            "value": "Próximas viagens são adicionadas automaticamente"
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "已关闭"
+            "value": "即将出发的行程将自动添加"
           }
         },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "已關閉"
+            "value": "即將出發的行程將自動加入"
           }
         }
       }
@@ -30410,28 +30956,16 @@
     "settings.calendar.toggle": {
       "extractionState": "manual",
       "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Trip Calendar"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "行程日历"
-          }
-        },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "行程日曆"
-          }
-        },
         "de": {
           "stringUnit": {
             "state": "translated",
             "value": "Reisekalender"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Trip Calendar"
           }
         },
         "es": {
@@ -30463,182 +30997,17 @@
             "state": "translated",
             "value": "Calendário de viagens"
           }
-        }
-      }
-    },
-    "settings.about.language": {
-      "extractionState": "manual",
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "needs_review",
-            "value": "Language"
-          }
-        },
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Language"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "needs_review",
-            "value": "Language"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "needs_review",
-            "value": "Language"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "needs_review",
-            "value": "Language"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "needs_review",
-            "value": "Language"
-          }
-        },
-        "pt-BR": {
-          "stringUnit": {
-            "state": "needs_review",
-            "value": "Language"
-          }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "语言"
+            "value": "行程日历"
           }
         },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "語言"
-          }
-        }
-      }
-    },
-    "settings.about.version": {
-      "extractionState": "manual",
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "needs_review",
-            "value": "Version"
-          }
-        },
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Version"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "needs_review",
-            "value": "Version"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "needs_review",
-            "value": "Version"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "needs_review",
-            "value": "Version"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "needs_review",
-            "value": "Version"
-          }
-        },
-        "pt-BR": {
-          "stringUnit": {
-            "state": "needs_review",
-            "value": "Version"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "应用版本"
-          }
-        },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "版本"
-          }
-        }
-      }
-    },
-    "settings.appicon.entry": {
-      "extractionState": "manual",
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "App-Symbol"
-          }
-        },
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "App Icon"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Icono de la app"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Icône de l'app"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "アプリアイコン"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "앱 아이콘"
-          }
-        },
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Ícone do app"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "应用图标"
-          }
-        },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "應用程式圖示"
+            "value": "行程日曆"
           }
         }
       }

@@ -1,5 +1,7 @@
 # Auto Pack Review — Spec
 
+> **Status: Pending** — AutoPackReviewView 尚未实现，当前 Auto Pack 流程直接进入 ItemPickerView
+
 ## 背景
 
 现有 Auto Pack 流程：选场景 → 直接生成草稿行程 → 进入 PackingListView（isNewTrip=true）预览 → Save list。

@@ -1,6 +1,8 @@
 # Carry 架构说明
 
 ## 整体结构
+
+### iOS
 SplashView（启动过渡）
 └─► ContentView（TabView）
     ├─► Tab 0：NavigationStack → HomeView
@@ -13,6 +15,21 @@ SplashView（启动过渡）
     │           ├─► packingList → PackingListView（新建完成）
     │           └─► editScenes → ScenePickerView（编辑场景）
     └─► Tab 1：NavigationStack → SettingsView
+
+### Mac Catalyst
+ContentView 在 `#if targetEnvironment(macCatalyst)` 下使用 `macLayout`（独立属性，同样用条件编译包裹）：
+
+```
+ZStack（全窗口）
+├─► MacGlobePanel（Globe/MacGlobePanel.swift）— .ignoresSafeArea()，铺满背景
+└─► NavigationStack（宽 360pt，浮层卡片样式）→ HomeView.macBody
+    └─► navigationDestination（同 iOS）
+```
+
+- **MacGlobePanel**：3D 地球，点亮到访国家，与 iOS 的 GlobeView 独立实现
+- **HomeView.macBody**：Mac 专用 body，使用 `List + .scrollContentBackground(.hidden)`，不包含 globe 背景、底部 sheet 容器、stagger reveal 动画；`onAppear` 时直接设 `initialRevealProgress = 1.0`
+- **Settings**：通过 toolbar 按钮 `showSettingsOnMac` 打开 sheet，不使用 Tab Bar
+- **导航**：统一走 `NavigationRouter`，与 iOS 共用同一套 `CreationRoute`
 
 ## 核心数据模型
 - TripBundle：行程容器（包含 PackingList、TripInfo 等）

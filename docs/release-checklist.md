@@ -16,6 +16,10 @@
 - [x] **开发者选项隔离**：`DeveloperModeView` 已有 `#if DEBUG` 保护 ✅（2026-05-27 确认）
 - [x] **SwiftData migration plan**：新版本如有 schema 变更，migration 已覆盖 ✅（已有 CarryMigrationPlan）
 - [ ] **Build number 递增**：每次提交 App Store Connect，`CFBundleVersion` 必须比上一次大
+- [ ] ⚠️ **WeatherKit 能力配置**（含天气功能的版本发布前必做）：
+  1. Xcode → Signing & Capabilities → 添加 WeatherKit
+  2. Developer Portal → App ID → 勾选 WeatherKit → 保存
+  3. Xcode 重新下载 Provisioning Profile
 
 ---
 
@@ -23,6 +27,7 @@
 
 - [ ] **Privacy Nutrition Labels**：在 App Store Connect 填写数据收集声明
   - 位置数据：CLGeocoder（目的地解析）+ MapKit（当前位置显示）→ 声明为「功能性」用途
+  - ⚠️ **接入 WeatherKit 后新增**：目的地坐标发送至 Apple Weather 服务 → 同样声明为「功能性」用途
   - 标识符：确认是否用到设备 ID 类 API
   - 无广告追踪、无第三方数据共享 → 可勾选对应豁免项
 - [ ] **出口合规（Export Compliance）**：仅使用 HTTPS + StoreKit 标准加密，勾选「使用豁免加密」
@@ -36,6 +41,7 @@
 
 - [x] **隐私政策页面上线**：https://murphy-lyu.github.io/carry-legal/privacy/ ✅（2026-05-27）
 - [x] **隐私政策内容覆盖**：✅（2026-05-27 确认，含位置访问、通知、StoreKit、GDPR/CCPA）
+- [ ] ⚠️ **接入 WeatherKit 后新增**：更新 https://murphy-lyu.github.io/carry-legal/privacy/ 中位置数据章节，补充「目的地坐标通过 WeatherKit 发送至 Apple 服务器用于获取天气预报」
 - [x] **用户协议页面上线**：https://murphy-lyu.github.io/carry-legal/terms/ ✅（2026-05-27）
 - [x] **App 内隐私入口**：`LegalViews` 链接已指向 GitHub Pages，可访问 ✅
 - [x] **本地通知说明**：隐私政策 Section 5 已注明 ✅
@@ -44,15 +50,19 @@
 
 ## 4. 多语言
 
-- [ ] 英语 ✅
-- [ ] 简体中文 ✅
-- [ ] 繁体中文 ✅
-- [ ] 德语（de）— 待补充翻译
-- [ ] 西班牙语（es）— 待补充翻译
-- [ ] 法语（fr）— 待补充翻译
-- [ ] 日语（ja）— 待补充翻译
-- [ ] 韩语（ko）— 待补充翻译
-- [ ] 葡萄牙语-巴西（pt-BR）— 待补充翻译
+所有 9 种语言均在 `Localizable.xcstrings` 中全程维护，新增/修改文案时同步更新所有语言（见 CLAUDE.md 本地化规范）。
+
+发布前检查：确认本次版本新增或修改的所有 key，9 种语言均已补全：
+
+- [ ] en（英语）
+- [ ] zh-Hans（简体中文）
+- [ ] zh-Hant（繁体中文，台湾/香港用语）
+- [ ] de（德语）
+- [ ] es（西班牙语）
+- [ ] fr（法语）
+- [ ] ja（日语）
+- [ ] ko（韩语）
+- [ ] pt-BR（葡萄牙语-巴西）
 
 ---
 
