@@ -521,8 +521,6 @@ struct ItemPickerView: View {
                         .labelStyle(.titleAndIcon)
                 }
                 .fontWeight(.semibold)
-                .disabled(!canConfirm)
-                .animation(.easeInOut(duration: 0.15), value: canConfirm)
             }
         }
         .onAppear {
