@@ -102,6 +102,10 @@ final class CarryLogger {
 
         // 日历同步
         case calendarSaveFailed     = "calendar_save_failed"
+        // Live Activity
+        case liveActivityStarted    = "live_activity_started"
+        case liveActivityStartFailed = "live_activity_start_failed"
+        case liveActivityEnded      = "live_activity_ended"
     }
 
     private static let errorEvents: Set<Event> = [
@@ -113,7 +117,7 @@ final class CarryLogger {
         .iconSwitchFailed, .backupRestoreFailed, .backupWriteFailed, .reminderPermissionDenied,
         .abnormalTermination, .geocodeFailed,
         .destinationDecodeFailed, .coffeePurchaseFailed, .coffeeProductsFetchFailed,
-        .calendarSaveFailed,
+        .calendarSaveFailed, .liveActivityStartFailed,
     ]
 
     private let sessionActiveKey = "carry_session_active"

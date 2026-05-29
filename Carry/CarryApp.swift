@@ -74,6 +74,10 @@ struct CarryApp: App {
                     CarryLogger.shared.log(.appWillEnterForeground)
                     // Re-arm the session flag when returning to foreground
                     UserDefaults.standard.set(true, forKey: "carry_session_active")
+                    // 出发日检查：若已到出发当天则结束 Live Activity
+#if !targetEnvironment(macCatalyst)
+                    Task { @MainActor in LiveActivityManager.shared.endIfDeparted() }
+#endif
                 }
                 .onReceive(NotificationCenter.default.publisher(
                     for: UIApplication.willTerminateNotification)

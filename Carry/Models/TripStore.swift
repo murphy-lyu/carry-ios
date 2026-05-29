@@ -444,6 +444,9 @@ final class TripStore: ObservableObject {
                 item.isPacked.toggle()
                 CarryLogger.shared.log(item.isPacked ? .itemChecked : .itemUnchecked)
                 save()
+#if !targetEnvironment(macCatalyst)
+                Task { @MainActor in LiveActivityManager.shared.update(for: trip) }
+#endif
                 return
             }
         }
@@ -458,6 +461,9 @@ final class TripStore: ObservableObject {
         }
         save()
         CarryLogger.shared.log(.tripCompleted)
+#if !targetEnvironment(macCatalyst)
+        Task { @MainActor in LiveActivityManager.shared.update(for: trip) }
+#endif
     }
 
     func markTripUncompleted(tripId: UUID) {
@@ -469,6 +475,9 @@ final class TripStore: ObservableObject {
         }
         save()
         CarryLogger.shared.log(.tripUncompleted)
+#if !targetEnvironment(macCatalyst)
+        Task { @MainActor in LiveActivityManager.shared.update(for: trip) }
+#endif
     }
 
     @discardableResult

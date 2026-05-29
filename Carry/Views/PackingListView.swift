@@ -199,6 +199,12 @@ struct PackingListView: View {
             if let b = bundle, b.sections == nil {
                 CarryLogger.shared.log(.tripDataEmpty, context: "context=onAppear")
             }
+            // Live Activity：打开打包清单时自动启动（若用户已开启开关）
+#if !targetEnvironment(macCatalyst)
+            if let b = bundle {
+                Task { @MainActor in LiveActivityManager.shared.startIfNeeded(for: b) }
+            }
+#endif
             guard isComplete else { return }
             Task {
                 try? await Task.sleep(for: .milliseconds(450))

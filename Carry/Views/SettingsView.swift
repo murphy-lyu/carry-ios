@@ -27,6 +27,7 @@ struct SettingsView: View {
     @EnvironmentObject private var store: TripStore
     @AppStorage("appearance_mode") private var appearanceModeRaw = AppearanceMode.system.rawValue
     @AppStorage("calendar_sync_enabled") private var calendarSyncEnabled = false
+    @AppStorage("liveActivityPackingEnabled") private var liveActivityPackingEnabled = false
 
     private var currentAppearance: AppearanceMode {
         AppearanceMode(rawValue: appearanceModeRaw) ?? .system
@@ -247,6 +248,23 @@ struct SettingsView: View {
 //                                settingsNavigationRow(title: "settings.appicon.entry") {
 //                                    AppIconView()
 //                                }
+#if !targetEnvironment(macCatalyst)
+                                Toggle(isOn: $liveActivityPackingEnabled) {
+                                    Text("settings.liveactivity.packing")
+                                        .font(.body)
+                                        .foregroundStyle(.primary)
+                                }
+                                .toggleStyle(SwitchToggleStyle(tint: .blue))
+                                .padding(.horizontal, 18)
+                                .frame(height: 58)
+                                .onChange(of: liveActivityPackingEnabled) { _, enabled in
+                                    if !enabled {
+                                        Task { @MainActor in
+                                            LiveActivityManager.shared.endAll()
+                                        }
+                                    }
+                                }
+#endif
                             }
                             .padding(.horizontal, 16)
                             .padding(.bottom, 18)
