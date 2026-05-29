@@ -934,12 +934,7 @@ private struct CalendarSettingsView: View {
                 .shadow(color: groupShadow, radius: colorScheme == .dark ? 10 : 12, x: 0, y: colorScheme == .dark ? 3 : 4)
                 .padding(.horizontal, 16)
 
-                Text("settings.calendar.packtime.hint")
-                    .font(.footnote)
-                    .foregroundStyle(.secondary)
-                    .padding(.horizontal, 32)
-                    .padding(.top, 8)
-                    .frame(maxWidth: .infinity, alignment: .leading)
+
             }
             .padding(.bottom, 24)
         }
