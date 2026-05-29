@@ -530,15 +530,11 @@ struct HomeView: View {
             HStack {
                 Spacer()
                 VStack(spacing: 8) {
-                    Menu {
-                        ForEach(MapStyleOption.allCases, id: \.rawValue) { option in
-                            Button {
-                                UIImpactFeedbackGenerator(style: .light).impactOccurred()
-                                mapStyleRaw = option.rawValue
-                            } label: {
-                                Label(option.label, systemImage: option.icon)
-                            }
-                        }
+                    Button {
+                        UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                        let all = MapStyleOption.allCases
+                        let next = ((all.firstIndex(of: mapStyleOption) ?? 0) + 1) % all.count
+                        mapStyleRaw = all[next].rawValue
                     } label: {
                         Image(systemName: mapStyleOption.icon)
                             .font(.system(size: 17, weight: .semibold))
@@ -553,6 +549,7 @@ struct HomeView: View {
                                     .strokeBorder(Color.primary.opacity(colorScheme == .dark ? 0.045 : 0.05), lineWidth: 1)
                             )
                     }
+                    .buttonStyle(.plain)
 
                     Button {
                         UIImpactFeedbackGenerator(style: .light).impactOccurred()
