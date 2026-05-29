@@ -31608,56 +31608,56 @@
       "localizations": {
         "de": {
           "stringUnit": {
-            "state": "needs_review",
-            "value": "Last Saved"
+            "state": "translated",
+            "value": "Letztes Auto-Backup"
           }
         },
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Last Saved"
+            "value": "Last Auto Backup"
           }
         },
         "es": {
           "stringUnit": {
-            "state": "needs_review",
-            "value": "Last Saved"
+            "state": "translated",
+            "value": "Última copia automática"
           }
         },
         "fr": {
           "stringUnit": {
-            "state": "needs_review",
-            "value": "Last Saved"
+            "state": "translated",
+            "value": "Dernière sauvegarde auto"
           }
         },
         "ja": {
           "stringUnit": {
-            "state": "needs_review",
-            "value": "最終保存"
+            "state": "translated",
+            "value": "最終自動バックアップ"
           }
         },
         "ko": {
           "stringUnit": {
-            "state": "needs_review",
-            "value": "마지막 저장"
+            "state": "translated",
+            "value": "마지막 자동 백업"
           }
         },
         "pt-BR": {
           "stringUnit": {
-            "state": "needs_review",
-            "value": "Last Saved"
+            "state": "translated",
+            "value": "Último backup automático"
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "保存时间"
+            "value": "最近自动备份"
           }
         },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "儲存時間"
+            "value": "最近自動備份"
           }
         }
       }
