@@ -99,7 +99,7 @@ let itemPickerCatalog: [ItemPickerCategory] = [
         "Card holder", "Wallet", "Cash",
         "Crossbody bag",
         "Sunglasses", "Umbrella", "Water bottle",
-        "Travel pillow", "Neck pillow", "Eye mask", "Earplugs",
+        "Neck pillow", "Eye mask", "Earplugs",
         "Pen", "Packing cubes", "Laundry bag", "Travel towel", "Quick-dry towel",
         "Transit card / app",
     ]),
