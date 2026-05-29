@@ -483,13 +483,13 @@ struct DestinationInfoView: View {
 
     private var cardFillColor: Color {
         colorScheme == .dark
-            ? Color(UIColor.secondarySystemBackground).opacity(0.56)
-            : Color(UIColor.secondarySystemBackground).opacity(0.40)
+            ? Color(UIColor.secondarySystemBackground).opacity(0.82)
+            : Color(UIColor.secondarySystemBackground).opacity(0.60)
     }
 
     private var cardStrokeColor: Color {
         colorScheme == .dark
-            ? Color.white.opacity(0.11)
-            : Color(UIColor.separator).opacity(0.1)
+            ? Color.white.opacity(0.08)
+            : Color.primary.opacity(0.06)
     }
 }

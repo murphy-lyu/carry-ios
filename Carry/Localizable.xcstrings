@@ -24036,13 +24036,13 @@
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "打包完成，就差出发了！🎉"
+            "value": "打包完成，就等出发了 🎉"
           }
         },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "打包完成，就差出發了！🎉"
+            "value": "打包完成，就等出發了 🎉"
           }
         }
       }
@@ -33267,7 +33267,7 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Scaling disabled"
+            "value": "Scaling Disabled"
           }
         },
         "es": {
@@ -33326,7 +33326,7 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Scaling enabled"
+            "value": "Scaling Enabled"
           }
         },
         "es": {
@@ -33385,7 +33385,7 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Enable scaling effects"
+            "value": "Enable Scaling Effects"
           }
         },
         "es": {
@@ -43267,7 +43267,7 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Weather preview"
+            "value": "Weather Preview"
           }
         },
         "zh-Hans": {
@@ -43301,7 +43301,7 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Weather preview enabled"
+            "value": "Weather Preview Enabled"
           }
         },
         "zh-Hans": {
@@ -43318,7 +43318,7 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Weather preview disabled"
+            "value": "Weather Preview Disabled"
           }
         },
         "zh-Hans": {

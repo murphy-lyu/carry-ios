@@ -127,24 +127,24 @@ struct PackingListView: View {
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Menu {
                         Button {
-                            showEditSheet = true
-                        } label: {
-                            Label("Edit trip", systemImage: "pencil")
-                        }
-                        Button {
                             router.path.append(CreationRoute.addItems(tripId))
                         } label: {
                             Label("packing.menu.add_from_library", systemImage: "shippingbox")
                         }
                         Button {
-                            showReorderSheet = true
-                        } label: {
-                            Label("Edit sections", systemImage: "arrow.up.arrow.down")
-                        }
-                        Button {
                             showReminderSheet = true
                         } label: {
                             Label("reminder.menu.item", systemImage: bundle?.remindersEnabled == true ? "bell" : "bell.slash")
+                        }
+                        Button {
+                            showEditSheet = true
+                        } label: {
+                            Label("Edit trip", systemImage: "pencil")
+                        }
+                        Button {
+                            showReorderSheet = true
+                        } label: {
+                            Label("Edit sections", systemImage: "arrow.up.arrow.down")
                         }
                         Button {
                             let activityVC = UIActivityViewController(
@@ -330,7 +330,7 @@ struct PackingListView: View {
             if !isNewTrip, let trip = bundle {
                 Section {
                     DestinationInfoView(trip: trip, weatherManager: weatherManager)
-                        .listRowInsets(EdgeInsets(top: 8, leading: 0, bottom: 8, trailing: 0))
+                        .listRowInsets(EdgeInsets(top: 14, leading: 0, bottom: 8, trailing: 0))
                         .listRowSeparator(.hidden)
                         .listRowBackground(Color.clear)
                 }
@@ -770,21 +770,10 @@ struct PackingListView: View {
                 .foregroundStyle(.primary)
         }
         .font(.subheadline.weight(.medium))
-        .frame(maxWidth: .infinity, alignment: .leading)
+        .frame(maxWidth: .infinity, alignment: .center)
         .padding(.vertical, 8)
         .padding(.horizontal, 16)
-        .overlay(alignment: .top) {
-            Rectangle()
-                .fill(Color.primary.opacity(0.04))
-                .frame(height: 1)
-                .padding(.horizontal, 0)
-        }
-        .overlay(alignment: .bottom) {
-            Rectangle()
-                .fill(Color.primary.opacity(0.04))
-                .frame(height: 1)
-                .padding(.horizontal, 0)
-        }
+        .background(Color(UIColor.systemBackground))
     }
 
     private var reminderStatusText: String {

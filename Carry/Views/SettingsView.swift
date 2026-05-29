@@ -302,8 +302,7 @@ struct SettingsView: View {
                                     showImporter = true
                                 }
                                 settingsNavigationRow(
-                                    title: "settings.data.local_backup",
-                                    valueText: autoSaveValueText
+                                    title: "settings.data.local_backup"
                                 ) {
                                     DataRecoveryView()
                                 }
