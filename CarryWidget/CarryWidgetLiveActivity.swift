@@ -2,79 +2,161 @@
 //  CarryWidgetLiveActivity.swift
 //  CarryWidget
 //
-//  Created by Murphy on 2026/5/29.
-//
 
 import ActivityKit
 import WidgetKit
 import SwiftUI
 
-struct CarryWidgetAttributes: ActivityAttributes {
-    public struct ContentState: Codable, Hashable {
-        // Dynamic stateful properties about your activity go here!
-        var emoji: String
-    }
-
-    // Fixed non-changing properties about your activity go here!
-    var name: String
-}
-
 struct CarryWidgetLiveActivity: Widget {
+
     var body: some WidgetConfiguration {
-        ActivityConfiguration(for: CarryWidgetAttributes.self) { context in
-            // Lock screen/banner UI goes here
-            VStack {
-                Text("Hello \(context.state.emoji)")
-            }
-            .activityBackgroundTint(Color.cyan)
-            .activitySystemActionForegroundColor(Color.black)
+        ActivityConfiguration(for: PackingActivityAttributes.self) { context in
+            // ── 锁屏 / 横幅 UI ──
+            LockScreenView(context: context)
+                .activityBackgroundTint(Color(.systemBackground))
 
         } dynamicIsland: { context in
             DynamicIsland {
-                // Expanded UI goes here.  Compose the expanded UI through
-                // various regions, like leading/trailing/center/bottom
+                // ── 展开态 ──
                 DynamicIslandExpandedRegion(.leading) {
-                    Text("Leading")
+                    HStack(spacing: 6) {
+                        Image(systemName: "airplane")
+                            .font(.system(size: 14, weight: .semibold))
+                            .foregroundStyle(.blue)
+                        Text(context.attributes.destinationCity)
+                            .font(.system(size: 14, weight: .semibold))
+                            .foregroundStyle(.primary)
+                            .lineLimit(1)
+                    }
                 }
                 DynamicIslandExpandedRegion(.trailing) {
-                    Text("Trailing")
+                    Text(departureSummary(date: context.attributes.departureDate))
+                        .font(.system(size: 12, weight: .medium))
+                        .foregroundStyle(.secondary)
+                        .lineLimit(1)
                 }
                 DynamicIslandExpandedRegion(.bottom) {
-                    Text("Bottom \(context.state.emoji)")
-                    // more content
+                    PackingProgressRow(
+                        packed: context.state.packedItems,
+                        total: context.attributes.totalItems,
+                        isCompleted: context.state.isCompleted
+                    )
+                    .padding(.horizontal, 4)
+                    .padding(.bottom, 4)
                 }
             } compactLeading: {
-                Text("L")
+                // ── 紧凑态 Leading：飞机图标 ──
+                Image(systemName: context.state.isCompleted ? "checkmark.circle.fill" : "airplane")
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundStyle(context.state.isCompleted ? .green : .blue)
             } compactTrailing: {
-                Text("T \(context.state.emoji)")
+                // ── 紧凑态 Trailing：进度百分比 ──
+                let pct = context.attributes.totalItems > 0
+                    ? Int(Double(context.state.packedItems) / Double(context.attributes.totalItems) * 100)
+                    : 0
+                Text("\(pct)%")
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundStyle(.primary)
             } minimal: {
-                Text(context.state.emoji)
+                // ── 最小态：飞机图标 ──
+                Image(systemName: "airplane")
+                    .font(.system(size: 12, weight: .semibold))
+                    .foregroundStyle(.blue)
             }
-            .widgetURL(URL(string: "http://www.apple.com"))
-            .keylineTint(Color.red)
+            .widgetURL(URL(string: "carry://packing"))
+            .keylineTint(.blue)
         }
     }
 }
 
-extension CarryWidgetAttributes {
-    fileprivate static var preview: CarryWidgetAttributes {
-        CarryWidgetAttributes(name: "World")
+// MARK: - 锁屏视图
+
+private struct LockScreenView: View {
+    let context: ActivityViewContext<PackingActivityAttributes>
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            // 标题行
+            HStack {
+                Image(systemName: "airplane")
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundStyle(.blue)
+                Text(context.attributes.tripName)
+                    .font(.system(size: 15, weight: .semibold))
+                    .foregroundStyle(.primary)
+                    .lineLimit(1)
+                Spacer()
+                Text(departureSummary(date: context.attributes.departureDate))
+                    .font(.system(size: 12, weight: .medium))
+                    .foregroundStyle(.secondary)
+            }
+
+            // 进度行
+            PackingProgressRow(
+                packed: context.state.packedItems,
+                total: context.attributes.totalItems,
+                isCompleted: context.state.isCompleted
+            )
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 12)
     }
 }
 
-extension CarryWidgetAttributes.ContentState {
-    fileprivate static var smiley: CarryWidgetAttributes.ContentState {
-        CarryWidgetAttributes.ContentState(emoji: "😀")
-     }
-     
-     fileprivate static var starEyes: CarryWidgetAttributes.ContentState {
-         CarryWidgetAttributes.ContentState(emoji: "🤩")
-     }
+// MARK: - 进度条组件（锁屏 + 展开态共用）
+
+private struct PackingProgressRow: View {
+    let packed: Int
+    let total: Int
+    let isCompleted: Bool
+
+    private var progress: Double {
+        total > 0 ? Double(packed) / Double(total) : 0
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 5) {
+            // 进度条
+            GeometryReader { geo in
+                ZStack(alignment: .leading) {
+                    Capsule()
+                        .fill(Color.secondary.opacity(0.18))
+                        .frame(height: 6)
+                    Capsule()
+                        .fill(isCompleted ? Color.green : Color.blue)
+                        .frame(width: max(geo.size.width * progress, 6), height: 6)
+                        .animation(.spring(duration: 0.4, bounce: 0.2), value: progress)
+                }
+            }
+            .frame(height: 6)
+
+            // 标签行
+            HStack {
+                if isCompleted {
+                    Label("打包完成，出发吧 🎉", systemImage: "checkmark.circle.fill")
+                        .font(.system(size: 12, weight: .medium))
+                        .foregroundStyle(.green)
+                } else {
+                    Text("已打包 \(packed) / \(total) 件")
+                        .font(.system(size: 12, weight: .medium))
+                        .foregroundStyle(.secondary)
+                }
+                Spacer()
+            }
+        }
+    }
 }
 
-#Preview("Notification", as: .content, using: CarryWidgetAttributes.preview) {
-   CarryWidgetLiveActivity()
-} contentStates: {
-    CarryWidgetAttributes.ContentState.smiley
-    CarryWidgetAttributes.ContentState.starEyes
+// MARK: - 工具函数
+
+private func departureSummary(date: Date) -> String {
+    let calendar = Calendar.current
+    let today = calendar.startOfDay(for: Date())
+    let departure = calendar.startOfDay(for: date)
+    let days = calendar.dateComponents([.day], from: today, to: departure).day ?? 0
+    switch days {
+    case 0: return "今天出发"
+    case 1: return "明天出发"
+    default: return "\(days) 天后出发"
+    }
 }

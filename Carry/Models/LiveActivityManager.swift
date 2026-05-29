@@ -146,6 +146,13 @@ final class LiveActivityManager {
 
     // MARK: - Private
 
+    // MARK: - 诊断（DEBUG）
+
+    /// 返回当前 Live Activity 各项条件的状态文字，供 Developer 页面显示。
+    var diagnosticAuthEnabled: Bool {
+        ActivityAuthorizationInfo().areActivitiesEnabled
+    }
+
     private func terminateAll() {
         Task {
             for activity in Activity<PackingActivityAttributes>.activities {
