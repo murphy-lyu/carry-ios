@@ -123,9 +123,13 @@ struct DestinationInfoView: View {
         let hasWeather = !destinations.isEmpty
 
         if hasWeather || hasPlug || hasCurrency {
+            let cardCount = (hasWeather ? 1 : 0) + (hasPlug ? 1 : 0) + (hasCurrency ? 1 : 0)
             GeometryReader { proxy in
-                // 露出下一张卡片约 28pt，提示可以横划
-                let cardWidth = max(220, proxy.size.width - 16 - 28)
+                // 单张卡片：全宽居中；多张：露出右侧约 28pt 提示可横划
+                let isSingle = cardCount == 1
+                let cardWidth = isSingle
+                    ? proxy.size.width - 32
+                    : max(220, proxy.size.width - 16 - 28)
                 ScrollView(.horizontal, showsIndicators: false) {
                     HStack(spacing: 12) {
                         if hasWeather {
@@ -147,7 +151,7 @@ struct DestinationInfoView: View {
                     .scrollTargetLayout()
                     .frame(minHeight: proxy.size.height)
                     .padding(.leading, 16)
-                    .padding(.trailing, 8)
+                    .padding(.trailing, isSingle ? 16 : 8)
                 }
                 .scrollTargetBehavior(.viewAligned)
             }
