@@ -124,16 +124,17 @@ struct RoadmapView: View {
     var body: some View {
         VStack(spacing: 0) {
             topBar
-                .padding(.horizontal, 16)
-                .padding(.top, 14)
-                .padding(.bottom, 6)
+                .padding(.horizontal, 20)
+                .padding(.top, 20)
+                .padding(.bottom, 12)
 
             ScrollView {
-                VStack(alignment: .leading, spacing: 14) {
+                VStack(alignment: .leading, spacing: 16) {
                     content
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
-                .padding(.horizontal, 16)
+                .padding(.horizontal, 20)
+                .padding(.top, 4)
                 .padding(.bottom, 24)
             }
         }
@@ -306,7 +307,7 @@ struct RoadmapView: View {
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(12)
+        .padding(16)
         .background(cardBackground)
         .overlay(
             RoundedRectangle(cornerRadius: 18, style: .continuous)
