@@ -126,6 +126,7 @@ let sceneItemMap: [String: [SceneItem]] = [
     "high_altitude": [
         makeSceneItem("Altitude sickness pills", isAlert: true),
         makeSceneItem("Thermal underwear", isAlert: true),
+        makeSceneItem("Down jacket", isAlert: true),
         makeSceneItem("Sunscreen", isAlert: true),
         makeSceneItem("Sunglasses", isAlert: true),
         makeSceneItem("Water bottle", isAlert: false),
@@ -135,6 +136,7 @@ let sceneItemMap: [String: [SceneItem]] = [
     ],
     "winter": [
         makeSceneItem("Thermal underwear", isAlert: true),
+        makeSceneItem("Down jacket", isAlert: true),
         makeSceneItem("Heavy winter coat", isAlert: true),
         makeSceneItem("Gloves", isAlert: true),
         makeSceneItem("Beanie", isAlert: true),
