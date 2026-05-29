@@ -333,7 +333,7 @@ struct PackingListView: View {
 
     private var packingList: some View {
         List {
-            if !isNewTrip, let trip = bundle {
+            if !isNewTrip, let trip = bundle, trip.departureDate > Date() {
                 Section {
                     DestinationInfoView(trip: trip, weatherManager: weatherManager)
                         .listRowInsets(EdgeInsets(top: 14, leading: 0, bottom: 8, trailing: 0))
