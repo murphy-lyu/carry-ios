@@ -53,7 +53,6 @@ private let itemNameAliases: [String: String] = [
     "Moisturiser": "Moisturizer",
     "Hand sanitiser": "Hand sanitizer",
     "Sun-protective clothing": "Sun shirt",
-    "Sheet mask": "Face mask",
 ]
 
 func canonicalItemName(_ name: String) -> String {
