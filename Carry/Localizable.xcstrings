@@ -2877,28 +2877,16 @@
     "Add \\(selectedCount) items": {
       "extractionState": "manual",
       "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Add \\(selectedCount) items"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "添加 \\(selectedCount) 个物品"
-          }
-        },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "新增 \\(selectedCount) 個物品"
-          }
-        },
         "de": {
           "stringUnit": {
             "state": "translated",
             "value": "\\(selectedCount) Artikel hinzufügen"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Add \\(selectedCount) items"
           }
         },
         "es": {
@@ -2929,6 +2917,18 @@
           "stringUnit": {
             "state": "translated",
             "value": "Adicionar \\(selectedCount) itens"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "添加 \\(selectedCount) 个物品"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "新增 \\(selectedCount) 個物品"
           }
         }
       }
@@ -18260,28 +18260,16 @@
     "itempicker.smart.preview.adding": {
       "extractionState": "manual",
       "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Will add %1$lld items: %2$@%3$@"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "将新增 %1$lld 件：%2$@%3$@"
-          }
-        },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "將新增 %1$lld 件：%2$@%3$@"
-          }
-        },
         "de": {
           "stringUnit": {
             "state": "translated",
             "value": "%1$lld Artikel werden hinzugefügt: %2$@%3$@"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Will add %1$lld items: %2$@%3$@"
           }
         },
         "es": {
@@ -18313,34 +18301,34 @@
             "state": "translated",
             "value": "%1$lld itens serão adicionados: %2$@%3$@"
           }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "将新增 %1$lld 件：%2$@%3$@"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "將新增 %1$lld 件：%2$@%3$@"
+          }
         }
       }
     },
     "itempicker.smart.preview.none": {
       "extractionState": "manual",
       "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Already up to date, no new items to add"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "已是最新，无需新增物品"
-          }
-        },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "已是最新，無需新增物品"
-          }
-        },
         "de": {
           "stringUnit": {
             "state": "translated",
             "value": "Bereits aktuell, keine neuen Artikel zum Hinzufügen"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Already up to date, no new items to add"
           }
         },
         "es": {
@@ -18372,34 +18360,34 @@
             "state": "translated",
             "value": "Já está atualizado, nenhum item novo para adicionar"
           }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "已是最新，无需新增物品"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "已是最新，無需新增物品"
+          }
         }
       }
     },
     "itempicker.smart.toast.added": {
       "extractionState": "manual",
       "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Added %1$lld items: %2$@%3$@"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "已新增 %1$lld 件：%2$@%3$@"
-          }
-        },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "已新增 %1$lld 件：%2$@%3$@"
-          }
-        },
         "de": {
           "stringUnit": {
             "state": "translated",
             "value": "%1$lld Artikel hinzugefügt: %2$@%3$@"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Added %1$lld items: %2$@%3$@"
           }
         },
         "es": {
@@ -18431,34 +18419,34 @@
             "state": "translated",
             "value": "%1$lld itens adicionados: %2$@%3$@"
           }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "已新增 %1$lld 件：%2$@%3$@"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "已新增 %1$lld 件：%2$@%3$@"
+          }
         }
       }
     },
     "itempicker.smart.toast.none": {
       "extractionState": "manual",
       "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Already up to date, no new items to add"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "已是最新，无需新增物品"
-          }
-        },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "已是最新，無需新增物品"
-          }
-        },
         "de": {
           "stringUnit": {
             "state": "translated",
             "value": "Bereits aktuell, keine neuen Artikel zum Hinzufügen"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Already up to date, no new items to add"
           }
         },
         "es": {
@@ -18489,6 +18477,18 @@
           "stringUnit": {
             "state": "translated",
             "value": "Já está atualizado, nenhum item novo para adicionar"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "已是最新，无需新增物品"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "已是最新，無需新增物品"
           }
         }
       }
@@ -22259,28 +22259,16 @@
     "myitems.source.smart": {
       "extractionState": "manual",
       "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Smart picks"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "智能推荐"
-          }
-        },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "智慧推薦"
-          }
-        },
         "de": {
           "stringUnit": {
             "state": "translated",
             "value": "Smarte Auswahl"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Smart picks"
           }
         },
         "es": {
@@ -22312,34 +22300,34 @@
             "state": "translated",
             "value": "Seleção inteligente"
           }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "智能推荐"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "智慧推薦"
+          }
         }
       }
     },
     "myitems.source.smart.subtitle": {
       "extractionState": "manual",
       "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "By travel scenes"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "按场景推荐"
-          }
-        },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "按場景推薦"
-          }
-        },
         "de": {
           "stringUnit": {
             "state": "translated",
             "value": "Nach Reiseszenarien"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "By travel scenes"
           }
         },
         "es": {
@@ -22370,6 +22358,18 @@
           "stringUnit": {
             "state": "translated",
             "value": "Por cenas de viagem"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "按场景推荐"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "按場景推薦"
           }
         }
       }
@@ -30739,55 +30739,55 @@
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Reisen automatisch zum Kalender hinzufügen"
+            "value": "Reisen zum Kalender hinzufügen"
           }
         },
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Automatically add trips to Calendar"
+            "value": "Add Trips to Calendar"
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Añadir viajes al Calendario automáticamente"
+            "value": "Añadir viajes al Calendario"
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Ajouter automatiquement les voyages au Calendrier"
+            "value": "Ajouter les voyages au Calendrier"
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "旅行を自動的にカレンダーへ追加"
+            "value": "旅行をカレンダーに追加"
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "여행을 캘린더에 자동으로 추가"
+            "value": "여행을 캘린더에 추가"
           }
         },
         "pt-BR": {
           "stringUnit": {
             "state": "translated",
-            "value": "Adicionar viagens ao Calendário automaticamente"
+            "value": "Adicionar viagens ao Calendário"
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "自动添加行程到日历"
+            "value": "添加行程到日历"
           }
         },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "自動加入行程到日曆"
+            "value": "加入行程到行事曆"
           }
         }
       }
@@ -37570,28 +37570,16 @@
     "suggestions.add_items_count": {
       "extractionState": "manual",
       "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Add %d items"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "添加 %d 个物品"
-          }
-        },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "新增 %d 個物品"
-          }
-        },
         "de": {
           "stringUnit": {
             "state": "translated",
             "value": "%d Artikel hinzufügen"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Add %d items"
           }
         },
         "es": {
@@ -37622,6 +37610,18 @@
           "stringUnit": {
             "state": "translated",
             "value": "Adicionar %d itens"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "添加 %d 个物品"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "新增 %d 個物品"
           }
         }
       }
@@ -43599,6 +43599,17 @@
         }
       }
     },
+    "下大雨时把手机、卡和票据装进去，会少很多\"怕淋湿\"的焦虑": {
+      "extractionState": "stale",
+      "localizations": {
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "下大雨時把手機、卡和票據裝進去，會少很多擔心"
+          }
+        }
+      }
+    },
     "下大雨时把手机、卡和票据装进去，会少很多“怕淋湿”的焦虑": {
       "extractionState": "manual",
       "localizations": {
@@ -44002,16 +44013,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "長時間在外移動時，遇到公共廁所會更安心"
-          }
-        }
-      }
-    },
-    "下大雨时把手机、卡和票据装进去，会少很多\"怕淋湿\"的焦虑": {
-      "localizations": {
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "下大雨時把手機、卡和票據裝進去，會少很多擔心"
           }
         }
       }
