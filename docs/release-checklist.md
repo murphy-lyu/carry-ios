@@ -26,12 +26,13 @@
 ## 2. Apple 政策层面
 
 - [ ] **Privacy Nutrition Labels**：在 App Store Connect 填写数据收集声明
-  - 位置数据：CLGeocoder（目的地解析）+ MapKit（当前位置显示）→ 声明为「功能性」用途
+  - 位置数据：CLGeocoder（目的地解析）+ MapKit（当前位置显示）→ 声明为「功能性」用途，**未与身份关联，未用于追踪**（2026-05-30 代码审计确认）
+  - 日历数据：仅写入设备本地日历，不上传服务器 → **无需在隐私标签中申报**
+  - 无广告追踪、无第三方 SDK、无跨 App 数据共享 → 可勾选对应豁免项
   - ⚠️ **接入 WeatherKit 后新增**：目的地坐标发送至 Apple Weather 服务 → 同样声明为「功能性」用途
-  - 标识符：确认是否用到设备 ID 类 API
-  - 无广告追踪、无第三方数据共享 → 可勾选对应豁免项
 - [ ] **出口合规（Export Compliance）**：仅使用 HTTPS + StoreKit 标准加密，勾选「使用豁免加密」
-- [ ] **年龄分级**：按问卷填写，旅行工具类预期 4+
+- [ ] **App Store Connect 应用分类**：确认与工程 `LSApplicationCategoryType = public.app-category.travel` 一致（2026-05-30 代码审计确认已配置）
+- [ ] **年龄分级**：按问卷填写，无暴力/成人内容，预期 4+（2026-05-30 代码审计确认内容合规）
 - [ ] **支持 URL**：App Store Connect 必填，需要真实可访问的页面（联系邮件页亦可）
 - [x] **隐私政策 URL**：https://murphy-lyu.github.io/carry-legal/privacy/ ✅（2026-05-27 上线）
 
