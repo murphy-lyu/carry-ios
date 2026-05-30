@@ -9,7 +9,7 @@ Carry 是一款面向有旅行习惯、追求生活品质的 iOS 用户的旅行
 表达规范：叙述说明使用中文；代码片段、命令、报错信息、配置键名等必要技术内容保持原始格式，不做强制翻译。
 
 目标用户：有旅行习惯、追求生活品质的 iOS 用户。
-当前阶段：已上线 App Store（2026年5月），持续迭代中。
+当前阶段：即将上线 App Store（2026年6月），持续迭代中。
 
 ## 已上线功能
 - 行程管理：创建/编辑/复制/删除行程
@@ -148,6 +148,7 @@ Carry 在中国大陆 App Store 上架，涉及地理政治敏感内容时必须
 - **Live Activity 数据同步**：TripStore 中任何修改物品数量（add/remove/merge）、行程信息（name/destination/date）、打包状态的函数，必须调用 `LiveActivityManager.shared.update(for:)` 或 `end(for:)`。删除行程调用 `end`，其余调用 `update`。仅 iOS（`#if !targetEnvironment(macCatalyst)`）。
 - **Widget Extension 文件约定**：`CarryWidget/` 下所有文件仅属于 CarryWidgetExtension target，不得与主 app target 混用；跨 target 共享的类型统一放 `SharedSources/`，通过 pbxproj `PBXSourcesBuildPhase` 显式加入两个 target
 - **Widget 本地化**：widget 使用 `CarryWidget/Localizable.xcstrings`，不共享主 app 的 xcstrings；新增 widget 文案必须同步补全 9 种语言
+- **埋点闭环**：在 `CarryLogger.Event` 新增 case 时，必须在同一次改动里补齐调用点，禁止"先定义后接线"——已定义却从未调用的 Event 是死代码，上线后无法回收数据。错误类 Event 新增后必须同步加入 `errorEvents` 集合。新增用户可触发的功能/交互（按钮、入口、分享等）应评估是否需要对应埋点
 
 ## 本地化规范
 

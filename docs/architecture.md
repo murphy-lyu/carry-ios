@@ -60,9 +60,16 @@ ZStack（全窗口）
   - create_trip：创建新行程
   - open_trip：打开指定行程
   - show_map：展示地球地图
-- GlobeView：3D 地球视图（countries-110m.geojson）
+- GlobeView：3D 地球视图（MapKit Annotation pin 点亮到访国家，不绘制多边形边界）
 - RoadmapView：产品路线图（支持远程 JSON 更新）
 - LiveActivityManager：`@MainActor` 单例，管理打包进度 Live Activity 生命周期（start / update / end / endIfDeparted）
+
+## 政策合规（中国大陆上架）
+> 完整约定见 CLAUDE.md「政策合规约定」章节，此处仅记模块归属。
+- `isChinaStorefront`（`SceneItemMap.swift` 顶层函数）：通过 `SKPaymentQueue` storefront 检测是否大陆区，Debug 可用 UserDefaults 覆盖。所有大陆差异化行为的唯一判断入口
+- `HomeView.normalizedCountryCode(_:)`：仅大陆 storefront 下将 HK/MO/TW 归并为 CN（仅展示层，存储层保持 ISO 原值）
+- `generatePackingSections(destinationCodes:)`：大陆 storefront 下按目的地推荐港澳通行证 / 台湾通行证替代护照
+- `TripStore.inferCountryCodes` / `inferIsInternational`：geocoding 异步完成前用本地城市表同步推断国家码，避免证件误推
 
 ## Widget Extension（CarryWidgetExtension）
 - 独立 target，bundle ID `com.murphy.carry.CarryWidget`

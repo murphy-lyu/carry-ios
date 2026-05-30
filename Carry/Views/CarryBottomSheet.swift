@@ -148,7 +148,17 @@ final class SheetViewController: UIViewController {
     override func viewDidLoad() {
         super.viewDidLoad()
 
-        containerView.backgroundColor = .clear
+        // Opaque background matching CarrySubtleBackground's bottom gradient stop.
+        // The container is extended below the screen (see placeSheet); during a fast
+        // spring overshoot the sheet flies up and this backing fills the gap that
+        // would otherwise expose the MapKit behind the sheet. The hosting view only
+        // occupies the top expandedHeight, so this colour shows only in the overshoot
+        // gap, reading as a seamless continuation of the sheet's bottom edge.
+        containerView.backgroundColor = UIColor { trait in
+            trait.userInterfaceStyle == .dark
+                ? UIColor(red: 0.08, green: 0.08, blue: 0.09, alpha: 1)
+                : UIColor(red: 0.98, green: 0.98, blue: 0.97, alpha: 1)
+        }
         containerView.clipsToBounds = true
         containerView.layer.cornerRadius = cornerRadius
         containerView.layer.maskedCorners = [
@@ -219,11 +229,17 @@ final class SheetViewController: UIViewController {
 
         let y      = h - expandedHeight + banded
         let width  = w
-        let height = expandedHeight
 
-        containerView.frame = CGRect(x: 0, y: y, width: width, height: height)
-        let bounds = containerView.bounds
-        hostingView?.frame = bounds
+        // Extend the container below its content so a fast upward spring overshoot
+        // (sheet flies above its resting position) never lifts the container's bottom
+        // edge above the screen bottom — the extension's background fills the gap
+        // instead of exposing MapKit. The extension lives off-screen at rest and the
+        // bottom corners are square, so it's never visible in normal use.
+        let bottomExtension: CGFloat = 400
+        containerView.frame = CGRect(x: 0, y: y, width: width, height: expandedHeight + bottomExtension)
+        // Hosting view keeps the original content height; the extension below it is
+        // pure container background.
+        hostingView?.frame = CGRect(x: 0, y: 0, width: width, height: expandedHeight)
     }
 
     // MARK: Physics helpers

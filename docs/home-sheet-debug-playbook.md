@@ -319,3 +319,21 @@
    - 用户反馈：A 档（开）与 B 档（关）“几乎没有差异”。
    - 决策：按“最小必要有效改动集合”原则，回退 A/B 开关实现，避免引入额外维护复杂度。
    - 当前结论：流畅度瓶颈不在 `ff473c5` 这两项（高刷上限/阈值缓存）本身，后续优化应转向 direct 路径的布局/状态同步稳定性。
+
+## 6. ⚠️ 头号陷阱：有两个 Sheet 实现，默认跑的不是 FX
+
+排查 Sheet 问题前**必须**先确认改对文件，否则所有改动“看起来无效”：
+
+- `HomeView` 通过 `SheetVariant`（`@AppStorage(sheetVariantDefaultsKey)`）在两个实现间切换：
+  - `.fallback` → **`CarryBottomSheet.swift`**（`SheetViewController`）← **默认值，真机/用户实际运行的就是它**
+  - `.ultimate`  → `CarryBottomSheetFX.swift`（`FXSheetViewController`）← 仅 Dev Options 手动开启「Ultimate sheet」开关才启用
+- 默认 `SheetVariant.fallback.rawValue`，所以**不开开关时改 `CarryBottomSheetFX.swift` 完全不会生效**。
+- 真实教训（2026-05-30）：连续 4 次改 `CarryBottomSheetFX.swift` 修“快速上滑溢出露地图”，全部“无效”，因为默认根本没实例化 FX。最终靠“把填充块改成鲜红色仍完全看不到”才定位到改错了文件。
+- 排查铁律：动手前先确认当前 `sheetVariantRaw` 的值（或直接在两个文件的关键方法打断点/改色验证哪个在跑），不要假设。
+
+## 7. 已修复：快速上滑（expand 弹性 overshoot）底部露出 MapKit
+
+- 现象：collapsed → 快速上滑把手迅速松手，sheet 顶部带弹性弹起（力度越大弹幅越大），sheet 底部边缘离开屏幕底，露出后面的 MapKit（可见高德 “Legal / 高德地图” 水印）。慢拖不触发。
+- 根因：`SheetViewController`（fallback）用 `UIViewPropertyAnimator` spring 做 snap，expand 时 presentation 层 overshoot 飞过静止位。`containerView` 高度固定 = `expandedHeight`、背景 `.clear`、底部直角，一上移底部就空出来透到 ZStack 底层的地图。
+- 修复（`placeSheet` + `viewDidLoad`）：`containerView` 向下延伸 `bottomExtension = 400`（静止时在屏幕外、底部本就是直角，正常不可见），并给 `containerView.backgroundColor` 设 `CarrySubtleBackground` 底部渐变色（dark `0.08/0.08/0.09`，light `0.98/0.98/0.97`）。`hostingView` 仍只占 `expandedHeight`，内容布局不受影响；overshoot 露出的是这段延伸背景而非地图。
+- 同类隐患：`CarryBottomSheetFX.swift` 的 ultimate 版用 clippingView/outerView 多层结构，若将来启用 ultimate 需单独验证是否有同样的 overshoot 露底（当前未做）。
