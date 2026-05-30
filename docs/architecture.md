@@ -52,7 +52,8 @@ ZStack（全窗口）
 
 ## 其他模块
 - CarryLogger：单例日志，记录关键生命周期事件和 DB 错误
-- NotificationManager：本地通知（行程提醒）
+- NotificationManager：本地通知（行程提醒）；`tripId(fromIdentifier:)` 从通知 ID 解析行程 UUID
+- PackReminderNotificationDelegate：`UNUserNotificationCenterDelegate`，点击打包提醒后解析 tripId 写入 `NavigationRouter.pendingTripId`，实现自动跳转
 - DataBackupManager：数据备份
 - CoffeeStore：StoreKit 内购（打赏功能）
 - CarryShortcuts / AppIntents：Siri/Spotlight 快捷指令
@@ -61,3 +62,15 @@ ZStack（全窗口）
   - show_map：展示地球地图
 - GlobeView：3D 地球视图（countries-110m.geojson）
 - RoadmapView：产品路线图（支持远程 JSON 更新）
+- LiveActivityManager：`@MainActor` 单例，管理打包进度 Live Activity 生命周期（start / update / end / endIfDeparted）
+
+## Widget Extension（CarryWidgetExtension）
+- 独立 target，bundle ID `com.murphy.carry.CarryWidget`
+- `CarryWidgetBundle`：注册 `CarryWidgetLiveActivity`（Live Activity 配置）
+- `CarryWidgetLiveActivity`：锁屏卡片（LockScreenView）+ 灵动岛（展开/紧凑/最小态）
+- `CarryWidget/Localizable.xcstrings`：widget 专属本地化（9 种语言）
+
+## SharedSources
+- `SharedSources/PackingActivityAttributes.swift`：ActivityKit 共享类型，通过 pbxproj 同时编译进 Carry 和 CarryWidgetExtension 两个 target
+- `ActivityAttributes`：只含 `tripId`（静态标识符）
+- `ContentState`：packedItems / totalItems / isCompleted / tripName / destinationCity / departureDate（全部动态，支持实时更新）

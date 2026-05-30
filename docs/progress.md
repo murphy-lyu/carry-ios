@@ -1,17 +1,20 @@
 # 项目进度
 
 ## 最后更新
-2026-05-30（下午）
+2026-05-30
 
-## 上次改动摘要
-- **Live Activity 完整集成完成**（锁屏卡片 + 灵动岛）：
-  1. `PackingActivityAttributes` 移到 `SharedSources/`，通过 pbxproj 加入两个 target，解决类型标识符不一致问题
-  2. `terminateAll()` 内 async Task 在 `Activity.request()` 之后执行，把刚建好的新 Activity 也 end 掉了。修复：调用前先快照 `.activities` 列表，Task 只 end 快照中的旧 Activity
-- Widget Extension 本地化：新建 `CarryWidget/Localizable.xcstrings`（9 种语言），修复 `CarryWidgetLiveActivity.swift` 内硬编码中文
-- Widget 文件加 `#if canImport(ActivityKit)` 守卫，消除 Mac Catalyst 主 app 对 widget 文件 SourceKit 误报
+## 上次改动摘要（V1.0 收尾 · Live Activity 完整集成）
+- `PackingActivityAttributes` 移至 `SharedSources/`，两个 target 共用，解决 ActivityKit 类型标识符不匹配
+- 修复 `terminateAll()` async Task 竞争 bug：调用前先快照 `.activities`，防止 end 掉刚建的新 Activity
+- 所有 trip 动态数据（tripName / destinationCity / departureDate / totalItems）移入 `ContentState`，实现实时刷新
+- 补全 TripStore 全部 `update`/`end` 触发点（addItem/removeItem/removeSection/removeTrip/updateTripInfo/mergeItems 等共 9 处）
+- 通知点击自动跳转行程打包清单（`PackReminderNotificationDelegate`）
+- `LiveActivitySettingsView` 二级页面（引导图 + 说明文案 + 开关）
+- 设置项标签改为「实时活动 / Live Activities」（Apple 官方译名，9 种语言）
+- Widget Extension 新建 `Localizable.xcstrings`，消除硬编码中文
+- 所有 imageset 冗余 1x/2x 文件清理，节省约 9MB
 
-## 已上线功能
-- [x] 日历同步（CalendarManager / EventKit）
+## 已上线功能（V1.0 完成）
 - [x] 行程创建与管理（TripBundle）
 - [x] 打包清单（PackingList）
 - [x] 场景选择与智能推荐清单
@@ -24,17 +27,19 @@
 - [x] Mac Catalyst 支持（浮层卡片面板 + 地球背景 + macBody）
 - [x] 多套 App Icon 切换
 - [x] Siri/Spotlight 快捷指令（创建行程、打开行程、显示地图）
-- [x] 行程提醒（本地通知）
+- [x] 行程提醒（本地通知）+ 点击通知自动跳转打包清单
 - [x] 数据备份
 - [x] 打赏（CoffeeStore / StoreKit）
 - [x] 产品路线图页面（支持远程更新）
 - [x] 本地化（Localizable.xcstrings，9 种语言全程维护）
 - [x] 外观模式切换（深色/浅色/跟随系统）
+- [x] 日历同步（CalendarManager / EventKit）
+- [x] **Live Activity**（锁屏打包进度卡片 + 灵动岛，CarryWidget Extension）
 
-## 待开发（按优先级）
+## 待开发（V1.x 迭代方向）
 1. [ ] 目的地实用信息 — UI 已完成，待开启 WeatherKit
    - ✅ 插头/电压卡片、货币+汇率卡片均已可用
-   - ⚠️ 天气卡片待开启 WeatherKit：开发者账号注册后 → Xcode Signing & Capabilities 添加 WeatherKit → Developer Portal App ID 勾选 WeatherKit → 重新下载 Profile
+   - ⚠️ 天气卡片：开发者账号注册后 → Xcode Signing & Capabilities 添加 WeatherKit → Developer Portal App ID 勾选 → 重新下载 Profile
 2. [ ] 个人资料（性别等字段，提升推荐精准度）— spec 待写
 3. [ ] 邮件 / 订单导入行程
 4. [ ] 行程统计增强

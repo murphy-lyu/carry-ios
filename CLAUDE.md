@@ -82,13 +82,21 @@ Carry 是一款面向有旅行习惯、追求生活品质的 iOS 用户的旅行
 
 ## 项目结构
 Carry/
-├── CarryApp.swift          ← App 入口，ModelContainer 初始化
+├── CarryApp.swift          ← App 入口，ModelContainer 初始化，通知委托注册
 ├── ContentView.swift       ← TabView + NavigationRouter
 ├── ViewModifiers.swift     ← 全局 ViewModifier
-├── Models/                 ← 数据模型、Store、Manager
+├── Models/                 ← 数据模型、Store、Manager（含 LiveActivityManager）
 ├── Views/                  ← 所有页面
 ├── Globe/                  ← 3D 地球视图（GlobeView）
 └── AppIntents/             ← Siri/Spotlight 快捷指令
+
+CarryWidget/                ← Widget Extension target
+├── CarryWidgetBundle.swift ← WidgetBundle 入口
+├── CarryWidgetLiveActivity.swift ← 锁屏卡片 + 灵动岛 UI
+└── Localizable.xcstrings   ← widget 专属本地化（9 种语言）
+
+SharedSources/              ← 两个 target 共用的代码
+└── PackingActivityAttributes.swift ← ActivityKit 共享数据模型
 
 ## 设计规范
 → 详见 docs/design-system.md
@@ -111,6 +119,9 @@ Carry/
 - NavigationRouter.path 操作统一走 router，禁止在子 View 里自行维护 NavigationPath
 - SwiftData 变更必须考虑 migration，不能直接改 model schema
 - 新功能开发前先写 specs/ 下的 spec 文件，确认后再实现
+- **Live Activity 数据同步**：TripStore 中任何修改物品数量（add/remove/merge）、行程信息（name/destination/date）、打包状态的函数，必须调用 `LiveActivityManager.shared.update(for:)` 或 `end(for:)`。删除行程调用 `end`，其余调用 `update`。仅 iOS（`#if !targetEnvironment(macCatalyst)`）。
+- **Widget Extension 文件约定**：`CarryWidget/` 下所有文件仅属于 CarryWidgetExtension target，不得与主 app target 混用；跨 target 共享的类型统一放 `SharedSources/`，通过 pbxproj `PBXSourcesBuildPhase` 显式加入两个 target
+- **Widget 本地化**：widget 使用 `CarryWidget/Localizable.xcstrings`，不共享主 app 的 xcstrings；新增 widget 文案必须同步补全 9 种语言
 
 ## 本地化规范
 
