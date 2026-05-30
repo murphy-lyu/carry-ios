@@ -58,7 +58,9 @@ struct PackingListView: View {
         bundle?.safeSections ?? []
     }
     private var hasScenes: Bool { !(bundle?.selectedSceneKeys.isEmpty ?? true) }
-    private var isHistoricalTrip: Bool { bundle.map { $0.departureDate <= Date() } ?? false }
+    private var isHistoricalTrip: Bool {
+        bundle.map { $0.departureDate < Calendar.current.startOfDay(for: Date()) } ?? false
+    }
     private var totalCount: Int  { bundle?.totalCount  ?? 0 }
     private var packedCount: Int { bundle?.packedCount ?? 0 }
     private var progress: Double {
@@ -340,7 +342,7 @@ struct PackingListView: View {
 
     private var packingList: some View {
         List {
-            if !isNewTrip, let trip = bundle, trip.departureDate > Date() {
+            if !isNewTrip, let trip = bundle, trip.departureDate >= Calendar.current.startOfDay(for: Date()) {
                 Section {
                     DestinationInfoView(trip: trip, weatherManager: weatherManager)
                         .listRowInsets(EdgeInsets(top: 14, leading: 0, bottom: 8, trailing: 0))

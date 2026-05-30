@@ -17,7 +17,6 @@ struct DestinationInfoView: View {
     @AppStorage("debug_mock_weather_enabled") private var debugMockWeatherEnabled = false
 
     @Environment(\.colorScheme) private var colorScheme
-    @State private var selectedDestIndex = 0
     private let cardHeight: CGFloat = 112
 
     // MARK: - Destinations
@@ -78,22 +77,14 @@ struct DestinationInfoView: View {
         return trip.departureDate >= tenDaysLater
     }
 
-    private var currentWeather: [DayWeatherInfo]? {
-        weatherManager.weatherByDestination[selectedDestIndex]
-    }
-
-    private var displayWeather: [DayWeatherInfo]? {
-        if let currentWeather, !currentWeather.isEmpty {
-            return currentWeather
-        }
+    private func weather(for index: Int) -> [DayWeatherInfo]? {
+        let loaded = weatherManager.weatherByDestination[index]
 #if DEBUG
         if debugMockWeatherEnabled {
-            return debugMockWeather
+            return loaded ?? debugMockWeather(for: index)
         }
-        return currentWeather
-#else
-        return currentWeather
 #endif
+        return loaded
     }
 
     private var allCountryCodes: [String] {
@@ -140,15 +131,15 @@ struct DestinationInfoView: View {
 
         if hasWeather || hasPlug || hasCurrency {
             GeometryReader { proxy in
-                // 无论几张卡，都保持固定左右边距 16pt。
-                // 吸附到任意卡片时，其左侧都与屏幕左边距对齐，避免三卡同时露出。
                 let cardWidth = proxy.size.width - 32
                 ScrollView(.horizontal, showsIndicators: false) {
                     HStack(spacing: 12) {
                         if hasWeather {
-                            weatherCard
-                                .frame(width: cardWidth)
-                                .frame(height: cardHeight)
+                            ForEach(destinations.indices, id: \.self) { i in
+                                weatherCard(for: i)
+                                    .frame(width: cardWidth)
+                                    .frame(height: cardHeight)
+                            }
                         }
                         if hasPlug {
                             plugCard
@@ -175,67 +166,46 @@ struct DestinationInfoView: View {
     // MARK: - Weather Card
 
     @ViewBuilder
-    private var weatherCard: some View {
+    private func weatherCard(for index: Int) -> some View {
+        let dest = destinations[index]
+        let currentWeather = weather(for: index)
         card {
             VStack(alignment: .leading, spacing: 12) {
-                // Header: city name + destination dots
                 HStack(alignment: .center, spacing: 6) {
-                    let cityName = destinations.indices.contains(selectedDestIndex)
-                        ? destinations[selectedDestIndex].name : ""
                     HStack(spacing: 4) {
                         Image(systemName: "cloud.sun")
                             .font(.system(size: 12, weight: .medium))
                             .foregroundStyle(.secondary)
-                        Text(cityName)
+                        Text(dest.name)
                             .font(.subheadline.weight(.semibold))
                             .foregroundStyle(.primary)
                             .lineLimit(1)
                     }
-
                     Spacer(minLength: 0)
-
-                    HStack(spacing: 8) {
-                        // Multi-destination dot indicator
-                        if destinations.count > 1 {
-                            HStack(spacing: 4) {
-                                ForEach(destinations.indices, id: \.self) { i in
-                                    Circle()
-                                        .fill(i == selectedDestIndex
-                                              ? Color.primary
-                                              : Color.primary.opacity(0.2))
-                                        .frame(width: 5, height: 5)
-                                        .onTapGesture { withAnimation(.spring(duration: 0.2)) { selectDestination(i) } }
-                                }
+                    if let attribution = weatherManager.attribution {
+                        Link(destination: attribution.legalPageURL) {
+                            AsyncImage(url: colorScheme == .dark
+                                       ? attribution.combinedMarkDarkURL
+                                       : attribution.combinedMarkLightURL) { image in
+                                image.resizable().scaledToFit()
+                            } placeholder: {
+                                Color.clear
                             }
-                        }
-
-                        if let attribution = weatherManager.attribution {
-                            Link(destination: attribution.legalPageURL) {
-                                AsyncImage(url: colorScheme == .dark
-                                           ? attribution.combinedMarkDarkURL
-                                           : attribution.combinedMarkLightURL) { image in
-                                    image.resizable().scaledToFit()
-                                } placeholder: {
-                                    Color.clear
-                                }
-                                .frame(height: 7)
-                                .opacity(0.66)
-                                .offset(y: -1)
-                            }
+                            .frame(height: 7)
+                            .opacity(0.66)
+                            .offset(y: -1)
                         }
                     }
                 }
 
                 dividerLine
 
-                // Weather content
                 if isTripInFuture {
                     Text(LocalizedStringKey("destination.weather.unavailable"))
                         .font(.footnote)
                         .foregroundStyle(.secondary)
                         .frame(maxWidth: .infinity, alignment: .leading)
-
-                } else if let days = displayWeather, !days.isEmpty {
+                } else if let days = currentWeather, !days.isEmpty {
                     GeometryReader { rowGeo in
                         let chipWidth: CGFloat = 28
                         let edgeInset: CGFloat = 6
@@ -251,9 +221,7 @@ struct DestinationInfoView: View {
 
                         if requiredWidth <= innerWidth {
                             HStack(spacing: spacing) {
-                                ForEach(days) { day in
-                                    dayChip(day, width: chipWidth)
-                                }
+                                ForEach(days) { day in dayChip(day, width: chipWidth) }
                             }
                             .padding(.horizontal, edgeInset)
                             .frame(width: availableWidth, alignment: .center)
@@ -261,9 +229,7 @@ struct DestinationInfoView: View {
                         } else {
                             ScrollView(.horizontal, showsIndicators: false) {
                                 HStack(spacing: spacing) {
-                                    ForEach(days) { day in
-                                        dayChip(day, width: chipWidth)
-                                    }
+                                    ForEach(days) { day in dayChip(day, width: chipWidth) }
                                 }
                                 .padding(.horizontal, edgeInset)
                             }
@@ -271,41 +237,20 @@ struct DestinationInfoView: View {
                     }
                     .frame(height: 40)
                 } else if currentWeather == nil {
-                    // Loading skeleton
                     HStack(spacing: 10) {
-                        ForEach(0..<5, id: \.self) { _ in
-                            skeletonChip
-                        }
+                        ForEach(0..<5, id: \.self) { _ in skeletonChip }
                     }
                 }
-                // currentWeather == [] → card is hidden (handled in body via hasWeather)
             }
         }
-        .onTapGesture {} // Absorb taps so dots don't bubble up
-        // Swipe left/right to switch destinations
-        .gesture(
-            DragGesture(minimumDistance: 30)
-                .onEnded { value in
-                    guard destinations.count > 1 else { return }
-                    if value.translation.width < -30 {
-                        withAnimation(.spring(duration: 0.2)) {
-                            selectDestination(min(selectedDestIndex + 1, destinations.count - 1))
-                        }
-                    } else if value.translation.width > 30 {
-                        withAnimation(.spring(duration: 0.2)) {
-                            selectDestination(max(selectedDestIndex - 1, 0))
-                        }
-                }
-            }
-        )
     }
 
 #if DEBUG
-    private var debugMockWeather: [DayWeatherInfo] {
+    private func debugMockWeather(for index: Int) -> [DayWeatherInfo] {
         let symbols = ["cloud.sun.fill", "cloud.rain.fill", "sun.max.fill", "wind", "cloud.bolt.rain.fill"]
         let tripStart = tripDates.start
         let calendar = Calendar.current
-        let baseTemp = 16 + (selectedDestIndex * 2)
+        let baseTemp = 16 + (index * 2)
         return (0..<7).compactMap { offset in
             guard let date = calendar.date(byAdding: .day, value: offset, to: tripStart) else { return nil }
             return DayWeatherInfo(
@@ -316,20 +261,6 @@ struct DestinationInfoView: View {
         }
     }
 #endif
-
-    private func selectDestination(_ index: Int) {
-        selectedDestIndex = index
-        // Trigger weather fetch for this destination if not yet loaded
-        guard destinations.indices.contains(index),
-              weatherManager.weatherByDestination[index] == nil else { return }
-        let dest = destinations[index]
-        let dates = tripDates
-        weatherManager.fetchAll(
-            destinations: [(index: index, lat: dest.latitude, lon: dest.longitude)],
-            tripStartDate: dates.start,
-            tripEndDate: dates.end
-        )
-    }
 
     private func dayChip(_ day: DayWeatherInfo, width: CGFloat = 30) -> some View {
         let calendar = Calendar.current
@@ -386,7 +317,7 @@ struct DestinationInfoView: View {
                 VStack(alignment: .leading, spacing: 6) {
                     let typesLabel = plugUnion.map { "Type \($0)" }.joined(separator: " · ")
                     Text(typesLabel)
-                        .font(.headline.weight(.semibold))
+                        .font(.subheadline.weight(.semibold))
                         .foregroundStyle(.primary)
                         .lineLimit(1)
                         .minimumScaleFactor(0.85)
@@ -396,7 +327,7 @@ struct DestinationInfoView: View {
                         .joined(separator: " · ")
                     if !voltageLabel.isEmpty {
                         Text(voltageLabel)
-                            .font(.footnote)
+                            .font(.caption)
                             .foregroundStyle(.secondary)
                             .lineLimit(1)
                             .minimumScaleFactor(0.9)
@@ -424,25 +355,60 @@ struct DestinationInfoView: View {
 
                 dividerLine
 
-                VStack(alignment: .leading, spacing: 8) {
-                    ForEach(Array(foreignCurrencies.prefix(2)), id: \.code) { currency in
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text("\(currency.code) \(currency.symbol)")
-                                .font(.headline.weight(.semibold))
-                                .foregroundStyle(.primary)
-                            if let rate = exchangeRateManager.formattedRate(for: currency.code) {
-                                Text("1 \(exchangeRateManager.baseCurrencyCode) ≈ \(rate) \(currency.symbol)")
-                                    .font(.footnote)
-                                    .foregroundStyle(.secondary)
-                                    .lineLimit(1)
-                                    .minimumScaleFactor(0.8)
+                Group {
+                    if foreignCurrencies.count >= 3 {
+                        HStack(alignment: .top, spacing: 6) {
+                            ForEach(Array(foreignCurrencies.prefix(3)), id: \.code) { currency in
+                                VStack(alignment: .leading, spacing: 2) {
+                                    Text("\(currency.code) \(currency.symbol)")
+                                        .font(.caption.weight(.semibold))
+                                        .foregroundStyle(.primary)
+                                        .lineLimit(1)
+                                        .minimumScaleFactor(0.8)
+                                    if let rate = exchangeRateManager.formattedRate(for: currency.code) {
+                                        Text("1 \(exchangeRateManager.baseCurrencyCode)≈\(rate)\(currency.symbol)")
+                                            .font(.caption2)
+                                            .foregroundStyle(.secondary)
+                                            .lineLimit(1)
+                                            .minimumScaleFactor(0.72)
+                                    }
+                                }
+                                .frame(maxWidth: .infinity, alignment: .leading)
                             }
                         }
-                    }
-                    if foreignCurrencies.count > 2 {
-                        Text("+\(foreignCurrencies.count - 2)")
-                            .font(.footnote.weight(.semibold))
-                            .foregroundStyle(.secondary)
+                    } else if foreignCurrencies.count == 2 {
+                        HStack(alignment: .top, spacing: 8) {
+                            ForEach(foreignCurrencies, id: \.code) { currency in
+                                VStack(alignment: .leading, spacing: 3) {
+                                    Text("\(currency.code) \(currency.symbol)")
+                                        .font(.subheadline.weight(.semibold))
+                                        .foregroundStyle(.primary)
+                                    if let rate = exchangeRateManager.formattedRate(for: currency.code) {
+                                        Text("1 \(exchangeRateManager.baseCurrencyCode) ≈ \(rate) \(currency.symbol)")
+                                            .font(.caption)
+                                            .foregroundStyle(.secondary)
+                                            .lineLimit(2)
+                                            .minimumScaleFactor(0.78)
+                                    }
+                                }
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                            }
+                        }
+                    } else {
+                        ForEach(foreignCurrencies, id: \.code) { currency in
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text("\(currency.code) \(currency.symbol)")
+                                    .font(.headline.weight(.semibold))
+                                    .foregroundStyle(.primary)
+                                if let rate = exchangeRateManager.formattedRate(for: currency.code) {
+                                    Text("1 \(exchangeRateManager.baseCurrencyCode) ≈ \(rate) \(currency.symbol)")
+                                        .font(.footnote)
+                                        .foregroundStyle(.secondary)
+                                        .lineLimit(1)
+                                        .minimumScaleFactor(0.8)
+                                }
+                            }
+                        }
                     }
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
