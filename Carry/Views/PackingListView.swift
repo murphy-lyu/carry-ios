@@ -153,6 +153,7 @@ struct PackingListView: View {
                             Label("Edit sections", systemImage: "arrow.up.arrow.down")
                         }
                         Button {
+                            CarryLogger.shared.log(.packingListShared)
                             let activityVC = UIActivityViewController(
                                 activityItems: [shareText],
                                 applicationActivities: nil

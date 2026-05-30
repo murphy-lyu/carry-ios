@@ -361,6 +361,7 @@ struct HomeView: View {
             store.correctMisgecodedTrips()
             store.geocodeMissingTrips()
             rebuildTripLists()
+            CarryLogger.shared.log(.mapOpened)
         }
         .onReceive(router.$path) { path in
             if path.isEmpty {
@@ -535,6 +536,7 @@ struct HomeView: View {
                         let all = MapStyleOption.allCases
                         let next = ((all.firstIndex(of: mapStyleOption) ?? 0) + 1) % all.count
                         mapStyleRaw = all[next].rawValue
+                        CarryLogger.shared.log(.mapStyleChanged, context: "style=\(all[next].rawValue)")
                     } label: {
                         Image(systemName: mapStyleOption.icon)
                             .font(.system(size: 17, weight: .semibold))

@@ -179,6 +179,12 @@ enum NotificationManager {
 
         let trigger = UNCalendarNotificationTrigger(dateMatching: components, repeats: false)
         let request = UNNotificationRequest(identifier: id, content: content, trigger: trigger)
-        UNUserNotificationCenter.current().add(request)
+        UNUserNotificationCenter.current().add(request) { error in
+            if let error {
+                CarryLogger.shared.log(.reminderScheduleFailed, context: "error=\(error.localizedDescription)")
+            } else {
+                CarryLogger.shared.log(.reminderScheduled)
+            }
+        }
     }
 }

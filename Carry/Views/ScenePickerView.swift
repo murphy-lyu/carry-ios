@@ -288,6 +288,14 @@ struct ScenePickerView: View {
 
     private func primaryAction() {
         let keys = selectedItems.compactMap { sceneLabelToKey[$0] }
+        let modeLabel: String
+        switch mode {
+        case .create:   modeLabel = "create"
+        case .edit:     modeLabel = "edit"
+        case .autoPack: modeLabel = "auto_pack"
+        case .suggest:  modeLabel = "suggest"
+        }
+        CarryLogger.shared.log(.sceneSelected, context: "mode=\(modeLabel) count=\(keys.count)")
         switch mode {
         case .create(let info):
             generateList(info: info, keys: keys)

@@ -150,6 +150,7 @@ struct CoffeeSheetView: View {
                 guard id != nil else { return }
                 showCelebration = true
             }
+            .onAppear { CarryLogger.shared.log(.coffeeSheetOpened) }
             .navigationTitle("settings.section.support")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {

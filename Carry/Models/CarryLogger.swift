@@ -90,15 +90,13 @@ final class CarryLogger {
         case dbInitFailed           = "db_init_failed"
         case duplicateFailed        = "duplicate_failed"
         case loadFailed             = "load_failed"
-        // 网络（为后续 AI 功能预留）
-        case apiTimeout             = "api_timeout"
-        case apiError               = "api_error"
         // 数据解码
         case destinationDecodeFailed = "destination_decode_failed"
         // 应用内购
         case coffeePurchased        = "coffee_purchased"
         case coffeePurchaseFailed   = "coffee_purchase_failed"
         case coffeeProductsFetchFailed = "coffee_products_fetch_failed"
+        case coffeeSheetOpened      = "coffee_sheet_opened"
 
         // 日历同步
         case calendarSaveFailed     = "calendar_save_failed"
@@ -106,6 +104,21 @@ final class CarryLogger {
         case liveActivityStarted    = "live_activity_started"
         case liveActivityStartFailed = "live_activity_start_failed"
         case liveActivityEnded      = "live_activity_ended"
+        // 通知
+        case reminderScheduled      = "reminder_scheduled"
+        case reminderScheduleFailed = "reminder_schedule_failed"
+        case notificationTapped     = "notification_tapped"
+        // Siri / Spotlight
+        case siriShortcutExecuted   = "siri_shortcut_executed"
+        // 地图
+        case mapOpened              = "map_opened"
+        case mapStyleChanged        = "map_style_changed"
+        // 场景 / 分享
+        case sceneSelected          = "scene_selected"
+        case packingListShared      = "packing_list_shared"
+        // 预留（API 扩展用）
+        case apiTimeout             = "api_timeout"
+        case apiError               = "api_error"
     }
 
     private static let errorEvents: Set<Event> = [
@@ -118,6 +131,7 @@ final class CarryLogger {
         .abnormalTermination, .geocodeFailed,
         .destinationDecodeFailed, .coffeePurchaseFailed, .coffeeProductsFetchFailed,
         .calendarSaveFailed, .liveActivityStartFailed,
+        .reminderScheduleFailed, .apiTimeout, .apiError,
     ]
 
     private let sessionActiveKey = "carry_session_active"

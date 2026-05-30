@@ -106,6 +106,7 @@ final class PackReminderNotificationDelegate: NSObject, UNUserNotificationCenter
         withCompletionHandler completionHandler: @escaping () -> Void
     ) {
         if let tripId = NotificationManager.tripId(fromIdentifier: response.notification.request.identifier) {
+            CarryLogger.shared.log(.notificationTapped, context: "tripId=\(tripId)")
             DispatchQueue.main.async { [weak self] in
                 self?.router?.pendingTripId = tripId
             }

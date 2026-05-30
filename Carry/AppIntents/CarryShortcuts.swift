@@ -42,6 +42,7 @@ struct CreateTripIntent: AppIntent {
 
     @MainActor
     func perform() async throws -> some IntentResult {
+        CarryLogger.shared.log(.siriShortcutExecuted, context: "action=create_trip")
         UserDefaults.standard.setShortcutCreateTrip()
         return .result()
     }
@@ -57,8 +58,10 @@ struct OpenNearestTripIntent: AppIntent {
     @MainActor
     func perform() async throws -> some IntentResult {
         if let trip = try nearestTrip() {
+            CarryLogger.shared.log(.siriShortcutExecuted, context: "action=open_nearest_trip")
             UserDefaults.standard.setShortcutOpenTrip(trip.id)
         } else {
+            CarryLogger.shared.log(.siriShortcutExecuted, context: "action=open_nearest_trip fallback=create")
             UserDefaults.standard.setShortcutCreateTrip()
         }
         return .result()
@@ -74,6 +77,7 @@ struct ShowFootprintIntent: AppIntent {
 
     @MainActor
     func perform() async throws -> some IntentResult {
+        CarryLogger.shared.log(.siriShortcutExecuted, context: "action=show_footprint")
         UserDefaults.standard.set("show_map", forKey: "carry_shortcut_action")
         return .result()
     }
