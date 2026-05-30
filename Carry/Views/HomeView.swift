@@ -162,10 +162,11 @@ struct HomeView: View {
         max(0, expandedSheetHeight - 188)
     }
 
-    /// Normalizes country codes so that HK, MO, and TW are treated as CN.
-    /// This ensures Hong Kong, Macau, and Taiwan are not counted as
-    /// independent countries in trip statistics or globe highlights.
+    /// Normalizes HK, MO, TW → CN only for the mainland China App Store storefront,
+    /// where local regulations require treating them as part of China.
+    /// All other storefronts preserve the original country code.
     private static func normalizedCountryCode(_ code: String) -> String {
+        guard isChinaStorefront else { return code.uppercased() }
         switch code.uppercased() {
         case "HK", "MO", "TW": return "CN"
         default: return code.uppercased()
@@ -238,7 +239,7 @@ struct HomeView: View {
 
     private var visitedCountries: [VisitedCountry] {
         // For each country code, keep the coordinates from the most-recent trip that includes it.
-        // HK/MO/TW are normalized to CN so they appear as a single China pin on the globe.
+        // HK/MO/TW are normalized to CN on the mainland China storefront only.
         var best: [String: (lat: Double, lon: Double, date: Date)] = [:]
 
         func consider(code: String, lat: Double, lon: Double, date: Date) {

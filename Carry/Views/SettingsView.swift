@@ -243,6 +243,7 @@ struct SettingsView: View {
                                     valueText: calendarSyncEnabled ? NSLocalizedString("settings.calendar.status.on", comment: "") : NSLocalizedString("settings.calendar.status.off", comment: "")
                                 ) {
                                     CalendarSettingsView()
+                                        .toolbar(.hidden, for: .tabBar)
                                 }
                                 // TODO: re-enable once icon designs are ready
 //                                settingsNavigationRow(title: "settings.appicon.entry") {
@@ -251,6 +252,7 @@ struct SettingsView: View {
 #if !targetEnvironment(macCatalyst)
                                 settingsNavigationRow(title: "settings.liveactivity.packing") {
                                     LiveActivitySettingsView()
+                                        .toolbar(.hidden, for: .tabBar)
                                 }
 #endif
                             }
@@ -275,6 +277,7 @@ struct SettingsView: View {
                                     title: "settings.data.local_backup"
                                 ) {
                                     DataRecoveryView()
+                                        .toolbar(.hidden, for: .tabBar)
                                 }
                             }
                             .padding(.horizontal, 16)
@@ -315,6 +318,7 @@ struct SettingsView: View {
                             settingsCard {
                                 settingsNavigationRow(title: "settings.about.entry") {
                                     AboutView()
+                                        .toolbar(.hidden, for: .tabBar)
                                 }
                                 settingsRow(title: "settings.section.support", valueText: "☕️") {
                                     showCoffeeSheet = true
@@ -337,6 +341,7 @@ struct SettingsView: View {
                             settingsCard {
                                 settingsNavigationRow(title: "settings.developer.entry") {
                                     DeveloperModeView()
+                                        .toolbar(.hidden, for: .tabBar)
                                 }
                             }
                             .padding(.horizontal, 16)
@@ -1063,6 +1068,25 @@ private struct DeveloperModeView: View {
                     VStack(alignment: .leading, spacing: 2) {
                         Text("settings.mock.weather_preview")
                         Text("settings.mock.weather_preview.subtitle")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+                }
+                .tint(colorScheme == .dark ? Color(.systemGray2) : Color(.label))
+                .listRowSeparator(.hidden)
+            }
+
+            Section("CN Storefront") {
+                Toggle(isOn: Binding(
+                    get: { UserDefaults.standard.bool(forKey: "debugChinaStorefront") },
+                    set: { newValue in
+                        UserDefaults.standard.set(newValue, forKey: "debugChinaStorefront")
+                        UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                    }
+                )) {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Simulate CN Storefront")
+                        Text("HK/MO → 港澳通行证，TW → 台湾通行证")
                             .font(.caption)
                             .foregroundStyle(.secondary)
                     }

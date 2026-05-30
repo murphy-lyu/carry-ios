@@ -19,6 +19,16 @@
 原因：roadmap 内容需要频繁调整，不想每次发版。
 实现：本地 roadmap.json 作 fallback，Settings 内可配置远程 URL。
 
+## 2026-05-30 地图合规
+
+### TW/HK/MO 归并逻辑改为仅对中国大陆 storefront 生效
+原因：原实现全局将 HK/MO/TW 归并为 CN，台湾/香港用户的行程会被显示为"中国"，体验冒犯。
+实现：`normalizedCountryCode` 增加 `isChinaStorefront` 前置判断，通过 `SKPaymentQueue.default().storefront?.countryCode == "CHN"` 检测是否为大陆 storefront。非大陆 storefront 保留原始 country code。
+放弃：按设备 Locale 判断（不准，无法区分 diaspora 用户与大陆用户）。
+
+### 删除 countries-110m.geojson
+原因：GeoJSON 文件从未被任何 Swift 代码引用（Globe 使用 MapKit Annotation pin，不绘制多边形），是死代码。文件内 Taiwan 以 `"TYPE": "Sovereign country"` 描述，存在中国区审核风险。直接删除，无功能影响。
+
 ## 2026-05-27 隐私与合规
 
 ### CarryLogger geocodeFailed 按编译模式区分 context

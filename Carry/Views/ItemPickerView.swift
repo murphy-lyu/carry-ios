@@ -75,12 +75,12 @@ struct ItemPickerView: View {
         self.cachedSceneRecommendedNames = []
     }
 
-    init(autoPackTripInfo: TripInfo, sceneKeys: [String]) {
+    init(autoPackTripInfo: TripInfo, sceneKeys: [String], isInternational: Bool? = nil, destinationCodes: [String] = []) {
         self.mode = .autoPackReview(autoPackTripInfo, sceneKeys: sceneKeys)
         self.startInMyItems = false
 
         // Pre-select items generated from scenes, matched back to catalog raw keys
-        let generated = generatePackingSections(selectedScenes: sceneKeys, tripDays: autoPackTripInfo.durationDays, isInternational: nil)
+        let generated = generatePackingSections(selectedScenes: sceneKeys, tripDays: autoPackTripInfo.durationDays, isInternational: isInternational, destinationCodes: destinationCodes)
         let generatedByCategory: [String: Set<String>] = Dictionary(
             uniqueKeysWithValues: generated.map { section in
                 (section.title, Set(section.sortedItems.map { $0.name }))
@@ -208,8 +208,26 @@ struct ItemPickerView: View {
 
     private var tripIsInternational: Bool? {
         switch mode {
-        case .create(_), .autoPackReview(_, _): return nil
-        case .merge(let tripId): return store.bundle(for: tripId)?.isInternational
+        case .create(let info):
+            return store.inferIsInternational(for: info.destinationCity)
+        case .autoPackReview(let info, _):
+            return store.inferIsInternational(for: info.destinationCity)
+        case .merge(let tripId):
+            guard let bundle = store.bundle(for: tripId) else { return nil }
+            return bundle.isInternational ?? store.inferIsInternational(for: bundle.destinationCity)
+        }
+    }
+
+    private var tripDestinationCodes: [String] {
+        switch mode {
+        case .create(let info):
+            return store.inferCountryCodes(for: info.destinationCity)
+        case .autoPackReview(let info, _):
+            return store.inferCountryCodes(for: info.destinationCity)
+        case .merge(let tripId):
+            guard let bundle = store.bundle(for: tripId) else { return [] }
+            let stored = ([bundle.countryCode] + bundle.additionalDestinations.map(\.countryCode)).filter { !$0.isEmpty }
+            return stored.isEmpty ? store.inferCountryCodes(for: bundle.destinationCity) : stored
         }
     }
 
@@ -916,7 +934,7 @@ struct ItemPickerView: View {
     private var smartPreviewItemNames: [String] {
         let keys = selectedSmartSceneLabels.compactMap { sceneLabelToKey[$0] }
         guard !keys.isEmpty else { return [] }
-        let sections = generatePackingSections(selectedScenes: keys, tripDays: tripDays, isInternational: tripIsInternational)
+        let sections = generatePackingSections(selectedScenes: keys, tripDays: tripDays, isInternational: tripIsInternational, destinationCodes: tripDestinationCodes)
         let names = sections.flatMap { $0.sortedItems.map { canonicalItemName($0.name) } }
         let unique = Array(Set(names)).sorted()
         return unique.filter { name in
@@ -1042,7 +1060,7 @@ struct ItemPickerView: View {
         let keys = selectedSmartSceneLabels.compactMap { sceneLabelToKey[$0] }
         guard !keys.isEmpty else { return }
 
-        let generated = generatePackingSections(selectedScenes: keys, tripDays: tripDays, isInternational: tripIsInternational)
+        let generated = generatePackingSections(selectedScenes: keys, tripDays: tripDays, isInternational: tripIsInternational, destinationCodes: tripDestinationCodes)
         let generatedByCategory: [String: Set<String>] = Dictionary(
             uniqueKeysWithValues: generated.map { section in
                 (section.title, Set(section.sortedItems.map { $0.name }))

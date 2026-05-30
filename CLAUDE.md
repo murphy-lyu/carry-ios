@@ -105,6 +105,32 @@ SharedSources/              ← 两个 target 共用的代码
 ## 当前进度
 → 详见 docs/progress.md
 
+## 政策合规约定（中国大陆上架）
+
+Carry 在中国大陆 App Store 上架，涉及地理政治敏感内容时必须遵守以下规则。
+
+### Storefront 检测
+- `isChinaStorefront`（定义在 `SceneItemMap.swift`）通过 `SKPaymentQueue.default().storefront?.countryCode == "CHN"` 检测是否为大陆 storefront
+- `#if DEBUG` 下可通过 UserDefaults `"debugChinaStorefront"` 覆盖，方便本地测试
+- **禁止**用设备 Locale / Region 替代 storefront 判断，两者不等价
+
+### 地图与统计：HK / MO / TW 归并
+- `HomeView.normalizedCountryCode(_:)` 在大陆 storefront 下将 HK、MO、TW 归并为 CN，用于地球仪点亮和到访国家计数
+- **禁止**在其他地方重复做此归并；原始 `countryCode` 存储层永远保持 ISO 原始值（HK / MO / TW），归并只发生在展示层
+- MapKit 底图在大陆设备上自动切换高德，政治边界由 Apple 处理，无需额外干预
+- **禁止**在 bundle 中放置含台湾独立国家描述的 GeoJSON 或边界数据（已删除 `countries-110m.geojson`）
+
+### 旅行证件推荐：按 storefront 差异化
+- 大陆 storefront + HK 或 MO 目的地 → 推荐「**港澳通行证**」，移除护照
+- 大陆 storefront + TW 目的地 → 推荐「**台湾通行证**」，移除护照
+- 其他 storefront 不受影响（外籍用户去港澳台仍推护照）
+- 逻辑集中在 `generatePackingSections(destinationCodes:)` 内，**禁止**在其他地方散落地做证件判断
+- 城市表（`cityLookup` / `countryKeywords`）必须包含「台湾」「台灣」「taiwan」→ TW 的映射，否则 TW 目的地无法被识别
+
+### 隐私政策
+- `carry-legal/privacy/zh.html` 第 14 条为 PIPL（《个人信息保护法》）专属声明，修改隐私政策时不得删除此条
+- 英文版 `index.html` 无需同步此条（PIPL 仅适用于大陆）
+
 ## 重要约定（每次必须遵守）
 - 业务逻辑、页面布局、导航全部 SwiftUI；手势拦截、动画性能优化等场景允许通过 UIViewRepresentable 使用 UIKit，但要隔离在独立文件/组件里，不暴露给上层；禁止使用私有 API
 - 颜色必须使用 docs/design-system.md 中定义的 Color Token，禁止硬编码 hex

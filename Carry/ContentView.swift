@@ -169,8 +169,13 @@ struct ContentView: View {
         case .editScenes(let id):
             ScenePickerView(editingTripId: id)
         case .autoPackPicker(let info, let sceneKeys):
-            ItemPickerView(autoPackTripInfo: info, sceneKeys: sceneKeys)
-                .id(sceneKeys.sorted().joined(separator: ","))
+            ItemPickerView(
+                autoPackTripInfo: info,
+                sceneKeys: sceneKeys,
+                isInternational: store.inferIsInternational(for: info.destinationCity),
+                destinationCodes: store.inferCountryCodes(for: info.destinationCity)
+            )
+            .id(sceneKeys.sorted().joined(separator: ","))
         }
     }
 

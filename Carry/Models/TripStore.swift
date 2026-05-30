@@ -619,7 +619,8 @@ final class TripStore: ObservableObject {
         }
 
         // Build fresh sections (sortOrder assigned by generatePackingSections position)
-        let newSections = generatePackingSections(selectedScenes: keys, tripDays: trip.days, isInternational: trip.isInternational)
+        let destCodes = ([trip.countryCode] + trip.additionalDestinations.map(\.countryCode)).filter { !$0.isEmpty }
+        let newSections = generatePackingSections(selectedScenes: keys, tripDays: trip.days, isInternational: trip.isInternational, destinationCodes: destCodes)
         for (index, section) in newSections.enumerated() { section.sortOrder = index }
 
         // Restore packed states + append custom items to matching section
@@ -1370,6 +1371,7 @@ final class TripStore: ObservableObject {
             ("kashgar","CN",39.47,75.98),("yili","CN",43.92,81.32),
             ("urumqi","CN",43.83,87.62),("lhasa","CN",29.65,91.13),
             ("hong kong","HK",22.40,114.11),("macau","MO",22.20,113.55),
+            ("taiwan","TW",23.69,120.96),
             ("taipei","TW",25.05,121.56),("kaohsiung","TW",22.63,120.30),
             ("taichung","TW",24.15,120.67),
             ("tokyo","JP",35.69,139.69),("osaka","JP",34.69,135.50),
@@ -1653,6 +1655,7 @@ final class TripStore: ObservableObject {
         ("浙江",    "CN", 30.25,120.16), ("江苏",    "CN", 32.06,118.76),
         ("山西",    "CN", 37.87,112.55), ("河北",    "CN", 38.05,114.48),
         ("陕西",    "CN", 34.27,108.95), ("中国",    "CN", 35.86,104.20),
+        ("台湾",    "TW", 23.69,120.96), ("台灣",    "TW", 23.69,120.96),
     ]
 
     // MARK: - Multi-city splitting
@@ -1702,6 +1705,24 @@ final class TripStore: ObservableObject {
     }
 
     // MARK: - Country centroids
+
+    /// Synchronously infers isInternational from the local city table.
+    /// Returns nil if the city can't be resolved (geocoding still needed).
+    /// Used to avoid showing Passport for domestic trips before geocoding completes.
+    func inferIsInternational(for city: String) -> Bool? {
+        let codes = inferCountryCodes(for: city)
+        guard !codes.isEmpty else { return nil }
+        if codes.contains(where: { $0 != "CN" }) { return true }
+        if codes.allSatisfy({ $0 == "CN" }) { return false }
+        return nil
+    }
+
+    /// Synchronously resolves destination city to country codes using the local city table.
+    /// Returns an empty array if the city can't be resolved.
+    func inferCountryCodes(for city: String) -> [String] {
+        let tokens = splitCities(city)
+        return tokens.compactMap { lookupCity($0)?.code }
+    }
 
     /// Approximate country centroids used as a fallback when CLGeocoder returns
     /// a valid isoCountryCode but a nil CLLocation (can happen for broad queries).

@@ -323,7 +323,14 @@ struct SuggestionPreviewView: View {
         let excludedLower = existingLower.union(myItemLower)
 
         // Regular suggestions (default unselected)
-        let generated = generatePackingSections(selectedScenes: sceneKeys, tripDays: bundle.days, isInternational: bundle.isInternational)
+        // Prefer resolved countryCode; fall back to synchronous local-table lookup if
+        // geocoding is still pending, so domestic/HK/TW trips get the right documents.
+        let isIntl = bundle.isInternational ?? store.inferIsInternational(for: bundle.destinationCity)
+        let destCodes: [String] = {
+            let stored = ([bundle.countryCode] + bundle.additionalDestinations.map(\.countryCode)).filter { !$0.isEmpty }
+            return stored.isEmpty ? store.inferCountryCodes(for: bundle.destinationCity) : stored
+        }()
+        let generated = generatePackingSections(selectedScenes: sceneKeys, tripDays: bundle.days, isInternational: isIntl, destinationCodes: destCodes)
         var result: [(title: String, items: [String])] = []
         var allNames = Set<String>()
         for section in generated {

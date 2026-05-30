@@ -4,6 +4,15 @@
 //
 
 import Foundation
+import StoreKit
+
+/// True when the app was downloaded from the mainland China App Store.
+var isChinaStorefront: Bool {
+    #if DEBUG
+    if UserDefaults.standard.bool(forKey: "debugChinaStorefront") { return true }
+    #endif
+    return SKPaymentQueue.default().storefront?.countryCode == "CHN"
+}
 
 struct SceneItem {
     let name: String
@@ -227,7 +236,7 @@ func sceneItems(for key: String) -> [SceneItem] {
 /// Merges base items + selected scene items, deduplicates by name (alert wins),
 /// then groups by category in a fixed order.
 /// - Parameter isInternational: `true` = international trip, `false` = domestic, `nil` = unknown (show all).
-func generatePackingSections(selectedScenes: [String], tripDays: Int = 1, isInternational: Bool? = nil) -> [PackingSection] {
+func generatePackingSections(selectedScenes: [String], tripDays: Int = 1, isInternational: Bool? = nil, destinationCodes: [String] = []) -> [PackingSection] {
     var merged: [(name: String, category: ItemCategory, isAlert: Bool)] = []
     var nameIndex: [String: Int] = [:]
 
@@ -243,6 +252,25 @@ func generatePackingSections(selectedScenes: [String], tripDays: Int = 1, isInte
 
     baseItems.forEach { insert($0) }
     selectedScenes.flatMap { sceneItems(for: $0) }.forEach { insert($0) }
+
+    // On the mainland China storefront, replace Passport with the destination-specific
+    // travel permit for HK/Macau (港澳通行证) or Taiwan (台湾通行证).
+    if isChinaStorefront && !destinationCodes.isEmpty {
+        let upper = Set(destinationCodes.map { $0.uppercased() })
+        let hasHKMO = upper.contains("HK") || upper.contains("MO")
+        let hasTW   = upper.contains("TW")
+        if hasHKMO || hasTW {
+            merged.removeAll { $0.name == canonicalItemName("Passport") }
+            if hasHKMO {
+                let item = makeSceneItem("HK & Macao permit", isAlert: true)
+                merged.append((item.name, item.category, item.isAlert))
+            }
+            if hasTW {
+                let item = makeSceneItem("Taiwan permit", isAlert: true)
+                merged.append((item.name, item.category, item.isAlert))
+            }
+        }
+    }
 
     let order: [ItemCategory] = [
         .documents,
