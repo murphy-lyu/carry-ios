@@ -1513,7 +1513,7 @@ struct ItemPickerView: View {
                 }
             } label: {
                 Image(systemName: isSaved ? "bookmark.fill" : "bookmark")
-                    .font(.system(size: 14, weight: .regular))
+                    .font(.system(size: 16, weight: .regular))
                     .foregroundStyle(isSaved ? Color.secondary.opacity(0.55) : Color.secondary.opacity(0.28))
                     .frame(width: 44, height: 44)
             }

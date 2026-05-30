@@ -254,7 +254,6 @@ struct SettingsView: View {
                                         .font(.body)
                                         .foregroundStyle(.primary)
                                 }
-                                .toggleStyle(SwitchToggleStyle(tint: .blue))
                                 .padding(.horizontal, 18)
                                 .frame(height: 58)
                                 .onChange(of: liveActivityPackingEnabled) { _, enabled in
