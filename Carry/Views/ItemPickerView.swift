@@ -170,6 +170,16 @@ struct ItemPickerView: View {
 
     private var myItemsCount: Int { store.myItems.count }
 
+    private var savedMyItemNames: Set<String> {
+        Set(store.myItems.map { normalizedItemName($0.name) })
+    }
+
+    private func savedMyItemID(for name: String) -> UUID? {
+        store.myItems.first {
+            normalizedItemName($0.name) == normalizedItemName(name)
+        }?.id
+    }
+
     private static let presetCategoryOrder: [String: Int] =
         Dictionary(uniqueKeysWithValues: itemPickerCatalog.enumerated().map { ($1.name, $0) })
 
@@ -412,9 +422,10 @@ struct ItemPickerView: View {
                                                 Button {
                                                     store.removeMyItem(id: item.id)
                                                 } label: {
-                                                    Label("Delete", systemImage: "trash")
+                                                    Image(systemName: "trash")
+                                                        .foregroundStyle(.white)
                                                 }
-                                                .tint(Color(UIColor.label))
+                                                .tint(.red)
                                             }
                                     }
                                 }
@@ -482,9 +493,9 @@ struct ItemPickerView: View {
                 }
                 .sheet(isPresented: $showMyItemAddSheet) {
                     NavigationStack {
-                        ItemPickerMyItemEditorView(titleKey: "myitems.add.title") { name, category, quantity in
+                        ItemPickerMyItemEditorView(titleKey: "myitems.add.title") { name, category in
                             let normalizedCategory = category.trimmingCharacters(in: CharacterSet.whitespacesAndNewlines).isEmpty ? "Custom" : category
-                            let item = store.addMyItem(name: name, category: normalizedCategory, defaultQuantity: quantity, collectionName: selectedMyItemCollection)
+                            let item = store.addMyItem(name: name, category: normalizedCategory, collectionName: selectedMyItemCollection)
                             selectedMyItemIDs.insert(item.id)
                             showToast(NSLocalizedString("myitems.toast.saved", comment: ""))
                         }
@@ -1427,65 +1438,88 @@ struct ItemPickerView: View {
         let isAlreadyAdded = existingItemNames.contains(normalizedItemName(item))
         let isSelected = selectedItems.contains(id)
         let isScenePick = sceneRecommendedNames.contains(canonicalItemName(item))
-        return Button {
-            guard !isAlreadyAdded else { return }
-            if isSelected {
-                selectedItems.remove(id)
-            } else {
-                selectedItems.insert(id)
-            }
-        } label: {
-            HStack(spacing: 12) {
-                ZStack {
-                    Circle()
-                        .fill((isSelected || isAlreadyAdded) ? Color.primary : Color.clear)
-                    Circle()
-                        .strokeBorder((isSelected || isAlreadyAdded) ? Color.primary : Color.secondary.opacity(0.4), lineWidth: 1.5)
-                    if isSelected || isAlreadyAdded {
-                        Image(systemName: "checkmark")
-                            .font(.system(size: 11, weight: .bold))
-                            .foregroundColor(Color(UIColor.systemBackground))
-                    }
+        let canonicalName = canonicalItemName(item)
+        let isSaved = savedMyItemNames.contains(normalizedItemName(canonicalName))
+
+        return HStack(spacing: 0) {
+            Button {
+                guard !isAlreadyAdded else { return }
+                if isSelected {
+                    selectedItems.remove(id)
+                } else {
+                    selectedItems.insert(id)
                 }
-                .frame(width: 24, height: 24)
-                VStack(alignment: .leading, spacing: 2) {
-                    HStack(spacing: 6) {
-                        Text(LocalizedStringKey(item))
-                            .font(.body)
-                            .foregroundColor(.primary)
-                        if isScenePick && !sceneRecommendedNames.isEmpty {
-                            Text("Scene pick")
-                                .font(.caption2.weight(.semibold))
-                                .foregroundStyle(.secondary)
-                                .padding(.horizontal, 8)
-                                .padding(.vertical, 3)
-                                .background(
-                                    Capsule(style: .continuous)
-                                        .fill(Color(UIColor.tertiarySystemFill))
-                                )
+            } label: {
+                HStack(spacing: 12) {
+                    ZStack {
+                        Circle()
+                            .fill((isSelected || isAlreadyAdded) ? Color.primary : Color.clear)
+                        Circle()
+                            .strokeBorder((isSelected || isAlreadyAdded) ? Color.primary : Color.secondary.opacity(0.4), lineWidth: 1.5)
+                        if isSelected || isAlreadyAdded {
+                            Image(systemName: "checkmark")
+                                .font(.system(size: 11, weight: .bold))
+                                .foregroundColor(Color(UIColor.systemBackground))
                         }
-                        if isAlreadyAdded {
-                            Text(LocalizedStringKey("itempicker.already_added"))
-                                .font(.caption2.weight(.semibold))
-                                .foregroundStyle(.secondary)
-                                .padding(.horizontal, 8)
-                                .padding(.vertical, 3)
-                                .background(
-                                    Capsule(style: .continuous)
-                                        .fill(Color(UIColor.tertiarySystemFill))
-                                )
-                        }
-                        Spacer()
                     }
+                    .frame(width: 24, height: 24)
+                    VStack(alignment: .leading, spacing: 2) {
+                        HStack(spacing: 6) {
+                            Text(LocalizedStringKey(item))
+                                .font(.body)
+                                .foregroundColor(.primary)
+                            if isScenePick && !sceneRecommendedNames.isEmpty {
+                                Text("Scene pick")
+                                    .font(.caption2.weight(.semibold))
+                                    .foregroundStyle(.secondary)
+                                    .padding(.horizontal, 8)
+                                    .padding(.vertical, 3)
+                                    .background(
+                                        Capsule(style: .continuous)
+                                            .fill(Color(UIColor.tertiarySystemFill))
+                                    )
+                            }
+                            if isAlreadyAdded {
+                                Text(LocalizedStringKey("itempicker.already_added"))
+                                    .font(.caption2.weight(.semibold))
+                                    .foregroundStyle(.secondary)
+                                    .padding(.horizontal, 8)
+                                    .padding(.vertical, 3)
+                                    .background(
+                                        Capsule(style: .continuous)
+                                            .fill(Color(UIColor.tertiarySystemFill))
+                                    )
+                            }
+                            Spacer()
+                        }
+                    }
+                    Spacer()
                 }
-                Spacer()
+                .frame(height: 44)
+                .opacity(isAlreadyAdded ? 0.72 : 1.0)
+                .contentShape(Rectangle())
             }
-            .frame(height: 44)
-            .opacity(isAlreadyAdded ? 0.72 : 1.0)
-            .contentShape(Rectangle())
+            .buttonStyle(.plain)
+            .padding(.leading, 16)
+
+            Button {
+                if isSaved {
+                    if let id = savedMyItemID(for: canonicalName) {
+                        store.removeMyItem(id: id)
+                    }
+                } else {
+                    store.addMyItem(name: canonicalName, category: category, defaultQuantity: 1, collectionName: selectedMyItemCollection)
+                    showToast(NSLocalizedString("itempicker.preset.saved_to_myitems", comment: ""))
+                }
+            } label: {
+                Image(systemName: isSaved ? "bookmark.fill" : "bookmark")
+                    .font(.system(size: 14, weight: .regular))
+                    .foregroundStyle(isSaved ? Color.secondary.opacity(0.55) : Color.secondary.opacity(0.28))
+                    .frame(width: 44, height: 44)
+            }
+            .buttonStyle(.plain)
+            .padding(.trailing, 4)
         }
-        .buttonStyle(.plain)
-        .padding(.horizontal, 16)
     }
 
     // MARK: - Toast
@@ -1666,61 +1700,87 @@ private struct ItemPickerMyItemEditorView: View {
     let titleKey: LocalizedStringKey
     var initialName: String = ""
     var initialCategory: String = ""
-    var initialQuantity: Int = 1
-    var onSave: (String, String, Int) -> Void
+    var onSave: (String, String) -> Void
 
     @Environment(\.dismiss) private var dismiss
     @State private var name: String
-    @State private var category: String
-    @State private var quantity: String
+    @State private var selectedCategoryKey: String
+    @State private var customCategoryText: String
+
+    private static let catalogCategoryKeys = itemPickerCatalog.map { $0.name }
+    private static let customSentinel = "__custom__"
+
+    private var effectiveCategory: String {
+        selectedCategoryKey == Self.customSentinel ? customCategoryText : selectedCategoryKey
+    }
+
+    private var canSave: Bool {
+        guard !name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return false }
+        if selectedCategoryKey == Self.customSentinel {
+            return !customCategoryText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+        }
+        return true
+    }
 
     init(
         titleKey: LocalizedStringKey,
         initialName: String = "",
         initialCategory: String = "",
-        initialQuantity: Int = 1,
-        onSave: @escaping (String, String, Int) -> Void
+        onSave: @escaping (String, String) -> Void
     ) {
         self.titleKey = titleKey
         self.initialName = initialName
         self.initialCategory = initialCategory
-        self.initialQuantity = initialQuantity
         self.onSave = onSave
         _name = State(initialValue: initialName)
-        _category = State(initialValue: initialCategory)
-        _quantity = State(initialValue: initialQuantity == 1 ? "" : String(initialQuantity))
+
+        if itemPickerCatalog.contains(where: { $0.name == initialCategory }) {
+            _selectedCategoryKey = State(initialValue: initialCategory)
+            _customCategoryText = State(initialValue: "")
+        } else if !initialCategory.isEmpty {
+            _selectedCategoryKey = State(initialValue: Self.customSentinel)
+            _customCategoryText = State(initialValue: initialCategory)
+        } else {
+            _selectedCategoryKey = State(initialValue: "")
+            _customCategoryText = State(initialValue: "")
+        }
     }
 
     var body: some View {
         Form {
             Section {
-                TextField("myitems.name", text: $name)
-                TextField("myitems.category", text: $category)
-                TextField("myitems.quantity", text: $quantity)
-                    .keyboardType(.numberPad)
-                    .onChange(of: quantity) { _, newValue in
-                        var filtered = newValue.filter(\.isNumber)
-                        if let num = Int(filtered) {
-                            if num < 1 { filtered = "1" }
-                            else if num > 9999 { filtered = "9999" }
-                        }
-                        if filtered != newValue { quantity = filtered }
+                TextField(LocalizedStringKey("myitems.name"), text: $name)
+
+                Picker(selection: $selectedCategoryKey) {
+                    Text(LocalizedStringKey("myitems.category.none"))
+                        .foregroundStyle(.secondary)
+                        .tag("")
+                    ForEach(Self.catalogCategoryKeys, id: \.self) { key in
+                        Text(LocalizedStringKey(key)).tag(key)
                     }
+                    Text(LocalizedStringKey("myitems.category.custom")).tag(Self.customSentinel)
+                } label: {
+                    Text(LocalizedStringKey("myitems.category"))
+                }
+                .pickerStyle(.navigationLink)
+
+                if selectedCategoryKey == Self.customSentinel {
+                    TextField(LocalizedStringKey("myitems.category.custom.placeholder"), text: $customCategoryText)
+                }
             }
         }
         .navigationTitle(titleKey)
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .cancellationAction) {
-                Button("common.cancel") { dismiss() }
+                Button(LocalizedStringKey("common.cancel")) { dismiss() }
             }
             ToolbarItem(placement: .confirmationAction) {
-                Button("common.done") {
-                    let value = max(1, Int(quantity) ?? 1)
-                    onSave(name, category, value)
+                Button(LocalizedStringKey("common.done")) {
+                    onSave(name, effectiveCategory)
                     dismiss()
                 }
-                .disabled(name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                .disabled(!canSave)
             }
         }
     }
