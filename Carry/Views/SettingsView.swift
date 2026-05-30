@@ -792,9 +792,10 @@ private struct CalendarSettingsView: View {
     @EnvironmentObject private var store: TripStore
     @Environment(\.colorScheme) private var colorScheme
 
-    @AppStorage("calendar_sync_enabled") private var calendarSyncEnabled = false
-    @AppStorage("calendar_pack_hour")    private var calendarPackHour    = 20
-    @AppStorage("calendar_pack_minute") private var calendarPackMinute  = 0
+    @AppStorage("calendar_sync_enabled")         private var calendarSyncEnabled        = false
+    @AppStorage("calendar_pack_reminder_enabled") private var calendarPackReminderEnabled = true
+    @AppStorage("calendar_pack_hour")             private var calendarPackHour            = 20
+    @AppStorage("calendar_pack_minute")           private var calendarPackMinute          = 0
 
     @State private var showPermissionAlert = false
     @State private var showBulkAlert       = false
@@ -892,6 +893,25 @@ private struct CalendarSettingsView: View {
                         .fill(Color.primary.opacity(colorScheme == .dark ? 0.06 : 0.03))
                         .frame(height: 1)
 
+                    // 打包提醒子开关
+                    HStack(spacing: 12) {
+                        Text("settings.calendar.pack_reminder")
+                            .font(.body)
+                            .foregroundStyle(.primary)
+                        Spacer()
+                        Toggle("", isOn: $calendarPackReminderEnabled)
+                            .labelsHidden()
+                            .tint(colorScheme == .dark ? Color(.systemGray2) : Color(.label))
+                    }
+                    .padding(.horizontal, 18)
+                    .frame(height: 58)
+                    .opacity(calendarSyncEnabled ? 1 : (colorScheme == .dark ? 0.45 : 0.5))
+                    .allowsHitTesting(calendarSyncEnabled)
+
+                    Rectangle()
+                        .fill(Color.primary.opacity(colorScheme == .dark ? 0.06 : 0.03))
+                        .frame(height: 1)
+
                     DatePicker(
                         LocalizedStringKey("settings.calendar.packtime"),
                         selection: packTimeBinding,
@@ -908,8 +928,8 @@ private struct CalendarSettingsView: View {
                             .foregroundStyle(.primary)
                             .padding(.leading, 18)
                     }
-                    .opacity(calendarSyncEnabled ? 1 : (colorScheme == .dark ? 0.45 : 0.5))
-                    .allowsHitTesting(calendarSyncEnabled)
+                    .opacity(calendarSyncEnabled && calendarPackReminderEnabled ? 1 : (colorScheme == .dark ? 0.45 : 0.5))
+                    .allowsHitTesting(calendarSyncEnabled && calendarPackReminderEnabled)
                 }
                 .background(
                     RoundedRectangle(cornerRadius: 28, style: .continuous)
@@ -958,7 +978,8 @@ private struct CalendarSettingsView: View {
                 let written = CalendarManager.shared.addAllUpcoming(
                     store.trips,
                     packHour: calendarPackHour,
-                    packMinute: calendarPackMinute
+                    packMinute: calendarPackMinute,
+                    includePackReminder: calendarPackReminderEnabled
                 )
                 if written > 0 {
                     showToast(String(format: NSLocalizedString("settings.calendar.bulk.added_toast", comment: ""), written))

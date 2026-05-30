@@ -35,7 +35,7 @@ final class CalendarManager {
 
     /// Adds events for a single upcoming trip. Returns true if written (or already added).
     @discardableResult
-    func addTrip(_ trip: TripBundle, packHour: Int, packMinute: Int) -> Bool {
+    func addTrip(_ trip: TripBundle, packHour: Int, packMinute: Int, includePackReminder: Bool = true) -> Bool {
         guard trip.departureDate >= Calendar.current.startOfDay(for: Date()) else { return false }
         var addedIds = loadAddedIds()
         let idString = trip.id.uuidString
@@ -45,7 +45,7 @@ final class CalendarManager {
             return false
         }
         do {
-            try writeEvents(for: trip, to: cal, packHour: packHour, packMinute: packMinute)
+            try writeEvents(for: trip, to: cal, packHour: packHour, packMinute: packMinute, includePackReminder: includePackReminder)
             addedIds.insert(idString)
             saveAddedIds(addedIds)
             return true
@@ -57,7 +57,7 @@ final class CalendarManager {
 
     /// Adds events for all upcoming trips not yet added. Returns count of trips written.
     @discardableResult
-    func addAllUpcoming(_ trips: [TripBundle], packHour: Int, packMinute: Int) -> Int {
+    func addAllUpcoming(_ trips: [TripBundle], packHour: Int, packMinute: Int, includePackReminder: Bool = true) -> Int {
         let today = Calendar.current.startOfDay(for: Date())
         guard let cal = carryCalendar else {
             CarryLogger.shared.log(.calendarSaveFailed, context: "carryCalendar=nil in addAllUpcoming")
@@ -69,7 +69,7 @@ final class CalendarManager {
             let idString = trip.id.uuidString
             guard !addedIds.contains(idString) else { continue }
             do {
-                try writeEvents(for: trip, to: cal, packHour: packHour, packMinute: packMinute)
+                try writeEvents(for: trip, to: cal, packHour: packHour, packMinute: packMinute, includePackReminder: includePackReminder)
                 addedIds.insert(idString)
                 written += 1
             } catch {
@@ -126,7 +126,7 @@ final class CalendarManager {
 
     // MARK: - Event writing
 
-    private func writeEvents(for trip: TripBundle, to cal: EKCalendar, packHour: Int, packMinute: Int) throws {
+    private func writeEvents(for trip: TripBundle, to cal: EKCalendar, packHour: Int, packMinute: Int, includePackReminder: Bool) throws {
         let greg = Calendar.current
 
         // All-day trip event.
@@ -159,7 +159,8 @@ final class CalendarManager {
             throw error
         }
 
-        // Pack reminder: day before departure at user-set time.
+        // Pack reminder: day before departure at user-set time (optional).
+        guard includePackReminder else { return }
         guard let packDay = greg.date(byAdding: .day, value: -1, to: dayStart) else { return }
         var comps = greg.dateComponents([.year, .month, .day], from: packDay)
         comps.hour   = packHour
