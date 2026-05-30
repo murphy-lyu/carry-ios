@@ -31152,55 +31152,55 @@
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Erinnerung am Vortag zum Packen"
+            "value": "Erinnerungszeit"
           }
         },
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Day-before packing reminder"
+            "value": "Reminder Time"
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Recordatorio de maleta el día anterior"
+            "value": "Hora del recordatorio"
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Rappel la veille pour faire la valise"
+            "value": "Heure du rappel"
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "前日の荷造りリマインダー"
+            "value": "リマインダー時刻"
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "출발 전날 짐 꾸리기 알림"
+            "value": "알림 시간"
           }
         },
         "pt-BR": {
           "stringUnit": {
             "state": "translated",
-            "value": "Lembrete de mala no dia anterior"
+            "value": "Horário do lembrete"
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "出发前一天打包提醒"
+            "value": "提醒时间"
           }
         },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "出發前一天打包提醒"
+            "value": "提醒時間"
           }
         }
       }
