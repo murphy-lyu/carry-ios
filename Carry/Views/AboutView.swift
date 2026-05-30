@@ -32,7 +32,7 @@ struct AboutView: View {
 
                 moduleCard {
                     HStack(spacing: 12) {
-                        Image("murphy")
+                        Image("Murphy")
                             .resizable()
                             .scaledToFill()
                             .frame(width: 44, height: 44)

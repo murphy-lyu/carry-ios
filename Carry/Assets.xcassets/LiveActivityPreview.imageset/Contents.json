@@ -1,17 +1,15 @@
 {
   "images" : [
     {
-      "filename" : "微信图片_20250626141313_3.jpg",
       "idiom" : "universal",
       "scale" : "1x"
     },
     {
-      "filename" : "微信图片_20250626141313_3 1.jpg",
       "idiom" : "universal",
       "scale" : "2x"
     },
     {
-      "filename" : "微信图片_20250626141313_3 2.jpg",
+      "filename" : "LiveActivityPreview_3x.png",
       "idiom" : "universal",
       "scale" : "3x"
     }

@@ -34268,61 +34268,120 @@
         }
       }
     },
+    "settings.liveactivity.description" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sobald du eine Packliste öffnest, zeigt Carry deinen Fortschritt automatisch auf dem Sperrbildschirm und der Dynamic Island an."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Open any trip's packing list and Carry will automatically show your progress on the Lock Screen and Dynamic Island."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Abre la lista de equipaje de cualquier viaje y Carry mostrará tu progreso automáticamente en la pantalla de bloqueo y la Dynamic Island."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ouvrez la liste d'emballage d'un voyage et Carry affichera automatiquement votre progression sur l'écran verrouillé et la Dynamic Island."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "旅行の荷物リストを開くと、Carry が自動でロック画面と Dynamic Island に進捗を表示します。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "여행 짐 목록을 열면 Carry가 잠금 화면과 다이나믹 아일랜드에 진행 상황을 자동으로 표시합니다."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Abra a lista de bagagem de qualquer viagem e o Carry exibirá automaticamente seu progresso na tela de bloqueio e na Dynamic Island."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "打开任意行程的打包清单后，Carry 会自动在锁屏和灵动岛显示打包进度，让你随时掌握还剩多少件没打包。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "開啟任意行程的打包清單後，Carry 會自動在鎖定畫面和靈動島顯示打包進度，讓你隨時掌握還剩多少件未打包。"
+          }
+        }
+      }
+    },
     "settings.liveactivity.packing" : {
       "extractionState" : "manual",
       "localizations" : {
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Packfortschritt auf Sperrbildschirm"
+            "value" : "Live-Aktivitäten"
           }
         },
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Lock Screen Packing Progress"
+            "value" : "Live Activities"
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Progreso en pantalla de bloqueo"
+            "value" : "Actividades en vivo"
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Progression sur l'écran verrouillé"
+            "value" : "Activités en direct"
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "ロック画面に準備の進捗を表示"
+            "value" : "ライブアクティビティ"
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "잠금 화면에 짐 싸기 진행 상황 표시"
+            "value" : "라이브 활동"
           }
         },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Progresso na tela de bloqueio"
+            "value" : "Atividades ao vivo"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "锁屏打包进度"
+            "value" : "实时活动"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "鎖定畫面打包進度"
+            "value" : "即時動態"
           }
         }
       }

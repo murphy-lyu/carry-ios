@@ -11,8 +11,8 @@ import SwiftUI
 @main
 struct CarryWidgetBundle: WidgetBundle {
     var body: some Widget {
-        CarryWidget()
-        CarryWidgetControl()
+#if canImport(ActivityKit)
         CarryWidgetLiveActivity()
+#endif
     }
 }

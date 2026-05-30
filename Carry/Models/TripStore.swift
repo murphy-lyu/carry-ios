@@ -319,6 +319,9 @@ final class TripStore: ObservableObject {
     func removeTrip(withId id: UUID) {
         guard let trip = trips.first(where: { $0.id == id }) else { return }
         NotificationManager.cancelReminders(forTripId: id)
+#if !targetEnvironment(macCatalyst)
+        Task { @MainActor in LiveActivityManager.shared.end(for: id) }
+#endif
         context.delete(trip)
         save()
         CarryLogger.shared.log(.tripDeleted)
@@ -393,6 +396,9 @@ final class TripStore: ObservableObject {
         if cityChanged && !info.destinationCity.isEmpty {
             updateCountryCode(for: tripId, city: info.destinationCity)
         }
+#if !targetEnvironment(macCatalyst)
+        Task { @MainActor in LiveActivityManager.shared.update(for: trip) }
+#endif
     }
 
     func setRemindersEnabled(_ enabled: Bool, tripId: UUID) {
@@ -511,6 +517,9 @@ final class TripStore: ObservableObject {
                 fetchTrips()
                 if wasNew && !name.isEmpty {
                     CarryLogger.shared.log(.itemAdded)
+#if !targetEnvironment(macCatalyst)
+                    Task { @MainActor in LiveActivityManager.shared.update(for: trip) }
+#endif
                 }
                 return
             }
@@ -543,7 +552,12 @@ final class TripStore: ObservableObject {
                     CarryLogger.shared.log(.itemDeleteFailed, context: "context=removeItem")
                 }
                 fetchTrips()
-                if wasNamed { CarryLogger.shared.log(.itemDeleted) }
+                if wasNamed {
+                    CarryLogger.shared.log(.itemDeleted)
+#if !targetEnvironment(macCatalyst)
+                    Task { @MainActor in LiveActivityManager.shared.update(for: trip) }
+#endif
+                }
                 return
             }
         }
@@ -645,6 +659,9 @@ final class TripStore: ObservableObject {
         trip.selectedSceneKeys = keys
         save()
         CarryLogger.shared.log(.autoPackTriggered, context: "scenes=\(keys.count)")
+#if !targetEnvironment(macCatalyst)
+        Task { @MainActor in LiveActivityManager.shared.update(for: trip) }
+#endif
     }
 
     /// Returns all unique preset item names for the given scene keys (including base items).
@@ -698,6 +715,9 @@ final class TripStore: ObservableObject {
         trip.sections?.removeAll { $0.id == sectionId }
         save()
         CarryLogger.shared.log(.sectionDeleted)
+#if !targetEnvironment(macCatalyst)
+        Task { @MainActor in LiveActivityManager.shared.update(for: trip) }
+#endif
     }
 
     func renameSection(tripId: UUID, sectionId: UUID, newName: String) {
@@ -719,6 +739,9 @@ final class TripStore: ObservableObject {
             trip.sections?.append(section)
         }
         save()
+#if !targetEnvironment(macCatalyst)
+        Task { @MainActor in LiveActivityManager.shared.update(for: trip) }
+#endif
     }
 
     /// Adds scene keys to a trip and merges the supplied sections.
@@ -771,6 +794,9 @@ final class TripStore: ObservableObject {
             draftTrip = trip
         } else {
             save()
+#if !targetEnvironment(macCatalyst)
+            Task { @MainActor in LiveActivityManager.shared.update(for: trip) }
+#endif
         }
     }
 
@@ -830,6 +856,9 @@ final class TripStore: ObservableObject {
         }
         dismissSurpriseItem(tripId: tripId, itemName: item.name)
         save()
+#if !targetEnvironment(macCatalyst)
+        Task { @MainActor in LiveActivityManager.shared.update(for: trip) }
+#endif
     }
 
     // MARK: - My Items
@@ -984,6 +1013,9 @@ final class TripStore: ObservableObject {
             section.items?.append(item)
         }
         save()
+#if !targetEnvironment(macCatalyst)
+        Task { @MainActor in LiveActivityManager.shared.update(for: trip) }
+#endif
     }
 
     // MARK: - Queries

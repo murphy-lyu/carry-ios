@@ -11,6 +11,8 @@
 		0DFA34E62FC9C12100D55AA8 /* SwiftUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 0DFA34E52FC9C12100D55AA8 /* SwiftUI.framework */; };
 		0DFA34F72FC9C12200D55AA8 /* CarryWidgetExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 0DFA34E12FC9C12100D55AA8 /* CarryWidgetExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		1183E3AD2FBD8D980039DC34 /* Carry.storekit in Resources */ = {isa = PBXBuildFile; fileRef = 1183E3AC2FBD8D980039DC34 /* Carry.storekit */; };
+		ABCD000300000000ABCD0003 /* PackingActivityAttributes.swift in Sources */ = {isa = PBXBuildFile; fileRef = ABCD000100000000ABCD0001 /* PackingActivityAttributes.swift */; };
+		ABCD000400000000ABCD0004 /* PackingActivityAttributes.swift in Sources */ = {isa = PBXBuildFile; fileRef = ABCD000100000000ABCD0001 /* PackingActivityAttributes.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -43,6 +45,7 @@
 		0DFA34E52FC9C12100D55AA8 /* SwiftUI.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = SwiftUI.framework; path = System/Library/Frameworks/SwiftUI.framework; sourceTree = SDKROOT; };
 		115B30532FB56F4F006FD636 /* Carry.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Carry.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		1183E3AC2FBD8D980039DC34 /* Carry.storekit */ = {isa = PBXFileReference; lastKnownFileType = text; path = Carry.storekit; sourceTree = "<group>"; };
+		ABCD000100000000ABCD0001 /* PackingActivityAttributes.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PackingActivityAttributes.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
@@ -115,6 +118,7 @@
 			children = (
 				115B30552FB56F4F006FD636 /* Carry */,
 				0DFA34E72FC9C12100D55AA8 /* CarryWidget */,
+				ABCD000200000000ABCD0002 /* SharedSources */,
 				0DFA34E22FC9C12100D55AA8 /* Frameworks */,
 				115B30542FB56F4F006FD636 /* Products */,
 				1183E3AC2FBD8D980039DC34 /* Carry.storekit */,
@@ -128,6 +132,14 @@
 				0DFA34E12FC9C12100D55AA8 /* CarryWidgetExtension.appex */,
 			);
 			name = Products;
+			sourceTree = "<group>";
+		};
+		ABCD000200000000ABCD0002 /* SharedSources */ = {
+			isa = PBXGroup;
+			children = (
+				ABCD000100000000ABCD0001 /* PackingActivityAttributes.swift */,
+			);
+			path = SharedSources;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -250,6 +262,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				ABCD000400000000ABCD0004 /* PackingActivityAttributes.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -257,6 +270,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				ABCD000300000000ABCD0003 /* PackingActivityAttributes.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

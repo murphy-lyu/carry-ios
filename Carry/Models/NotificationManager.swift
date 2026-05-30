@@ -156,6 +156,16 @@ enum NotificationManager {
         tripPrefix + tripId.uuidString + reminderInfix + configId.uuidString
     }
 
+    /// 从打包提醒通知的 identifier 中提取 tripId。
+    /// 格式：carry.trip.{uuid}.reminder.{uuid}
+    static func tripId(fromIdentifier identifier: String) -> UUID? {
+        guard identifier.hasPrefix(tripPrefix) else { return nil }
+        let afterPrefix = identifier.dropFirst(tripPrefix.count)
+        guard let infixRange = afterPrefix.range(of: reminderInfix) else { return nil }
+        let uuidString = String(afterPrefix[..<infixRange.lowerBound])
+        return UUID(uuidString: uuidString)
+    }
+
     private static func schedule(
         id: String,
         title: String,

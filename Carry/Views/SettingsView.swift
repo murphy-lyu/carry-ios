@@ -249,19 +249,8 @@ struct SettingsView: View {
 //                                    AppIconView()
 //                                }
 #if !targetEnvironment(macCatalyst)
-                                Toggle(isOn: $liveActivityPackingEnabled) {
-                                    Text("settings.liveactivity.packing")
-                                        .font(.body)
-                                        .foregroundStyle(.primary)
-                                }
-                                .padding(.horizontal, 18)
-                                .frame(height: 58)
-                                .onChange(of: liveActivityPackingEnabled) { _, enabled in
-                                    if !enabled {
-                                        Task { @MainActor in
-                                            LiveActivityManager.shared.endAll()
-                                        }
-                                    }
+                                settingsNavigationRow(title: "settings.liveactivity.packing") {
+                                    LiveActivitySettingsView()
                                 }
 #endif
                             }
@@ -1084,45 +1073,57 @@ private struct DeveloperModeView: View {
 
 #if !targetEnvironment(macCatalyst)
             Section("Live Activity") {
-                // 诊断：显示当前各项条件状态
-                VStack(alignment: .leading, spacing: 4) {
-                    let enabled = UserDefaults.standard.bool(forKey: LiveActivityManager.enabledKey)
-                    let authOK = LiveActivityManager.shared.diagnosticAuthEnabled
-                    let nearestTrip = store.trips
-                        .filter { $0.departureDate > Date() }
-                        .sorted { $0.departureDate < $1.departureDate }
-                        .first
-                    let itemCount = nearestTrip?.safeSections.flatMap { $0.items ?? [] }.filter { !$0.name.isEmpty }.count ?? 0
-                    Text("开关：\(enabled ? "✅ 已开启" : "❌ 未开启")")
-                        .font(.caption).foregroundStyle(.secondary)
-                    Text("系统授权：\(authOK ? "✅ 允许" : "❌ 未授权")")
-                        .font(.caption).foregroundStyle(.secondary)
-                    Text("最近行程：\(nearestTrip?.name ?? "无（或已出发）")")
-                        .font(.caption).foregroundStyle(.secondary)
-                    Text("物品数：\(itemCount)")
-                        .font(.caption).foregroundStyle(.secondary)
-                }
-                .listRowSeparator(.hidden)
-
-                actionRow(title: "强制启动 Live Activity（最近行程）") {
-                    guard let trip = store.trips
-                        .filter({ $0.departureDate > Date() })
-                        .sorted(by: { $0.departureDate < $1.departureDate })
-                        .first else {
-                        showToast("无未出发的行程")
-                        return
+                DisclosureGroup {
+                    // 诊断：显示当前各项条件状态
+                    VStack(alignment: .leading, spacing: 4) {
+                        let enabled = UserDefaults.standard.bool(forKey: LiveActivityManager.enabledKey)
+                        let authOK = LiveActivityManager.shared.diagnosticAuthEnabled
+                        let nearestTrip = store.trips
+                            .filter { $0.departureDate > Date() }
+                            .sorted { $0.departureDate < $1.departureDate }
+                            .first
+                        let itemCount = nearestTrip?.safeSections.flatMap { $0.items ?? [] }.filter { !$0.name.isEmpty }.count ?? 0
+                        Text("开关：\(enabled ? "✅ 已开启" : "❌ 未开启")")
+                            .font(.caption).foregroundStyle(.secondary)
+                        Text("系统授权：\(authOK ? "✅ 允许" : "❌ 未授权")")
+                            .font(.caption).foregroundStyle(.secondary)
+                        Text("最近行程：\(nearestTrip?.name ?? "无（或已出发）")")
+                            .font(.caption).foregroundStyle(.secondary)
+                        Text("物品数：\(itemCount)")
+                            .font(.caption).foregroundStyle(.secondary)
                     }
-                    Task { @MainActor in
-                        LiveActivityManager.shared.startIfNeeded(for: trip)
-                        showToast("已尝试启动（trip: \(trip.name)）")
-                    }
-                    UIImpactFeedbackGenerator(style: .light).impactOccurred()
-                }
+                    .listRowSeparator(.hidden)
+                    .padding(.top, 4)
 
-                actionRow(title: "结束所有 Live Activity", tint: .red) {
-                    Task { @MainActor in LiveActivityManager.shared.endAll() }
-                    UIImpactFeedbackGenerator(style: .light).impactOccurred()
-                    showToast("已结束")
+                    actionRow(title: "强制启动（最近行程）") {
+                        let today = Calendar.current.startOfDay(for: Date())
+                        guard let trip = store.trips
+                            .filter({ $0.departureDate >= today })
+                            .sorted(by: { $0.departureDate < $1.departureDate })
+                            .first else {
+                            showToast("无可用行程（需有今天或之后出发的行程）")
+                            return
+                        }
+                        let result = LiveActivityManager.shared.forceStart(for: trip)
+                        showToast(result)
+                        UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                    }
+
+                    actionRow(title: "查看当前 Activity 状态") {
+                        let info = LiveActivityManager.shared.diagnosticActivityState
+                        showToast(info)
+                        UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                    }
+
+                    actionRow(title: "结束所有 Live Activity", tint: .red) {
+                        Task { @MainActor in LiveActivityManager.shared.endAll() }
+                        UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                        showToast("已结束")
+                    }
+                } label: {
+                    Text("Live Activity")
+                        .frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
+                        .contentShape(Rectangle())
                 }
             }
 #endif

@@ -1,13 +1,14 @@
 # 项目进度
 
 ## 最后更新
-2026-05-29
+2026-05-30（下午）
 
 ## 上次改动摘要
-- 目的地实用信息卡片组完成：天气（WeatherKit，待开启 entitlement）、充电插头/电压、货币+实时汇率
-- 新增 `DestinationInfoView`：GeometryReader 动态宽度、iOS 17 `.scrollTargetBehavior(.viewAligned)` 自动回弹分页、等高卡片
-- 新增 `ExchangeRateManager`：从 jsDelivr CDN 拉取汇率，按天缓存在 UserDefaults，自动读取设备 locale 作为基准货币
-- 货币卡片展示：币种代码 + 符号 + `1 USD ≈ 149.8 ¥` 汇率参考行
+- **Live Activity 完整集成完成**（锁屏卡片 + 灵动岛）：
+  1. `PackingActivityAttributes` 移到 `SharedSources/`，通过 pbxproj 加入两个 target，解决类型标识符不一致问题
+  2. `terminateAll()` 内 async Task 在 `Activity.request()` 之后执行，把刚建好的新 Activity 也 end 掉了。修复：调用前先快照 `.activities` 列表，Task 只 end 快照中的旧 Activity
+- Widget Extension 本地化：新建 `CarryWidget/Localizable.xcstrings`（9 种语言），修复 `CarryWidgetLiveActivity.swift` 内硬编码中文
+- Widget 文件加 `#if canImport(ActivityKit)` 守卫，消除 Mac Catalyst 主 app 对 widget 文件 SourceKit 误报
 
 ## 已上线功能
 - [x] 日历同步（CalendarManager / EventKit）

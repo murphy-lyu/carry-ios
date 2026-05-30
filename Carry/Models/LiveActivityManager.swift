@@ -40,7 +40,7 @@ final class LiveActivityManager {
     func startIfNeeded(for trip: TripBundle) {
         guard isEnabled else { return }
         guard ActivityAuthorizationInfo().areActivitiesEnabled else { return }
-        guard trip.departureDate > Date() else { return }
+        guard trip.departureDate >= Calendar.current.startOfDay(for: Date()) else { return }
 
         // 同一行程已在运行，无需重复启动
         if let current = currentActivity,
@@ -57,15 +57,14 @@ final class LiveActivityManager {
         guard total > 0 else { return }
 
         let packed = allItems.filter { $0.isPacked }.count
-        let attributes = PackingActivityAttributes(
-            tripName: trip.name,
-            destinationCity: trip.destinationCity.isEmpty ? trip.name : trip.destinationCity,
-            departureDate: trip.departureDate,
-            totalItems: total
-        )
+        let attributes = PackingActivityAttributes(tripId: trip.id)
         let state = PackingActivityAttributes.ContentState(
             packedItems: packed,
-            isCompleted: packed == total
+            totalItems: total,
+            isCompleted: packed == total,
+            tripName: trip.name,
+            destinationCity: trip.destinationCity.isEmpty ? trip.name : trip.destinationCity,
+            departureDate: trip.departureDate
         )
 
         do {
@@ -98,7 +97,11 @@ final class LiveActivityManager {
 
         let state = PackingActivityAttributes.ContentState(
             packedItems: packed,
-            isCompleted: total > 0 && packed == total
+            totalItems: total,
+            isCompleted: total > 0 && packed == total,
+            tripName: trip.name,
+            destinationCity: trip.destinationCity.isEmpty ? trip.name : trip.destinationCity,
+            departureDate: trip.departureDate
         )
         Task {
             await activity.update(.init(state: state, staleDate: nil))
@@ -121,12 +124,13 @@ final class LiveActivityManager {
 
     /// 立即结束所有 Live Activity（关闭开关 / 行程删除时使用）。
     func endAll() {
+        let snapshot = Array(Activity<PackingActivityAttributes>.activities)
+        currentActivity = nil
+        currentTripId = nil
         Task {
-            for activity in Activity<PackingActivityAttributes>.activities {
+            for activity in snapshot {
                 await activity.end(nil, dismissalPolicy: .immediate)
             }
-            currentActivity = nil
-            currentTripId = nil
         }
     }
 
@@ -138,7 +142,7 @@ final class LiveActivityManager {
         guard let activity = Activity<PackingActivityAttributes>.activities
             .first(where: { _ in true }) else { return }
         let calendar = Calendar.current
-        let departure = activity.attributes.departureDate
+        let departure = activity.content.state.departureDate
         if calendar.startOfDay(for: departure) <= calendar.startOfDay(for: Date()) {
             end(for: tripId)
         }
@@ -148,14 +152,67 @@ final class LiveActivityManager {
 
     // MARK: - 诊断（DEBUG）
 
-    /// 返回当前 Live Activity 各项条件的状态文字，供 Developer 页面显示。
     var diagnosticAuthEnabled: Bool {
         ActivityAuthorizationInfo().areActivitiesEnabled
     }
 
+#if DEBUG
+    var diagnosticActivityState: String {
+        let activities = Activity<PackingActivityAttributes>.activities
+        guard !activities.isEmpty else { return "❌ 系统中无 PackingActivityAttributes Activity" }
+        let info = activities.enumerated().map { i, a in
+            "[\(i)] state=\(a.activityState)"
+        }.joined(separator: "\n")
+        return "共 \(activities.count) 条:\n\(info)"
+    }
+#endif
+
+#if DEBUG
+    /// 强制启动并返回错误描述，供 Developer 页面诊断用。
+    func forceStart(for trip: TripBundle) -> String {
+        guard isEnabled else { return "❌ 开关未开启" }
+        guard ActivityAuthorizationInfo().areActivitiesEnabled else { return "❌ 系统未授权 Live Activity" }
+        guard trip.departureDate >= Calendar.current.startOfDay(for: Date()) else { return "❌ 行程已出发（departureDate < today）" }
+
+        terminateAll()
+
+        let allItems = trip.safeSections
+            .flatMap { $0.items ?? [] }
+            .filter { !$0.name.isEmpty }
+        let total = allItems.count
+        guard total > 0 else { return "❌ 行程没有物品" }
+
+        let packed = allItems.filter { $0.isPacked }.count
+        let attributes = PackingActivityAttributes(tripId: trip.id)
+        let state = PackingActivityAttributes.ContentState(
+            packedItems: packed,
+            totalItems: total,
+            isCompleted: packed == total,
+            tripName: trip.name,
+            destinationCity: trip.destinationCity.isEmpty ? trip.name : trip.destinationCity,
+            departureDate: trip.departureDate
+        )
+        do {
+            let activity = try Activity.request(
+                attributes: attributes,
+                content: .init(state: state, staleDate: nil),
+                pushType: nil
+            )
+            currentActivity = activity
+            currentTripId = trip.id
+            return "✅ 已启动：\(trip.name)（\(packed)/\(total)）"
+        } catch {
+            return "❌ Activity.request 失败：\(error.localizedDescription)"
+        }
+    }
+#endif
+
     private func terminateAll() {
+        // 先快照，Task 只 end 调用时已存在的旧 Activity，
+        // 避免 end 掉调用后立刻创建的新 Activity。
+        let snapshot = Array(Activity<PackingActivityAttributes>.activities)
         Task {
-            for activity in Activity<PackingActivityAttributes>.activities {
+            for activity in snapshot {
                 await activity.end(nil, dismissalPolicy: .immediate)
             }
         }

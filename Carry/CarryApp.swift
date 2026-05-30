@@ -8,6 +8,7 @@
 import SwiftUI
 import SwiftData
 import AppIntents
+import UserNotifications
 
 @main
 struct CarryApp: App {
@@ -34,6 +35,8 @@ struct CarryApp: App {
 
     @AppStorage("appearance_mode") private var appearanceModeRaw = AppearanceMode.system.rawValue
 
+    private let notificationDelegate = PackReminderNotificationDelegate()
+
     private var appearanceMode: AppearanceMode {
         AppearanceMode(rawValue: appearanceModeRaw) ?? .system
     }
@@ -46,15 +49,16 @@ struct CarryApp: App {
                 .preferredColorScheme(appearanceMode.colorScheme)
                 .onAppear {
                     CarryLogger.shared.log(.appLaunched)
-                    // Register App Shortcuts with Siri / Spotlight.
                     CarryAppShortcuts.updateAppShortcutParameters()
+                    // 注册通知委托，让打包提醒点击后直接跳到对应行程
+                    notificationDelegate.router = router
+                    UNUserNotificationCenter.current().delegate = notificationDelegate
                 }
                 .onOpenURL { url in
-                    // carry://trip/{uuid}
                     guard url.scheme == "carry",
-                          url.host == "trip",
                           let uuidString = url.pathComponents.dropFirst().first,
                           let id = UUID(uuidString: uuidString) else { return }
+                    // carry://trip/{uuid} 或 carry://packing/{uuid}
                     router.pendingTripId = id
                 }
                 .onReceive(NotificationCenter.default.publisher(
@@ -87,5 +91,34 @@ struct CarryApp: App {
                 }
         }
         .modelContainer(Self.container)
+    }
+}
+
+// MARK: - 打包提醒通知点击处理
+
+final class PackReminderNotificationDelegate: NSObject, UNUserNotificationCenterDelegate {
+    weak var router: NavigationRouter?
+
+    /// 用户点击通知时调用：解析 tripId 并跳转到对应行程打包清单
+    func userNotificationCenter(
+        _ center: UNUserNotificationCenter,
+        didReceive response: UNNotificationResponse,
+        withCompletionHandler completionHandler: @escaping () -> Void
+    ) {
+        if let tripId = NotificationManager.tripId(fromIdentifier: response.notification.request.identifier) {
+            DispatchQueue.main.async { [weak self] in
+                self?.router?.pendingTripId = tripId
+            }
+        }
+        completionHandler()
+    }
+
+    /// App 在前台时也展示 banner
+    func userNotificationCenter(
+        _ center: UNUserNotificationCenter,
+        willPresent notification: UNNotification,
+        withCompletionHandler completionHandler: @escaping (UNNotificationPresentationOptions) -> Void
+    ) {
+        completionHandler([.banner, .sound])
     }
 }
