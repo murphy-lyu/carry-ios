@@ -81,7 +81,8 @@ struct DestinationInfoView: View {
         let loaded = weatherManager.weatherByDestination[index]
 #if DEBUG
         if debugMockWeatherEnabled {
-            return loaded ?? debugMockWeather(for: index)
+            if let loaded, !loaded.isEmpty { return loaded }
+            return debugMockWeather(for: index)
         }
 #endif
         return loaded
