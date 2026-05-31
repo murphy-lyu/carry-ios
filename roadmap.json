@@ -8,10 +8,24 @@
       "titleZhHant": "即將推出",
       "items": [
         {
-          "id": "import-itinerary",
-          "title": "邮件 / 订单导入行程",
-          "titleEn": "Import trips from email / bookings",
-          "titleZhHant": "郵件 / 訂單匯入行程",
+          "id": "calendar-import",
+          "title": "从日历导入行程",
+          "titleEn": "Import trips from Calendar",
+          "titleZhHant": "從行事曆匯入行程",
+          "status": "in_progress"
+        },
+        {
+          "id": "icloud-sync",
+          "title": "iCloud 同步",
+          "titleEn": "iCloud sync",
+          "titleZhHant": "iCloud 同步",
+          "status": "planned"
+        },
+        {
+          "id": "apple-watch",
+          "title": "Apple Watch 支持",
+          "titleEn": "Apple Watch app",
+          "titleZhHant": "Apple Watch 支援",
           "status": "planned"
         }
       ]

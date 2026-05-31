@@ -77,15 +77,21 @@ private struct RoadmapPayload: Codable {
                 id: "upcoming",
                 title: RoadmapL10n.text(en: "Upcoming", zhHans: "即将推出", zhHant: "即將推出"),
                 items: [
-                    RoadmapItem(id: "destination-info", title: RoadmapL10n.text(en: "Destination info (plugs, voltage, currency)", zhHans: "目的地实用信息（充电插头、电压、货币）", zhHant: "目的地實用資訊（充電插頭、電壓、貨幣）"), status: .inProgress, note: nil),
-                    RoadmapItem(id: "weather", title: RoadmapL10n.text(en: "Weather forecast", zhHans: "目的地天气预报", zhHant: "目的地天氣預報"), status: .planned, note: nil),
-                    RoadmapItem(id: "import-itinerary", title: RoadmapL10n.text(en: "Import trips from email / bookings", zhHans: "邮件 / 订单导入行程", zhHant: "郵件 / 訂單匯入行程"), status: .planned, note: nil)
+                    RoadmapItem(id: "calendar-import", title: RoadmapL10n.text(en: "Import trips from Calendar", zhHans: "从日历导入行程", zhHant: "從行事曆匯入行程"), status: .inProgress, note: nil),
+                    RoadmapItem(id: "icloud-sync", title: RoadmapL10n.text(en: "iCloud sync", zhHans: "iCloud 同步", zhHant: "iCloud 同步"), status: .planned, note: nil),
+                    RoadmapItem(id: "apple-watch", title: RoadmapL10n.text(en: "Apple Watch app", zhHans: "Apple Watch 支持", zhHant: "Apple Watch 支援"), status: .planned, note: nil)
                 ]
             ),
             RoadmapSection(
                 id: "done",
                 title: RoadmapL10n.text(en: "Shipped", zhHans: "已上线", zhHant: "已上線"),
                 items: [
+                    RoadmapItem(id: "destination-info", title: RoadmapL10n.text(en: "Destination info (plugs, voltage, currency)", zhHans: "目的地实用信息（充电插头、电压、货币）", zhHant: "目的地實用資訊（充電插頭、電壓、貨幣）"), status: .done, note: nil),
+                    RoadmapItem(id: "weather", title: RoadmapL10n.text(en: "Weather forecast", zhHans: "目的地天气预报", zhHant: "目的地天氣預報"), status: .done, note: nil),
+                    RoadmapItem(id: "live-activity", title: RoadmapL10n.text(en: "Live Activity (Dynamic Island & Lock Screen)", zhHans: "灵动岛 & 锁屏打包进度", zhHant: "靈動島 & 鎖定畫面打包進度"), status: .done, note: nil),
+                    RoadmapItem(id: "home-widget", title: RoadmapL10n.text(en: "Home Screen widget", zhHans: "桌面小组件", zhHant: "主畫面小工具"), status: .done, note: nil),
+                    RoadmapItem(id: "period-reminder", title: RoadmapL10n.text(en: "Period-aware packing", zhHans: "经期打包提醒", zhHant: "生理期打包提醒"), status: .done, note: nil),
+                    RoadmapItem(id: "quick-actions", title: RoadmapL10n.text(en: "Home Screen quick actions", zhHans: "主屏快捷操作", zhHant: "主畫面快速操作"), status: .done, note: nil),
                     RoadmapItem(id: "calendar-sync", title: RoadmapL10n.text(en: "Calendar sync", zhHans: "日历同步", zhHant: "行事曆同步"), status: .done, note: nil),
                     RoadmapItem(id: "smart-suggestions", title: RoadmapL10n.text(en: "Smart suggestions", zhHans: "智能推荐清单", zhHant: "智能推薦清單"), status: .done, note: nil),
                     RoadmapItem(id: "worth-considering", title: RoadmapL10n.text(en: "Little Joys", zhHans: "小确幸", zhHant: "小確幸"), status: .done, note: nil),
