@@ -142,7 +142,7 @@ final class CalendarManager {
         #endif
 
         let tripEvent = EKEvent(eventStore: store)
-        tripEvent.title     = "🗺️ \(trip.name)"
+        tripEvent.title     = "✈️ \(trip.name)"
         tripEvent.isAllDay  = true
         tripEvent.startDate = dayStart
         tripEvent.endDate   = dayEnd
