@@ -662,7 +662,9 @@ struct PackingListView: View {
             .filter { !$0.isEmpty }.joined(separator: " · ")
         lines.append("🧳 \(heading)")
         lines.append("")
-        lines.append("📅 \(String(format: daysFormat, locale: Locale.current, bundle.localizedDateRange, Int64(bundle.days)))")
+        if !bundle.isDateless {
+            lines.append("📅 \(String(format: daysFormat, locale: Locale.current, bundle.localizedDateRange, Int64(bundle.days)))")
+        }
         if packedCount == totalCount && totalCount > 0 {
             let allPackedFormat = NSLocalizedString("packing.share.all_packed", comment: "")
             lines.append("📊 \(String(format: allPackedFormat, Int64(totalCount)))")
@@ -793,7 +795,9 @@ struct PackingListView: View {
     }
 
     private var tripDateRangeLine: String? {
-        guard let date = bundle?.localizedDateRange, !date.isEmpty else { return nil }
+        guard let bundle, !bundle.isDateless else { return nil }   // 无日期行程头部不显示日期
+        let date = bundle.localizedDateRange
+        guard !date.isEmpty else { return nil }
         return date
     }
 
