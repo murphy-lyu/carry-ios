@@ -11,7 +11,6 @@ import UIKit
 struct ScenePickerView: View {
 
     enum Mode {
-        case create(TripInfo)
         case edit(tripId: UUID)
         case autoPack(tripInfo: TripInfo, seedSections: [PackingSection])
         case suggest(tripId: UUID)
@@ -19,11 +18,6 @@ struct ScenePickerView: View {
 
     private let mode: Mode
     private let preselectedSceneKeys: [String]
-
-    init(tripInfo: TripInfo) {
-        self.mode = .create(tripInfo)
-        self.preselectedSceneKeys = []
-    }
 
     init(editingTripId: UUID) {
         self.mode = .edit(tripId: editingTripId)
@@ -199,10 +193,15 @@ struct ScenePickerView: View {
     }
 
     private var nudgeSceneKeys: [String] {
-        guard let bundle = tripBundle,
-              !bundle.countryCode.isEmpty else { return [] }
+        guard let bundle = tripBundle else { return [] }
+        // 优先用已落库的 countryCode；未回填（如刚创建、地理编码未完成）时回退到按目的地
+        // 文字即时推断，与 ItemPickerView 同源，避免气候 nudge 因时序缺失。
+        let code = bundle.countryCode.isEmpty
+            ? (store.inferCountryCodes(for: bundle.destinationCity).first ?? "")
+            : bundle.countryCode
+        guard !code.isEmpty else { return [] }
         let inferred = ClimateInference.inferredSceneKeys(
-            countryCode: bundle.countryCode,
+            countryCode: code,
             departureDate: bundle.departureDate
         )
         let selectedKeys = Set(selectedItems.compactMap { sceneLabelToKey[$0] })
@@ -335,12 +334,12 @@ struct ScenePickerView: View {
         CarryLogger.shared.log(.cycleNudgeShown)
     }
 
-    /// 跨 mode 提取行程日期区间。新建 / autoPack 用 TripInfo（创建当下即有日期，
+    /// 跨 mode 提取行程日期区间。autoPack 用 TripInfo（创建当下即有日期，
     /// 无需等待 countryCode），编辑 / 推荐用已落库的 TripBundle。
     private var tripDateRange: (start: Date, end: Date)? {
         let calendar = Calendar.current
         switch mode {
-        case .create(let info), .autoPack(let info, _):
+        case .autoPack(let info, _):
             return (calendar.startOfDay(for: info.departureDate),
                     calendar.startOfDay(for: info.returnDate))
         case .edit(let id), .suggest(let id):
@@ -369,8 +368,6 @@ struct ScenePickerView: View {
                 savedKeys.contains(key) ? label : nil
             }
             selectedItems = Set(labels)
-        default:
-            return
         }
     }
 
@@ -378,15 +375,12 @@ struct ScenePickerView: View {
         let keys = selectedItems.compactMap { sceneLabelToKey[$0] }
         let modeLabel: String
         switch mode {
-        case .create:   modeLabel = "create"
         case .edit:     modeLabel = "edit"
         case .autoPack: modeLabel = "auto_pack"
         case .suggest:  modeLabel = "suggest"
         }
         CarryLogger.shared.log(.sceneSelected, context: "mode=\(modeLabel) count=\(keys.count)")
         switch mode {
-        case .create(let info):
-            generateList(info: info, keys: keys)
         case .edit(let tripId):
             guard !isSaved else { return }
             store.regenerateScenes(tripId: tripId, keys: keys)
@@ -414,66 +408,6 @@ struct ScenePickerView: View {
         }
     }
 
-    @discardableResult
-    private func buildTrip(info: TripInfo, keys: [String], seedSections: [PackingSection] = []) -> UUID {
-        let isIntl = store.inferIsInternational(for: info.destinationCity)
-        let destCodes = store.inferCountryCodes(for: info.destinationCity)
-        var sections = generatePackingSections(selectedScenes: keys, tripDays: info.durationDays, isInternational: isIntl, destinationCodes: destCodes)
-        if !seedSections.isEmpty {
-            mergeSeedSections(seedSections, into: &sections)
-        }
-        let bundle = TripBundle(
-            name: info.name,
-            destinationCity: info.destinationCity,
-            days: info.durationDays,
-            dateRange: info.dateRangeDisplay,
-            departureDate: info.departureDate,
-            selectedSceneKeys: keys,
-            sections: sections
-        )
-        store.setDraftTrip(bundle)
-        return bundle.id
-    }
-
-    private func generateList(info: TripInfo, keys: [String]) {
-        let id = buildTrip(info: info, keys: keys)
-        router.path.append(CreationRoute.packingList(id))
-    }
-
-    private func mergeSeedSections(_ seedSections: [PackingSection], into sections: inout [PackingSection]) {
-        for seedSection in seedSections {
-            if let targetIndex = sections.firstIndex(where: { $0.title == seedSection.title }) {
-                guard let targetItems = sections[targetIndex].items else { continue }
-                let existingNames = Set(targetItems.map { $0.name.lowercased() })
-                var nextOrder = (targetItems.map(\.sortOrder).max() ?? -1) + 1
-                for seedItem in seedSection.sortedItems where !existingNames.contains(seedItem.name.lowercased()) {
-                    let newItem = PackingItem(
-                        name: seedItem.name,
-                        quantity: seedItem.quantity,
-                        isAlert: seedItem.isAlert,
-                        sortOrder: nextOrder
-                    )
-                    nextOrder += 1
-                    sections[targetIndex].items?.append(newItem)
-                }
-            } else {
-                let copiedItems = seedSection.sortedItems.enumerated().map { index, item in
-                    PackingItem(
-                        name: item.name,
-                        quantity: item.quantity,
-                        isAlert: item.isAlert,
-                        sortOrder: index
-                    )
-                }
-                let newSection = PackingSection(
-                    title: seedSection.title,
-                    items: copiedItems,
-                    sortOrder: sections.count
-                )
-                sections.append(newSection)
-            }
-        }
-    }
 }
 
 // MARK: - Scene Group Section

@@ -131,6 +131,10 @@ struct ItemPickerView: View {
     @State private var didLogSearch = false
     @State private var isConfirmingSelection = false
     @AppStorage("itempicker.last_source_mode") private var lastSourceModeRawValue: String = SourceMode.smart.rawValue
+    /// 「经期打包提醒」总开关（设置内，默认关）。关闭时不跑预测、不触碰 HealthKit。
+    @AppStorage("cycleNudgeFeatureEnabled") private var cycleNudgeFeatureEnabled = false
+    @State private var cycleNudgeActive = false
+    @State private var didRunCyclePrediction = false
 
     private var existingItemNames: Set<String> {
         guard case .merge(let tripId) = mode,
@@ -193,6 +197,61 @@ struct ItemPickerView: View {
         case preset
         case myItems
         case smart
+    }
+
+    private static let periodSceneKey = "personal_period"
+
+    /// 经期场景 chip 的展示标签（"🌸 On / near period"），从 key 反查，避免硬编码。
+    private var periodSceneLabel: String? {
+        sceneLabelToKey.first(where: { $0.value == Self.periodSceneKey })?.key
+    }
+
+    /// 二次添加（merge）时，行程创建阶段已应用过的场景 key。这些不再重复推荐。
+    /// 创建 / autoPack 模式下为空（尚无已应用场景）。
+    private var alreadyAppliedSceneKeys: Set<String> {
+        guard case .merge(let tripId) = mode, let bundle = store.bundle(for: tripId) else { return [] }
+        return Set(bundle.selectedSceneKeys)
+    }
+
+    /// 基于目的地（+ 出发日期）推断的气候场景标签。
+    /// 与 ScenePickerView 的气候推荐同源；新建流程的目的地码同步推断即可，无需等待异步回填。
+    /// 注意：不按"是否已选"过滤——推荐项被上移到顶部唯一展示，选中后仍留在顶部（显示选中态）。
+    /// 但 merge 模式会排除创建时已应用过的场景，避免二次添加时重复推荐。
+    private var climateSuggestedLabels: [String] {
+        guard let primaryCode = tripDestinationCodes.first(where: { !$0.isEmpty }),
+              let range = tripDateRange else { return [] }
+        let inferred = ClimateInference.inferredSceneKeys(countryCode: primaryCode, departureDate: range.start)
+        let applied = alreadyAppliedSceneKeys
+        return inferred
+            .filter { !applied.contains($0) }
+            .compactMap { key in sceneLabelToKey.first(where: { $0.value == key })?.key }
+    }
+
+    /// 是否推荐经期场景：预测命中，且（merge 模式下）该场景未在创建时被应用过。
+    private var shouldNudgePeriod: Bool {
+        cycleNudgeActive && !alreadyAppliedSceneKeys.contains(Self.periodSceneKey)
+    }
+
+    /// 被上移到顶部「Suggested」区的场景标签集合（气候 + 经期）。
+    /// 这些标签需从下方固定分组中排除，保证"一个场景一个位置"，不重复展示。
+    private var promotedSceneLabels: Set<String> {
+        var set = Set(climateSuggestedLabels)
+        if shouldNudgePeriod, let period = periodSceneLabel { set.insert(period) }
+        return set
+    }
+
+    /// 跨 mode 提取行程日期区间，供经期预测使用。
+    private var tripDateRange: (start: Date, end: Date)? {
+        let cal = Calendar.current
+        switch mode {
+        case .create(let info), .autoPackReview(let info, _):
+            return (cal.startOfDay(for: info.departureDate), cal.startOfDay(for: info.returnDate))
+        case .merge(let tripId):
+            guard let bundle = store.bundle(for: tripId) else { return nil }
+            let start = cal.startOfDay(for: bundle.departureDate)
+            guard let end = cal.date(byAdding: .day, value: max(0, bundle.days), to: start) else { return nil }
+            return (start, end)
+        }
     }
 
     private var tripDays: Int {
@@ -550,6 +609,9 @@ struct ItemPickerView: View {
                         .labelStyle(.titleAndIcon)
                 }
                 .fontWeight(.semibold)
+                // 创建流程：始终可点（允许空清单，稍后在清单页添加）。
+                // 追加流程（.merge）：无选择即置灰，避免"加 0 个"的死点击。
+                .disabled(!isCreateMode && !canConfirm)
             }
         }
         .onAppear {
@@ -875,7 +937,8 @@ struct ItemPickerView: View {
     private var groupedSmartScenesView: some View {
         VStack(alignment: .leading, spacing: 12) {
             ForEach(defaultSceneGroups) { group in
-                let groupLabels = group.items.filter { sceneLabelToKey[$0] != nil }
+                // 排除已上移到顶部「Suggested」区的场景，避免同一场景重复展示。
+                let groupLabels = group.items.filter { sceneLabelToKey[$0] != nil && !promotedSceneLabels.contains($0) }
                 if !groupLabels.isEmpty {
                     VStack(alignment: .leading, spacing: 4) {
                         Text(LocalizedStringKey(group.title))
@@ -903,6 +966,13 @@ struct ItemPickerView: View {
                             .padding(.bottom, 2)
 
                         if searchText.isEmpty {
+                            let climateLabels = climateSuggestedLabels
+                            if !climateLabels.isEmpty {
+                                nudgeSection(titleKey: "scenepicker.nudge.title", labels: climateLabels)
+                            }
+                            if shouldNudgePeriod, let label = periodSceneLabel {
+                                nudgeSection(titleKey: "scenepicker.nudge.cycle.title", labels: [label])
+                            }
                             groupedSmartScenesView
                         } else if labels.isEmpty {
                             smartSearchEmptyState
@@ -918,6 +988,40 @@ struct ItemPickerView: View {
             .padding(.bottom, isCreateMode ? 120 : 36)
         }
         .scrollDismissesKeyboard(.interactively)
+        .task { await runCyclePredictionIfNeeded() }
+    }
+
+    /// 轻推区块：在场景列表顶部高亮推荐的场景（气候 / 经期），点击即选入。
+    private func nudgeSection(titleKey: String, labels: [String]) -> some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Text(LocalizedStringKey(titleKey))
+                .font(.system(size: 11, weight: .medium))
+                .foregroundStyle(colorScheme == .dark ? Color(.systemGray2) : Color(.systemGray))
+                .kerning(1.5)
+                .textCase(.uppercase)
+            sceneChipGrid(labels: labels)
+        }
+    }
+
+    /// 经期预测：总闸开启（或 DEBUG 强制）时跑一次，命中则激活顶部轻推。读不到/不重叠静默降级。
+    private func runCyclePredictionIfNeeded() async {
+        guard !didRunCyclePrediction else { return }
+        didRunCyclePrediction = true
+
+#if DEBUG
+        if UserDefaults.standard.bool(forKey: "debugForceCycleNudge") {
+            cycleNudgeActive = true
+            CarryLogger.shared.log(.cycleNudgeShown)
+            return
+        }
+#endif
+
+        guard cycleNudgeFeatureEnabled, let range = tripDateRange else { return }
+        let overlaps = await CycleInference.tripOverlapsPredictedPeriod(start: range.start, end: range.end)
+        guard overlaps else { return }
+
+        cycleNudgeActive = true
+        CarryLogger.shared.log(.cycleNudgeShown)
     }
 
     private var sceneChipGrid: some View {
@@ -1575,7 +1679,9 @@ struct ItemPickerView: View {
         }
 
         let sections = combinedSelectedSections()
-        guard !sections.isEmpty else { return }
+        // 追加模式无选择则无可合并，直接返回（按钮此时也已禁用，仅作兜底）。
+        // 创建模式允许空清单：行程照常创建，用户可稍后在清单页添加。
+        if !isCreateMode, sections.isEmpty { return }
         let presetCount = selectedItems.count
         let myItemCount = selectedMyItemIDs.count
         let sourceLabel = presetCount > 0 && myItemCount > 0 ? "mixed"
@@ -1598,7 +1704,11 @@ struct ItemPickerView: View {
                 sections: sections
             )
             store.setDraftTrip(bundle)
-            router.path.append(CreationRoute.packingList(bundle.id, initialItemCount: totalAdded))
+            if sections.isEmpty {
+                finalizeEmptyTrip(bundle: bundle, city: info.destinationCity)
+            } else {
+                router.path.append(CreationRoute.packingList(bundle.id, initialItemCount: totalAdded))
+            }
 
         case .autoPackReview(let info, let sceneKeys):
             let bundle = TripBundle(
@@ -1611,7 +1721,11 @@ struct ItemPickerView: View {
                 sections: sections
             )
             store.setDraftTrip(bundle)
-            router.path.append(CreationRoute.packingList(bundle.id, initialItemCount: totalAdded))
+            if sections.isEmpty {
+                finalizeEmptyTrip(bundle: bundle, city: info.destinationCity)
+            } else {
+                router.path.append(CreationRoute.packingList(bundle.id, initialItemCount: totalAdded))
+            }
 
         case .merge(let tripId):
             store.mergeItems(tripId: tripId, sections: sections)
@@ -1626,6 +1740,17 @@ struct ItemPickerView: View {
                 isConfirmingSelection = false
             }
         }
+    }
+
+    /// 空清单创建：跳过新建预览（那一步无内容可看、且会形成 Add item ↔ Add items 的空跳转循环），
+    /// 直接提交行程并进入正式清单页（isNewTrip:false，带 ⋯ 菜单），与预览页 "Save list" 行为一致。
+    private func finalizeEmptyTrip(bundle: TripBundle, city: String) {
+        store.commitDraftTrip()
+        if !city.isEmpty {
+            store.updateCountryCode(for: bundle.id, city: city)
+        }
+        router.path = NavigationPath([bundle.id])
+        Task { await NotificationManager.requestAuthorizationIfNeeded() }
     }
 
     private func buildMyItemSections() -> [PackingSection] {

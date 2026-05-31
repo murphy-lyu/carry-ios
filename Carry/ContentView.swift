@@ -12,7 +12,6 @@ enum CreationRoute: Hashable {
     case tripInfo(UUID, startInMyItems: Bool)
     case itemPicker(TripInfo, startInMyItems: Bool)
     case addItems(UUID)
-    case scenePicker(TripInfo)
     case packingList(UUID, initialItemCount: Int = 0)
     case editScenes(UUID)
     case autoPackPicker(TripInfo, sceneKeys: [String])
@@ -166,8 +165,6 @@ struct ContentView: View {
             ItemPickerView(tripInfo: info, startInMyItems: startInMyItems)
         case .addItems(let tripId):
             ItemPickerView(tripId: tripId)
-        case .scenePicker(let info):
-            ScenePickerView(tripInfo: info)
         case .packingList(let id, let initialItemCount):
             PackingListView(tripId: id, isNewTrip: true, initialItemCount: initialItemCount)
         case .editScenes(let id):

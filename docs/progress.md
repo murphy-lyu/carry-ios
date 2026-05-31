@@ -3,6 +3,25 @@
 ## 最后更新
 2026-05-31
 
+## 上次改动摘要（场景推荐去重重构 + Add items 交互打磨 · 2026-05-31）
+
+- **场景推荐"上移去重"**：被推荐场景（气候 + 经期）只在 ItemPicker 顶部「Suggested」区出现一次，经 `promotedSceneLabels` 从固定分组排除；顶部 chip 选中后留在原地显示选中态，消除旧实现的"重复展示 + 选中态在分身间瞬移"的别扭交互。
+- **ScenePicker 气候 nudge 时序修复**：`countryCode` 未回填时回退到 `store.inferCountryCodes(目的地文字)`，与 ItemPicker 同源，解决"同一泰国行程 ItemPicker 有气候 nudge、ScenePicker 没有"的不一致。
+- **空清单创建直达**：创建流程啥都不选点确认 → `finalizeEmptyTrip` 直接提交行程并进正式清单页（isNewTrip:false，有 ⋯ 菜单），跳过无内容的新建预览，消除 Add item↔Add items 空跳转循环。
+- **确认按钮按模式可点性**：创建模式始终可点（允许空清单），追加模式无选择时置灰，消除死点击。
+- **merge 去冗余**：二次添加时通过 `alreadyAppliedSceneKeys` 排除创建时已应用的场景 nudge；预设场景保持 fresh（mergeItems 已按名去重）。
+- **死代码清理**：删除 `CreationRoute.scenePicker` + `ScenePickerView.Mode.create` / `init(tripInfo:)`（ContentView + ScenePickerView）。
+- 全部通过 iPhone 17 Pro simulator build + 真机视觉验证（设置入口、Health 授权、两 nudge 同屏、空创建直达均确认）。
+- **待办**：ScenePickerView 的场景推荐去重尚未同步（编辑场景流程仍是旧的分身式）；merge 回写 `selectedSceneKeys` 的边界闭环未做。
+
+## 上次改动摘要（nudge 接到正确界面 + 气候 nudge 迁入 · 2026-05-31）
+
+- **修正接错界面**：真机验证发现新建主流程是 `TripInfoView → ItemPickerView(Smart picks) → PackingList`，不经过 ScenePickerView（`CreationRoute.scenePicker` 是死代码）。原先经期/气候 nudge 只在 ScenePickerView，新建时从不出现。
+- 在 `ItemPickerView.smartRecommendationView` 顶部新增通用 `nudgeSection(titleKey:labels:)`：气候 nudge（`ClimateInference`，主目的地码同步推断）+ 经期 nudge（`CycleInference`），复用 `sceneChipGrid`，以 `cycleNudgeFeatureEnabled` / DEBUG 强制开关为闸。
+- **气候 nudge 一并迁入**：既有气候 nudge 同样只在 ScenePickerView、新建流程从未显示，本次顺带补到 ItemPickerView，消除"有经期 nudge 没气候 nudge"的不一致。ScenePickerView 两个 nudge 保留（编辑场景流程）。
+- 遗留：`CreationRoute.scenePicker` + ScenePickerView `.create` 分支为死代码，已 spawn 独立任务清理。
+- 通过 simulator build + 真机视觉验证（设置入口、Health 授权弹窗、设置页均确认）。
+
 ## 上次改动摘要（经期提醒：显性入口 + 预测前移 · 2026-05-31）
 
 - **交互重构**：经期功能改为**设置内显性 opt-in**。设置 → 通用 → 「经期提醒」→ `CycleReminderSettingsView`（新文件），开关 `cycleNudgeFeatureEnabled`（默认关）。开启时触发 HealthKit 系统授权弹窗（`CycleInference.requestAuthorization()`）。页面含功能说明 + 隐私脚注（仅本机/不存储/不上传/可随时关）。仅 `CycleInference.isAvailable` 的设备显示该入口。
