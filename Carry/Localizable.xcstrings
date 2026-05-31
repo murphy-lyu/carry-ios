@@ -28196,6 +28196,20 @@
         }
       }
     },
+    "packing.header.planning": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": { "stringUnit": { "state": "translated", "value": "In Planung · noch kein Datum" } },
+        "en": { "stringUnit": { "state": "translated", "value": "Planning · no dates yet" } },
+        "es": { "stringUnit": { "state": "translated", "value": "En planificación · sin fechas aún" } },
+        "fr": { "stringUnit": { "state": "translated", "value": "En préparation · dates à définir" } },
+        "ja": { "stringUnit": { "state": "translated", "value": "計画中 · 日付未定" } },
+        "ko": { "stringUnit": { "state": "translated", "value": "계획 중 · 날짜 미정" } },
+        "pt-BR": { "stringUnit": { "state": "translated", "value": "Em planejamento · sem datas ainda" } },
+        "zh-Hans": { "stringUnit": { "state": "translated", "value": "规划中 · 日期待定" } },
+        "zh-Hant": { "stringUnit": { "state": "translated", "value": "規劃中 · 日期待定" } }
+      }
+    },
     "home.planning": {
       "extractionState": "manual",
       "localizations": {

@@ -795,7 +795,12 @@ struct PackingListView: View {
     }
 
     private var tripDateRangeLine: String? {
-        guard let bundle, !bundle.isDateless else { return nil }   // 无日期行程头部不显示日期
+        guard let bundle else { return nil }
+        // 无日期「规划中」行程：头部不显示占位日期，改显示规划标签——清单页是独立上下文
+        //（没有首页「规划中」分区标题兜底），需自己传达"这是计划、日期待定"。
+        if bundle.isDateless {
+            return NSLocalizedString("packing.header.planning", comment: "Planning trip header, no dates set")
+        }
         let date = bundle.localizedDateRange
         guard !date.isEmpty else { return nil }
         return date
@@ -1546,7 +1551,7 @@ struct ReorderSectionsView: View {
         ScrollView {
             if ordered.isEmpty {
                 VStack(spacing: 16) {
-                    Spacer(minLength: 90)
+                    Spacer(minLength: 24)
                     Image(systemName: "square.grid.2x2")
                         .font(.system(size: 38, weight: .regular))
                         .foregroundStyle(.secondary)
@@ -1569,10 +1574,13 @@ struct ReorderSectionsView: View {
                     }
                     .buttonStyle(PressableScaleButtonStyle(scale: 0.985, pressedBrightness: -0.02, pressedOpacity: 0.95))
                     .padding(.horizontal, 16)
-                    Spacer(minLength: 90)
+                    Spacer(minLength: 24)
                 }
                 .frame(maxWidth: .infinity)
                 .padding(.horizontal, 24)
+                // 让空状态在 ScrollView 可视区（导航栏与底部栏之间）内垂直居中，
+                // 而非整屏居中：内容高度对齐容器可视高度，再由对称 Spacer 居中。
+                .containerRelativeFrame(.vertical, alignment: .center)
             } else {
                 VStack(spacing: rowGap) {
                     ForEach(ordered) { section in
