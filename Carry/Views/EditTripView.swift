@@ -74,7 +74,7 @@ struct EditTripView: View {
                                 // 无日期态：点此设置日期即转正为普通行程。
                                 Button { showDatePicker = true } label: {
                                     HStack {
-                                        Text("edittrip.set_dates")
+                                        Text("tripdates.unset")
                                             .font(.subheadline)
                                             .foregroundStyle(.secondary)
                                         Spacer()
@@ -129,13 +129,17 @@ struct EditTripView: View {
                                 )
                                 .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
 
-                                // 清除日期 → 退回「规划中」。
+                                // 就近清除日期 → 退回「规划中」（与创建页同款）。
                                 Button {
                                     info.isDateless = true
                                 } label: {
-                                    Text("edittrip.clear_dates")
-                                        .font(.footnote.weight(.medium))
-                                        .foregroundStyle(.secondary)
+                                    HStack(spacing: 4) {
+                                        Image(systemName: "xmark.circle")
+                                            .font(.caption2.weight(.semibold))
+                                        Text("tripdates.clear")
+                                            .font(.footnote.weight(.medium))
+                                    }
+                                    .foregroundStyle(.secondary)
                                 }
                                 .buttonStyle(.plain)
                                 .padding(.top, 6)

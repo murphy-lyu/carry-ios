@@ -15,6 +15,8 @@ struct TripInfoView: View {
     @State private var departureDate: Date
     @State private var returnDate: Date
     @State private var showDatePicker = false
+    /// 是否设置了日期。预填默认 true；点「无需日期」清除则为 false（→ 规划中行程）。
+    @State private var hasDates = true
     @FocusState private var focusedField: FocusField?
     @EnvironmentObject var router: NavigationRouter
     @Environment(\.colorScheme) private var colorScheme
@@ -50,13 +52,13 @@ struct TripInfoView: View {
         canContinue ? Color(.systemBackground) : Color(.secondaryLabel)
     }
 
-    private func makeInfo(dateless: Bool) -> TripInfo {
+    private var info: TripInfo {
         TripInfo(
             name: tripName,
             destinationCity: destinationCity,
             departureDate: departureDate,
             returnDate: returnDate,
-            isDateless: dateless
+            isDateless: !hasDates
         )
     }
 
@@ -89,42 +91,59 @@ struct TripInfoView: View {
                     }
 
                     fieldGroup(label: "Dates") {
-                        Button { showDatePicker = true } label: {
-                            HStack(spacing: 0) {
-                                VStack(alignment: .leading, spacing: 3) {
-                                    Text("Departure")
+                        if hasDates {
+                            Button { showDatePicker = true } label: {
+                                HStack(spacing: 0) {
+                                    VStack(alignment: .leading, spacing: 3) {
+                                        Text("Departure")
+                                            .font(.caption.weight(.semibold))
+                                            .foregroundStyle(.secondary.opacity(0.82))
+                                        Text(departureDate.formatted(date: .long, time: .omitted))
+                                            .font(.subheadline)
+                                            .foregroundStyle(.primary)
+                                    }
+                                    Spacer()
+                                    Image(systemName: "arrow.right")
                                         .font(.caption.weight(.semibold))
-                                        .foregroundStyle(.secondary.opacity(0.82))
-                                    Text(departureDate.formatted(date: .long, time: .omitted))
-                                        .font(.subheadline)
-                                        .foregroundStyle(.primary)
+                                        .foregroundStyle(.tertiary.opacity(0.88))
+                                    Spacer()
+                                    VStack(alignment: .trailing, spacing: 3) {
+                                        Text("Return")
+                                            .font(.caption.weight(.semibold))
+                                            .foregroundStyle(.secondary.opacity(0.82))
+                                        Text(returnDate.formatted(date: .long, time: .omitted))
+                                            .font(.subheadline)
+                                            .foregroundStyle(.primary)
+                                    }
                                 }
-                                Spacer()
-                                Image(systemName: "arrow.right")
-                                    .font(.caption.weight(.semibold))
-                                    .foregroundStyle(.tertiary.opacity(0.88))
-                                Spacer()
-                                VStack(alignment: .trailing, spacing: 3) {
-                                    Text("Return")
-                                        .font(.caption.weight(.semibold))
-                                        .foregroundStyle(.secondary.opacity(0.82))
-                                    Text(returnDate.formatted(date: .long, time: .omitted))
-                                        .font(.subheadline)
-                                        .foregroundStyle(.primary)
-                                }
+                                .padding(14)
                             }
-                            .padding(14)
+                            .buttonStyle(.plain)
+                            .background(Color(UIColor.systemBackground).opacity(0.64))
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 12, style: .continuous)
+                                    .strokeBorder(
+                                        Color.primary.opacity(colorScheme == .dark ? 0.11 : 0.07),
+                                        lineWidth: 1
+                                    )
+                            )
+                            .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+
+                            // 就近清除：点此改为「规划中」无日期行程。
+                            Button { hasDates = false } label: {
+                                HStack(spacing: 4) {
+                                    Image(systemName: "xmark.circle")
+                                        .font(.caption2.weight(.semibold))
+                                    Text("tripdates.clear")
+                                        .font(.footnote.weight(.medium))
+                                }
+                                .foregroundStyle(.secondary)
+                            }
+                            .buttonStyle(.plain)
+                            .padding(.top, 6)
+                        } else {
+                            datesUnsetCard
                         }
-                        .buttonStyle(.plain)
-                        .background(Color(UIColor.systemBackground).opacity(0.64))
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 12, style: .continuous)
-                                .strokeBorder(
-                                    Color.primary.opacity(colorScheme == .dark ? 0.11 : 0.07),
-                                    lineWidth: 1
-                                )
-                        )
-                        .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
                     }
                 }
                 .padding(.bottom, 16)
@@ -137,11 +156,11 @@ struct TripInfoView: View {
             }
         )
         .safeAreaInset(edge: .bottom) {
-            VStack(spacing: 10) {
+            VStack(spacing: 0) {
                 Button(action: {
                     guard canContinue else { return }
                     hideKeyboard()
-                    router.path.append(CreationRoute.itemPicker(makeInfo(dateless: false), startInMyItems: startInMyItems))
+                    router.path.append(CreationRoute.itemPicker(info, startInMyItems: startInMyItems))
                 }) {
                     Text("Continue")
                         .font(.subheadline)
@@ -158,23 +177,8 @@ struct TripInfoView: View {
                 }
                 .buttonStyle(SolidPressButtonStyle())
                 .allowsHitTesting(canContinue)
-
-                // 次级入口：暂不设置日期，作为「规划中」行程先建起来（日期可稍后在编辑里补上）。
-                Button(action: {
-                    guard canContinue else { return }
-                    hideKeyboard()
-                    router.path.append(CreationRoute.itemPicker(makeInfo(dateless: true), startInMyItems: startInMyItems))
-                }) {
-                    Text("tripinfo.skip_dates")
-                        .font(.footnote.weight(.medium))
-                        .foregroundStyle(canContinue ? Color.secondary : Color(.tertiaryLabel))
-                        .frame(maxWidth: .infinity)
-                        .frame(height: 32)
-                }
-                .buttonStyle(.plain)
-                .allowsHitTesting(canContinue)
+                .padding(.horizontal, 16)
             }
-            .padding(.horizontal, 16)
             .padding(.top, 12)
             .padding(.bottom, 16)
             .frame(maxWidth: .infinity)
@@ -189,6 +193,7 @@ struct TripInfoView: View {
             ) { start, end in
                 departureDate = start
                 returnDate = max(end, Calendar.current.date(byAdding: .day, value: 1, to: start) ?? start)
+                hasDates = true   // 选定日期 = 有日期行程
             }
         }
         .onAppear {
@@ -199,6 +204,29 @@ struct TripInfoView: View {
             CarryLogger.shared.log(.tripInfoOpened, context: context)
             #endif
         }
+    }
+
+    /// 清除日期后的空态卡片：点此可重新选择日期（→ 恢复有日期行程）。
+    private var datesUnsetCard: some View {
+        Button { showDatePicker = true } label: {
+            HStack {
+                Text("tripdates.unset")
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+                Spacer()
+                Image(systemName: "calendar.badge.plus")
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(.tertiary)
+            }
+            .padding(14)
+        }
+        .buttonStyle(.plain)
+        .background(Color(UIColor.systemBackground).opacity(0.64))
+        .overlay(
+            RoundedRectangle(cornerRadius: 12, style: .continuous)
+                .strokeBorder(Color.primary.opacity(colorScheme == .dark ? 0.11 : 0.07), lineWidth: 1)
+        )
+        .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
     }
 
     private var heroSection: some View {

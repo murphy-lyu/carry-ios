@@ -28210,18 +28210,18 @@
         "zh-Hant": { "stringUnit": { "state": "translated", "value": "規劃中" } }
       }
     },
-    "tripinfo.skip_dates": {
+    "tripdates.clear": {
       "extractionState": "manual",
       "localizations": {
         "de": { "stringUnit": { "state": "translated", "value": "Ohne Datum – erst planen" } },
-        "en": { "stringUnit": { "state": "translated", "value": "Skip dates — plan first" } },
+        "en": { "stringUnit": { "state": "translated", "value": "No dates — plan first" } },
         "es": { "stringUnit": { "state": "translated", "value": "Sin fechas — planear primero" } },
         "fr": { "stringUnit": { "state": "translated", "value": "Sans dates — planifier d'abord" } },
         "ja": { "stringUnit": { "state": "translated", "value": "日付なしで先に計画する" } },
         "ko": { "stringUnit": { "state": "translated", "value": "날짜 없이 먼저 계획하기" } },
         "pt-BR": { "stringUnit": { "state": "translated", "value": "Sem datas — planejar primeiro" } },
-        "zh-Hans": { "stringUnit": { "state": "translated", "value": "暂不设置日期，先做规划" } },
-        "zh-Hant": { "stringUnit": { "state": "translated", "value": "暫不設定日期，先做規劃" } }
+        "zh-Hans": { "stringUnit": { "state": "translated", "value": "无需日期，先做规划" } },
+        "zh-Hant": { "stringUnit": { "state": "translated", "value": "無需日期，先做規劃" } }
       }
     },
     "trip.card.no_dates": {
@@ -28238,32 +28238,18 @@
         "zh-Hant": { "stringUnit": { "state": "translated", "value": "未定日期" } }
       }
     },
-    "edittrip.set_dates": {
+    "tripdates.unset": {
       "extractionState": "manual",
       "localizations": {
-        "de": { "stringUnit": { "state": "translated", "value": "Kein Datum · tippen zum Festlegen" } },
-        "en": { "stringUnit": { "state": "translated", "value": "No dates · tap to set" } },
-        "es": { "stringUnit": { "state": "translated", "value": "Sin fechas · toca para definir" } },
-        "fr": { "stringUnit": { "state": "translated", "value": "Sans dates · toucher pour définir" } },
-        "ja": { "stringUnit": { "state": "translated", "value": "日付なし · タップして設定" } },
-        "ko": { "stringUnit": { "state": "translated", "value": "날짜 없음 · 탭하여 설정" } },
-        "pt-BR": { "stringUnit": { "state": "translated", "value": "Sem datas · toque para definir" } },
-        "zh-Hans": { "stringUnit": { "state": "translated", "value": "暂无日期 · 点此设置" } },
-        "zh-Hant": { "stringUnit": { "state": "translated", "value": "暫無日期 · 點此設定" } }
-      }
-    },
-    "edittrip.clear_dates": {
-      "extractionState": "manual",
-      "localizations": {
-        "de": { "stringUnit": { "state": "translated", "value": "Datum entfernen (zu „In Planung“)" } },
-        "en": { "stringUnit": { "state": "translated", "value": "Clear dates (move to Planning)" } },
-        "es": { "stringUnit": { "state": "translated", "value": "Borrar fechas (a En planificación)" } },
-        "fr": { "stringUnit": { "state": "translated", "value": "Effacer les dates (vers En préparation)" } },
-        "ja": { "stringUnit": { "state": "translated", "value": "日付を消す（計画中に戻す）" } },
-        "ko": { "stringUnit": { "state": "translated", "value": "날짜 지우기 (계획 중으로)" } },
-        "pt-BR": { "stringUnit": { "state": "translated", "value": "Limpar datas (para Em planejamento)" } },
-        "zh-Hans": { "stringUnit": { "state": "translated", "value": "清除日期，改为规划中" } },
-        "zh-Hant": { "stringUnit": { "state": "translated", "value": "清除日期，改為規劃中" } }
+        "de": { "stringUnit": { "state": "translated", "value": "Nicht festgelegt · zum Wählen tippen" } },
+        "en": { "stringUnit": { "state": "translated", "value": "Not set · tap to choose dates" } },
+        "es": { "stringUnit": { "state": "translated", "value": "Sin definir · toca para elegir fechas" } },
+        "fr": { "stringUnit": { "state": "translated", "value": "Non défini · toucher pour choisir" } },
+        "ja": { "stringUnit": { "state": "translated", "value": "未設定 · タップして日付を選択" } },
+        "ko": { "stringUnit": { "state": "translated", "value": "미설정 · 탭하여 날짜 선택" } },
+        "pt-BR": { "stringUnit": { "state": "translated", "value": "Não definido · toque para escolher" } },
+        "zh-Hans": { "stringUnit": { "state": "translated", "value": "未设置 · 点此选择日期" } },
+        "zh-Hant": { "stringUnit": { "state": "translated", "value": "未設定 · 點此選擇日期" } }
       }
     },
     "home.upcoming": {
