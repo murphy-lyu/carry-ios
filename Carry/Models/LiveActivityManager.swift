@@ -25,6 +25,10 @@ final class LiveActivityManager {
 
     static let enabledKey = "liveActivityPackingEnabled"
 
+    /// 仅在出发前这么多天内（且未出发）才激活 Live Activity。更远的行程点开清单
+    /// 不应在锁屏常驻活动——Live Activity 面向临近 / 进行中的事件，远期行程无紧迫性。
+    static let activationWindowDays = 7
+
     var isEnabled: Bool {
         UserDefaults.standard.bool(forKey: Self.enabledKey)
     }
@@ -40,7 +44,15 @@ final class LiveActivityManager {
     func startIfNeeded(for trip: TripBundle) {
         guard isEnabled else { return }
         guard ActivityAuthorizationInfo().areActivitiesEnabled else { return }
-        guard trip.departureDate >= Calendar.current.startOfDay(for: Date()) else { return }
+        // 仅为临近出发的行程激活：出发前 activationWindowDays 天内、且未出发。
+        // 远期行程（如几个月后）点开清单不应在锁屏常驻 Live Activity（无紧迫性）。
+        let calendar = Calendar.current
+        let daysUntilDeparture = calendar.dateComponents(
+            [.day],
+            from: calendar.startOfDay(for: Date()),
+            to: calendar.startOfDay(for: trip.departureDate)
+        ).day ?? 0
+        guard daysUntilDeparture >= 0, daysUntilDeparture <= Self.activationWindowDays else { return }
 
         // 同一行程已在运行，无需重复启动
         if let current = currentActivity,

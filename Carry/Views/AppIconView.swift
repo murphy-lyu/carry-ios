@@ -8,77 +8,55 @@ import UIKit
 
 // MARK: - Icon options
 //
-// To add a new icon:
-//  1. Design a 1024×1024 PNG named e.g. "CarryIconDark.png"
-//  2. Add the file to Xcode project root (NOT inside Assets.xcassets),
-//     make sure "Copy Bundle Resources" is checked in Build Phases.
-//  3. Declare it in Info.plist under CFBundleIcons → CFBundleAlternateIcons.
-//  4. Add a new AppIconOption entry below with the matching iconName.
+// To add a new alternate icon (Asset Catalog approach — single 1024×1024, no @2x/@3x):
+//  1. Add a 1024×1024 PNG (NO alpha channel) named e.g. "IconDog.png".
+//  2. In Assets.xcassets create "<Name>.appiconset" with a Contents.json that
+//     references the PNG as a single 1024x1024 universal/ios image.
+//     (INCLUDE_ALL_APPICON_ASSETS = YES auto-registers it as an alternate icon.)
+//  3. Add an AppIconOption entry below with id == the appiconset name.
+//
+// The Asset Catalog name is also the identifier passed to setAlternateIconName.
 
 struct AppIconOption: Identifiable {
-    /// Matches CFBundleAlternateIcons key in Info.plist. nil = primary icon.
+    /// Matches the .appiconset name in Assets.xcassets. nil = primary icon.
     let id: String?
-    let name: LocalizedStringKey
-    let description: LocalizedStringKey
+    /// Localization key (String, so the name can also be resolved to a plain String
+    /// for the Settings row value — LocalizedStringKey can't be read back).
+    let nameKey: String
+    let descriptionKey: String
+
+    var name: LocalizedStringKey { LocalizedStringKey(nameKey) }
+    var description: LocalizedStringKey { LocalizedStringKey(descriptionKey) }
+
+    /// Plain localized name, used by the Settings row to show the current icon.
+    var localizedName: String { NSLocalizedString(nameKey, comment: "") }
 }
 
-private let iconOptions: [AppIconOption] = [
+let appIconOptions: [AppIconOption] = [
     AppIconOption(
         id: nil,
-        name: "icon.default.name",
-        description: "icon.default.description"
+        nameKey: "icon.default.name",
+        descriptionKey: "icon.default.description"
     ),
     AppIconOption(
-        id: "IconDark",
-        name: "icon.dark.name",
-        description: "icon.dark.description"
+        id: "IconCat",
+        nameKey: "icon.cat.name",
+        descriptionKey: "icon.cat.description"
     ),
     AppIconOption(
-        id: "IconLight",
-        name: "icon.light.name",
-        description: "icon.light.description"
-    ),
-    AppIconOption(
-        id: "IconPride",
-        name: "icon.pride.name",
-        description: "icon.pride.description"
-    ),
-    AppIconOption(
-        id: "IconSoft",
-        name: "icon.soft.name",
-        description: "icon.soft.description"
-    ),
-    AppIconOption(
-        id: "IconPink",
-        name: "icon.pink.name",
-        description: "icon.pink.description"
-    ),
-    AppIconOption(
-        id: "IconBlue",
-        name: "icon.blue.name",
-        description: "icon.blue.description"
-    ),
-    AppIconOption(
-        id: "IconOrange",
-        name: "icon.orange.name",
-        description: "icon.orange.description"
-    ),
-    AppIconOption(
-        id: "IconButter",
-        name: "icon.butter.name",
-        description: "icon.butter.description"
-    ),
-    AppIconOption(
-        id: "IconGreen",
-        name: "icon.green.name",
-        description: "icon.green.description"
-    ),
-    AppIconOption(
-        id: "HandDrawn",
-        name: "icon.handdrawn.name",
-        description: "icon.handdrawn.description"
+        id: "IconDog",
+        nameKey: "icon.dog.name",
+        descriptionKey: "icon.dog.description"
     ),
 ]
+
+/// Localized name of the currently active app icon (for the Settings row value).
+/// Falls back to the default icon's name if the active id isn't in the list.
+func currentAppIconDisplayName() -> String {
+    let activeId = UIApplication.shared.alternateIconName
+    let match = appIconOptions.first { $0.id == activeId } ?? appIconOptions[0]
+    return match.localizedName
+}
 
 // MARK: - AppIconView
 
@@ -121,8 +99,8 @@ struct AppIconView: View {
 
     private var iconList: some View {
         VStack(spacing: 0) {
-            ForEach(Array(iconOptions.enumerated()), id: \.element.id) { index, option in
-                iconRow(option: option, isLast: index == iconOptions.count - 1)
+            ForEach(Array(appIconOptions.enumerated()), id: \.element.id) { index, option in
+                iconRow(option: option, isLast: index == appIconOptions.count - 1)
             }
         }
         .padding(.vertical, 2)
@@ -190,7 +168,9 @@ struct AppIconView: View {
     @ViewBuilder
     private func iconPreview(for option: AppIconOption) -> some View {
         let size: CGFloat = 52
-        let imageName = option.id ?? "IconDark"
+        // iOS forbids loading app-icon assets via UIImage(named:), so each icon has a
+        // companion "<id>Preview" imageset (same artwork) used purely for this thumbnail.
+        let imageName = (option.id ?? "IconDefault") + "Preview"
 
         if let uiImage = UIImage(named: imageName) {
             Image(uiImage: uiImage)
@@ -219,59 +199,12 @@ struct AppIconView: View {
         }
     }
 
+    /// Neutral gradient shown only if a preview image can't be resolved.
     private func placeholderFill(for option: AppIconOption) -> LinearGradient {
-        switch option.id {
-        case nil:
-            return LinearGradient(
-                colors: [Color(red: 0.20, green: 0.22, blue: 0.28),
-                         Color(red: 0.14, green: 0.16, blue: 0.22)],
-                startPoint: .topLeading, endPoint: .bottomTrailing)
-        case "HandDrawn":
-            return LinearGradient(
-                colors: [Color(red: 0.96, green: 0.92, blue: 0.84),
-                         Color(red: 0.82, green: 0.76, blue: 0.66)],
-                startPoint: .topLeading, endPoint: .bottomTrailing)
-        case "IconBlue":
-            return LinearGradient(
-                colors: [Color(red: 0.28, green: 0.56, blue: 0.96),
-                         Color(red: 0.14, green: 0.36, blue: 0.80)],
-                startPoint: .topLeading, endPoint: .bottomTrailing)
-        case "IconBusiness":
-            return LinearGradient(
-                colors: [Color(red: 0.18, green: 0.20, blue: 0.24),
-                         Color(red: 0.10, green: 0.12, blue: 0.16)],
-                startPoint: .topLeading, endPoint: .bottomTrailing)
-        case "IconGreen":
-            return LinearGradient(
-                colors: [Color(red: 0.28, green: 0.76, blue: 0.48),
-                         Color(red: 0.14, green: 0.56, blue: 0.32)],
-                startPoint: .topLeading, endPoint: .bottomTrailing)
-        case "IconPink":
-            return LinearGradient(
-                colors: [Color(red: 0.98, green: 0.60, blue: 0.76),
-                         Color(red: 0.90, green: 0.38, blue: 0.58)],
-                startPoint: .topLeading, endPoint: .bottomTrailing)
-        case "IconPride":
-            return LinearGradient(
-                colors: [Color(red: 0.98, green: 0.76, blue: 0.26),
-                         Color(red: 0.92, green: 0.36, blue: 0.62)],
-                startPoint: .topLeading, endPoint: .bottomTrailing)
-        case "IconSoft":
-            return LinearGradient(
-                colors: [Color(red: 0.82, green: 0.74, blue: 0.96),
-                         Color(red: 0.62, green: 0.52, blue: 0.88)],
-                startPoint: .topLeading, endPoint: .bottomTrailing)
-        case "IconButter":
-            return LinearGradient(
-                colors: [Color(red: 1.00, green: 0.92, blue: 0.56),
-                         Color(red: 0.94, green: 0.78, blue: 0.32)],
-                startPoint: .topLeading, endPoint: .bottomTrailing)
-        default:
-            return LinearGradient(
-                colors: [Color(red: 0.80, green: 0.80, blue: 0.82),
-                         Color(red: 0.68, green: 0.68, blue: 0.70)],
-                startPoint: .topLeading, endPoint: .bottomTrailing)
-        }
+        LinearGradient(
+            colors: [Color(red: 0.80, green: 0.80, blue: 0.82),
+                     Color(red: 0.68, green: 0.68, blue: 0.70)],
+            startPoint: .topLeading, endPoint: .bottomTrailing)
     }
 
     // MARK: Switch logic

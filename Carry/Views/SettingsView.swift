@@ -22,6 +22,8 @@ struct SettingsView: View {
     @State private var restoreToastMessage: String?
     // 备份信息缓存：onAppear 时读取一次，避免每次 body 求值触发磁盘 I/O
     @State private var cachedBackupDate: Date? = nil
+    // 当前 App Icon 显示名：onAppear / 前台激活时刷新（图标切换后同步）
+    @State private var currentIconName: String = currentAppIconDisplayName()
     @Environment(\.scenePhase) private var scenePhase
     @Environment(\.colorScheme) private var colorScheme
     @EnvironmentObject private var store: TripStore
@@ -239,16 +241,19 @@ struct SettingsView: View {
                                     openSystemSettings()
                                 }
                                 settingsNavigationRow(
+                                    title: "settings.appicon.entry",
+                                    valueText: currentIconName
+                                ) {
+                                    AppIconView()
+                                        .toolbar(.hidden, for: .tabBar)
+                                }
+                                settingsNavigationRow(
                                     title: "settings.calendar.entry",
                                     valueText: calendarSyncEnabled ? NSLocalizedString("settings.calendar.status.on", comment: "") : NSLocalizedString("settings.calendar.status.off", comment: "")
                                 ) {
                                     CalendarSettingsView()
                                         .toolbar(.hidden, for: .tabBar)
                                 }
-                                // TODO: re-enable once icon designs are ready
-//                                settingsNavigationRow(title: "settings.appicon.entry") {
-//                                    AppIconView()
-//                                }
 #if !targetEnvironment(macCatalyst)
                                 settingsNavigationRow(title: "settings.liveactivity.packing") {
                                     LiveActivitySettingsView()
@@ -396,10 +401,14 @@ struct SettingsView: View {
         .navigationTitle(Text("settings.title"))
         .navigationBarTitleDisplayMode(.large)
         .task { await refreshNotificationStatus() }
-        .onAppear { refreshBackupCache() }
+        .onAppear {
+            refreshBackupCache()
+            currentIconName = currentAppIconDisplayName()
+        }
         .onChange(of: scenePhase) { _, phase in
             if phase == .active {
                 refreshBackupCache()
+                currentIconName = currentAppIconDisplayName()
                 if !didApplyLaunchSheetReset {
                     showRoadmapSheet = false
                     didApplyLaunchSheetReset = true

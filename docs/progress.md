@@ -1,7 +1,18 @@
 # 项目进度
 
 ## 最后更新
-2026-05-30
+2026-05-31
+
+## 上次改动摘要（App Icon 切换 + Live Activity 窗口 · 2026-05-31）
+
+- **App Icon 切换重新启用**：此前因图标未就绪被注释隐藏（`9c2b790`），现恢复。
+  - 改用 **Asset Catalog 单 1024 方式**（替代旧的 Info.plist `CFBundleAlternateIcons` + bundle 根裸 PNG @2x/@3x）：`pbxproj` 设 `INCLUDE_ALL_APPICON_ASSETS = YES`，删除 Info.plist 旧 `CFBundleIcons` 声明。
+  - 图标：Default / Travel Cat（旅行小猫）/ Travel Buddy（旅行小狗），每个 `<id>.appiconset`（系统切换用）+ `<id>Preview.imageset`（app 内缩略图，因 iOS 禁止 `UIImage(named:)` 读 app icon 资源）。
+  - `AppIconView`：iconOptions 重命名为顶层 `appIconOptions`，新增 `currentAppIconDisplayName()`；清理旧 10 图标占位逻辑。
+  - Settings：App Icon 入口移到 Calendar Sync **上方**，右侧显示当前图标名（onAppear / 前台激活刷新）。
+  - 文案：`icon.dog.*` / `icon.cat.*` × 9 语言。
+- **Live Activity 激活窗口**：`LiveActivityManager.startIfNeeded` 新增上限——仅出发前 `activationWindowDays`（7）天内且未出发才激活。此前打开任意未出发行程（哪怕几个月后）的清单都会在锁屏常驻活动，无紧迫性。
+- **Settings 状态显示约定**：Calendar Sync 显示 On/Off（真状态，有用）；Live Activities 不显示（开≠在用，避免误导）；App Icon 显示当前图标名（精致，桌面虽可见但视觉对称）。
 
 ## 上次改动摘要（Quick Actions + 桌面 Widget · 2026-05-31）
 

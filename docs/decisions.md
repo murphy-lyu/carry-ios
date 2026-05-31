@@ -1,5 +1,20 @@
 # 决策日志
 
+## 2026-05-31 App Icon / Live Activity
+
+### App Icon 用 Asset Catalog 单 1024，预览另存 imageset
+原因：旧实现走 Info.plist `CFBundleAlternateIcons` + bundle 根裸 PNG（要 @2x@3x、手动加 Copy Bundle Resources），繁琐易错。Asset Catalog 方式单张 1024 即可，与主图标一致。
+实现：每图标 `<id>.appiconset`（`INCLUDE_ALL_APPICON_ASSETS=YES` 自动注册为 alternate icon）；删 Info.plist 旧声明。
+关键坑：iOS **禁止** `UIImage(named:)` 读取 app icon 资源（含 alternate），故 app 内缩略图必须另存一份普通 `<id>Preview.imageset`（同图）。这是业界标准模式（Things/Carrot 等），非冗余 hack。
+
+### Live Activity 仅出发前 7 天内激活
+原因：原 `startIfNeeded` 只挡「已出发」，无上限——打开任意未出发行程（哪怕数月后）的清单都会在锁屏常驻活动。Live Activity 面向临近/进行中事件，远期行程无紧迫性。
+实现：`activationWindowDays = 7`，`0 <= daysUntilDeparture <= 7` 才激活。
+
+### Settings 右侧状态：按「信息是否有用」区别对待，不统一
+原因：右侧状态文字应服务「不进二级页就获取有用信息」。Calendar 的 On/Off 是真状态（有用）；Live Activity 的「开」只是「允许」、真展示还取决于有无临近行程（开≠在用，显示会误导）；App Icon 名字是冗余信息（桌面可见）但显示更精致对称。
+决定：Calendar 显 On/Off、Live Activity 不显、App Icon 显图标名。
+
 ## 2026-05-31 Quick Actions / 桌面 Widget（待确认）
 
 ### 主屏幕 Quick Actions 复用 UserDefaults 分发，不新建通道
