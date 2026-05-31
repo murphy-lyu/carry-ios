@@ -10204,13 +10204,13 @@
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "足迹"
+            "value": "我的足迹"
           }
         },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "足跡"
+            "value": "我的足跡"
           }
         }
       }

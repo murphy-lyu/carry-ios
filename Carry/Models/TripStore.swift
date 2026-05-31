@@ -109,6 +109,15 @@ final class TripBundle {
     var packedCount: Int { safeSections.flatMap { $0.items ?? [] }.filter { $0.isPacked && !$0.name.isEmpty }.count }
     var totalCount:  Int { safeSections.flatMap { $0.items ?? [] }.filter { !$0.name.isEmpty }.count }
 
+    /// 行程是否已计入"到访"——用于地图点亮（国家/城市）与首页 Trip Overview 的到访国家数。
+    /// 规则：出发日期的**次日**起才算到访，出发当天及之前都不计入。
+    /// `departureDate` 存的是出发当天 00:00（见 TripInfo），裸 `departureDate <= Date()`
+    /// 会让"今天出发但尚未启程"的行程一过零点就被点亮，故改为按天比较且要求已过出发日。
+    var countsAsVisited: Bool {
+        let calendar = Calendar.current
+        return calendar.startOfDay(for: Date()) > calendar.startOfDay(for: departureDate)
+    }
+
     /// Locale-aware date range, computed at display time so it follows the current app language.
     var localizedDateRange: String {
         let returnDate = Calendar.current.date(byAdding: .day, value: days, to: departureDate) ?? departureDate

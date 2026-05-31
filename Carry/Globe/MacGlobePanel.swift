@@ -57,7 +57,7 @@ struct MacGlobePanel: View {
             }
         }
 
-        for trip in store.trips where trip.departureDate <= Date() {
+        for trip in store.trips where trip.countsAsVisited {
             var raw = [trip.destinationCity]
             for sep in [" and ", " And ", " AND ", " 和 "] { raw = raw.flatMap { $0.components(separatedBy: sep) } }
             for sep in [",", "，", "、", "/", "／", "&", "＆", "+", "＋"] { raw = raw.flatMap { $0.components(separatedBy: sep) } }
@@ -90,7 +90,7 @@ struct MacGlobePanel: View {
             }
         }
 
-        for trip in store.trips where trip.departureDate <= Date() {
+        for trip in store.trips where trip.countsAsVisited {
             consider(code: trip.countryCode, lat: trip.latitude, lon: trip.longitude, date: trip.departureDate)
             for dest in trip.additionalDestinations {
                 consider(code: dest.countryCode, lat: dest.latitude, lon: dest.longitude, date: trip.departureDate)

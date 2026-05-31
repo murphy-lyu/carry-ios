@@ -178,7 +178,7 @@ struct HomeView: View {
     /// stored for multi-city trips.
     private var visitedCountriesCount: Int {
         var codes = Set<String>()
-        for trip in store.trips where trip.departureDate <= Date() {
+        for trip in store.trips where trip.countsAsVisited {
             if !trip.countryCode.isEmpty { codes.insert(Self.normalizedCountryCode(trip.countryCode)) }
             for dest in trip.additionalDestinations where !dest.countryCode.isEmpty {
                 codes.insert(Self.normalizedCountryCode(dest.countryCode))
@@ -217,7 +217,7 @@ struct HomeView: View {
             }
         }
 
-        for trip in store.trips where trip.departureDate <= Date() {
+        for trip in store.trips where trip.countsAsVisited {
             // Split using the same separators as geocoding so token[n] aligns with destination[n]
             var raw = [trip.destinationCity]
             for sep in [" and ", " And ", " AND ", " 和 "] {
@@ -260,7 +260,7 @@ struct HomeView: View {
             }
         }
 
-        for trip in store.trips where trip.departureDate <= Date() {
+        for trip in store.trips where trip.countsAsVisited {
             consider(code: trip.countryCode, lat: trip.latitude, lon: trip.longitude, date: trip.departureDate)
             for dest in trip.additionalDestinations {
                 consider(code: dest.countryCode, lat: dest.latitude, lon: dest.longitude, date: trip.departureDate)
