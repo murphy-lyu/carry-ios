@@ -9,7 +9,19 @@ import UserNotifications
 import UniformTypeIdentifiers
 import EventKit
 
+/// Settings 二级页路由。用 value-based 导航把 tab bar 显隐控制提到 ContentView
+/// 外层（settingsPath.isEmpty 驱动），与 Trips 链路同构，消除返回时 tab bar 延迟。
+enum SettingsRoute: Hashable {
+    case appIcon
+    case calendar
+    case liveActivity
+    case dataRecovery
+    case about
+    case developer
+}
+
 struct SettingsView: View {
+    @Binding var path: NavigationPath
 
     @State private var notificationStatus: UNAuthorizationStatus = .notDetermined
     @State private var showAppearancePicker = false
@@ -242,23 +254,16 @@ struct SettingsView: View {
                                 }
                                 settingsNavigationRow(
                                     title: "settings.appicon.entry",
-                                    valueText: currentIconName
-                                ) {
-                                    AppIconView()
-                                        .toolbar(.hidden, for: .tabBar)
-                                }
+                                    valueText: currentIconName,
+                                    route: .appIcon
+                                )
                                 settingsNavigationRow(
                                     title: "settings.calendar.entry",
-                                    valueText: calendarSyncEnabled ? NSLocalizedString("settings.calendar.status.on", comment: "") : NSLocalizedString("settings.calendar.status.off", comment: "")
-                                ) {
-                                    CalendarSettingsView()
-                                        .toolbar(.hidden, for: .tabBar)
-                                }
+                                    valueText: calendarSyncEnabled ? NSLocalizedString("settings.calendar.status.on", comment: "") : NSLocalizedString("settings.calendar.status.off", comment: ""),
+                                    route: .calendar
+                                )
 #if !targetEnvironment(macCatalyst)
-                                settingsNavigationRow(title: "settings.liveactivity.packing") {
-                                    LiveActivitySettingsView()
-                                        .toolbar(.hidden, for: .tabBar)
-                                }
+                                settingsNavigationRow(title: "settings.liveactivity.packing", route: .liveActivity)
 #endif
                             }
                             .padding(.horizontal, 16)
@@ -279,11 +284,9 @@ struct SettingsView: View {
                                     showImporter = true
                                 }
                                 settingsNavigationRow(
-                                    title: "settings.data.local_backup"
-                                ) {
-                                    DataRecoveryView()
-                                        .toolbar(.hidden, for: .tabBar)
-                                }
+                                    title: "settings.data.local_backup",
+                                    route: .dataRecovery
+                                )
                             }
                             .padding(.horizontal, 16)
                             .padding(.bottom, 18)
@@ -321,10 +324,7 @@ struct SettingsView: View {
 
                         Section {
                             settingsCard {
-                                settingsNavigationRow(title: "settings.about.entry") {
-                                    AboutView()
-                                        .toolbar(.hidden, for: .tabBar)
-                                }
+                                settingsNavigationRow(title: "settings.about.entry", route: .about)
                                 settingsRow(title: "settings.section.support", valueText: "☕️") {
                                     showCoffeeSheet = true
                                 }
@@ -344,10 +344,7 @@ struct SettingsView: View {
 #if DEBUG
                         Section {
                             settingsCard {
-                                settingsNavigationRow(title: "settings.developer.entry") {
-                                    DeveloperModeView()
-                                        .toolbar(.hidden, for: .tabBar)
-                                }
+                                settingsNavigationRow(title: "settings.developer.entry", route: .developer)
                             }
                             .padding(.horizontal, 16)
                             .padding(.bottom, 18)
@@ -397,6 +394,9 @@ struct SettingsView: View {
                 CarryLogger.shared.log(.backupRestoreFailed,
                     context: "reason=picker_failed error=\(error.localizedDescription)")
             }
+        }
+        .navigationDestination(for: SettingsRoute.self) { route in
+            settingsDestination(route)
         }
         .navigationTitle(Text("settings.title"))
         .navigationBarTitleDisplayMode(.large)
@@ -574,16 +574,23 @@ struct SettingsView: View {
     }
 
     @ViewBuilder
-    private func settingsNavigationRow<Destination: View>(
+    private func settingsNavigationRow(
         title: LocalizedStringKey,
-        @ViewBuilder destination: @escaping () -> Destination
+        valueText: String? = nil,
+        route: SettingsRoute
     ) -> some View {
-        NavigationLink(destination: destination()) {
+        NavigationLink(value: route) {
             HStack(spacing: 14) {
                 Text(title)
                     .font(.body)
                     .foregroundStyle(.primary)
                 Spacer()
+                if let valueText {
+                    Text(valueText)
+                        .font(.body)
+                        .foregroundStyle(settingsValueColor)
+                        .lineLimit(1)
+                }
                 Image(systemName: "chevron.right")
                     .font(.caption.weight(.semibold))
                     .foregroundStyle(settingsChevronColor)
@@ -595,31 +602,32 @@ struct SettingsView: View {
         .buttonStyle(.plain)
     }
 
+    /// Resolves a SettingsRoute to its destination view. tab bar 显隐由 ContentView
+    /// 外层 settingsPath.isEmpty 统一驱动，二级页不再各自挂 .toolbar(.hidden)。
     @ViewBuilder
-    private func settingsNavigationRow<Destination: View>(
-        title: LocalizedStringKey,
-        valueText: String,
-        @ViewBuilder destination: @escaping () -> Destination
-    ) -> some View {
-        NavigationLink(destination: destination()) {
-            HStack(spacing: 14) {
-                Text(title)
-                    .font(.body)
-                    .foregroundStyle(.primary)
-                Spacer()
-                Text(valueText)
-                    .font(.body)
-                    .foregroundStyle(settingsValueColor)
-                    .lineLimit(1)
-                Image(systemName: "chevron.right")
-                    .font(.caption.weight(.semibold))
-                    .foregroundStyle(settingsChevronColor)
-            }
-            .padding(.horizontal, 18)
-            .frame(height: 58)
-            .contentShape(Rectangle())
+    private func settingsDestination(_ route: SettingsRoute) -> some View {
+        switch route {
+        case .appIcon:
+            AppIconView()
+        case .calendar:
+            CalendarSettingsView()
+        case .liveActivity:
+#if !targetEnvironment(macCatalyst)
+            LiveActivitySettingsView()
+#else
+            EmptyView()
+#endif
+        case .dataRecovery:
+            DataRecoveryView()
+        case .about:
+            AboutView()
+        case .developer:
+#if DEBUG
+            DeveloperModeView()
+#else
+            EmptyView()
+#endif
         }
-        .buttonStyle(.plain)
     }
 }
 
@@ -1009,7 +1017,7 @@ private struct CalendarSettingsView: View {
 }
 
 #Preview {
-    SettingsView()
+    SettingsView(path: .constant(NavigationPath()))
         .environmentObject(TripStore())
 }
 

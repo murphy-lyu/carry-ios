@@ -34,6 +34,9 @@ struct ContentView: View {
     @Environment(\.scenePhase) private var scenePhase
     @Environment(\.colorScheme) private var colorScheme
     @State private var selectedTab = 0
+    // Settings 二级导航路径，提到外层用 isEmpty 驱动 tab bar 显隐，
+    // 与 Trips 链路同构，避免「挂在目标视图上」导致返回时 tab bar 慢半拍。
+    @State private var settingsPath = NavigationPath()
     @State private var didApplyStartupReset = false
     @State private var didRefreshOnLaunch = false
     @State private var showSettingsOnMac = false
@@ -87,7 +90,7 @@ struct ContentView: View {
             .padding(.top, 24)
             .padding(.bottom, 48)
             .sheet(isPresented: $showSettingsOnMac) {
-                NavigationStack { SettingsView() }
+                NavigationStack(path: $settingsPath) { SettingsView(path: $settingsPath) }
                     .frame(minWidth: 420, minHeight: 560)
             }
         }
@@ -121,9 +124,10 @@ struct ContentView: View {
             .tabItem { Label("Trips", systemImage: "suitcase") }
             .tag(0)
 
-            NavigationStack {
-                SettingsView()
+            NavigationStack(path: $settingsPath) {
+                SettingsView(path: $settingsPath)
             }
+            .toolbar(settingsPath.isEmpty ? .visible : .hidden, for: .tabBar)
             .tabItem { Label("Settings", systemImage: "gear") }
             .tag(1)
         }

@@ -3,6 +3,18 @@
 ## 最后更新
 2026-05-31
 
+## 上次改动摘要（Settings tab bar 延迟修复 · 2026-05-31）
+
+- **根因**：Settings 二级页返回时底部 tab bar 恢复有延迟，而 Trips 链路（首页↔物品清单）及时。原因是两条链路 tab bar 控制方式不同：
+  - Trips：`.toolbar(.hidden)` 挂在 **NavigationStack 外层**，`router.path.isEmpty` 状态驱动 → pop 时 path 立即变空，tab bar 同步恢复。
+  - Settings：`.toolbar(.hidden)` 挂在**每个二级页自身** → 等二级页 dismiss 动画走完才解除，慢半拍。
+- **修复**（对齐 Trips 的外层 + 状态驱动）：
+  - ContentView 给 Settings 的 NavigationStack 加 `settingsPath`，外层 `.toolbar(settingsPath.isEmpty ? .visible : .hidden)`。
+  - `settingsNavigationRow` 由 `NavigationLink(destination:)` 改为 `NavigationLink(value: SettingsRoute)`；二级页解析统一放 SettingsView 内的 `navigationDestination`（private 视图照常访问）。
+  - 删除 6 个二级页各自的 `.toolbar(.hidden, for: .tabBar)`。
+  - Mac sheet 与 Preview 同步补 `path` 参数。
+- **Quick Actions 标记更新**：真机确认图标菜单只显示 3 项（iOS 16+ 自动合并自建 `UIApplicationShortcutItem` 与 `AppShortcutsProvider`，不重复），decisions.md 去掉「待确认」。
+
 ## 上次改动摘要（App Icon 切换 + Live Activity 窗口 · 2026-05-31）
 
 - **App Icon 切换重新启用**：此前因图标未就绪被注释隐藏（`9c2b790`），现恢复。

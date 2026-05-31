@@ -15,13 +15,13 @@
 原因：右侧状态文字应服务「不进二级页就获取有用信息」。Calendar 的 On/Off 是真状态（有用）；Live Activity 的「开」只是「允许」、真展示还取决于有无临近行程（开≠在用，显示会误导）；App Icon 名字是冗余信息（桌面可见）但显示更精致对称。
 决定：Calendar 显 On/Off、Live Activity 不显、App Icon 显图标名。
 
-## 2026-05-31 Quick Actions / 桌面 Widget（待确认）
+## 2026-05-31 Quick Actions / 桌面 Widget
 
 ### 主屏幕 Quick Actions 复用 UserDefaults 分发，不新建通道
 原因：`AppShortcutsProvider`（Siri/Spotlight）不填充图标长按菜单，后者需 `UIApplicationShortcutItems`。
 实现：动态 `shortcutItems`（SF Symbol 图标 + 复用语义 key 本地化）；`CarrySceneDelegate` 接收冷/热启动回调写 `carry_shortcut_action`，复用 ContentView 既有的 `UserDefaults.didChangeNotification` 监听分发，零导航改动。
 放弃：Info.plist 静态声明（SF Symbol 受限、本地化分散到 InfoPlist.xcstrings）。
-风险：SceneDelegate 注入 SwiftUI 须不创建 window，否则黑屏；模拟器测不全，须真机。
+真机验证（已确认）：冷/热启动 × 3 动作均正常；SceneDelegate 未破坏 WindowGroup（无黑屏）；图标菜单**只显示 3 项**——iOS 16+ 自动把自建 `UIApplicationShortcutItem` 与 `AppShortcutsProvider` 合并，不重复，无需移除自建那套。
 
 ### Widget 数据共享用 App Group UserDefaults 快照，不共享 SwiftData 容器
 原因：Widget 独立进程读不到主 App SwiftData。改 `ModelContainer` 为 App Group 容器会迁移现有用户数据存储位置，有丢数据风险。
