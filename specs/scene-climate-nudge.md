@@ -40,7 +40,7 @@ Indian Ocean: MV, LK
 African/Indian Ocean islands: MG, MU, SC, CV, RE
 Middle East beach: AE, OM  (Dubai/Oman; QA/BH 主要是商务旅游，不加)
 Pacific: FJ, WS, TO, VU, PF, SB, PW, FM, MH, KI, NC, GU, MP
-Caribbean: CU, DO, JM, BS, BB, TT, LC, VC, GD, KN, AG, AW, CW, MQ, GP, TC
+Caribbean: CU, DO, JM, BS, BB, TT, LC, VC, GD, KN, AG, AW, CW, MQ, GP, TC, PR, KY, VG, VI
 Central America: CR, PA, GT, BZ, HN, NI, SV
 ```
 

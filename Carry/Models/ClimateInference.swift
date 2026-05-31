@@ -18,6 +18,7 @@ enum ClimateInference {
         "NC", "GU", "MP",                                          // Pacific (New Caledonia, Guam, Saipan)
         "CU", "DO", "JM", "BS", "BB", "TT",                       // Caribbean
         "LC", "VC", "GD", "KN", "AG", "AW", "CW", "MQ", "GP", "TC", // Caribbean (cont.)
+        "PR", "KY", "VG", "VI",                                    // Caribbean (single-climate beach islands)
         "CR", "PA", "GT", "BZ", "HN", "NI", "SV",                 // Central America
     ]
 
