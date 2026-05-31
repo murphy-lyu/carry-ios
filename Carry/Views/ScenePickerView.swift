@@ -116,16 +116,17 @@ struct ScenePickerView: View {
 
                 ScrollView {
                     VStack(alignment: .leading, spacing: 28) {
-                        if showCycleNudge {
-                            cycleNudgeSection
+                        let climateLabels = climateSuggestedLabels
+                        if !climateLabels.isEmpty {
+                            nudgeSection(titleKey: "scenepicker.nudge.title", labels: climateLabels, logAccepted: false)
+                        }
+                        if let period = periodNudgeLabel {
+                            nudgeSection(titleKey: "scenepicker.nudge.cycle.title", labels: [period], logAccepted: true)
                         }
 
-                        if !nudgeSceneKeys.isEmpty {
-                            climateNudgeSection
-                        }
-
+                        let excluded = promotedSceneLabels
                         ForEach(Array(defaultSceneGroups.enumerated()), id: \.element.id) { index, group in
-                            SceneGroupSection(group: group, selectedItems: $selectedItems)
+                            SceneGroupSection(group: group, selectedItems: $selectedItems, excludedLabels: excluded)
                         }
                     }
                     .padding(.top, 4)
@@ -192,38 +193,41 @@ struct ScenePickerView: View {
         }
     }
 
-    private var nudgeSceneKeys: [String] {
-        guard let bundle = tripBundle else { return [] }
-        // 优先用已落库的 countryCode；未回填（如刚创建、地理编码未完成）时回退到按目的地
-        // 文字即时推断，与 ItemPickerView 同源，避免气候 nudge 因时序缺失。
-        let code = bundle.countryCode.isEmpty
-            ? (store.inferCountryCodes(for: bundle.destinationCity).first ?? "")
-            : bundle.countryCode
-        guard !code.isEmpty else { return [] }
-        let inferred = ClimateInference.inferredSceneKeys(
-            countryCode: code,
-            departureDate: bundle.departureDate
-        )
-        let selectedKeys = Set(selectedItems.compactMap { sceneLabelToKey[$0] })
-        return inferred.filter { !selectedKeys.contains($0) }
-    }
-
     private static let sceneKeyToLabel: [String: String] = Dictionary(
         uniqueKeysWithValues: sceneLabelToKey.map { ($1, $0) }
     )
 
     private static let periodSceneKey = "personal_period"
 
-    /// 仅当预测命中、且用户尚未手动选中经期场景时，才展示经期轻推。
-    private var showCycleNudge: Bool {
-        guard cycleNudgeActive,
-              let label = Self.sceneKeyToLabel[Self.periodSceneKey] else { return false }
-        return !selectedItems.contains(label)
+    /// 基于目的地（+ 出发日期）推断的气候场景标签。countryCode 未回填时回退到按目的地文字
+    /// 即时推断，与 ItemPickerView 同源。不按"是否已选"过滤——推荐项上移到顶部唯一展示，
+    /// 选中后仍留在顶部（显示选中态），不消失、不瞬移。
+    private var climateSuggestedLabels: [String] {
+        guard let bundle = tripBundle else { return [] }
+        let code = bundle.countryCode.isEmpty
+            ? (store.inferCountryCodes(for: bundle.destinationCity).first ?? "")
+            : bundle.countryCode
+        guard !code.isEmpty else { return [] }
+        let inferred = ClimateInference.inferredSceneKeys(countryCode: code, departureDate: bundle.departureDate)
+        return inferred.compactMap { Self.sceneKeyToLabel[$0] }
     }
 
-    private var climateNudgeSection: some View {
+    /// 预测命中时的经期场景标签（上移到顶部）。
+    private var periodNudgeLabel: String? {
+        cycleNudgeActive ? Self.sceneKeyToLabel[Self.periodSceneKey] : nil
+    }
+
+    /// 被上移到顶部「Suggested」区的场景标签集合（气候 + 经期），需从固定分组排除。
+    private var promotedSceneLabels: Set<String> {
+        var set = Set(climateSuggestedLabels)
+        if let period = periodNudgeLabel { set.insert(period) }
+        return set
+    }
+
+    /// 轻推区块：顶部高亮推荐场景，点击切换选中并留在原地（不消失）。
+    private func nudgeSection(titleKey: String, labels: [String], logAccepted: Bool) -> some View {
         VStack(alignment: .leading, spacing: 10) {
-            Text("scenepicker.nudge.title")
+            Text(LocalizedStringKey(titleKey))
                 .font(.system(size: 11, weight: .medium))
                 .foregroundStyle(Color(.systemGray))
                 .kerning(1.5)
@@ -232,43 +236,18 @@ struct ScenePickerView: View {
 
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(spacing: 8) {
-                    ForEach(nudgeSceneKeys, id: \.self) { key in
-                        if let label = Self.sceneKeyToLabel[key] {
-                            SceneChip(
-                                label: label,
-                                isSelected: selectedItems.contains(label)
-                            ) {
-                                selectedItems.insert(label)
-                                UIImpactFeedbackGenerator(style: .light).impactOccurred()
-                            }
-                        }
-                    }
-                }
-                .padding(.horizontal, 16)
-            }
-            .padding(.bottom, 6)
-        }
-    }
-
-    private var cycleNudgeSection: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            Text("scenepicker.nudge.cycle.title")
-                .font(.system(size: 11, weight: .medium))
-                .foregroundStyle(Color(.systemGray))
-                .kerning(1.5)
-                .textCase(.uppercase)
-                .padding(.horizontal, 16)
-
-            ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: 8) {
-                    if let label = Self.sceneKeyToLabel[Self.periodSceneKey] {
+                    ForEach(labels, id: \.self) { label in
                         SceneChip(
                             label: label,
                             isSelected: selectedItems.contains(label)
                         ) {
-                            selectedItems.insert(label)
+                            if selectedItems.contains(label) {
+                                selectedItems.remove(label)
+                            } else {
+                                selectedItems.insert(label)
+                                if logAccepted { CarryLogger.shared.log(.cycleNudgeAccepted) }
+                            }
                             UIImpactFeedbackGenerator(style: .light).impactOccurred()
-                            CarryLogger.shared.log(.cycleNudgeAccepted)
                         }
                     }
                 }
@@ -416,42 +395,52 @@ struct SceneGroupSection: View {
 
     let group: SceneGroup
     @Binding var selectedItems: Set<String>
+    /// 已上移到顶部「Suggested」区的场景标签——从本组排除，避免重复展示。
+    var excludedLabels: Set<String> = []
     @Environment(\.colorScheme) private var colorScheme
 
-    var body: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            Text(LocalizedStringKey(group.title))
-                .font(.system(size: 11, weight: .medium))
-                .foregroundStyle(colorScheme == .dark ? Color(.systemGray2) : Color(.systemGray))
-                .kerning(1.5)
-                .textCase(.uppercase)
-                .padding(.horizontal, 16)
+    /// 排除已上移标签后，本组实际要展示的场景。
+    private var visibleItems: [String] {
+        group.items.filter { !excludedLabels.contains($0) }
+    }
 
-            GeometryReader { geo in
-                let rows = chipRows(for: group.items, maxWidth: max(1, geo.size.width))
-                VStack(alignment: .leading, spacing: 8) {
-                    ForEach(Array(rows.enumerated()), id: \.offset) { _, row in
-                        HStack(spacing: 8) {
-                            ForEach(row, id: \.self) { item in
-                                SceneChip(
-                                    label: item,
-                                    isSelected: selectedItems.contains(item)
-                                ) {
-                                    if selectedItems.contains(item) {
-                                        selectedItems.remove(item)
-                                    } else {
-                                        selectedItems.insert(item)
+    var body: some View {
+        // 本组场景全部被上移到顶部时，整组（含标题）隐藏。
+        if !visibleItems.isEmpty {
+            VStack(alignment: .leading, spacing: 10) {
+                Text(LocalizedStringKey(group.title))
+                    .font(.system(size: 11, weight: .medium))
+                    .foregroundStyle(colorScheme == .dark ? Color(.systemGray2) : Color(.systemGray))
+                    .kerning(1.5)
+                    .textCase(.uppercase)
+                    .padding(.horizontal, 16)
+
+                GeometryReader { geo in
+                    let rows = chipRows(for: visibleItems, maxWidth: max(1, geo.size.width))
+                    VStack(alignment: .leading, spacing: 8) {
+                        ForEach(Array(rows.enumerated()), id: \.offset) { _, row in
+                            HStack(spacing: 8) {
+                                ForEach(row, id: \.self) { item in
+                                    SceneChip(
+                                        label: item,
+                                        isSelected: selectedItems.contains(item)
+                                    ) {
+                                        if selectedItems.contains(item) {
+                                            selectedItems.remove(item)
+                                        } else {
+                                            selectedItems.insert(item)
+                                        }
                                     }
                                 }
                             }
                         }
                     }
                 }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .frame(height: chipsHeight(for: visibleItems))
+                .padding(.horizontal, 16)
+                .padding(.bottom, 6)
             }
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .frame(height: chipsHeight(for: group.items))
-            .padding(.horizontal, 16)
-            .padding(.bottom, 6)
         }
     }
 

@@ -1728,7 +1728,10 @@ struct ItemPickerView: View {
             }
 
         case .merge(let tripId):
-            store.mergeItems(tripId: tripId, sections: sections)
+            // 记录本次应用的场景 key 到行程，闭环 selectedSceneKeys——下次二次添加时
+            // 这些场景就会被 alreadyAppliedSceneKeys 识别，不再重复推荐。
+            let mergedSceneKeys = selectedSmartSceneLabels.compactMap { sceneLabelToKey[$0] }
+            store.addScenesAndMerge(tripId: tripId, keys: mergedSceneKeys, sections: sections)
             guard !isConfirmingSelection else { return }
             isConfirmingSelection = true
             if totalAdded > 0 {

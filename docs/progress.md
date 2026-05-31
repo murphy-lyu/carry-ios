@@ -1,7 +1,27 @@
 # 项目进度
 
 ## 最后更新
-2026-05-31
+2026-06-01
+
+## 上次改动摘要（到访国家/地图点亮按"出发次日"判定 · 2026-06-01）
+
+- **未出发行程被点亮修复**：地图点亮国家/城市、首页 Trip Overview「到访国家数」原用裸 `trip.departureDate <= Date()`，而 `departureDate` 存的是出发当天 00:00（`TripInfo`），导致"今天出发但尚未启程"的行程一过零点就被点亮/计数（用户反馈：未出发的希腊雅典/圣托里尼被点亮）。
+- **修复（根因 + 去重）**：在 `TripBundle` 新增共享判据 `countsAsVisited`（`startOfDay(now) > startOfDay(departureDate)`，即**出发日期次日起**才算到访），替换全部 5 处散落判据——HomeView 的 `visitedCountriesCount` / `visitedCities` / `visitedCountries` + `MacGlobePanel` 的 2 处。与工程其余按天比较（CalendarManager / LiveActivityManager）保持一致。
+- **规则选择**：采用"出发次日"而非"出发当天"——到访应代表确已身处当地，出发当天可能仍在途。如需改回"出发当天"，将判据的 `>` 改为 `>=` 即可。语义上「跨国旅」这类当天/在途行程仍留在 UPCOMING 列表，但不计入到访，两套语义各自正确。
+- **模拟器确定性验证通过**：含一笔今天（6/1）出发的多城行程「跨国旅」，到访国家数 6 → 3（剔除仅由该行程贡献的 GB/AT/JP），符合预测。
+
+## 上次改动摘要（ScenePicker 去重同步 + merge selectedSceneKeys 闭环 · 2026-06-01）
+
+- **ScenePickerView 同步"上移去重"**：编辑场景 / suggest 界面也改为"一个场景一个位置"。`SceneGroupSection` 新增 `excludedLabels`（过滤已上移标签、全空隐藏整组）；顶部用统一 `nudgeSection`，chip 选中后留原地、不瞬移。删除旧 `nudgeSceneKeys`/`showCycleNudge`/分身式 section。现在两个场景界面（ItemPicker / ScenePicker）行为一致。
+- **merge 回写 selectedSceneKeys 闭环**：ItemPicker merge 路径由 `mergeItems` 改调既有 `store.addScenesAndMerge`，把二次添加时选的场景 key 也写入 `selectedSceneKeys`，使多次添加之间"不重复推荐已用场景"彻底闭环。
+- 验证：`NSHealthShareUsageDescription` 9 语言已确认全部打进编译产物各 `.lproj/InfoPlist.strings`（授权弹窗按设备语言显示，非缺失）。
+- 通过 iPhone 17 Pro simulator build。
+
+## 上次改动摘要（深链进入返回首页空列表修复 + 足迹文案 · 2026-06-01）
+
+- **首页行程卡片空列表修复**：从 Widget（4×1 / 1×1）、Quick Action、本地通知深链冷启动进入某行程后，返回首页时 upcoming 卡片不显示（只剩 Trip Overview 头卡）。根因：`HomeView.triggerUpcomingReveal` 的 +0.28s 延迟闭包有 `guard router.path.isEmpty`，冷启动时深链已把 path 推成非空 → 揭示被永久跳过 → `didRevealUpcoming` 卡在 false → upcoming 卡片停在 opacity 0。修复：在 `sheetContent` 的 `onReceive(router.$path)` 的 `path.isEmpty`（返回首页根）分支补一次揭示（已 true 时不重复触发，安全无回归）。Widget/通知/Quick Action 三类入口共用同一导航链路，一处修复全覆盖。**真机验证通过。**
+- **时序竞争复现说明**：此类冷启动深链 bug 在模拟器复现不出来（`simctl openurl` 有「Open?」确认框延迟送达；`defaults` 注入与真机 scene 时序不符），须真机验证——已记入开发者 memory。
+- **Quick Action「足迹」文案**：中文环境（zh-Hans / zh-Hant）由「足迹/足跡」改为「我的足迹/我的足跡」（保留繁体「跡」字），其余 7 种语言不变。`"Footprint"` key 同时被 Quick Action 标题与 Siri shortcut shortTitle 共用，两处同步生效。
 
 ## 上次改动摘要（场景推荐去重重构 + Add items 交互打磨 · 2026-05-31）
 
