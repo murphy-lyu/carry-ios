@@ -15,6 +15,7 @@ enum SettingsRoute: Hashable {
     case appIcon
     case calendar
     case liveActivity
+    case cycleReminder
     case dataRecovery
     case about
     case developer
@@ -265,6 +266,9 @@ struct SettingsView: View {
 #if !targetEnvironment(macCatalyst)
                                 settingsNavigationRow(title: "settings.liveactivity.packing", route: .liveActivity)
 #endif
+                                if CycleInference.isAvailable {
+                                    settingsNavigationRow(title: "settings.cycle.entry", route: .cycleReminder)
+                                }
                             }
                             .padding(.horizontal, 16)
                             .padding(.bottom, 18)
@@ -617,6 +621,8 @@ struct SettingsView: View {
 #else
             EmptyView()
 #endif
+        case .cycleReminder:
+            CycleReminderSettingsView()
         case .dataRecovery:
             DataRecoveryView()
         case .about:
@@ -1130,6 +1136,25 @@ private struct DeveloperModeView: View {
                 .listRowSeparator(.hidden)
             }
 
+            Section("Cycle Nudge") {
+                Toggle(isOn: Binding(
+                    get: { UserDefaults.standard.bool(forKey: "debugForceCycleNudge") },
+                    set: { newValue in
+                        UserDefaults.standard.set(newValue, forKey: "debugForceCycleNudge")
+                        UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                    }
+                )) {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Force period nudge")
+                        Text("跳过 HealthKit，强制在场景选择里显示经期 nudge")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+                }
+                .tint(colorScheme == .dark ? Color(.systemGray2) : Color(.label))
+                .listRowSeparator(.hidden)
+            }
+
             Section("settings.developer.reset_group") {
                 actionRow(title: "settings.debug.reset_support_tone") {
                     coffeeStore.debugResetSupportCount()
@@ -1209,7 +1234,10 @@ private struct DeveloperModeView: View {
 #endif
 
             Section("settings.developer.calendar_group") {
-                actionRow(title: "settings.developer.clear_calendar_ids") {
+                actionRow(
+                    title: "settings.developer.clear_calendar_ids",
+                    subtitle: "settings.developer.clear_calendar_ids.subtitle"
+                ) {
                     CalendarManager.shared.clearAddedIds()
                     UserDefaults.standard.set(false, forKey: "calendar_sync_enabled")
                     UIImpactFeedbackGenerator(style: .light).impactOccurred()
@@ -1257,14 +1285,22 @@ private struct DeveloperModeView: View {
         }
     }
 
-    private func actionRow(title: LocalizedStringKey, tint: Color = .primary, action: @escaping () -> Void) -> some View {
+    private func actionRow(title: LocalizedStringKey, subtitle: LocalizedStringKey? = nil, tint: Color = .primary, action: @escaping () -> Void) -> some View {
         Button(action: action) {
             HStack {
-                Text(title)
-                    .foregroundStyle(tint)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(title)
+                        .foregroundStyle(tint)
+                    if let subtitle {
+                        Text(subtitle)
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+                }
                 Spacer()
             }
             .frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
+            .padding(.vertical, subtitle == nil ? 0 : 4)
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)

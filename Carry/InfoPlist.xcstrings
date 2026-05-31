@@ -37,12 +37,119 @@
     },
     "NSCalendarsFullAccessUsageDescription" : {
       "comment" : "Privacy - Calendars Full Access Usage Description",
-      "extractionState" : "extracted_with_value",
       "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Carry fügt deine Reisen und eine Pack-Erinnerung zu deinem Kalender hinzu, damit du keine Abreise verpasst."
+          }
+        },
         "en" : {
           "stringUnit" : {
-            "state" : "new",
+            "state" : "translated",
             "value" : "Carry adds your trips and a pack reminder to your calendar so you never miss a departure."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Carry añade tus viajes y un recordatorio para hacer la maleta a tu calendario para que nunca pierdas una salida."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Carry ajoute vos voyages et un rappel de bagages à votre calendrier pour ne jamais manquer un départ."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "出発を見逃さないよう、旅行と荷造りのリマインダーをカレンダーに追加する。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "출발을 놓치지 않도록 여행과 짐 싸기 알림을 캘린더에 추가합니다."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "O Carry adiciona suas viagens e um lembrete de arrumar a mala ao seu calendário para você nunca perder uma partida."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "启程会将你的行程和打包提醒添加到日历，让你不错过任何一次出发。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "啟程會將你的行程和打包提醒加入行事曆，讓你不錯過任何一次出發。"
+          }
+        }
+      }
+    },
+    "NSHealthShareUsageDescription" : {
+      "comment" : "Privacy - Health Share Usage Description",
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Carry liest deine Zyklusdaten auf dem Gerät, um dich ans Einpacken von Periodenartikeln zu erinnern, wenn eine Reise in deine Periode fallen könnte. Diese Daten verlassen dein Gerät nie."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Carry reads your Cycle Tracking on-device to remind you to pack period essentials when a trip may overlap your period. This data never leaves your device."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Carry lee tu seguimiento del ciclo en el dispositivo para recordarte llevar productos para la menstruación cuando un viaje pueda coincidir con tu periodo. Estos datos nunca salen de tu dispositivo."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Carry lit votre suivi de cycle sur l'appareil pour vous rappeler d'emporter des produits menstruels lorsqu'un voyage pourrait coïncider avec vos règles. Ces données ne quittent jamais votre appareil."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "旅行が生理と重なりそうなときに生理用品の持ち物をお知らせするため、デバイス上で周期記録を読み取る。このデータが端末の外に出ることはない。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "여행이 생리 기간과 겹칠 수 있을 때 생리용품 챙기기를 알려드리기 위해 기기에서 생리 주기 기록을 읽습니다. 이 데이터는 기기를 벗어나지 않습니다."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "O Carry lê seu acompanhamento de ciclo no dispositivo para lembrá-lo de levar itens de menstruação quando uma viagem puder coincidir com seu período. Esses dados nunca saem do seu dispositivo."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "启程在本机读取您的经期记录，以便在行程可能赶上经期时提醒您携带相关物品。这些数据仅保留在您的设备上，绝不会上传。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "啟程在本機讀取您的生理期記錄，以便在行程可能遇上生理期時提醒您攜帶相關物品。這些資料僅保留在您的裝置上，絕不會上傳。"
           }
         }
       }

@@ -116,6 +116,8 @@ final class CarryLogger {
         // 场景 / 分享
         case sceneSelected          = "scene_selected"
         case packingListShared      = "packing_list_shared"
+        case cycleNudgeShown        = "cycle_nudge_shown"
+        case cycleNudgeAccepted     = "cycle_nudge_accepted"
         // 预留（API 扩展用）
         case apiTimeout             = "api_timeout"
         case apiError               = "api_error"

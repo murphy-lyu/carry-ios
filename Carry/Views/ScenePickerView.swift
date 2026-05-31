@@ -49,6 +49,11 @@ struct ScenePickerView: View {
     @State private var isSaved = false
     @State private var confirmedSuggestKeys: [String]? = nil
     @State private var didFinishSuggest = false
+    /// HealthKit 预测：本次行程区间是否赶上经期。读不到/不重叠时保持 false（静默降级）。
+    @State private var cycleNudgeActive = false
+    @State private var didRunCyclePrediction = false
+    /// 「经期打包提醒」总开关（设置内，默认关）。关闭时不跑预测、不触碰 HealthKit。
+    @AppStorage("cycleNudgeFeatureEnabled") private var cycleNudgeFeatureEnabled = false
 
     private var hasSelection: Bool { !selectedItems.isEmpty }
     private var selectionCount: Int { selectedItems.count }
@@ -117,6 +122,10 @@ struct ScenePickerView: View {
 
                 ScrollView {
                     VStack(alignment: .leading, spacing: 28) {
+                        if showCycleNudge {
+                            cycleNudgeSection
+                        }
+
                         if !nudgeSceneKeys.isEmpty {
                             climateNudgeSection
                         }
@@ -166,6 +175,7 @@ struct ScenePickerView: View {
         .navigationTitle("")
         .navigationBarTitleDisplayMode(.inline)
         .onAppear { loadInitialSelectionIfNeeded() }
+        .task { await runCyclePredictionIfNeeded() }
         .sheet(isPresented: Binding(
             get: { confirmedSuggestKeys != nil },
             set: { if !$0 { confirmedSuggestKeys = nil } }
@@ -203,6 +213,15 @@ struct ScenePickerView: View {
         uniqueKeysWithValues: sceneLabelToKey.map { ($1, $0) }
     )
 
+    private static let periodSceneKey = "personal_period"
+
+    /// 仅当预测命中、且用户尚未手动选中经期场景时，才展示经期轻推。
+    private var showCycleNudge: Bool {
+        guard cycleNudgeActive,
+              let label = Self.sceneKeyToLabel[Self.periodSceneKey] else { return false }
+        return !selectedItems.contains(label)
+    }
+
     private var climateNudgeSection: some View {
         VStack(alignment: .leading, spacing: 10) {
             Text("scenepicker.nudge.title")
@@ -223,6 +242,34 @@ struct ScenePickerView: View {
                                 selectedItems.insert(label)
                                 UIImpactFeedbackGenerator(style: .light).impactOccurred()
                             }
+                        }
+                    }
+                }
+                .padding(.horizontal, 16)
+            }
+            .padding(.bottom, 6)
+        }
+    }
+
+    private var cycleNudgeSection: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Text("scenepicker.nudge.cycle.title")
+                .font(.system(size: 11, weight: .medium))
+                .foregroundStyle(Color(.systemGray))
+                .kerning(1.5)
+                .textCase(.uppercase)
+                .padding(.horizontal, 16)
+
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 8) {
+                    if let label = Self.sceneKeyToLabel[Self.periodSceneKey] {
+                        SceneChip(
+                            label: label,
+                            isSelected: selectedItems.contains(label)
+                        ) {
+                            selectedItems.insert(label)
+                            UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                            CarryLogger.shared.log(.cycleNudgeAccepted)
                         }
                     }
                 }
@@ -262,6 +309,47 @@ struct ScenePickerView: View {
     }
 
     // MARK: Private
+
+    /// 仅 edit / suggest 模式（已有 TripBundle 落库）才运行经期预测，且每个生命周期只跑一次。
+    private func runCyclePredictionIfNeeded() async {
+        guard !didRunCyclePrediction else { return }
+        didRunCyclePrediction = true
+
+#if DEBUG
+        // 调试开关：跳过 HealthKit + 总开关，强制显示经期 nudge（任意 mode），便于纯 UI 验收。
+        if UserDefaults.standard.bool(forKey: "debugForceCycleNudge") {
+            cycleNudgeActive = true
+            CarryLogger.shared.log(.cycleNudgeShown)
+            return
+        }
+#endif
+
+        // 总闸：用户未在设置里开启「经期打包提醒」则完全不跑预测、不触碰 HealthKit。
+        guard cycleNudgeFeatureEnabled else { return }
+        guard let range = tripDateRange else { return }
+
+        let overlaps = await CycleInference.tripOverlapsPredictedPeriod(start: range.start, end: range.end)
+        guard overlaps else { return }
+
+        cycleNudgeActive = true
+        CarryLogger.shared.log(.cycleNudgeShown)
+    }
+
+    /// 跨 mode 提取行程日期区间。新建 / autoPack 用 TripInfo（创建当下即有日期，
+    /// 无需等待 countryCode），编辑 / 推荐用已落库的 TripBundle。
+    private var tripDateRange: (start: Date, end: Date)? {
+        let calendar = Calendar.current
+        switch mode {
+        case .create(let info), .autoPack(let info, _):
+            return (calendar.startOfDay(for: info.departureDate),
+                    calendar.startOfDay(for: info.returnDate))
+        case .edit(let id), .suggest(let id):
+            guard let bundle = store.bundle(for: id) else { return nil }
+            let start = calendar.startOfDay(for: bundle.departureDate)
+            guard let end = calendar.date(byAdding: .day, value: max(0, bundle.days), to: start) else { return nil }
+            return (start, end)
+        }
+    }
 
     private func loadInitialSelectionIfNeeded() {
         guard !didLoadInitialSelection else { return }

@@ -3,6 +3,25 @@
 ## 最后更新
 2026-05-31
 
+## 上次改动摘要（经期提醒：显性入口 + 预测前移 · 2026-05-31）
+
+- **交互重构**：经期功能改为**设置内显性 opt-in**。设置 → 通用 → 「经期提醒」→ `CycleReminderSettingsView`（新文件），开关 `cycleNudgeFeatureEnabled`（默认关）。开启时触发 HealthKit 系统授权弹窗（`CycleInference.requestAuthorization()`）。页面含功能说明 + 隐私脚注（仅本机/不存储/不上传/可随时关）。仅 `CycleInference.isAvailable` 的设备显示该入口。
+- **关键修正**：预测从"仅 `.edit`/`.suggest`（已有行程）"**前移到全部 mode（含 `.create`/`.autoPack`）**。早期照抄 `ClimateInference` 把新建流程排除是错的——climate 排除是因依赖异步回填的 `countryCode`，而 cycle 只需日期，新建当下 `TripInfo` 即有。新增 `tripDateRange` 跨 mode 统一取日期。现在用户新建行程填完日期、进场景选择就能被推荐，不再后置。
+- 预测总闸：`runCyclePredictionIfNeeded` 先过 `cycleNudgeFeatureEnabled`，关则完全不碰 HealthKit。
+- `CycleInference` 新增 `isAvailable` / `requestAuthorization()` 公开 API。
+- 本地化：`settings.cycle.entry/toggle/description/privacy` × 9 语言。
+- DEBUG 强制开关（`debugForceCycleNudge`）保留，短路在总闸之前，不受 opt-in 影响。
+- 通过 iPhone 17 Pro simulator build。
+
+## 上次改动摘要（HealthKit 经期预测轻推 · 2026-05-31）
+
+- 新增 `CycleInference.swift`：读 HealthKit Cycle Tracking（仅 `.menstrualFlow` 读权限），中位数外推周期，预测行程区间 `[departureDate, +days]` 是否赶上经期。全部本地推断，不持久化/不上传/不写回；HealthKit import 收敛在此一处。
+- `ScenePickerView` 复用现有 nudge 机制：新增独立 `cycleNudgeSection`（贴心标题 `scenepicker.nudge.cycle.title`，9 语言），命中且未手动选中时在场景选择上方轻推「🌸 On / near period」chip。仅 `.edit`/`.suggest` 模式跑预测（`.task` 异步，每生命周期一次）。读不到/无权限/样本<2/不重叠 → 静默降级为现状。
+- 工程：`Carry.entitlements` 加 `com.apple.developer.healthkit`；`Info.plist` 加 `NSHealthShareUsageDescription`（聚焦"读经期、仅本地、用于打包提醒"）。HealthKit.framework 走 clang autolink，无需改 pbxproj。
+- 埋点：`CarryLogger.Event` 新增 `cycleNudgeShown` / `cycleNudgeAccepted`（只记交互，不记任何健康数据），调用点已接。
+- **决策**：明确只做经期，不接用药（物品库只有笼统 `Daily medication`，精确药名无处落地）、不接生理性别（onboarding 让用户点「男/女」更轻更准、无 `.notSet` 兜底与审核成本）。详见 `specs/healthkit-cycle-nudge.md`。
+- 已通过 iPhone 17 Pro simulator build。**待办**：真机验证经期预测；隐私政策补"读 HealthKit 经期、仅本地不上传"一句（中英 + PIPL 版）；审核用途文案上线前定稿。
+
 ## 上次改动摘要（Calendar Sync 禁用态视觉强化 · 2026-05-31）
 
 - 主开关 `Add Trips to Calendar` 关闭时，从属的 `Day-before Packing Reminder` / `Reminder Time` 原来仅用整行 `opacity(0.45/0.5)` 表达禁用 —— 信号太弱，且 ON 态开关在深色 tint 下 `.disabled()` 不变色，出现「文字灰但开关仍黑亮」的割裂。

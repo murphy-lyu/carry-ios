@@ -35018,6 +35018,65 @@
         }
       }
     },
+    "scenepicker.nudge.cycle.title": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Diese Reise könnte in deine Periode fallen"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This trip may overlap your period"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Este viaje podría coincidir con tu periodo"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ce voyage pourrait coïncider avec vos règles"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "この旅行は生理と重なるかも"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "이번 여행이 생리 기간과 겹칠 수 있어요"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Esta viagem pode coincidir com sua menstruação"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "这趟可能赶上经期"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "這趟可能遇上生理期"
+          }
+        }
+      }
+    },
     "scenepicker.nudge.title": {
       "extractionState": "manual",
       "localizations": {
@@ -37907,6 +37966,62 @@
         }
       }
     },
+    "settings.cycle.entry": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": { "stringUnit": { "state": "translated", "value": "Perioden-Erinnerungen" } },
+        "en": { "stringUnit": { "state": "translated", "value": "Period Reminders" } },
+        "es": { "stringUnit": { "state": "translated", "value": "Recordatorios de periodo" } },
+        "fr": { "stringUnit": { "state": "translated", "value": "Rappels de règles" } },
+        "ja": { "stringUnit": { "state": "translated", "value": "生理リマインダー" } },
+        "ko": { "stringUnit": { "state": "translated", "value": "생리 알림" } },
+        "pt-BR": { "stringUnit": { "state": "translated", "value": "Lembretes de menstruação" } },
+        "zh-Hans": { "stringUnit": { "state": "translated", "value": "经期提醒" } },
+        "zh-Hant": { "stringUnit": { "state": "translated", "value": "生理期提醒" } }
+      }
+    },
+    "settings.cycle.toggle": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": { "stringUnit": { "state": "translated", "value": "Periodenbewusstes Packen" } },
+        "en": { "stringUnit": { "state": "translated", "value": "Period-aware packing" } },
+        "es": { "stringUnit": { "state": "translated", "value": "Equipaje según tu periodo" } },
+        "fr": { "stringUnit": { "state": "translated", "value": "Bagages selon vos règles" } },
+        "ja": { "stringUnit": { "state": "translated", "value": "生理を考慮した持ち物" } },
+        "ko": { "stringUnit": { "state": "translated", "value": "생리 기간 짐 챙기기" } },
+        "pt-BR": { "stringUnit": { "state": "translated", "value": "Mala ciente da menstruação" } },
+        "zh-Hans": { "stringUnit": { "state": "translated", "value": "经期打包提醒" } },
+        "zh-Hant": { "stringUnit": { "state": "translated", "value": "生理期打包提醒" } }
+      }
+    },
+    "settings.cycle.description": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": { "stringUnit": { "state": "translated", "value": "Wenn eine Reise in deine Periode fallen könnte, schlägt Carry vor, das Nötigste einzupacken – etwa Hygieneartikel und Schmerzmittel." } },
+        "en": { "stringUnit": { "state": "translated", "value": "When a trip may overlap your period, Carry suggests packing the essentials — like hygiene products and pain relief." } },
+        "es": { "stringUnit": { "state": "translated", "value": "Cuando un viaje pueda coincidir con tu periodo, Carry te sugiere llevar lo esencial, como productos de higiene y analgésicos." } },
+        "fr": { "stringUnit": { "state": "translated", "value": "Lorsqu'un voyage pourrait coïncider avec vos règles, Carry vous suggère d'emporter l'essentiel : produits d'hygiène et antidouleurs." } },
+        "ja": { "stringUnit": { "state": "translated", "value": "旅行が生理と重なりそうなとき、衛生用品や鎮痛剤などの必需品の持ち物を提案する。" } },
+        "ko": { "stringUnit": { "state": "translated", "value": "여행이 생리 기간과 겹칠 수 있을 때, 위생용품과 진통제 같은 필수품 챙기기를 제안해요." } },
+        "pt-BR": { "stringUnit": { "state": "translated", "value": "Quando uma viagem pode coincidir com sua menstruação, o Carry sugere levar o essencial, como itens de higiene e analgésicos." } },
+        "zh-Hans": { "stringUnit": { "state": "translated", "value": "当行程可能赶上经期时，启程会提醒你带上卫生用品、止痛药等必需品。" } },
+        "zh-Hant": { "stringUnit": { "state": "translated", "value": "當行程可能遇上生理期時，啟程會提醒你帶上衛生用品、止痛藥等必需品。" } }
+      }
+    },
+    "settings.cycle.privacy": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": { "stringUnit": { "state": "translated", "value": "Carry liest deine Zyklusdaten nur auf diesem Gerät, um die Vorhersage zu treffen. Diese Daten werden nie gespeichert, nie in Backups aufgenommen und verlassen dein Gerät nie. Du kannst dies jederzeit deaktivieren." } },
+        "en": { "stringUnit": { "state": "translated", "value": "Carry reads your Cycle Tracking on this device only, to make the prediction. This data is never stored, never included in backups, and never leaves your device. You can turn this off anytime." } },
+        "es": { "stringUnit": { "state": "translated", "value": "Carry lee tu seguimiento del ciclo solo en este dispositivo para hacer la predicción. Estos datos nunca se almacenan, nunca se incluyen en copias de seguridad y nunca salen de tu dispositivo. Puedes desactivarlo cuando quieras." } },
+        "fr": { "stringUnit": { "state": "translated", "value": "Carry lit votre suivi de cycle uniquement sur cet appareil pour établir la prédiction. Ces données ne sont jamais stockées, jamais incluses dans les sauvegardes et ne quittent jamais votre appareil. Vous pouvez désactiver cette option à tout moment." } },
+        "ja": { "stringUnit": { "state": "translated", "value": "予測のために、この端末上でのみ周期記録を読み取る。このデータが保存されたり、バックアップに含まれたり、端末の外に出ることはない。いつでもオフにできる。" } },
+        "ko": { "stringUnit": { "state": "translated", "value": "예측을 위해 이 기기에서만 생리 주기 기록을 읽습니다. 이 데이터는 저장되거나 백업에 포함되지 않으며 기기를 벗어나지 않습니다. 언제든지 끌 수 있어요." } },
+        "pt-BR": { "stringUnit": { "state": "translated", "value": "O Carry lê seu acompanhamento de ciclo apenas neste dispositivo para fazer a previsão. Esses dados nunca são armazenados, nunca são incluídos em backups e nunca saem do seu dispositivo. Você pode desativar a qualquer momento." } },
+        "zh-Hans": { "stringUnit": { "state": "translated", "value": "启程仅在本机读取你的经期记录用于预测。这些数据不会被存储、不会进入备份，也绝不会离开你的设备。可随时关闭。" } },
+        "zh-Hant": { "stringUnit": { "state": "translated", "value": "啟程僅在本機讀取你的生理期記錄用於預測。這些資料不會被儲存、不會進入備份，也絕不會離開你的裝置。可隨時關閉。" } }
+      }
+    },
     "settings.data.title": {
       "extractionState": "manual",
       "localizations": {
@@ -38316,6 +38431,65 @@
           "stringUnit": {
             "state": "translated",
             "value": "重置行事曆同步記錄"
+          }
+        }
+      }
+    },
+    "settings.developer.clear_calendar_ids.subtitle": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Löscht die Aufzeichnung, welche Reisen bereits zum Kalender hinzugefügt wurden, um den Ablauf erneut zu testen. Bestehende Kalendereinträge bleiben erhalten."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Clears the record of which trips were already added to Calendar, so the add-to-calendar flow can be tested again. Does not delete existing calendar events."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Borra el registro de qué viajes ya se añadieron al calendario para volver a probar el flujo. No elimina los eventos existentes del calendario."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Efface l'enregistrement des voyages déjà ajoutés au calendrier afin de retester le flux. Ne supprime pas les événements existants du calendrier."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "どの旅行が既にカレンダーに追加されたかの記録を消去し、追加フローを再テストできるようにします。既存のカレンダーイベントは削除されません。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "어떤 여행이 이미 캘린더에 추가되었는지에 대한 기록을 지워 추가 흐름을 다시 테스트할 수 있게 합니다. 기존 캘린더 이벤트는 삭제하지 않습니다."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Limpa o registro de quais viagens já foram adicionadas ao calendário para testar o fluxo novamente. Não exclui eventos existentes do calendário."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "清除「哪些行程已加入日历」的记录，以便重新测试加入日历流程。不会删除日历中已存在的事件。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "清除「哪些行程已加入日曆」的記錄，以便重新測試加入日曆流程。不會刪除日曆中已存在的事件。"
           }
         }
       }
