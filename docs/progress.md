@@ -3,6 +3,16 @@
 ## 最后更新
 2026-05-31
 
+## 上次改动摘要（Calendar Sync 禁用态视觉强化 · 2026-05-31）
+
+- 主开关 `Add Trips to Calendar` 关闭时，从属的 `Day-before Packing Reminder` / `Reminder Time` 原来仅用整行 `opacity(0.45/0.5)` 表达禁用 —— 信号太弱，且 ON 态开关在深色 tint 下 `.disabled()` 不变色，出现「文字灰但开关仍黑亮」的割裂。
+- 修复为三重一致信号：标题文字切 `tertiaryLabel`；开关 tint 禁用时切 `systemGray4`（`.disabled()` 不改 tint，须手动控制，否则 ON 开关不灰）；保留 `.disabled()` + `allowsHitTesting(false)`。helper：`rowTitleColor(enabled:)` / `toggleTint(enabled:)`。
+
+## 上次改动摘要（日历行程图标 + App Icon 命名 · 2026-05-31）
+
+- 日历行程事件图标 🗺️ → ✈️（旅行通用符号，与打包提醒 🧳 配对）。
+- App Icon 命名对称：`Travel Buddy` → `Travel Pup`（与 Travel Cat 对称、更贴图）。
+
 ## 上次改动摘要（Settings tab bar 延迟修复 · 2026-05-31）
 
 - **根因**：Settings 二级页返回时底部 tab bar 恢复有延迟，而 Trips 链路（首页↔物品清单）及时。原因是两条链路 tab bar 控制方式不同：

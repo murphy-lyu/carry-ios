@@ -842,6 +842,23 @@ private struct CalendarSettingsView: View {
             : Color.black.opacity(0.03)
     }
 
+    /// 打包提醒子开关是否可用（依赖主开关）。
+    private var packReminderRowEnabled: Bool { calendarSyncEnabled }
+    /// 提醒时间行是否可用（依赖主开关 + 子开关）。
+    private var packTimeRowEnabled: Bool { calendarSyncEnabled && calendarPackReminderEnabled }
+
+    /// 行标题文字色：可用时主色，禁用时系统三级灰（比单纯降透明度更明确地传达「不可用」）。
+    private func rowTitleColor(enabled: Bool) -> Color {
+        enabled ? .primary : Color(UIColor.tertiaryLabel)
+    }
+
+    /// 开关 tint：可用时主色；禁用时用浅灰，使 ON 态开关也呈禁用感（`.disabled()`
+    /// 本身不改 tint，深色 tint 下禁用视觉太弱，会出现「文字灰但开关仍亮」的割裂）。
+    private func toggleTint(enabled: Bool) -> Color {
+        if !enabled { return Color(UIColor.systemGray4) }
+        return colorScheme == .dark ? Color(.systemGray2) : Color(.label)
+    }
+
     private var packTimeBinding: Binding<Date> {
         Binding(
             get: {
@@ -919,16 +936,16 @@ private struct CalendarSettingsView: View {
                     HStack(spacing: 12) {
                         Text("settings.calendar.pack_reminder")
                             .font(.body)
-                            .foregroundStyle(.primary)
+                            .foregroundStyle(rowTitleColor(enabled: packReminderRowEnabled))
                         Spacer()
                         Toggle("", isOn: $calendarPackReminderEnabled)
                             .labelsHidden()
-                            .tint(colorScheme == .dark ? Color(.systemGray2) : Color(.label))
+                            .tint(toggleTint(enabled: packReminderRowEnabled))
+                            .disabled(!packReminderRowEnabled)
                     }
                     .padding(.horizontal, 18)
                     .frame(height: 58)
-                    .opacity(calendarSyncEnabled ? 1 : (colorScheme == .dark ? 0.45 : 0.5))
-                    .allowsHitTesting(calendarSyncEnabled)
+                    .allowsHitTesting(packReminderRowEnabled)
 
                     Rectangle()
                         .fill(Color.primary.opacity(colorScheme == .dark ? 0.06 : 0.03))
@@ -947,11 +964,12 @@ private struct CalendarSettingsView: View {
                     .overlay(alignment: .leading) {
                         Text("settings.calendar.packtime")
                             .font(.body)
-                            .foregroundStyle(.primary)
+                            .foregroundStyle(rowTitleColor(enabled: packTimeRowEnabled))
                             .padding(.leading, 18)
                     }
-                    .opacity(calendarSyncEnabled && calendarPackReminderEnabled ? 1 : (colorScheme == .dark ? 0.45 : 0.5))
-                    .allowsHitTesting(calendarSyncEnabled && calendarPackReminderEnabled)
+                    .disabled(!packTimeRowEnabled)
+                    .opacity(packTimeRowEnabled ? 1 : (colorScheme == .dark ? 0.55 : 0.6))
+                    .allowsHitTesting(packTimeRowEnabled)
                 }
                 .background(
                     RoundedRectangle(cornerRadius: 28, style: .continuous)
