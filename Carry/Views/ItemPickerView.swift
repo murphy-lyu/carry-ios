@@ -1011,7 +1011,8 @@ struct ItemPickerView: View {
         didRunCyclePrediction = true
 
 #if DEBUG
-        if UserDefaults.standard.bool(forKey: "debugForceCycleNudge") {
+        // 调试强制开关也尊重 dateless：无日期行程没有可用日期区间，强制态同样不显示。
+        if UserDefaults.standard.bool(forKey: "debugForceCycleNudge"), tripDateRange != nil {
             cycleNudgeActive = true
             CarryLogger.shared.log(.cycleNudgeShown)
             return

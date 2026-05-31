@@ -294,8 +294,9 @@ struct ScenePickerView: View {
         didRunCyclePrediction = true
 
 #if DEBUG
-        // 调试开关：跳过 HealthKit + 总开关，强制显示经期 nudge（任意 mode），便于纯 UI 验收。
-        if UserDefaults.standard.bool(forKey: "debugForceCycleNudge") {
+        // 调试开关：跳过 HealthKit + 总开关，强制显示经期 nudge，便于纯 UI 验收。
+        // 但同样尊重 dateless——无日期行程没有可用日期区间，强制态也不显示。
+        if UserDefaults.standard.bool(forKey: "debugForceCycleNudge"), tripDateRange != nil {
             cycleNudgeActive = true
             CarryLogger.shared.log(.cycleNudgeShown)
             return

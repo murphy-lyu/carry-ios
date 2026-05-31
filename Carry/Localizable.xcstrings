@@ -28234,8 +28234,8 @@
         "ja": { "stringUnit": { "state": "translated", "value": "日付未定" } },
         "ko": { "stringUnit": { "state": "translated", "value": "날짜 미정" } },
         "pt-BR": { "stringUnit": { "state": "translated", "value": "Sem datas ainda" } },
-        "zh-Hans": { "stringUnit": { "state": "translated", "value": "规划中 · 未定日期" } },
-        "zh-Hant": { "stringUnit": { "state": "translated", "value": "規劃中 · 未定日期" } }
+        "zh-Hans": { "stringUnit": { "state": "translated", "value": "未定日期" } },
+        "zh-Hant": { "stringUnit": { "state": "translated", "value": "未定日期" } }
       }
     },
     "edittrip.set_dates": {
