@@ -489,6 +489,14 @@ struct HomeView: View {
                 if path.isEmpty {
                     store.refresh()
                     rebuildTripLists()
+                    // 从 Widget / Quick Action 深链进入时会先 push 目标页，
+                    // triggerUpcomingReveal 的延迟闭包因 router.path 非空而 return，
+                    // didRevealUpcoming 被永久卡在 false，导致返回首页后即将出发的
+                    // 行程卡片停留在 opacity 0（看起来列表为空）。回到首页根（path 清空）
+                    // 这一事件触发时补一次揭示，确保卡片可见。
+                    if !didRevealUpcoming {
+                        withAnimation(.easeOut(duration: 0.30)) { didRevealUpcoming = true }
+                    }
                     if !hasShownFirstTripShimmer,
                        firstTripCreatedAtInterval > 0,
                        Date().timeIntervalSince1970 - firstTripCreatedAtInterval <= Self.shimmerWindowSeconds,
