@@ -6,7 +6,7 @@
 ## 上次改动摘要（无日期「规划中」行程 · 2026-06-01）
 
 - 允许创建不设出发/返程日期的「规划中」行程（参考 Tripsy），单独分组、补日期可"转正"、清空日期可"退回"。spec：`specs/dateless-planning-trips.md`。
-- **模型/数据**：`TripBundle.isDateless`（+ `TripInfo.isDateless`）；SchemaV2 轻量迁移（加字段，零数据风险）；`BackupTrip.isDateless`（可选，兼容旧备份）。
+- **模型/数据**：`TripBundle.isDateless`（+ `TripInfo.isDateless`）；保持单一 SchemaV1 + SwiftData 自动轻量迁移（加字段，零数据风险）；`BackupTrip.isDateless`（可选，兼容旧备份）。⚠️ 曾误加 SchemaV2（models 仍指向同一 live 类）导致 "Duplicate version checksums detected" 启动崩溃，已改回单版本——多版本需冻结旧模型快照，本项目无线上数据无需如此。
 - **降级守卫（防 bug 关键）**：所有读 `departureDate` 的地方先 `guard !isDateless`——`countsAsVisited`（防占位日期误判到访）、首页 upcoming/past 分区（防自己跳到 Past）、提醒、Live Activity、日历、Widget 快照、Nearest Trip、天气、经期/气候 nudge（`tripDateRange` 返回 nil 自动跳过）。
 - **创建**：TripInfoView 加次级按钮「暂不设置日期」。**首页**：新增「规划中」分区（Upcoming 与 Past 之间），卡片隐藏日期行、显示"规划中"标签。**编辑**：EditTripView 支持补日期转正 / 清空日期退回，`updateTripInfo` 在退回时取消提醒、结束 Live Activity。
 - 复制行程保留 `isDateless`。本地化新增 `home.planning` / `tripinfo.skip_dates` / `trip.card.no_dates` / `edittrip.set_dates` / `edittrip.clear_dates` × 9 语言。

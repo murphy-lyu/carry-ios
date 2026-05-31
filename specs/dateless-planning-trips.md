@@ -38,10 +38,9 @@ var isDateless: Bool = false
 - `durationDays` / `dateRangeDisplay` 在 `isDateless` 时不应被调用（调用方先判断）。
 
 ### Schema 迁移（`CarrySchema.swift`）
-- 新增 `SchemaV2: VersionedSchema`（`Version(2,0,0)`，模型类型不变）。
-- `CarryMigrationPlan.schemas = [SchemaV1.self, SchemaV2.self]`。
-- `stages = [.lightweight(fromVersion: SchemaV1.self, toVersion: SchemaV2.self)]`（新增带默认值字段 → 轻量迁移）。
-- ⚠️ App 尚未发布，线上无老数据，迁移风险此刻最低；但仍按版本化方式做，保持未来可演进。
+- **保持单一 `SchemaV1`、空 stages**，让 SwiftData 对本地 store 做自动轻量迁移（`isDateless` 是带默认值的可加字段，属轻量变更）。
+- ⚠️ **踩过的坑**：最初新增了 `SchemaV2` 且其 `models` 仍指向同一个 live `TripBundle` 类——SwiftData 用模型当前结构算 checksum，新旧两版 checksum 相同 → 启动崩溃 **"Duplicate version checksums detected"**。正确的多版本写法需为旧版本**冻结独立模型快照**；但本项目未发布、无线上老数据，单版本 + 自动轻量迁移即可，无需引入第二版本。
+- 将来发布后若有「重命名/删除字段、改关系」等**非轻量**变更，再按"冻结旧快照 + 显式 stage"补 SchemaV2。
 
 ## 日期依赖降级矩阵（逐项，必须全覆盖）
 

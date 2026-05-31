@@ -24,36 +24,25 @@ enum SchemaV1: VersionedSchema {
     }
 }
 
-// MARK: - Schema V2 — adds TripBundle.isDateless (无日期「规划中」行程)
-
-enum SchemaV2: VersionedSchema {
-    static var versionIdentifier = Schema.Version(2, 0, 0)
-
-    static var models: [any PersistentModel.Type] {
-        [
-            TripBundle.self,
-            PackingSection.self,
-            PackingItem.self,
-            MyItem.self,
-        ]
-    }
-}
-
 // MARK: - Migration Plan
+//
+// 注意：SwiftData 的 VersionedSchema 用模型类的当前结构计算 checksum。
+// 若新增一个版本但其 models 仍指向同一个 live 类（如加了 isDateless 后的
+// TripBundle），新旧两版 checksum 会相同 → 启动崩溃 "Duplicate version
+// checksums detected"。正确的多版本写法需要为旧版本冻结一份独立的模型快照。
+//
+// 本项目尚未发布、无线上老数据，新增的 `isDateless` 又是「带默认值的可加字段」，
+// 属 SwiftData 可自动处理的轻量变更。因此保持**单一 SchemaV1**、空 stages，
+// 让 SwiftData 对本地 store 做自动轻量迁移即可——无需引入第二个版本。
+// 待将来发布后若有「重命名/删除字段、改关系」等非轻量变更，再按"冻结旧快照 +
+// 显式 stage"的方式补 SchemaV2。
 
 enum CarryMigrationPlan: SchemaMigrationPlan {
-    /// All known schema versions in chronological order.
     static var schemas: [any VersionedSchema.Type] {
-        [SchemaV1.self, SchemaV2.self]
+        [SchemaV1.self]
     }
 
-    /// Migration stages between versions.
-    /// V1 → V2 is lightweight: `isDateless` is an additive property with a
-    /// default value (false), so existing trips migrate transparently as
-    /// normal (dated) trips.
     static var stages: [MigrationStage] {
-        [
-            .lightweight(fromVersion: SchemaV1.self, toVersion: SchemaV2.self)
-        ]
+        []
     }
 }
