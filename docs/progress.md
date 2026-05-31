@@ -3,6 +3,19 @@
 ## 最后更新
 2026-05-30
 
+## 上次改动摘要（Quick Actions + 桌面 Widget · 2026-05-31）
+
+- **主屏幕 Widget**（已实现，数据已通、视觉定稿）：即将出发行程 + 打包进度，Small / Medium。
+  - 数据：App Group `group.com.murphy.carry`（两 target 已配 capability）+ UserDefaults JSON 快照（`WidgetTripSnapshot`），不动 SwiftData 容器、无迁移风险；主 App 在 launch / 进后台时写快照 + `reloadAllTimelines`。
+  - UI：header 式布局（suitcase 图标 + UPCOMING 标签）/ 行程名（优先 `name`，与 App 卡片一致）/ 倒计时 / 进度（Small 进度条 + 右侧百分比；Medium 进度环 58pt）；Medium 含第二行程；无行程时空状态降级。
+  - 倒计时按天数分支（today / tomorrow / %d days left）绕开各语言复数规则。
+  - spec：`specs/home-screen-widget.md`
+- **主屏幕图标 Quick Actions**（已实现，待真机验证）：长按图标菜单，3 动作（New Trip / Nearest Trip / Footprint）。`CarryQuickAction` + `CarryAppDelegate` / `CarrySceneDelegate` 接冷 / 热启动回调，写 `carry_shortcut_action`，复用 ContentView 既有 `UserDefaults.didChangeNotification` 监听分发。
+  - ⚠️ **待确认**：iOS 16+ `AppShortcutsProvider` 本就会进图标菜单，本套 `UIApplicationShortcutItem` 可能与之**重复**；真机确认后再决定是否移除自建那套。SceneDelegate 不破坏 WindowGroup（黑屏风险）也需真机验证。
+  - spec：`specs/home-screen-quick-actions.md`
+- **i18n 对齐**：`home.upcoming`（首页分区 / 统计标签）与 widget `widget.header.upcoming` 统一为地道译法。此前首页 de/es/fr/ja/ko/pt-BR 仅留英文 "Upcoming"，本轮两边补全并对齐（9 语言）。
+- **App Group / 工程**：新增 `Carry/Carry.entitlements` + `CarryWidgetExtension.entitlements`（`group.com.murphy.carry`），pbxproj 设 `CODE_SIGN_ENTITLEMENTS`；清理 Xcode 生成的孤儿 entitlements 与 .orig/.bak 临时文件。
+
 ## 上次改动摘要（上架前质量收尾 · 2026-05-30）
 
 - **Home Sheet 修复**：快速上滑触发 spring overshoot 时 sheet 底部露出 MapKit（fallback 版 `CarryBottomSheet.SheetViewController`）。修复为 `containerView` 向下延伸 400pt + 设 `CarrySubtleBackground` 底部色背景，`hostingView` 内容高度不变；overshoot 露出的是延伸背景而非地图。坑：`HomeView` 有 fallback / ultimate 两个 sheet 实现，默认 fallback，详见 `docs/home-sheet-debug-playbook.md` §6/§7

@@ -9,9 +9,16 @@ import SwiftUI
 import SwiftData
 import AppIntents
 import UserNotifications
+import UIKit
 
 @main
 struct CarryApp: App {
+    // Bridges UIKit app/scene lifecycle for home-screen Quick Actions, which have
+    // no native SwiftUI hook. The scene delegate (set in CarryAppDelegate) receives
+    // the quick-action callbacks; the adaptor itself does not alter SwiftUI's
+    // window management.
+    @UIApplicationDelegateAdaptor(CarryAppDelegate.self) private var appDelegate
+
     static let container: ModelContainer = {
         do {
             // Use the versioned schema + migration plan so future schema changes
@@ -50,6 +57,8 @@ struct CarryApp: App {
                 .onAppear {
                     CarryLogger.shared.log(.appLaunched)
                     CarryAppShortcuts.updateAppShortcutParameters()
+                    Self.installQuickActions()
+                    store.writeWidgetSnapshot()
                     // 注册通知委托，让打包提醒点击后直接跳到对应行程
                     notificationDelegate.router = router
                     UNUserNotificationCenter.current().delegate = notificationDelegate
@@ -71,6 +80,8 @@ struct CarryApp: App {
                 ) { _ in
                     CarryLogger.shared.log(.appDidEnterBackground)
                     CarryLogger.shared.markSessionEnded()
+                    // Refresh the home-screen widget with the latest trip data.
+                    store.writeWidgetSnapshot()
                 }
                 .onReceive(NotificationCenter.default.publisher(
                     for: UIApplication.willEnterForegroundNotification)
@@ -91,6 +102,76 @@ struct CarryApp: App {
                 }
         }
         .modelContainer(Self.container)
+    }
+
+    /// Installs the three home-screen Quick Actions. Content is fixed; icons reuse
+    /// the SF Symbols from CarryAppShortcuts and titles come from Localizable.xcstrings.
+    private static func installQuickActions() {
+        UIApplication.shared.shortcutItems = [
+            UIApplicationShortcutItem(
+                type: CarryQuickAction.newTrip,
+                localizedTitle: NSLocalizedString("New Trip", comment: "Quick action title"),
+                localizedSubtitle: nil,
+                icon: UIApplicationShortcutIcon(systemImageName: "plus"),
+                userInfo: nil
+            ),
+            UIApplicationShortcutItem(
+                type: CarryQuickAction.nearestTrip,
+                localizedTitle: NSLocalizedString("Nearest Trip", comment: "Quick action title"),
+                localizedSubtitle: nil,
+                icon: UIApplicationShortcutIcon(systemImageName: "suitcase.fill"),
+                userInfo: nil
+            ),
+            UIApplicationShortcutItem(
+                type: CarryQuickAction.footprint,
+                localizedTitle: NSLocalizedString("Footprint", comment: "Quick action title"),
+                localizedSubtitle: nil,
+                icon: UIApplicationShortcutIcon(systemImageName: "globe.asia.australia.fill"),
+                userInfo: nil
+            )
+        ]
+    }
+}
+
+// MARK: - Quick Action lifecycle bridge
+
+/// Minimal app delegate that points new scenes at CarrySceneDelegate so home-screen
+/// Quick Actions can be received. Does not otherwise touch app/window setup.
+final class CarryAppDelegate: NSObject, UIApplicationDelegate {
+    func application(
+        _ application: UIApplication,
+        configurationForConnecting connectingSceneSession: UISceneSession,
+        options: UIScene.ConnectionOptions
+    ) -> UISceneConfiguration {
+        let config = UISceneConfiguration(name: nil, sessionRole: connectingSceneSession.role)
+        config.delegateClass = CarrySceneDelegate.self
+        return config
+    }
+}
+
+/// Receives home-screen Quick Action callbacks. Deliberately does NOT create a
+/// UIWindow — SwiftUI's WindowGroup owns the window; this delegate only forwards
+/// the tapped action into the shared UserDefaults that ContentView observes.
+final class CarrySceneDelegate: NSObject, UIWindowSceneDelegate {
+    /// Cold launch: app was not running and was started by a Quick Action.
+    func scene(
+        _ scene: UIScene,
+        willConnectTo session: UISceneSession,
+        options connectionOptions: UIScene.ConnectionOptions
+    ) {
+        if let item = connectionOptions.shortcutItem {
+            CarryQuickAction.handle(type: item.type)
+        }
+    }
+
+    /// Warm launch: app was already running in the background.
+    func windowScene(
+        _ windowScene: UIWindowScene,
+        performActionFor shortcutItem: UIApplicationShortcutItem,
+        completionHandler: @escaping (Bool) -> Void
+    ) {
+        CarryQuickAction.handle(type: shortcutItem.type)
+        completionHandler(true)
     }
 }
 

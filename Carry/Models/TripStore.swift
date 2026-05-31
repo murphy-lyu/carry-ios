@@ -8,6 +8,9 @@ import Combine
 import SwiftData
 import CoreLocation
 import UserNotifications
+#if canImport(WidgetKit)
+import WidgetKit
+#endif
 
 // MARK: - DestinationEntry
 
@@ -1944,5 +1947,54 @@ final class TripStore: ObservableObject {
                 }
             }
         }
+    }
+}
+
+// MARK: - Home Screen Widget snapshot
+
+/// Lightweight, SwiftData-free mirror of a trip, shared with CarryWidget via the
+/// App Group UserDefaults. The widget defines a field-identical struct and decodes
+/// the same JSON — no shared type / pbxproj change needed.
+struct WidgetTripSnapshot: Codable {
+    let tripId: String
+    let name: String
+    let destinationCity: String
+    let departureDate: Date
+    let packedCount: Int
+    let totalCount: Int
+}
+
+extension TripStore {
+    /// App Group shared with CarryWidgetExtension. Requires the matching App Group
+    /// capability on both targets; absent it, `UserDefaults(suiteName:)` is nil and
+    /// the write is a safe no-op (widget shows its empty state).
+    static let widgetAppGroup = "group.com.murphy.carry"
+    static let widgetSnapshotKey = "carry_widget_trips"
+
+    /// Publishes the next up-to-3 upcoming trips to the widget and reloads timelines.
+    /// Called from CarryApp lifecycle hooks (launch / entering background).
+    func writeWidgetSnapshot() {
+        let today = Calendar.current.startOfDay(for: Date())
+        let upcoming = trips
+            .filter { $0.departureDate >= today }
+            .sorted { $0.departureDate < $1.departureDate }
+            .prefix(3)
+        let snapshots = upcoming.map {
+            WidgetTripSnapshot(
+                tripId: $0.id.uuidString,
+                name: $0.name,
+                destinationCity: $0.destinationCity,
+                departureDate: $0.departureDate,
+                packedCount: $0.packedCount,
+                totalCount: $0.totalCount
+            )
+        }
+        guard let defaults = UserDefaults(suiteName: Self.widgetAppGroup) else { return }
+        if let data = try? JSONEncoder().encode(Array(snapshots)) {
+            defaults.set(data, forKey: Self.widgetSnapshotKey)
+        }
+        #if canImport(WidgetKit)
+        WidgetCenter.shared.reloadAllTimelines()
+        #endif
     }
 }

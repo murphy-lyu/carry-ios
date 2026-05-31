@@ -22,10 +22,48 @@ private extension UserDefaults {
     func setShortcutCreateTrip() {
         set("create_trip", forKey: Self.shortcutActionKey)
     }
+
+    /// Store a "show footprint map" shortcut action.
+    func setShortcutShowMap() {
+        set("show_map", forKey: Self.shortcutActionKey)
+    }
+}
+
+// MARK: - Home Screen Quick Actions
+
+/// Bridges long-press home-screen Quick Actions into the same UserDefaults action
+/// that `ContentView.handlePendingShortcut()` consumes. Quick Actions are a separate
+/// system from AppShortcutsProvider (which only feeds Spotlight/Siri/Shortcuts), so
+/// they must be wired explicitly via the scene delegate.
+enum CarryQuickAction {
+    static let newTrip     = "com.murphy.carry.quickaction.new_trip"
+    static let nearestTrip = "com.murphy.carry.quickaction.nearest_trip"
+    static let footprint   = "com.murphy.carry.quickaction.footprint"
+
+    /// Translates a tapped quick action into the shared UserDefaults action.
+    /// Writing the key triggers `UserDefaults.didChangeNotification`, which
+    /// ContentView already observes to perform navigation — so no extra plumbing.
+    static func handle(type: String) {
+        let defaults = UserDefaults.standard
+        switch type {
+        case newTrip:
+            defaults.setShortcutCreateTrip()
+        case nearestTrip:
+            if let trip = try? findNearestTrip() {
+                defaults.setShortcutOpenTrip(trip.id)
+            } else {
+                defaults.setShortcutCreateTrip()
+            }
+        case footprint:
+            defaults.setShortcutShowMap()
+        default:
+            break
+        }
+    }
 }
 
 /// Returns the trip whose departure date is closest to today (past or future).
-private func nearestTrip() throws -> TripBundle? {
+private func findNearestTrip() throws -> TripBundle? {
     let context = ModelContext(CarryApp.container)
     let trips = try context.fetch(FetchDescriptor<TripBundle>())
     return trips.min(by: {
@@ -57,7 +95,7 @@ struct OpenNearestTripIntent: AppIntent {
 
     @MainActor
     func perform() async throws -> some IntentResult {
-        if let trip = try nearestTrip() {
+        if let trip = try findNearestTrip() {
             CarryLogger.shared.log(.siriShortcutExecuted, context: "action=open_nearest_trip")
             UserDefaults.standard.setShortcutOpenTrip(trip.id)
         } else {

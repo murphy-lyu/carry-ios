@@ -1,7 +1,7 @@
 {
   "images" : [
     {
-      "filename" : "CarryLogo_AnyAppearance.png",
+      "filename" : "CarryAppDefaultLogo.png",
       "idiom" : "universal",
       "platform" : "ios",
       "size" : "1024x1024"
@@ -13,7 +13,7 @@
           "value" : "dark"
         }
       ],
-      "filename" : "CarryLogo_Dark.png",
+      "filename" : "CarryAppDefaultLogo 1.png",
       "idiom" : "universal",
       "platform" : "ios",
       "size" : "1024x1024"
@@ -25,7 +25,7 @@
           "value" : "tinted"
         }
       ],
-      "filename" : "CarryLogo_Tinted.png",
+      "filename" : "CarryAppDefaultLogo 2.png",
       "idiom" : "universal",
       "platform" : "ios",
       "size" : "1024x1024"

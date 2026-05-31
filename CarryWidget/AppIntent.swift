@@ -2,17 +2,6 @@
 //  AppIntent.swift
 //  CarryWidget
 //
-//  Created by Murphy on 2026/5/29.
+//  CarryWidget uses StaticConfiguration (no user-configurable parameters),
+//  so the template ConfigurationAppIntent has been removed.
 //
-
-import WidgetKit
-import AppIntents
-
-struct ConfigurationAppIntent: WidgetConfigurationIntent {
-    static var title: LocalizedStringResource { "Configuration" }
-    static var description: IntentDescription { "This is an example widget." }
-
-    // An example configurable parameter.
-    @Parameter(title: "Favorite Emoji", default: "😃")
-    var favoriteEmoji: String
-}
