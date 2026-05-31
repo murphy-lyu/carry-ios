@@ -12,7 +12,6 @@ struct PackingListView: View {
 
     let tripId: UUID
     var isNewTrip: Bool = false
-    var initialItemCount: Int = 0
 
     @EnvironmentObject var store: TripStore
     @EnvironmentObject var router: NavigationRouter
@@ -45,8 +44,9 @@ struct PackingListView: View {
     @State private var dragStartIds: [UUID] = []
     @State private var dragStartIndex: Int = 0
     @State private var currentDragIndex: Int = 0
-    @State private var toastVisible = false
-    @State private var toastText = ""
+    /// 新建预览页内容的入场揭示开关：landing 时由 false→true 驱动 chips 交错淡入上浮。
+    /// 用"内容入场"本身作为"已添加"的确认，替代会顶内容的浮层 toast。
+    @State private var didRevealPreview = false
 
     @State private var surpriseItems: [SurpriseItem] = []
     @State private var surpriseItemPool: [SurpriseItem] = []
@@ -200,8 +200,12 @@ struct PackingListView: View {
         .onAppear {
             if isNewTrip { loadSurpriseItems() }
             if !isNewTrip { fetchDestinationWeather() }
-            if initialItemCount > 0 {
-                showToastMessage(String(format: NSLocalizedString("itempicker.toast.added_count", comment: ""), initialItemCount))
+            // 新建预览：让刚整理好的物品 chips 交错入场，作为"已添加"的确认
+            // （取代旧的顶部 toast——后者会把列表顶下去、消失时又弹回，不优雅）。
+            if isNewTrip && !didRevealPreview {
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
+                    withAnimation(.easeOut(duration: 0.34)) { didRevealPreview = true }
+                }
             }
             CarryLogger.shared.log(.tripOpened)
             // Remember this trip so "Continue Packing" shortcut can reopen it.
@@ -317,16 +321,10 @@ struct PackingListView: View {
         ZStack(alignment: .top) {
             contentSurface
 
-            VStack(spacing: 0) {
-                if toastVisible {
-                    toastBanner
-                }
-
-                if sections.isEmpty {
-                    emptyState
-                } else {
-                    packingList
-                }
+            if sections.isEmpty {
+                emptyState
+            } else {
+                packingList
             }
         }
         .safeAreaInset(edge: .top, spacing: 0) {
@@ -353,10 +351,26 @@ struct PackingListView: View {
                 .listSectionSeparator(.hidden)
             }
 
+            if isNewTrip && totalCount > 0 {
+                Section {
+                    previewSummaryRow
+                        .opacity(didRevealPreview ? 1 : 0)
+                        .offset(y: didRevealPreview ? 0 : 12)
+                        .animation(.easeOut(duration: 0.34), value: didRevealPreview)
+                        .listRowInsets(EdgeInsets(top: 6, leading: 16, bottom: 2, trailing: 16))
+                        .listRowSeparator(.hidden)
+                        .listRowBackground(Color.clear)
+                }
+                .listSectionSeparator(.hidden)
+            }
+
             ForEach(Array(sections.enumerated()), id: \.element.id) { index, section in
                 Section {
                     if isNewTrip {
                         previewChipsRow(items: section.sortedItems.filter { !$0.name.isEmpty })
+                            .opacity(didRevealPreview ? 1 : 0)
+                            .offset(y: didRevealPreview ? 0 : 12)
+                            .animation(.easeOut(duration: 0.34).delay(Double(min(index, 6)) * 0.05), value: didRevealPreview)
                             .listRowInsets(EdgeInsets(top: 4, leading: 16, bottom: 16, trailing: 16))
                             .listRowSeparator(.hidden)
                             .listRowBackground(Color.clear)
@@ -392,11 +406,17 @@ struct PackingListView: View {
                         .listRowInsets(EdgeInsets())
                 }
                 .listSectionSeparator(.hidden)
+                .opacity(didRevealPreview ? 1 : 0)
+                .offset(y: didRevealPreview ? 0 : 12)
+                .animation(.easeOut(duration: 0.34).delay(Double(min(sections.count, 6)) * 0.05), value: didRevealPreview)
             }
 
             if isNewTrip && !hasScenes {
                 Section {
                     scenePromptCard
+                        .opacity(didRevealPreview ? 1 : 0)
+                        .offset(y: didRevealPreview ? 0 : 12)
+                        .animation(.easeOut(duration: 0.34).delay(Double(min(sections.count, 6)) * 0.05), value: didRevealPreview)
                         .listRowInsets(EdgeInsets(top: 4, leading: 16, bottom: 16, trailing: 16))
                         .listRowSeparator(.hidden)
                         .listRowBackground(Color.clear)
@@ -1170,43 +1190,14 @@ struct PackingListView: View {
         .background(Color(UIColor.systemBackground))
     }
 
-    private var toastBanner: some View {
-        Text(toastText)
-            .font(.subheadline.weight(.semibold))
-            .foregroundStyle(.primary)
-            .padding(.horizontal, 14)
-            .padding(.vertical, 10)
-            .background(.ultraThinMaterial, in: Capsule(style: .continuous))
-            .overlay(
-                Capsule(style: .continuous)
-                    .strokeBorder(Color.primary.opacity(0.06), lineWidth: 1)
-            )
-            .padding(.top, 10)
-            .transition(.move(edge: .top).combined(with: .opacity))
-    }
-
-    private func showToastMessage(_ message: String) {
-        toastText = message
-        withAnimation(.easeInOut(duration: 0.2)) { toastVisible = true }
-        Task {
-            try? await Task.sleep(for: .seconds(2))
-            withAnimation(.easeInOut(duration: 0.2)) { toastVisible = false }
-        }
-    }
-
-    private func showToast(_ messageKey: String) {
-        toastText = NSLocalizedString(messageKey, comment: "")
-        withAnimation(.easeInOut(duration: 0.2)) {
-            toastVisible = true
-        }
-        Task {
-            try? await Task.sleep(for: .milliseconds(1600))
-            await MainActor.run {
-                withAnimation(.easeInOut(duration: 0.2)) {
-                    toastVisible = false
-                }
-            }
-        }
+    /// 新建预览顶部的常驻件数行——保留旧 toast 唯一的信息量（已整理的件数），
+    /// 但它在布局里固定存在、随增删实时更新，不会出现/消失，因而不会顶动列表。
+    private var previewSummaryRow: some View {
+        Text(String.localizedStringWithFormat(
+            NSLocalizedString("packing.preview.summary", comment: ""), totalCount))
+            .font(.footnote.weight(.medium))
+            .foregroundStyle(.secondary)
+            .frame(maxWidth: .infinity, alignment: .leading)
     }
 
     // MARK: Editing

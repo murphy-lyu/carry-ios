@@ -3,6 +3,14 @@
 ## 最后更新
 2026-06-01
 
+## 上次改动摘要（预览页 Toast → 内容入场 + 件数 inline · 2026-06-01）
+
+- **去掉会"跳"的 Toast**：物品清单预览页（`PackingListView(isNewTrip:true)`）顶部「已添加 N 件」Toast 原本和列表是 `mainContent` 同一 VStack 的兄弟节点、参与布局，出现/消失时把列表顶下去又弹回。已移除 Toast 及其死代码（`toastBanner`/`showToastMessage`/`showToast`/`toastVisible`/`toastText`）。
+- **改用"内容入场"作确认**：进入预览时各分类 chips 按分区交错淡入+上浮（`easeOut 0.34s`，每区 delay 50ms，惊喜区/场景卡稍晚一拍），由 `didRevealPreview` 在 onAppear 触发。"物品落进清单"本身即确认，零浮层、零位移。
+- **顶部常驻件数行**：新增 `previewSummaryRow`（实时 `totalCount`），保留旧 Toast 唯一信息量（件数），固定在布局里不闪现。新增本地化 key `packing.preview.summary` × 9 语言（无复数风格，沿用 `added_count`）。
+- **死代码清理**：`initialItemCount` 透传链原仅 Toast 使用，已移除——`CreationRoute.packingList` 去掉该参，连带 ContentView / ItemPickerView（2 处）/ PackingListView 同步。
+- 通过 iPhone 17 Pro simulator build。
+
 ## 上次改动摘要（到访国家/地图点亮按"出发次日"判定 · 2026-06-01）
 
 - **未出发行程被点亮修复**：地图点亮国家/城市、首页 Trip Overview「到访国家数」原用裸 `trip.departureDate <= Date()`，而 `departureDate` 存的是出发当天 00:00（`TripInfo`），导致"今天出发但尚未启程"的行程一过零点就被点亮/计数（用户反馈：未出发的希腊雅典/圣托里尼被点亮）。

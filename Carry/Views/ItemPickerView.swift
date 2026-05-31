@@ -1707,7 +1707,7 @@ struct ItemPickerView: View {
             if sections.isEmpty {
                 finalizeEmptyTrip(bundle: bundle, city: info.destinationCity)
             } else {
-                router.path.append(CreationRoute.packingList(bundle.id, initialItemCount: totalAdded))
+                router.path.append(CreationRoute.packingList(bundle.id))
             }
 
         case .autoPackReview(let info, let sceneKeys):
@@ -1724,7 +1724,7 @@ struct ItemPickerView: View {
             if sections.isEmpty {
                 finalizeEmptyTrip(bundle: bundle, city: info.destinationCity)
             } else {
-                router.path.append(CreationRoute.packingList(bundle.id, initialItemCount: totalAdded))
+                router.path.append(CreationRoute.packingList(bundle.id))
             }
 
         case .merge(let tripId):
