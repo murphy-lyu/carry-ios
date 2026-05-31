@@ -537,7 +537,7 @@ struct PackingListView: View {
     // MARK: Actions
 
     private func fetchDestinationWeather() {
-        guard let trip = bundle, trip.latitude != 0 else { return }
+        guard let trip = bundle, !trip.isDateless, trip.latitude != 0 else { return }
         let start = trip.departureDate
         let end = Calendar.current.date(byAdding: .day, value: max(trip.days - 1, 0), to: start) ?? start
         var dests: [(index: Int, lat: Double, lon: Double)] = [

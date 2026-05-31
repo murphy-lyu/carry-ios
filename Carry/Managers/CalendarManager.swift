@@ -36,6 +36,7 @@ final class CalendarManager {
     /// Adds events for a single upcoming trip. Returns true if written (or already added).
     @discardableResult
     func addTrip(_ trip: TripBundle, packHour: Int, packMinute: Int, includePackReminder: Bool = true) -> Bool {
+        guard !trip.isDateless else { return false }   // 无日期行程不写日历
         guard trip.departureDate >= Calendar.current.startOfDay(for: Date()) else { return false }
         var addedIds = loadAddedIds()
         let idString = trip.id.uuidString
@@ -65,7 +66,7 @@ final class CalendarManager {
         }
         var addedIds = loadAddedIds()
         var written = 0
-        for trip in trips where trip.departureDate >= today {
+        for trip in trips where !trip.isDateless && trip.departureDate >= today {
             let idString = trip.id.uuidString
             guard !addedIds.contains(idString) else { continue }
             do {

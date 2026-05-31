@@ -50,12 +50,13 @@ struct TripInfoView: View {
         canContinue ? Color(.systemBackground) : Color(.secondaryLabel)
     }
 
-    private var info: TripInfo {
+    private func makeInfo(dateless: Bool) -> TripInfo {
         TripInfo(
             name: tripName,
             destinationCity: destinationCity,
             departureDate: departureDate,
-            returnDate: returnDate
+            returnDate: returnDate,
+            isDateless: dateless
         )
     }
 
@@ -136,11 +137,11 @@ struct TripInfoView: View {
             }
         )
         .safeAreaInset(edge: .bottom) {
-            VStack(spacing: 0) {
+            VStack(spacing: 10) {
                 Button(action: {
                     guard canContinue else { return }
                     hideKeyboard()
-                    router.path.append(CreationRoute.itemPicker(info, startInMyItems: startInMyItems))
+                    router.path.append(CreationRoute.itemPicker(makeInfo(dateless: false), startInMyItems: startInMyItems))
                 }) {
                     Text("Continue")
                         .font(.subheadline)
@@ -157,8 +158,23 @@ struct TripInfoView: View {
                 }
                 .buttonStyle(SolidPressButtonStyle())
                 .allowsHitTesting(canContinue)
-                .padding(.horizontal, 16)
+
+                // 次级入口：暂不设置日期，作为「规划中」行程先建起来（日期可稍后在编辑里补上）。
+                Button(action: {
+                    guard canContinue else { return }
+                    hideKeyboard()
+                    router.path.append(CreationRoute.itemPicker(makeInfo(dateless: true), startInMyItems: startInMyItems))
+                }) {
+                    Text("tripinfo.skip_dates")
+                        .font(.footnote.weight(.medium))
+                        .foregroundStyle(canContinue ? Color.secondary : Color(.tertiaryLabel))
+                        .frame(maxWidth: .infinity)
+                        .frame(height: 32)
+                }
+                .buttonStyle(.plain)
+                .allowsHitTesting(canContinue)
             }
+            .padding(.horizontal, 16)
             .padding(.top, 12)
             .padding(.bottom, 16)
             .frame(maxWidth: .infinity)

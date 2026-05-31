@@ -27,6 +27,8 @@ enum NotificationManager {
 
     static func scheduleReminders(for trip: TripBundle) {
         cancelReminders(forTripId: trip.id)
+        // 无日期「规划中」行程没有出发日，不排打包提醒（先清后不排 = 退回时也自动撤销）。
+        guard !trip.isDateless else { return }
         for config in trip.reminderConfigs {
             scheduleReminder(for: trip, config: config)
         }

@@ -55,6 +55,7 @@ struct HomeView: View {
     // Cached sorted trip lists — recomputed only when store.trips changes,
     // not on every body re-evaluation (e.g. initialRevealProgress animation ticks).
     @State private var cachedUpcoming: [TripBundle] = []
+    @State private var cachedPlanning: [TripBundle] = []
     @State private var cachedPastByYear: [(year: Int, trips: [TripBundle])] = []
 
     /// True when the list should appear empty — either no real trips exist,
@@ -79,13 +80,13 @@ struct HomeView: View {
             return todayStart > calendar.startOfDay(for: ret)
         }
 
-        // Upcoming
+        // Upcoming（排除无日期「规划中」行程——其占位 departureDate 不能参与时间判定）
         if store.isHomeEmptyStateMockEnabled {
             cachedUpcoming = []
         } else {
             struct Decorated { let trip: TripBundle; let isComplete: Bool }
             let decorated = store.trips
-                .filter { !isPast($0) }
+                .filter { !$0.isDateless && !isPast($0) }
                 .map { Decorated(trip: $0, isComplete: $0.totalCount > 0 && $0.packedCount == $0.totalCount) }
             cachedUpcoming = decorated
                 .sorted {
@@ -97,11 +98,23 @@ struct HomeView: View {
                 .map(\.trip)
         }
 
-        // Past by year
+        // Planning（无日期行程，单独分组，按创建时间倒序）
+        if store.isHomeEmptyStateMockEnabled {
+            cachedPlanning = []
+        } else {
+            cachedPlanning = store.trips
+                .filter { $0.isDateless }
+                .sorted {
+                    if $0.createdAt != $1.createdAt { return $0.createdAt > $1.createdAt }
+                    return $0.id.uuidString < $1.id.uuidString
+                }
+        }
+
+        // Past by year（同样排除无日期行程）
         if store.isHomeEmptyStateMockEnabled {
             cachedPastByYear = []
         } else {
-            let grouped = Dictionary(grouping: store.trips.filter { isPast($0) }) {
+            let grouped = Dictionary(grouping: store.trips.filter { !$0.isDateless && isPast($0) }) {
                 calendar.component(.year, from: returnDate(for: $0))
             }
             cachedPastByYear = grouped.keys.sorted(by: >).map { year in
@@ -118,6 +131,7 @@ struct HomeView: View {
     }
 
     private var upcomingTrips: [TripBundle] { cachedUpcoming }
+    private var planningTrips: [TripBundle] { cachedPlanning }
     private var pastTripsByYear: [(year: Int, trips: [TripBundle])] { cachedPastByYear }
 
     private func startNewTrip() {
@@ -340,6 +354,7 @@ struct HomeView: View {
                     .listRowBackground(Color.clear)
                     .listRowSeparator(.hidden)
                 upcomingSection
+                planningSection
                 pastSection
                 listFooter
                     .listRowInsets(EdgeInsets(top: 14, leading: 16, bottom: 4, trailing: 16))
@@ -427,6 +442,7 @@ struct HomeView: View {
                             .listRowSeparator(.hidden)
 
                         upcomingSection
+                        planningSection
                         pastSection
 
                         listFooter
@@ -610,6 +626,20 @@ struct HomeView: View {
                     .offset(y: (1 - itemProgress) * 14)
                     .scaleEffect(0.99 + itemProgress * 0.01)
                     .animation(.easeOut(duration: 0.24).delay(Double(staggerIndex) * 0.035), value: didRevealUpcoming)
+            }
+        }
+    }
+
+    @ViewBuilder
+    private var planningSection: some View {
+        if !planningTrips.isEmpty {
+            sectionLabel("home.planning", uppercase: true)
+                .listRowInsets(EdgeInsets(top: 8, leading: 16, bottom: 4, trailing: 16))
+                .listRowBackground(Color.clear)
+                .listRowSeparator(.hidden)
+
+            ForEach(Array(planningTrips.enumerated()), id: \.element.id) { _, bundle in
+                tripRow(bundle: bundle, isPast: false)
             }
         }
     }
@@ -995,6 +1025,10 @@ struct TripCard: View {
     }
     
     private var dateAndDurationText: String {
+        // 无日期「规划中」行程不显示日期区间，改显示轻标签。
+        if bundle.isDateless {
+            return NSLocalizedString("trip.card.no_dates", comment: "Planning trip with no dates set")
+        }
         let format = NSLocalizedString("%@ · %lld days", comment: "Trip date range and duration")
         return String(format: format, locale: Locale.current, bundle.localizedDateRange, Int64(bundle.days))
     }

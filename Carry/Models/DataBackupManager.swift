@@ -31,6 +31,8 @@ struct BackupTrip: Codable {
     var days: Int
     var dateRange: String
     var departureDate: Date
+    /// 可选以兼容旧备份（无此键时解码不报错，还原时按 false 处理）。
+    var isDateless: Bool?
     var createdAt: Date
     var selectedSceneKeys: [String]
     var dismissedSurpriseNames: [String]
@@ -127,6 +129,7 @@ final class DataBackupManager {
                 days: trip.days,
                 dateRange: trip.dateRange,
                 departureDate: trip.departureDate,
+                isDateless: trip.isDateless,
                 createdAt: trip.createdAt,
                 selectedSceneKeys: trip.selectedSceneKeys,
                 dismissedSurpriseNames: trip.dismissedSurpriseNames,
@@ -261,6 +264,7 @@ final class DataBackupManager {
                 days: bt.days,
                 dateRange: bt.dateRange,
                 departureDate: bt.departureDate,
+                isDateless: bt.isDateless ?? false,
                 createdAt: bt.createdAt,
                 selectedSceneKeys: bt.selectedSceneKeys
             )

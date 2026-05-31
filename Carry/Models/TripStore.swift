@@ -32,6 +32,9 @@ final class TripBundle {
     var days: Int = 1
     var dateRange: String = ""
     var departureDate: Date = Date()
+    /// 无日期「规划中」行程标记。为真时 departureDate/days 退化为无意义占位值，
+    /// 所有日期相关功能（提醒/Live Activity/日历/天气/经期/到访/排序）必须先 guard !isDateless。
+    var isDateless: Bool = false
     var createdAt: Date = Date()
     var selectedSceneKeys: [String] = []
     var dismissedSurpriseNames: [String] = []
@@ -80,6 +83,7 @@ final class TripBundle {
         days: Int = 1,
         dateRange: String = "",
         departureDate: Date = Date(),
+        isDateless: Bool = false,
         createdAt: Date = Date(),
         selectedSceneKeys: [String] = [],
         sections: [PackingSection] = []
@@ -90,6 +94,7 @@ final class TripBundle {
         self.days = days
         self.dateRange = dateRange
         self.departureDate = departureDate
+        self.isDateless = isDateless
         self.createdAt = createdAt
         self.selectedSceneKeys = selectedSceneKeys
         self.sections = sections
@@ -114,6 +119,9 @@ final class TripBundle {
     /// `departureDate` 存的是出发当天 00:00（见 TripInfo），裸 `departureDate <= Date()`
     /// 会让"今天出发但尚未启程"的行程一过零点就被点亮，故改为按天比较且要求已过出发日。
     var countsAsVisited: Bool {
+        // 无日期「规划中」行程永远不算到访——其 departureDate 是无意义占位值，
+        // 不加此守卫会导致占位日期过期后误判为已到访（污染地图点亮 + 到访国家数）。
+        guard !isDateless else { return false }
         let calendar = Calendar.current
         return calendar.startOfDay(for: Date()) > calendar.startOfDay(for: departureDate)
     }
@@ -363,6 +371,7 @@ final class TripStore: ObservableObject {
             days: original.days,
             dateRange: original.dateRange,
             departureDate: original.departureDate,
+            isDateless: original.isDateless,
             createdAt: Date(),
             selectedSceneKeys: original.selectedSceneKeys,
             sections: newSections
@@ -387,9 +396,11 @@ final class TripStore: ObservableObject {
         let cityChanged = trip.destinationCity != info.destinationCity
         trip.name = info.name
         trip.destinationCity = info.destinationCity
+        trip.isDateless = info.isDateless
+        // 无日期「规划中」行程：days/dateRange 退化为无意义占位值（不会被展示/计算读取）。
         trip.departureDate = info.departureDate
-        trip.days = info.durationDays
-        trip.dateRange = info.dateRangeDisplay
+        trip.days = info.isDateless ? 1 : info.durationDays
+        trip.dateRange = info.isDateless ? "" : info.dateRangeDisplay
         if cityChanged {
             // Clear stale coordinates immediately so the map doesn't show the old location
             trip.countryCode = ""
@@ -403,6 +414,7 @@ final class TripStore: ObservableObject {
             CarryLogger.shared.log(.tripEditSaveFailed)
         }
         fetchTrips()
+        // scheduleReminders 内部已 guard isDateless：退回规划中时自动取消提醒，转正时重新排期。
         if trip.remindersEnabled {
             NotificationManager.scheduleReminders(for: trip)
         }
@@ -410,7 +422,14 @@ final class TripStore: ObservableObject {
             updateCountryCode(for: tripId, city: info.destinationCity)
         }
 #if !targetEnvironment(macCatalyst)
-        Task { @MainActor in LiveActivityManager.shared.update(for: trip) }
+        Task { @MainActor in
+            // 退回规划中：结束 Live Activity；其余情况正常更新。
+            if info.isDateless {
+                LiveActivityManager.shared.end(for: tripId)
+            } else {
+                LiveActivityManager.shared.update(for: trip)
+            }
+        }
 #endif
     }
 
@@ -1985,7 +2004,7 @@ extension TripStore {
     func writeWidgetSnapshot() {
         let today = Calendar.current.startOfDay(for: Date())
         let upcoming = trips
-            .filter { $0.departureDate >= today }
+            .filter { !$0.isDateless && $0.departureDate >= today }
             .sorted { $0.departureDate < $1.departureDate }
             .prefix(3)
         let snapshots = upcoming.map {

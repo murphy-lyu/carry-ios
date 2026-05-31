@@ -28196,6 +28196,76 @@
         }
       }
     },
+    "home.planning": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": { "stringUnit": { "state": "translated", "value": "In Planung" } },
+        "en": { "stringUnit": { "state": "translated", "value": "Planning" } },
+        "es": { "stringUnit": { "state": "translated", "value": "En planificación" } },
+        "fr": { "stringUnit": { "state": "translated", "value": "En préparation" } },
+        "ja": { "stringUnit": { "state": "translated", "value": "計画中" } },
+        "ko": { "stringUnit": { "state": "translated", "value": "계획 중" } },
+        "pt-BR": { "stringUnit": { "state": "translated", "value": "Em planejamento" } },
+        "zh-Hans": { "stringUnit": { "state": "translated", "value": "规划中" } },
+        "zh-Hant": { "stringUnit": { "state": "translated", "value": "規劃中" } }
+      }
+    },
+    "tripinfo.skip_dates": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": { "stringUnit": { "state": "translated", "value": "Ohne Datum – erst planen" } },
+        "en": { "stringUnit": { "state": "translated", "value": "Skip dates — plan first" } },
+        "es": { "stringUnit": { "state": "translated", "value": "Sin fechas — planear primero" } },
+        "fr": { "stringUnit": { "state": "translated", "value": "Sans dates — planifier d'abord" } },
+        "ja": { "stringUnit": { "state": "translated", "value": "日付なしで先に計画する" } },
+        "ko": { "stringUnit": { "state": "translated", "value": "날짜 없이 먼저 계획하기" } },
+        "pt-BR": { "stringUnit": { "state": "translated", "value": "Sem datas — planejar primeiro" } },
+        "zh-Hans": { "stringUnit": { "state": "translated", "value": "暂不设置日期，先做规划" } },
+        "zh-Hant": { "stringUnit": { "state": "translated", "value": "暫不設定日期，先做規劃" } }
+      }
+    },
+    "trip.card.no_dates": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": { "stringUnit": { "state": "translated", "value": "Noch kein Datum" } },
+        "en": { "stringUnit": { "state": "translated", "value": "No dates yet" } },
+        "es": { "stringUnit": { "state": "translated", "value": "Sin fechas aún" } },
+        "fr": { "stringUnit": { "state": "translated", "value": "Pas encore de dates" } },
+        "ja": { "stringUnit": { "state": "translated", "value": "日付未定" } },
+        "ko": { "stringUnit": { "state": "translated", "value": "날짜 미정" } },
+        "pt-BR": { "stringUnit": { "state": "translated", "value": "Sem datas ainda" } },
+        "zh-Hans": { "stringUnit": { "state": "translated", "value": "规划中 · 未定日期" } },
+        "zh-Hant": { "stringUnit": { "state": "translated", "value": "規劃中 · 未定日期" } }
+      }
+    },
+    "edittrip.set_dates": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": { "stringUnit": { "state": "translated", "value": "Kein Datum · tippen zum Festlegen" } },
+        "en": { "stringUnit": { "state": "translated", "value": "No dates · tap to set" } },
+        "es": { "stringUnit": { "state": "translated", "value": "Sin fechas · toca para definir" } },
+        "fr": { "stringUnit": { "state": "translated", "value": "Sans dates · toucher pour définir" } },
+        "ja": { "stringUnit": { "state": "translated", "value": "日付なし · タップして設定" } },
+        "ko": { "stringUnit": { "state": "translated", "value": "날짜 없음 · 탭하여 설정" } },
+        "pt-BR": { "stringUnit": { "state": "translated", "value": "Sem datas · toque para definir" } },
+        "zh-Hans": { "stringUnit": { "state": "translated", "value": "暂无日期 · 点此设置" } },
+        "zh-Hant": { "stringUnit": { "state": "translated", "value": "暫無日期 · 點此設定" } }
+      }
+    },
+    "edittrip.clear_dates": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": { "stringUnit": { "state": "translated", "value": "Datum entfernen (zu „In Planung“)" } },
+        "en": { "stringUnit": { "state": "translated", "value": "Clear dates (move to Planning)" } },
+        "es": { "stringUnit": { "state": "translated", "value": "Borrar fechas (a En planificación)" } },
+        "fr": { "stringUnit": { "state": "translated", "value": "Effacer les dates (vers En préparation)" } },
+        "ja": { "stringUnit": { "state": "translated", "value": "日付を消す（計画中に戻す）" } },
+        "ko": { "stringUnit": { "state": "translated", "value": "날짜 지우기 (계획 중으로)" } },
+        "pt-BR": { "stringUnit": { "state": "translated", "value": "Limpar datas (para Em planejamento)" } },
+        "zh-Hans": { "stringUnit": { "state": "translated", "value": "清除日期，改为规划中" } },
+        "zh-Hant": { "stringUnit": { "state": "translated", "value": "清除日期，改為規劃中" } }
+      }
+    },
     "home.upcoming": {
       "extractionState": "manual",
       "localizations": {
@@ -39908,6 +39978,118 @@
             "value": "開啟任意行程的打包清單後，Carry 會自動在鎖定畫面和靈動島顯示打包進度，讓你隨時掌握還剩多少件未打包。"
           }
         }
+      }
+    },
+    "settings.widget.entry": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": { "stringUnit": { "state": "translated", "value": "Widgets" } },
+        "en": { "stringUnit": { "state": "translated", "value": "Widgets" } },
+        "es": { "stringUnit": { "state": "translated", "value": "Widgets" } },
+        "fr": { "stringUnit": { "state": "translated", "value": "Widgets" } },
+        "ja": { "stringUnit": { "state": "translated", "value": "ウィジェット" } },
+        "ko": { "stringUnit": { "state": "translated", "value": "위젯" } },
+        "pt-BR": { "stringUnit": { "state": "translated", "value": "Widgets" } },
+        "zh-Hans": { "stringUnit": { "state": "translated", "value": "小部件" } },
+        "zh-Hant": { "stringUnit": { "state": "translated", "value": "小工具" } }
+      }
+    },
+    "settings.widget.description": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": { "stringUnit": { "state": "translated", "value": "Carry bietet Home-Bildschirm-Widgets – deine nächste Reise und der Packfortschritt sind nur einen Blick entfernt. So fügst du eines hinzu." } },
+        "en": { "stringUnit": { "state": "translated", "value": "Carry has Home Screen widgets, so your next trip and packing progress are just a glance away. Here's how to add one." } },
+        "es": { "stringUnit": { "state": "translated", "value": "Carry tiene widgets en la pantalla de inicio para ver tu próximo viaje y el progreso del equipaje de un vistazo. Así se añade uno." } },
+        "fr": { "stringUnit": { "state": "translated", "value": "Carry propose des widgets sur l'écran d'accueil : votre prochain voyage et l'avancement de votre valise en un coup d'œil. Voici comment en ajouter un." } },
+        "ja": { "stringUnit": { "state": "translated", "value": "Carry はホーム画面ウィジェットに対応。次の旅行と荷造りの進み具合がひと目でわかります。追加手順は次のとおりです。" } },
+        "ko": { "stringUnit": { "state": "translated", "value": "Carry는 홈 화면 위젯을 지원해 다음 여행과 짐 싸기 진행 상황을 한눈에 볼 수 있어요. 추가하는 방법은 다음과 같아요." } },
+        "pt-BR": { "stringUnit": { "state": "translated", "value": "O Carry tem widgets na Tela de Início para ver sua próxima viagem e o progresso da mala num relance. Veja como adicionar." } },
+        "zh-Hans": { "stringUnit": { "state": "translated", "value": "Carry 提供桌面小部件，让你在主屏幕一眼看到即将出发的行程和打包进度。按下面三步把它添加到主屏幕。" } },
+        "zh-Hant": { "stringUnit": { "state": "translated", "value": "Carry 提供主畫面小工具，讓你在主畫面一眼看到即將出發的行程與打包進度。依下列三步將它加入主畫面。" } }
+      }
+    },
+    "settings.widget.step1.title": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": { "stringUnit": { "state": "translated", "value": "Home-Bildschirm gedrückt halten" } },
+        "en": { "stringUnit": { "state": "translated", "value": "Touch and hold the Home Screen" } },
+        "es": { "stringUnit": { "state": "translated", "value": "Mantén pulsada la pantalla de inicio" } },
+        "fr": { "stringUnit": { "state": "translated", "value": "Appuyez longuement sur l'écran d'accueil" } },
+        "ja": { "stringUnit": { "state": "translated", "value": "ホーム画面を長押し" } },
+        "ko": { "stringUnit": { "state": "translated", "value": "홈 화면을 길게 누르기" } },
+        "pt-BR": { "stringUnit": { "state": "translated", "value": "Toque e segure a Tela de Início" } },
+        "zh-Hans": { "stringUnit": { "state": "translated", "value": "长按主屏幕" } },
+        "zh-Hant": { "stringUnit": { "state": "translated", "value": "長按主畫面" } }
+      }
+    },
+    "settings.widget.step1.caption": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": { "stringUnit": { "state": "translated", "value": "Halte eine leere Stelle gedrückt, bis die App-Symbole zu wackeln beginnen." } },
+        "en": { "stringUnit": { "state": "translated", "value": "Touch and hold an empty area until the app icons start to jiggle." } },
+        "es": { "stringUnit": { "state": "translated", "value": "Mantén pulsada una zona vacía hasta que los iconos empiecen a moverse." } },
+        "fr": { "stringUnit": { "state": "translated", "value": "Maintenez une zone vide jusqu'à ce que les icônes se mettent à bouger." } },
+        "ja": { "stringUnit": { "state": "translated", "value": "アイコンが揺れ始めるまで、空いている場所を押し続けます。" } },
+        "ko": { "stringUnit": { "state": "translated", "value": "앱 아이콘이 흔들릴 때까지 빈 공간을 길게 누르세요." } },
+        "pt-BR": { "stringUnit": { "state": "translated", "value": "Toque e segure uma área vazia até os ícones começarem a tremer." } },
+        "zh-Hans": { "stringUnit": { "state": "translated", "value": "按住主屏幕空白处，直到 App 图标开始抖动。" } },
+        "zh-Hant": { "stringUnit": { "state": "translated", "value": "按住主畫面空白處，直到 App 圖示開始晃動。" } }
+      }
+    },
+    "settings.widget.step2.title": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": { "stringUnit": { "state": "translated", "value": "Auf ＋ tippen und Carry suchen" } },
+        "en": { "stringUnit": { "state": "translated", "value": "Tap ＋ and find Carry" } },
+        "es": { "stringUnit": { "state": "translated", "value": "Toca ＋ y busca Carry" } },
+        "fr": { "stringUnit": { "state": "translated", "value": "Touchez ＋ et trouvez Carry" } },
+        "ja": { "stringUnit": { "state": "translated", "value": "＋ をタップして Carry を探す" } },
+        "ko": { "stringUnit": { "state": "translated", "value": "＋ 를 누르고 Carry 찾기" } },
+        "pt-BR": { "stringUnit": { "state": "translated", "value": "Toque em ＋ e encontre o Carry" } },
+        "zh-Hans": { "stringUnit": { "state": "translated", "value": "点「＋」找到 Carry" } },
+        "zh-Hant": { "stringUnit": { "state": "translated", "value": "點「＋」找到 Carry" } }
+      }
+    },
+    "settings.widget.step2.caption": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": { "stringUnit": { "state": "translated", "value": "Tippe oben links auf ＋ und suche nach Carry." } },
+        "en": { "stringUnit": { "state": "translated", "value": "Tap the ＋ button in the top-left corner, then search for Carry." } },
+        "es": { "stringUnit": { "state": "translated", "value": "Toca el botón ＋ de la esquina superior izquierda y busca Carry." } },
+        "fr": { "stringUnit": { "state": "translated", "value": "Touchez le bouton ＋ en haut à gauche, puis recherchez Carry." } },
+        "ja": { "stringUnit": { "state": "translated", "value": "左上の ＋ ボタンをタップし、「Carry」を検索します。" } },
+        "ko": { "stringUnit": { "state": "translated", "value": "왼쪽 상단의 ＋ 버튼을 누른 다음 Carry를 검색하세요." } },
+        "pt-BR": { "stringUnit": { "state": "translated", "value": "Toque no botão ＋ no canto superior esquerdo e procure por Carry." } },
+        "zh-Hans": { "stringUnit": { "state": "translated", "value": "点击左上角的「＋」按钮，然后搜索「Carry」。" } },
+        "zh-Hant": { "stringUnit": { "state": "translated", "value": "點擊左上角的「＋」按鈕，然後搜尋「Carry」。" } }
+      }
+    },
+    "settings.widget.step3.title": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": { "stringUnit": { "state": "translated", "value": "Größe wählen und hinzufügen" } },
+        "en": { "stringUnit": { "state": "translated", "value": "Choose a size and add it" } },
+        "es": { "stringUnit": { "state": "translated", "value": "Elige un tamaño y añádelo" } },
+        "fr": { "stringUnit": { "state": "translated", "value": "Choisissez une taille et ajoutez-le" } },
+        "ja": { "stringUnit": { "state": "translated", "value": "サイズを選んで追加" } },
+        "ko": { "stringUnit": { "state": "translated", "value": "크기를 선택하고 추가" } },
+        "pt-BR": { "stringUnit": { "state": "translated", "value": "Escolha um tamanho e adicione" } },
+        "zh-Hans": { "stringUnit": { "state": "translated", "value": "选择尺寸并添加" } },
+        "zh-Hant": { "stringUnit": { "state": "translated", "value": "選擇尺寸並加入" } }
+      }
+    },
+    "settings.widget.step3.caption": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": { "stringUnit": { "state": "translated", "value": "Wische zu einem kleinen oder mittleren Widget, tippe auf Widget hinzufügen und ziehe es an die gewünschte Stelle." } },
+        "en": { "stringUnit": { "state": "translated", "value": "Swipe to a small or medium widget, tap Add Widget, then drag it where you like." } },
+        "es": { "stringUnit": { "state": "translated", "value": "Desliza hasta un widget pequeño o mediano, toca Añadir widget y arrástralo donde quieras." } },
+        "fr": { "stringUnit": { "state": "translated", "value": "Faites défiler jusqu'à un widget petit ou moyen, touchez Ajouter le widget, puis placez-le où vous voulez." } },
+        "ja": { "stringUnit": { "state": "translated", "value": "スワイプして小または中サイズを選び、「ウィジェットを追加」をタップして好きな場所に配置します。" } },
+        "ko": { "stringUnit": { "state": "translated", "value": "스와이프해 소형 또는 중형 위젯을 고른 뒤 위젯 추가를 누르고 원하는 위치로 끌어다 놓으세요." } },
+        "pt-BR": { "stringUnit": { "state": "translated", "value": "Deslize até um widget pequeno ou médio, toque em Adicionar widget e arraste para onde quiser." } },
+        "zh-Hans": { "stringUnit": { "state": "translated", "value": "左右滑动选择小号或中号小部件，点「添加小组件」，再拖到合适的位置。" } },
+        "zh-Hant": { "stringUnit": { "state": "translated", "value": "左右滑動選擇小型或中型小工具，點「加入小工具」，再拖到合適的位置。" } }
       }
     },
     "settings.liveactivity.packing": {

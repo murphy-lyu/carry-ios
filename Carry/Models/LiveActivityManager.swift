@@ -43,6 +43,7 @@ final class LiveActivityManager {
     /// 若开关开启且条件满足，为指定行程启动 Live Activity。
     func startIfNeeded(for trip: TripBundle) {
         guard isEnabled else { return }
+        guard !trip.isDateless else { return }   // 无日期行程无倒计时，不激活 Live Activity
         guard ActivityAuthorizationInfo().areActivitiesEnabled else { return }
         // 仅为临近出发的行程激活：出发前 activationWindowDays 天内、且未出发。
         // 远期行程（如几个月后）点开清单不应在锁屏常驻 Live Activity（无紧迫性）。

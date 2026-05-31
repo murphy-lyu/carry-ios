@@ -31,7 +31,8 @@ struct EditTripView: View {
             name: trip.name,
             destinationCity: trip.destinationCity,
             departureDate: trip.departureDate,
-            returnDate: returnDate
+            returnDate: returnDate,
+            isDateless: trip.isDateless
         ))
     }
 
@@ -69,42 +70,76 @@ struct EditTripView: View {
                         }
 
                         fieldGroup(label: "Dates") {
-                            Button { showDatePicker = true } label: {
-                                HStack(spacing: 0) {
-                                    VStack(alignment: .leading, spacing: 3) {
-                                        Text("Departure")
-                                            .font(.caption.weight(.semibold))
-                                            .foregroundStyle(.secondary.opacity(0.82))
-                                        Text(info.departureDate.formatted(date: .long, time: .omitted))
+                            if info.isDateless {
+                                // 无日期态：点此设置日期即转正为普通行程。
+                                Button { showDatePicker = true } label: {
+                                    HStack {
+                                        Text("edittrip.set_dates")
                                             .font(.subheadline)
-                                            .foregroundStyle(.primary)
+                                            .foregroundStyle(.secondary)
+                                        Spacer()
+                                        Image(systemName: "calendar.badge.plus")
+                                            .font(.subheadline.weight(.semibold))
+                                            .foregroundStyle(.tertiary)
                                     }
-                                    Spacer()
-                                    Image(systemName: "arrow.right")
-                                        .font(.caption.weight(.semibold))
-                                        .foregroundStyle(.tertiary.opacity(0.88))
-                                    Spacer()
-                                    VStack(alignment: .trailing, spacing: 3) {
-                                        Text("Return")
-                                            .font(.caption.weight(.semibold))
-                                            .foregroundStyle(.secondary.opacity(0.82))
-                                        Text(info.returnDate.formatted(date: .long, time: .omitted))
-                                            .font(.subheadline)
-                                            .foregroundStyle(.primary)
-                                    }
+                                    .padding(14)
                                 }
-                                .padding(14)
+                                .buttonStyle(.plain)
+                                .background(Color(UIColor.systemBackground).opacity(0.64))
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: 12, style: .continuous)
+                                        .strokeBorder(Color.primary.opacity(colorScheme == .dark ? 0.11 : 0.07), lineWidth: 1)
+                                )
+                                .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+                            } else {
+                                Button { showDatePicker = true } label: {
+                                    HStack(spacing: 0) {
+                                        VStack(alignment: .leading, spacing: 3) {
+                                            Text("Departure")
+                                                .font(.caption.weight(.semibold))
+                                                .foregroundStyle(.secondary.opacity(0.82))
+                                            Text(info.departureDate.formatted(date: .long, time: .omitted))
+                                                .font(.subheadline)
+                                                .foregroundStyle(.primary)
+                                        }
+                                        Spacer()
+                                        Image(systemName: "arrow.right")
+                                            .font(.caption.weight(.semibold))
+                                            .foregroundStyle(.tertiary.opacity(0.88))
+                                        Spacer()
+                                        VStack(alignment: .trailing, spacing: 3) {
+                                            Text("Return")
+                                                .font(.caption.weight(.semibold))
+                                                .foregroundStyle(.secondary.opacity(0.82))
+                                            Text(info.returnDate.formatted(date: .long, time: .omitted))
+                                                .font(.subheadline)
+                                                .foregroundStyle(.primary)
+                                        }
+                                    }
+                                    .padding(14)
+                                }
+                                .buttonStyle(.plain)
+                                .background(Color(UIColor.systemBackground).opacity(0.64))
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: 12, style: .continuous)
+                                        .strokeBorder(
+                                            Color.primary.opacity(colorScheme == .dark ? 0.11 : 0.07),
+                                            lineWidth: 1
+                                        )
+                                )
+                                .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+
+                                // 清除日期 → 退回「规划中」。
+                                Button {
+                                    info.isDateless = true
+                                } label: {
+                                    Text("edittrip.clear_dates")
+                                        .font(.footnote.weight(.medium))
+                                        .foregroundStyle(.secondary)
+                                }
+                                .buttonStyle(.plain)
+                                .padding(.top, 6)
                             }
-                            .buttonStyle(.plain)
-                            .background(Color(UIColor.systemBackground).opacity(0.64))
-                            .overlay(
-                                RoundedRectangle(cornerRadius: 12, style: .continuous)
-                                    .strokeBorder(
-                                        Color.primary.opacity(colorScheme == .dark ? 0.11 : 0.07),
-                                        lineWidth: 1
-                                    )
-                            )
-                            .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
                         }
                     }
                     .padding(.top, 8)
@@ -126,6 +161,7 @@ struct EditTripView: View {
                 ) { start, end in
                     info.departureDate = start
                     info.returnDate = max(end, Calendar.current.date(byAdding: .day, value: 1, to: start) ?? start)
+                    info.isDateless = false   // 选定日期即转正为普通行程
                 }
             }
             .toolbar {

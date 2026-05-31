@@ -66,6 +66,7 @@ enum CarryQuickAction {
 private func findNearestTrip() throws -> TripBundle? {
     let context = ModelContext(CarryApp.container)
     let trips = try context.fetch(FetchDescriptor<TripBundle>())
+        .filter { !$0.isDateless }   // 无日期行程无出发日，不参与"最近行程"
     return trips.min(by: {
         abs($0.departureDate.timeIntervalSinceNow) < abs($1.departureDate.timeIntervalSinceNow)
     })

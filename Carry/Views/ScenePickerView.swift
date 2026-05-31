@@ -203,7 +203,7 @@ struct ScenePickerView: View {
     /// 即时推断，与 ItemPickerView 同源。不按"是否已选"过滤——推荐项上移到顶部唯一展示，
     /// 选中后仍留在顶部（显示选中态），不消失、不瞬移。
     private var climateSuggestedLabels: [String] {
-        guard let bundle = tripBundle else { return [] }
+        guard let bundle = tripBundle, !bundle.isDateless else { return [] }
         let code = bundle.countryCode.isEmpty
             ? (store.inferCountryCodes(for: bundle.destinationCity).first ?? "")
             : bundle.countryCode
@@ -319,10 +319,11 @@ struct ScenePickerView: View {
         let calendar = Calendar.current
         switch mode {
         case .autoPack(let info, _):
+            guard !info.isDateless else { return nil }
             return (calendar.startOfDay(for: info.departureDate),
                     calendar.startOfDay(for: info.returnDate))
         case .edit(let id), .suggest(let id):
-            guard let bundle = store.bundle(for: id) else { return nil }
+            guard let bundle = store.bundle(for: id), !bundle.isDateless else { return nil }
             let start = calendar.startOfDay(for: bundle.departureDate)
             guard let end = calendar.date(byAdding: .day, value: max(0, bundle.days), to: start) else { return nil }
             return (start, end)

@@ -10,15 +10,19 @@ struct TripInfo: Hashable {
     var destinationCity: String = ""
     var departureDate: Date
     var returnDate: Date
+    /// 无日期「规划中」行程。为真时 departureDate/returnDate 为占位值，调用方不应读取。
+    var isDateless: Bool = false
 
     init(
         name: String = "",
         destinationCity: String = "",
         departureDate: Date? = nil,
-        returnDate: Date? = nil
+        returnDate: Date? = nil,
+        isDateless: Bool = false
     ) {
         self.name = name
         self.destinationCity = destinationCity
+        self.isDateless = isDateless
 
         let calendar = Calendar.current
         let base = calendar.startOfDay(for: departureDate ?? Date())

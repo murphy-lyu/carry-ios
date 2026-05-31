@@ -240,14 +240,16 @@ struct ItemPickerView: View {
         return set
     }
 
-    /// 跨 mode 提取行程日期区间，供经期预测使用。
+    /// 跨 mode 提取行程日期区间，供经期/气候推荐使用。
+    /// 无日期「规划中」行程返回 nil → 经期预测与气候推荐（都依赖此区间）一并自动跳过。
     private var tripDateRange: (start: Date, end: Date)? {
         let cal = Calendar.current
         switch mode {
         case .create(let info), .autoPackReview(let info, _):
+            guard !info.isDateless else { return nil }
             return (cal.startOfDay(for: info.departureDate), cal.startOfDay(for: info.returnDate))
         case .merge(let tripId):
-            guard let bundle = store.bundle(for: tripId) else { return nil }
+            guard let bundle = store.bundle(for: tripId), !bundle.isDateless else { return nil }
             let start = cal.startOfDay(for: bundle.departureDate)
             guard let end = cal.date(byAdding: .day, value: max(0, bundle.days), to: start) else { return nil }
             return (start, end)
@@ -1697,9 +1699,10 @@ struct ItemPickerView: View {
             let bundle = TripBundle(
                 name: info.name,
                 destinationCity: info.destinationCity,
-                days: info.durationDays,
-                dateRange: info.dateRangeDisplay,
+                days: info.isDateless ? 1 : info.durationDays,
+                dateRange: info.isDateless ? "" : info.dateRangeDisplay,
                 departureDate: info.departureDate,
+                isDateless: info.isDateless,
                 selectedSceneKeys: pickedSceneKeys,
                 sections: sections
             )
@@ -1714,9 +1717,10 @@ struct ItemPickerView: View {
             let bundle = TripBundle(
                 name: info.name,
                 destinationCity: info.destinationCity,
-                days: info.durationDays,
-                dateRange: info.dateRangeDisplay,
+                days: info.isDateless ? 1 : info.durationDays,
+                dateRange: info.isDateless ? "" : info.dateRangeDisplay,
                 departureDate: info.departureDate,
+                isDateless: info.isDateless,
                 selectedSceneKeys: sceneKeys,
                 sections: sections
             )

@@ -3,6 +3,15 @@
 ## 最后更新
 2026-06-01
 
+## 上次改动摘要（无日期「规划中」行程 · 2026-06-01）
+
+- 允许创建不设出发/返程日期的「规划中」行程（参考 Tripsy），单独分组、补日期可"转正"、清空日期可"退回"。spec：`specs/dateless-planning-trips.md`。
+- **模型/数据**：`TripBundle.isDateless`（+ `TripInfo.isDateless`）；SchemaV2 轻量迁移（加字段，零数据风险）；`BackupTrip.isDateless`（可选，兼容旧备份）。
+- **降级守卫（防 bug 关键）**：所有读 `departureDate` 的地方先 `guard !isDateless`——`countsAsVisited`（防占位日期误判到访）、首页 upcoming/past 分区（防自己跳到 Past）、提醒、Live Activity、日历、Widget 快照、Nearest Trip、天气、经期/气候 nudge（`tripDateRange` 返回 nil 自动跳过）。
+- **创建**：TripInfoView 加次级按钮「暂不设置日期」。**首页**：新增「规划中」分区（Upcoming 与 Past 之间），卡片隐藏日期行、显示"规划中"标签。**编辑**：EditTripView 支持补日期转正 / 清空日期退回，`updateTripInfo` 在退回时取消提醒、结束 Live Activity。
+- 复制行程保留 `isDateless`。本地化新增 `home.planning` / `tripinfo.skip_dates` / `trip.card.no_dates` / `edittrip.set_dates` / `edittrip.clear_dates` × 9 语言。
+- 通过 iPhone 17 Pro simulator build。**已知小限制**：退回时旧日历事件不自动移除（CalendarManager 无删除 API）。**待办**：模拟器/真机全流程验收（建无日期→不进 upcoming/past/到访/widget/提醒/天气；转正副作用到位；退回撤销；备份还原与复制保 isDateless）。
+
 ## 上次改动摘要（预览页 Toast → 内容入场 + 件数 inline · 2026-06-01）
 
 - **去掉会"跳"的 Toast**：物品清单预览页（`PackingListView(isNewTrip:true)`）顶部「已添加 N 件」Toast 原本和列表是 `mainContent` 同一 VStack 的兄弟节点、参与布局，出现/消失时把列表顶下去又弹回。已移除 Toast 及其死代码（`toastBanner`/`showToastMessage`/`showToast`/`toastVisible`/`toastText`）。
