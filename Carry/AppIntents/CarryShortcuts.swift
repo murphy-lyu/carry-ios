@@ -133,7 +133,7 @@ struct CarryAppShortcuts: AppShortcutsProvider {
                 "Plan a trip with \(.applicationName)"
             ],
             shortTitle: LocalizedStringResource("New Trip"),
-            systemImageName: "plus"
+            systemImageName: "plus.circle"
         )
         AppShortcut(
             intent: OpenNearestTripIntent(),
@@ -143,7 +143,7 @@ struct CarryAppShortcuts: AppShortcutsProvider {
                 "Open my trip in \(.applicationName)"
             ],
             shortTitle: LocalizedStringResource("Nearest Trip"),
-            systemImageName: "suitcase.fill"
+            systemImageName: "suitcase"
         )
         AppShortcut(
             intent: ShowFootprintIntent(),
@@ -153,7 +153,7 @@ struct CarryAppShortcuts: AppShortcutsProvider {
                 "My visited countries in \(.applicationName)"
             ],
             shortTitle: LocalizedStringResource("Footprint"),
-            systemImageName: "globe.asia.australia.fill"
+            systemImageName: "globe.asia.australia"
         )
     }
 }

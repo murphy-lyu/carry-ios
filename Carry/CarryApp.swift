@@ -112,21 +112,21 @@ struct CarryApp: App {
                 type: CarryQuickAction.newTrip,
                 localizedTitle: NSLocalizedString("New Trip", comment: "Quick action title"),
                 localizedSubtitle: nil,
-                icon: UIApplicationShortcutIcon(systemImageName: "plus"),
+                icon: UIApplicationShortcutIcon(systemImageName: "plus.circle"),
                 userInfo: nil
             ),
             UIApplicationShortcutItem(
                 type: CarryQuickAction.nearestTrip,
                 localizedTitle: NSLocalizedString("Nearest Trip", comment: "Quick action title"),
                 localizedSubtitle: nil,
-                icon: UIApplicationShortcutIcon(systemImageName: "suitcase.fill"),
+                icon: UIApplicationShortcutIcon(systemImageName: "suitcase"),
                 userInfo: nil
             ),
             UIApplicationShortcutItem(
                 type: CarryQuickAction.footprint,
                 localizedTitle: NSLocalizedString("Footprint", comment: "Quick action title"),
                 localizedSubtitle: nil,
-                icon: UIApplicationShortcutIcon(systemImageName: "globe.asia.australia.fill"),
+                icon: UIApplicationShortcutIcon(systemImageName: "globe.asia.australia"),
                 userInfo: nil
             )
         ]

@@ -174,6 +174,14 @@ struct CarryWidgetEntryView: View {
                     Text(primary.name.isEmpty ? primary.destinationCity : primary.name)
                         .font(.title2.weight(.bold))
                         .lineLimit(1)
+                    if !primary.name.isEmpty,
+                       !primary.destinationCity.isEmpty,
+                       primary.name != primary.destinationCity {
+                        Text(primary.destinationCity)
+                            .font(.subheadline.weight(.medium))
+                            .foregroundStyle(.secondary)
+                            .lineLimit(1)
+                    }
                     Text(countdownText(for: primary.departureDate))
                         .font(.caption.weight(.semibold))
                         .foregroundStyle(.secondary)
