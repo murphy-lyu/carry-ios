@@ -38326,55 +38326,55 @@
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Perioden-Erinnerungen"
+            "value": "Gesundheitstipps"
           }
         },
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Period Reminders"
+            "value": "Health Tips"
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Recordatorios de periodo"
+            "value": "Consejos de salud"
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Rappels de règles"
+            "value": "Conseils santé"
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "生理リマインダー"
+            "value": "健康のヒント"
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "생리 알림"
+            "value": "건강 팁"
           }
         },
         "pt-BR": {
           "stringUnit": {
             "state": "translated",
-            "value": "Lembretes de menstruação"
+            "value": "Dicas de saúde"
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "经期提醒"
+            "value": "健康提示"
           }
         },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "生理期提醒"
+            "value": "健康提示"
           }
         }
       }
@@ -38444,55 +38444,55 @@
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Wenn eine Reise in deine Periode fallen könnte, schlägt Carry vor, das Nötigste einzupacken – etwa Hygieneartikel und Schmerzmittel."
+            "value": "Schlägt Periodenbedarfe vor, wenn eine Reise deinen Zyklus überschneiden könnte."
           }
         },
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "When a trip may overlap your period, Carry suggests packing the essentials — like hygiene products and pain relief."
+            "value": "Suggests period essentials when a trip may overlap your cycle."
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Cuando un viaje pueda coincidir con tu periodo, Carry te sugiere llevar lo esencial, como productos de higiene y analgésicos."
+            "value": "Sugiere artículos esenciales para el periodo cuando un viaje puede coincidir con tu ciclo."
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Lorsqu'un voyage pourrait coïncider avec vos règles, Carry vous suggère d'emporter l'essentiel : produits d'hygiène et antidouleurs."
+            "value": "Suggère les essentiels menstruels si un voyage peut coïncider avec ton cycle."
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "旅行が生理と重なりそうなとき、衛生用品や鎮痛剤などの必需品の持ち物を提案する。"
+            "value": "旅行が生理と重なりそうなとき、必需品のパッキングを提案します。"
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "여행이 생리 기간과 겹칠 수 있을 때, 위생용품과 진통제 같은 필수품 챙기기를 제안해요."
+            "value": "여행이 생리 기간과 겹칠 때 필수품을 챙기도록 제안합니다."
           }
         },
         "pt-BR": {
           "stringUnit": {
             "state": "translated",
-            "value": "Quando uma viagem pode coincidir com sua menstruação, o Carry sugere levar o essencial, como itens de higiene e analgésicos."
+            "value": "Sugere itens essenciais para o período quando uma viagem pode coincidir com seu ciclo."
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "当行程可能赶上经期时，启程会提醒你带上卫生用品、止痛药等必需品。"
+            "value": "行程与经期重叠时，提醒你带上必备物品。"
           }
         },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "當行程可能遇上生理期時，啟程會提醒你帶上衛生用品、止痛藥等必需品。"
+            "value": "行程與生理期重疊時，提醒你帶上必備物品。"
           }
         }
       }
@@ -38503,55 +38503,55 @@
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Carry liest deine Zyklusdaten nur auf diesem Gerät, um die Vorhersage zu treffen. Diese Daten werden nie gespeichert, nie in Backups aufgenommen und verlassen dein Gerät nie. Du kannst dies jederzeit deaktivieren."
+            "value": "Zyklus-Tracking wird nur auf diesem Gerät gelesen – nie gespeichert oder geteilt. Jederzeit abschaltbar."
           }
         },
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Carry reads your Cycle Tracking on this device only, to make the prediction. This data is never stored, never included in backups, and never leaves your device. You can turn this off anytime."
+            "value": "Cycle Tracking is read on-device only — never stored or shared. Turn off anytime."
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Carry lee tu seguimiento del ciclo solo en este dispositivo para hacer la predicción. Estos datos nunca se almacenan, nunca se incluyen en copias de seguridad y nunca salen de tu dispositivo. Puedes desactivarlo cuando quieras."
+            "value": "El seguimiento del ciclo se lee solo en este dispositivo, nunca se almacena ni comparte. Desactívalo cuando quieras."
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Carry lit votre suivi de cycle uniquement sur cet appareil pour établir la prédiction. Ces données ne sont jamais stockées, jamais incluses dans les sauvegardes et ne quittent jamais votre appareil. Vous pouvez désactiver cette option à tout moment."
+            "value": "Le suivi du cycle est lu uniquement sur cet appareil — jamais stocké ni partagé. Désactivable à tout moment."
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "予測のために、この端末上でのみ周期記録を読み取る。このデータが保存されたり、バックアップに含まれたり、端末の外に出ることはない。いつでもオフにできる。"
+            "value": "サイクルトラッキングはこのデバイスのみで読み取られ、保存・共有されません。いつでもオフにできます。"
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "예측을 위해 이 기기에서만 생리 주기 기록을 읽습니다. 이 데이터는 저장되거나 백업에 포함되지 않으며 기기를 벗어나지 않습니다. 언제든지 끌 수 있어요."
+            "value": "생리 주기 기록은 이 기기에서만 읽히며 저장되거나 공유되지 않습니다. 언제든지 끌 수 있습니다."
           }
         },
         "pt-BR": {
           "stringUnit": {
             "state": "translated",
-            "value": "O Carry lê seu acompanhamento de ciclo apenas neste dispositivo para fazer a previsão. Esses dados nunca são armazenados, nunca são incluídos em backups e nunca saem do seu dispositivo. Você pode desativar a qualquer momento."
+            "value": "O rastreamento do ciclo é lido apenas neste dispositivo — nunca armazenado ou compartilhado. Desative a qualquer momento."
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "启程仅在本机读取你的经期记录用于预测。这些数据不会被存储、不会进入备份，也绝不会离开你的设备。可随时关闭。"
+            "value": "仅在本机读取经期记录，不存储、不上传。可随时关闭。"
           }
         },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "啟程僅在本機讀取你的生理期記錄用於預測。這些資料不會被儲存、不會進入備份，也絕不會離開你的裝置。可隨時關閉。"
+            "value": "僅在本機讀取生理期記錄，不儲存、不上傳。可隨時關閉。"
           }
         }
       }
@@ -41164,29 +41164,119 @@
     "settings.section.personalization": {
       "extractionState": "manual",
       "localizations": {
-        "de": { "stringUnit": { "state": "translated", "value": "Personalisierung" } },
-        "en": { "stringUnit": { "state": "translated", "value": "Personalization" } },
-        "es": { "stringUnit": { "state": "translated", "value": "Personalización" } },
-        "fr": { "stringUnit": { "state": "translated", "value": "Personnalisation" } },
-        "ja": { "stringUnit": { "state": "translated", "value": "カスタマイズ" } },
-        "ko": { "stringUnit": { "state": "translated", "value": "개인 설정" } },
-        "pt-BR": { "stringUnit": { "state": "translated", "value": "Personalização" } },
-        "zh-Hans": { "stringUnit": { "state": "translated", "value": "个性化" } },
-        "zh-Hant": { "stringUnit": { "state": "translated", "value": "個人化" } }
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Personalisierung"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Personalization"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Personalización"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Personnalisation"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "カスタマイズ"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "개인 설정"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Personalização"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "个性化"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "個人化"
+          }
+        }
       }
     },
     "settings.section.reminders_display": {
       "extractionState": "manual",
       "localizations": {
-        "de": { "stringUnit": { "state": "translated", "value": "Erinnerungen & Anzeige" } },
-        "en": { "stringUnit": { "state": "translated", "value": "Reminders & Display" } },
-        "es": { "stringUnit": { "state": "translated", "value": "Recordatorios y visualización" } },
-        "fr": { "stringUnit": { "state": "translated", "value": "Rappels et affichage" } },
-        "ja": { "stringUnit": { "state": "translated", "value": "リマインダーと表示" } },
-        "ko": { "stringUnit": { "state": "translated", "value": "알림 및 표시" } },
-        "pt-BR": { "stringUnit": { "state": "translated", "value": "Lembretes e exibição" } },
-        "zh-Hans": { "stringUnit": { "state": "translated", "value": "提醒与显示" } },
-        "zh-Hant": { "stringUnit": { "state": "translated", "value": "提醒與顯示" } }
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Verbindungen & Widgets"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Connected & Widgets"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Conexiones y widgets"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Connexions et widgets"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "連携 & ウィジェット"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "연결 및 위젯"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Conexões e widgets"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "连接 & 小组件"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "連接 & 小組件"
+          }
+        }
       }
     },
     "settings.section.support": {
@@ -45105,6 +45195,64 @@
           "stringUnit": {
             "state": "translated",
             "value": "徒步 / 露營"
+          }
+        }
+      }
+    },
+    "settings.cycle.section.period": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Period Reminders"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "经期提醒"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "生理期提醒"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Perioden-Erinnerungen"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Recordatorios de periodo"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Rappels de règles"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "生理リマインダー"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "생리 알림"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Lembretes de menstruação"
           }
         }
       }

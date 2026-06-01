@@ -14,13 +14,11 @@ struct WidgetGuideView: View {
         ScrollView {
             VStack(alignment: .leading, spacing: 16) {
                 // 小部件预览图（占位）
-                ZStack {
-                    Color(.secondarySystemGroupedBackground)
-                    guideImage("WidgetPreview", placeholderAspect: 16.0 / 10.0)
-                        .padding(.horizontal, 24)
-                        .padding(.vertical, 20)
-                }
-                .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
+                guideImage("WidgetPreview", placeholderAspect: 16.0 / 10.0)
+                    .padding(.horizontal, 24)
+                    .padding(.top, 20)
+                    .background(Color(.secondarySystemGroupedBackground))
+                    .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
 
                 Text("settings.widget.description")
                     .font(.subheadline)
@@ -45,7 +43,6 @@ struct WidgetGuideView: View {
             Image(name)
                 .resizable()
                 .scaledToFit()
-                .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
         } else {
             RoundedRectangle(cornerRadius: 12, style: .continuous)
                 .fill(colorScheme == .dark ? Color.white.opacity(0.04) : Color.primary.opacity(0.035))

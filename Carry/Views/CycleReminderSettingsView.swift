@@ -20,37 +20,58 @@ struct CycleReminderSettingsView: View {
 
     var body: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: 14) {
-                Text("settings.cycle.description")
-                    .font(.subheadline)
-                    .foregroundStyle(.secondary)
-                    .lineSpacing(1.6)
+            VStack(alignment: .leading, spacing: 24) {
 
-                HStack(spacing: 12) {
-                    Text("settings.cycle.toggle")
-                        .font(.body)
-                        .foregroundStyle(.primary)
-                    Spacer()
-                    Toggle("", isOn: $isEnabled)
-                        .labelsHidden()
-                        .tint(colorScheme == .dark ? Color(.systemGray2) : Color(.label))
+                // MARK: 经期提醒分组
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("settings.cycle.section.period")
+                        .font(.system(size: 13, weight: .medium))
+                        .foregroundStyle(.secondary)
+                        .textCase(.uppercase)
+                        .kerning(0.4)
+                        .padding(.horizontal, 4)
+
+                    // 卡片：描述 + 开关
+                    VStack(alignment: .leading, spacing: 0) {
+                        Text("settings.cycle.description")
+                            .font(.subheadline)
+                            .foregroundStyle(.secondary)
+                            .lineSpacing(1.6)
+                            .padding(.horizontal, 18)
+                            .padding(.top, 16)
+                            .padding(.bottom, 14)
+
+                        Divider()
+                            .padding(.horizontal, 18)
+
+                        HStack(spacing: 12) {
+                            Text("settings.cycle.toggle")
+                                .font(.body)
+                                .foregroundStyle(.primary)
+                            Spacer()
+                            Toggle("", isOn: $isEnabled)
+                                .labelsHidden()
+                                .tint(colorScheme == .dark ? Color(.systemGray2) : Color(.label))
+                        }
+                        .padding(.horizontal, 18)
+                        .frame(height: 58)
+                    }
+                    .background(
+                        RoundedRectangle(cornerRadius: 18, style: .continuous)
+                            .fill(cardFill)
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 18, style: .continuous)
+                                    .strokeBorder(cardStroke, lineWidth: 1)
+                            )
+                    )
+
+                    Text("settings.cycle.privacy")
+                        .font(.footnote)
+                        .foregroundStyle(.tertiary)
+                        .lineSpacing(1.4)
+                        .padding(.horizontal, 4)
                 }
-                .padding(.horizontal, 18)
-                .frame(height: 58)
-                .background(
-                    RoundedRectangle(cornerRadius: 18, style: .continuous)
-                        .fill(cardFill)
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 18, style: .continuous)
-                                .strokeBorder(cardStroke, lineWidth: 1)
-                        )
-                )
 
-                Text("settings.cycle.privacy")
-                    .font(.footnote)
-                    .foregroundStyle(.tertiary)
-                    .lineSpacing(1.4)
-                    .padding(.horizontal, 4)
             }
             .padding(.horizontal, 16)
             .padding(.top, 8)

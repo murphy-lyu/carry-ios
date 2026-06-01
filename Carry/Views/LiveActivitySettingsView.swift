@@ -20,16 +20,14 @@ struct LiveActivitySettingsView: View {
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 14) {
-                ZStack(alignment: .top) {
-                    Color(.secondarySystemGroupedBackground)
-                    Image("LiveActivityPreview")
-                        .resizable()
-                        .scaledToFit()
-                        .padding(.horizontal, 24)
-                        .padding(.bottom, 16)
-                        .shadow(color: .black.opacity(colorScheme == .dark ? 0.14 : 0.10), radius: 10, x: 0, y: 3)
-                }
-                .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
+                Image("LiveActivityPreview")
+                    .resizable()
+                    .scaledToFit()
+                    .padding(.horizontal, 24)
+                    .padding(.bottom, 16)
+                    .shadow(color: .black.opacity(colorScheme == .dark ? 0.14 : 0.10), radius: 10, x: 0, y: 3)
+                    .background(Color(.secondarySystemGroupedBackground))
+                    .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
 
                 Text("settings.liveactivity.description")
                     .font(.subheadline)
