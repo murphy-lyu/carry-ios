@@ -5,7 +5,20 @@ import SwiftUI
 /// 仍可在物品清单里单独增删提醒、互不影响。未来航班 / 协作等通知场景在此页按分组扩展。
 struct NotificationSettingsView: View {
     @AppStorage(ReminderPreferences.storageKey) private var offsetsRaw = "0,1"
+    @AppStorage(ReminderPreferences.timeKey) private var defaultMinutes = 540  // 09:00
     @Environment(\.colorScheme) private var colorScheme
+
+    private var timeBinding: Binding<Date> {
+        Binding(
+            get: {
+                Calendar.current.date(from: DateComponents(hour: defaultMinutes / 60, minute: defaultMinutes % 60)) ?? Date()
+            },
+            set: { newDate in
+                let c = Calendar.current.dateComponents([.hour, .minute], from: newDate)
+                defaultMinutes = (c.hour ?? 9) * 60 + (c.minute ?? 0)
+            }
+        )
+    }
 
     private var cardFill: Color {
         colorScheme == .dark
@@ -42,6 +55,20 @@ struct NotificationSettingsView: View {
                         .padding(.horizontal, 4)
 
                     VStack(spacing: 0) {
+                        // 全局默认提醒时间：下方所有档位统一用它（per-trip 仍可逐条覆盖）
+                        HStack(spacing: 12) {
+                            Text("settings.notifications.time")
+                                .font(.body)
+                                .foregroundStyle(.primary)
+                            Spacer()
+                            DatePicker("", selection: timeBinding, displayedComponents: .hourAndMinute)
+                                .labelsHidden()
+                        }
+                        .padding(.horizontal, 18)
+                        .frame(height: 58)
+
+                        Divider().padding(.leading, 18)
+
                         ForEach(Array(TripReminderConfig.presets.enumerated()), id: \.element.daysBeforeDeparture) { index, preset in
                             HStack(spacing: 12) {
                                 Text(preset.localizedLabel)

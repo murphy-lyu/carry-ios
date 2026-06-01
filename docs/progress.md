@@ -10,7 +10,9 @@
 - **默认软化**：`TripReminderConfig.defaults` 从 `[提前3天@9 + 出发当天@7]` → `[出发前1天@9]`（仅作存量空配置行程的回退；新行程走快照）。
 - **全局偏好**：新增 `ReminderPreferences`（`UserDefaults` 存逗号分隔 offsets；nil→默认[1]，空串→[]全关，二者区分）。**纳入备份**（`CarryBackup.defaultReminderOffsets: [Int]?`，旧备份缺字段则保持现状）。
 - **去重**：档位标签逻辑抽到 `TripReminderConfig.localizedLabel`，`TripReminderSheet.reminderLabel` 改为复用。新增 3 个 xcstrings key × 9 语言（entry/section/footer）。
-- 通过 simulator build。**待办**：真机验收（改设置→新建行程读到对应档位；全关→无提醒；老行程不受影响；备份还原带偏好）。
+- **全局默认时间**（06-02 加）：通知页顶部一个时间选择器（`defaultMinutes`，默认 09:00），所有已开启档位统一用此时间（去掉原 presets 7:00/9:00 混合的认知缺口）；per-trip 仍可逐条覆盖。`defaults` 回退也统一 9:00。
+- **一级设置**（06-02 顺带）：去掉日历同步右侧 On/Off 状态显示（反转 05-31 决定），移除随之死掉的 `calendarSyncEnabled` 声明。
+- 通过 simulator build。**待办**：真机验收（改设置档位+时间→新建行程读到对应配置；全关→无提醒；老行程不受影响；备份还原带偏好）。
 
 ## 上次改动摘要（电压预警 · 女性出行视角第一弹 · 2026-06-01）
 

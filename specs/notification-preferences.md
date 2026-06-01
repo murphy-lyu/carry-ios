@@ -39,8 +39,8 @@
 
 - **新增全局偏好 = 已开启档位的集合**（不存时间）。`@AppStorage`/`UserDefaults` 存一组 `daysBeforeDeparture` 值（如 JSON `[1]`）。
   - 默认值 = `[0, 1]`（出发当天 + 出发前1天）。
-- **时间不另设、不自定义**（已定）：每个档位的提醒时间**直接取 `TripReminderConfig.options` 里该档位既有的时间**（出发当天 7:00 / 其余 9:00），与物品清单 `TripReminderSheet` 现用的一致。设置页**不出现时间选择**。
-  - 即：创建行程时，快照 = `options` 中 `daysBeforeDeparture` 落在"已开启集合"内的那些条目（连带其固有时间）。
+- **单一全局默认时间**（2026-06-02 修订）：`ReminderPreferences.defaultMinutes`（自午夜起分钟数，默认 540 = 09:00），通知页顶部时间选择器可改。所有已开启档位**统一用此时间**（不再用 presets 的 7:00/9:00 混合）。
+  - 即：创建行程时，快照 = 已开启档位 × 全局默认时间。per-trip 仍可逐条覆盖。
 - **不改 `TripBundle` schema**：仍用现有 `reminderConfigData`。仅改"创建时如何填充它"。
 
 ## 实现要点
@@ -69,7 +69,7 @@
 
 ## 已确认决策（2026-06-02）
 
-1. ✅ **时间不另设、不自定义**：每档位直接取 `TripReminderConfig.options` 既有时间（出发当天 7:00 / 其余 9:00），与物品清单一致；设置页无时间选择。精调仍靠 per-trip `TripReminderSheet`。
+1. ✅ **单一全局默认时间**（2026-06-02 修订）：通知页顶部一个时间选择器（`ReminderPreferences.defaultMinutes`，默认 09:00），所有已开启档位**统一用此时间**。理由：原"取 presets 固定时间、设置页不显示"会让用户不知道几点收到、且 7:00/9:00 不一致显得武断。per-trip `TripReminderSheet` 仍可对单条提醒覆盖时间。
 2. ✅ **默认开「出发当天 + 出发前1天」**。
 3. ✅ **全局偏好纳入备份**（`DataBackupManager` 增一个字段；缺省时按默认 `[1]`，兼容旧备份）。
 4. ✅ **档位标签用更暖口吻**（参考 Tripsy：如「您的旅行今天开始」「出发前 1 天」等）；9 语言均按此口吻，非直译。

@@ -15,7 +15,7 @@ struct TripReminderConfig: Codable, Identifiable, Equatable {
     /// [出发当天 + 出发前1天]（去掉提前3天）。
     /// 新建行程不走此回退——创建时由 ReminderPreferences.defaultConfigs 显式写入。
     static let defaults: [TripReminderConfig] = [
-        TripReminderConfig(daysBeforeDeparture: 0, hour: 7),
+        TripReminderConfig(daysBeforeDeparture: 0, hour: 9),
         TripReminderConfig(daysBeforeDeparture: 1, hour: 9),
     ]
 
@@ -73,6 +73,7 @@ struct TripReminderConfig: Codable, Identifiable, Equatable {
 /// - 显式设为空串 ""        → []（全部关闭，新行程默认无提醒，合法）
 enum ReminderPreferences {
     static let storageKey = "default_reminder_offsets"
+    static let timeKey = "default_reminder_minutes"  // 自午夜起的分钟数；默认 540 = 09:00
 
     static var enabledOffsets: Set<Int> {
         get {
@@ -85,8 +86,17 @@ enum ReminderPreferences {
         }
     }
 
-    /// 新建行程的默认提醒配置 = presets 中"已开启"的档位（连带其固有时间）。
+    /// 全局默认提醒时间（所有档位统一用此时间；per-trip 仍可逐条覆盖）。默认 09:00。
+    static var defaultMinutes: Int {
+        get { UserDefaults.standard.object(forKey: timeKey) as? Int ?? 540 }
+        set { UserDefaults.standard.set(newValue, forKey: timeKey) }
+    }
+
+    /// 新建行程的默认提醒配置 = 已开启档位，统一用全局默认时间。
     static var defaultConfigs: [TripReminderConfig] {
-        TripReminderConfig.presets.filter { enabledOffsets.contains($0.daysBeforeDeparture) }
+        let h = defaultMinutes / 60, m = defaultMinutes % 60
+        return enabledOffsets.sorted().map {
+            TripReminderConfig(daysBeforeDeparture: $0, hour: h, minute: m)
+        }
     }
 }
