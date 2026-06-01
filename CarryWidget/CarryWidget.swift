@@ -101,16 +101,31 @@ struct CarryEntry: TimelineEntry {
 
 }
 
-/// .preferredColorScheme() 在 Widget 里只是对系统的建议，不强制生效。
-/// 用 .environment(\.colorScheme) 直接注入才能可靠覆盖；automatic 不注入，让系统决定。
+/// containerBackground(.fill.tertiary) 由系统环境决定材质颜色，不受 view 树内注入的
+/// colorScheme 影响——必须把 containerBackground 移进 modifier，并在背景 view 上
+/// 同步注入 resolvedScheme，才能让背景和内容颜色一致。
 private struct WidgetColorSchemeOverride: ViewModifier {
     let appearance: WidgetAppearance
-    func body(content: Content) -> some View {
+    @Environment(\.colorScheme) private var systemScheme
+
+    private var resolvedScheme: ColorScheme {
         switch appearance {
-        case .automatic: content
-        case .light:     content.environment(\.colorScheme, .light)
-        case .dark:      content.environment(\.colorScheme, .dark)
+        case .automatic: return systemScheme
+        case .light:     return .light
+        case .dark:      return .dark
         }
+    }
+
+    func body(content: Content) -> some View {
+        let scheme = resolvedScheme
+        content
+            .environment(\.colorScheme, scheme)
+            .containerBackground(for: .widget) {
+                // fill.tertiary 在 background view 里单独注入，确保随 resolvedScheme 渲染。
+                Rectangle()
+                    .fill(.fill.tertiary)
+                    .environment(\.colorScheme, scheme)
+            }
     }
 }
 
@@ -155,7 +170,6 @@ struct CarryWidgetEntryView: View {
                 emptyView
             }
         }
-        .containerBackground(.fill.tertiary, for: .widget)
         .modifier(WidgetColorSchemeOverride(appearance: entry.appearance))
     }
 
