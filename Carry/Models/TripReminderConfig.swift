@@ -19,7 +19,9 @@ struct TripReminderConfig: Codable, Identifiable, Equatable {
         TripReminderConfig(daysBeforeDeparture: 1, hour: 9),
     ]
 
-    /// 全部可选档位（连带各自固有时间）：设置页开关与 per-trip 选择器共用同一组。
+    /// 全部可选档位：设置页开关与 per-trip 加提醒选择器共用同一组。
+    /// 注：这里的 hour 仅为名义占位——实际默认时间统一取 `ReminderPreferences.defaultMinutes`
+    ///（设置页可改），per-trip 加完后还可逐条调。故此处时间值已不直接生效。
     static let presets: [TripReminderConfig] = [
         TripReminderConfig(daysBeforeDeparture: 0, hour: 7),
         TripReminderConfig(daysBeforeDeparture: 1, hour: 9),

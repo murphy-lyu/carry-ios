@@ -45494,55 +45494,55 @@
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Gilt für Reisen, die du als Nächstes erstellst. Erinnerungen lassen sich pro Reise in der Packliste weiter anpassen."
+            "value": "Gilt zur oben gewählten Zeit für Reisen, die du als Nächstes erstellst. Erinnerungen lassen sich pro Reise in der Packliste anpassen."
           }
         },
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Applied to trips you create next. You can still fine-tune reminders for each trip in its packing list."
+            "value": "Applied to trips you create next, at the time above. You can still fine-tune reminders for each trip in its packing list."
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Se aplica a los viajes que crees a continuación. Puedes ajustar los recordatorios de cada viaje en su lista de equipaje."
+            "value": "Se aplica a la hora indicada arriba a los viajes que crees a continuación. Puedes ajustar los recordatorios de cada viaje en su lista de equipaje."
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "S’applique aux voyages que vous créez ensuite. Vous pouvez ajuster les rappels de chaque voyage dans sa liste de bagages."
+            "value": "S’applique à l’heure choisie ci-dessus aux voyages que vous créez ensuite. Vous pouvez ajuster les rappels de chaque voyage dans sa liste de bagages."
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "これ以降に作成する旅行に適用されます。各旅行のリマインダーは荷物リストで個別に調整できます。"
+            "value": "上記の時刻で、これ以降に作成する旅行に適用されます。各旅行のリマインダーは荷物リストで個別に調整できます。"
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "이후에 만드는 여행에 적용돼요. 각 여행의 알림은 짐 목록에서 개별적으로 조정할 수 있어요."
+            "value": "위에 설정한 시간으로, 이후에 만드는 여행에 적용돼요. 각 여행의 알림은 짐 목록에서 개별적으로 조정할 수 있어요."
           }
         },
         "pt-BR": {
           "stringUnit": {
             "state": "translated",
-            "value": "Aplica-se às viagens que você criar a seguir. Você ainda pode ajustar os lembretes de cada viagem na lista de bagagem."
+            "value": "Aplica-se no horário acima às viagens que você criar a seguir. Você pode ajustar os lembretes de cada viagem na lista de bagagem."
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "应用于你之后新建的行程。每个行程仍可在其物品清单里单独调整提醒。"
+            "value": "按上方时间，应用于你之后新建的行程。每个行程仍可在其物品清单里单独调整提醒。"
           }
         },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "套用於你之後新建的行程。每個行程仍可在其物品清單裡單獨調整提醒。"
+            "value": "依上方時間，套用於你之後新建的行程。每個行程仍可在其物品清單裡單獨調整提醒。"
           }
         }
       }
