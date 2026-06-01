@@ -452,9 +452,6 @@ final class SheetViewController: UIViewController {
             let cur = sv.contentOffset.y
             guard abs(cur - locked) > 0.5 else { return }
             sv.setContentOffset(CGPoint(x: sv.contentOffset.x, y: locked), animated: false)
-#if DEBUG
-            print("🩺[Sheet] contentOffset KVO clamp: 漏滚 y=\(cur) → 拉回 \(locked) · 此刻 delegate 是代理? \(sv.delegate === self.delegateProxy)")
-#endif
         }
     }
 
