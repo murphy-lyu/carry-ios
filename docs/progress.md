@@ -1,7 +1,17 @@
 # 项目进度
 
 ## 最后更新
-2026-06-01
+2026-06-02
+
+## 上次改动摘要（UI / 文案打磨批次 · 2026-06-02）
+
+- **设置开关启用态**：定为 `Color(.label)`（=`.primary` 黑白）。中途误用品牌橙被否决——主题黑白、无品牌橙（详见 decisions）。
+- **闪屏**：logo 跟随所选 App 图标（`currentAppIconPreviewName`）；品牌字中文显示「启程 / 啟程」，与桌面 App 名一致。
+- **文案**：`about.tagline` 加「情」+ 句末全角「～」；无日期入口「先规划，日期再说」；Settings 分区改名「提醒与显示 / Reminders & Display」（9 语言重译）；日历开关「自动添加行程到日历」+ 卡片下加 footer「行程进名为 Carry 的日历，未显示请在日历 App 勾选 Carry」。
+- **中文全角标点**：修复半角逗号/省略号，并写入 CLAUDE.md「中文文案必须用全角标点」规范防复发。
+- **过期行程提醒入口**恢复可点击（去掉 `isHistoricalTrip` 门控，TripReminderSheet 本就支持过期展示）。
+- **WeatherKit entitlement** 因免费 Personal Team 不支持、撤回（真机签名会失败），待付费账号到位再加（见 release-checklist 顶部「待付费账号」节）。
+- 清理 xcstrings 失效 key；图标换版 CarryLogoThin（用户在 Xcode 内换，已合入）。
 
 ## 上次改动摘要（移除日历打包提醒 · 2026-06-02）
 

@@ -268,6 +268,7 @@ private let itemNameAliases: [String: String] = [
 - xcstrings key 已更新但 Swift 数据源未同步 → UI 渲染旧字符串（如 `"Documents"` vs `"Travel Documents"`）
 - 用简繁转换工具替代真实翻译 → zh-Hant 出现大陆用语或错误字形
 - 中文文案用了英文半角标点（`,` `.` `...` 等）→ 应全角（`，` `。` `…`），见上「中文文案必须用全角标点」
+- 用脚本改 `Localizable.xcstrings` 时序列化格式不匹配 Xcode → 整文件重排出 6 万行 diff。Xcode 用 `" : "`（冒号前空格）；脚本须用 `json.dumps(..., ensure_ascii=False, indent=2, separators=(',', ' : '))` 且无尾换行，先做零改动 round-trip 验证再改。另：Xcode 构建会重写该文件、可能覆盖未提交的脚本编辑（编辑前最好确认 Xcode 未在构建）。`git commit` 用显式路径，避免误并入用户在 Xcode 内换图标等在途改动。
 
 ## 文件索引
 - docs/design-system.md：视觉规范与组件标准

@@ -37,7 +37,8 @@ ZStack（全窗口）
 - PackingList：打包清单
 - Scene / SceneItemMap：场景与物品映射（智能推荐基础）
 - ItemCatalog：物品目录（预置数据）
-- TripReminderConfig：行程提醒配置
+- TripReminderConfig：行程提醒配置（含 `presets` 档位、`localizedLabel`）
+- ReminderPreferences（UserDefaults）：全局默认提醒偏好（已开启档位 + 默认时间）。新建行程时**快照**进该行程的 reminderConfigData（非实时联动）；设置「通知」二级页（NotificationSettingsView）编辑
 - SurpriseItemMap："顺手考虑一下"功能的物品映射
 
 ## 状态管理
