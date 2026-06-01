@@ -3,6 +3,13 @@
 ## 最后更新
 2026-06-01
 
+## 上次改动摘要（首页冷启动揭示动画统一 · 2026-06-01）
+
+- **断层根因**：首页分组入场揭示原本是两套系统拼的——Hero/Past 走连续的 `initialRevealProgress`（按阈值 0.16 / 0.78 揭示），而 Upcoming 单开了 `didRevealUpcoming` 布尔 + `triggerUpcomingReveal` 的 `asyncAfter(0.28)`；**Planning 两套都没接**，冷启动时瞬间硬出现，紧跟在浮入的 Upcoming 之后形成视觉断层。`listRevealThreshold = 0.58`（Upcoming 本该用的阈值）是 orphaned 死代码。
+- **统一治理**：把 Upcoming + Planning 一起收敛到 `initialRevealProgress >= listRevealThreshold`，与 Hero/Past 同一条 ramp 驱动，形成 Hero(0.16)→Upcoming/Planning(0.58)→Past(0.78) 连续级联。删除 `didRevealUpcoming` 状态、`triggerUpcomingReveal` 函数（连带 `asyncAfter` 反模式，CLAUDE.md 明令禁止用硬编码延迟等动画）、以及已死的 `revealProgress` helper。Planning 加 0.08/0.10s 基准 delay，读起来接在 Upcoming 之后浮入。
+- **深链兜底简化 + 更稳**：原 `onReceive(router.$path)` 里救「Upcoming 卡 opacity 0」的分支（因 `triggerUpcomingReveal` 闭包有 `guard router.path.isEmpty` 守卫而需要）改为 `if initialRevealProgress < 1 { … = 1 }`。`initialRevealProgress` 在 macBody/sheetContent 两个 onAppear 里都无 router.path 守卫，本就比旧方案更不易卡深链 bug。
+- macBody onAppear 去掉 `didRevealUpcoming = true`（Mac Catalyst 无冷启动动画，`initialRevealProgress = 1.0` 瞬间满状态不变）。通过 iOS Simulator build。**待办**：深链(Widget/QuickAction)冷启动路径须真机验收（模拟器复现不了时序）。
+
 ## 上次改动摘要（Settings 信息架构优化 · 2026-06-01）
 
 - **「通用」分区超载拆分**：原「通用」一张卡塞了 6–7 行且混了两类心智（"App 长什么样" + "Carry 在哪儿提醒/出现"）。拆为两组——**个性化**（外观 · 应用图标 · 语言）+ **提醒与显示**（日历 · 灵动岛 · 小部件 · 经期）。每卡降到 3–4 行，扫读成本降低。纯层级调整，行/跳转/功能与 `#if`、`CycleInference.isAvailable` 条件全部原样。
