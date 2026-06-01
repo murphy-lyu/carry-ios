@@ -128,7 +128,6 @@ struct EditTripView: View {
                                         )
                                 )
                                 .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
-                                // 「清除日期 → 规划中」入口已收进日期选择器底部，保持界面干净。
                             }
                         }
                     }

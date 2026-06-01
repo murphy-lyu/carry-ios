@@ -128,7 +128,6 @@ struct TripInfoView: View {
                                     )
                             )
                             .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
-                            // 「暂不设置日期」入口已收进日期选择器（TripDateRangePickerSheet 底部），保持主界面干净。
                         } else {
                             datesUnsetCard
                         }
