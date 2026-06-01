@@ -5438,17 +5438,6 @@
         }
       }
     },
-    "calendar.event.pack.title" : {
-      "extractionState" : "extracted_with_value",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "%@"
-          }
-        }
-      }
-    },
     "Camera" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -31688,9 +31677,6 @@
           }
         }
       }
-    },
-    "settings.calendar.packtime" : {
-
     },
     "settings.calendar.permission.denied.message" : {
       "extractionState" : "manual",
