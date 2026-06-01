@@ -337,3 +337,25 @@
 - 根因：`SheetViewController`（fallback）用 `UIViewPropertyAnimator` spring 做 snap，expand 时 presentation 层 overshoot 飞过静止位。`containerView` 高度固定 = `expandedHeight`、背景 `.clear`、底部直角，一上移底部就空出来透到 ZStack 底层的地图。
 - 修复（`placeSheet` + `viewDidLoad`）：`containerView` 向下延伸 `bottomExtension = 400`（静止时在屏幕外、底部本就是直角，正常不可见），并给 `containerView.backgroundColor` 设 `CarrySubtleBackground` 底部渐变色（dark `0.08/0.08/0.09`，light `0.98/0.98/0.97`）。`hostingView` 仍只占 `expandedHeight`，内容布局不受影响；overshoot 露出的是这段延伸背景而非地图。
 - 同类隐患：`CarryBottomSheetFX.swift` 的 ultimate 版用 clippingView/outerView 多层结构，若将来启用 ultimate 需单独验证是否有同样的 overshoot 露底（当前未做）。
+
+## 16. 待解：上拉内容区「概率性滚动」（2026-06-01，非钩子失效）
+
+**现象**：上拉内容区（尤其收起态，规则 3 应"上拉=驱动 Sheet 上移、内容不滚"）**概率性**出现内容滚动。概率性 = 时序竞争。
+
+**已用诊断日志排除"钩子失效"**：临时在 `attachScrollView`（打印是否重连到新 sv）与 `handleListPan`（打印 `listScrollView == nil`）打点。在「规划中」分区从无到有切换时：
+- 无 `previousWasNil=false`（scroll view 未被重建）
+- 无 `listScrollView == nil`（钩子一直有效）
+
+故曾假设"一次性 0.15s 钩子被 SwiftUI 重建后失效"并加 `viewDidLayoutSubviews` 自愈重连——**证伪并已回退（commit `a641c74`）**。
+
+**当前最可能真因（代码层，未真机证实）**：
+- 锁滚动依赖 `DecelerationCanceller` 代理 delegate 的 `scrollViewDidScroll` 把 `contentOffset` 拉回 `lockedOffsetY`。
+- 但 SwiftUI 会自行设 `scrollView.delegate`，靠 `delegateObservation`(KVO `\.delegate`) 再装回代理——**KVO 重装有一帧窗**，窗口内生效的是 SwiftUI 的 delegate，`scrollViewDidScroll` 锁不执行 → 滚动漏过。
+- 次因：`activePanDriver` 在 `.cancelled/.failed` 边界可能未复位，影响下一手势判定。
+
+**下一步（真机 + 仪器化，模拟器手势测不准）**：
+1. 真机找触发序列（什么情况概率升高）。
+2. 在 `installProxy` / `delegateObservation` / `scrollViewDidScroll` 打点，确认滚动瞬间生效的 delegate 是否被 SwiftUI 顶替。
+3. 候选方向：锁不再依赖 delegate 时序——例如 `.began` 同步 `sv.isScrollEnabled = false`、`.ended` 恢复（而非靠 `scrollViewDidScroll` 拉回）；需单一路径验证，勿多驱动并存（见第 5 节禁忌）。
+
+**是否由「无日期行程」引入**：存疑——分区切换不触发重建，倾向既有/独立时序问题，需进一步确认。
