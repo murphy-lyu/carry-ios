@@ -75,12 +75,10 @@ struct NotificationSettingsView: View {
                                     .font(.body)
                                     .foregroundStyle(.primary)
                                 Spacer()
-                                Toggle("", isOn: Binding(
+                                MonoToggle(isOn: Binding(
                                     get: { enabled.contains(preset.daysBeforeDeparture) },
                                     set: { setOn(preset.daysBeforeDeparture, $0) }
                                 ))
-                                .labelsHidden()
-                                .tint(Color(.label))
                             }
                             .padding(.horizontal, 18)
                             .frame(height: 58)

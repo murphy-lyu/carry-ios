@@ -39,9 +39,7 @@ struct LiveActivitySettingsView: View {
                         .font(.body)
                         .foregroundStyle(.primary)
                     Spacer()
-                    Toggle("", isOn: $isEnabled)
-                        .labelsHidden()
-                        .tint(Color(.label))
+                    MonoToggle(isOn: $isEnabled)
                 }
                 .padding(.horizontal, 18)
                 .frame(height: 58)

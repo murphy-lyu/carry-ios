@@ -910,15 +910,13 @@ private struct CalendarSettingsView: View {
                             .font(.body)
                             .foregroundStyle(.primary)
                         Spacer()
-                        Toggle("", isOn: Binding(
+                        MonoToggle(isOn: Binding(
                             get: { calendarSyncEnabled },
                             set: { newValue in
                                 if newValue { Task { await handleToggleOn() } }
                                 else { calendarSyncEnabled = false }
                             }
                         ))
-                        .labelsHidden()
-                        .tint(Color(.label))
                     }
                     .padding(.horizontal, 18)
                     .frame(height: 58)
