@@ -846,9 +846,6 @@ private struct CalendarSettingsView: View {
     @Environment(\.colorScheme) private var colorScheme
 
     @AppStorage("calendar_sync_enabled")         private var calendarSyncEnabled        = false
-    @AppStorage("calendar_pack_reminder_enabled") private var calendarPackReminderEnabled = true
-    @AppStorage("calendar_pack_hour")             private var calendarPackHour            = 20
-    @AppStorage("calendar_pack_minute")           private var calendarPackMinute          = 0
 
     @State private var showPermissionAlert = false
     @State private var showBulkAlert       = false
@@ -871,39 +868,6 @@ private struct CalendarSettingsView: View {
         colorScheme == .dark
             ? Color.black.opacity(0.16)
             : Color.black.opacity(0.03)
-    }
-
-    /// 打包提醒子开关是否可用（依赖主开关）。
-    private var packReminderRowEnabled: Bool { calendarSyncEnabled }
-    /// 提醒时间行是否可用（依赖主开关 + 子开关）。
-    private var packTimeRowEnabled: Bool { calendarSyncEnabled && calendarPackReminderEnabled }
-
-    /// 行标题文字色：可用时主色，禁用时系统三级灰（比单纯降透明度更明确地传达「不可用」）。
-    private func rowTitleColor(enabled: Bool) -> Color {
-        enabled ? .primary : Color(UIColor.tertiaryLabel)
-    }
-
-    /// 开关 tint：可用时主色；禁用时用浅灰，使 ON 态开关也呈禁用感（`.disabled()`
-    /// 本身不改 tint，深色 tint 下禁用视觉太弱，会出现「文字灰但开关仍亮」的割裂）。
-    private func toggleTint(enabled: Bool) -> Color {
-        if !enabled { return Color(UIColor.systemGray4) }
-        return colorScheme == .dark ? Color(.systemGray) : Color(.label)
-    }
-
-    private var packTimeBinding: Binding<Date> {
-        Binding(
-            get: {
-                var comps = Calendar.current.dateComponents([.year, .month, .day], from: Date())
-                comps.hour   = calendarPackHour
-                comps.minute = calendarPackMinute
-                return Calendar.current.date(from: comps) ?? Date()
-            },
-            set: { newDate in
-                let comps    = Calendar.current.dateComponents([.hour, .minute], from: newDate)
-                calendarPackHour   = comps.hour   ?? 20
-                calendarPackMinute = comps.minute  ?? 0
-            }
-        )
     }
 
     private func handleToggleOn() async {
@@ -958,49 +922,6 @@ private struct CalendarSettingsView: View {
                     }
                     .padding(.horizontal, 18)
                     .frame(height: 58)
-
-                    Rectangle()
-                        .fill(Color.primary.opacity(colorScheme == .dark ? 0.06 : 0.03))
-                        .frame(height: 1)
-
-                    // 打包提醒子开关
-                    HStack(spacing: 12) {
-                        Text("settings.calendar.pack_reminder")
-                            .font(.body)
-                            .foregroundStyle(rowTitleColor(enabled: packReminderRowEnabled))
-                        Spacer()
-                        Toggle("", isOn: $calendarPackReminderEnabled)
-                            .labelsHidden()
-                            .tint(toggleTint(enabled: packReminderRowEnabled))
-                            .disabled(!packReminderRowEnabled)
-                    }
-                    .padding(.horizontal, 18)
-                    .frame(height: 58)
-                    .allowsHitTesting(packReminderRowEnabled)
-
-                    Rectangle()
-                        .fill(Color.primary.opacity(colorScheme == .dark ? 0.06 : 0.03))
-                        .frame(height: 1)
-
-                    DatePicker(
-                        LocalizedStringKey("settings.calendar.packtime"),
-                        selection: packTimeBinding,
-                        displayedComponents: .hourAndMinute
-                    )
-                    .datePickerStyle(.compact)
-                    .labelsHidden()
-                    .frame(maxWidth: .infinity, alignment: .trailing)
-                    .padding(.horizontal, 18)
-                    .frame(height: 58)
-                    .overlay(alignment: .leading) {
-                        Text("settings.calendar.packtime")
-                            .font(.body)
-                            .foregroundStyle(rowTitleColor(enabled: packTimeRowEnabled))
-                            .padding(.leading, 18)
-                    }
-                    .disabled(!packTimeRowEnabled)
-                    .opacity(packTimeRowEnabled ? 1 : (colorScheme == .dark ? 0.55 : 0.6))
-                    .allowsHitTesting(packTimeRowEnabled)
                 }
                 .background(
                     RoundedRectangle(cornerRadius: 28, style: .continuous)
@@ -1046,12 +967,7 @@ private struct CalendarSettingsView: View {
         }
         .alert(LocalizedStringKey("settings.calendar.bulk.title"), isPresented: $showBulkAlert) {
             Button("settings.calendar.bulk.confirm") {
-                let written = CalendarManager.shared.addAllUpcoming(
-                    store.trips,
-                    packHour: calendarPackHour,
-                    packMinute: calendarPackMinute,
-                    includePackReminder: calendarPackReminderEnabled
-                )
+                let written = CalendarManager.shared.addAllUpcoming(store.trips)
                 if written > 0 {
                     showToast(String(format: NSLocalizedString("settings.calendar.bulk.added_toast", comment: ""), written))
                 } else {

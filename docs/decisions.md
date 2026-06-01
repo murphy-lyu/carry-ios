@@ -230,6 +230,12 @@
 原因：右上确认按钮原先恒显可点，但无选择时 `confirmSelection` 因 `guard !sections.isEmpty` 静默 return → 死点击。
 实现：`.disabled(!isCreateMode && !canConfirm)`——创建模式始终可点（允许空清单，见上），追加模式无选择时置灰，给诚实反馈。
 
+## 2026-06-02 移除日历打包提醒
+
+### 删除 Calendar Sync 里的"打包提醒"日历事件（含其时间设置）
+原因：刚做完应用内通知系统（可选档位 + 时间的打包提醒）后，日历里再写一个"出发前1天打包提醒"事件是**重复提醒同一件事**，且为它加了子开关 + 时间选择器，属冗余配置、与 Carry 克制定位冲突。Calendar Sync 的非冗余核心价值只是"把行程显示到系统日历"。打包提醒交给应用内通知，两者职责清晰不重叠。未上线、无存量用户，正是动刀时机。
+实现：`CalendarManager` 删 pack 事件写入（writeEvents 只写行程事件）+ 删 `packingListNotes`（仅 pack 用）；`addTrip`/`addAllUpcoming`/`writeEvents` 去掉 packHour/packMinute/includePackReminder 参数。`CalendarSettingsView` 删打包提醒子开关 + 时间行 + 相关 helper（packReminderRowEnabled/packTimeRowEnabled/rowTitleColor/toggleTint/packTimeBinding）+ 3 个 AppStorage（calendar_pack_*）。`TripStore` 创建行程时不再读 pack 偏好。删 3 个失效 xcstrings key（settings.calendar.pack_reminder / .packtime / calendar.event.pack.title）。Calendar Sync 现只剩"自动添加行程到日历"单一开关。
+
 ## 2026-06-02 通知偏好
 
 ### 默认提醒改为"用户自定义 + 创建时快照"，而非全局实时联动

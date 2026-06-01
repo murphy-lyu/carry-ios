@@ -3,6 +3,11 @@
 ## 最后更新
 2026-06-01
 
+## 上次改动摘要（移除日历打包提醒 · 2026-06-02）
+
+- **删掉 Calendar Sync 里的"打包提醒"日历事件 + 时间设置**。理由：与刚做的应用内通知系统重复（都提醒打包），且子开关+时间选择器属冗余配置，违背克制。Calendar Sync 现只剩「自动添加行程到日历」单一开关,职责清晰（日历=显示行程，通知=提醒打包）。
+- 改动：`CalendarManager`（删 pack 事件 + packingListNotes + 3 个签名去参）、`CalendarSettingsView`（删子开关/时间行/5 个 helper/3 个 AppStorage）、`TripStore`（创建时不再读 pack 偏好）、删 3 个失效 xcstrings key。通过 simulator build。
+
 ## 上次改动摘要（通知偏好 · 自定义默认提醒 · 2026-06-02）
 
 - **新功能：设置 →「通知」二级页**（`NotificationSettingsView`，放「提醒与显示」分区首行）。用户用开关选择"新建行程的默认提醒档位"（出发当天/前1/2/3天/前1周/前2周，复用 `TripReminderConfig.presets` + `reminder.label.*` 文案），默认开「出发当天 + 出发前1天」。spec：`specs/notification-preferences.md`。
