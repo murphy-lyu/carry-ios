@@ -41342,55 +41342,55 @@
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Verbindungen & Widgets"
+            "value": "Erinnerungen & Anzeige"
           }
         },
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Connected & Widgets"
+            "value": "Reminders & Display"
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Conexiones y widgets"
+            "value": "Recordatorios y visualización"
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Connexions et widgets"
+            "value": "Rappels et affichage"
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "連携 & ウィジェット"
+            "value": "リマインダーと表示"
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "연결 및 위젯"
+            "value": "알림 및 표시"
           }
         },
         "pt-BR": {
           "stringUnit": {
             "state": "translated",
-            "value": "Conexões e widgets"
+            "value": "Lembretes e exibição"
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "连接 & 小组件"
+            "value": "提醒与显示"
           }
         },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "連接 & 小組件"
+            "value": "提醒與顯示"
           }
         }
       }
