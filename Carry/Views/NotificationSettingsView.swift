@@ -80,7 +80,7 @@ struct NotificationSettingsView: View {
                                     set: { setOn(preset.daysBeforeDeparture, $0) }
                                 ))
                                 .labelsHidden()
-                                .tint(colorScheme == .dark ? Color(.systemGray) : Color(.label))
+                                .tint(Color.accentColor)
                             }
                             .padding(.horizontal, 18)
                             .frame(height: 58)
