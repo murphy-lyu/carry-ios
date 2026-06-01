@@ -12,9 +12,17 @@ struct TripDateRangePickerSheet: View {
     var onSkipDates: (() -> Void)? = nil
 
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.colorScheme) private var colorScheme
     @State private var selectedStart: Date
     @State private var selectedEnd: Date
     @State private var isSelectingEnd = false
+
+    /// 与 CarrySubtleBackground 渐变底色一致，让底部入口无缝融入、不撞色。
+    private var footerBlendColor: Color {
+        colorScheme == .dark
+            ? Color(red: 0.08, green: 0.08, blue: 0.09)
+            : Color(red: 0.98, green: 0.98, blue: 0.97)
+    }
 
     private let calendar = Calendar.current
     private let today: Date
@@ -77,11 +85,16 @@ struct TripDateRangePickerSheet: View {
                         }
                         .foregroundStyle(.secondary)
                         .frame(maxWidth: .infinity)
-                        .frame(height: 44)
+                        .frame(height: 48)
                     }
                     .buttonStyle(.plain)
-                    .background(.ultraThinMaterial)
-                    .overlay(Divider(), alignment: .top)
+                    .background(footerBlendColor)
+                    .overlay(
+                        Rectangle()
+                            .fill(Color.primary.opacity(0.06))
+                            .frame(height: 0.5),
+                        alignment: .top
+                    )
                 }
             }
             .navigationTitle("Select Dates")
