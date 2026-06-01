@@ -17,9 +17,10 @@
 - [x] **SwiftData migration plan**：新版本如有 schema 变更，migration 已覆盖 ✅（已有 CarryMigrationPlan）
 - [ ] **Build number 递增**：每次提交 App Store Connect，`CFBundleVersion` 必须比上一次大
 - [ ] ⚠️ **WeatherKit 能力配置**（含天气功能的版本发布前必做）：
-  1. Xcode → Signing & Capabilities → 添加 WeatherKit
-  2. Developer Portal → App ID → 勾选 WeatherKit → 保存
-  3. Xcode 重新下载 Provisioning Profile
+  1. ✅ `Carry.entitlements` 已加 `com.apple.developer.weatherkit`（代码侧，2026-06-01）
+  2. [ ] Developer Portal → App ID → 勾选 WeatherKit → 保存（**手动，未做**）
+  3. [ ] Xcode 重新下载 Provisioning Profile（**手动，未做**）
+  4. [ ] 隐私政策补天气条款（文案已起草，待粘到 carry-legal 的 privacy/zh.html + index.html）
 
 ---
 
