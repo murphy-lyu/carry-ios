@@ -28199,15 +28199,15 @@
     "packing.header.planning": {
       "extractionState": "manual",
       "localizations": {
-        "de": { "stringUnit": { "state": "translated", "value": "In Planung · noch kein Datum" } },
-        "en": { "stringUnit": { "state": "translated", "value": "Planning · no dates yet" } },
-        "es": { "stringUnit": { "state": "translated", "value": "En planificación · sin fechas aún" } },
-        "fr": { "stringUnit": { "state": "translated", "value": "En préparation · dates à définir" } },
-        "ja": { "stringUnit": { "state": "translated", "value": "計画中 · 日付未定" } },
-        "ko": { "stringUnit": { "state": "translated", "value": "계획 중 · 날짜 미정" } },
-        "pt-BR": { "stringUnit": { "state": "translated", "value": "Em planejamento · sem datas ainda" } },
-        "zh-Hans": { "stringUnit": { "state": "translated", "value": "规划中 · 日期待定" } },
-        "zh-Hant": { "stringUnit": { "state": "translated", "value": "規劃中 · 日期待定" } }
+        "de": { "stringUnit": { "state": "translated", "value": "Noch in Planung · Datum folgt" } },
+        "en": { "stringUnit": { "state": "translated", "value": "Still planning · dates to come" } },
+        "es": { "stringUnit": { "state": "translated", "value": "Aún planeando · fechas por llegar" } },
+        "fr": { "stringUnit": { "state": "translated", "value": "En préparation · dates à venir" } },
+        "ja": { "stringUnit": { "state": "translated", "value": "計画中 · 日付はこれから" } },
+        "ko": { "stringUnit": { "state": "translated", "value": "아직 계획 중 · 날짜는 곧" } },
+        "pt-BR": { "stringUnit": { "state": "translated", "value": "Ainda planejando · datas em breve" } },
+        "zh-Hans": { "stringUnit": { "state": "translated", "value": "还在计划 · 日子待定" } },
+        "zh-Hant": { "stringUnit": { "state": "translated", "value": "還在規劃 · 日子待定" } }
       }
     },
     "home.planning": {
@@ -28227,43 +28227,43 @@
     "tripdates.clear": {
       "extractionState": "manual",
       "localizations": {
-        "de": { "stringUnit": { "state": "translated", "value": "Ohne Datum – erst planen" } },
-        "en": { "stringUnit": { "state": "translated", "value": "No dates — plan first" } },
-        "es": { "stringUnit": { "state": "translated", "value": "Sin fechas — planear primero" } },
-        "fr": { "stringUnit": { "state": "translated", "value": "Sans dates — planifier d'abord" } },
-        "ja": { "stringUnit": { "state": "translated", "value": "日付なしで先に計画する" } },
-        "ko": { "stringUnit": { "state": "translated", "value": "날짜 없이 먼저 계획하기" } },
-        "pt-BR": { "stringUnit": { "state": "translated", "value": "Sem datas — planejar primeiro" } },
-        "zh-Hans": { "stringUnit": { "state": "translated", "value": "无需日期，先做规划" } },
-        "zh-Hant": { "stringUnit": { "state": "translated", "value": "無需日期，先做規劃" } }
+        "de": { "stringUnit": { "state": "translated", "value": "Erst planen, Datum später" } },
+        "en": { "stringUnit": { "state": "translated", "value": "Plan now, pick dates later" } },
+        "es": { "stringUnit": { "state": "translated", "value": "Planea ahora, elige las fechas después" } },
+        "fr": { "stringUnit": { "state": "translated", "value": "Planifie d'abord, dates plus tard" } },
+        "ja": { "stringUnit": { "state": "translated", "value": "先に計画して、日付は後で" } },
+        "ko": { "stringUnit": { "state": "translated", "value": "먼저 계획하고 날짜는 나중에" } },
+        "pt-BR": { "stringUnit": { "state": "translated", "value": "Planeje agora, escolha as datas depois" } },
+        "zh-Hans": { "stringUnit": { "state": "translated", "value": "先规划,日子以后再定" } },
+        "zh-Hant": { "stringUnit": { "state": "translated", "value": "先規劃,日子以後再定" } }
       }
     },
     "trip.card.no_dates": {
       "extractionState": "manual",
       "localizations": {
-        "de": { "stringUnit": { "state": "translated", "value": "Noch kein Datum" } },
-        "en": { "stringUnit": { "state": "translated", "value": "No dates yet" } },
-        "es": { "stringUnit": { "state": "translated", "value": "Sin fechas aún" } },
-        "fr": { "stringUnit": { "state": "translated", "value": "Pas encore de dates" } },
-        "ja": { "stringUnit": { "state": "translated", "value": "日付未定" } },
-        "ko": { "stringUnit": { "state": "translated", "value": "날짜 미정" } },
-        "pt-BR": { "stringUnit": { "state": "translated", "value": "Sem datas ainda" } },
-        "zh-Hans": { "stringUnit": { "state": "translated", "value": "未定日期" } },
-        "zh-Hant": { "stringUnit": { "state": "translated", "value": "未定日期" } }
+        "de": { "stringUnit": { "state": "translated", "value": "Datum folgt" } },
+        "en": { "stringUnit": { "state": "translated", "value": "Dates to come" } },
+        "es": { "stringUnit": { "state": "translated", "value": "Fechas por llegar" } },
+        "fr": { "stringUnit": { "state": "translated", "value": "Dates à venir" } },
+        "ja": { "stringUnit": { "state": "translated", "value": "日付はこれから" } },
+        "ko": { "stringUnit": { "state": "translated", "value": "날짜는 곧" } },
+        "pt-BR": { "stringUnit": { "state": "translated", "value": "Datas em breve" } },
+        "zh-Hans": { "stringUnit": { "state": "translated", "value": "日子待定" } },
+        "zh-Hant": { "stringUnit": { "state": "translated", "value": "日子待定" } }
       }
     },
     "tripdates.unset": {
       "extractionState": "manual",
       "localizations": {
-        "de": { "stringUnit": { "state": "translated", "value": "Nicht festgelegt · zum Wählen tippen" } },
-        "en": { "stringUnit": { "state": "translated", "value": "Not set · tap to choose dates" } },
-        "es": { "stringUnit": { "state": "translated", "value": "Sin definir · toca para elegir fechas" } },
-        "fr": { "stringUnit": { "state": "translated", "value": "Non défini · toucher pour choisir" } },
-        "ja": { "stringUnit": { "state": "translated", "value": "未設定 · タップして日付を選択" } },
-        "ko": { "stringUnit": { "state": "translated", "value": "미설정 · 탭하여 날짜 선택" } },
-        "pt-BR": { "stringUnit": { "state": "translated", "value": "Não definido · toque para escolher" } },
-        "zh-Hans": { "stringUnit": { "state": "translated", "value": "未设置 · 点此选择日期" } },
-        "zh-Hant": { "stringUnit": { "state": "translated", "value": "未設定 · 點此選擇日期" } }
+        "de": { "stringUnit": { "state": "translated", "value": "Noch kein Datum – wähl eins, wenn du so weit bist" } },
+        "en": { "stringUnit": { "state": "translated", "value": "No date yet — pick one when you're ready" } },
+        "es": { "stringUnit": { "state": "translated", "value": "Aún sin fecha — elígela cuando lo tengas claro" } },
+        "fr": { "stringUnit": { "state": "translated", "value": "Pas encore de date — choisis quand tu es prêt" } },
+        "ja": { "stringUnit": { "state": "translated", "value": "日付はまだ。決まったら選んでね" } },
+        "ko": { "stringUnit": { "state": "translated", "value": "날짜는 아직 — 정해지면 골라요" } },
+        "pt-BR": { "stringUnit": { "state": "translated", "value": "Sem data ainda — escolha quando estiver pronto" } },
+        "zh-Hans": { "stringUnit": { "state": "translated", "value": "日子还没定,想好了再选" } },
+        "zh-Hant": { "stringUnit": { "state": "translated", "value": "日子還沒定,想好了再選" } }
       }
     },
     "home.upcoming": {

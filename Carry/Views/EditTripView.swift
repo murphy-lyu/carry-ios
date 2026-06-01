@@ -134,7 +134,7 @@ struct EditTripView: View {
                                     info.isDateless = true
                                 } label: {
                                     HStack(spacing: 4) {
-                                        Image(systemName: "xmark.circle")
+                                        Image(systemName: "calendar.badge.clock")
                                             .font(.caption2.weight(.semibold))
                                         Text("tripdates.clear")
                                             .font(.footnote.weight(.medium))

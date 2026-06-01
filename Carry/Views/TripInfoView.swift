@@ -132,7 +132,7 @@ struct TripInfoView: View {
                             // 就近清除：点此改为「规划中」无日期行程。
                             Button { hasDates = false } label: {
                                 HStack(spacing: 4) {
-                                    Image(systemName: "xmark.circle")
+                                    Image(systemName: "calendar.badge.clock")
                                         .font(.caption2.weight(.semibold))
                                     Text("tripdates.clear")
                                         .font(.footnote.weight(.medium))
