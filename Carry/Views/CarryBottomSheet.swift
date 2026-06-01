@@ -118,6 +118,10 @@ final class SheetViewController: UIViewController {
     private weak var listScrollView: UIScrollView?
     private var delegateProxy: DecelerationCanceller?
     private var delegateObservation: NSKeyValueObservation?
+    /// 不依赖 delegate 的滚动锁：锁定期间直接 KVO 观察 contentOffset，谁顶替了 delegate 都能拉回。
+    /// 针对"概率性上拉内容区时内容滚动"——疑因 DecelerationCanceller 代理被 SwiftUI 临时顶替、
+    /// scrollViewDidScroll 锁漏帧。KVO 不受 delegate 顶替影响，作为稳健兜底。【候选修复，待真机验证】
+    private var contentOffsetObservation: NSKeyValueObservation?
 
     private let feedbackGenerator = UIImpactFeedbackGenerator(style: .soft)
 
@@ -440,6 +444,17 @@ final class SheetViewController: UIViewController {
         delegateObservation = sv.observe(\.delegate, options: []) { [weak self, weak sv] _, _ in
             guard let self, let sv, sv.delegate !== self.delegateProxy else { return }
             self.installProxy(on: sv)
+        }
+        // 锁定期间的 delegate-无关钳制：只要 lockedOffsetY 已设且 offset 漂移就拉回。
+        // KVO 在 contentOffset 任何变化时都触发（包括 UIScrollView 内部更新），不受 delegate 被顶替影响。
+        contentOffsetObservation = sv.observe(\.contentOffset, options: [.new]) { [weak self, weak sv] _, _ in
+            guard let self, let sv, let locked = self.delegateProxy?.lockedOffsetY else { return }
+            let cur = sv.contentOffset.y
+            guard abs(cur - locked) > 0.5 else { return }
+            sv.setContentOffset(CGPoint(x: sv.contentOffset.x, y: locked), animated: false)
+#if DEBUG
+            print("🩺[Sheet] contentOffset KVO clamp: 漏滚 y=\(cur) → 拉回 \(locked) · 此刻 delegate 是代理? \(sv.delegate === self.delegateProxy)")
+#endif
         }
     }
 
