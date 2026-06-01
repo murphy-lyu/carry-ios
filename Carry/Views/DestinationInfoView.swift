@@ -109,6 +109,38 @@ struct DestinationInfoView: View {
         Locale.current.region?.identifier.uppercased()
     }
 
+    // MARK: - Voltage converter warning
+
+    /// 电热设备（规范英文名）：单电压变体在电压不匹配时可能被烧坏。
+    /// 注：当前物品库仅含 "Hair straightener"，其余为将来扩库预留（见 spec）。
+    private static let heatingAppliances: Set<String> = [
+        "hair straightener", "hair dryer", "curling iron", "hair curler",
+        "flat iron", "travel iron", "clothes steamer", "travel steamer"
+    ]
+
+    /// 清单里是否含电热设备
+    private var hasHeatingAppliance: Bool {
+        (trip.sections ?? [])
+            .flatMap { $0.items ?? [] }
+            .contains { Self.heatingAppliances.contains($0.name.trimmingCharacters(in: .whitespaces).lowercased()) }
+    }
+
+    /// 家乡电压（取自设备 locale 国家 → PlugCatalog）
+    private var homeVoltage: Int? {
+        guard let home = homeCountryCode else { return nil }
+        return PlugCatalog.info(for: home)?.voltage
+    }
+
+    /// 电压档位：低压档(100–127V)=0，高压档(220–240V)=1
+    private func voltageBand(_ v: Int) -> Int { v < 160 ? 0 : 1 }
+
+    /// 触发条件：清单含电热设备 且 家乡与任一目的地电压档不同
+    private var showConverterWarning: Bool {
+        guard hasHeatingAppliance, let home = homeVoltage else { return false }
+        let homeBand = voltageBand(home)
+        return voltages.contains { voltageBand($0.voltage) != homeBand }
+    }
+
     /// True when all destinations are in the user's home country
     private var allDestinationsAreHome: Bool {
         guard let home = homeCountryCode, !allCountryCodes.isEmpty else { return false }
@@ -323,15 +355,25 @@ struct DestinationInfoView: View {
                         .lineLimit(1)
                         .minimumScaleFactor(0.85)
 
+                    // 电压行始终展示「电压 / 频率」，与无警示状态一致。清单含电热设备 +
+                    // 电压档位与家乡不同时，整行转橙并附「可能需变压器」提示（转换插头不变压）。
                     let voltageLabel = voltages
                         .map { "\($0.voltage)V / \($0.frequency)Hz" }
                         .joined(separator: " · ")
                     if !voltageLabel.isEmpty {
-                        Text(voltageLabel)
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                            .lineLimit(1)
-                            .minimumScaleFactor(0.9)
+                        HStack(spacing: 3) {
+                            if showConverterWarning {
+                                Image(systemName: "bolt.trianglebadge.exclamationmark.fill")
+                                    .font(.system(size: 11, weight: .semibold))
+                            }
+                            Text(showConverterWarning
+                                 ? "\(voltageLabel) · \(NSLocalizedString("destination.plug.voltage_warning", comment: ""))"
+                                 : voltageLabel)
+                                .lineLimit(1)
+                                .minimumScaleFactor(0.8)
+                        }
+                        .font(.caption)
+                        .foregroundStyle(showConverterWarning ? Color.alertOrange : .secondary)
                     }
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)

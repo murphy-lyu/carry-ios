@@ -89,7 +89,7 @@ let itemPickerCatalog: [ItemPickerCategory] = [
         "Makeup remover / cleansing oil", "Cotton pads", "Face wash", "Face mask", "Face mist", "Toner", "Serum", "Eye cream", "Facial oil", "Lotion", "Moisturizer",
         "Body lotion",
         "Lip balm", "Sunscreen", "Blotting paper",
-        "Hair ties", "Comb", "Hair straightener", "Dry shampoo", "Perfume",
+        "Hair ties", "Comb", "Hair straightener", "Hair dryer", "Dry shampoo", "Perfume",
         "Dental floss", "Toothbrush", "Toothpaste", "Mouthwash",
         "Shampoo", "Conditioner", "Body wash",
         "Razor", "Nail clippers",
