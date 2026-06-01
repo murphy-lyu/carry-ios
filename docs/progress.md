@@ -3,6 +3,13 @@
 ## 最后更新
 2026-06-01
 
+## 上次改动摘要（Settings 信息架构优化 · 2026-06-01）
+
+- **「通用」分区超载拆分**：原「通用」一张卡塞了 6–7 行且混了两类心智（"App 长什么样" + "Carry 在哪儿提醒/出现"）。拆为两组——**个性化**（外观 · 应用图标 · 语言）+ **提醒与显示**（日历 · 灵动岛 · 小部件 · 经期）。每卡降到 3–4 行，扫读成本降低。纯层级调整，行/跳转/功能与 `#if`、`CycleInference.isAvailable` 条件全部原样。
+- **个性化组内换序**：App Icon 移到语言之前——外观+图标都是"App 视觉外观"放一起，语言（跳转 iOS 系统设置、会离开 App）置于该组最末。
+- 本地化：新增 `settings.section.personalization` / `settings.section.reminders_display` × 9 语言（zh-Hant 用台湾术语「個人化」）；删除已无引用的 `settings.section.general`。
+- 同会话另：小部件引导页（设置新增「小部件」入口，单张预览图占位 `WidgetPreview` + 版本无关的"长按主屏幕添加"说明，不做分步）；「编辑分类」空状态用 `containerRelativeFrame(.vertical)` 在可视区垂直居中。
+
 ## 上次改动摘要（日期选择器视觉优化 · 2026-06-01）
 
 - **底部「先规划，日子以后再定」入口**：从 TripInfoView / EditTripView 的内联链接移进 `TripDateRangePickerSheet` 底部（`.safeAreaInset`），两处内联入口代码及占位注释全部删除。底部栏背景用 `footerBlendColor` 与 `CarrySubtleBackground` 渐变底色精确匹配（light 暖白 / dark 深色），0.5pt 极淡发丝线替代硬 Divider，无割裂感。

@@ -41161,63 +41161,32 @@
         }
       }
     },
-    "settings.section.general": {
+    "settings.section.personalization": {
       "extractionState": "manual",
       "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "needs_review",
-            "value": "General"
-          }
-        },
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "General"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "needs_review",
-            "value": "General"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "needs_review",
-            "value": "General"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "needs_review",
-            "value": "General"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "needs_review",
-            "value": "General"
-          }
-        },
-        "pt-BR": {
-          "stringUnit": {
-            "state": "needs_review",
-            "value": "General"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "通用"
-          }
-        },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "一般"
-          }
-        }
+        "de": { "stringUnit": { "state": "translated", "value": "Personalisierung" } },
+        "en": { "stringUnit": { "state": "translated", "value": "Personalization" } },
+        "es": { "stringUnit": { "state": "translated", "value": "Personalización" } },
+        "fr": { "stringUnit": { "state": "translated", "value": "Personnalisation" } },
+        "ja": { "stringUnit": { "state": "translated", "value": "カスタマイズ" } },
+        "ko": { "stringUnit": { "state": "translated", "value": "개인 설정" } },
+        "pt-BR": { "stringUnit": { "state": "translated", "value": "Personalização" } },
+        "zh-Hans": { "stringUnit": { "state": "translated", "value": "个性化" } },
+        "zh-Hant": { "stringUnit": { "state": "translated", "value": "個人化" } }
+      }
+    },
+    "settings.section.reminders_display": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": { "stringUnit": { "state": "translated", "value": "Erinnerungen & Anzeige" } },
+        "en": { "stringUnit": { "state": "translated", "value": "Reminders & Display" } },
+        "es": { "stringUnit": { "state": "translated", "value": "Recordatorios y visualización" } },
+        "fr": { "stringUnit": { "state": "translated", "value": "Rappels et affichage" } },
+        "ja": { "stringUnit": { "state": "translated", "value": "リマインダーと表示" } },
+        "ko": { "stringUnit": { "state": "translated", "value": "알림 및 표시" } },
+        "pt-BR": { "stringUnit": { "state": "translated", "value": "Lembretes e exibição" } },
+        "zh-Hans": { "stringUnit": { "state": "translated", "value": "提醒与显示" } },
+        "zh-Hant": { "stringUnit": { "state": "translated", "value": "提醒與顯示" } }
       }
     },
     "settings.section.support": {

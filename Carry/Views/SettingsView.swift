@@ -222,6 +222,7 @@ struct SettingsView: View {
             ScrollView {
                 LazyVStack(alignment: .leading, spacing: 0) {
 
+                        // 个性化：App 长什么样（外观 · 语言 · 应用图标）
                         Section {
                             settingsCard {
                                 Button {
@@ -251,14 +252,25 @@ struct SettingsView: View {
                                         }
                                     }
                                 }
-                                settingsRow(title: "settings.about.language", valueText: currentLanguageDisplay) {
-                                    openSystemSettings()
-                                }
                                 settingsNavigationRow(
                                     title: "settings.appicon.entry",
                                     valueText: currentIconName,
                                     route: .appIcon
                                 )
+                                // 语言会跳转到 iOS 系统设置（离开 App），放该组最末
+                                settingsRow(title: "settings.about.language", valueText: currentLanguageDisplay) {
+                                    openSystemSettings()
+                                }
+                            }
+                            .padding(.horizontal, 16)
+                            .padding(.bottom, 18)
+                        } header: {
+                            sectionHeader("settings.section.personalization")
+                        }
+
+                        // 提醒与显示：Carry 在哪儿提醒我 / 出现（日历 · 灵动岛 · 小部件 · 经期）
+                        Section {
+                            settingsCard {
                                 settingsNavigationRow(
                                     title: "settings.calendar.entry",
                                     valueText: calendarSyncEnabled ? NSLocalizedString("settings.calendar.status.on", comment: "") : NSLocalizedString("settings.calendar.status.off", comment: ""),
@@ -275,7 +287,7 @@ struct SettingsView: View {
                             .padding(.horizontal, 16)
                             .padding(.bottom, 18)
                         } header: {
-                            sectionHeader("settings.section.general")
+                            sectionHeader("settings.section.reminders_display")
                         }
 
                         Section {
