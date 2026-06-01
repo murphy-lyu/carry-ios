@@ -11,9 +11,11 @@ struct TripReminderConfig: Codable, Identifiable, Equatable {
     var minute: Int = 0
 
     /// 行程未显式设置提醒时的回退默认（仅作用于 reminderConfigData 为空 Data 的行程，
-    /// 主要是存量老行程）。已从早期强默认 [提前3天 + 出发当天] 软化为「出发前1天」。
+    /// 主要是存量老行程）。已从早期强默认 [提前3天 + 出发当天] 软化为
+    /// [出发当天 + 出发前1天]（去掉提前3天）。
     /// 新建行程不走此回退——创建时由 ReminderPreferences.defaultConfigs 显式写入。
     static let defaults: [TripReminderConfig] = [
+        TripReminderConfig(daysBeforeDeparture: 0, hour: 7),
         TripReminderConfig(daysBeforeDeparture: 1, hour: 9),
     ]
 
@@ -67,14 +69,14 @@ struct TripReminderConfig: Codable, Identifiable, Equatable {
 /// 用户在设置里选择的"新建行程默认提醒档位"。创建行程时快照进该行程的
 /// reminderConfigData（非实时联动），之后改设置不影响已建行程。
 /// 存储：UserDefaults 一个逗号分隔的 daysBeforeDeparture 串。
-/// - 从未设置（key 不存在）→ 默认 [1]（出发前1天）
+/// - 从未设置（key 不存在）→ 默认 [0, 1]（出发当天 + 出发前1天）
 /// - 显式设为空串 ""        → []（全部关闭，新行程默认无提醒，合法）
 enum ReminderPreferences {
     static let storageKey = "default_reminder_offsets"
 
     static var enabledOffsets: Set<Int> {
         get {
-            guard let raw = UserDefaults.standard.string(forKey: storageKey) else { return [1] }
+            guard let raw = UserDefaults.standard.string(forKey: storageKey) else { return [0, 1] }
             return Set(raw.split(separator: ",").compactMap { Int($0) })
         }
         set {

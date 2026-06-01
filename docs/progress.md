@@ -5,7 +5,7 @@
 
 ## 上次改动摘要（通知偏好 · 自定义默认提醒 · 2026-06-02）
 
-- **新功能：设置 →「通知」二级页**（`NotificationSettingsView`，放「提醒与显示」分区首行）。用户用开关选择"新建行程的默认提醒档位"（出发当天/前1/2/3天/前1周/前2周，复用 `TripReminderConfig.presets` + `reminder.label.*` 文案），默认仅「出发前1天」。spec：`specs/notification-preferences.md`。
+- **新功能：设置 →「通知」二级页**（`NotificationSettingsView`，放「提醒与显示」分区首行）。用户用开关选择"新建行程的默认提醒档位"（出发当天/前1/2/3天/前1周/前2周，复用 `TripReminderConfig.presets` + `reminder.label.*` 文案），默认开「出发当天 + 出发前1天」。spec：`specs/notification-preferences.md`。
 - **机制：创建时快照，非实时联动**。`ItemPickerView` 的 `.create`/`.autoPackReview` 在建 `TripBundle` 后 `bundle.reminderConfigs = ReminderPreferences.defaultConfigs`。改设置不影响已建行程；单行程仍可在物品清单独立增删。
 - **默认软化**：`TripReminderConfig.defaults` 从 `[提前3天@9 + 出发当天@7]` → `[出发前1天@9]`（仅作存量空配置行程的回退；新行程走快照）。
 - **全局偏好**：新增 `ReminderPreferences`（`UserDefaults` 存逗号分隔 offsets；nil→默认[1]，空串→[]全关，二者区分）。**纳入备份**（`CarryBackup.defaultReminderOffsets: [Int]?`，旧备份缺字段则保持现状）。

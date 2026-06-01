@@ -4,7 +4,7 @@ import SwiftUI
 /// 档位（开关）。该选择仅作用于"之后新建"的行程（创建时快照进行程），每个行程
 /// 仍可在物品清单里单独增删提醒、互不影响。未来航班 / 协作等通知场景在此页按分组扩展。
 struct NotificationSettingsView: View {
-    @AppStorage(ReminderPreferences.storageKey) private var offsetsRaw = "1"
+    @AppStorage(ReminderPreferences.storageKey) private var offsetsRaw = "0,1"
     @Environment(\.colorScheme) private var colorScheme
 
     private var cardFill: Color {
