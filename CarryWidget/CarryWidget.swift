@@ -7,6 +7,7 @@
 
 import WidgetKit
 import SwiftUI
+import AppIntents
 
 // MARK: - Shared data (mirror of TripStore.WidgetTripSnapshot)
 
@@ -70,32 +71,62 @@ private func progressText(_ trip: WidgetTrip) -> String {
     String(format: NSLocalizedString("widget.progress.packed", comment: ""), trip.packedCount, trip.totalCount)
 }
 
+// MARK: - Widget appearance configuration
+
+enum WidgetAppearance: String, AppEnum {
+    case automatic, light, dark
+
+    static var typeDisplayRepresentation: TypeDisplayRepresentation = "widget.config.appearance"
+    static var caseDisplayRepresentations: [WidgetAppearance: DisplayRepresentation] = [
+        .automatic: "widget.appearance.automatic",
+        .light:     "widget.appearance.light",
+        .dark:      "widget.appearance.dark",
+    ]
+}
+
+struct CarryWidgetIntent: WidgetConfigurationIntent {
+    static var title: LocalizedStringResource = "widget.config.title"
+    static var description = IntentDescription("widget.config.description")
+
+    @Parameter(title: "widget.config.appearance", default: .automatic)
+    var appearance: WidgetAppearance
+}
+
 // MARK: - Timeline
 
 struct CarryEntry: TimelineEntry {
     let date: Date
     let trips: [WidgetTrip]
+    var appearance: WidgetAppearance = .automatic
+
+    var preferredColorScheme: ColorScheme? {
+        switch appearance {
+        case .automatic: return nil
+        case .light:     return .light
+        case .dark:      return .dark
+        }
+    }
 }
 
-struct CarryProvider: TimelineProvider {
+struct CarryProvider: AppIntentTimelineProvider {
     func placeholder(in context: Context) -> CarryEntry {
         CarryEntry(date: Date(), trips: [.preview])
     }
 
-    func getSnapshot(in context: Context, completion: @escaping (CarryEntry) -> Void) {
+    func snapshot(for configuration: CarryWidgetIntent, in context: Context) async -> CarryEntry {
         let trips = context.isPreview ? [.preview] : loadWidgetTrips()
-        completion(CarryEntry(date: Date(), trips: trips))
+        return CarryEntry(date: Date(), trips: trips, appearance: configuration.appearance)
     }
 
-    func getTimeline(in context: Context, completion: @escaping (Timeline<CarryEntry>) -> Void) {
-        let entry = CarryEntry(date: Date(), trips: loadWidgetTrips())
+    func timeline(for configuration: CarryWidgetIntent, in context: Context) async -> Timeline<CarryEntry> {
+        let entry = CarryEntry(date: Date(), trips: loadWidgetTrips(), appearance: configuration.appearance)
         // Countdown changes daily — refresh at the next local midnight.
         let nextMidnight = Calendar.current.nextDate(
             after: Date(),
             matching: DateComponents(hour: 0, minute: 0, second: 5),
             matchingPolicy: .nextTime
         ) ?? Date().addingTimeInterval(3600)
-        completion(Timeline(entries: [entry], policy: .after(nextMidnight)))
+        return Timeline(entries: [entry], policy: .after(nextMidnight))
     }
 }
 
@@ -119,6 +150,7 @@ struct CarryWidgetEntryView: View {
             }
         }
         .containerBackground(.fill.tertiary, for: .widget)
+        .preferredColorScheme(entry.preferredColorScheme)
     }
 
     // MARK: Small
@@ -246,7 +278,7 @@ struct CarryWidget: Widget {
     let kind: String = "CarryWidget"
 
     var body: some WidgetConfiguration {
-        StaticConfiguration(kind: kind, provider: CarryProvider()) { entry in
+        AppIntentConfiguration(kind: kind, intent: CarryWidgetIntent.self, provider: CarryProvider()) { entry in
             CarryWidgetEntryView(entry: entry)
         }
         .configurationDisplayName("widget.display_name")
