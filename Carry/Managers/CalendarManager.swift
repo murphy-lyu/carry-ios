@@ -35,7 +35,7 @@ final class CalendarManager {
 
     /// Adds events for a single upcoming trip. Returns true if written (or already added).
     @discardableResult
-    func addTrip(_ trip: TripBundle, packHour: Int, packMinute: Int, includePackReminder: Bool = true) -> Bool {
+    func addTrip(_ trip: TripBundle) -> Bool {
         guard !trip.isDateless else { return false }   // 无日期行程不写日历
         guard trip.departureDate >= Calendar.current.startOfDay(for: Date()) else { return false }
         var addedIds = loadAddedIds()
@@ -46,7 +46,7 @@ final class CalendarManager {
             return false
         }
         do {
-            try writeEvents(for: trip, to: cal, packHour: packHour, packMinute: packMinute, includePackReminder: includePackReminder)
+            try writeEvents(for: trip, to: cal)
             addedIds.insert(idString)
             saveAddedIds(addedIds)
             return true
@@ -58,7 +58,7 @@ final class CalendarManager {
 
     /// Adds events for all upcoming trips not yet added. Returns count of trips written.
     @discardableResult
-    func addAllUpcoming(_ trips: [TripBundle], packHour: Int, packMinute: Int, includePackReminder: Bool = true) -> Int {
+    func addAllUpcoming(_ trips: [TripBundle]) -> Int {
         let today = Calendar.current.startOfDay(for: Date())
         guard let cal = carryCalendar else {
             CarryLogger.shared.log(.calendarSaveFailed, context: "carryCalendar=nil in addAllUpcoming")
@@ -70,7 +70,7 @@ final class CalendarManager {
             let idString = trip.id.uuidString
             guard !addedIds.contains(idString) else { continue }
             do {
-                try writeEvents(for: trip, to: cal, packHour: packHour, packMinute: packMinute, includePackReminder: includePackReminder)
+                try writeEvents(for: trip, to: cal)
                 addedIds.insert(idString)
                 written += 1
             } catch {
@@ -127,7 +127,7 @@ final class CalendarManager {
 
     // MARK: - Event writing
 
-    private func writeEvents(for trip: TripBundle, to cal: EKCalendar, packHour: Int, packMinute: Int, includePackReminder: Bool) throws {
+    private func writeEvents(for trip: TripBundle, to cal: EKCalendar) throws {
         let greg = Calendar.current
 
         // All-day trip event.
@@ -159,45 +159,6 @@ final class CalendarManager {
             CarryLogger.shared.log(.calendarSaveFailed, context: "tripEvent '\(trip.name)' dayStart=\(dayStart) dayEnd=\(dayEnd): \(error.localizedDescription)")
             throw error
         }
-
-        // Pack reminder: day before departure at user-set time (optional).
-        guard includePackReminder else { return }
-        guard let packDay = greg.date(byAdding: .day, value: -1, to: dayStart) else { return }
-        var comps = greg.dateComponents([.year, .month, .day], from: packDay)
-        comps.hour   = packHour
-        comps.minute = packMinute
-        guard let packStart = greg.date(from: comps),
-              let packEnd   = greg.date(byAdding: .minute, value: 30, to: packStart) else { return }
-
-        let packEvent = EKEvent(eventStore: store)
-        packEvent.title     = String(format: NSLocalizedString("calendar.event.pack.title", comment: ""), trip.name)
-        packEvent.startDate = packStart
-        packEvent.endDate   = packEnd
-        packEvent.notes     = packingListNotes(for: trip)
-        packEvent.addAlarm(EKAlarm(relativeOffset: 0))
-        packEvent.url      = URL(string: "carry://trip/\(trip.id.uuidString)")
-        packEvent.calendar = cal
-        do {
-            try store.save(packEvent, span: .thisEvent, commit: true)
-        } catch {
-            CarryLogger.shared.log(.calendarSaveFailed, context: "packEvent '\(trip.name)' packStart=\(packStart): \(error.localizedDescription)")
-            throw error
-        }
-    }
-
-    private func packingListNotes(for trip: TripBundle) -> String? {
-        let sections = (trip.sections ?? [])
-            .sorted { $0.sortOrder < $1.sortOrder }
-            .compactMap { section -> String? in
-                let items = section.sortedItems.map { item in
-                    "· \(item.name) × \(item.quantity)"
-                }
-                guard !items.isEmpty else { return nil }
-                return section.title.isEmpty
-                    ? items.joined(separator: "\n")
-                    : "\(section.title)\n" + items.joined(separator: "\n")
-            }
-        return sections.isEmpty ? nil : sections.joined(separator: "\n\n")
     }
 
     // MARK: - Persistence
