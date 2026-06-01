@@ -8,6 +8,7 @@
 import WidgetKit
 import SwiftUI
 import AppIntents
+import UIKit
 
 // MARK: - Shared data (mirror of TripStore.WidgetTripSnapshot)
 
@@ -101,9 +102,9 @@ struct CarryEntry: TimelineEntry {
 
 }
 
-/// containerBackground(.fill.tertiary) 由系统环境决定材质颜色，不受 view 树内注入的
-/// colorScheme 影响——必须把 containerBackground 移进 modifier，并在背景 view 上
-/// 同步注入 resolvedScheme，才能让背景和内容颜色一致。
+/// containerBackground 的材质颜色由系统 trait 决定，无法通过 SwiftUI 环境注入覆盖。
+/// 强制 Light / Dark 时，用 UITraitCollection 解析出对应的 UIColor.systemBackground
+/// 作为明确背景色；Automatic 仍用系统自适应的 .fill.tertiary。
 private struct WidgetColorSchemeOverride: ViewModifier {
     let appearance: WidgetAppearance
     @Environment(\.colorScheme) private var systemScheme
@@ -116,15 +117,26 @@ private struct WidgetColorSchemeOverride: ViewModifier {
         }
     }
 
+    /// 强制模式下用 UIKit trait 解析出目标模式的 systemBackground，
+    /// 视觉上与标准 widget 背景一致，且不受系统模式影响。
+    private var forcedBackground: Color {
+        let style: UIUserInterfaceStyle = resolvedScheme == .dark ? .dark : .light
+        let uiColor = UIColor.systemBackground.resolvedColor(
+            with: UITraitCollection(userInterfaceStyle: style)
+        )
+        return Color(uiColor)
+    }
+
     func body(content: Content) -> some View {
         let scheme = resolvedScheme
         content
             .environment(\.colorScheme, scheme)
             .containerBackground(for: .widget) {
-                // fill.tertiary 在 background view 里单独注入，确保随 resolvedScheme 渲染。
-                Rectangle()
-                    .fill(.fill.tertiary)
-                    .environment(\.colorScheme, scheme)
+                if appearance == .automatic {
+                    Rectangle().fill(.fill.tertiary)
+                } else {
+                    forcedBackground
+                }
             }
     }
 }
