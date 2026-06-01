@@ -1137,7 +1137,7 @@ private struct DeveloperModeView: View {
                 .listRowSeparator(.hidden)
             }
 
-            Section("中国大陆 Storefront") {
+            Section("CN Storefront") {
                 Toggle(isOn: Binding(
                     get: { UserDefaults.standard.bool(forKey: "debugChinaStorefront") },
                     set: { newValue in
@@ -1146,7 +1146,7 @@ private struct DeveloperModeView: View {
                     }
                 )) {
                     VStack(alignment: .leading, spacing: 2) {
-                        Text("模拟中国大陆 Storefront")
+                        Text("Simulate CN Storefront")
                         Text("HK/MO → 港澳通行证，TW → 台湾通行证")
                             .font(.caption)
                             .foregroundStyle(.secondary)
@@ -1156,7 +1156,7 @@ private struct DeveloperModeView: View {
                 .listRowSeparator(.hidden)
             }
 
-            Section("经期 Nudge") {
+            Section("Cycle Nudge") {
                 Toggle(isOn: Binding(
                     get: { UserDefaults.standard.bool(forKey: "debugForceCycleNudge") },
                     set: { newValue in
@@ -1165,7 +1165,7 @@ private struct DeveloperModeView: View {
                     }
                 )) {
                     VStack(alignment: .leading, spacing: 2) {
-                        Text("强制经期 nudge")
+                        Text("Force period nudge")
                         Text("跳过 HealthKit，强制在场景选择里显示经期 nudge")
                             .font(.caption)
                             .foregroundStyle(.secondary)
