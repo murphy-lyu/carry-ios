@@ -4108,13 +4108,13 @@
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "Carry"
+            "value": "启程"
           }
         },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "Carry"
+            "value": "啟程"
           }
         }
       }
