@@ -45494,55 +45494,55 @@
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Gilt zur oben gewählten Zeit für Reisen, die du als Nächstes erstellst. Erinnerungen lassen sich pro Reise in der Packliste anpassen."
+            "value": "Standard-Erinnerungszeit für neue Reisen. Pro Reise anpassbar."
           }
         },
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Applied to trips you create next, at the time above. You can still fine-tune reminders for each trip in its packing list."
+            "value": "Default reminder time for new trips. You can adjust each trip individually."
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Se aplica a la hora indicada arriba a los viajes que crees a continuación. Puedes ajustar los recordatorios de cada viaje en su lista de equipaje."
+            "value": "Hora de recordatorio por defecto para viajes nuevos. Ajustable en cada viaje."
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "S’applique à l’heure choisie ci-dessus aux voyages que vous créez ensuite. Vous pouvez ajuster les rappels de chaque voyage dans sa liste de bagages."
+            "value": "Heure de rappel par défaut des nouveaux voyages. Ajustable par voyage."
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "上記の時刻で、これ以降に作成する旅行に適用されます。各旅行のリマインダーは荷物リストで個別に調整できます。"
+            "value": "新しい旅行のデフォルトのリマインダー時刻。旅行ごとに調整できます。"
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "위에 설정한 시간으로, 이후에 만드는 여행에 적용돼요. 각 여행의 알림은 짐 목록에서 개별적으로 조정할 수 있어요."
+            "value": "새 여행의 기본 알림 시간이에요. 여행마다 조정할 수 있어요."
           }
         },
         "pt-BR": {
           "stringUnit": {
             "state": "translated",
-            "value": "Aplica-se no horário acima às viagens que você criar a seguir. Você pode ajustar os lembretes de cada viagem na lista de bagagem."
+            "value": "Horário de lembrete padrão para viagens novas. Ajustável em cada viagem."
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "按上方时间，应用于你之后新建的行程。每个行程仍可在其物品清单里单独调整提醒。"
+            "value": "新行程的默认提醒时间，每个行程仍可单独调整。"
           }
         },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "依上方時間，套用於你之後新建的行程。每個行程仍可在其物品清單裡單獨調整提醒。"
+            "value": "新行程的預設提醒時間，每個行程仍可單獨調整。"
           }
         }
       }
