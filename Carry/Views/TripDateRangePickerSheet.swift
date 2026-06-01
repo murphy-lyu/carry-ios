@@ -308,7 +308,8 @@ private struct DayCell: View {
         colorScheme == .dark ? 0.10 : 0.10
     }
     private var maxCornerRadius: CGFloat {
-        18
+        // 大于半高即可，SwiftUI 自动 clamp 到半高 = 完美半圆端头，与端点实心圆视觉一致。
+        100
     }
     private var endpointCircleScale: CGFloat {
         0.96
@@ -355,8 +356,9 @@ private struct DayCell: View {
     @ViewBuilder
     private var selectionBackground: some View {
         let r = maxCornerRadius
+        // 所有"端点"（真实起止日 + 换行断点）的圆角侧统一加 endpointEdgeInset，
+        // 保证相同圆角半径在相同宽度的形状上，视觉效果一致。
         if isStart {
-            // 行尾换行时右侧也收圆角，其余右侧直角续接下一格
             UnevenRoundedRectangle(
                 topLeadingRadius: r, bottomLeadingRadius: r,
                 bottomTrailingRadius: isRowEnd ? r : 0,
@@ -365,8 +367,8 @@ private struct DayCell: View {
             )
             .fill(Color.accentColor.opacity(rangeOpacity))
             .padding(.leading, endpointEdgeInset)
+            .padding(.trailing, isRowEnd ? endpointEdgeInset : 0)
         } else if isEnd {
-            // 行首续接时左侧也收圆角，其余左侧直角续接上一格
             UnevenRoundedRectangle(
                 topLeadingRadius: isRowStart ? r : 0,
                 bottomLeadingRadius: isRowStart ? r : 0,
@@ -374,9 +376,9 @@ private struct DayCell: View {
                 style: .continuous
             )
             .fill(Color.accentColor.opacity(rangeOpacity))
+            .padding(.leading, isRowStart ? endpointEdgeInset : 0)
             .padding(.trailing, endpointEdgeInset)
         } else {
-            // 行首左圆角、行尾右圆角，中间格直角
             UnevenRoundedRectangle(
                 topLeadingRadius: isRowStart ? r : 0,
                 bottomLeadingRadius: isRowStart ? r : 0,
@@ -385,6 +387,8 @@ private struct DayCell: View {
                 style: .continuous
             )
             .fill(Color.accentColor.opacity(rangeOpacity))
+            .padding(.leading, isRowStart ? endpointEdgeInset : 0)
+            .padding(.trailing, isRowEnd ? endpointEdgeInset : 0)
         }
     }
 }
