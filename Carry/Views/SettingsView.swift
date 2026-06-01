@@ -13,6 +13,7 @@ import EventKit
 /// 外层（settingsPath.isEmpty 驱动），与 Trips 链路同构，消除返回时 tab bar 延迟。
 enum SettingsRoute: Hashable {
     case appIcon
+    case notifications
     case calendar
     case liveActivity
     case widgetGuide
@@ -42,7 +43,6 @@ struct SettingsView: View {
     @Environment(\.colorScheme) private var colorScheme
     @EnvironmentObject private var store: TripStore
     @AppStorage("appearance_mode") private var appearanceModeRaw = AppearanceMode.system.rawValue
-    @AppStorage("calendar_sync_enabled") private var calendarSyncEnabled = false
     @AppStorage("liveActivityPackingEnabled") private var liveActivityPackingEnabled = false
 
     private var currentAppearance: AppearanceMode {
@@ -268,12 +268,15 @@ struct SettingsView: View {
                             sectionHeader("settings.section.personalization")
                         }
 
-                        // 提醒与显示：Carry 在哪儿提醒我 / 出现（日历 · 灵动岛 · 小部件 · 经期）
+                        // 提醒与显示：Carry 在哪儿提醒我 / 出现（通知 · 日历 · 灵动岛 · 小部件 · 经期）
                         Section {
                             settingsCard {
                                 settingsNavigationRow(
+                                    title: "settings.notifications.entry",
+                                    route: .notifications
+                                )
+                                settingsNavigationRow(
                                     title: "settings.calendar.entry",
-                                    valueText: calendarSyncEnabled ? NSLocalizedString("settings.calendar.status.on", comment: "") : NSLocalizedString("settings.calendar.status.off", comment: ""),
                                     route: .calendar
                                 )
 #if !targetEnvironment(macCatalyst)
@@ -627,6 +630,8 @@ struct SettingsView: View {
         switch route {
         case .appIcon:
             AppIconView()
+        case .notifications:
+            NotificationSettingsView()
         case .calendar:
             CalendarSettingsView()
         case .liveActivity:
@@ -882,7 +887,7 @@ private struct CalendarSettingsView: View {
     /// 本身不改 tint，深色 tint 下禁用视觉太弱，会出现「文字灰但开关仍亮」的割裂）。
     private func toggleTint(enabled: Bool) -> Color {
         if !enabled { return Color(UIColor.systemGray4) }
-        return colorScheme == .dark ? Color(.systemGray2) : Color(.label)
+        return colorScheme == .dark ? Color(.systemGray) : Color(.label)
     }
 
     private var packTimeBinding: Binding<Date> {
@@ -949,7 +954,7 @@ private struct CalendarSettingsView: View {
                             }
                         ))
                         .labelsHidden()
-                        .tint(colorScheme == .dark ? Color(.systemGray2) : Color(.label))
+                        .tint(colorScheme == .dark ? Color(.systemGray) : Color(.label))
                     }
                     .padding(.horizontal, 18)
                     .frame(height: 58)
@@ -1095,7 +1100,7 @@ private struct DeveloperModeView: View {
                             .foregroundStyle(.secondary)
                     }
                 }
-                .tint(colorScheme == .dark ? Color(.systemGray2) : Color(.label))
+                .tint(colorScheme == .dark ? Color(.systemGray) : Color(.label))
                 .listRowSeparator(.hidden)
             }
 
@@ -1115,7 +1120,7 @@ private struct DeveloperModeView: View {
                             .foregroundStyle(.secondary)
                     }
                 }
-                .tint(colorScheme == .dark ? Color(.systemGray2) : Color(.label))
+                .tint(colorScheme == .dark ? Color(.systemGray) : Color(.label))
                 .listRowSeparator(.hidden)
 
                 Toggle(isOn: Binding(
@@ -1133,7 +1138,7 @@ private struct DeveloperModeView: View {
                             .foregroundStyle(.secondary)
                     }
                 }
-                .tint(colorScheme == .dark ? Color(.systemGray2) : Color(.label))
+                .tint(colorScheme == .dark ? Color(.systemGray) : Color(.label))
                 .listRowSeparator(.hidden)
             }
 
@@ -1152,7 +1157,7 @@ private struct DeveloperModeView: View {
                             .foregroundStyle(.secondary)
                     }
                 }
-                .tint(colorScheme == .dark ? Color(.systemGray2) : Color(.label))
+                .tint(colorScheme == .dark ? Color(.systemGray) : Color(.label))
                 .listRowSeparator(.hidden)
             }
 
@@ -1171,7 +1176,7 @@ private struct DeveloperModeView: View {
                             .foregroundStyle(.secondary)
                     }
                 }
-                .tint(colorScheme == .dark ? Color(.systemGray2) : Color(.label))
+                .tint(colorScheme == .dark ? Color(.systemGray) : Color(.label))
                 .listRowSeparator(.hidden)
             }
 

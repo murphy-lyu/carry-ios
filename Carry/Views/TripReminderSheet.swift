@@ -320,19 +320,7 @@ private struct ReminderRow: View {
     }
 
     private func reminderLabel(for config: TripReminderConfig) -> String {
-        if config.daysBeforeDeparture == 0 {
-            return String(localized: "reminder.label.departureDay")
-        } else if config.daysBeforeDeparture % 7 == 0 {
-            let weeks = config.daysBeforeDeparture / 7
-            return weeks == 1
-                ? String(localized: "reminder.label.oneWeekBefore")
-                : String.localizedStringWithFormat(NSLocalizedString("reminder.label.weeksBefore", comment: ""), weeks)
-        } else {
-            let days = config.daysBeforeDeparture
-            return days == 1
-                ? String(localized: "reminder.label.oneDayBefore")
-                : String.localizedStringWithFormat(NSLocalizedString("reminder.label.daysBefore", comment: ""), days)
-        }
+        config.localizedLabel
     }
 }
 
@@ -346,10 +334,15 @@ struct ReminderPickerSheet: View {
     @Environment(\.dismiss) private var dismiss
 
     private var availablePresets: [TripReminderConfig] {
-        let existing = bundle.reminderConfigs
-        return TripReminderConfig.presets.filter { preset in
-            !existing.contains(where: { $0.isSameTrigger(as: preset) })
-        }
+        // 按档位（daysBeforeDeparture）去重——一个档位最多加一次，与已设时间无关。
+        // 时间统一取全局默认（ReminderPreferences.defaultMinutes），与设置页一致；
+        // 加完后用户仍可在主面板逐条改时间。
+        let existingOffsets = Set(bundle.reminderConfigs.map { $0.daysBeforeDeparture })
+        let h = ReminderPreferences.defaultMinutes / 60
+        let m = ReminderPreferences.defaultMinutes % 60
+        return TripReminderConfig.presets
+            .filter { !existingOffsets.contains($0.daysBeforeDeparture) }
+            .map { TripReminderConfig(daysBeforeDeparture: $0.daysBeforeDeparture, hour: h, minute: m) }
     }
 
     var body: some View {
