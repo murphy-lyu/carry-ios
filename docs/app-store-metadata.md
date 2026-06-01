@@ -224,6 +224,13 @@ LOCATION PERMISSION
 Trigger location: Home tab → tap the location button on the map.
 The system permission dialog is NOT shown at app launch — only when the user taps the location button.
 
+HEALTHKIT — Cycle-based packing reminders (optional, opt-in, OFF by default)
+Carry offers an optional feature that reads menstrual cycle data from HealthKit to predict period dates during a trip and suggest relevant items (e.g., feminine hygiene products). This is strictly opt-in and OFF by default. The HealthKit permission dialog is shown ONLY after the user explicitly enables the feature in: Settings tab → "Connected & Widgets" → "Health Tips". Cycle data is used solely on-device for local prediction — it is never uploaded, shared with third parties, or used for tracking or advertising.
+
+WEATHERKIT — Destination weather forecast
+Carry uses Apple WeatherKit to display a weather forecast for the user's trip destination. The destination's coordinates are sent to Apple's WeatherKit service solely to retrieve the forecast; no location history is stored or used for tracking.
+To view: open any trip → the destination info card shows the forecast.
+
 DEVELOPER MODE (not visible to regular users)
 An internal developer menu exists in DEBUG builds only and is completely hidden in the release build. Regular users cannot access it.
 ```
