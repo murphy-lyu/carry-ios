@@ -6,6 +6,19 @@
 
 ---
 
+## ⏳ 待付费账号统一处理（$99 Apple Developer，预计 2026-06-08 当周到位）
+
+> 以下全部**阻塞在付费账号**，账号一到位作为一批集中做。代码/文档侧能做的已完成（见下方各节 ✅）。
+
+1. **WeatherKit**：Developer Portal → App ID 勾选 WeatherKit → 保存 → Xcode 重下 Provisioning Profile（entitlement 已加 ✅，详见 §1）
+2. **iCloud 同步（这版做）**：Developer Portal 建 CloudKit 容器 `iCloud.com.murphy.carry` + 加 iCloud/CloudKit capability → `ModelConfiguration` 切 `cloudKitDatabase: .automatic`（保留本地/in-memory fallback）→ 真机跨设备联调 + 删 App 重装验证恢复。**schema 已确认 CloudKit 兼容、无迁移风险**（详见记忆 `carry-icloud-todo`）
+3. **ASC 政策项**：隐私营养标签（位置 + 天气坐标 = 功能性、不追踪）、出口合规（勾豁免加密）、支持 URL、年龄分级（4+）、填元数据（用 `app-store-metadata.md`，审核备注已含 HealthKit/WeatherKit ✅）
+4. **TestFlight + 监控**：Release build 跑核心流程、接崩溃监控（Xcode Organizer 免费）
+5. **HealthKit 经期**：上架前剩余真机验证 + 文案定稿（详见记忆 `carry-healthkit-todo`）
+6. **Build number**：每次提交 ASC 递增 `CFBundleVersion`
+
+---
+
 ## 1. 工程层面
 
 - [x] **Release build 配置**：`SWIFT_COMPILATION_MODE = wholemodule`，`SWIFT_OPTIMIZATION_LEVEL` 沿用 Xcode 默认 `-O`，配置正确 ✅（2026-05-27 确认）
