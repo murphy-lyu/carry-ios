@@ -31,26 +31,12 @@ struct HomeView: View {
     @State private var didPlayInitialReveal = false
     @State private var initialRevealProgress: Double = 0
     @State private var revealCurtainOpacity: Double = 1
-    @State private var didRevealUpcoming = false
 
+    // 全部分组(Hero / Upcoming / Planning / Past)统一由 initialRevealProgress(0→1)
+    // 按阈值揭示，形成一条连续级联，不再有独立的 didRevealUpcoming 状态。
     private let heroRevealThreshold: Double = 0.16
     private let listRevealThreshold: Double = 0.58
     private let pastRevealThreshold: Double = 0.78
-
-    private func revealProgress(start: Double, duration: Double) -> Double {
-        guard duration > 0 else { return initialRevealProgress >= start ? 1 : 0 }
-        return min(max((initialRevealProgress - start) / duration, 0), 1)
-    }
-
-    private func triggerUpcomingReveal(after delay: Double = 0.24) {
-        didRevealUpcoming = false
-        DispatchQueue.main.asyncAfter(deadline: .now() + delay) {
-            guard router.path.isEmpty else { return }
-            withAnimation(.easeOut(duration: 0.30)) {
-                didRevealUpcoming = true
-            }
-        }
-    }
 
     // Cached sorted trip lists — recomputed only when store.trips changes,
     // not on every body re-evaluation (e.g. initialRevealProgress animation ticks).
@@ -372,7 +358,6 @@ struct HomeView: View {
         }
         .onAppear {
             initialRevealProgress = 1.0
-            didRevealUpcoming = true
             store.refresh()
             store.correctMisgecodedTrips()
             store.geocodeMissingTrips()
@@ -496,22 +481,21 @@ struct HomeView: View {
                     revealCurtainOpacity = 1
                     DispatchQueue.main.asyncAfter(deadline: .now() + 0.04) {
                         withAnimation(.easeOut(duration: 0.22)) { revealCurtainOpacity = 0 }
+                        // 同一条 ramp 驱动 Hero/Upcoming/Planning/Past 的阈值揭示，
+                        // 无需再用 asyncAfter 单独对齐 Upcoming 的时序。
                         withAnimation(.easeOut(duration: 0.52)) { initialRevealProgress = 1 }
                     }
-                    triggerUpcomingReveal(after: 0.28)
                 }
             }
             .onReceive(router.$path) { path in
                 if path.isEmpty {
                     store.refresh()
                     rebuildTripLists()
-                    // 从 Widget / Quick Action 深链进入时会先 push 目标页，
-                    // triggerUpcomingReveal 的延迟闭包因 router.path 非空而 return，
-                    // didRevealUpcoming 被永久卡在 false，导致返回首页后即将出发的
-                    // 行程卡片停留在 opacity 0（看起来列表为空）。回到首页根（path 清空）
-                    // 这一事件触发时补一次揭示，确保卡片可见。
-                    if !didRevealUpcoming {
-                        withAnimation(.easeOut(duration: 0.30)) { didRevealUpcoming = true }
+                    // 从 Widget / Quick Action 深链进入时会先 push 目标页，冷启动揭示动画
+                    // 可能在用户看不到首页时就已播放/未播完。回到首页根（path 清空）时兜底
+                    // 把 initialRevealProgress 推到 1，确保所有分组（含 Upcoming/Planning）可见。
+                    if initialRevealProgress < 1 {
+                        withAnimation(.easeOut(duration: 0.30)) { initialRevealProgress = 1 }
                     }
                     if !hasShownFirstTripShimmer,
                        firstTripCreatedAtInterval > 0,
@@ -609,23 +593,24 @@ struct HomeView: View {
     @ViewBuilder
     private var upcomingSection: some View {
         if !upcomingTrips.isEmpty {
-            let sectionProgress = didRevealUpcoming ? 1.0 : 0.0
+            let revealed = initialRevealProgress >= listRevealThreshold
+            let sectionProgress = revealed ? 1.0 : 0.0
             sectionLabel("home.upcoming", uppercase: true)
                 .opacity(sectionProgress)
                 .offset(y: (1 - sectionProgress) * 14)
-                .animation(.easeOut(duration: 0.22), value: didRevealUpcoming)
+                .animation(.easeOut(duration: 0.22), value: initialRevealProgress)
                 .listRowInsets(EdgeInsets(top: 2, leading: 16, bottom: 4, trailing: 16))
                 .listRowBackground(Color.clear)
                 .listRowSeparator(.hidden)
 
             ForEach(Array(upcomingTrips.enumerated()), id: \.element.id) { index, bundle in
                 let staggerIndex = min(index, 5)
-                let itemProgress = didRevealUpcoming ? 1.0 : 0.0
+                let itemProgress = revealed ? 1.0 : 0.0
                 tripRow(bundle: bundle, isPast: false)
                     .opacity(itemProgress)
                     .offset(y: (1 - itemProgress) * 14)
                     .scaleEffect(0.99 + itemProgress * 0.01)
-                    .animation(.easeOut(duration: 0.24).delay(Double(staggerIndex) * 0.035), value: didRevealUpcoming)
+                    .animation(.easeOut(duration: 0.24).delay(Double(staggerIndex) * 0.035), value: initialRevealProgress)
             }
         }
     }
@@ -633,13 +618,26 @@ struct HomeView: View {
     @ViewBuilder
     private var planningSection: some View {
         if !planningTrips.isEmpty {
+            // 与 Upcoming 共用同一阈值 listRevealThreshold，保持折叠线内分组揭示节奏一致；
+            // 基准 delay 让 Planning 读起来是接在 Upcoming 之后浮入，避免断层。
+            let revealed = initialRevealProgress >= listRevealThreshold
+            let sectionProgress = revealed ? 1.0 : 0.0
             sectionLabel("home.planning", uppercase: true)
+                .opacity(sectionProgress)
+                .offset(y: (1 - sectionProgress) * 14)
+                .animation(.easeOut(duration: 0.22).delay(0.08), value: initialRevealProgress)
                 .listRowInsets(EdgeInsets(top: 8, leading: 16, bottom: 4, trailing: 16))
                 .listRowBackground(Color.clear)
                 .listRowSeparator(.hidden)
 
-            ForEach(Array(planningTrips.enumerated()), id: \.element.id) { _, bundle in
+            ForEach(Array(planningTrips.enumerated()), id: \.element.id) { index, bundle in
+                let staggerIndex = min(index, 5)
+                let itemProgress = revealed ? 1.0 : 0.0
                 tripRow(bundle: bundle, isPast: false)
+                    .opacity(itemProgress)
+                    .offset(y: (1 - itemProgress) * 14)
+                    .scaleEffect(0.99 + itemProgress * 0.01)
+                    .animation(.easeOut(duration: 0.24).delay(0.10 + Double(staggerIndex) * 0.035), value: initialRevealProgress)
             }
         }
     }

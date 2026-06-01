@@ -229,3 +229,10 @@
 ### Add items 确认按钮按模式区分可点性
 原因：右上确认按钮原先恒显可点，但无选择时 `confirmSelection` 因 `guard !sections.isEmpty` 静默 return → 死点击。
 实现：`.disabled(!isCreateMode && !canConfirm)`——创建模式始终可点（允许空清单，见上），追加模式无选择时置灰，给诚实反馈。
+
+## 2026-06-01 首页冷启动揭示动画
+
+### 首页分组入场揭示统一由单一 initialRevealProgress 阈值驱动
+原因：冷启动入场揭示曾是两套并存的系统——Hero/Past 走连续值 `initialRevealProgress`（按阈值揭示），Upcoming 却单开 `didRevealUpcoming` 布尔 + `triggerUpcomingReveal` 的 `asyncAfter(0.28)` 硬编码延迟去对齐前一段 0.52s ramp；而 Planning 两套都没接、瞬间硬出现，造成"Upcoming 浮入 / Planning 硬出现"的视觉断层。`asyncAfter` 等动画正是 CLAUDE.md 点名的反模式（两处时长隐式耦合、深链时闭包因 `guard router.path.isEmpty` 早退导致 Upcoming 永久卡 opacity 0，还得在 onReceive 里补兜底）。`listRevealThreshold = 0.58` 本是 Upcoming 设计上的阈值，却成了 orphaned 死代码。
+实现：Upcoming + Planning 一并收敛到 `initialRevealProgress >= listRevealThreshold`，与 Hero(0.16)/Past(0.78) 同一条 ramp，形成连续级联。删除 `didRevealUpcoming`、`triggerUpcomingReveal`、死的 `revealProgress` helper；macBody onAppear 去掉 `didRevealUpcoming = true`（Mac 无冷启动动画，`initialRevealProgress = 1.0` 不变）。深链兜底由"翻 didRevealUpcoming"改为"`if initialRevealProgress < 1 { … = 1 }`"——`initialRevealProgress` 两个 onAppear 均无 router.path 守卫，本就更稳。Planning 加 0.08/0.10s 基准 delay，读起来接 Upcoming 之后。
+放弃：彻底重构成统一的"分组揭示"抽象（收益不抵改动量与时序风险，按最小必要集合止于复用现有 `initialRevealProgress` + 阈值）。遗留：深链(Widget/QuickAction)冷启动须真机验收，模拟器复现不了时序。
