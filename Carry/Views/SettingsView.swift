@@ -934,6 +934,12 @@ private struct CalendarSettingsView: View {
                 .shadow(color: groupShadow, radius: colorScheme == .dark ? 10 : 12, x: 0, y: colorScheme == .dark ? 3 : 4)
                 .padding(.horizontal, 16)
 
+                Text("settings.calendar.footer")
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+                    .lineSpacing(1.4)
+                    .padding(.horizontal, 20)
+                    .padding(.top, 6)
 
             }
             .padding(.bottom, 24)
