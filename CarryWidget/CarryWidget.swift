@@ -121,7 +121,9 @@ private struct WidgetColorSchemeOverride: ViewModifier {
     /// 视觉上与标准 widget 背景一致，且不受系统模式影响。
     private var forcedBackground: Color {
         let style: UIUserInterfaceStyle = resolvedScheme == .dark ? .dark : .light
-        let uiColor = UIColor.systemBackground.resolvedColor(
+        // secondarySystemBackground 在 dark 模式下为 #1C1C1E，与 fill.tertiary 材质接近；
+        // systemBackground 在 dark 模式下为纯黑 #000000，与 Automatic 档位视觉不一致。
+        let uiColor = UIColor.secondarySystemBackground.resolvedColor(
             with: UITraitCollection(userInterfaceStyle: style)
         )
         return Color(uiColor)
