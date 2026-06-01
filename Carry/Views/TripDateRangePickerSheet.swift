@@ -8,6 +8,8 @@ import SwiftUI
 struct TripDateRangePickerSheet: View {
 
     let onConfirm: (Date, Date) -> Void
+    /// 可选「暂不设置日期，先做计划」出口。传入即在底部显示该入口（→ 行程作为「规划中」无日期行程）。
+    var onSkipDates: (() -> Void)? = nil
 
     @Environment(\.dismiss) private var dismiss
     @State private var selectedStart: Date
@@ -18,8 +20,9 @@ struct TripDateRangePickerSheet: View {
     private let today: Date
     private let months: [Date]
 
-    init(departure: Date, return returnDate: Date, onConfirm: @escaping (Date, Date) -> Void) {
+    init(departure: Date, return returnDate: Date, onSkipDates: (() -> Void)? = nil, onConfirm: @escaping (Date, Date) -> Void) {
         self.onConfirm = onConfirm
+        self.onSkipDates = onSkipDates
         let cal = Calendar.current
         let now = cal.startOfDay(for: Date())
         self.today = now
@@ -58,6 +61,27 @@ struct TripDateRangePickerSheet: View {
                     Divider()
 
                     monthsScrollView
+                }
+            }
+            .safeAreaInset(edge: .bottom) {
+                if let onSkipDates {
+                    Button {
+                        onSkipDates()
+                        dismiss()
+                    } label: {
+                        HStack(spacing: 6) {
+                            Image(systemName: "calendar.badge.clock")
+                                .font(.footnote.weight(.semibold))
+                            Text("tripdates.clear")
+                                .font(.subheadline.weight(.medium))
+                        }
+                        .foregroundStyle(.secondary)
+                        .frame(maxWidth: .infinity)
+                        .frame(height: 44)
+                    }
+                    .buttonStyle(.plain)
+                    .background(.ultraThinMaterial)
+                    .overlay(Divider(), alignment: .top)
                 }
             }
             .navigationTitle("Select Dates")

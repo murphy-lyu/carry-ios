@@ -128,19 +128,7 @@ struct TripInfoView: View {
                                     )
                             )
                             .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
-
-                            // 就近清除：点此改为「规划中」无日期行程。
-                            Button { hasDates = false } label: {
-                                HStack(spacing: 4) {
-                                    Image(systemName: "calendar.badge.clock")
-                                        .font(.caption2.weight(.semibold))
-                                    Text("tripdates.clear")
-                                        .font(.footnote.weight(.medium))
-                                }
-                                .foregroundStyle(.secondary)
-                            }
-                            .buttonStyle(.plain)
-                            .padding(.top, 6)
+                            // 「暂不设置日期」入口已收进日期选择器（TripDateRangePickerSheet 底部），保持主界面干净。
                         } else {
                             datesUnsetCard
                         }
@@ -189,7 +177,8 @@ struct TripInfoView: View {
         .sheet(isPresented: $showDatePicker) {
             TripDateRangePickerSheet(
                 departure: departureDate,
-                return: returnDate
+                return: returnDate,
+                onSkipDates: { hasDates = false }   // 选择器内「暂不设置日期」→ 规划中行程
             ) { start, end in
                 departureDate = start
                 returnDate = max(end, Calendar.current.date(byAdding: .day, value: 1, to: start) ?? start)

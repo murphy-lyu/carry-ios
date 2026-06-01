@@ -128,21 +128,7 @@ struct EditTripView: View {
                                         )
                                 )
                                 .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
-
-                                // 就近清除日期 → 退回「规划中」（与创建页同款）。
-                                Button {
-                                    info.isDateless = true
-                                } label: {
-                                    HStack(spacing: 4) {
-                                        Image(systemName: "calendar.badge.clock")
-                                            .font(.caption2.weight(.semibold))
-                                        Text("tripdates.clear")
-                                            .font(.footnote.weight(.medium))
-                                    }
-                                    .foregroundStyle(.secondary)
-                                }
-                                .buttonStyle(.plain)
-                                .padding(.top, 6)
+                                // 「清除日期 → 规划中」入口已收进日期选择器底部，保持界面干净。
                             }
                         }
                     }
@@ -161,7 +147,8 @@ struct EditTripView: View {
             .sheet(isPresented: $showDatePicker) {
                 TripDateRangePickerSheet(
                     departure: info.departureDate,
-                    return: info.returnDate
+                    return: info.returnDate,
+                    onSkipDates: { info.isDateless = true }   // 选择器内「暂不设置日期」→ 退回规划中
                 ) { start, end in
                     info.departureDate = start
                     info.returnDate = max(end, Calendar.current.date(byAdding: .day, value: 1, to: start) ?? start)
