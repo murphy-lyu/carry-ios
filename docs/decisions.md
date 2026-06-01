@@ -230,6 +230,17 @@
 原因：右上确认按钮原先恒显可点，但无选择时 `confirmSelection` 因 `guard !sections.isEmpty` 静默 return → 死点击。
 实现：`.disabled(!isCreateMode && !canConfirm)`——创建模式始终可点（允许空清单，见上），追加模式无选择时置灰，给诚实反馈。
 
+## 2026-06-02 UI / 文案
+
+### 设置开关启用态用 .primary（黑白），不用品牌橙
+原因：暗色下单色灰开关（systemGray2/systemGray）开/关都是灰、难分辨（用户反馈"非常不明显"）。中途改用 `Color.accentColor`（橙）被用户否决——**主题是黑白，无品牌橙**（橙仅为个别强调色，不代表品牌）。最终用 `Color(.label)`（= 全局 tint `.primary`，黑/白自适应）：浅色黑轨白滑块；深色亮白轨道 vs 关闭深灰，亮暗对比强、一眼可辨，且纯黑白。
+注意：iOS Toggle 滑块恒为白，深色下白轨道会让滑块边缘偏柔（靠"亮 vs 暗"整体对比传达开关态，可接受）；若要更利落滑块需自定义 Toggle（暂未做）。
+教训：不要把 App 里的橙色（FAB/accentColor）当成品牌主色；主题黑白。
+
+### 中文文案全角标点 + xcstrings 匹配 Xcode 格式
+原因：`tripdates.clear` 等用了半角逗号、搜索 placeholder 用 `...`；另外用脚本改 `Localizable.xcstrings` 时若不匹配 Xcode 的 `" : "`（冒号前空格）序列化格式，会炸出整文件重排 diff（且 Xcode 在构建时会重写该文件、可能覆盖未提交编辑）。
+实现：中文统一全角标点（见 CLAUDE.md 新规）；编辑 xcstrings 用 `separators=(',', ' : ')` 无尾换行，先做零改动 round-trip 验证再改；`git commit` 用显式路径避免误并入用户在途的图标改动。
+
 ## 2026-06-02 移除日历打包提醒
 
 ### 删除 Calendar Sync 里的"打包提醒"日历事件（含其时间设置）

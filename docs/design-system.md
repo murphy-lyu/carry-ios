@@ -19,8 +19,10 @@ Apple 原生风格，极简、克制、优雅。
 - Destructive：Color(.systemRed)
 
 ### 品牌色 / Accent
+- **品牌主题是黑白**，没有品牌主色。App 内的橙（FAB、AccentColor 等）仅为个别强调，**不代表品牌色**——不要把它当主色铺开（如开关、大面积 tint）。
 - Accent（全局 tint）：.primary（ContentView 中已设置 .tint(.primary)）
 - 如需彩色强调，优先从 Assets.xcassets/AccentColor 扩展
+- **开关（Toggle）启用态**：用 `Color(.label)`（=`.primary` 黑白自适应），**禁止用橙**。浅色=黑轨白滑块；深色=亮白轨道，靠"亮 vs 暗"对比传达开关态（iOS 滑块恒白，深色下滑块边缘偏柔，可接受）。
 
 ### Tab Bar 背景（已实现）
 - Dark：Color(red: 0.09, green: 0.09, blue: 0.10)
