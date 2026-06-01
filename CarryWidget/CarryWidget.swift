@@ -99,11 +99,17 @@ struct CarryEntry: TimelineEntry {
     let trips: [WidgetTrip]
     var appearance: WidgetAppearance = .automatic
 
-    var preferredColorScheme: ColorScheme? {
+}
+
+/// .preferredColorScheme() 在 Widget 里只是对系统的建议，不强制生效。
+/// 用 .environment(\.colorScheme) 直接注入才能可靠覆盖；automatic 不注入，让系统决定。
+private struct WidgetColorSchemeOverride: ViewModifier {
+    let appearance: WidgetAppearance
+    func body(content: Content) -> some View {
         switch appearance {
-        case .automatic: return nil
-        case .light:     return .light
-        case .dark:      return .dark
+        case .automatic: content
+        case .light:     content.environment(\.colorScheme, .light)
+        case .dark:      content.environment(\.colorScheme, .dark)
         }
     }
 }
@@ -150,7 +156,7 @@ struct CarryWidgetEntryView: View {
             }
         }
         .containerBackground(.fill.tertiary, for: .widget)
-        .preferredColorScheme(entry.preferredColorScheme)
+        .modifier(WidgetColorSchemeOverride(appearance: entry.appearance))
     }
 
     // MARK: Small
