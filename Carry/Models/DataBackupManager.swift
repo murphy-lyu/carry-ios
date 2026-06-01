@@ -64,6 +64,8 @@ struct CarryBackup: Codable {
     var createdAt: Date
     var trips: [BackupTrip]
     var myItems: [BackupMyItem]
+    /// 用户的默认提醒档位偏好（设置 →「通知」）。可选：旧备份无此字段时还原后保持现状。
+    var defaultReminderOffsets: [Int]?
 }
 
 // MARK: - DataBackupManager
@@ -163,7 +165,8 @@ final class DataBackupManager {
             version: 1,
             createdAt: Date(),
             trips: backupTrips,
-            myItems: backupMyItems
+            myItems: backupMyItems,
+            defaultReminderOffsets: ReminderPreferences.enabledOffsets.sorted()
         )
 
         // Encode on the calling thread (main actor) so the Codable conformance stays
@@ -254,6 +257,11 @@ final class DataBackupManager {
         // Wipe existing data (cascade deletes PackingSection + PackingItem)
         try context.delete(model: TripBundle.self)
         try context.delete(model: MyItem.self)
+
+        // 还原默认提醒偏好（旧备份无此字段则保持现状）
+        if let offsets = backup.defaultReminderOffsets {
+            ReminderPreferences.enabledOffsets = Set(offsets)
+        }
 
         // Restore trips
         for bt in backup.trips {

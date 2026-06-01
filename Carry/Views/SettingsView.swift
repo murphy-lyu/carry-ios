@@ -13,6 +13,7 @@ import EventKit
 /// 外层（settingsPath.isEmpty 驱动），与 Trips 链路同构，消除返回时 tab bar 延迟。
 enum SettingsRoute: Hashable {
     case appIcon
+    case notifications
     case calendar
     case liveActivity
     case widgetGuide
@@ -268,9 +269,13 @@ struct SettingsView: View {
                             sectionHeader("settings.section.personalization")
                         }
 
-                        // 提醒与显示：Carry 在哪儿提醒我 / 出现（日历 · 灵动岛 · 小部件 · 经期）
+                        // 提醒与显示：Carry 在哪儿提醒我 / 出现（通知 · 日历 · 灵动岛 · 小部件 · 经期）
                         Section {
                             settingsCard {
+                                settingsNavigationRow(
+                                    title: "settings.notifications.entry",
+                                    route: .notifications
+                                )
                                 settingsNavigationRow(
                                     title: "settings.calendar.entry",
                                     valueText: calendarSyncEnabled ? NSLocalizedString("settings.calendar.status.on", comment: "") : NSLocalizedString("settings.calendar.status.off", comment: ""),
@@ -627,6 +632,8 @@ struct SettingsView: View {
         switch route {
         case .appIcon:
             AppIconView()
+        case .notifications:
+            NotificationSettingsView()
         case .calendar:
             CalendarSettingsView()
         case .liveActivity:

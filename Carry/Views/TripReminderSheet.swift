@@ -320,19 +320,7 @@ private struct ReminderRow: View {
     }
 
     private func reminderLabel(for config: TripReminderConfig) -> String {
-        if config.daysBeforeDeparture == 0 {
-            return String(localized: "reminder.label.departureDay")
-        } else if config.daysBeforeDeparture % 7 == 0 {
-            let weeks = config.daysBeforeDeparture / 7
-            return weeks == 1
-                ? String(localized: "reminder.label.oneWeekBefore")
-                : String.localizedStringWithFormat(NSLocalizedString("reminder.label.weeksBefore", comment: ""), weeks)
-        } else {
-            let days = config.daysBeforeDeparture
-            return days == 1
-                ? String(localized: "reminder.label.oneDayBefore")
-                : String.localizedStringWithFormat(NSLocalizedString("reminder.label.daysBefore", comment: ""), days)
-        }
+        config.localizedLabel
     }
 }
 

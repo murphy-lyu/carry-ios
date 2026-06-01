@@ -1707,6 +1707,8 @@ struct ItemPickerView: View {
                 selectedSceneKeys: pickedSceneKeys,
                 sections: sections
             )
+            // 新建行程：把设置里的默认提醒档位快照进该行程（非实时联动）。
+            bundle.reminderConfigs = ReminderPreferences.defaultConfigs
             store.setDraftTrip(bundle)
             if sections.isEmpty {
                 finalizeEmptyTrip(bundle: bundle, city: info.destinationCity)
@@ -1725,6 +1727,8 @@ struct ItemPickerView: View {
                 selectedSceneKeys: sceneKeys,
                 sections: sections
             )
+            // 新建行程：把设置里的默认提醒档位快照进该行程（非实时联动）。
+            bundle.reminderConfigs = ReminderPreferences.defaultConfigs
             store.setDraftTrip(bundle)
             if sections.isEmpty {
                 finalizeEmptyTrip(bundle: bundle, city: info.destinationCity)

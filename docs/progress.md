@@ -3,6 +3,15 @@
 ## 最后更新
 2026-06-01
 
+## 上次改动摘要（通知偏好 · 自定义默认提醒 · 2026-06-02）
+
+- **新功能：设置 →「通知」二级页**（`NotificationSettingsView`，放「提醒与显示」分区首行）。用户用开关选择"新建行程的默认提醒档位"（出发当天/前1/2/3天/前1周/前2周，复用 `TripReminderConfig.presets` + `reminder.label.*` 文案），默认仅「出发前1天」。spec：`specs/notification-preferences.md`。
+- **机制：创建时快照，非实时联动**。`ItemPickerView` 的 `.create`/`.autoPackReview` 在建 `TripBundle` 后 `bundle.reminderConfigs = ReminderPreferences.defaultConfigs`。改设置不影响已建行程；单行程仍可在物品清单独立增删。
+- **默认软化**：`TripReminderConfig.defaults` 从 `[提前3天@9 + 出发当天@7]` → `[出发前1天@9]`（仅作存量空配置行程的回退；新行程走快照）。
+- **全局偏好**：新增 `ReminderPreferences`（`UserDefaults` 存逗号分隔 offsets；nil→默认[1]，空串→[]全关，二者区分）。**纳入备份**（`CarryBackup.defaultReminderOffsets: [Int]?`，旧备份缺字段则保持现状）。
+- **去重**：档位标签逻辑抽到 `TripReminderConfig.localizedLabel`，`TripReminderSheet.reminderLabel` 改为复用。新增 3 个 xcstrings key × 9 语言（entry/section/footer）。
+- 通过 simulator build。**待办**：真机验收（改设置→新建行程读到对应档位；全关→无提醒；老行程不受影响；备份还原带偏好）。
+
 ## 上次改动摘要（电压预警 · 女性出行视角第一弹 · 2026-06-01）
 
 - **新功能：美发电器 × 电压预警**。清单含电热设备（直发棒/吹风机）+ 目的地与家乡电压档位不同（`<160V` 低压 / `≥160V` 高压）时，`DestinationInfoView` 插头卡片的电压行变橙警示，提示"转换插头不变压、可能需变压器"。复用现有 `PlugCatalog` 电压数据 + `Locale.current.region` 家乡判定，纯本地零新增数据源。spec：`specs/voltage-converter-nudge.md`。
