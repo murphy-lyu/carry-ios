@@ -15,6 +15,7 @@ enum SettingsRoute: Hashable {
     case appIcon
     case calendar
     case liveActivity
+    case widgetGuide
     case cycleReminder
     case dataRecovery
     case about
@@ -265,6 +266,7 @@ struct SettingsView: View {
                                 )
 #if !targetEnvironment(macCatalyst)
                                 settingsNavigationRow(title: "settings.liveactivity.packing", route: .liveActivity)
+                                settingsNavigationRow(title: "settings.widget.entry", route: .widgetGuide)
 #endif
                                 if CycleInference.isAvailable {
                                     settingsNavigationRow(title: "settings.cycle.entry", route: .cycleReminder)
@@ -618,6 +620,12 @@ struct SettingsView: View {
         case .liveActivity:
 #if !targetEnvironment(macCatalyst)
             LiveActivitySettingsView()
+#else
+            EmptyView()
+#endif
+        case .widgetGuide:
+#if !targetEnvironment(macCatalyst)
+            WidgetGuideView()
 #else
             EmptyView()
 #endif
