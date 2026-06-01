@@ -3,6 +3,14 @@
 ## 最后更新
 2026-06-01
 
+## 上次改动摘要（电压预警 · 女性出行视角第一弹 · 2026-06-01）
+
+- **新功能：美发电器 × 电压预警**。清单含电热设备（直发棒/吹风机）+ 目的地与家乡电压档位不同（`<160V` 低压 / `≥160V` 高压）时，`DestinationInfoView` 插头卡片的电压行变橙警示，提示"转换插头不变压、可能需变压器"。复用现有 `PlugCatalog` 电压数据 + `Locale.current.region` 家乡判定，纯本地零新增数据源。spec：`specs/voltage-converter-nudge.md`。
+- **物品库**：Personal Care 组新增「Hair dryer / 吹风机」（9 语言）。未加 Curling iron——其中文与 Hair straightener 译文「直发棒/卷发棒」重复会致歧义。`heatingAppliances` 集合预留了其余规范名以备扩库。
+- **UI 迭代定稿**：警示行最终为**单行 + 保留 Hz**（`⚡️ 120V / 60Hz · may need a converter`，整行橙）。曾试"去掉 Hz"和"两行"版，前者与普通状态信息不一致、后者占空显空，最终单行保留 Hz 最利落一致。`lineLimit(1)+minimumScaleFactor(0.8)` 防长语言破版。
+- 本地化新增 `destination.plug.voltage_warning` + `Hair dryer` × 9 语言（含显式 en）。模拟器实测：大陆(220V)→纽约(120V)+直发棒/吹风机 → 橙色警示正常。**待办**：去欧洲(230V，与大陆同档)确认不触发；长语言(德/西)真机扫一眼缩放。
+- 同会话另记 4 条女性向待办（见记忆 `project_carry_female_user_ideas`）：电压预警(本次)/液体合规/气候护肤/solo安全，后三者上线后做。
+
 ## 上次改动摘要（首页冷启动揭示动画统一 · 2026-06-01）
 
 - **断层根因**：首页分组入场揭示原本是两套系统拼的——Hero/Past 走连续的 `initialRevealProgress`（按阈值 0.16 / 0.78 揭示），而 Upcoming 单开了 `didRevealUpcoming` 布尔 + `triggerUpcomingReveal` 的 `asyncAfter(0.28)`；**Planning 两套都没接**，冷启动时瞬间硬出现，紧跟在浮入的 Upcoming 之后形成视觉断层。`listRevealThreshold = 0.58`（Upcoming 本该用的阈值）是 orphaned 死代码。

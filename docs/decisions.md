@@ -230,6 +230,14 @@
 原因：右上确认按钮原先恒显可点，但无选择时 `confirmSelection` 因 `guard !sections.isEmpty` 静默 return → 死点击。
 实现：`.disabled(!isCreateMode && !canConfirm)`——创建模式始终可点（允许空清单，见上），追加模式无选择时置灰，给诚实反馈。
 
+## 2026-06-01 电压预警（女性出行视角）
+
+### 电压预警就地改造插头卡片电压行，不新增卡片/行
+原因：女性出行常带电热美发工具，电压不匹配会烧设备，且多数人不知"转换插头(adapter)不变压、需变压器(converter)"。Carry 已有 `PlugCatalog` 电压 + `Locale.current.region` 家乡数据，零成本可做智能提醒。设计取舍：插头卡片固定高 112pt，新增整张卡片/独立行都有溢出或占空风险。
+实现：复用现有数据，触发 = 清单含电热设备(`heatingAppliances` 集合匹配 `PackingItem.name` 英文规范名) + 家乡与目的地电压档位不同(`<160V`/`≥160V` 二分)。仅就地把电压行变橙 + 附提示。用"**可能**需变压器"措辞避免误报（设备可能本就全电压 100–240V）。
+UI 迭代：①初版单行去掉 Hz 省空间 → 与普通状态信息不一致（用户发现）；②改两行(电压行 + 独立警示行) → 卡片显空、不利落；③**定稿单行保留 Hz**（`⚡️ 120V / 60Hz · may need a converter` 整行橙，`minimumScaleFactor(0.8)` 防长语言破版）——既一致又利落。
+放弃：加 Curling iron 物品（中文与 Hair straightener 的「/卷发棒」重复致歧义，拆分需同步改 straightener 译文，属独立任务）；仅补 Hair dryer。
+
 ## 2026-06-01 首页冷启动揭示动画
 
 ### 首页分组入场揭示统一由单一 initialRevealProgress 阈值驱动
