@@ -51,7 +51,7 @@ struct CycleReminderSettingsView: View {
                             Spacer()
                             Toggle("", isOn: $isEnabled)
                                 .labelsHidden()
-                                .tint(colorScheme == .dark ? Color(.systemGray) : Color(.label))
+                                .tint(Color.accentColor)
                         }
                         .padding(.horizontal, 18)
                         .frame(height: 58)
