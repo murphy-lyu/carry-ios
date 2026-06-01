@@ -10,7 +10,7 @@
 
 > 以下全部**阻塞在付费账号**，账号一到位作为一批集中做。代码/文档侧能做的已完成（见下方各节 ✅）。
 
-1. **WeatherKit**：Developer Portal → App ID 勾选 WeatherKit → 保存 → Xcode 重下 Provisioning Profile（entitlement 已加 ✅，详见 §1）
+1. **WeatherKit**：Developer Portal → App ID 勾选 WeatherKit → 保存 → Xcode 重下 Provisioning Profile → **然后才把 `com.apple.developer.weatherkit` 加回 `Carry.entitlements`**（⚠️ 免费 Personal Team 不支持 WeatherKit，entitlement 提前加会导致真机签名失败，故现已撤回，详见 §1）
 2. **iCloud 同步（这版做）**：Developer Portal 建 CloudKit 容器 `iCloud.com.murphy.carry` + 加 iCloud/CloudKit capability → `ModelConfiguration` 切 `cloudKitDatabase: .automatic`（保留本地/in-memory fallback）→ 真机跨设备联调 + 删 App 重装验证恢复。**schema 已确认 CloudKit 兼容、无迁移风险**（详见记忆 `carry-icloud-todo`）
 3. **ASC 政策项**：隐私营养标签（位置 + 天气坐标 = 功能性、不追踪）、出口合规（勾豁免加密）、支持 URL、年龄分级（4+）、填元数据（用 `app-store-metadata.md`，审核备注已含 HealthKit/WeatherKit ✅）
 4. **TestFlight + 监控**：Release build 跑核心流程、接崩溃监控（Xcode Organizer 免费）
@@ -30,9 +30,9 @@
 - [x] **SwiftData migration plan**：新版本如有 schema 变更，migration 已覆盖 ✅（已有 CarryMigrationPlan）
 - [ ] **Build number 递增**：每次提交 App Store Connect，`CFBundleVersion` 必须比上一次大
 - [ ] ⚠️ **WeatherKit 能力配置**（含天气功能的版本发布前必做）：
-  1. ✅ `Carry.entitlements` 已加 `com.apple.developer.weatherkit`（代码侧，2026-06-01）
-  2. [ ] Developer Portal → App ID → 勾选 WeatherKit → 保存（**手动，未做**）
-  3. [ ] Xcode 重新下载 Provisioning Profile（**手动，未做**）
+  1. [ ] `Carry.entitlements` 加 `com.apple.developer.weatherkit`（⚠️ **2026-06-01 曾提前加，导致免费 Personal Team 真机签名失败「do not support the WeatherKit capability」，已撤回**。务必在付费账号 + 下面 2/3 步完成后再加回）
+  2. [ ] Developer Portal → App ID → 勾选 WeatherKit → 保存（**需付费账号，未做**）
+  3. [ ] Xcode 重新下载 Provisioning Profile（**需付费账号，未做**）
   4. ✅ 隐私政策已补天气条款（carry-legal privacy/zh.html + index.html，2026-06-01 已发布）
 
 ---
