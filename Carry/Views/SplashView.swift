@@ -4,6 +4,7 @@
 //
 
 import SwiftUI
+import UIKit
 
 struct SplashView: View {
 
@@ -32,12 +33,17 @@ struct SplashView: View {
             CarryAtmosphereBackground()
 
             VStack(spacing: 14) {
-                Image("LaunchIcon")
-                    .resizable()
-                    .interpolation(.high)
-                    .frame(width: 96, height: 96)
-                    .clipShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
-                    .shadow(color: .black.opacity(0.08), radius: 14, x: 0, y: 8)
+                // 跟随用户所选 App 图标：显示其 preview 图，取不到则回退 LaunchIcon。
+                Group {
+                    if let icon = UIImage(named: currentAppIconPreviewName()) {
+                        Image(uiImage: icon).resizable().interpolation(.high)
+                    } else {
+                        Image("LaunchIcon").resizable().interpolation(.high)
+                    }
+                }
+                .frame(width: 96, height: 96)
+                .clipShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
+                .shadow(color: .black.opacity(0.08), radius: 14, x: 0, y: 8)
 
                 VStack(spacing: 6) {
                     Text("Carry")
