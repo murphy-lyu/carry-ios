@@ -43,7 +43,6 @@ struct SettingsView: View {
     @Environment(\.colorScheme) private var colorScheme
     @EnvironmentObject private var store: TripStore
     @AppStorage("appearance_mode") private var appearanceModeRaw = AppearanceMode.system.rawValue
-    @AppStorage("calendar_sync_enabled") private var calendarSyncEnabled = false
     @AppStorage("liveActivityPackingEnabled") private var liveActivityPackingEnabled = false
 
     private var currentAppearance: AppearanceMode {
@@ -278,7 +277,6 @@ struct SettingsView: View {
                                 )
                                 settingsNavigationRow(
                                     title: "settings.calendar.entry",
-                                    valueText: calendarSyncEnabled ? NSLocalizedString("settings.calendar.status.on", comment: "") : NSLocalizedString("settings.calendar.status.off", comment: ""),
                                     route: .calendar
                                 )
 #if !targetEnvironment(macCatalyst)
