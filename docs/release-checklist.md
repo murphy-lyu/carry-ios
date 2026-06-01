@@ -20,7 +20,7 @@
   1. ✅ `Carry.entitlements` 已加 `com.apple.developer.weatherkit`（代码侧，2026-06-01）
   2. [ ] Developer Portal → App ID → 勾选 WeatherKit → 保存（**手动，未做**）
   3. [ ] Xcode 重新下载 Provisioning Profile（**手动，未做**）
-  4. [ ] 隐私政策补天气条款（文案已起草，待粘到 carry-legal 的 privacy/zh.html + index.html）
+  4. ✅ 隐私政策已补天气条款（carry-legal privacy/zh.html + index.html，2026-06-01 已发布）
 
 ---
 
@@ -43,7 +43,7 @@
 
 - [x] **隐私政策页面上线**：https://murphy-lyu.github.io/carry-legal/privacy/ ✅（2026-05-27）
 - [x] **隐私政策内容覆盖**：✅（2026-05-27 确认，含位置访问、通知、StoreKit、GDPR/CCPA）
-- [ ] ⚠️ **接入 WeatherKit 后新增**：更新 https://murphy-lyu.github.io/carry-legal/privacy/ 中位置数据章节，补充「目的地坐标通过 WeatherKit 发送至 Apple 服务器用于获取天气预报」
+- [x] **接入 WeatherKit 后新增**：✅ 已更新隐私政策位置数据章节 + 第三方服务，补充「目的地坐标通过 WeatherKit 发送至 Apple 用于获取天气预报」（中英，2026-06-01 发布）
 - [x] **用户协议页面上线**：https://murphy-lyu.github.io/carry-legal/terms/ ✅（2026-05-27）
 - [x] **App 内隐私入口**：`LegalViews` 链接已指向 GitHub Pages，可访问 ✅
 - [x] **本地通知说明**：隐私政策 Section 5 已注明 ✅
