@@ -296,6 +296,11 @@ private struct DayCell: View {
     private var hasRange: Bool { selectedStart < selectedEnd }
     private var isInRange: Bool { date > selectedStart && date < selectedEnd }
     private var isToday: Bool { calendar.isDate(date, inSameDayAs: today) }
+    private var columnIndex: Int {
+        (calendar.component(.weekday, from: date) - calendar.firstWeekday + 7) % 7
+    }
+    private var isRowStart: Bool { columnIndex == 0 }
+    private var isRowEnd: Bool { columnIndex == 6 }
     private var selectedDayForeground: Color {
         colorScheme == .dark ? Color.black : Color.white
     }
@@ -349,29 +354,37 @@ private struct DayCell: View {
 
     @ViewBuilder
     private var selectionBackground: some View {
+        let r = maxCornerRadius
         if isStart {
+            // 行尾换行时右侧也收圆角，其余右侧直角续接下一格
             UnevenRoundedRectangle(
-                topLeadingRadius: maxCornerRadius,
-                bottomLeadingRadius: maxCornerRadius,
-                bottomTrailingRadius: 0,
-                topTrailingRadius: 0,
+                topLeadingRadius: r, bottomLeadingRadius: r,
+                bottomTrailingRadius: isRowEnd ? r : 0,
+                topTrailingRadius: isRowEnd ? r : 0,
                 style: .continuous
             )
             .fill(Color.accentColor.opacity(rangeOpacity))
             .padding(.leading, endpointEdgeInset)
         } else if isEnd {
+            // 行首续接时左侧也收圆角，其余左侧直角续接上一格
             UnevenRoundedRectangle(
-                topLeadingRadius: 0,
-                bottomLeadingRadius: 0,
-                bottomTrailingRadius: maxCornerRadius,
-                topTrailingRadius: maxCornerRadius,
+                topLeadingRadius: isRowStart ? r : 0,
+                bottomLeadingRadius: isRowStart ? r : 0,
+                bottomTrailingRadius: r, topTrailingRadius: r,
                 style: .continuous
             )
             .fill(Color.accentColor.opacity(rangeOpacity))
             .padding(.trailing, endpointEdgeInset)
         } else {
-            Rectangle()
-                .fill(Color.accentColor.opacity(rangeOpacity))
+            // 行首左圆角、行尾右圆角，中间格直角
+            UnevenRoundedRectangle(
+                topLeadingRadius: isRowStart ? r : 0,
+                bottomLeadingRadius: isRowStart ? r : 0,
+                bottomTrailingRadius: isRowEnd ? r : 0,
+                topTrailingRadius: isRowEnd ? r : 0,
+                style: .continuous
+            )
+            .fill(Color.accentColor.opacity(rangeOpacity))
         }
     }
 }
