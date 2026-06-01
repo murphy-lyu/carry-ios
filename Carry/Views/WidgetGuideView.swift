@@ -1,53 +1,22 @@
 import SwiftUI
 
 #if !targetEnvironment(macCatalyst)
-/// 设置 → 小部件：告知用户 Carry 有桌面小部件，并图文引导如何添加到主屏幕。
-/// 视觉与交互对齐 `LiveActivitySettingsView`（同款卡片底色/描边、分组背景）。
+/// 设置 → 小部件：告知用户 Carry 有桌面小部件，并展示它长什么样。
+/// 不做分步添加引导——各 iOS 版本添加方式不同，分步反而易误导；只给一张预览图 +
+/// 一句版本无关的添加提示（长按主屏幕）。视觉对齐 `LiveActivitySettingsView`。
 ///
-/// 图片槽位说明：所有引导图都通过 `guideImage(_:)` 渲染——资源不存在时显示带资源名的
-/// 占位框，做好真图后以对应名称加入 `Assets.xcassets` 即自动替换，无需改代码。
-/// 需要的资源名：`WidgetPreview`（顶部小部件预览）、`WidgetGuideStep1/2/3`（三步截图）。
+/// 图片槽位：预览图通过 `guideImage(_:)` 渲染——资源不存在时显示带资源名的占位框，
+/// 做好真图后以 `WidgetPreview` 命名加入 `Assets.xcassets` 即自动替换，无需改代码。
 struct WidgetGuideView: View {
     @Environment(\.colorScheme) private var colorScheme
 
-    private var cardFill: Color {
-        colorScheme == .dark
-            ? Color(UIColor.secondarySystemGroupedBackground).opacity(0.72)
-            : Color(UIColor.secondarySystemGroupedBackground)
-    }
-
-    private var cardStroke: Color {
-        colorScheme == .dark
-            ? Color.white.opacity(0.045)
-            : Color.primary.opacity(0.05)
-    }
-
-    private struct Step: Identifiable {
-        let id = UUID()
-        let titleKey: LocalizedStringKey
-        let captionKey: LocalizedStringKey
-        let imageName: String
-    }
-
-    private let steps: [Step] = [
-        Step(titleKey: "settings.widget.step1.title",
-             captionKey: "settings.widget.step1.caption",
-             imageName: "WidgetGuideStep1"),
-        Step(titleKey: "settings.widget.step2.title",
-             captionKey: "settings.widget.step2.caption",
-             imageName: "WidgetGuideStep2"),
-        Step(titleKey: "settings.widget.step3.title",
-             captionKey: "settings.widget.step3.caption",
-             imageName: "WidgetGuideStep3")
-    ]
-
     var body: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: 18) {
-                // 顶部：小部件预览图（占位）
+            VStack(alignment: .leading, spacing: 16) {
+                // 小部件预览图（占位）
                 ZStack {
                     Color(.secondarySystemGroupedBackground)
-                    guideImage("WidgetPreview", placeholderAspect: 16.0 / 9.0)
+                    guideImage("WidgetPreview", placeholderAspect: 16.0 / 10.0)
                         .padding(.horizontal, 24)
                         .padding(.vertical, 20)
                 }
@@ -57,12 +26,6 @@ struct WidgetGuideView: View {
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
                     .lineSpacing(1.6)
-
-                VStack(spacing: 14) {
-                    ForEach(Array(steps.enumerated()), id: \.element.id) { index, step in
-                        stepCard(number: index + 1, step: step)
-                    }
-                }
             }
             .padding(.horizontal, 16)
             .padding(.top, 8)
@@ -72,40 +35,6 @@ struct WidgetGuideView: View {
         .navigationTitle(Text("settings.widget.entry"))
         .navigationBarTitleDisplayMode(.inline)
         .toolbar(.hidden, for: .tabBar)
-    }
-
-    private func stepCard(number: Int, step: Step) -> some View {
-        VStack(alignment: .leading, spacing: 12) {
-            HStack(alignment: .top, spacing: 10) {
-                Text("\(number)")
-                    .font(.subheadline.weight(.bold))
-                    .foregroundStyle(Color(UIColor.systemBackground))
-                    .frame(width: 24, height: 24)
-                    .background(Circle().fill(Color.primary.opacity(0.85)))
-                VStack(alignment: .leading, spacing: 3) {
-                    Text(step.titleKey)
-                        .font(.body.weight(.semibold))
-                        .foregroundStyle(.primary)
-                    Text(step.captionKey)
-                        .font(.footnote)
-                        .foregroundStyle(.secondary)
-                        .lineSpacing(1.4)
-                        .fixedSize(horizontal: false, vertical: true)
-                }
-                Spacer(minLength: 0)
-            }
-            guideImage(step.imageName, placeholderAspect: 4.0 / 3.0)
-        }
-        .padding(16)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background(
-            RoundedRectangle(cornerRadius: 18, style: .continuous)
-                .fill(cardFill)
-                .overlay(
-                    RoundedRectangle(cornerRadius: 18, style: .continuous)
-                        .strokeBorder(cardStroke, lineWidth: 1)
-                )
-        )
     }
 
     /// 图片槽：资源存在时显示真图；否则显示带资源名的虚线占位框。
