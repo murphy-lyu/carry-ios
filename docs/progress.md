@@ -133,7 +133,7 @@
   - 倒计时按天数分支（today / tomorrow / %d days left）绕开各语言复数规则。
   - spec：`specs/home-screen-widget.md`
 - **主屏幕图标 Quick Actions**（已实现，待真机验证）：长按图标菜单，3 动作（New Trip / Nearest Trip / Footprint）。`CarryQuickAction` + `CarryAppDelegate` / `CarrySceneDelegate` 接冷 / 热启动回调，写 `carry_shortcut_action`，复用 ContentView 既有 `UserDefaults.didChangeNotification` 监听分发。
-  - ⚠️ **待确认**：iOS 16+ `AppShortcutsProvider` 本就会进图标菜单，本套 `UIApplicationShortcutItem` 可能与之**重复**；真机确认后再决定是否移除自建那套。SceneDelegate 不破坏 WindowGroup（黑屏风险）也需真机验证。
+  - 两套并存是正确设计：`UIApplicationShortcutItem` 驱动长按图标菜单，`AppShortcutsProvider` 驱动 Siri/Spotlight/Shortcuts App，系统层面完全独立，不重复。
   - spec：`specs/home-screen-quick-actions.md`
 - **i18n 对齐**：`home.upcoming`（首页分区 / 统计标签）与 widget `widget.header.upcoming` 统一为地道译法。此前首页 de/es/fr/ja/ko/pt-BR 仅留英文 "Upcoming"，本轮两边补全并对齐（9 语言）。
 - **App Group / 工程**：新增 `Carry/Carry.entitlements` + `CarryWidgetExtension.entitlements`（`group.com.murphy.carry`），pbxproj 设 `CODE_SIGN_ENTITLEMENTS`；清理 Xcode 生成的孤儿 entitlements 与 .orig/.bak 临时文件。
