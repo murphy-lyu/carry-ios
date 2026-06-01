@@ -58,9 +58,6 @@ struct PackingListView: View {
         bundle?.safeSections ?? []
     }
     private var hasScenes: Bool { !(bundle?.selectedSceneKeys.isEmpty ?? true) }
-    private var isHistoricalTrip: Bool {
-        bundle.map { $0.departureDate < Calendar.current.startOfDay(for: Date()) } ?? false
-    }
     private var totalCount: Int  { bundle?.totalCount  ?? 0 }
     private var packedCount: Int { bundle?.packedCount ?? 0 }
     private var progress: Double {
@@ -135,12 +132,10 @@ struct PackingListView: View {
                         } label: {
                             Label("packing.menu.add_from_library", systemImage: "shippingbox")
                         }
-                        if !isHistoricalTrip {
-                            Button {
-                                showReminderSheet = true
-                            } label: {
-                                Label("reminder.menu.item", systemImage: bundle?.remindersEnabled == true ? "bell" : "bell.slash")
-                            }
+                        Button {
+                            showReminderSheet = true
+                        } label: {
+                            Label("reminder.menu.item", systemImage: bundle?.remindersEnabled == true ? "bell" : "bell.slash")
                         }
                         Button {
                             showEditSheet = true
@@ -755,18 +750,16 @@ struct PackingListView: View {
                 Spacer(minLength: 8)
 
                 Button {
-                    if !isHistoricalTrip { showReminderSheet = true }
+                    showReminderSheet = true
                 } label: {
                     HStack(spacing: 4) {
                         Image(systemName: reminderStatusIconName)
                             .font(.system(size: 9, weight: .semibold))
                         Text(reminderStatusText)
                             .font(.caption2.weight(.medium))
-                        if !isHistoricalTrip {
-                            Image(systemName: "chevron.right")
-                                .font(.system(size: 7, weight: .semibold))
-                                .foregroundStyle(.tertiary)
-                        }
+                        Image(systemName: "chevron.right")
+                            .font(.system(size: 7, weight: .semibold))
+                            .foregroundStyle(.tertiary)
                     }
                     .foregroundStyle(colorScheme == .dark ? Color.secondary.opacity(0.94) : .secondary)
                     .padding(.horizontal, 7)
