@@ -3,6 +3,13 @@
 ## 最后更新
 2026-06-01
 
+## 上次改动摘要（日期选择器视觉优化 · 2026-06-01）
+
+- **底部「先规划，日子以后再定」入口**：从 TripInfoView / EditTripView 的内联链接移进 `TripDateRangePickerSheet` 底部（`.safeAreaInset`），两处内联入口代码及占位注释全部删除。底部栏背景用 `footerBlendColor` 与 `CarrySubtleBackground` 渐变底色精确匹配（light 暖白 / dark 深色），0.5pt 极淡发丝线替代硬 Divider，无割裂感。
+- **清除日期后日期框文案**：`tripdates.unset` 改为「日子待定 / Dates to come」× 9 语言，与首页行程卡无日期标签完全一致，产品内表述统一。
+- **日历空白修复**：修复 `LazyVStack` + 可变高度月份 + `scrollTo` 跳中部时视口下方 realize 留白问题（之前是底部「Plan now」容器被 GeometryReader 死循环撑高所致，确认根因后回退无关改动，保持原 241 月 LazyVStack 不变）。
+- **日期区间高亮换行圆角**：换行处(行尾/行首)背景形状加 `isRowStart`/`isRowEnd` 判断，用 `UnevenRoundedRectangle` 分别圆角；所有"端点"侧加 `endpointEdgeInset` 保证形状宽度一致；`maxCornerRadius` 18→100（SwiftUI 自动 clamp 到半高=完美半圆），与端点实心圆视觉完全一致。
+
 ## 上次改动摘要（无日期「规划中」行程 · 2026-06-01）
 
 - 允许创建不设出发/返程日期的「规划中」行程（参考 Tripsy），单独分组、补日期可"转正"、清空日期可"退回"。spec：`specs/dateless-planning-trips.md`。
