@@ -58,6 +58,13 @@ func currentAppIconDisplayName() -> String {
     return match.localizedName
 }
 
+/// Companion preview-imageset name of the currently active app icon (same artwork
+/// as the selected icon). Used by SplashView so the splash logo matches the icon
+/// the user picked. Mirrors `iconPreview(for:)` naming: "<id>Preview" / "IconDefaultPreview".
+func currentAppIconPreviewName() -> String {
+    (UIApplication.shared.alternateIconName ?? "IconDefault") + "Preview"
+}
+
 // MARK: - AppIconView
 
 struct AppIconView: View {
