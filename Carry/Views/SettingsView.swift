@@ -887,7 +887,7 @@ private struct CalendarSettingsView: View {
     /// 本身不改 tint，深色 tint 下禁用视觉太弱，会出现「文字灰但开关仍亮」的割裂）。
     private func toggleTint(enabled: Bool) -> Color {
         if !enabled { return Color(UIColor.systemGray4) }
-        return colorScheme == .dark ? Color(.systemGray2) : Color(.label)
+        return colorScheme == .dark ? Color(.systemGray) : Color(.label)
     }
 
     private var packTimeBinding: Binding<Date> {
@@ -954,7 +954,7 @@ private struct CalendarSettingsView: View {
                             }
                         ))
                         .labelsHidden()
-                        .tint(colorScheme == .dark ? Color(.systemGray2) : Color(.label))
+                        .tint(colorScheme == .dark ? Color(.systemGray) : Color(.label))
                     }
                     .padding(.horizontal, 18)
                     .frame(height: 58)
@@ -1100,7 +1100,7 @@ private struct DeveloperModeView: View {
                             .foregroundStyle(.secondary)
                     }
                 }
-                .tint(colorScheme == .dark ? Color(.systemGray2) : Color(.label))
+                .tint(colorScheme == .dark ? Color(.systemGray) : Color(.label))
                 .listRowSeparator(.hidden)
             }
 
@@ -1120,7 +1120,7 @@ private struct DeveloperModeView: View {
                             .foregroundStyle(.secondary)
                     }
                 }
-                .tint(colorScheme == .dark ? Color(.systemGray2) : Color(.label))
+                .tint(colorScheme == .dark ? Color(.systemGray) : Color(.label))
                 .listRowSeparator(.hidden)
 
                 Toggle(isOn: Binding(
@@ -1138,7 +1138,7 @@ private struct DeveloperModeView: View {
                             .foregroundStyle(.secondary)
                     }
                 }
-                .tint(colorScheme == .dark ? Color(.systemGray2) : Color(.label))
+                .tint(colorScheme == .dark ? Color(.systemGray) : Color(.label))
                 .listRowSeparator(.hidden)
             }
 
@@ -1157,7 +1157,7 @@ private struct DeveloperModeView: View {
                             .foregroundStyle(.secondary)
                     }
                 }
-                .tint(colorScheme == .dark ? Color(.systemGray2) : Color(.label))
+                .tint(colorScheme == .dark ? Color(.systemGray) : Color(.label))
                 .listRowSeparator(.hidden)
             }
 
@@ -1176,7 +1176,7 @@ private struct DeveloperModeView: View {
                             .foregroundStyle(.secondary)
                     }
                 }
-                .tint(colorScheme == .dark ? Color(.systemGray2) : Color(.label))
+                .tint(colorScheme == .dark ? Color(.systemGray) : Color(.label))
                 .listRowSeparator(.hidden)
             }
 
