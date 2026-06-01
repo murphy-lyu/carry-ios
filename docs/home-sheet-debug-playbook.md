@@ -359,3 +359,11 @@
 3. 候选方向：锁不再依赖 delegate 时序——例如 `.began` 同步 `sv.isScrollEnabled = false`、`.ended` 恢复（而非靠 `scrollViewDidScroll` 拉回）；需单一路径验证，勿多驱动并存（见第 5 节禁忌）。
 
 **是否由「无日期行程」引入**：存疑——分区切换不触发重建，倾向既有/独立时序问题，需进一步确认。
+
+### 16.1 候选修复（commit `112ac4c`，待真机验证）
+
+在 `attachScrollView` 增加 `contentOffset` 的 KVO 观察：锁定期间（`delegateProxy.lockedOffsetY != nil`）只要 offset 漂移 > 0.5 就 `setContentOffset` 拉回。**与 delegate 无关**——KVO 在 offset 任何变化时都触发，绕开"代理 delegate 被 SwiftUI 顶替"的时序窗。保留原 `DecelerationCanceller` 代理（负责 forwarding + 减速取消），KVO 作为稳健的锁强制层。
+
+自带 DEBUG 日志：`🩺[Sheet] contentOffset KVO clamp: 漏滚 y=… → 拉回 … · 此刻 delegate 是代理? false/true`。
+
+真机验收：① 上拉内容区不再漏滚 = 修复有效；② 日志出现 `delegate 是代理? false` = 证实 delegate 被顶替假设。通过后删 🩺。若仍漏滚且 KVO 从不触发 → 是 `lockedOffsetY`/`activePanDriver` 未在该路径正确设置（状态分支），转查 `handleListPan` 的 `.began`。
