@@ -176,12 +176,6 @@ final class SheetViewController: UIViewController {
 
     override func viewDidLayoutSubviews() {
         super.viewDidLayoutSubviews()
-        // 自愈式重连：内容区的 UIScrollView 可能在初次 0.15s 钩取后被 SwiftUI 重建
-        // （如「规划中」分区从无到有出现等结构变化），导致 weak listScrollView 失效、
-        // handleListPan 提前 return、三条联动规则全部失灵（内容自由滚动）。
-        // attachScrollView 内有 `sv !== listScrollView` 幂等守卫，反复调用安全且仅在
-        // scroll view 真正变化时才重新挂载手势/代理。
-        if let hostingView { attachScrollView(in: hostingView) }
         guard runningAnimator == nil else { return }
         placeSheet(at: snappedOffset + liveDelta)
     }
@@ -440,10 +434,6 @@ final class SheetViewController: UIViewController {
 
     private func attachScrollView(in root: UIView) {
         guard let sv = findScrollView(in: root), sv !== listScrollView else { return }
-#if DEBUG
-        // 诊断（临时）：是否重连到一个【新的】scroll view（旧的非 nil = 被重建/替换）。
-        print("🩺[Sheet] attachScrollView: re-hook scrollView. previousWasNil=\(listScrollView == nil) → 重连到新 sv=\(ObjectIdentifier(sv))")
-#endif
         listScrollView = sv
         sv.panGestureRecognizer.addTarget(self, action: #selector(handleListPan(_:)))
         installProxy(on: sv)
@@ -471,13 +461,7 @@ final class SheetViewController: UIViewController {
     // MARK: List pan (three gesture rules)
 
     @objc private func handleListPan(_ pan: UIPanGestureRecognizer) {
-        guard let sv = listScrollView else {
-#if DEBUG
-            // 诊断（临时）：内容区手势触发了，但钩子已失效（listScrollView=nil）→ 三规则失灵的直接证据。
-            print("🩺[Sheet] handleListPan: listScrollView == nil → 协调失效，内容自由滚动（钩子已失效）")
-#endif
-            return
-        }
+        guard let sv = listScrollView else { return }
         let topInset    = -sv.adjustedContentInset.top
         let translation = pan.translation(in: sv).y
         let velocity    = pan.velocity(in: sv).y
