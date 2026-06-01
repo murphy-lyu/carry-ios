@@ -36260,55 +36260,55 @@
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Reisen zum Kalender hinzufügen"
+            "value": "Reisen automatisch zum Kalender hinzufügen"
           }
         },
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Add Trips to Calendar"
+            "value": "Automatically Add Trips to Calendar"
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Añadir viajes al Calendario"
+            "value": "Añadir viajes al calendario automáticamente"
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Ajouter les voyages au Calendrier"
+            "value": "Ajouter automatiquement les voyages au calendrier"
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "旅行をカレンダーに追加"
+            "value": "旅行をカレンダーに自動追加"
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "여행을 캘린더에 추가"
+            "value": "여행을 캘린더에 자동 추가"
           }
         },
         "pt-BR": {
           "stringUnit": {
             "state": "translated",
-            "value": "Adicionar viagens ao Calendário"
+            "value": "Adicionar viagens ao calendário automaticamente"
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "添加行程到日历"
+            "value": "自动添加行程到日历"
           }
         },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "加入行程到行事曆"
+            "value": "自動加入行程到日曆"
           }
         }
       }
