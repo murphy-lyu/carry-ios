@@ -195,6 +195,14 @@ final class TripStore: ObservableObject {
         return result
     }
 
+    /// 合并导入：将备份中在本地不存在的行程 / 物品模板插入，不影响现有数据。
+    @discardableResult
+    func mergeFromData(_ data: Data) throws -> (trips: Int, myItems: Int) {
+        let result = try DataBackupManager.shared.mergeFromData(data, into: context)
+        applyPostRestoreSideEffects()
+        return result
+    }
+
     /// 还原后清理副作用：旧 trip 的 pending 通知 / Live Activity 必须全清，否则会出现
     /// "通知 ID 指向已不存在的 trip" 或"灵动岛挂着旧行程"等幽灵。然后按新还原的 trip
     /// 重排所有提醒，并触发 widget snapshot 重写。

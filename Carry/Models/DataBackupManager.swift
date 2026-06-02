@@ -278,6 +278,96 @@ final class DataBackupManager {
         return try performRestore(from: backup, into: context)
     }
 
+    // MARK: - Merge (imported file)
+
+    /// 合并导入：将备份中在本地不存在的行程 / 物品模板插入数据库，
+    /// 已存在的（UUID 匹配）跳过，不覆盖本地版本。
+    @discardableResult
+    func mergeFromData(_ data: Data, into context: ModelContext) throws -> (trips: Int, myItems: Int) {
+        struct VersionStub: Decodable { let version: Int }
+        if let stub = try? decoder.decode(VersionStub.self, from: data),
+           stub.version > Self.currentBackupVersion {
+            throw BackupError.unsupportedVersion(stub.version)
+        }
+        guard let backup = try? decoder.decode(CarryBackup.self, from: data) else {
+            throw BackupError.decodingFailed
+        }
+        return try performMerge(from: backup, into: context)
+    }
+
+    private func performMerge(from backup: CarryBackup, into context: ModelContext) throws -> (trips: Int, myItems: Int) {
+        // 取出现有 UUID 集合，用于去重判断
+        let existingTripIDs = Set(try context.fetch(FetchDescriptor<TripBundle>()).map(\.id))
+        let existingMyItemIDs = Set(try context.fetch(FetchDescriptor<MyItem>()).map(\.id))
+
+        var newTripCount = 0
+
+        for bt in backup.trips where !existingTripIDs.contains(bt.id) {
+            let trip = TripBundle(
+                id: bt.id,
+                name: bt.name,
+                destinationCity: bt.destinationCity,
+                days: bt.days,
+                dateRange: bt.dateRange,
+                departureDate: bt.departureDate,
+                isDateless: bt.isDateless ?? false,
+                createdAt: bt.createdAt,
+                selectedSceneKeys: bt.selectedSceneKeys
+            )
+            trip.dismissedSurpriseNames = bt.dismissedSurpriseNames
+            trip.sceneCardDismissed = bt.sceneCardDismissed
+            trip.remindersEnabled = bt.remindersEnabled
+            trip.reminderConfigData = bt.reminderConfigData
+            trip.countryCode = bt.countryCode
+            trip.latitude = bt.latitude
+            trip.longitude = bt.longitude
+            if let extra = bt.additionalDestinationsData {
+                trip.additionalDestinationsData = extra
+            }
+            context.insert(trip)
+
+            for bs in bt.sections.sorted(by: { $0.sortOrder < $1.sortOrder }) {
+                let section = PackingSection(title: bs.title, sortOrder: bs.sortOrder)
+                section.id = bs.id
+                section.bundle = trip
+                context.insert(section)
+
+                for bi in bs.items.sorted(by: { $0.sortOrder < $1.sortOrder }) {
+                    let item = PackingItem(
+                        name: bi.name,
+                        quantity: bi.quantity,
+                        isPacked: bi.isPacked,
+                        isAlert: bi.isAlert,
+                        sortOrder: bi.sortOrder
+                    )
+                    item.id = bi.id
+                    item.section = section
+                    context.insert(item)
+                }
+            }
+            newTripCount += 1
+        }
+
+        for bm in backup.myItems where !existingMyItemIDs.contains(bm.id) {
+            let item = MyItem(
+                id: bm.id,
+                name: bm.name,
+                collectionName: bm.collectionName,
+                category: bm.category,
+                defaultQuantity: bm.defaultQuantity,
+                quantityMode: MyItemQuantityMode(rawValue: bm.quantityModeRaw) ?? .fixed,
+                quantityIntervalDays: bm.quantityIntervalDays,
+                sortOrder: bm.sortOrder,
+                createdAt: bm.createdAt,
+                updatedAt: bm.updatedAt
+            )
+            context.insert(item)
+        }
+
+        try context.save()
+        return (newTripCount, backup.myItems.filter { !existingMyItemIDs.contains($0.id) }.count)
+    }
+
     // MARK: - Core restore
 
     private func performRestore(from backup: CarryBackup, into context: ModelContext) throws -> (trips: Int, myItems: Int) {

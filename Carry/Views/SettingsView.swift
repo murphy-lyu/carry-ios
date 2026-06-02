@@ -34,6 +34,19 @@ struct SettingsView: View {
     @State private var showImporter = false
     @State private var showImportConfirmation = false
     @State private var pendingImportData: Data?
+
+    private func mergeSuccessMessage(count: Int) -> String {
+        if count == 0 {
+            return NSLocalizedString("settings.data.import.merge.none", comment: "")
+        }
+        return String(
+            format: NSLocalizedString(
+                count == 1 ? "settings.data.import.merge.success.one" : "settings.data.import.merge.success",
+                comment: ""
+            ),
+            count
+        )
+    }
     @State private var restoreToastMessage: String?
     // 备份信息缓存：onAppear 时读取一次，避免每次 body 求值触发磁盘 I/O
     @State private var cachedBackupDate: Date? = nil
@@ -315,6 +328,22 @@ struct SettingsView: View {
                                 Text("settings.data.import.confirm.title"),
                                 isPresented: $showImportConfirmation
                             ) {
+                                Button {
+                                    guard let data = pendingImportData else { return }
+                                    do {
+                                        let result = try store.mergeFromData(data)
+                                        showToast(mergeSuccessMessage(count: result.trips))
+                                        CarryLogger.shared.log(.backupMerged,
+                                            context: "trips=\(result.trips) myItems=\(result.myItems)")
+                                    } catch {
+                                        showToast(error.localizedDescription)
+                                        CarryLogger.shared.log(.backupRestoreFailed,
+                                            context: "source=merge error=\(error.localizedDescription)")
+                                    }
+                                    pendingImportData = nil
+                                } label: {
+                                    Text("settings.data.import.action.merge")
+                                }
                                 Button(role: .destructive) {
                                     guard let data = pendingImportData else { return }
                                     do {
@@ -325,7 +354,7 @@ struct SettingsView: View {
                                     } catch {
                                         showToast(error.localizedDescription)
                                         CarryLogger.shared.log(.backupRestoreFailed,
-                                            context: "error=\(error.localizedDescription)")
+                                            context: "source=replace error=\(error.localizedDescription)")
                                     }
                                     pendingImportData = nil
                                 } label: {
