@@ -52,7 +52,16 @@ final class TripBundle {
     var reminderConfigs: [TripReminderConfig] {
         get {
             guard !reminderConfigData.isEmpty else { return TripReminderConfig.defaults }
-            return (try? JSONDecoder().decode([TripReminderConfig].self, from: reminderConfigData)) ?? TripReminderConfig.defaults
+            do {
+                return try JSONDecoder().decode([TripReminderConfig].self, from: reminderConfigData)
+            } catch {
+                // 解码失败：记录原始数据长度（不含内容），留追溯线索。
+                // ⚠️ 注意：UI 此处会展示 defaults，但本 getter 不主动改写 reminderConfigData
+                //（避免被静默覆盖原始数据）。下次 setter 写入新值时才会替换。
+                CarryLogger.shared.log(.dataCorrupted,
+                    context: "reminderConfigs decode failed, dataLen=\(reminderConfigData.count)")
+                return TripReminderConfig.defaults
+            }
         }
         set {
             reminderConfigData = (try? JSONEncoder().encode(newValue)) ?? Data()
@@ -174,7 +183,7 @@ final class TripStore: ObservableObject {
     @discardableResult
     func restoreFromBackup() throws -> (trips: Int, myItems: Int) {
         let result = try DataBackupManager.shared.restore(into: context)
-        fetchTrips()
+        applyPostRestoreSideEffects()
         return result
     }
 
@@ -182,8 +191,28 @@ final class TripStore: ObservableObject {
     @discardableResult
     func restoreFromData(_ data: Data) throws -> (trips: Int, myItems: Int) {
         let result = try DataBackupManager.shared.restoreFromData(data, into: context)
-        fetchTrips()
+        applyPostRestoreSideEffects()
         return result
+    }
+
+    /// 还原后清理副作用：旧 trip 的 pending 通知 / Live Activity 必须全清，否则会出现
+    /// "通知 ID 指向已不存在的 trip" 或"灵动岛挂着旧行程"等幽灵。然后按新还原的 trip
+    /// 重排所有提醒，并触发 widget snapshot 重写。
+    private func applyPostRestoreSideEffects() {
+        // 1. 全清旧通知
+        UNUserNotificationCenter.current().removeAllPendingNotificationRequests()
+        // 2. 全结束旧 Live Activity（含可能孤立的）
+#if !targetEnvironment(macCatalyst)
+        Task { @MainActor in LiveActivityManager.shared.endAll() }
+#endif
+        // 3. 刷 trips（也会刷自动备份）
+        fetchTrips()
+        // 4. 按新数据重排提醒
+        for trip in trips where trip.remindersEnabled && !trip.isDateless {
+            NotificationManager.scheduleReminders(for: trip)
+        }
+        // 5. 写一份新 widget snapshot
+        writeWidgetSnapshot()
     }
 
     func setDraftTrip(_ trip: TripBundle?) {
@@ -313,6 +342,10 @@ final class TripStore: ObservableObject {
             defaults.removePersistentDomain(forName: bundleId)
         }
         UNUserNotificationCenter.current().removeAllPendingNotificationRequests()
+#if !targetEnvironment(macCatalyst)
+        // 结束所有 Live Activity，避免重置后灵动岛挂着已不存在的行程
+        Task { @MainActor in LiveActivityManager.shared.endAll() }
+#endif
         trips = []
         myItems = []
         draftTrip = nil
