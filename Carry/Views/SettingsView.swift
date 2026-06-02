@@ -918,7 +918,7 @@ private struct CalendarSettingsView: View {
                             }
                         ))
                         .labelsHidden()
-                        .tint(Color(.label))
+                        .tint(.blue)
                     }
                     .padding(.horizontal, 18)
                     .frame(height: 58)
@@ -1022,7 +1022,7 @@ private struct DeveloperModeView: View {
                             .foregroundStyle(.secondary)
                     }
                 }
-                .tint(Color(.label))
+                .tint(.blue)
                 .listRowSeparator(.hidden)
             }
 
@@ -1042,7 +1042,7 @@ private struct DeveloperModeView: View {
                             .foregroundStyle(.secondary)
                     }
                 }
-                .tint(Color(.label))
+                .tint(.blue)
                 .listRowSeparator(.hidden)
 
                 Toggle(isOn: Binding(
@@ -1060,7 +1060,7 @@ private struct DeveloperModeView: View {
                             .foregroundStyle(.secondary)
                     }
                 }
-                .tint(Color(.label))
+                .tint(.blue)
                 .listRowSeparator(.hidden)
             }
 
@@ -1079,7 +1079,7 @@ private struct DeveloperModeView: View {
                             .foregroundStyle(.secondary)
                     }
                 }
-                .tint(Color(.label))
+                .tint(.blue)
                 .listRowSeparator(.hidden)
             }
 
@@ -1098,7 +1098,7 @@ private struct DeveloperModeView: View {
                             .foregroundStyle(.secondary)
                     }
                 }
-                .tint(Color(.label))
+                .tint(.blue)
                 .listRowSeparator(.hidden)
             }
 
