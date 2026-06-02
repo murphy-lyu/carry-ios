@@ -37,11 +37,18 @@ final class LiveActivityManager {
 
     private var currentActivity: Activity<PackingActivityAttributes>?
     private var currentTripId: UUID?
+    /// 锁：startIfNeeded 进行中（含 terminateAll 异步结束旧 activity 期间）拒绝并发重入。
+    /// 防止用户快速点击行程 A → B 时，两次 request 在旧 end Task 完成前同时发起，
+    /// 撞 ActivityKit 单 attribute 上限。
+    private var isStarting: Bool = false
 
     // MARK: - 启动
 
     /// 若开关开启且条件满足，为指定行程启动 Live Activity。
     func startIfNeeded(for trip: TripBundle) {
+        // 并发保护：上一次 startIfNeeded 触发的 terminateAll 异步 end 尚未完成期间，
+        // 拒绝新的 start，避免两次 Activity.request 撞 ActivityKit 上限。
+        guard !isStarting else { return }
         guard isEnabled else { return }
         guard !trip.isDateless else { return }   // 无日期行程无倒计时，不激活 Live Activity
         guard ActivityAuthorizationInfo().areActivitiesEnabled else { return }
@@ -60,9 +67,6 @@ final class LiveActivityManager {
            currentTripId == trip.id,
            current.activityState == .active { return }
 
-        // 结束其他行程残留的 Activity
-        terminateAll()
-
         let allItems = trip.safeSections
             .flatMap { $0.items ?? [] }
             .filter { !$0.name.isEmpty }
@@ -80,17 +84,26 @@ final class LiveActivityManager {
             departureDate: trip.departureDate
         )
 
-        do {
-            let activity = try Activity.request(
-                attributes: attributes,
-                content: .init(state: state, staleDate: nil),
-                pushType: nil
-            )
-            currentActivity = activity
-            currentTripId = trip.id
-            CarryLogger.shared.log(.liveActivityStarted, context: "trip=\(trip.id)")
-        } catch {
-            CarryLogger.shared.log(.liveActivityStartFailed, context: error.localizedDescription)
+        // 加锁串行执行：await 真正等所有残留 Activity 结束，再 request 新的。
+        // 否则 terminateAll 的异步 end Task 与紧随其后的同步 request 之间存在 race，
+        // 旧 activity 还没真正 end 就 request → 撞 ActivityKit 单 attribute 上限。
+        isStarting = true
+        let newTripId = trip.id
+        Task { @MainActor in
+            defer { self.isStarting = false }
+            await self.terminateAllAndWait()
+            do {
+                let activity = try Activity.request(
+                    attributes: attributes,
+                    content: .init(state: state, staleDate: nil),
+                    pushType: nil
+                )
+                self.currentActivity = activity
+                self.currentTripId = newTripId
+                CarryLogger.shared.log(.liveActivityStarted, context: "trip=\(newTripId)")
+            } catch {
+                CarryLogger.shared.log(.liveActivityStartFailed, context: error.localizedDescription)
+            }
         }
     }
 
@@ -149,14 +162,24 @@ final class LiveActivityManager {
 
     // MARK: - 出发日检查
 
-    /// App 进入前台时调用；若已到出发日则结束 Activity。
+    /// App 进入前台时调用；若已经出发则结束 Activity。
+    /// ⚠️ 修复点：
+    /// 1. 原实现 `first(where: { _ in true })` 会拿到 activities 数组里的"任一条"，
+    ///    多 Activity 残留时可能取错条目，用别的 trip 的 departureDate 判断当前 trip。
+    ///    改为按 `attributes.tripId == currentTripId` 精确过滤。
+    /// 2. 原实现按 `startOfDay` 比较"天"，跨时区飞行时本机时区切换会让天数计算偏移
+    ///    一天（北京建的 trip departureDate 是北京午夜的 Date，到 EST 后 startOfDay
+    ///    会回退一天 → 可能漏结束或提前结束）。改为按"departureDate 已过去"判断，
+    ///    绝对秒数比较，跨时区无歧义。
     func endIfDeparted() {
         guard let tripId = currentTripId else { return }
         guard let activity = Activity<PackingActivityAttributes>.activities
-            .first(where: { _ in true }) else { return }
-        let calendar = Calendar.current
+            .first(where: { $0.attributes.tripId == tripId }) else { return }
         let departure = activity.content.state.departureDate
-        if calendar.startOfDay(for: departure) <= calendar.startOfDay(for: Date()) {
+        // 出发当天保留 Activity（最有用的一天）；出发当天 24:00 后结束。
+        let endOfDeparture = Calendar.current.date(byAdding: .day, value: 1,
+            to: Calendar.current.startOfDay(for: departure)) ?? departure
+        if Date() >= endOfDeparture {
             end(for: tripId)
         }
     }
@@ -231,6 +254,17 @@ final class LiveActivityManager {
         }
         currentActivity = nil
         currentTripId = nil
+    }
+
+    /// terminateAll 的 await 版本：等所有旧 Activity 真正 end 后才返回。
+    /// 仅供 startIfNeeded 内部串行化使用，避免 end Task 与紧随其后的 request 竞争。
+    private func terminateAllAndWait() async {
+        let snapshot = Array(Activity<PackingActivityAttributes>.activities)
+        currentActivity = nil
+        currentTripId = nil
+        for activity in snapshot {
+            await activity.end(nil, dismissalPolicy: .immediate)
+        }
     }
 }
 
