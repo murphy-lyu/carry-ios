@@ -198,8 +198,9 @@ final class TripStore: ObservableObject {
     /// 合并导入：将备份中在本地不存在的行程 / 物品模板插入，不影响现有数据。
     @discardableResult
     func mergeFromData(_ data: Data) throws -> (trips: Int, myItems: Int) {
+        let existingIds = Set(trips.map(\.id))   // 记录 merge 前的 trip ID，用于识别新增的
         let result = try DataBackupManager.shared.mergeFromData(data, into: context)
-        applyPostRestoreSideEffects()
+        applyPostMergeSideEffects(previousTripIds: existingIds)
         return result
     }
 
@@ -220,6 +221,20 @@ final class TripStore: ObservableObject {
             NotificationManager.scheduleReminders(for: trip)
         }
         // 5. 写一份新 widget snapshot
+        writeWidgetSnapshot()
+    }
+
+    /// 合并后清理副作用：与 restore 不同，**不能清旧通知 / 不能 endAll LA**——
+    /// 本地原有行程仍然存在，那些通知和 Live Activity 是用户当前正在用的。
+    /// 只需：① 刷 trips → ② 给"本次新合并进来"的 trip 排提醒 → ③ 刷 widget snapshot。
+    private func applyPostMergeSideEffects(previousTripIds: Set<UUID>) {
+        fetchTrips()
+        // 只给"merge 后新出现"的 trip 排提醒；原有 trip 的提醒保持不动。
+        for trip in trips where !previousTripIds.contains(trip.id)
+                              && trip.remindersEnabled
+                              && !trip.isDateless {
+            NotificationManager.scheduleReminders(for: trip)
+        }
         writeWidgetSnapshot()
     }
 
