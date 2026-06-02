@@ -213,6 +213,7 @@ struct DestinationInfoView: View {
                             .font(.subheadline.weight(.semibold))
                             .foregroundStyle(.primary)
                             .lineLimit(1)
+                            .minimumScaleFactor(0.85)
                     }
                     Spacer(minLength: 0)
                     if let attribution = weatherManager.attribution {

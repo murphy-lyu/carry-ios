@@ -1,1183 +1,1180 @@
 {
-  "sourceLanguage": "en",
-  "strings": {
-    " / %lld": {},
-    "%lld": {},
-    "%lld%%": {},
-    "widget.countdown.days_left": {
-      "extractionState": "manual",
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "noch %d Tage"
+  "sourceLanguage" : "en",
+  "strings" : {
+    "widget.countdown.days_left" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "noch %d Tage"
           }
         },
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%d days left"
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%d days left"
           }
         },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "faltan %d días"
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "faltan %d días"
           }
         },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "dans %d jours"
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "dans %d jours"
           }
         },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "あと%d日"
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "あと%d日"
           }
         },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%d일 남음"
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%d일 남음"
           }
         },
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "faltam %d dias"
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "faltam %d dias"
           }
         },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "还有 %d 天"
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "还有 %d 天"
           }
         },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "還有 %d 天"
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "還有 %d 天"
           }
         }
       }
     },
-    "widget.countdown.today": {
-      "extractionState": "manual",
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Heute"
+    "widget.countdown.today" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Heute"
           }
         },
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Today"
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Today"
           }
         },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Hoy"
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hoy"
           }
         },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Aujourd'hui"
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Aujourd'hui"
           }
         },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "今日"
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "今日"
           }
         },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "오늘"
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "오늘"
           }
         },
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Hoje"
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hoje"
           }
         },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "今天"
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "今天"
           }
         },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "今天"
-          }
-        }
-      }
-    },
-    "widget.countdown.tomorrow": {
-      "extractionState": "manual",
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Morgen"
-          }
-        },
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Tomorrow"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Mañana"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Demain"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "明日"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "내일"
-          }
-        },
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Amanhã"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "明天"
-          }
-        },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "明天"
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "今天"
           }
         }
       }
     },
-    "widget.description": {
-      "extractionState": "manual",
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Deine nächste Reise und der Packfortschritt."
+    "widget.countdown.tomorrow" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Morgen"
           }
         },
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Your next trip and packing progress."
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tomorrow"
           }
         },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Tu próximo viaje y el progreso de tu equipaje."
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mañana"
           }
         },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Votre prochain voyage et l'avancement de vos bagages."
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Demain"
           }
         },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "次の旅行と荷造りの進捗。"
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "明日"
           }
         },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "다가오는 여행과 짐 싸기 진행 상황."
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "내일"
           }
         },
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Sua próxima viagem e o progresso da mala."
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Amanhã"
           }
         },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "你的下一段行程与打包进度。"
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "明天"
           }
         },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "你的下一段行程與打包進度。"
-          }
-        }
-      }
-    },
-    "widget.display_name": {
-      "extractionState": "manual",
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Reisen"
-          }
-        },
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Trips"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Viajes"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Voyages"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "旅行"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "여행"
-          }
-        },
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Viagens"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "行程"
-          }
-        },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "行程"
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "明天"
           }
         }
       }
     },
-    "widget.empty.subtitle": {
-      "extractionState": "manual",
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Reise hinzufügen und packen"
+    "widget.description" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Deine nächste Reise und der Packfortschritt."
           }
         },
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Add a trip to start packing"
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Your next trip and packing progress."
           }
         },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Añade un viaje para empezar"
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tu próximo viaje y el progreso de tu equipaje."
           }
         },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Ajoutez un voyage pour commencer"
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Votre prochain voyage et l'avancement de vos bagages."
           }
         },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "旅行を追加して荷造りを始めましょう"
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "次の旅行と荷造りの進捗。"
           }
         },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "여행을 추가하고 짐을 싸보세요"
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "다가오는 여행과 짐 싸기 진행 상황."
           }
         },
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Adicione uma viagem para começar"
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sua próxima viagem e o progresso da mala."
           }
         },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "添加行程开始打包"
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "你的下一段行程与打包进度。"
           }
         },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "新增行程開始打包"
-          }
-        }
-      }
-    },
-    "widget.empty.title": {
-      "extractionState": "manual",
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Noch keine Reisen"
-          }
-        },
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "No trips yet"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Aún no hay viajes"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Aucun voyage"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "まだ旅行がありません"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "아직 여행이 없어요"
-          }
-        },
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Nenhuma viagem ainda"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "还没有行程"
-          }
-        },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "還沒有行程"
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "你的下一段行程與打包進度。"
           }
         }
       }
     },
-    "widget.header.upcoming": {
-      "extractionState": "manual",
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Anstehend"
+    "widget.display_name" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Reisen"
           }
         },
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Upcoming"
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Trips"
           }
         },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Próximos"
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Viajes"
           }
         },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "À venir"
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Voyages"
           }
         },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "予定"
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "旅行"
           }
         },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "다가오는 여행"
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "여행"
           }
         },
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Próximas"
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Viagens"
           }
         },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "即将出发"
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "行程"
           }
         },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "即將出發"
-          }
-        }
-      }
-    },
-    "widget.liveactivity.completed": {
-      "extractionState": "manual",
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Alles eingepackt! 🎉"
-          }
-        },
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "All packed! 🎉"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "¡Todo empacado! 🎉"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Tout est emballé ! 🎉"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "全部詰め終わった！🎉"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "다 챙겼어요！🎉"
-          }
-        },
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Tudo arrumado! 🎉"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "全部打包完成！🎉"
-          }
-        },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "全部打包完成！🎉"
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "行程"
           }
         }
       }
     },
-    "widget.liveactivity.departure.days": {
-      "extractionState": "manual",
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Noch %lld Tage"
+    "widget.empty.subtitle" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Reise hinzufügen und packen"
           }
         },
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "In %lld days"
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Add a trip to start packing"
           }
         },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "En %lld días"
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Añade un viaje para empezar"
           }
         },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Dans %lld jours"
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ajoutez un voyage pour commencer"
           }
         },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%lld 日後に出発"
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "旅行を追加して荷造りを始めましょう"
           }
         },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%lld일 후 출발"
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "여행을 추가하고 짐을 싸보세요"
           }
         },
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Em %lld dias"
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Adicione uma viagem para começar"
           }
         },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%lld 天后出发"
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "添加行程开始打包"
           }
         },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%lld 天後出發"
-          }
-        }
-      }
-    },
-    "widget.liveactivity.departure.today": {
-      "extractionState": "manual",
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Heute Abreise"
-          }
-        },
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Departing today"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Salida hoy"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Départ aujourd'hui"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "今日出発"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "오늘 출발"
-          }
-        },
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Partindo hoje"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "今天出发"
-          }
-        },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "今天出發"
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "新增行程開始打包"
           }
         }
       }
     },
-    "widget.liveactivity.departure.tomorrow": {
-      "extractionState": "manual",
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Morgen Abreise"
+    "widget.empty.title" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Noch keine Reisen"
           }
         },
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Departing tomorrow"
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No trips yet"
           }
         },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Salida mañana"
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Aún no hay viajes"
           }
         },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Départ demain"
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Aucun voyage"
           }
         },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "明日出発"
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "まだ旅行がありません"
           }
         },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "내일 출발"
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "아직 여행이 없어요"
           }
         },
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Partindo amanhã"
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nenhuma viagem ainda"
           }
         },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "明天出发"
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "还没有行程"
           }
         },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "明天出發"
-          }
-        }
-      }
-    },
-    "widget.liveactivity.progress": {
-      "extractionState": "manual",
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%1$lld / %2$lld Artikel eingepackt"
-          }
-        },
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Packed %1$lld / %2$lld items"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%1$lld / %2$lld artículos empacados"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%1$lld / %2$lld articles emballés"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%1$lld / %2$lld つ詰めました"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%1$lld / %2$lld개 챙겼어요"
-          }
-        },
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%1$lld / %2$lld itens arrumados"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "已打包 %1$lld / %2$lld 件"
-          }
-        },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "已打包 %1$lld / %2$lld 件"
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "還沒有行程"
           }
         }
       }
     },
-    "widget.progress.packed": {
-      "extractionState": "manual",
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%1$d / %2$d gepackt"
+    "widget.header.upcoming" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Anstehend"
           }
         },
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%1$d / %2$d packed"
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Upcoming"
           }
         },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%1$d / %2$d empacados"
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Próximos"
           }
         },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%1$d / %2$d emballés"
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "À venir"
           }
         },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%1$d / %2$d 個済み"
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "予定"
           }
         },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%1$d / %2$d 완료"
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "다가오는 여행"
           }
         },
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%1$d / %2$d arrumados"
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Próximas"
           }
         },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "已打包 %1$d / %2$d"
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "即将出发"
           }
         },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "已打包 %1$d / %2$d"
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "即將出發"
           }
         }
       }
     },
-    "widget.config.title": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Carry"
+    "widget.liveactivity.completed" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Alles eingepackt! 🎉"
           }
         },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "启程"
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "All packed! 🎉"
           }
         },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "啟程"
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "¡Todo empacado! 🎉"
           }
         },
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Carry"
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tout est emballé ! 🎉"
           }
         },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Carry"
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "全部詰め終わった！🎉"
           }
         },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Carry"
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "다 챙겼어요！🎉"
           }
         },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Carry"
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tudo arrumado! 🎉"
           }
         },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Carry"
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "全部打包完成！🎉"
           }
         },
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Carry"
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "全部打包完成！🎉"
           }
         }
       }
     },
-    "widget.config.description": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Customize widget appearance."
+    "widget.liveactivity.departure.days" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Noch %lld Tage"
           }
         },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "自定义小组件外观。"
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "In %lld days"
           }
         },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "自訂小組件外觀。"
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "En %lld días"
           }
         },
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Widget-Erscheinungsbild anpassen."
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dans %lld jours"
           }
         },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Personaliza la apariencia del widget."
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld 日後に出発"
           }
         },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Personnalisez l'apparence du widget."
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld일 후 출발"
           }
         },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "ウィジェットの外観をカスタマイズ。"
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Em %lld dias"
           }
         },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "위젯 외관을 커스터마이즈하세요."
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld 天后出发"
           }
         },
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Personalize a aparência do widget."
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld 天後出發"
           }
         }
       }
     },
-    "widget.config.appearance": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Appearance"
+    "widget.liveactivity.departure.today" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Heute Abreise"
           }
         },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "外观"
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Departing today"
           }
         },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "外觀"
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Salida hoy"
           }
         },
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Erscheinungsbild"
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Départ aujourd'hui"
           }
         },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Apariencia"
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "今日出発"
           }
         },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Apparence"
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "오늘 출발"
           }
         },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "外観"
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Partindo hoje"
           }
         },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "모양"
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "今天出发"
           }
         },
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Aparência"
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "今天出發"
           }
         }
       }
     },
-    "widget.appearance.automatic": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Automatic"
+    "widget.liveactivity.departure.tomorrow" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Morgen Abreise"
           }
         },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "自动"
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Departing tomorrow"
           }
         },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "自動"
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Salida mañana"
           }
         },
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Automatisch"
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Départ demain"
           }
         },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Automático"
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "明日出発"
           }
         },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Automatique"
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "내일 출발"
           }
         },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "自動"
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Partindo amanhã"
           }
         },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "자동"
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "明天出发"
           }
         },
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Automático"
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "明天出發"
           }
         }
       }
     },
-    "widget.appearance.light": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Light"
+    "widget.liveactivity.progress" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$lld / %2$lld Artikel eingepackt"
           }
         },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "浅色"
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Packed %1$lld / %2$lld items"
           }
         },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "淺色"
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$lld / %2$lld artículos empacados"
           }
         },
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Hell"
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$lld / %2$lld articles emballés"
           }
         },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Claro"
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$lld / %2$lld つ詰めました"
           }
         },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Clair"
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$lld / %2$lld개 챙겼어요"
           }
         },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "ライト"
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$lld / %2$lld itens arrumados"
           }
         },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "라이트"
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "已打包 %1$lld / %2$lld 件"
           }
         },
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Claro"
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "已打包 %1$lld / %2$lld 件"
           }
         }
       }
     },
-    "widget.appearance.dark": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Dark"
+    "widget.progress.packed" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$d / %2$d gepackt"
           }
         },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "深色"
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$d / %2$d packed"
           }
         },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "深色"
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$d / %2$d empacados"
           }
         },
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Dunkel"
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$d / %2$d emballés"
           }
         },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Oscuro"
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$d / %2$d 個済み"
           }
         },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Sombre"
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$d / %2$d 완료"
           }
         },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "ダーク"
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$d / %2$d arrumados"
           }
         },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "다크"
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "已打包 %1$d / %2$d"
           }
         },
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Escuro"
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "已打包 %1$d / %2$d"
+          }
+        }
+      }
+    },
+    "widget.config.title" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Carry"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "启程"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "啟程"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Carry"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Carry"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Carry"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Carry"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Carry"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Carry"
+          }
+        }
+      }
+    },
+    "widget.config.description" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Customize widget appearance."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "自定义小组件外观。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "自訂小組件外觀。"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Widget-Erscheinungsbild anpassen."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Personaliza la apariencia del widget."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Personnalisez l'apparence du widget."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ウィジェットの外観をカスタマイズ。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "위젯 외관을 커스터마이즈하세요."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Personalize a aparência do widget."
+          }
+        }
+      }
+    },
+    "widget.config.appearance" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Appearance"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "外观"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "外觀"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Erscheinungsbild"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Apariencia"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Apparence"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "外観"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "모양"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Aparência"
+          }
+        }
+      }
+    },
+    "widget.appearance.automatic" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Automatic"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "自动"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "自動"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Automatisch"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Automático"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Automatique"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "自動"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "자동"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Automático"
+          }
+        }
+      }
+    },
+    "widget.appearance.light" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Light"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "浅色"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "淺色"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hell"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Claro"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Clair"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ライト"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "라이트"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Claro"
+          }
+        }
+      }
+    },
+    "widget.appearance.dark" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dark"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "深色"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "深色"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dunkel"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Oscuro"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sombre"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ダーク"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "다크"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Escuro"
           }
         }
       }
     }
   },
-  "version": "1.0"
+  "version" : "1.0"
 }
