@@ -186,6 +186,13 @@ struct ContentView: View {
             didRefreshOnLaunch = true
             store.refresh()
         }
+        // 深链冷启动保护：CarryApp.onOpenURL 在 SplashView 阶段就可能把 pendingTripId
+        // 设上（Widget/通知/Universal Link 冷启动），那时 ContentView 还没 mount，
+        // onChange(of: pendingTripId) 不会重放历史值——直接丢失。这里主动消费一次。
+        // 见 memory project_carry_deeplink_timing.md。
+        if let id = router.pendingTripId {
+            handlePendingTripId(id)
+        }
     }
 
     private func handlePendingTripId(_ tripId: UUID?) {
@@ -221,7 +228,10 @@ struct ContentView: View {
         guard let action = defaults.string(forKey: "carry_shortcut_action") else { return }
         defaults.removeObject(forKey: "carry_shortcut_action")
 
-        // Small delay so NavigationStack is fully settled before we push.
+        // ⚠️ asyncAfter 反模式（CLAUDE.md 点名），但此处保留：SplashView 淡出 + ContentView
+        // 完全 attach + NavigationStack ready 三者的"就绪事件"在 SwiftUI 里没有可观察的钩子。
+        // 改为 0 ms 立即 push 在老机型/慢启动场景下会让 NavigationStack 错过这次 push。
+        // 真正消除此延迟需重构为"路径就绪通知 → 消费 pending"——超出本次 QA 修复范围。
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) {
             switch action {
             case "create_trip":
