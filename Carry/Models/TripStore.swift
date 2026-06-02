@@ -340,6 +340,10 @@ final class TripStore: ObservableObject {
 #if !targetEnvironment(macCatalyst)
         Task { @MainActor in LiveActivityManager.shared.end(for: id) }
 #endif
+        // 同步清理日历事件，避免"删行程但日历残留"幽灵
+        if UserDefaults.standard.bool(forKey: "calendar_sync_enabled") {
+            Task { CalendarManager.shared.removeTrip(id) }
+        }
         context.delete(trip)
         save()
         CarryLogger.shared.log(.tripDeleted)
@@ -384,6 +388,12 @@ final class TripStore: ObservableObject {
                 CarryLogger.shared.log(.duplicateFailed, context: "context=save_failed")
             }
         }
+        // 副作用链对齐 commitDraftTrip：排提醒 + 写日历事件（若开启同步）。
+        // Live Activity 不在此激活：复制后行程默认未打开，进入清单页时 startIfNeeded 会判定。
+        NotificationManager.scheduleReminders(for: newBundle)
+        if UserDefaults.standard.bool(forKey: "calendar_sync_enabled") {
+            Task { CalendarManager.shared.addTrip(newBundle) }
+        }
         CarryLogger.shared.log(.tripDuplicated)
         return newBundle.id
     }
@@ -417,6 +427,14 @@ final class TripStore: ObservableObject {
         }
         if cityChanged && !info.destinationCity.isEmpty {
             updateCountryCode(for: tripId, city: info.destinationCity)
+        }
+        // 同步更新日历事件：退回规划中（无日期）→ 删除；否则按当前数据重写。
+        if UserDefaults.standard.bool(forKey: "calendar_sync_enabled") {
+            if info.isDateless {
+                Task { CalendarManager.shared.removeTrip(tripId) }
+            } else {
+                Task { CalendarManager.shared.updateTrip(trip) }
+            }
         }
 #if !targetEnvironment(macCatalyst)
         Task { @MainActor in

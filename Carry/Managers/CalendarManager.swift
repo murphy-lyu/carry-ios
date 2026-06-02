@@ -167,6 +167,50 @@ final class CalendarManager {
         defaults.removeObject(forKey: Self.addedIdsKey)
     }
 
+    /// 删除某行程在 Carry 日历里的所有事件（按 `carry://trip/{uuid}` URL 标记匹配）。
+    /// 同时从已添加 ID 集合中移除——这样若用户后续重新启用同步或重新加入此行程，
+    /// 不会被 `addTrip` 的"已加过"短路逻辑跳过。删除事件失败不抛出，仅记日志。
+    func removeTrip(_ tripId: UUID) {
+        let idString = tripId.uuidString
+        var addedIds = loadAddedIds()
+        defer {
+            addedIds.remove(idString)
+            saveAddedIds(addedIds)
+        }
+        guard let cal = carryCalendar else { return }
+        // 用一个宽窗口（去年 → 明年+1）覆盖所有可能的事件。EKEventStore 没有"按 URL 直接查询"的 API。
+        let now = Date()
+        let cal0 = Calendar.current
+        guard let start = cal0.date(byAdding: .year, value: -1, to: now),
+              let end   = cal0.date(byAdding: .year, value:  2, to: now) else { return }
+        let predicate = store.predicateForEvents(withStart: start, end: end, calendars: [cal])
+        let matches = store.events(matching: predicate).filter {
+            $0.url?.absoluteString.contains(idString) == true
+        }
+        for ev in matches {
+            do {
+                try store.remove(ev, span: .thisEvent, commit: false)
+            } catch {
+                CarryLogger.shared.log(.calendarSaveFailed,
+                    context: "removeTrip ev='\(ev.title ?? "?")': \(error.localizedDescription)")
+            }
+        }
+        do {
+            try store.commit()
+        } catch {
+            CarryLogger.shared.log(.calendarSaveFailed,
+                context: "removeTrip commit: \(error.localizedDescription)")
+        }
+    }
+
+    /// 更新某行程在 Carry 日历里的事件（先删除旧的，再按当前数据重写）。
+    /// 仅在 `calendar_sync_enabled` 且行程未删除时调用；内部不再检查开关，调用方负责。
+    func updateTrip(_ trip: TripBundle) {
+        removeTrip(trip.id)
+        // 从 addedIds 移除后，addTrip 内的"已加过"短路就不会拦截。
+        _ = addTrip(trip)
+    }
+
     private func loadAddedIds() -> Set<String> {
         Set(defaults.stringArray(forKey: Self.addedIdsKey) ?? [])
     }
