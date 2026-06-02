@@ -74,8 +74,11 @@ struct TripReminderConfig: Codable, Identifiable, Equatable {
 /// - 从未设置（key 不存在）→ 默认 [0, 1]（出发当天 + 出发前1天）
 /// - 显式设为空串 ""        → []（全部关闭，新行程默认无提醒，合法）
 enum ReminderPreferences {
-    static let storageKey = "default_reminder_offsets"
-    static let timeKey = "default_reminder_minutes"  // 自午夜起的分钟数；默认 540 = 09:00
+    // 所有 Carry 自有 UserDefaults key 用 "carry." 前缀，与系统/第三方裸 key 区分，
+    // 也便于未来排查、迁移。⚠️ key 一旦发布到生产，**禁止改名**——需新 key + 一次性
+    // 迁移旧值（见 docs/decisions.md「UserDefaults / AppStorage key 一旦发布不能改名」）。
+    static let storageKey = "carry.notif.default_offsets"
+    static let timeKey = "carry.notif.default_minutes"  // 自午夜起的分钟数；默认 540 = 09:00
 
     static var enabledOffsets: Set<Int> {
         get {
