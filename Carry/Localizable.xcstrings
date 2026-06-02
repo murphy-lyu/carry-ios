@@ -42372,13 +42372,13 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "日子待定"
+            "value" : "未来某天"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "日子待定"
+            "value" : "未來某天"
           }
         }
       }
@@ -42726,13 +42726,13 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "日子待定"
+            "value" : "未来某天"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "日子待定"
+            "value" : "未來某天"
           }
         }
       }
