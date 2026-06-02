@@ -264,13 +264,16 @@ final class DataBackupManager {
     /// file within a security scope (e.g., from the file importer picker).
     @discardableResult
     func restoreFromData(_ data: Data, into context: ModelContext) throws -> (trips: Int, myItems: Int) {
+        // 关键顺序：必须先用最小 stub 只读 version，再做完整 decode。
+        // 否则新版备份含旧版未识别的非可选字段时，完整 decode 会先抛 decodingFailed
+        //（"文件损坏"），用户永远看不到 unsupportedVersion 的"请更新 App"提示。
+        struct VersionStub: Decodable { let version: Int }
+        if let stub = try? decoder.decode(VersionStub.self, from: data),
+           stub.version > Self.currentBackupVersion {
+            throw BackupError.unsupportedVersion(stub.version)
+        }
         guard let backup = try? decoder.decode(CarryBackup.self, from: data) else {
             throw BackupError.decodingFailed
-        }
-        // 防止用新版备份在旧版 App 还原（新版备份可能含旧版无法识别的非可选字段，
-        // 静默还原会得到错误数据或运行时崩溃）。直接拒绝并提示用户先更新 App。
-        guard backup.version <= Self.currentBackupVersion else {
-            throw BackupError.unsupportedVersion(backup.version)
         }
         return try performRestore(from: backup, into: context)
     }
