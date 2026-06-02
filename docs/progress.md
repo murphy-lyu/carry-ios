@@ -3,6 +3,22 @@
 ## 最后更新
 2026-06-02
 
+## 上次改动摘要（QA 全量审计 + 修复 · 2026-06-02）
+
+并行 4 个 agent 从数据完整性 / 边界错误 / 时序异步 / 本地化跨平台四维做静态 QA，列出 28 条候选问题，trust-but-verify 后分 9 批修完（PR #32-#40）。
+
+**关键修复**：
+- **数据同步链**：删/改/复制 trip 时补齐日历事件清理（CalendarManager 新增 removeTrip/updateTrip）+ 复制 trip 补排提醒
+- **备份还原**：performRestore 加 .pre-restore.json 半原子保护；还原后清旧通知/LA + 重排 + 刷 widget；BackupTrip 加 additionalDestinationsData（多目的地）；版本守护逻辑修正（先 VersionStub 判版本再完整 decode，原顺序错误导致永远走不到）
+- **LiveActivity**：endIfDeparted 按 tripId 精确过滤（原 first 取错）；跨时区"出发日"用绝对秒数比较 + 保留出发当天；startIfNeeded 加 isStarting 锁 + terminateAllAndWait 防并发重入
+- **通知调度**：updateReminderTime 加 remindersEnabled/isDateless guard；已过 fireDate 不再静默丢弃（60 秒后兜底触发）；components 显式锁 timeZone 防跨时区漂移
+- **错误处理**：CalendarManager.requestAccess / NotificationManager.requestAuthorizationIfNeeded / WeatherKit catch 不再吞错，统一记日志
+- **深链冷启动**：ContentView.onAppearCommon 主动消费 pendingTripId（防 Splash 期间设值丢失）
+- **Minor**：findNearestTrip 优先未来；regenerateScenes 自定义物品 fallback "其他" 收容防丢失
+- **本地化**：Agent 报硬编码多为误判（SwiftUI Text 字面量自动当 LocalizedStringKey），真改 CFBundleDisplayName 补 6 语言 + 删 widget 3 个伪 key + DestinationInfoView 加 minimumScaleFactor
+
+**未修**：handlePendingShortcut 的 0.35s asyncAfter（splash + NavigationStack 就绪事件无可观察钩子，根治需重构）— 加了注释明确取舍。
+
 ## 上次改动摘要（UI / 文案打磨批次 · 2026-06-02）
 
 - **设置开关启用态**：定为 `Color(.label)`（=`.primary` 黑白）。中途误用品牌橙被否决——主题黑白、无品牌橙（详见 decisions）。

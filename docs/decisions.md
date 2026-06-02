@@ -1,5 +1,39 @@
 # 决策日志
 
+## 2026-06-02 QA 全量审计修复（28 条 → 9 批 PR）
+
+### 删/改/复制 trip 的副作用必须同步 CalendarManager
+原因：日历事件靠 carry://trip/{uuid} URL 标记，但 TripStore 删除/编辑/复制 trip 时只清通知和 Live Activity，从不动日历。开启日历同步的用户会在系统日历看到"已删 trip 残留事件 / 改名后日历仍是旧标题"等幽灵。
+实现：CalendarManager 新增 removeTrip(UUID)（按 URL 匹配删除）+ updateTrip(TripBundle)（先 remove 再 addTrip）；TripStore 三处写入路径同步调用。
+
+### 备份还原半原子化（pre-restore.json 快照）
+原因：SwiftData 无原生 context 回滚，performRestore 先 delete 全表再循环 insert，中途失败可清空所有用户数据。
+实现：delete 前把当前 backup.json 复制成 carry_backup.pre-restore.json，失败时记日志，用户/作者可手工恢复。还原成功后强制清旧通知 + 结束所有 LA + 按新数据重排提醒 + 写新 widget snapshot（restoreFromBackup/restoreFromData 共用 applyPostRestoreSideEffects）。
+
+### 备份版本判断必须走 VersionStub 优先
+原因：原"先完整 decode 再判 version"顺序错——CarryBackup 含新字段时完整 decode 先抛 decodingFailed（"文件损坏"），unsupportedVersion（"请更新 App"）永远走不到。
+实现：先用一个只含 version 字段的 VersionStub decode 判版本，通过后再做完整 decode。
+
+### LiveActivity 防并发重入 + 跨时区出发日比较
+原因：① endIfDeparted 用 first(where: { _ in true }) 等价 first，多 Activity 残留时取错条目。② startIfNeeded 内 terminateAll 是 fire-and-forget 异步，紧随的同步 Activity.request 与旧 end Task 竞争，撞 ActivityKit 单 attribute 上限。③ 按 startOfDay 比较"出发日"在跨时区飞行时漂移一天。
+实现：① 按 attributes.tripId == currentTripId 精确过滤；② 加 isStarting 锁 + 新增 terminateAllAndWait async 版本，await 真正等旧 end 完成再 request；③ 改为按"departureDate + 1 天 >= now"绝对秒数比较，保留出发当天，仅在出发次日才结束。
+
+### 通知调度：guard 缺失 + 已过 fireDate 降级 + 时区锁定
+原因：① updateReminderTime 不 guard 总开关/dateless，关掉总开关后改某档时间会排出本该不存在的通知。② scheduleReminder 用 fireDate > now 严格判断，已过 fireDate 静默丢弃用户错过整个档位。③ UNCalendarNotificationTrigger 按"触发时系统时区"重新解，跨时区飞行后通知时间漂移。
+实现：① TripStore.updateReminderTime 加 if remindersEnabled && !isDateless；② NotificationManager.scheduleReminder fireDate 已过时改用 UNTimeIntervalNotificationTrigger 60 秒后触发一次（兜底）；③ 显式 comps.timeZone = TimeZone.current 锁住调度时本机时区。
+
+### 深链冷启动 pendingTripId 主动消费防丢失
+原因：CarryApp.onOpenURL 在 SplashView 阶段就可能把 router.pendingTripId 设上（Widget/通知/Universal Link 冷启动），但 ContentView 还没 mount，onChange(of: pendingTripId) 不会重放历史值 → 用户被深链冷启动进 App，看不到目标行程。已记 memory project_carry_deeplink_timing.md。
+实现：ContentView.onAppearCommon 末尾主动 if let id = router.pendingTripId { handlePendingTripId(id) }。
+
+### CalendarManager / NotificationManager 不再 try? 吞错
+原因：requestAccess、requestAuthorizationIfNeeded 失败原因被吞掉，开关显示"已开"但用户收不到提醒、写日历无效，无任何排查线索。
+实现：catch 内记日志（calendarSaveFailed / reminderScheduleFailed），CalendarManager 新增 authorizationStatus computed 供 UI 区分"未决定 / 已拒绝 / 已授权"。
+
+### Agent 报硬编码字符串多为误判
+原因：SwiftUI `Text("xxx")` 字面量会自动当 LocalizedStringKey 查 xcstrings，只要表里有 key 就工作正常。Agent 不知道这个 SwiftUI 行为，把所有字面量都报成"硬编码"。
+实现教训：本地化审计需先用脚本 verify 每个字面量是否在 xcstrings 中存在 + 是否有完整翻译，再判断是否真硬编码。本轮 28 条候选中本地化部分大幅消减为 3 条真改（CFBundleDisplayName 补 6 语言 + 删 widget 伪 key + DestinationInfoView minimumScaleFactor）。
+
 ## 版本升级安全约定（长期有效，每次大版本必查）
 
 ### SwiftData 非轻量变更必须冻结旧 schema 快照，否则老用户启动崩溃
