@@ -62,14 +62,23 @@ enum CarryQuickAction {
     }
 }
 
-/// Returns the trip whose departure date is closest to today (past or future).
+/// 返回"最近一次即将出发"的行程：优先选未来最近的；若没有未来行程，再 fallback
+/// 到最近的过去行程。修复点：原 `abs(timeIntervalSinceNow)` 不分过去未来，会选到
+/// "昨天刚结束的行程"而忽略"3 天后的下次行程"，与 QuickAction「Nearest Trip」
+/// 的产品意图不符。
 private func findNearestTrip() throws -> TripBundle? {
     let context = ModelContext(CarryApp.container)
+    let today = Calendar.current.startOfDay(for: Date())
     let trips = try context.fetch(FetchDescriptor<TripBundle>())
         .filter { !$0.isDateless }   // 无日期行程无出发日，不参与"最近行程"
-    return trips.min(by: {
-        abs($0.departureDate.timeIntervalSinceNow) < abs($1.departureDate.timeIntervalSinceNow)
-    })
+    // 优先未来（含今天出发）
+    if let upcoming = trips
+        .filter({ $0.departureDate >= today })
+        .min(by: { $0.departureDate < $1.departureDate }) {
+        return upcoming
+    }
+    // 全是过去行程时 fallback 到最近的过去行程
+    return trips.max(by: { $0.departureDate < $1.departureDate })
 }
 
 // MARK: - 1. New Trip
