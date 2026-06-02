@@ -1,5 +1,18 @@
 # 决策日志
 
+## 版本升级安全约定（长期有效，每次大版本必查）
+
+### SwiftData 非轻量变更必须冻结旧 schema 快照，否则老用户启动崩溃
+症状：新 SchemaV2 的 models 仍指向 live 类 → checksum 与 V1 相同 → 启动崩溃 "Duplicate version checksums detected"（已踩过 isDateless 一次）。这是最严重的升级事故，让所有老用户无法启动。
+约定：非轻量变更（重命名/删除字段、改关系类型）时，必须为上一版本建 CarrySchemaV{N}Frozen.swift 冻结快照（只存结构，不含业务逻辑）。详细模板和步骤见 `CarrySchema.swift` 末尾注释。轻量变更（加带默认值字段）不需要新版本，SwiftData 自动处理。
+每次变更必做：① 判断轻量/非轻量 ② 非轻量则冻结快照 ③ 真机用老版本数据验证迁移。
+
+### CarryBackup.version 字段须在 restore 时做版本判断
+现在备份 version 写了 1，但 restoreFromData 未读 version。一旦备份格式出现不兼容变更（新增非可选字段），用新版备份在旧版 App 还原会崩。约定：每次改 CarryBackup 结构时，同步在 restoreFromData 加 `guard backup.version <= currentVersion` 的降级处理，避免跨版本还原崩溃。当前 v1 尚未上线，首版发布后开始执行。
+
+### UserDefaults / AppStorage key 一旦发布不能改名
+改名等于旧用户所有设置丢失（不会崩，但体验差）。约定：key 确定后视为公开接口，只能新增 key + 在 App 首次使用时做一次性迁移（读旧 key 写新 key 然后删旧 key）；不能直接在代码里改 key 字符串。
+
 ## 2026-05-31 App Icon / Live Activity
 
 ### App Icon 用 Asset Catalog 单 1024，预览另存 imageset

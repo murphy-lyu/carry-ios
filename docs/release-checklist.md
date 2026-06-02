@@ -81,6 +81,18 @@
 
 ---
 
+## ⛔ 版本升级必查（每次大版本发布前，防止老用户崩溃）
+
+> 首版上线后，每次发布新版本必须额外对照此节。
+
+- [ ] **SwiftData schema 变更类型判断**
+  - 只加带默认值的字段 → 轻量迁移，SwiftData 自动处理，无需新版本 ✅
+  - 重命名/删除字段/改关系 → **非轻量**，必须冻结旧版快照 + 新建 SchemaV{N+1}（见 `CarrySchema.swift` 末尾模板；做错会让所有老用户启动崩溃）
+- [ ] **真机迁移验证**：用真实老版本数据安装新版，确认数据完整、App 正常启动（模拟器复现不了迁移崩溃）
+- [ ] **CarryBackup 格式变更**：改了 `CarryBackup` 结构 → 同步在 `restoreFromData` 加版本判断，防止跨版本还原崩溃
+- [ ] **UserDefaults key 变更**：key 不能直接改名，须新 key + 一次性迁移旧值 + 删旧 key
+- [ ] **App Group / Widget 快照格式**：`WidgetTripSnapshot` 字段变更须保持向后兼容（Widget 进程可能读旧格式）
+
 ## 5. 发布流程 & 其他
 
 - [ ] **TestFlight 内测**：提交正式版前用 Release build 完整跑一遍核心流程
