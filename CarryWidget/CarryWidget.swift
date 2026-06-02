@@ -17,6 +17,10 @@ private let widgetSnapshotKey = "carry_widget_trips"
 
 /// Field-identical mirror of the main app's `WidgetTripSnapshot`, decoded from the
 /// JSON the app writes into the App Group UserDefaults.
+///
+/// ⚠️ 升级兼容：未来给 `WidgetTripSnapshot` 加新字段时，**这里对应字段必须是可选或
+/// 自带默认值**，否则用户装了新版主 App（写入含新字段的 JSON）+ 未刷新的旧 Widget
+/// extension 进程会解码失败，Widget 显示空白/崩溃。当前字段均为 V1 原始字段。
 struct WidgetTrip: Codable, Identifiable {
     let tripId: String
     let name: String

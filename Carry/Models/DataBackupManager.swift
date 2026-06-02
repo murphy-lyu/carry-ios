@@ -162,7 +162,7 @@ final class DataBackupManager {
         }
 
         let backup = CarryBackup(
-            version: 1,
+            version: Self.currentBackupVersion,
             createdAt: Date(),
             trips: backupTrips,
             myItems: backupMyItems,
@@ -214,14 +214,24 @@ final class DataBackupManager {
 
     // MARK: - Restore
 
+    /// 当前 App 能读取的最高备份版本。备份格式升级时同步递增。
+    /// 用来防止"用新版备份在旧版 App 还原"——若 backup.version > currentBackupVersion
+    /// 则提示用户先更新 App，而不是崩溃或静默还原出错误数据。
+    static let currentBackupVersion = 1
+
     enum BackupError: LocalizedError {
         case fileNotFound
         case decodingFailed
+        case unsupportedVersion(Int)
 
         var errorDescription: String? {
             switch self {
-            case .fileNotFound:  return NSLocalizedString("settings.data.restore.error.not_found", comment: "")
-            case .decodingFailed: return NSLocalizedString("settings.data.restore.error.corrupt", comment: "")
+            case .fileNotFound:
+                return NSLocalizedString("settings.data.restore.error.not_found", comment: "")
+            case .decodingFailed:
+                return NSLocalizedString("settings.data.restore.error.corrupt", comment: "")
+            case .unsupportedVersion(let v):
+                return String(format: NSLocalizedString("settings.data.restore.error.version", comment: ""), v)
             }
         }
     }
@@ -247,6 +257,11 @@ final class DataBackupManager {
     func restoreFromData(_ data: Data, into context: ModelContext) throws -> (trips: Int, myItems: Int) {
         guard let backup = try? decoder.decode(CarryBackup.self, from: data) else {
             throw BackupError.decodingFailed
+        }
+        // 防止用新版备份在旧版 App 还原（新版备份可能含旧版无法识别的非可选字段，
+        // 静默还原会得到错误数据或运行时崩溃）。直接拒绝并提示用户先更新 App。
+        guard backup.version <= Self.currentBackupVersion else {
+            throw BackupError.unsupportedVersion(backup.version)
         }
         return try performRestore(from: backup, into: context)
     }

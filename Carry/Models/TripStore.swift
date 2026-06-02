@@ -2036,6 +2036,10 @@ final class TripStore: ObservableObject {
 /// Lightweight, SwiftData-free mirror of a trip, shared with CarryWidget via the
 /// App Group UserDefaults. The widget defines a field-identical struct and decodes
 /// the same JSON — no shared type / pbxproj change needed.
+///
+/// ⚠️ 升级兼容：加字段时，**主 App 此处和 CarryWidget/CarryWidget.swift 的 WidgetTrip
+/// 必须同步修改**，且新字段在 widget 侧应为可选 / 有默认值，否则旧 Widget extension
+/// 解码新 JSON 会失败、显示空白或崩溃。删字段同理（保持向后兼容字段）。
 struct WidgetTripSnapshot: Codable {
     let tripId: String
     let name: String

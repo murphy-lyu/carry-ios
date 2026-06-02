@@ -45486,6 +45486,64 @@
           }
         }
       }
+    },
+    "settings.data.restore.error.version" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dieses Backup (Version %lld) stammt aus einer neueren Carry-Version. Bitte aktualisiere die App zuerst."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "This backup (version %lld) is from a newer version of Carry. Please update the app first."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Esta copia de seguridad (versión %lld) es de una versión más reciente de Carry. Actualiza la app primero."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Cette sauvegarde (version %lld) provient d’une version plus récente de Carry. Mettez d’abord l’app à jour."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "このバックアップ（バージョン %lld）は新しいバージョンの Carry で作成されました。先にアプリを更新してください。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "이 백업(버전 %lld)은 더 최신 버전의 Carry에서 만든 거예요. 먼저 앱을 업데이트해 주세요."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Este backup (versão %lld) é de uma versão mais recente do Carry. Atualize o app primeiro."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "此备份（版本 %lld）由更新版本的 Carry 创建。请先更新 App。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "此備份（版本 %lld）由更新版本的 Carry 建立。請先更新 App。"
+          }
+        }
+      }
     }
   },
   "version" : "1.0"
