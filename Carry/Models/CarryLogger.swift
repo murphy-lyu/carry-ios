@@ -47,6 +47,8 @@ final class CarryLogger {
         case backupRestored         = "backup_restored"
         case backupRestoreFailed    = "backup_restore_failed"
         case backupWriteFailed      = "backup_write_failed"
+        case backupSafetyCopyCreated = "backup_safety_copy_created"
+        case backupCorrupted        = "backup_corrupted"
         // 物品选择器
         case pickerOpened           = "picker_opened"
         case pickerCategoryExpanded = "picker_category_expanded"
@@ -129,7 +131,7 @@ final class CarryLogger {
         .tripDataEmpty, .tripSaveFailed, .tripEditSaveFailed,
         .itemAddFailed, .itemDeleteFailed, .orphanTrip, .orphanSection,
         .sortIndexOutOfBounds, .apiTimeout, .apiError,
-        .iconSwitchFailed, .backupRestoreFailed, .backupWriteFailed, .reminderPermissionDenied,
+        .iconSwitchFailed, .backupRestoreFailed, .backupWriteFailed, .backupCorrupted, .reminderPermissionDenied,
         .abnormalTermination, .geocodeFailed,
         .destinationDecodeFailed, .coffeePurchaseFailed, .coffeeProductsFetchFailed,
         .calendarSaveFailed, .liveActivityStartFailed,

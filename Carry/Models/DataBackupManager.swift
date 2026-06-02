@@ -43,6 +43,8 @@ struct BackupTrip: Codable {
     var countryCode: String
     var latitude: Double
     var longitude: Double
+    /// 多目的地行程的次目的地（2nd city onward）JSON。可选以兼容旧备份。
+    var additionalDestinationsData: Data?
     var sections: [BackupPackingSection]
 }
 
@@ -142,6 +144,7 @@ final class DataBackupManager {
                 countryCode: trip.countryCode,
                 latitude: trip.latitude,
                 longitude: trip.longitude,
+                additionalDestinationsData: trip.additionalDestinationsData.isEmpty ? nil : trip.additionalDestinationsData,
                 sections: sections
             )
         }
@@ -217,7 +220,13 @@ final class DataBackupManager {
     /// 当前 App 能读取的最高备份版本。备份格式升级时同步递增。
     /// 用来防止"用新版备份在旧版 App 还原"——若 backup.version > currentBackupVersion
     /// 则提示用户先更新 App，而不是崩溃或静默还原出错误数据。
-    static let currentBackupVersion = 1
+    ///
+    /// 版本历史：
+    /// - v1（首版）：基础字段
+    /// - v2：BackupTrip 加 additionalDestinationsData（多目的地）；CarryBackup 加
+    ///   defaultReminderOffsets（通知偏好）；二者均为可选，v1 旧备份在 v2 App 还原
+    ///   时按 nil 处理（多目的地丢失/偏好保持现状）。
+    static let currentBackupVersion = 2
 
     enum BackupError: LocalizedError {
         case fileNotFound
@@ -269,6 +278,16 @@ final class DataBackupManager {
     // MARK: - Core restore
 
     private func performRestore(from backup: CarryBackup, into context: ModelContext) throws -> (trips: Int, myItems: Int) {
+        // 原子化保护：在执行破坏性 delete 前先把当前 backup.json 复制成 .pre-restore.json，
+        // 任一步失败时记录路径到日志，用户/作者可手动从该文件恢复（避免 delete 中途崩溃后数据全无）。
+        if let backupURL = backupURL,
+           FileManager.default.fileExists(atPath: backupURL.path) {
+            let safety = backupURL.deletingPathExtension().appendingPathExtension("pre-restore.json")
+            try? FileManager.default.removeItem(at: safety)
+            try? FileManager.default.copyItem(at: backupURL, to: safety)
+            CarryLogger.shared.log(.backupSafetyCopyCreated, context: "path=\(safety.lastPathComponent)")
+        }
+
         // Wipe existing data (cascade deletes PackingSection + PackingItem)
         try context.delete(model: TripBundle.self)
         try context.delete(model: MyItem.self)
@@ -299,6 +318,10 @@ final class DataBackupManager {
             trip.countryCode = bt.countryCode
             trip.latitude = bt.latitude
             trip.longitude = bt.longitude
+            // 还原多目的地数据（旧备份无此字段时保持默认空 Data）
+            if let extra = bt.additionalDestinationsData {
+                trip.additionalDestinationsData = extra
+            }
             context.insert(trip)
 
             for bs in bt.sections.sorted(by: { $0.sortOrder < $1.sortOrder }) {
