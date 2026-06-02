@@ -16,12 +16,22 @@ enum NotificationManager {
         let center = UNUserNotificationCenter.current()
         let settings = await center.notificationSettings()
         guard settings.authorizationStatus == .notDetermined else { return }
-        _ = try? await center.requestAuthorization(options: [.alert, .sound, .badge])
+        do {
+            _ = try await center.requestAuthorization(options: [.alert, .sound, .badge])
+        } catch {
+            // 原实现 try? 直接吞错；失败时记日志便于排查（例如配置文件缺权限项等系统级错误）
+            CarryLogger.shared.log(.reminderScheduleFailed,
+                context: "requestAuthorization threw: \(error.localizedDescription)")
+        }
     }
 
     static func authorizationStatus() async -> UNAuthorizationStatus {
         await UNUserNotificationCenter.current().notificationSettings().authorizationStatus
     }
+
+    // 注：权限被拒后排的通知由系统层静默忽略；本类的 `schedule(...)` add 回调
+    // 会捕获 add error 并写入 reminderScheduleFailed 日志，足够排查。无需在
+    // schedule 前再做一次 sync 状态检查（iOS 没有 sync API）。
 
     // MARK: - Scheduling
 

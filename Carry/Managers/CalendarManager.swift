@@ -23,8 +23,17 @@ final class CalendarManager {
         do {
             return try await store.requestFullAccessToEvents()
         } catch {
+            // 记日志，便于排查（原实现直接吞错，与"用户主动拒绝"无法区分）
+            CarryLogger.shared.log(.calendarSaveFailed,
+                context: "requestFullAccessToEvents threw: \(error.localizedDescription)")
             return false
         }
+    }
+
+    /// 返回当前权限状态，用于 UI 区分"未决定 / 已拒绝 / 已授权"以提供合适的引导。
+    /// 例：被拒后引导用户去「设置 → Carry → 日历」开权限，而不是无差别提示"开启失败"。
+    var authorizationStatus: EKAuthorizationStatus {
+        EKEventStore.authorizationStatus(for: .event)
     }
 
     var hasAccess: Bool {
