@@ -32621,61 +32621,120 @@
         }
       }
     },
+    "settings.data.import.action.merge" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Zusammenführen"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Merge"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Combinar"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Fusionner"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "統合"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "병합"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mesclar"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "合并导入"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "合併匯入"
+          }
+        }
+      }
+    },
     "settings.data.import.confirm.message" : {
       "extractionState" : "manual",
       "localizations" : {
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Alle aktuellen Reisen werden durch die Daten aus der ausgewählten Datei ersetzt. Dies kann nicht rückgängig gemacht werden."
+            "value" : "Zusammenführen fügt neue Reisen aus dem Backup hinzu, ohne vorhandene Daten zu löschen. Ersetzen löscht zuerst alle aktuellen Daten."
           }
         },
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "All current trips will be replaced with the data from the selected file. This cannot be undone."
+            "value" : "Merge adds new trips from the backup without removing your current data. Replace removes all current data first."
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Todos los viajes actuales serán reemplazados por los datos del archivo seleccionado. Esta acción no se puede deshacer."
+            "value" : "Combinar añade los nuevos viajes del respaldo sin eliminar los datos actuales. Reemplazar elimina todos los datos actuales primero."
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Tous les voyages actuels seront remplacés par les données du fichier sélectionné. Cette action est irréversible."
+            "value" : "Fusionner ajoute les nouveaux voyages de la sauvegarde sans supprimer les données actuelles. Remplacer supprime d'abord toutes les données actuelles."
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "現在の旅行データはすべて選択したファイルのデータに置き換えられます。この操作は元に戻せません。"
+            "value" : "「統合」はバックアップの新しい旅行を既存データを保持したまま追加します。「置き換え」は現在のデータをすべて削除してからインポートします。"
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "모든 현재 여행이 선택한 파일의 데이터로 교체됩니다. 이 작업은 되돌릴 수 없습니다."
+            "value" : "병합은 현재 데이터를 유지하면서 백업의 새 여행을 추가합니다. 교체는 현재 데이터를 모두 삭제한 후 가져옵니다."
           }
         },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Todas as viagens atuais serão substituídas pelos dados do arquivo selecionado. Isso não pode ser desfeito."
+            "value" : "Mesclar adiciona novas viagens do backup sem remover seus dados atuais. Substituir remove todos os dados atuais primeiro."
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "当前所有行程将被所选文件中的数据替换，此操作无法撤销。"
+            "value" : "「合并」仅导入备份中的新行程，不影响现有数据；「替换」会清除当前所有数据后重新导入。"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "目前所有行程將被所選檔案中的資料取代，此操作無法復原。"
+            "value" : "「合併」僅匯入備份中的新行程，不影響現有資料；「取代」會清除目前所有資料後重新匯入。"
           }
         }
       }
@@ -32735,6 +32794,183 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "匯入此備份？"
+          }
+        }
+      }
+    },
+    "settings.data.import.merge.none" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Keine neuen Reisen zum Zusammenführen"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No new trips to merge"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No hay nuevos viajes para combinar"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Aucun nouveau voyage à fusionner"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "統合する新しい旅行はありません"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "병합할 새 여행이 없습니다"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nenhuma viagem nova para mesclar"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "备份中没有新行程"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "備份中沒有新行程"
+          }
+        }
+      }
+    },
+    "settings.data.import.merge.success" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld Reisen zusammengeführt"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Merged %lld trips"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld viajes combinados"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld voyages fusionnés"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld件の旅行を統合しました"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld개의 여행이 병합되었습니다"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld viagens mescladas"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "已合并 %lld 个行程"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "已合併 %lld 個行程"
+          }
+        }
+      }
+    },
+    "settings.data.import.merge.success.one" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "1 Reise zusammengeführt"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Merged 1 trip"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "1 viaje combinado"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "1 voyage fusionné"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "1件の旅行を統合しました"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "1개의 여행이 병합되었습니다"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "1 viagem mesclada"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "已合并 1 个行程"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "已合併 1 個行程"
           }
         }
       }

@@ -195,6 +195,15 @@ final class TripStore: ObservableObject {
         return result
     }
 
+    /// 合并导入：将备份中在本地不存在的行程 / 物品模板插入，不影响现有数据。
+    @discardableResult
+    func mergeFromData(_ data: Data) throws -> (trips: Int, myItems: Int) {
+        let existingIds = Set(trips.map(\.id))   // 记录 merge 前的 trip ID，用于识别新增的
+        let result = try DataBackupManager.shared.mergeFromData(data, into: context)
+        applyPostMergeSideEffects(previousTripIds: existingIds)
+        return result
+    }
+
     /// 还原后清理副作用：旧 trip 的 pending 通知 / Live Activity 必须全清，否则会出现
     /// "通知 ID 指向已不存在的 trip" 或"灵动岛挂着旧行程"等幽灵。然后按新还原的 trip
     /// 重排所有提醒，并触发 widget snapshot 重写。
@@ -212,6 +221,20 @@ final class TripStore: ObservableObject {
             NotificationManager.scheduleReminders(for: trip)
         }
         // 5. 写一份新 widget snapshot
+        writeWidgetSnapshot()
+    }
+
+    /// 合并后清理副作用：与 restore 不同，**不能清旧通知 / 不能 endAll LA**——
+    /// 本地原有行程仍然存在，那些通知和 Live Activity 是用户当前正在用的。
+    /// 只需：① 刷 trips → ② 给"本次新合并进来"的 trip 排提醒 → ③ 刷 widget snapshot。
+    private func applyPostMergeSideEffects(previousTripIds: Set<UUID>) {
+        fetchTrips()
+        // 只给"merge 后新出现"的 trip 排提醒；原有 trip 的提醒保持不动。
+        for trip in trips where !previousTripIds.contains(trip.id)
+                              && trip.remindersEnabled
+                              && !trip.isDateless {
+            NotificationManager.scheduleReminders(for: trip)
+        }
         writeWidgetSnapshot()
     }
 
@@ -414,12 +437,16 @@ final class TripStore: ObservableObject {
         // Insert in-memory first to avoid full-list refetch jumpiness in UI.
         let insertIndex = min(originalIndex + 1, trips.count)
         trips.insert(newBundle, at: insertIndex)
-        DispatchQueue.main.async {
-            do {
-                try self.context.save()
-            } catch {
-                CarryLogger.shared.log(.duplicateFailed, context: "context=save_failed")
-            }
+        // ⚠️ save 必须同步：原 DispatchQueue.main.async 异步保存 + 紧随的同步
+        // scheduleReminders/calendar addTrip 会产生"DB 里没这行程但通知/日历有"的幽灵
+        // （save 失败时副作用已经执行）。改为同步 save，失败时回滚 in-memory 插入并跳过副作用。
+        do {
+            try context.save()
+        } catch {
+            CarryLogger.shared.log(.duplicateFailed, context: "context=save_failed")
+            trips.remove(at: insertIndex)  // 回滚 in-memory 插入
+            context.delete(newBundle)
+            return nil
         }
         // 副作用链对齐 commitDraftTrip：排提醒 + 写日历事件（若开启同步）。
         // Live Activity 不在此激活：复制后行程默认未打开，进入清单页时 startIfNeeded 会判定。

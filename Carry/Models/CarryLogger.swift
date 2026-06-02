@@ -45,6 +45,7 @@ final class CarryLogger {
         // 数据备份 / 恢复
         case backupExported         = "backup_exported"
         case backupRestored         = "backup_restored"
+        case backupMerged           = "backup_merged"
         case backupRestoreFailed    = "backup_restore_failed"
         case backupWriteFailed      = "backup_write_failed"
         case backupSafetyCopyCreated = "backup_safety_copy_created"
