@@ -36,11 +36,10 @@ enum NotificationManager {
 
     static func scheduleReminder(for trip: TripBundle, config: TripReminderConfig) {
         let now = Date()
-        guard let fireDate = config.fireDate(relativeTo: trip.departureDate),
-              fireDate > now else { return }
+        guard let fireDate = config.fireDate(relativeTo: trip.departureDate) else { return }
+        // 行程出发日已过：不再排提醒（用户卸/重装等场景下的合理短路）
+        guard trip.departureDate >= Calendar.current.startOfDay(for: now) else { return }
 
-        let calendar = Calendar.current
-        let comps = calendar.dateComponents([.year, .month, .day, .hour, .minute], from: fireDate)
         let destination = trip.destinationCity.isEmpty ? trip.name : trip.destinationCity
         let (title, body) = notificationContent(
             daysBeforeDeparture: config.daysBeforeDeparture,
@@ -48,12 +47,36 @@ enum NotificationManager {
             destination: destination
         )
 
-        schedule(
-            id: identifier(tripId: trip.id, configId: config.id),
-            title: title,
-            body: body,
-            components: comps
-        )
+        // C8 时区锁定：显式把 timeZone 写进 components。否则
+        // UNCalendarNotificationTrigger 默认按"触发时系统时区"重新解析，
+        // 跨时区飞行后通知时间会漂移（北京设的 9 点 → 落地纽约变 EST 9 点）。
+        var comps = Calendar.current.dateComponents([.year, .month, .day, .hour, .minute], from: fireDate)
+        comps.timeZone = TimeZone.current
+
+        // C7 已过 fireDate 的降级：fireDate 已过但行程未到（如早 8 点编辑"出发当天 7 点"
+        // 的提醒），不静默丢弃 → 60 秒后触发一次，让用户至少收到一次。
+        let identifier = identifier(tripId: trip.id, configId: config.id)
+        if fireDate > now {
+            schedule(id: identifier, title: title, body: body, components: comps)
+        } else {
+            scheduleAfterInterval(id: identifier, title: title, body: body, interval: 60)
+        }
+    }
+
+    /// 一次性 N 秒后触发（用于"已过 fireDate"的降级路径）
+    private static func scheduleAfterInterval(id: String, title: String, body: String, interval: TimeInterval) {
+        let content = UNMutableNotificationContent()
+        content.title = title
+        content.body = body
+        content.sound = .default
+        let trigger = UNTimeIntervalNotificationTrigger(timeInterval: max(1, interval), repeats: false)
+        let request = UNNotificationRequest(identifier: id, content: content, trigger: trigger)
+        UNUserNotificationCenter.current().add(request) { error in
+            if let error {
+                CarryLogger.shared.log(.reminderScheduleFailed,
+                    context: "fallback id=\(id) error=\(error.localizedDescription)")
+            }
+        }
     }
 
     private static func notificationContent(
