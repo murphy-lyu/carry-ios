@@ -520,7 +520,11 @@ final class TripStore: ObservableObject {
         configs[index].minute = minute
         trip.reminderConfigs = configs
         save()
-        NotificationManager.scheduleReminder(for: trip, config: configs[index])
+        // 只在行程总开关开 + 非 dateless 时重排：否则会挂上本不该存在的通知
+        // （如总开关已 OFF 或行程已退回规划中时改某档时间）。
+        if trip.remindersEnabled && !trip.isDateless {
+            NotificationManager.scheduleReminder(for: trip, config: configs[index])
+        }
     }
 
     func toggleItem(tripId: UUID, itemId: UUID) {
