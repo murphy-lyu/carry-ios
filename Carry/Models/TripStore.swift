@@ -713,7 +713,7 @@ final class TripStore: ObservableObject {
                     item.isPacked = wasPacked
                 }
             }
-            if let customs = customItemsBySection[section.title] {
+            if let customs = customItemsBySection.removeValue(forKey: section.title) {
                 let nextOrderStart = ((section.items ?? []).map(\.sortOrder).max() ?? -1) + 1
                 for (offset, custom) in customs.enumerated() {
                     let item = PackingItem(
@@ -728,19 +728,45 @@ final class TripStore: ObservableObject {
             }
         }
 
+        // 兜底：若用户曾改过某 section 标题，customItemsBySection 里的 key（旧 title）
+        // 在 newSections 中找不到匹配，会被静默丢弃。把剩下的自定义物品收容到
+        // fallback "Other" section，避免数据丢失。
+        var sectionsToWrite = newSections
+        if !customItemsBySection.isEmpty {
+            let fallbackTitle = NSLocalizedString("packing.section.other", comment: "")
+            let fallback = PackingSection(title: fallbackTitle, sortOrder: sectionsToWrite.count)
+            var order = 0
+            for (_, customs) in customItemsBySection {
+                for custom in customs {
+                    let item = PackingItem(
+                        name: custom.name,
+                        quantity: custom.quantity,
+                        isPacked: custom.isPacked,
+                        isAlert: false,
+                        sortOrder: order
+                    )
+                    fallback.items?.append(item)
+                    order += 1
+                }
+            }
+            sectionsToWrite.append(fallback)
+            CarryLogger.shared.log(.autoPackTriggered,
+                context: "rescued_orphan_customs=\(order)")
+        }
+
         // Replace
         // Delete old sections explicitly (cascade should handle items)
         for section in trip.safeSections {
             context.delete(section)
         }
         // Insert new sections + their items
-        for section in newSections {
+        for section in sectionsToWrite {
             context.insert(section)
             for item in section.items ?? [] {
                 context.insert(item)
             }
         }
-        trip.sections = newSections
+        trip.sections = sectionsToWrite
         trip.selectedSceneKeys = keys
         save()
         CarryLogger.shared.log(.autoPackTriggered, context: "scenes=\(keys.count)")
