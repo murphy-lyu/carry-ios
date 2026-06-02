@@ -281,12 +281,16 @@ final class DataBackupManager {
     // MARK: - Core restore
 
     private func performRestore(from backup: CarryBackup, into context: ModelContext) throws -> (trips: Int, myItems: Int) {
-        // 原子化保护：在执行破坏性 delete 前先把当前 backup.json 复制成 .pre-restore.json，
-        // 任一步失败时记录路径到日志，用户/作者可手动从该文件恢复（避免 delete 中途崩溃后数据全无）。
+        // 原子化保护：在执行破坏性 delete 前先把当前 backup.json 复制成
+        // .pre-restore-{epoch}.json，任一步失败时用户/作者可手动恢复。
+        // ⚠️ 用 epoch 时间戳后缀而非固定名 — 用户连续 restore 失败多次时，
+        // 每次保留独立安全副本，避免被下一次覆盖丢失原始数据。
         if let backupURL = backupURL,
            FileManager.default.fileExists(atPath: backupURL.path) {
-            let safety = backupURL.deletingPathExtension().appendingPathExtension("pre-restore.json")
-            try? FileManager.default.removeItem(at: safety)
+            let epoch = Int(Date().timeIntervalSince1970)
+            let safety = backupURL
+                .deletingPathExtension()
+                .appendingPathExtension("pre-restore-\(epoch).json")
             try? FileManager.default.copyItem(at: backupURL, to: safety)
             CarryLogger.shared.log(.backupSafetyCopyCreated, context: "path=\(safety.lastPathComponent)")
         }

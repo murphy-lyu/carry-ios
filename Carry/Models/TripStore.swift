@@ -414,12 +414,16 @@ final class TripStore: ObservableObject {
         // Insert in-memory first to avoid full-list refetch jumpiness in UI.
         let insertIndex = min(originalIndex + 1, trips.count)
         trips.insert(newBundle, at: insertIndex)
-        DispatchQueue.main.async {
-            do {
-                try self.context.save()
-            } catch {
-                CarryLogger.shared.log(.duplicateFailed, context: "context=save_failed")
-            }
+        // ⚠️ save 必须同步：原 DispatchQueue.main.async 异步保存 + 紧随的同步
+        // scheduleReminders/calendar addTrip 会产生"DB 里没这行程但通知/日历有"的幽灵
+        // （save 失败时副作用已经执行）。改为同步 save，失败时回滚 in-memory 插入并跳过副作用。
+        do {
+            try context.save()
+        } catch {
+            CarryLogger.shared.log(.duplicateFailed, context: "context=save_failed")
+            trips.remove(at: insertIndex)  // 回滚 in-memory 插入
+            context.delete(newBundle)
+            return nil
         }
         // 副作用链对齐 commitDraftTrip：排提醒 + 写日历事件（若开启同步）。
         // Live Activity 不在此激活：复制后行程默认未打开，进入清单页时 startIfNeeded 会判定。
