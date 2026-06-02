@@ -23651,55 +23651,55 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Heute Abend packen — du wirst dir morgen früh dankbar sein."
+            "value" : "Morgen geht’s los — pack heute Abend und leg deine Dokumente bereit."
           }
         },
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Pack tonight — you'll thank yourself in the morning."
+            "value" : "Leaving tomorrow — pack tonight and get your documents ready."
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Haz las maletas esta noche — te lo agradecerás por la mañana."
+            "value" : "Sales mañana: haz la maleta esta noche y prepara tus documentos."
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Faites vos valises ce soir — vous vous en féliciterez demain matin."
+            "value" : "Départ demain — faites vos bagages ce soir et préparez vos documents."
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "今夜荷造りを — 明日の朝に感謝するはず。"
+            "value" : "明日出発。今夜のうちに荷造りを済ませ、書類も準備しておきましょう。"
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "오늘 밤 짐을 싸세요 — 내일 아침 고마워할 거예요."
+            "value" : "내일 출발이에요. 오늘 밤 짐을 챙기고 서류도 준비해 두세요."
           }
         },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Faça as malas esta noite — você vai se agradecer amanhã de manhã."
+            "value" : "Você viaja amanhã — arrume as malas hoje à noite e separe seus documentos."
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "今晚把行李收拾好，明天出门一身轻～"
+            "value" : "明天出发，今晚收好行李、备齐证件。"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "今晚把行李收拾好，明天出門一身輕～"
+            "value" : "明天出發，今晚收好行李、備齊證件。"
           }
         }
       }
@@ -23769,55 +23769,55 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Noch eine Woche. Öffne deine Liste und freue dich."
+            "value" : "Noch eine Woche — wirf einen Blick aufs Wetter und überlege, was du mitnimmst."
           }
         },
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "One week to go. Open your list and get excited."
+            "value" : "One week to go — check the forecast so you can plan what to bring."
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Una semana más. Abre tu lista y emociónate."
+            "value" : "Falta una semana: mira el clima del destino para preparar qué llevar."
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Plus qu'une semaine. Ouvrez votre liste et profitez de l'anticipation."
+            "value" : "Encore une semaine — consultez la météo pour préparer vos affaires."
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "あと1週間。リストを開いてわくわくしよう。"
+            "value" : "あと1週間。現地の天気を見て、持ち物を考え始めましょう。"
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "일주일 남았어요. 목록을 열고 설레어보세요."
+            "value" : "일주일 남았어요. 도착지 날씨를 보고 무엇을 챙길지 준비해 보세요."
           }
         },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Uma semana restante. Abra sua lista e fique animado."
+            "value" : "Falta uma semana — veja o clima do destino para planejar o que levar."
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "一周后就出发了，先把清单打开看看？"
+            "value" : "还有一周，看看目的地天气，该带什么早做准备。"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "一週後就出發了，先把清單打開看看？"
+            "value" : "還有一週，看看目的地天氣，該帶什麼早做準備。"
           }
         }
       }
@@ -23887,55 +23887,55 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Fast da. Ein schöner Abend zum Packen."
+            "value" : "Noch zwei Tage — geh deine Liste in Ruhe durch."
           }
         },
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Almost there. A great evening to start packing."
+            "value" : "Two days to go — a good time to run through your list."
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Ya casi. Una buena tarde para empezar a empacar."
+            "value" : "Faltan dos días: repasa tu lista con calma."
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Presque là. Une bonne soirée pour commencer à faire les valises."
+            "value" : "Encore deux jours — passez en revue votre liste."
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "もうすぐ。荷造りを始めるいい夜です。"
+            "value" : "あさって出発。今のうちにリストを見直しましょう。"
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "거의 다 왔어요. 짐을 싸기 좋은 저녁이에요."
+            "value" : "이틀 남았어요. 지금 목록을 한 번 점검해 보세요."
           }
         },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Quase lá. Uma boa noite para começar a fazer as malas."
+            "value" : "Faltam dois dias — aproveite para revisar sua lista."
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "还有两天，现在动手刚刚好～"
+            "value" : "后天出发，趁现在把清单过一遍。"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "還有兩天，現在動手剛剛好～"
+            "value" : "後天出發，趁現在把清單過一遍。"
           }
         }
       }
@@ -24005,55 +24005,55 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Zwei Wochen Zeit — fang an, vom Packen zu träumen."
+            "value" : "Noch zwei Wochen — wie laufen die Reisepläne?"
           }
         },
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Two weeks out — start dreaming about what to pack."
+            "value" : "Two weeks to go — how’s the planning coming along?"
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Dos semanas por delante — empieza a soñar con lo que empacar."
+            "value" : "Faltan dos semanas, ¿cómo va la planificación?"
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Deux semaines devant vous — commencez à rêver de ce que vous allez emporter."
+            "value" : "Encore deux semaines — où en est la planification ?"
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "あと2週間 — 何を持っていくか夢想し始めよう。"
+            "value" : "出発まであと2週間。計画は進んでいますか？"
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "2주 남았어요 — 무엇을 챙길지 꿈꾸기 시작해보세요."
+            "value" : "출발까지 2주 남았어요. 여행 계획은 잘 되고 있나요?"
           }
         },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Duas semanas — comece a sonhar com o que levar."
+            "value" : "Faltam duas semanas — como está o planejamento?"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "两周说快也快，先把清单想一想？"
+            "value" : "还有两周就出发啦，行程规划得怎么样了？"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "兩週說快也快，先把清單想一想？"
+            "value" : "還有兩週就出發啦，行程規劃得怎麼樣了？"
           }
         }
       }
@@ -24123,55 +24123,55 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Noch drei Tage — eine gute Zeit, um mit dem Packen zu beginnen."
+            "value" : "Noch drei Tage — leg deine Packliste an."
           }
         },
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Three days out — a good time to start packing."
+            "value" : "Three days to go — time to start your packing list."
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Tres días para ir — un buen momento para empezar a empacar."
+            "value" : "Faltan tres días: empieza tu lista de equipaje."
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Trois jours devant vous — une bonne occasion de commencer à faire les valises."
+            "value" : "Encore trois jours — commencez votre liste d’affaires."
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "あと3日 — 荷造りを始めるいいタイミングです。"
+            "value" : "あと3日。持ち物リストを作り始めましょう。"
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "3일 남았어요 — 짐을 싸기 좋은 때예요."
+            "value" : "3일 남았어요. 챙길 짐 목록을 만들기 시작해요."
           }
         },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Três dias restantes — um bom momento para começar a fazer as malas."
+            "value" : "Faltam três dias — comece sua lista de bagagem."
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "3 天后出发，慢慢把行李备好吧～"
+            "value" : "还有 3 天，可以开始列要带的东西了。"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "3 天後出發，慢慢把行李備好吧～"
+            "value" : "還有 3 天，可以開始列要帶的東西了。"
           }
         }
       }
@@ -24241,55 +24241,55 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Dein Abenteuer beginnt jetzt. Gute Reise."
+            "value" : "Heute geht’s los — gute Reise!"
           }
         },
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Your adventure starts now. Safe travels."
+            "value" : "Today’s the day — have a wonderful trip!"
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Tu aventura comienza ahora. ¡Buen viaje!"
+            "value" : "¡Hoy es el día, buen viaje!"
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Votre aventure commence maintenant. Bon voyage !"
+            "value" : "C’est le grand jour — bon voyage !"
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "旅が始まります。良い旅を。"
+            "value" : "いよいよ出発の日。素敵な旅を！"
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "모험이 시작돼요. 좋은 여행 되세요."
+            "value" : "드디어 출발하는 날이에요. 즐거운 여행 되세요!"
           }
         },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Sua aventura começa agora. Boa viagem!"
+            "value" : "Hoje é o dia — boa viagem!"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "旅程开始了，准备出发吧～"
+            "value" : "今天出发，旅途愉快！"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "旅程開始了，準備出發吧～"
+            "value" : "今天出發，旅途愉快！"
           }
         }
       }
