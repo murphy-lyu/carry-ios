@@ -133,7 +133,11 @@ final class WeatherManager: ObservableObject {
             weatherByDestination[destinationIndex] = result
 
         } catch {
-            // On failure, use stale cache if available; otherwise mark as empty (card hidden)
+            // 失败原因记录到日志：可能是网络/WeatherKit 未启用/坐标无效等。
+            // UI 仍按"空数组 = 无预报"显示（不引入新 UI 状态以控制改动范围）。
+            CarryLogger.shared.log(.apiError,
+                context: "weatherkit dest=\(destinationIndex) err=\(error.localizedDescription)")
+            // 退化策略：有过期缓存则用；没有则空数组（卡片显示无内容）
             if let stale = cache[key] {
                 weatherByDestination[destinationIndex] = stale.data
             } else {
