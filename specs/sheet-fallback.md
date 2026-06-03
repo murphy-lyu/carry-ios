@@ -1,12 +1,18 @@
 # Sheet Fallback Implementation — Spec
 
-> **Status: Active** — 手势/吸附逻辑持续调优中，调试历史详见 `docs/home-sheet-debug-playbook.md`
+> **Status: 方向已反转（2026-06-03）** — 终极方案（FX）已达成视觉到位 + 纯 Core Animation 丝滑，
+> **已设为默认**；保底方案（无缩放）降级为 Dev Options A/B 备选，暂保留（用户决定先不删）。
+> 调试全过程详见 `docs/home-sheet-debug-playbook.md` §21–§32。
+>
+> ⚠️ 术语/文件名提醒：本 spec 早期用 `CarryBottomSheetFallback.swift` 指保底方案，
+> 但**实际实现**为：保底=`CarryBottomSheet.swift`（无缩放），终极=`CarryBottomSheetFX.swift`（缩放）。
+> 下文已按实际文件名校正。
 
 ## 背景
 
-HomeView 底部 Sheet 的终极方案（含两侧/底部缩放视觉效果）尚有未解决的疑难杂症。
-为确保产品按时上线，先实现一套无缩放视觉的保底方案，通过 feature flag 切换，
-终极方案稳定后删掉保底方案及所有 A/B 相关代码。
+HomeView 底部 Sheet 的终极方案（`CarryBottomSheetFX.swift`，含两侧/底部缩放视觉效果）早期尚有疑难杂症，
+故先做一套无缩放保底方案（`CarryBottomSheet.swift`）通过 feature flag 切换、确保按时上线。
+**2026-06-03：终极方案已稳定且丝滑，切换为默认；后续待其长期稳定后再删掉保底方案及 A/B 代码（现暂留）。**
 
 ---
 
@@ -89,12 +95,12 @@ struct CarryBottomSheetFallback<Content: View>: UIViewControllerRepresentable {
 ```swift
 // SheetFeatureFlag.swift
 enum SheetVariant {
-    case fallback   // 保底方案（无缩放）
-    case ultimate   // 终极方案（含缩放）
+    case fallback   // 保底方案（无缩放，CarryBottomSheet.swift）— A/B 备选
+    case ultimate   // 终极方案（含缩放，CarryBottomSheetFX.swift）— 现默认
 }
 
-// 上线前改这一行
-let activeSheetVariant: SheetVariant = .fallback
+// 编译期默认（2026-06-03 起为 .ultimate）；UserDefaults / Dev Options 开关可覆盖
+var activeSheetVariant: SheetVariant { /* … UserDefaults override … */ .ultimate }
 ```
 
 ### HomeView 调用层
@@ -123,14 +129,14 @@ Sheet Implementation
 
 ---
 
-## 终态清洁路径
+## 终态清洁路径（**暂不执行**，用户决定先保留 fallback 作 A/B）
 
-终极方案稳定后，删除步骤：
+待终极方案（FX）长期稳定、确认无需回退后，退役**保底方案**步骤：
 
-1. 删除 `CarryBottomSheetFallback.swift`
+1. 删除 `CarryBottomSheet.swift`（保底/无缩放版）
 2. 删除 `SheetFeatureFlag.swift`
-3. 将 HomeView 的 `switch activeSheetVariant` 还原为直接调用 `CarryBottomSheet`
-4. 删除 `DeveloperModeView` 里的 Sheet Implementation section
+3. 将 HomeView 的 `switch` 还原为直接调用 `CarryBottomSheetFX`
+4. 删除 `SettingsView`（Dev Options）里的 Sheet Implementation section
 
 **HomeView 的 Sheet 调用参数签名不需要改动。**
 
@@ -138,5 +144,8 @@ Sheet Implementation
 
 ## 暂不处理
 
-- 终极方案现有 bug 的修复（独立进行）
+- 退役 fallback（见上「终态清洁路径」，用户决定先留）
 - Sheet 内容区域的任何 UI 改动
+
+> 注：终极方案早期的疑难杂症（卡帧、漏地图、滚动锁、圆角等）已在 2026-06-03 全部根治，
+> 详见 `docs/home-sheet-debug-playbook.md` §21–§32。
