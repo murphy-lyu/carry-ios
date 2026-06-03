@@ -338,6 +338,24 @@
 - 修复（`placeSheet` + `viewDidLoad`）：`containerView` 向下延伸 `bottomExtension = 400`（静止时在屏幕外、底部本就是直角，正常不可见），并给 `containerView.backgroundColor` 设 `CarrySubtleBackground` 底部渐变色（dark `0.08/0.08/0.09`，light `0.98/0.98/0.97`）。`hostingView` 仍只占 `expandedHeight`，内容布局不受影响；overshoot 露出的是这段延伸背景而非地图。
 - 同类隐患：`CarryBottomSheetFX.swift` 的 ultimate 版用 clippingView/outerView 多层结构，若将来启用 ultimate 需单独验证是否有同样的 overshoot 露底（当前未做）。
 
+## 17. 已修复：下拉中途向上拉导致 Sheet 停在中间 + 内容区滚动锁失效（2026-06-01）
+
+**现象**：把手下拉 Sheet 即将到底时，同时做向上拉动作，概率性阻断 Sheet 落底，停在中间位置，内容区可以滚动（违反 Rule 3）。
+
+**根因链路**（单一、已确认）：
+1. `handleSheetPan .ended` → `commitSnap(to: collapsedOffset)` 启动动画（~0.48s）
+2. 动画进行中，用户手指触碰内容区 → `handleListPan .began` → `beginInteractiveControl()` 中断动画，Sheet 冻在中间（`snappedOffset` = 中间值 > 0）
+3. 用户向上手势 → `isCollapsedState = false`，Rule 2 触发 → `liveDelta = 0`
+4. `handleListPan .ended`：`drag = liveDelta = 0` → 命中 `guard drag != 0 else` → **无条件释放锁**（`lockedOffsetY = nil`）
+5. Sheet 留在中间 + 锁释放 → 内容可滚
+
+**修复**（commit `aeb37fb`，`handleListPan .ended` 两处）：
+- `drag == 0` 的 guard 分支：加判断 `snappedOffset > 0 && !isCollapsedState`，若是中间位置则 `commitSnap` 到最近极点（`listPanInterruptedSettle`），不直接释放锁
+- 原 `settleAtCurrentPositionWithoutSnap()` 分支：同样替换为 snap 到最近极点（`listPanMidwaySettle`），关闭第二条留在中间的路径
+- 真机验证通过（用户确认）
+
+---
+
 ## 16. 待解：上拉内容区「概率性滚动」（2026-06-01，非钩子失效）
 
 **现象**：上拉内容区（尤其收起态，规则 3 应"上拉=驱动 Sheet 上移、内容不滚"）**概率性**出现内容滚动。概率性 = 时序竞争。
