@@ -62,6 +62,10 @@ ZStack（全窗口）
   - open_trip：打开指定行程
   - show_map：展示地球地图
 - GlobeView：3D 地球视图（MapKit Annotation pin 点亮到访国家，不绘制多边形边界）
+- 首页底部 Sheet：`UIViewControllerRepresentable` 桥接的 UIKit 自定义 sheet，两个变体经 `SheetVariant`（`@AppStorage`，Dev Options 开关 + 编译期默认）切换：
+  - `CarryBottomSheetFX`（`.ultimate`，**现默认**）：两侧/底部缩放视觉，纯 Core Animation 驱动（吸附用 `UIViewPropertyAnimator`，无 CADisplayLink）；内容固定尺寸 + transform 缩放 + 运动期 `shouldRasterize`，嵌套 cornerRadius 层做上下异半径圆角。详见 `docs/home-sheet-debug-playbook.md`。
+  - `CarryBottomSheet`（`.fallback`）：无缩放矩形版，现仅作 A/B 备选，暂留待退役。
+  - 触碰此模块**必读** `docs/home-sheet-debug-playbook.md`（手势/吸附/滚动锁的踩坑史与纪律）。
 - RoadmapView：产品路线图（支持远程 JSON 更新）
 - LiveActivityManager：`@MainActor` 单例，管理打包进度 Live Activity 生命周期（start / update / end / endIfDeparted）
 

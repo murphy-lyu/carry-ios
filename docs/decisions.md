@@ -1,5 +1,27 @@
 # 决策日志
 
+## 2026-06-03 FX 缩放 Sheet 根治 + 设为默认
+
+### 自动吸附动画用 Core Animation，禁止手写 CADisplayLink 逐帧动画
+原因：FX 自动吸附原用手写 `CADisplayLink` 每帧算位置 + 限步，在任何刷新率都易抖（主线程时序 / 限步追不上理想值）。把 17 Pro 锁 60Hz 后 Tripsy 仍丝滑、我们仍卡——证伪了"帧率不够"，定位到"动画机制"错了。
+决策：吸附改 `UIViewPropertyAnimator`（`dampingRatio 1.0` 临界阻尼、无回弹），交渲染服务器 GPU 插值、与刷新率自适应。删除全部 CADisplayLink 机制。**以后动画/吸附一律优先 Core Animation，不手写 displayLink 逐帧改属性。**
+
+### Sheet 缩放：内容固定尺寸 + transform 缩放，绝不每帧 resize
+原因：旧实现每帧改 `hostingView.frame` 宽度 → SwiftUI 每帧 relayout 整个列表 → 卡。
+决策：SwiftUI 内容布局一次、尺寸固定；侧边收窄用**等比 scale transform**（内容 + 内边距同步缩，对齐 Flighty/Tripsy，而非裁切致内边距趋零）；运动期对内容层 `shouldRasterize` 缓存，避免 transform 每帧重渲染 `.blur`/`.shadow` 滤镜（运动结束/列表滚动时必须关，否则滚动被冻在缓存位图）。
+
+### 圆角用嵌套 cornerRadius 层，不用每帧重建 CAShapeLayer.path
+原因：上下不同圆角（顶 36 / 底大）用 path mask 需每帧重建路径 + 整层重栅格化，是 relayout 之后的头号每帧成本。
+决策：两层各圆两角的嵌套 layer（GPU 原生 `cornerRadius` + `cornerCurve=.continuous`），零 path、零栅格化。
+
+### 展开态底角半径必须 ≤ 屏幕物理圆角
+原因：展开贴屏时底角压在屏幕角上，半径 > 屏幕 → 比屏幕缩进更多 → 角落露出月牙地图（反直觉：不是越大越贴合）。
+决策：设 ≤ 屏幕圆角（17 Pro 取 40），让屏幕硬件圆角"过裁"，视觉上正好贴合屏幕的圆、绝不漏。无公开 API 读屏幕圆角（私有 API 禁用），按测试机型手设常量。
+
+### 默认底部 Sheet 切到 FX（`.ultimate`）
+原因：FX 已达视觉到位 + 纯 CA 丝滑。
+决策：编译期默认改 `.ultimate`；fallback（`CarryBottomSheet`，无缩放）降为 Dev Options A/B 备选，**暂留**（待 FX 长期稳定再退役，见 `specs/sheet-fallback.md` 清洁路径）。
+
 ## 2026-06-02 QA 全量审计修复（28 条 → 9 批 PR）
 
 ### 删/改/复制 trip 的副作用必须同步 CalendarManager
