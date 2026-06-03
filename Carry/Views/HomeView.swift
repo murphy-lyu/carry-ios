@@ -22,6 +22,7 @@ fileprivate let homeDarkCardBottomRefined = Color(red: 0.12, green: 0.12, blue: 
 struct HomeView: View {
 
     @Environment(\.colorScheme) private var colorScheme
+    @Environment(\.toggleTint) private var toggleTint
     @EnvironmentObject var store: TripStore
     @EnvironmentObject var router: NavigationRouter
 
@@ -140,7 +141,7 @@ struct HomeView: View {
     /// Set to true to programmatically collapse the sheet (Siri, map button).
     @State private var collapseRequest: Bool = false
     /// Observes the UserDefaults key written by the Dev Options toggle.
-    @AppStorage(sheetVariantDefaultsKey) private var sheetVariantRaw: String = SheetVariant.fallback.rawValue
+    @AppStorage(sheetVariantDefaultsKey) private var sheetVariantRaw: String = SheetVariant.ultimate.rawValue
     @AppStorage("mapStyleOption") private var mapStyleRaw: String = MapStyleOption.hybrid.rawValue
     @AppStorage("hasShownFirstTripShimmer") private var hasShownFirstTripShimmer = false
     @AppStorage("firstTripCreatedAt") private var firstTripCreatedAtInterval: Double = 0
@@ -300,7 +301,7 @@ struct HomeView: View {
             // Bottom sheet — UIKit-driven, zero SwiftUI re-evaluates during animation.
             // Variant is controlled by SheetFeatureFlag / Dev Options toggle.
             Group {
-                switch SheetVariant(rawValue: sheetVariantRaw) ?? .fallback {
+                switch SheetVariant(rawValue: sheetVariantRaw) ?? .ultimate {
                 case .fallback:
                     CarryBottomSheet(
                         expandedHeight: expandedSheetHeight,
@@ -996,7 +997,7 @@ struct HomeView: View {
             } label: {
                 Label("trip.swipe.duplicate", systemImage: "doc.on.doc")
             }
-            .tint(.blue)
+            .tint(toggleTint)
         }
         .listRowInsets(EdgeInsets(top: 0, leading: 16, bottom: 12, trailing: 16))
         .listRowBackground(Color.clear)

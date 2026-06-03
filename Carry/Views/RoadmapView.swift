@@ -344,7 +344,7 @@ struct RoadmapView: View {
                     if showLatestBadge {
                         Text(RoadmapL10n.text(en: "Latest", zhHans: "最新", zhHant: "最新"))
                             .font(.system(size: 10, weight: .semibold))
-                            .foregroundStyle(.blue)
+                            .foregroundStyle(Color.accentColor)
                             .padding(.horizontal, 6)
                             .padding(.vertical, 2)
                             .background(

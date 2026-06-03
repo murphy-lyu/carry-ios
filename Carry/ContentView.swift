@@ -39,6 +39,17 @@ struct ContentView: View {
     @State private var didApplyStartupReset = false
     @State private var didRefreshOnLaunch = false
     @State private var showSettingsOnMac = false
+    @AppStorage("debug_theme_accent") private var themeAccentRaw = ThemeAccent.classic.rawValue
+
+    private var activeAccent: Color {
+        let theme = ThemeAccent(rawValue: themeAccentRaw) ?? .classic
+        return theme == .classic ? .primary : theme.color
+    }
+
+    // classic 模式下 Toggle 保持系统蓝；其余颜色继承全局 tint。
+    private var activeToggleTint: Color {
+        ThemeAccent(rawValue: themeAccentRaw) == .classic ? Color(.systemBlue) : .accentColor
+    }
 
     var body: some View {
         #if targetEnvironment(macCatalyst)
@@ -93,7 +104,8 @@ struct ContentView: View {
                     .frame(minWidth: 420, minHeight: 560)
             }
         }
-        .tint(.primary)
+        .tint(activeAccent)
+        .environment(\.toggleTint, activeToggleTint)
         .environmentObject(store)
         .environmentObject(router)
         .onAppear { onAppearCommon() }
@@ -130,7 +142,8 @@ struct ContentView: View {
             .tabItem { Label("Settings", systemImage: "gear") }
             .tag(1)
         }
-        .tint(.primary)
+        .tint(activeAccent)
+        .environment(\.toggleTint, activeToggleTint)
         .toolbarBackground(
             colorScheme == .dark
                 ? Color(red: 0.11, green: 0.11, blue: 0.12)

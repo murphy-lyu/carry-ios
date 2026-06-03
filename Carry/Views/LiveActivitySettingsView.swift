@@ -4,6 +4,7 @@ import SwiftUI
 struct LiveActivitySettingsView: View {
     @AppStorage("liveActivityPackingEnabled") private var isEnabled = false
     @Environment(\.colorScheme) private var colorScheme
+    @Environment(\.toggleTint) private var toggleTint
 
     private var cardFill: Color {
         colorScheme == .dark
@@ -41,7 +42,7 @@ struct LiveActivitySettingsView: View {
                     Spacer()
                     Toggle("", isOn: $isEnabled)
                         .labelsHidden()
-                        .tint(.blue)
+                        .tint(toggleTint)
                 }
                 .padding(.horizontal, 18)
                 .frame(height: 58)

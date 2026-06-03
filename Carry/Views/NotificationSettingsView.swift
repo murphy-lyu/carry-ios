@@ -7,6 +7,7 @@ struct NotificationSettingsView: View {
     @AppStorage(ReminderPreferences.storageKey) private var offsetsRaw = "0,1"
     @AppStorage(ReminderPreferences.timeKey) private var defaultMinutes = 540  // 09:00
     @Environment(\.colorScheme) private var colorScheme
+    @Environment(\.toggleTint) private var toggleTint
 
     private var timeBinding: Binding<Date> {
         Binding(
@@ -80,7 +81,7 @@ struct NotificationSettingsView: View {
                                     set: { setOn(preset.daysBeforeDeparture, $0) }
                                 ))
                                 .labelsHidden()
-                                .tint(.blue)
+                                .tint(toggleTint)
                             }
                             .padding(.horizontal, 18)
                             .frame(height: 58)

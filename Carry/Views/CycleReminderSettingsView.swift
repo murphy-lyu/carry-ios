@@ -5,6 +5,7 @@ import SwiftUI
 struct CycleReminderSettingsView: View {
     @AppStorage("cycleNudgeFeatureEnabled") private var isEnabled = false
     @Environment(\.colorScheme) private var colorScheme
+    @Environment(\.toggleTint) private var toggleTint
 
     private var cardFill: Color {
         colorScheme == .dark
@@ -51,7 +52,7 @@ struct CycleReminderSettingsView: View {
                             Spacer()
                             Toggle("", isOn: $isEnabled)
                                 .labelsHidden()
-                                .tint(.blue)
+                                .tint(toggleTint)
                         }
                         .padding(.horizontal, 18)
                         .frame(height: 58)
