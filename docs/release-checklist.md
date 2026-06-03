@@ -97,11 +97,20 @@
 
 - [ ] **TestFlight 内测**：提交正式版前用 Release build 完整跑一遍核心流程
 - [ ] **崩溃监控**：接入 Xcode Organizer Crash Reports（免费，Apple 原生）或 Firebase Crashlytics
-- [ ] **App Store Connect 元数据**：
-  - [ ] 副标题（Subtitle，≤25 字，影响搜索权重）
+- [ ] **App Store Connect 元数据**（文案见 `app-store-metadata.md`）：
+  - [ ] 显示名称（三语）：`Carry: Travel Packing List` / `启程: 旅行打包清单` / `啟程: 旅行打包清單`（**刻意不叫 Travel Planner**——规划功能未上线，避免名不副实）
+  - [ ] 副标题（Subtitle，≤30 字符，影响搜索权重）：en / zh-Hans / zh-Hant 三语已定稿，补名称未含的新词
   - [ ] 关键词（Keywords，认真选，直接影响搜索排名）
   - [ ] 主分类 + 次分类
   - [ ] 审核备注（Review Notes）：说明内购操作路径、通知权限触发时机
+- [ ] **App Store 截图**（脚本 + 模拟数据 + 中英 slogan 见 `app-store-screenshots.md`，6 帧）：
+  - [ ] iPhone 6.9"（1290×2796，**必需**）：en-US + zh-Hans 两套，各 6 帧
+  - [ ] iPad 13"（2064×2752）+ Mac/Catalyst（2880×1800）：可在 iPhone 版定稿后补；首版至少保证 6.9" 一套，其余 fallback
+  - [ ] 数据清洗：删名为 `Test` 的行程、状态栏锁 9:41、地球旗子标签不重叠、统一深色
+  - [ ] 第 4 帧用出国行程（230V，如 London & Paris & Amsterdam）触发电压橙标
+  - [ ] 第 5 帧用「两天后出发」的行程 + 先进一次清单页，才能触发 Live Activity
+  - [ ] 中英两版 = 同构图 + 切系统语言重截 UI + 换 slogan 文字层（中文版数据也要本地化）
+  - [ ] 文件：PNG、RGB、无 alpha 透明通道
 - [ ] **`exit(0)` 说明**：仅在 `#if DEBUG` 下可见，不影响线上用户，无需处理 ✅
 
 ---
