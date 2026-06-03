@@ -56,6 +56,7 @@ struct SettingsView: View {
     @Environment(\.colorScheme) private var colorScheme
     @EnvironmentObject private var store: TripStore
     @AppStorage("appearance_mode") private var appearanceModeRaw = AppearanceMode.system.rawValue
+    @Environment(\.toggleTint) private var toggleTint
     @AppStorage("liveActivityPackingEnabled") private var liveActivityPackingEnabled = false
 
     private var currentAppearance: AppearanceMode {
@@ -873,6 +874,7 @@ private struct DataRecoveryView: View {
 private struct CalendarSettingsView: View {
     @EnvironmentObject private var store: TripStore
     @Environment(\.colorScheme) private var colorScheme
+    @Environment(\.toggleTint) private var toggleTint
 
     @AppStorage("calendar_sync_enabled")         private var calendarSyncEnabled        = false
 
@@ -947,7 +949,7 @@ private struct CalendarSettingsView: View {
                             }
                         ))
                         .labelsHidden()
-                        .tint(.blue)
+                        .tint(toggleTint)
                     }
                     .padding(.horizontal, 18)
                     .frame(height: 58)
@@ -1029,12 +1031,53 @@ private struct DeveloperModeView: View {
     @State private var toastMessage: String?
     @State private var showResetAllConfirm = false
     @AppStorage("debug_mock_weather_enabled") private var debugMockWeatherEnabled = false
+    @AppStorage("debug_theme_accent") private var themeAccentRaw = ThemeAccent.classic.rawValue
+    @Environment(\.toggleTint) private var toggleTint
 
     var body: some View {
         List {
+            Section("Accent Color") {
+                LazyVGrid(
+                    columns: Array(repeating: GridItem(.flexible(), spacing: 4), count: 6),
+                    alignment: .leading,
+                    spacing: 12
+                ) {
+                    ForEach(ThemeAccent.allCases) { accent in
+                        Button {
+                            themeAccentRaw = accent.rawValue
+                            UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                        } label: {
+                            VStack(spacing: 5) {
+                                ZStack {
+                                    Circle()
+                                        .fill(accent.swatch)
+                                        .frame(width: 34, height: 34)
+                                    if themeAccentRaw == accent.rawValue {
+                                        Circle()
+                                            .strokeBorder(.white.opacity(0.9), lineWidth: 2.5)
+                                            .frame(width: 34, height: 34)
+                                        Image(systemName: "checkmark")
+                                            .font(.system(size: 12, weight: .bold))
+                                            .foregroundStyle(.white)
+                                    }
+                                }
+                                Text(accent.displayName)
+                                    .font(.system(size: 9))
+                                    .lineLimit(1)
+                                    .minimumScaleFactor(0.7)
+                                    .foregroundStyle(themeAccentRaw == accent.rawValue ? .primary : .secondary)
+                            }
+                            .frame(maxWidth: .infinity)
+                        }
+                        .buttonStyle(.plain)
+                    }
+                }
+                .padding(.vertical, 4)
+            }
+
             Section("settings.developer.sheet_group") {
                 Toggle(isOn: Binding(
-                    get: { (UserDefaults.standard.string(forKey: sheetVariantDefaultsKey).flatMap(SheetVariant.init) ?? .fallback) == .ultimate },
+                    get: { (UserDefaults.standard.string(forKey: sheetVariantDefaultsKey).flatMap(SheetVariant.init) ?? .ultimate) == .ultimate },
                     set: { useScaling in
                         UserDefaults.standard.set(
                             (useScaling ? SheetVariant.ultimate : SheetVariant.fallback).rawValue,
@@ -1051,7 +1094,7 @@ private struct DeveloperModeView: View {
                             .foregroundStyle(.secondary)
                     }
                 }
-                .tint(.blue)
+                .tint(toggleTint)
                 .listRowSeparator(.hidden)
             }
 
@@ -1071,7 +1114,7 @@ private struct DeveloperModeView: View {
                             .foregroundStyle(.secondary)
                     }
                 }
-                .tint(.blue)
+                .tint(toggleTint)
                 .listRowSeparator(.hidden)
 
                 Toggle(isOn: Binding(
@@ -1089,7 +1132,7 @@ private struct DeveloperModeView: View {
                             .foregroundStyle(.secondary)
                     }
                 }
-                .tint(.blue)
+                .tint(toggleTint)
                 .listRowSeparator(.hidden)
             }
 
@@ -1108,7 +1151,7 @@ private struct DeveloperModeView: View {
                             .foregroundStyle(.secondary)
                     }
                 }
-                .tint(.blue)
+                .tint(toggleTint)
                 .listRowSeparator(.hidden)
             }
 
@@ -1127,7 +1170,7 @@ private struct DeveloperModeView: View {
                             .foregroundStyle(.secondary)
                     }
                 }
-                .tint(.blue)
+                .tint(toggleTint)
                 .listRowSeparator(.hidden)
             }
 

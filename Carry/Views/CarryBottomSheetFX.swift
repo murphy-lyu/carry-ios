@@ -8,10 +8,16 @@
 //
 //  View hierarchy inside FXSheetViewController.view (full-screen):
 //
-//    clippingView (clipsToBounds = true)  ← shrinks from bottom on collapse
-//      └── outerView  (clipsToBounds = false)   ← moves up/down, scales
-//            └── innerView  (clipsToBounds = true, mask = innerMaskLayer)
-//                  └── hostingView              ← UIHostingController.view
+//    outerView (clipsToBounds, cornerRadius = bottom corners)  ← card: slides (center),
+//      │                                                          uniform-SCALES to narrow,
+//      │                                                          bounds.height = collapse clip
+//      └── innerView (clipsToBounds, cornerRadius = top corners)
+//            └── hostingView  ← UIHostingController.view, FIXED full size
+//
+//  Width narrowing is a uniform scale TRANSFORM on the card — content + padding scale
+//  together (constant ratio, like Flighty/Tripsy), and the host is never resized so
+//  SwiftUI never re-lays-out mid-gesture. Corners use two nested single-radius layers
+//  (independent top/bottom radii, GPU-native — no CAShapeLayer path / mask rasterisation).
 //
 
 import UIKit
@@ -90,13 +96,27 @@ final class FXSheetViewController: UIViewController {
 
     // MARK: Visual metrics (1:1 from Tripsy measurement, iPhone 17 Pro @3x)
 
-    /// Corner radius when fully expanded (all 4 corners).
+    /// Top-left / top-right radius when fully expanded.
     private let expandedRadius:        CGFloat = 36
+    /// Bottom-left / bottom-right radius when fully expanded (sheet bottom flush + full-width,
+    /// so its bottom corners sit on the device's screen corners).
+    /// MUST be ≤ the screen's physical corner radius — counter-intuitively, SMALLER not larger:
+    ///   • larger than the screen → the sheet corner curves in MORE than the display → a
+    ///     crescent of map shows in the corner (the leak);
+    ///   • ≤ screen → the sheet over-fills into the corner and the display's hardware mask
+    ///     clips it, so the visible corner exactly follows the screen (no public API exposes
+    ///     the real display radius; private API banned, so this is a hand-set constant).
+    /// 40 on iPhone 17 Pro (screen ≈ 55) clears even a faint sub-pixel left-corner sliver with
+    /// margin to spare. Since the screen clips it anyway, the expanded corner still LOOKS like
+    /// the screen's ~55 radius — 40 only controls "enough over-fill to never leak".
+    private let expandedBottomRadius:  CGFloat = 40
     /// Top-left / top-right radius when fully collapsed.
     private let collapsedTopRadius:    CGFloat = 36
-    /// Bottom-left / bottom-right radius when fully collapsed.
-    private let collapsedBottomRadius: CGFloat = 48
+    /// Bottom-left / bottom-right radius when fully collapsed (rounder than the top for a
+    /// softer floating-card bottom). Tune on-device.
+    private let collapsedBottomRadius: CGFloat = 56
     /// Horizontal inset on each side when collapsed.
+    /// Restrained scaling target (≈Tripsy/Flighty). Tune on-device.
     private let collapsedSideMargin:   CGFloat = 8
     /// Gap between sheet bottom and screen bottom when collapsed.
     private let collapsedBottomMargin: CGFloat = 8
@@ -109,21 +129,13 @@ final class FXSheetViewController: UIViewController {
         min(max(0, p), 1)
     }
 
-    /// Bottom clipping/reveal only happens in the final tail of collapse to avoid
-    /// the "sheet gets short first, then falls" artifact on fast downward auto-snap.
-    private func bottomRevealProgress(_ p: CGFloat) -> CGFloat {
-        let threshold: CGFloat = 0.97
-        guard p > threshold else { return 0 }
-        return (p - threshold) / (1 - threshold)
-    }
-
     // Corner radii change linearly with progress so they stay in sync with the
     // gesture at all times — matching Tripsy / Flighty behaviour.
     // effectProgress is intentionally NOT used here: concentrating the change in
     // the last 35% makes corners appear to jump when a fast snap passes through
     // that window. Pill margins and bottom lift still use effectProgress.
-    private func topRadius(_ p: CGFloat)    -> CGFloat { expandedRadius + p * (collapsedTopRadius    - expandedRadius) }
-    private func bottomRadius(_ p: CGFloat) -> CGFloat { expandedRadius + p * (collapsedBottomRadius - expandedRadius) }
+    private func topRadius(_ p: CGFloat)    -> CGFloat { expandedRadius       + p * (collapsedTopRadius    - expandedRadius)       }
+    private func bottomRadius(_ p: CGFloat) -> CGFloat { expandedBottomRadius + p * (collapsedBottomRadius - expandedBottomRadius) }
 
     /// Called on main thread when a snap animation begins.
     var onSnapChanged: ((Bool) -> Void)?
@@ -136,20 +148,6 @@ final class FXSheetViewController: UIViewController {
     private var liveDelta: CGFloat = 0
     /// Shape state decoupled from position to prevent high-velocity jump shrink.
     private var shapeProgressState: CGFloat = 0
-    private var shapeDisplayLink: CADisplayLink?
-    private var directMaskSyncDisplayLink: CADisplayLink?
-    private var directMaskSyncProgress: CGFloat = 0
-    private var directPositionDisplayLink: CADisplayLink?
-    private var directPositionStartOffset: CGFloat = 0
-    private var directPositionTargetOffset: CGFloat = 0
-    private var directPositionDuration: CFTimeInterval = 0
-    private var directPositionStartTime: CFTimeInterval = 0
-    private var directPositionFixedProgress: CGFloat = 0
-    private var directPositionCompletion: (() -> Void)?
-    private var directPositionTickCount: Int = 0
-    private var directPositionCurrentOffset: CGFloat = 0
-    private var snapShapeStart: CGFloat = 0
-    private var snapShapeTarget: CGFloat = 0
 
     private var isCollapsedState: Bool { snappedOffset >= collapsedOffset - 8 }
     private var runningAnimator: UIViewPropertyAnimator?
@@ -158,33 +156,21 @@ final class FXSheetViewController: UIViewController {
     /// Ensures only one gesture source drives liveDelta/snap at a time.
     private var activePanDriver: PanDriver = .none
     private var lastGestureSource: String = "none"
-    /// Temporary switch: disable gesture-end auto snap to isolate pure manual drag behavior.
-    private let disableGestureAutoSnap: Bool = true
 
     // MARK: View hierarchy
 
-    /// Clips the sheet from below: height = screenHeight - bottomLift.
-    /// As the sheet collapses, this shrinks and reveals background, creating
-    /// the "ship leaving dock" gap at the bottom.
-    /// FXPassthroughView so touches outside the sheet reach MapKit behind it.
-    private let clippingView = FXPassthroughView()
-    /// Moves and scales; clipsToBounds = false.
+    /// Outer card layer: positions/slides the sheet, rounds the BOTTOM two corners,
+    /// and its bounds HEIGHT performs the bottom clip (creating the "ship leaving dock"
+    /// gap). Rounded purely via `layer.cornerRadius` — GPU-native, so nothing is
+    /// re-rasterised per frame (the old design rebuilt a CAShapeLayer mask path every
+    /// frame, forcing a full-layer mask re-raster — the main residual per-frame cost).
     private let outerView = UIView()
-    /// Stays within outerView bounds; clips content to rounded corners.
+    /// Inner layer: fills outerView and rounds the TOP two corners. Nesting two
+    /// single-radius corner layers gives independent top/bottom radii with no path mask.
     private let innerView = UIView()
-    /// Reused mask layer on innerView — path is updated in place so
-    /// UIViewPropertyAnimator can spring-animate it automatically.
-    private let innerMaskLayer = CAShapeLayer()
-    private var lastMaskW: CGFloat = -1
-    private var lastMaskTop: CGFloat = -1
-    private var lastMaskBottom: CGFloat = -1
-    private var lastMaskVisibleH: CGFloat = -1
-    /// SwiftUI hosting view — referenced so placeSheet can keep its frame
-    /// in lockstep with outerView/innerView. Relying on autoresizingMask
-    /// alone caused SwiftUI content to drift right with each gesture: the
-    /// mask propagates during the next layout pass (outside the animator's
-    /// transaction), so the hosting view briefly saw an in-between width
-    /// and accumulated tiny layout differences across iterations.
+    /// SwiftUI hosting view — kept at a FIXED full size and only re-centred per frame
+    /// (origin-only shift), so it is never resized during a drag and SwiftUI never
+    /// re-lays-out the sheet content mid-gesture.
     private weak var hostingView: UIView?
 
     // MARK: Scroll coordination
@@ -193,6 +179,10 @@ final class FXSheetViewController: UIViewController {
     private weak var listScrollView: UIScrollView?
     private var delegateProxy: FXDecelerationCanceller?
     private var delegateObservation: NSKeyValueObservation?
+    /// 不依赖 delegate 的滚动锁（与 fallback CarryBottomSheet 对齐，见 playbook §16.1）：
+    /// 锁定期间直接 KVO 观察 contentOffset，无论谁顶替了 delegate 都能把 offset 拉回，
+    /// 绕开 "DecelerationCanceller 代理被 SwiftUI 临时顶替 → scrollViewDidScroll 漏帧" 的时序窗。
+    private var contentOffsetObservation: NSKeyValueObservation?
 
     /// Pre-allocated so the Taptic Engine is warm before the first snap.
     private let feedbackGenerator = UIImpactFeedbackGenerator(style: .soft)
@@ -227,22 +217,20 @@ final class FXSheetViewController: UIViewController {
     override func viewDidLoad() {
         super.viewDidLoad()
 
-        // clippingView: sits full-screen but shrinks from the bottom as the
-        // sheet collapses, creating a transparent strip between sheet and screen edge.
-        // Corner rounding is handled entirely by innerMaskLayer (not clippingView.cornerRadius),
-        // which lets us place bottom corners exactly at the visual clip line.
-        clippingView.clipsToBounds = true
-        clippingView.backgroundColor = .clear
-        view.addSubview(clippingView)
+        // Two nested single-radius corner layers replace the old CAShapeLayer mask:
+        //   outerView → rounds the BOTTOM corners + clips the bottom edge (its bounds
+        //               height is the visible-window clip line);
+        //   innerView → rounds the TOP corners.
+        // Both use the continuous (squircle) curve. cornerRadius is GPU-native, so there
+        // is no per-frame path construction and no per-frame mask rasterisation.
+        outerView.clipsToBounds = true
+        outerView.layer.cornerCurve = .continuous
+        outerView.layer.maskedCorners = [.layerMinXMaxYCorner, .layerMaxXMaxYCorner]   // bottom-left, bottom-right
+        view.addSubview(outerView)
 
-        // outerView: moves, scales; does NOT clip (lives inside clippingView)
-        outerView.clipsToBounds = false
-        clippingView.addSubview(outerView)
-
-        // innerView: clips SwiftUI content to the animated corner radius.
         innerView.clipsToBounds = true
-        // Mask handles all corner rounding; set once, path updated in place.
-        innerView.layer.mask = innerMaskLayer
+        innerView.layer.cornerCurve = .continuous
+        innerView.layer.maskedCorners = [.layerMinXMinYCorner, .layerMaxXMinYCorner]   // top-left, top-right
         outerView.addSubview(innerView)
 
         // Pan gesture on the full view; shouldReceive limits it to sheet zone.
@@ -258,6 +246,19 @@ final class FXSheetViewController: UIViewController {
 
     override func viewDidLayoutSubviews() {
         super.viewDidLayoutSubviews()
+
+        // Fallback scroll-view attach: the one-shot 0.15s timer in installContent
+        // can miss when the sheet is recreated (e.g. toggling the Dev Options
+        // "Enable Scaling Effects" switch rebuilds the whole sheet) and SwiftUI's
+        // List hasn't materialised its UIScrollView yet — leaving handleListPan
+        // unwired and the scroll lock dead. Re-attempt here, but ONLY when we've
+        // never attached (listScrollView == nil), so this does NOT re-attach on
+        // mid-session SwiftUI rebuilds (that broader self-heal was tried and
+        // reverted, see playbook §16). attachScrollView is idempotent.
+        if listScrollView == nil, let hv = hostingView {
+            attachScrollView(in: hv)
+        }
+
         guard runningAnimator == nil else { return }
         let raw = snappedOffset + liveDelta
         placeSheet(at: raw)
@@ -268,7 +269,6 @@ final class FXSheetViewController: UIViewController {
         CATransaction.begin()
         CATransaction.setDisableActions(true)
         applyCornerMask(top: topRadius(progress), bottom: bottomRadius(progress), progress: progress)
-        innerView.transform = .identity
         CATransaction.commit()
     }
 
@@ -318,16 +318,24 @@ final class FXSheetViewController: UIViewController {
     // MARK: Layout helpers
 
     private struct SheetGeometry {
-        let clippingFrame: CGRect
-        let outerFrame: CGRect
+        /// Uniform scale that narrows the whole card (content + padding together), so the
+        /// inner padding stays a constant RATIO of the card width — matching Flighty/Tripsy,
+        /// instead of the content drifting to the edge as an absolute clip would cause.
+        let scale: CGFloat
+        /// outerView.bounds (pre-scale). Width = full width; height = visibleHeight / scale
+        /// so the post-scale visual height equals the intended visible window.
+        let boundsSize: CGSize
+        /// outerView.center (default anchor 0.5,0.5). Chosen so the post-scale visual frame
+        /// is exactly (sideMargin, topY, w-2M, visibleHeight) — keeps the card top pinned at
+        /// topY and `presentation().frame.origin.y == topY`, so snap reads are unchanged.
+        let center: CGPoint
         let positionProgress: CGFloat
         let shapeProgress: CGFloat
     }
 
-    private func pixelAligned(_ value: CGFloat, scale: CGFloat) -> CGFloat {
-        guard scale > 0 else { return value }
-        return (value * scale).rounded() / scale
-    }
+    /// Current uniform scale (1 = expanded). Used to divide cornerRadius so the VISUAL
+    /// radius (after the scale) hits the intended value.
+    private var currentScale: CGFloat = 1
 
     private func geometry(for rawOffset: CGFloat, shapeProgressOverride: CGFloat? = nil) -> SheetGeometry? {
         let banded = rubberBand(rawOffset)
@@ -338,16 +346,31 @@ final class FXSheetViewController: UIViewController {
         let h = view.bounds.height
         guard w > 0, h > 0 else { return nil }
 
-        let scale = view.window?.screen.scale ?? UIScreen.main.scale
-        let sideMargin = pixelAligned(collapsedSideMargin * effectProgress(positionProgress), scale: scale)
-        let y = pixelAligned(h - expandedHeight + banded, scale: scale)
-        let width = max(0, pixelAligned(w - 2 * sideMargin, scale: scale))
-        let height = max(0, pixelAligned(expandedHeight, scale: scale))
-        let clippingHeight = max(0, pixelAligned(h - lift, scale: scale))
+        // All scaling quantities are continuous (no pixel snapping). They can be:
+        // the SwiftUI content is laid out ONCE at full size and never resized during a
+        // drag (see placeSheet), so a varying width no longer triggers per-frame
+        // relayout — the narrowing is a pure clip + GPU-cheap origin shift. Continuous
+        // values therefore cost nothing extra and avoid the stair-step that pixel
+        // snapping caused on the slowly-varying margins.
+        let sideMargin = collapsedSideMargin * effectProgress(positionProgress)
+        // Uniform scale narrows the card (and its content + padding, proportionally) —
+        // the content is NOT resized, so SwiftUI never re-lays-out; the narrowing is a
+        // GPU transform. s = (w - 2·sideMargin) / w.
+        let scale = max(0.01, (w - 2 * sideMargin) / w)
+        let topY = h - expandedHeight + banded
+        // Visible window height: full content height minus how far it has slid down
+        // (banded) minus the bottom-edge lift. A pure function of position, so the card's
+        // height is ALWAYS locked to its position — the "shrink-before-fall" race is
+        // structurally impossible. The card's bottom sits at `topY + visibleHeight = h - lift`.
+        let visibleHeight = max(1, expandedHeight - lift - banded)
 
+        // bounds height is divided by scale so the post-scale visual height == visibleHeight;
+        // center is placed so the post-scale visual frame is exactly
+        // (sideMargin, topY, w-2·sideMargin, visibleHeight) — see SheetGeometry.center.
         return SheetGeometry(
-            clippingFrame: CGRect(x: 0, y: 0, width: w, height: clippingHeight),
-            outerFrame: CGRect(x: sideMargin, y: y, width: width, height: height),
+            scale: scale,
+            boundsSize: CGSize(width: w, height: visibleHeight / scale),
+            center: CGPoint(x: w / 2, y: topY + visibleHeight / 2),
             positionProgress: positionProgress,
             shapeProgress: shapeProgress
         )
@@ -357,214 +380,46 @@ final class FXSheetViewController: UIViewController {
         shapeProgressState = min(max(0, value), 1)
     }
 
-    private func stopShapeDisplayLink() {
-        shapeDisplayLink?.invalidate()
-        shapeDisplayLink = nil
-    }
-
-    private func stopDirectMaskSync() {
-        directMaskSyncDisplayLink?.invalidate()
-        directMaskSyncDisplayLink = nil
-    }
-
-    private func startDirectMaskSync(fixedProgress: CGFloat) {
-        stopDirectMaskSync()
-        directMaskSyncProgress = fixedProgress
-        let link = CADisplayLink(target: self, selector: #selector(handleDirectMaskSyncTick(_:)))
-        link.preferredFrameRateRange = CAFrameRateRange(minimum: 30, maximum: 60, preferred: 60)
-        link.add(to: .main, forMode: .common)
-        directMaskSyncDisplayLink = link
-    }
-
-    @objc private func handleDirectMaskSyncTick(_ link: CADisplayLink) {
-        CATransaction.begin()
-        CATransaction.setDisableActions(true)
-        applyCornerMask(top: topRadius(directMaskSyncProgress),
-                        bottom: bottomRadius(directMaskSyncProgress),
-                        progress: directMaskSyncProgress)
-        CATransaction.commit()
-    }
-
-    private func stopDirectPositionSync() {
-        directPositionDisplayLink?.invalidate()
-        directPositionDisplayLink = nil
-        directPositionCompletion = nil
-    }
-
-    private func startDirectPositionSync(from start: CGFloat,
-                                         to target: CGFloat,
-                                         duration: CFTimeInterval,
-                                         fixedProgress: CGFloat,
-                                         completion: @escaping () -> Void) {
-        stopDirectPositionSync()
-        directPositionStartOffset = start
-        directPositionTargetOffset = target
-        directPositionDuration = max(0.001, duration)
-        directPositionStartTime = CACurrentMediaTime()
-        directPositionFixedProgress = fixedProgress
-        directPositionCompletion = completion
-        directPositionTickCount = 0
-        directPositionCurrentOffset = start
-        let link = CADisplayLink(target: self, selector: #selector(handleDirectPositionTick(_:)))
-        link.preferredFrameRateRange = CAFrameRateRange(minimum: 30, maximum: 60, preferred: 60)
-        link.add(to: .main, forMode: .common)
-        directPositionDisplayLink = link
-    }
-
-    @objc private func handleDirectPositionTick(_ link: CADisplayLink) {
-        let t = min(max((CACurrentMediaTime() - directPositionStartTime) / directPositionDuration, 0), 1)
-        let idealRaw = directPositionStartOffset + CGFloat(t) * (directPositionTargetOffset - directPositionStartOffset)
-        let dt = max(1.0 / 120.0, link.targetTimestamp - link.timestamp)
-        let totalDistance = abs(directPositionTargetOffset - directPositionStartOffset)
-        let expectedStep = totalDistance * CGFloat(dt / directPositionDuration)
-        // Clamp per-frame travel to suppress dropped-frame "jump steps"
-        // while keeping overall linear progression.
-        let maxStep = max(2, min(18, expectedStep * 1.35))
-        let delta = idealRaw - directPositionCurrentOffset
-        let step = max(-maxStep, min(maxStep, delta))
-        let raw = directPositionCurrentOffset + step
-        directPositionCurrentOffset = raw
-        directPositionTickCount += 1
-        CATransaction.begin()
-        CATransaction.setDisableActions(true)
-        placeSheet(at: raw, shapeProgressOverride: directPositionFixedProgress)
-        // Keep position fully per-frame. Delay heavy mask path rebuilds to the
-        // tail phase to reduce mid-path hitching on direct snap.
-        if t >= 0.88 || t >= 1 {
-            applyCornerMask(top: topRadius(directPositionFixedProgress),
-                            bottom: bottomRadius(directPositionFixedProgress),
-                            progress: directPositionFixedProgress)
-        }
-        CATransaction.commit()
-        snappedOffset = raw
-        liveDelta = 0
-
-        if t >= 1, abs(directPositionTargetOffset - directPositionCurrentOffset) <= 0.5 {
-            let completion = directPositionCompletion
-            stopDirectPositionSync()
-            completion?()
-        }
-    }
-
-    private func startSnapShapeFollow(duration: CFTimeInterval) {
-        stopShapeDisplayLink()
-        guard duration > 0 else {
-            setShapeProgress(snapShapeTarget)
-            return
-        }
-        let startTime = CACurrentMediaTime()
-        let link = CADisplayLink(target: self, selector: #selector(handleShapeDisplayLink(_:)))
-        link.preferredFrameRateRange = CAFrameRateRange(minimum: 30, maximum: 60, preferred: 60)
-        link.add(to: .main, forMode: .common)
-        link.accessibilityLabel = "\(startTime)|\(duration)"
-        shapeDisplayLink = link
-    }
-
-    @objc private func handleShapeDisplayLink(_ link: CADisplayLink) {
-        guard let payload = link.accessibilityLabel else { return }
-        let parts = payload.split(separator: "|")
-        guard parts.count == 2,
-              let start = CFTimeInterval(parts[0]),
-              let duration = CFTimeInterval(parts[1]) else { return }
-
-        let t = min(max((CACurrentMediaTime() - start) / duration, 0), 1)
-        // Ease-out so shape follows continuously while avoiding abrupt late shrink.
-        let eased = 1 - pow(1 - t, 2)
-        let next = snapShapeStart + CGFloat(eased) * (snapShapeTarget - snapShapeStart)
-        setShapeProgress(next)
-
-        let raw: CGFloat
-        if let pf = outerView.layer.presentation()?.frame {
-            raw = pf.origin.y - (view.bounds.height - expandedHeight)
-        } else {
-            raw = snappedOffset + liveDelta
-        }
-        placeSheet(at: raw, shapeProgressOverride: shapeProgressState)
-        CATransaction.begin()
-        CATransaction.setDisableActions(true)
-        applyCornerMask(top: topRadius(shapeProgressState), bottom: bottomRadius(shapeProgressState), progress: shapeProgressState)
-        CATransaction.commit()
-
-        if t >= 1 {
-            stopShapeDisplayLink()
-        }
-    }
 
     private func placeSheet(at rawOffset: CGFloat, shapeProgressOverride: CGFloat? = nil) {
         guard let g = geometry(for: rawOffset, shapeProgressOverride: shapeProgressOverride) else { return }
-        clippingView.frame = g.clippingFrame
-        outerView.frame = g.outerFrame
+        // All UIView APIs (bounds/transform/center) — they suppress implicit CALayer
+        // animations, so these are immediate during a drag. The uniform scale narrows the
+        // card AND its content+padding together (constant ratio = Flighty's "padding stays
+        // fixed" look); the bounds height performs the vertical collapse clip.
+        currentScale = g.scale
+        outerView.bounds = CGRect(origin: .zero, size: g.boundsSize)
+        outerView.transform = CGAffineTransform(scaleX: g.scale, y: g.scale)
+        outerView.center = g.center
+        innerView.frame = outerView.bounds      // fills the card (pre-scale); rounds top corners
 
-        // Explicitly sync innerView + hostingView frames in the SAME runloop turn
-        // as outerView frame updates, so SwiftUI never consumes transient widths.
-        let innerBounds = outerView.bounds
-        innerView.frame = innerBounds
-        hostingView?.frame = innerBounds
+        // ROOT-CAUSE PERFORMANCE INVARIANT: the SwiftUI content is laid out exactly ONCE,
+        // at full size, and is NEVER resized during a drag/snap (resizing forced SwiftUI to
+        // re-layout the whole list every frame — the jank). The host fills the card's full
+        // (pre-scale) width and is pinned to its top; the visual narrowing comes from the
+        // parent's scale transform, not from changing the host's size. Its bottom is clipped
+        // by the card's bounds height.
+        hostingView?.frame = CGRect(x: 0, y: 0, width: view.bounds.width, height: expandedHeight)
     }
 
-    /// Called inside UIViewPropertyAnimator.addAnimations — the animator drives
-    /// the implicit CALayer animations on the mask path and transform.
+    /// Applies the corner radii for a given progress (0 = expanded, 1 = collapsed).
     private func setProgress(_ progress: CGFloat, animated: Bool) {
         applyCornerMask(top: topRadius(progress), bottom: bottomRadius(progress), progress: progress)
     }
 
-    /// Updates `innerMaskLayer.path` in place with per-corner radii.
-    /// Uses `visibleH` — the portion of innerView actually visible above
-    /// clippingView's bottom edge — so bottom corners sit exactly at the
-    /// visual clip line (matching the top corner radius).
-    /// `progress` (0 = expanded, 1 = collapsed) drives a safe-area subtraction
-    /// so bottom corners float above the home indicator when collapsed,
-    /// Caller is responsible for wrapping in CATransaction.setDisableActions(true)
-    /// when an implicit animation should be suppressed.
+    /// Applies the corner radii. With the nested-layer hierarchy this is just two
+    /// GPU-native `cornerRadius` scalars — no path, no per-frame mask rasterisation:
+    ///   innerView → top corners, outerView → bottom corners.
+    /// The bottom clip (the visible-window height) is the card's bounds height, set in
+    /// `placeSheet`. `progress` is unused now but kept for call-site compatibility.
+    /// Caller wraps in CATransaction.setDisableActions(true) to suppress implicit
+    /// animation during interactive drag; during a snap the animator/displayLink drives it.
     private func applyCornerMask(top: CGFloat, bottom: CGFloat, progress: CGFloat) {
-        let w     = innerView.bounds.width
-        let fullH = innerView.bounds.height
-        guard w > 0, fullH > 0 else { return }
-
-        // Keep full height for almost the whole descent.
-        // Only reveal bottom clipping in the very final tail.
-        let rawVisible = clippingView.frame.height - outerView.frame.origin.y
-        let ep         = bottomRevealProgress(progress)
-        let visibleH   = max(0, min(fullH, fullH + ep * (rawVisible - fullH)))
-
-        // Path rebuild is expensive. Skip tiny deltas that are visually identical.
-        if abs(w - lastMaskW) < 0.25,
-           abs(top - lastMaskTop) < 0.25,
-           abs(bottom - lastMaskBottom) < 0.25,
-           abs(visibleH - lastMaskVisibleH) < 0.5 {
-            return
-        }
-
-        // True circular arcs — addArc produces the same geometry as CALayer
-        // corner rounding, unlike the quadBezier approximation.
-        let path = UIBezierPath()
-        let tl = top, tr = top, bl = bottom, br = bottom
-        path.move(to: CGPoint(x: tl, y: 0))
-        // Top edge → top-right arc
-        path.addLine(to: CGPoint(x: w - tr, y: 0))
-        path.addArc(withCenter: CGPoint(x: w - tr, y: tr),
-                    radius: tr, startAngle: -.pi / 2, endAngle: 0, clockwise: true)
-        // Right edge → bottom-right arc
-        path.addLine(to: CGPoint(x: w, y: visibleH - br))
-        path.addArc(withCenter: CGPoint(x: w - br, y: visibleH - br),
-                    radius: br, startAngle: 0, endAngle: .pi / 2, clockwise: true)
-        // Bottom edge → bottom-left arc
-        path.addLine(to: CGPoint(x: bl, y: visibleH))
-        path.addArc(withCenter: CGPoint(x: bl, y: visibleH - bl),
-                    radius: bl, startAngle: .pi / 2, endAngle: .pi, clockwise: true)
-        // Left edge → top-left arc
-        path.addLine(to: CGPoint(x: 0, y: tl))
-        path.addArc(withCenter: CGPoint(x: tl, y: tl),
-                    radius: tl, startAngle: .pi, endAngle: -.pi / 2, clockwise: true)
-        path.close()
-
-        // Updating `.path` on the existing layer (not replacing the layer) lets
-        // UIViewPropertyAnimator interpolate it as a CALayer animatable property.
-        innerMaskLayer.path = path.cgPath
-        lastMaskW = w
-        lastMaskTop = top
-        lastMaskBottom = bottom
-        lastMaskVisibleH = visibleH
+        // Divide by the current scale so the VISUAL radius (after the uniform card scale)
+        // equals the intended value.
+        let s = currentScale > 0 ? currentScale : 1
+        innerView.layer.cornerRadius = top / s
+        outerView.layer.cornerRadius = bottom / s
     }
 
     private func rubberBand(_ raw: CGFloat) -> CGFloat {
@@ -584,7 +439,8 @@ final class FXSheetViewController: UIViewController {
         return min(max(0, raw), collapsedOffset) / collapsedOffset
     }
 
-    /// How much to shrink clippingView from the bottom (only in last 35% of travel).
+    /// How far the card's bottom edge floats above the screen bottom (the gap), driven
+    /// continuously by position so it opens in lockstep with the side margins.
     private func bottomLift(_ progress: CGFloat) -> CGFloat {
         effectProgress(progress) * collapsedBottomMargin
     }
@@ -599,18 +455,29 @@ final class FXSheetViewController: UIViewController {
         return snappedOffset + liveDelta
     }
 
+    /// Caches the SwiftUI content (blurred background + card shadows) into a single bitmap
+    /// while the card is being scaled, so the per-frame scale transform just composites the
+    /// cached texture on the GPU instead of re-rendering the scale-dependent blur/shadow
+    /// filters each frame. Only enabled during sheet motion (never during a live list
+    /// scroll, which would otherwise be frozen in the cached bitmap). Scale is set to the
+    /// display scale and we only ever scale DOWN, so the cached bitmap stays crisp.
+    private func setContentRasterized(_ on: Bool) {
+        guard let layer = hostingView?.layer else { return }
+        if on {
+            layer.rasterizationScale = view.window?.screen.scale ?? UIScreen.main.scale
+        }
+        if layer.shouldRasterize != on { layer.shouldRasterize = on }
+    }
+
     /// When user starts dragging, immediately take over from any running snap animation
     /// so the sheet can follow finger 1:1 without fighting background animators.
     private func beginInteractiveControl() {
-        stopShapeDisplayLink()
         if let animator = runningAnimator {
             animationGeneration += 1  // invalidate stale completion before stopping
             animator.stopAnimation(false)
             animator.finishAnimation(at: .current)
             runningAnimator = nil
         }
-        stopDirectMaskSync()
-        stopDirectPositionSync()
         var visual = min(max(0, currentVisualOffset()), collapsedOffset)
         if visual >= collapsedOffset - expandSnapMinTranslation {
             visual = collapsedOffset
@@ -634,7 +501,6 @@ final class FXSheetViewController: UIViewController {
         // Invalidate older completions before stopping the current animation.
         animationGeneration += 1
         let generation = animationGeneration
-        stopShapeDisplayLink()
         if let animator = runningAnimator {
             // Freeze exactly at current visual state; do not jump to end-state.
             animator.stopAnimation(false)
@@ -667,37 +533,45 @@ final class FXSheetViewController: UIViewController {
             delegateProxy?.cancelNext = true
         }
 
+        // Cache the content so the snap animates a bitmap, not per-frame blur/shadow renders.
+        setContentRasterized(true)
+
         let isCollapsing = target >= collapsedOffset - 1
         // Fast handle-down release should be one-way and non-bouncy.
         let isDirectHandleCollapse = (source == "sheetPanDirectCollapse")
         let isDirectExpand = (source == "sheetPanDirectExpand" || source == "listPanUp")
         if isDirectHandleCollapse || isDirectExpand {
-            stopShapeDisplayLink()
-            stopDirectMaskSync()
-            stopDirectPositionSync()
-            startDirectPositionSync(
-                from: clampedVisual,
-                to: target,
-                duration: 0.48,
-                fixedProgress: visualProgress
-            ) { [weak self] in
+            let targetProgress = clampedProgress(target)
+            // Hand the snap to Core Animation (render-server / GPU driven), NOT a hand-rolled
+            // CADisplayLink. The displayLink juddered even at 60Hz — where Tripsy is perfectly
+            // smooth — proving the METHOD was wrong, not the refresh rate: a per-frame
+            // main-thread position update (with step-clamping) can't match a GPU-interpolated
+            // animation. The content is rasterised, so the animated transform just composites a
+            // cached bitmap → smooth at any refresh rate. dampingRatio 1.0 = critically damped,
+            // NO overshoot — direct collapse/expand must be one-way & non-bouncy (playbook §5/§13).
+            let anim = UIViewPropertyAnimator(duration: 0.36, dampingRatio: 1.0) { [weak self] in
+                guard let self else { return }
+                self.placeSheet(at: target)
+                self.applyCornerMask(top: self.topRadius(targetProgress),
+                                     bottom: self.bottomRadius(targetProgress),
+                                     progress: targetProgress)
+                self.setShapeProgress(targetProgress)
+            }
+            anim.addCompletion { [weak self] _ in
                 guard let self else { return }
                 guard generation == self.animationGeneration else { return }
                 self.snappedOffset = target
                 self.liveDelta = 0
                 self.runningAnimator = nil
-                let p = self.clampedProgress(target)
-                self.setShapeProgress(p)
-                CATransaction.begin()
-                CATransaction.setDisableActions(true)
-                self.placeSheet(at: target)
-                self.applyCornerMask(top: self.topRadius(p), bottom: self.bottomRadius(p), progress: p)
-                CATransaction.commit()
+                self.setShapeProgress(targetProgress)
+                self.setContentRasterized(false)   // settled — restore live rendering (scrolling)
                 if let sv = self.listScrollView, self.delegateProxy?.lockedOffsetY != nil {
                     self.delegateProxy?.lockedOffsetY = nil
                     sv.isScrollEnabled = true
                 }
             }
+            runningAnimator = anim
+            anim.startAnimation()
             return
         }
         let anim: UIViewPropertyAnimator
@@ -709,21 +583,19 @@ final class FXSheetViewController: UIViewController {
         )
         anim = UIViewPropertyAnimator(duration: 0.68, timingParameters: params)
         let targetShapeProgress = clampedProgress(target)
-        stopDirectMaskSync()
-        snapShapeStart = shapeProgressState
-        snapShapeTarget = targetShapeProgress
-        startSnapShapeFollow(duration: 0.68)
         anim.addAnimations { [weak self] in
             guard let self else { return }
-            // Position channel only; shape follows via displayLink.
+            // Single Core Animation channel: position (bounds/center/transform) AND corner
+            // radius animate together on the same curve — no separate shape displayLink.
             self.placeSheet(at: target)
+            self.applyCornerMask(top: self.topRadius(targetShapeProgress),
+                                 bottom: self.bottomRadius(targetShapeProgress),
+                                 progress: targetShapeProgress)
+            self.setShapeProgress(targetShapeProgress)
         }
         anim.addCompletion { [weak self] _ in
             guard let self else { return }
             guard generation == self.animationGeneration else { return }
-            self.stopShapeDisplayLink()
-            self.stopDirectMaskSync()
-            self.stopDirectPositionSync()
             self.snappedOffset = target
             self.liveDelta = 0
             self.runningAnimator = nil
@@ -734,6 +606,7 @@ final class FXSheetViewController: UIViewController {
             self.applyCornerMask(top: self.topRadius(self.shapeProgressState), bottom: self.bottomRadius(self.shapeProgressState), progress: self.shapeProgressState)
             CATransaction.commit()
             self.placeSheet(at: target)
+            self.setContentRasterized(false)   // settled — restore live rendering (scrolling)
             if let sv = self.listScrollView, self.delegateProxy?.lockedOffsetY != nil {
                 self.delegateProxy?.lockedOffsetY = nil
                 sv.isScrollEnabled = true
@@ -745,7 +618,6 @@ final class FXSheetViewController: UIViewController {
     }
 
     private func settleAtCurrentPositionWithoutSnap() {
-        stopShapeDisplayLink()
         if let animator = runningAnimator {
             animator.stopAnimation(false)
             animator.finishAnimation(at: .current)
@@ -761,6 +633,7 @@ final class FXSheetViewController: UIViewController {
         placeSheet(at: visual, shapeProgressOverride: p)
         applyCornerMask(top: topRadius(p), bottom: bottomRadius(p), progress: p)
         CATransaction.commit()
+        setContentRasterized(false)   // settled mid-position — restore live rendering
     }
 
     private func finalizeGestureAndSnap(source: String, velocity: CGFloat, translation: CGFloat, rawOffset: CGFloat) {
@@ -787,7 +660,13 @@ final class FXSheetViewController: UIViewController {
     // MARK: Live drag visual update (during gesture, no animator)
 
     private func applyLiveDelta(_ delta: CGFloat) {
-        stopShapeDisplayLink()
+        // Rasterise the content while the sheet is actually being driven (delta != 0), so
+        // the per-frame scale transform composites a cached bitmap instead of re-rendering
+        // the blurred background + ~10 card shadows every frame (the real-device jank,
+        // confirmed by A/B: fallback w/o scale is smooth, FX w/ scale is not). delta == 0
+        // means Rule 2 (normal list scroll) or a no-op — must stay un-rasterised so the
+        // live list scroll isn't frozen in a cached bitmap.
+        setContentRasterized(delta != 0)
         liveDelta = delta
         let raw      = snappedOffset + delta
         let progress = clampedProgress(raw)
@@ -797,7 +676,6 @@ final class FXSheetViewController: UIViewController {
         CATransaction.begin()
         CATransaction.setDisableActions(true)
         applyCornerMask(top: topRadius(shapeProgressState), bottom: bottomRadius(shapeProgressState), progress: shapeProgressState)
-        innerView.transform = .identity
         CATransaction.commit()
     }
 
@@ -869,6 +747,21 @@ final class FXSheetViewController: UIViewController {
             guard let self, let sv, sv.delegate !== self.delegateProxy else { return }
             self.installProxy(on: sv)
         }
+        // STATE-DRIVEN 内容锁（根因修复"偶现内容区自由滚动"）：
+        // 锁的真正不变量是——"只要 Sheet 不在完全展开态，内容就必须钉在顶部"（规则 1/3 的本质）。
+        // 旧实现把锁绑在易失的每手势标志（.began 里设的 lockedOffsetY / activePanDriver）上，
+        // 存在时序窗：delegate 被 SwiftUI 顶替那一帧、或 activePanDriver 在 .cancelled/.failed 未复位，
+        // 都会让锁没设上 → 整段手势内容自由滚动（playbook §16 的偶现）。
+        // 改为直接由 Sheet 位置状态判定，且用 delegate-无关的 contentOffset KVO 强制：
+        // KVO 在 offset 任何变化时都触发，不受 delegate/标志位时序影响，确定性消除时序窗。
+        contentOffsetObservation = sv.observe(\.contentOffset, options: [.new]) { [weak self, weak sv] _, _ in
+            guard let self, let sv else { return }
+            // 完全展开（snappedOffset+liveDelta ≈ 0）→ 允许自由滚动（规则 2）；否则钉顶。
+            guard (self.snappedOffset + self.liveDelta) > 0.5 else { return }
+            let topInset = -sv.adjustedContentInset.top
+            guard abs(sv.contentOffset.y - topInset) > 0.5 else { return }
+            sv.setContentOffset(CGPoint(x: sv.contentOffset.x, y: topInset), animated: false)
+        }
     }
 
     private func installProxy(on sv: UIScrollView) {
@@ -886,11 +779,6 @@ final class FXSheetViewController: UIViewController {
         return nil
     }
 
-    deinit {
-        stopShapeDisplayLink()
-        stopDirectMaskSync()
-        stopDirectPositionSync()
-    }
 
     @objc private func handleListPan(_ pan: UIPanGestureRecognizer) {
         guard let sv = listScrollView else { return }
@@ -957,9 +845,20 @@ final class FXSheetViewController: UIViewController {
             wasAtTop = false
 
             guard drag != 0 else {
-                // No sheet movement — release any collapsed-state scroll lock
-                // so subsequent gestures are not permanently blocked.
-                delegateProxy?.lockedOffsetY = nil
+                // No sheet movement this gesture. If fully expanded (snappedOffset == 0)
+                // it's a normal list touch — release the lock. But if snappedOffset > 0
+                // the sheet is stranded mid-way (a new list gesture interrupted a running
+                // collapse), and releasing the lock here would let content scroll on a
+                // half-open sheet (violates Rule 3). Snap to the nearest extreme instead.
+                // (Aligned with fallback CarryBottomSheet, playbook §17.)
+                if snappedOffset > 0 && !isCollapsedState {
+                    let target: CGFloat = snappedOffset >= collapsedOffset * 0.5 ? collapsedOffset : 0
+                    if target == 0 { delegateProxy?.lockedOffsetY = nil }
+                    lastGestureSource = "listPanInterruptedSettle"
+                    commitSnap(to: target, velocity: 0, source: "listPanInterruptedSettle")
+                } else {
+                    delegateProxy?.lockedOffsetY = nil
+                }
                 activePanDriver = .none
                 return
             }
@@ -982,9 +881,13 @@ final class FXSheetViewController: UIViewController {
                         lastGestureSource = "sheetPanDirectCollapse"
                         commitSnap(to: collapsedOffset, velocity: velocity, source: "sheetPanDirectCollapse")
                     } else {
-                        // Genuinely mid-way: settle and release the scroll lock.
-                        delegateProxy?.lockedOffsetY = nil
-                        settleAtCurrentPositionWithoutSnap()
+                        // Mid-way after partial list drag: snap to nearest extreme rather
+                        // than settling here — a stranded intermediate position would
+                        // release the scroll lock on a half-open sheet (same bug as above).
+                        let target: CGFloat = currentPos >= collapsedOffset * 0.5 ? collapsedOffset : 0
+                        if target == 0 { delegateProxy?.lockedOffsetY = nil }
+                        lastGestureSource = "listPanMidwaySettle"
+                        commitSnap(to: target, velocity: velocity, source: "listPanMidwaySettle")
                     }
                 }
             }

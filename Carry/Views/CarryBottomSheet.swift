@@ -536,9 +536,23 @@ final class SheetViewController: UIViewController {
             wasAtTop = false
 
             guard drag != 0 else {
-                // No sheet movement — release any collapsed-state scroll lock
-                // so subsequent gestures are not permanently blocked.
-                delegateProxy?.lockedOffsetY = nil
+                // No sheet movement this gesture. If the sheet is fully expanded
+                // (snappedOffset == 0) this is a normal list touch — release the lock.
+                // But if snappedOffset > 0 the sheet is at an intermediate position,
+                // which happens when a new list gesture interrupted a running collapse
+                // animation (beginInteractiveControl stopped it mid-flight). Leaving
+                // the sheet stranded here would release the lock while the sheet is
+                // visually neither expanded nor collapsed — content would scroll freely
+                // on a half-open sheet, violating Rule 3. Snap to the nearest extreme
+                // instead so the sheet always lands at a known settled state.
+                if snappedOffset > 0 && !isCollapsedState {
+                    // Interrupted mid-collapse: resume toward the nearer extreme.
+                    let target: CGFloat = snappedOffset >= collapsedOffset * 0.5 ? collapsedOffset : 0
+                    if target == 0 { delegateProxy?.lockedOffsetY = nil }
+                    commitSnap(to: target, velocity: 0, source: "listPanInterruptedSettle")
+                } else {
+                    delegateProxy?.lockedOffsetY = nil
+                }
                 activePanDriver = .none
                 return
             }
@@ -556,9 +570,12 @@ final class SheetViewController: UIViewController {
                         // Near-collapsed micro-drag: snap back to collapsed.
                         commitSnap(to: collapsedOffset, velocity: velocity, source: "sheetPanDirectCollapse")
                     } else {
-                        // Genuinely mid-way: settle and release the scroll lock.
-                        delegateProxy?.lockedOffsetY = nil
-                        settleAtCurrentPositionWithoutSnap()
+                        // Mid-way after partial list drag: snap to nearest extreme rather
+                        // than settling here — a stranded intermediate position would
+                        // release the scroll lock on a half-open sheet (same bug as above).
+                        let target: CGFloat = currentPos >= collapsedOffset * 0.5 ? collapsedOffset : 0
+                        if target == 0 { delegateProxy?.lockedOffsetY = nil }
+                        commitSnap(to: target, velocity: velocity, source: "listPanMidwaySettle")
                     }
                 }
             }

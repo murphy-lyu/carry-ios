@@ -19,10 +19,13 @@ Apple 原生风格，极简、克制、优雅。
 - Destructive：Color(.systemRed)
 
 ### 品牌色 / Accent
-- **品牌主题是黑白**，没有品牌主色。App 内的橙（FAB、AccentColor 等）仅为个别强调，**不代表品牌色**——不要把它当主色铺开（如开关、大面积 tint）。
-- Accent（全局 tint）：.primary（ContentView 中已设置 .tint(.primary)）
-- 如需彩色强调，优先从 Assets.xcassets/AccentColor 扩展
-- **开关（Toggle）启用态**：用 `Color(.label)`（=`.primary` 黑白自适应），**禁止用橙**。浅色=黑轨白滑块；深色=亮白轨道，靠"亮 vs 暗"对比传达开关态（iOS 滑块恒白，深色下滑块边缘偏柔，可接受）。
+- **品牌主题色：海湾青（Bay Teal）**
+  - Light：`#3DB8A4`（sRGB r=0.239, g=0.722, b=0.643）
+  - Dark：`#4ECBB7`（sRGB r=0.306, g=0.796, b=0.718）
+  - 定义在 `Assets.xcassets/AccentColor.colorset`，代码中通过 `Color.accentColor` 或 `.tint(.accentColor)` 引用
+- Accent（全局 tint）：`.accentColor`（ContentView 中已设置 `.tint(.accentColor)`）
+- **禁止**在代码里硬编码 `.tint(.blue)` / `.foregroundStyle(.blue)`，统一用 `.accentColor`
+- **开关（Toggle）启用态**：跟随 `.accentColor`（海湾青），无需单独指定
 
 ### Tab Bar 背景（已实现）
 - Dark：Color(red: 0.09, green: 0.09, blue: 0.10)
@@ -46,10 +49,17 @@ Apple 原生风格，极简、克制、优雅。
 页面水平边距：16pt（标准）/ 20pt（宽松）
 
 ## 圆角
-- 大卡片 / Sheet：16pt
+- 大卡片 / 通用 Sheet：16pt
 - 标准按钮 / 输入框容器：12pt
 - Tag / Chip / 小元素：8pt
 - 头像小尺寸：8pt，大尺寸：全圆（.clipShape(Circle())）
+
+### 首页底部缩放 Sheet（CarryBottomSheetFX，独立规格）
+首页主 Sheet 是自定义 UIKit 缩放 sheet，不走上面的通用 16pt；视觉对标 Flighty/Tripsy：
+- 下拉收起时**整体等比缩小**（内容 + 内边距同步），两侧/底部边距随之拉开（收起态各 8pt）。
+- 圆角上下异半径、随状态过渡：顶角 36pt；底角 展开 40 / 收起 56（`cornerCurve = .continuous`）。
+- 展开贴屏时底角半径必须 **≤ 设备屏幕物理圆角**，靠屏幕硬件圆角过裁、与屏幕严丝合缝（大于会露月牙地图）。
+- 这些是真机调定值，实现/调参锚点见 `CarryBottomSheetFX.swift` 常量 + `docs/home-sheet-debug-playbook.md`；改前必读 playbook。
 
 ## 阴影（仅 Light Mode 使用，Dark Mode 禁用阴影）
 - 卡片：shadow(color: .black.opacity(0.06), radius: 8, y: 2)

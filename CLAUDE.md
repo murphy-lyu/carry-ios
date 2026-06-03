@@ -143,7 +143,7 @@ Carry 在中国大陆 App Store 上架，涉及地理政治敏感内容时必须
 - 动画统一：标准交互用 .spring(duration: 0.3, bounce: 0.2)
 - 信息密度必须服务于当前任务；如果上层页面已经提供了足够上下文，当前页面只保留完成当下操作所必需的信息，避免重复展示同一信息。
 - 问题排查时避免发散猜测；若当前信息不足以可靠定位问题，应先明确提出所需的最小补充信息（复现步骤、报错文本、截图/录屏、设备与系统版本等），再继续分析与实现，以提升排查效率和结论可信度。
-- 问题修复优先采用根因治理而非补丁叠加；默认从正确性、执行效率、性能、稳定性和可维护性出发设计方案，避免以”能跑就行”的偏方替代长期可持续实现。仅在必须临时止血时允许短期兜底方案，并需明确标注风险、适用范围与后续回收计划。典型反模式：用 `DispatchQueue.asyncAfter` 硬编码延迟来”等待”另一个异步过程（如动画）结束——这会把两处时长隐式耦合，任一改动都可能静默失效；正确做法是用该过程自身的完成回调（如 `addCompletion`、`onCompletion` 闭包）来驱动状态变化，让生命周期由事件而非时间控制。
+- **零容忍止血/补丁/过渡方案（用户硬性要求）**：问题修复必须从根本上用最合理、最科学的框架与技术解决，追求逻辑与科学正确，而非"看起来能用就行"。**禁止**提出或采用任何"止血""最小改动""临时兜底""先扛过去""补丁叠加"类方案——即使它更快、改动更小。不得以"开发耗时/工期"为由降级方案：AI 完成同等工作仅需分钟级，绝不能套用人类"一个修复要三天"的时间权衡来合理化偏方。遇到性能/架构类问题，先判断"业界（如 Flighty、Tripsy 等）如何做到"——别人能做到的、非自研黑科技的效果，本项目理论上也应能用正确技术做到；若当前实现卡顿/别扭，应合理怀疑是框架或技术方案选型不当，并负责任地换用科学解，不得回避根因。根因方案的代码改动可能很小也可能很大，以"是否真正解决根因"为唯一标准，不以改动大小论。典型反模式：用 `DispatchQueue.asyncAfter` 硬编码延迟来"等待"另一个异步过程（如动画）结束——这会把两处时长隐式耦合，任一改动都可能静默失效；正确做法是用该过程自身的完成回调（如 `addCompletion`、`onCompletion` 闭包）来驱动状态变化，让生命周期由事件而非时间控制。
 - 对迭代中的排查/优化任务，必须执行“改动有效性审计”：持续回看本轮已做改动，区分有效/无效/副作用改动。凡是“无明显收益 + 引入复杂度或潜在性能/稳定性风险”的改动，应及时回退，不得因投入成本而保留。允许尝试很多方案，但最终合入代码应保持最小必要集合（Minimal Effective Set）：只保留能被验证带来正向效果、且维护成本可控的改动，并在文档中记录“改动内容 → 结果 → 去留决策”。
 - 新 View 必须注入 store / router（通过 @EnvironmentObject）
 - NavigationRouter.path 操作统一走 router，禁止在子 View 里自行维护 NavigationPath
@@ -153,6 +153,26 @@ Carry 在中国大陆 App Store 上架，涉及地理政治敏感内容时必须
 - **Widget Extension 文件约定**：`CarryWidget/` 下所有文件仅属于 CarryWidgetExtension target，不得与主 app target 混用；跨 target 共享的类型统一放 `SharedSources/`，通过 pbxproj `PBXSourcesBuildPhase` 显式加入两个 target
 - **Widget 本地化**：widget 使用 `CarryWidget/Localizable.xcstrings`，不共享主 app 的 xcstrings；新增 widget 文案必须同步补全 9 种语言
 - **埋点闭环**：在 `CarryLogger.Event` 新增 case 时，必须在同一次改动里补齐调用点，禁止"先定义后接线"——已定义却从未调用的 Event 是死代码，上线后无法回收数据。错误类 Event 新增后必须同步加入 `errorEvents` 集合。新增用户可触发的功能/交互（按钮、入口、分享等）应评估是否需要对应埋点
+
+## 经验教训：性能/动画类疑难问题的排查纪律
+
+> 来源：FX 缩放 Sheet 的掉帧问题，纯靠迭代试错走了 3–4 天才找到真正根因（自动吸附用手写 `CADisplayLink` → 应换成 Core Animation）。这套纪律的目的：以后遇到类似"卡顿/不流畅/动画别扭"的问题**不再走这么多弯路**。详细经过见 `docs/home-sheet-debug-playbook.md` §21–§32。
+
+1. **先用"对照组"隔离根因，不要逐层枚举成本试错。** 某效果不如一个已知的好参照时，第一步永远是用**控制变量法**找出那个唯一差异，而不是凭经验猜可疑点逐个改：
+   - 项目内有现成对照（本例 fallback 实现：同内容、唯一差别=缩放 transform）→ **立刻 A/B**，差异即根因方向。
+   - 有竞品参照（如 Tripsy）→ 用它隔离变量（"锁 60Hz 看 Tripsy 是否仍丝滑"一举排除了"帧率不够"这个假设）。
+   - 这两个实验本应在**第一次报问题时**就做，而不是拖到第 3 天。
+2. **"改了只是好一点点"是危险信号**——说明在修次要成本、不是根因。别在同一条路上继续磨，停下来重新对照隔离。本例 relayout→mask→blur→帧率 每步都"好一点"，持续强化了错误方向。
+3. **动画/交互"不丝滑"，第一嫌疑是动画的"机制"对不对，而非逐帧成本。** iOS 原生丝滑动画 = **Core Animation**（`UIViewPropertyAnimator` / `CASpringAnimation`，渲染服务器 GPU 插值、与刷新率自适应）。**手写 `CADisplayLink` 每帧改属性几乎总是错的**（主线程每帧算、易抖、还要自己处理限步/时序）。看到吸附/动画用 `CADisplayLink + 每帧 setFrame/手算插值` → 高度怀疑，优先换 CA 动画。
+4. **任何"历史 workaround"在它的前提改变后，必须重新质疑、而非当成不可碰的雷区。** 本例手写 displayLink 当初是为旧的 CAShapeLayer mask 服务（mask 没法被动画器干净插值）；mask 删掉后它早该退役，却因被标"雷区"一直绕着供着，严重拖慢定位。
+5. **对标平台/竞品的实现方式。** 我们的方案在架构上与"系统/竞品怎么做"不同时，那个差异就是头号嫌疑，先查它再微调参数。iOS 圆角 Sheet 的正解 ≈ Apple 自家：`layer.cornerRadius`（非 path mask）+ CA 动画（非 displayLink）+ 内容固定尺寸不每帧 relayout + 缩放用 transform（必要时 `shouldRasterize` 缓存 blur/阴影）。
+6. **缺客观数据时尽早仪表化。** 没法真机 profile 时，加帧时间埋点拿数据，比"假设 + 真机主观反馈"的慢回路快得多。
+
+**iOS 流畅滚动/动画 速查（直接规避踩过的坑）**：
+- 每帧 resize SwiftUI 宿主 view（改 `frame.size`）→ 触发整树 relayout，必卡。内容固定尺寸，缩放/位移用 `transform`/`center`。
+- 缩放含 `.blur`/`.shadow` 的内容 → CA 每帧重渲染滤镜。运动期对内容层 `shouldRasterize`（运动结束/列表滚动时必须关）。
+- 圆角优先 `layer.cornerRadius + cornerCurve=.continuous`（GPU 原生）；避免每帧重建 `CAShapeLayer.path`（整层重栅格化）。上下不同圆角用两层各圆两角的嵌套 layer，而非 path mask。
+- 自定义高刷 `CADisplayLink` 需 Info.plist `CADisableMinimumFrameDurationOnPhone=YES` 才能上 120Hz——但**优先用 CA 动画，别手写 displayLink**。
 
 ## 本地化规范
 

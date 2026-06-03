@@ -320,16 +320,147 @@
    - 决策：按“最小必要有效改动集合”原则，回退 A/B 开关实现，避免引入额外维护复杂度。
    - 当前结论：流畅度瓶颈不在 `ff473c5` 这两项（高刷上限/阈值缓存）本身，后续优化应转向 direct 路径的布局/状态同步稳定性。
 
-## 6. ⚠️ 头号陷阱：有两个 Sheet 实现，默认跑的不是 FX
+21. 改动（2026-06-03，FX/ultimate 缩放，待真机验收）：
+   - 文件：`CarryBottomSheetFX.swift`（ultimate 变体；Dev Options「Enable Scaling Effects」开启时才跑）。
+   - 用户确认症状：**底部末段突变**——两侧边距连续跟手拉开，但底部圆角/收缩在快到底时才突然冒出来。
+   - 根因（结构性，非参数）：`applyCornerMask` 的 `visibleH = fullH + ep*(rawVisible - fullH)`，`ep = bottomRevealProgress(progress)`。只要 `ep < 1`，圆角底边就被画在可见裁剪线**之下**（被裁掉）→ 底部恒为直角；只有 `ep→1`（进度逼近 1）圆角才可见。这解释了为何历史上把 threshold 从 0.97 降到 0.35（日志第 7 条）"基本无效"——降 threshold 改的是起点，改变不了"必须 ep≈1 才可见"的本质。
+   - 修复：`visibleH = max(0, min(fullH, rawVisible))`，底部圆角始终贴可见裁剪线，随下拉连续上抬，与两侧同步。删除 `bottomRevealProgress` 函数。
+   - 关键安全性：两端点不变 —— 展开 `p=0` 时 `rawVisible == fullH`、收起 `p=1` 时 `rawVisible ==` 收起可见高度，与旧公式算出的 `visibleH` 一致；只改中间拖拽态。因此**不触碰脆弱的自动吸附收尾路径**（`commitSnap` / `handleDirectPositionTick` 结构未动），吸附中 mask 仍按既有时机重建，未引入"先压矮再下落"风险来源。
+   - 配套：缩放幅度 `collapsedSideMargin` / `collapsedBottomMargin` 由 `8 → 14`（用户口径"明显但克制"，对标 Tripsy/Flighty；这是纯调参旋钮，真机再微调）。
+   - 顺手清理：删除死代码 `disableGestureAutoSnap`（声明 `= true` 但全代码无人读取，是"做一半"残留）。
+   - 编译：iphonesimulator Debug `BUILD SUCCEEDED`。
+   - 真机验收清单：① 慢速跟手下拉，底部圆角/边距是否与两侧**同步**连续上抬（不再末段突变）；② 快速下拉松手自动吸附，底部是否仍**无**"先压矮再下落"（本次未碰吸附路径，预期不回归，但需确认）；③ 上拉展开方向底部圆角是否同样连续；④ 14pt 幅度是否"明显但克制"。
+
+22. 改动（2026-06-03，紧接第 21 条，待真机验收）：
+   - 用户反馈第 21 条结果：「缩放幅度太过了 + 不够流畅」。
+   - 幅度：`collapsedSideMargin` / `collapsedBottomMargin` 由 `14 → 10`。
+   - 流畅度根因：`geometry()` 把 `sideMargin / width / clippingHeight` 做了 `pixelAligned` 像素对齐。这些缩放量在整段 ~580pt 行程里只变 ~10pt，变化极慢；像素对齐后每 ~15–20pt 手指位移才跳一个像素 → 慢拖时两侧/底部边距**阶梯式跳变**。且幅度越小阶梯越粗，故"降幅度"会加重卡顿，必须同时连续化。
+   - 修复：缩放量去掉 `pixelAligned`，连续变化（`sideMargin` / `width` / `clippingHeight`）。`y`（垂直位置）与基准 `height` 仍保留像素对齐，避免内容文字抖动/锯齿。
+   - 配套：`applyCornerMask` mask 路径缓存阈值 `0.25/0.5 → 0.1/0.2`，让圆角跟上连续值，不再跳过亚像素更新。
+   - ⚠️ 已知取舍（需真机确认）：`width` 连续后，`hostingView.frame` 宽度逐帧变化 → SwiftUI 内容逐帧 relayout（原像素对齐会让连续多帧宽度相同从而跳过 relayout）。可见列表很短，现代设备预期可承受；**若真机反而出现 CPU 掉帧**，则改用「两侧用 GPU transform 缩放、不 resize 内容 frame」的方案（更大改动，届时单独评估）。
+   - 编译：iphonesimulator Debug `BUILD SUCCEEDED`。
+   - 真机验收：① 慢拖两侧/底部是否连续无阶梯；② 10pt 幅度是否合适（仍是 `collapsedSideMargin`/`collapsedBottomMargin` 两个旋钮）；③ 是否有新的逐帧 relayout 掉帧（重点看列表较长时下拉）。
+
+23. 改动（2026-06-03，FX 滚动锁与 fallback 对齐 + 底部圆角，待真机验收）：
+   - 用户反馈：①「内容区上滑锁需参考 CarryBottomSheet.swift（fallback）」②「底部圆角初始值太小，缩放前段裁剪不完整」。
+   - 背景：playbook §16.1（`contentOffsetObservation` KVO 钳制）与 §17（中间位置不释放锁、snap 到极点）两个修复，当时只补进了 fallback `CarryBottomSheet.swift`，**漏同步到 FX**。本轮把三处移植进 `CarryBottomSheetFX.swift`：
+     - `attachScrollView` 增加 `contentOffsetObservation = sv.observe(\.contentOffset)`，锁定期间 offset 漂移 >0.5 即拉回，不依赖 delegate。
+     - `handleListPan .ended` 的 `drag==0` guard：`snappedOffset>0 && !isCollapsedState` 时 snap 到最近极点（`listPanInterruptedSettle`），不再无条件释放锁。
+     - 中间 settle 分支：由 `settleAtCurrentPositionWithoutSnap()` 改为 snap 到最近极点（`listPanMidwaySettle`）。
+   - 底部圆角：几何分析确认「初始值太小」与「前段裁剪不完整」同根因——底边最多只抬 10pt，大圆角贴屏底露不全。用户选「只加大圆角数值，不动底边抬升」。实现：
+     - 新增 `expandedBottomRadius = 44`，让底部圆角**起点与顶部解耦**（顶部仍 36 不变），`bottomRadius(p)` 改用它作基。
+     - `collapsedBottomRadius` `48 → 52`。
+     - 顶部圆角、`topRadius` 完全未动。
+   - 编译：iphonesimulator Debug `BUILD SUCCEEDED`。
+   - 真机验收：① 上拉内容区（收起态/中断收起）滚动锁是否稳（§16 概率性漏滚是否改善）；② 下拉中途上拉、是否还会卡中间+可滚（§17 回归）；③ 底部圆角初始是否够圆、前段是否还"裁剪不完整"——`expandedBottomRadius`/`collapsedBottomRadius` 是旋钮；④ 若用户后续仍觉裁剪不完整，则真因是底边抬升不足（需调 `collapsedBottomMargin`，本轮按用户要求未动）。
+
+24. 改动（2026-06-03，修「切换开关后 FX 滚动锁整体失效」，待真机验收）：
+   - 现象：在 Dev Options 切换 Enable Scaling Effects 开关后，内容区滚动锁完全消失——上滑内容区本应驱动 sheet，结果变回普通内容滚动（handleListPan 整个没生效）。冷启动不复现，仅"切换后"复现。
+   - 根因：FX 只在 `installContent` 用一次性 `asyncAfter(0.15s)` 调 `attachScrollView`，且 `findScrollView` 失败时 `guard else return` **无重试**。切换开关时 HomeView `switch` 销毁旧 sheet、新建 `FXSheetViewController`，整页重渲染，SwiftUI 的 List 在 0.15s 内常还没生成 UIScrollView → attach 静默失败 → `handleListPan` target 未加、`delegateProxy` 未建 → 锁永远装不上。
+   - 排除自身改动：第 21–23 轮的 `.ended`/KVO 改动均在 attach 成功之后才生效，attach 没跑成则全不生效，故非那些改动引入；属 FX attach 时序固有脆弱（§16 已提）。
+   - 修复：`viewDidLayoutSubviews` 增加兜底——**仅当 `listScrollView == nil`（从未成功 attach）** 时调用 `attachScrollView(in: hostingView)`。scroll view 一布局出来即接上；attach 自带 `sv !== listScrollView` 幂等 guard，不会重复加 target。
+   - 刻意收窄条件：只在"从未 attach"时触发，**不**在 `sv !== listScrollView`（mid-session 重建）时重连——后者是 §16 试过并回退的更宽自愈，避免重蹈复杂度。
+   - 编译：iphonesimulator Debug `BUILD SUCCEEDED`。
+   - 真机验收：切换开关 → 立刻上滑/下拉内容区，锁是否恢复（驱动 sheet 而非滚内容）；反复来回切换多次仍需稳。
+
+25. 改动（2026-06-03，撤回反向操作 + 底部圆角=屏幕圆角，待真机验收）：
+   - 用户反馈：①「不流畅，怀疑技术方案不科学、每帧运算太多导致卡帧」②「底部圆角初始值仍太小，下拉前半段圆角被屏幕挡住；预期初始圆角=屏幕圆角」。
+   - 卡帧根因（确认用户直觉正确）：FX 每帧 `placeSheet` 改 `hostingView.frame` 宽度 → 宽度变 → SwiftUI 每帧 relayout 整个 sheet 内容（行程列表）。这是主因。**且第 22 轮我去掉缩放量的 `pixelAligned`（误判卡顿为"阶梯感"）反而把宽度变成逐帧不同 → relayout 从"每~19pt 一次"恶化为"每帧一次"**；同轮把 mask 缓存阈值从 0.25/0.5 调到 0.1/0.2 也增加了每帧 path 重建。
+   - 本轮（低风险撤回，先止血）：
+     - 恢复 `sideMargin/width/clippingHeight` 的 `pixelAligned`（宽度跨帧稳定 → `hostingView.frame` 多帧相同 → 跳过 relayout）。代价：边距 ~0.33pt 亚像素阶梯，远比每帧 relayout 卡顿轻。
+     - mask 缓存阈值还原 `0.1/0.2 → 0.25/0.5`。
+   - 底部圆角（用户要"初始=屏幕圆角"）：`expandedBottomRadius 44 → 55`（≈现代 iPhone 屏幕圆角，使展开时底部与屏幕圆角嵌套，不再被遮）；`collapsedBottomRadius 52 → 36`（收起成对称卡片）。注：无公开 API 读设备圆角（私有 API 禁用），55 为常量、可调。
+   - ⚠️ 根因未除：上述只是"减少每帧重复运算"的止血。**彻底丝滑的正解是停止每帧 resize 内容、改用 GPU transform（CALayer scale）做缩放——内容固定尺寸、永不 relayout、mask 一次成形随 transform 缩放**。属架构级改写，触碰 placeSheet/applyCornerMask（被多处 snap 路径调用，§5 雷区），需真机迭代，未在本轮盲改。待用户验证止血效果后决定是否上重写。
+   - 编译：iphonesimulator Debug `BUILD SUCCEEDED`。
+   - 真机验收：① 慢/快拖是否明显变顺（撤回是否止血）；② 底部圆角展开时是否与屏幕圆角齐平、前半段不再被挡；③ 若仍卡 → 需上 transform 重写（架构级）。
+
+26. 改动（2026-06-03，根因解决卡帧 = 内容布局与缩放彻底解耦，待真机验收）：
+   - 用户硬性要求：不接受任何止血/补丁/过渡方案，只要根因科学解（已写入 CLAUDE.md「重要约定」+ 用户记忆）。
+   - 卡帧根因（确认）：FX 旧实现每帧把 `hostingView.frame` 的**宽度**设成"被收窄后的 outerView 宽度"→ 宽度逐帧变 → SwiftUI **每帧重新布局整个行程列表**（多毫秒级）。这是"不流畅"的真因，不是圆角/像素对齐之类的表层。
+   - 根因方案（性能不变量）：**SwiftUI 内容只在完整展开尺寸下布局一次，拖拽/吸附全程永不 resize。**
+     - `placeSheet`：`hostingView.frame` 固定为 `(x: 居中偏移, y: 0, width: 满宽, height: expandedHeight)`——宽高恒定，每帧只改 origin.x 居中。改 origin 是 GPU 廉价的 position 变更，**不触发 layoutSubviews → SwiftUI 不 relayout**。
+     - 宽度收窄不再靠"把内容布局成更窄"，而是内容保持满宽、由 innerView 的 mask **裁切**实现（裁掉的是 ≤10pt 的内容内边距区，列表 padding 足以吸收）。
+     - geometry 去掉 `pixelAligned`（连续值）——relayout 已解耦，连续不再有代价，反而消除了像素对齐在缓慢变化的边距上造成的阶梯感。删除 `pixelAligned` 函数（无引用）。
+   - 每帧剩余开销：仅图层几何（frame/clip/mask path）——无任何 SwiftUI 布局。mask path 为 4 段弧的廉价 CG 构建，非瓶颈。
+   - 视觉差异（需真机确认）：收起态内容现按满宽渲染再裁 ≤10pt（旧实现是 reflow 成窄宽）；若有贴右边元素被裁，再议（预期 padding 吸收）。
+   - 圆角沿用第 25 轮：`expandedBottomRadius=55`（≈屏幕圆角，展开时底部与屏幕嵌套）→ 收起 `36`；顶部恒 36。
+   - 编译：iphonesimulator Debug `BUILD SUCCEEDED`。
+   - 真机验收：① 拖拽是否达到 Flighty/Tripsy 级顺滑（这是根因解，预期质变）；② 底部圆角展开与屏幕齐平；③ 收起态内容右/左缘有无异常裁切。若仍有残余掉帧——唯一剩余每帧成本是 mask path 重栅格化，届时再上"顶部 layer.cornerRadius + 底部独立处理"的纯 GPU 圆角方案（需放弃 mask）。
+
+27. 改动（2026-06-03，根因修「偶现内容区自由滚动」= 锁改为状态驱动，待真机验收）：
+   - 用户反馈：FX 偶现内容区在不该滚时仍能上下滚动；要求核对 FX 锁逻辑是否与 fallback 一致。
+   - 审计结论：FX 的锁逻辑（`.began`/`.changed`/`.ended`/`attachScrollView`/`installProxy`/`FXDecelerationCanceller`/手势 delegate）已与 fallback `CarryBottomSheet` 逐行等价，**不是漏抄**。
+   - 根因（两套共有的设计弱点，非 FX/fallback 差异）：锁是否生效绑在**易失的每手势标志**上——`activePanDriver == .list` + `.began` 里设的 `lockedOffsetY`。时序窗（§16）：① delegate 被 SwiftUI 顶替一帧；② `activePanDriver` 在 `.cancelled/.failed` 未复位 → 锁没设上 → 整段手势内容自由滚动 = 偶现。
+   - 根因解（仅改 FX）：把 delegate-无关的 `contentOffsetObservation` KVO 钳制改为 **状态驱动**——直接由 `snappedOffset + liveDelta > 0.5`（Sheet 非完全展开）判定该不该钉顶，**不依赖 lockedOffsetY 标志，也不依赖 activePanDriver**。KVO 在 offset 任何变化时触发，确定性消除时序窗。完全展开（≈0）才放开滚动（规则 2）。
+   - 为何 FX 安全而未同步改 fallback：FX 收起/展开走 `directPositionDisplayLink`，`snappedOffset` 每帧跟随真实位置，状态判定全程准确；fallback 用 spring animator，动画期 `snappedOffset` 仅在首/尾更新，盲套同款状态判定有动画中途误判风险。故 fallback **暂未动**（其同款潜在时序窗仍在，但用户未踩到）；如需两套严格一致，需对 fallback 单独按其 snap 模型适配，不可照抄。
+   - 保留：原 `lockedOffsetY` + `FXDecelerationCanceller` delegate 钳制 + `cancelNext`（负责动量取消），作为次级层与状态驱动 KVO 同向（都钉 topInset），不冲突。
+   - 编译：iphonesimulator Debug `BUILD SUCCEEDED`。
+   - 真机验收：反复在收起态/中断收起态上下滑内容区（高频试），是否还能偶现自由滚动（预期根除）；展开态内容区上下滚动是否仍正常自由（规则 2 不被误锁）。
+
+28. 改动（2026-06-03，根因消除最后一项每帧重活 = 去 CAShapeLayer mask，待真机验收）：
+   - 用户要求：继续从代码/实现层找流畅度优化空间，要科学解、无论多复杂。
+   - 逐帧开销审计：relayout 解耦后（§26），拖拽每帧仍有一项真重活——`applyCornerMask` 每帧用 `UIBezierPath` 重建 4 段弧并赋给 `CAShapeLayer.path`（innerView 的 `.mask`）。CAShapeLayer 作 mask 时 path 一变，渲染服务器要把**整张图层等大的 alpha 位图重栅格化**（展开态 ~1180×2100@3x），是 relayout 之后的头号每帧成本。根因是"上下圆角不同（顶 36/底 55→36）只能用 path mask"。
+   - 根因解（Apple 自家圆角 sheet 的做法）：用**两层嵌套的单半径 `cornerRadius` 图层**替代 path mask——
+     - `outerView`：圆底部两角（`maskedCorners` 下两角）+ 其 `bounds.height` 承担底部裁切（取代 mask 的 visibleH 与旧 clippingView）；
+     - `innerView`：圆顶部两角；
+     - 内容被两层依次裁切 → 四角独立半径，全程 **零 path、零 mask 栅格化**，`cornerRadius` 为 GPU 原生。
+   - 连带架构收益：
+     - 删除 `clippingView`、`innerMaskLayer`、`lastMask*` 缓存、整个 `applyCornerMask` 的路径构建（→ 仅两行 cornerRadius 赋值）。
+     - 卡片高度 `visibleHeight = expandedHeight - lift - banded` 是**位置的纯函数**，与位置永远锁死 → 结构性根除"先压矮再下落"（§4/§5 反复出现的吸附伪影的根）。
+     - 删除死代码 `directMaskSync*`（§15 已证伪、定义后从未调用的 displayLink + 两个状态变量 + 5 处无操作调用点）。
+     - 去掉每帧无意义的 `innerView.transform = .identity`。
+   - 现每帧只剩：geometry 数学 + 3 个 frame 赋值（host 仅改 origin，size 恒定→无 SwiftUI 布局）+ 2 个 cornerRadius 标量。等价于 Apple 原生圆角 sheet 的逐帧成本。
+   - 视图层级新：`outerView(底角+裁高) → innerView(顶角) → hostingView(固定满尺寸，仅居中平移)`。
+   - 编译：iphonesimulator Debug `BUILD SUCCEEDED`。
+   - 真机验收：① 拖拽/吸附是否已达 Flighty/Tripsy 级丝滑（无掉帧）；② 圆角观感：展开顶 36/底 55(嵌屏)、收起四角 36；连续过渡无突跳；③ 底部"离港"间隙与圆角是否仍正确；④ 收起态内容裁切是否正常（host 满宽裁 ≤10pt）。
+
+29. 改动（2026-06-03，内容收窄改等比缩放 = 内边距保持固定，待真机验收）：
+    - 用户对照 Flighty/Tripsy：下拉时它们「Sheet 内内容整体 + 内边距保持固定」；而我们的内容在卡片收窄时内边距越来越小直到贴边。
+    - 根因：§26/§28 为不 relayout，让 host 固定满宽、靠裁切收窄 → 内容满宽不动、卡片边内收，内边距被**绝对**裁掉 M(~10pt)→ 趋零贴边。
+    - 科学解（Flighty 的做法）：侧边收窄改为对整张卡片施加**等比 scale transform**，`s=(w-2M)/w`。host 仍固定满尺寸不 resize（不 relayout），收窄是 GPU transform；内容/内边距/圆角等比一起缩 → 内边距占卡宽比例恒定 = "保持固定"。垂直收起仍由 bounds.height 裁切。
+    - 实现要点：`outerView` 用 `bounds`+`transform`+`center`（UIView API，无隐式动画）；默认 anchor，center 取 `(w/2, topY+visibleHeight/2)`、bounds 高 `visibleHeight/s`，使缩放后视觉 frame 恰为 `(M, topY, w-2M, visibleHeight)` → `presentation().frame.origin.y==topY` 不变，吸附读位置不受影响。host 满宽 `(0,0,w,expandedHeight)` 填满卡片（无需居中偏移），随父层缩放。圆角按 `radius/scale` 反算保证视觉准确（新增 `currentScale`）。
+    - 取舍（需真机确认）：等比缩放下，内容在最收起态会整体缩 ~5%（s≈0.95）——这是 Flighty 式"卡片轻微 zoom"，内边距比例恒定。若要内容**零缩放**且内边距恒定，只能 reflow(=relayout=卡)，已否决。幅度由 `collapsedSideMargin` 调（越小缩得越少）。
+    - 编译：iphonesimulator Debug `BUILD SUCCEEDED`。
+    - 真机验收：① 下拉时内容与卡片边的内边距是否保持恒定（不再贴边）；② 仍丝滑（host 未 resize）；③ 收起态内容 ~5% 缩放是否可接受，否则调小 `collapsedSideMargin`；④ 圆角/底部间隙是否仍正确。
+
+30. 改动（2026-06-03，根因修真机掉帧 = 运动期栅格化内容，待真机验收）：
+    - 真机 iPhone 17 Pro 仍明显掉帧。A/B 决定性定位：关开关跑 fallback（内容相同、无缩放 transform，纯平移）**丝滑**；开开关跑 FX（每帧 scale transform）**卡**。
+    - 根因（确认）：§27 把侧边收窄改成每帧变化的 scale transform。`.blur`（`CarrySubtleBackground` 背景 blur 18~24）与卡片 ~10 处 `.shadow` 是**缩放相关滤镜**，父层 transform 每帧变 → CoreAnimation 每帧在 GPU 重渲染这些 blur/阴影。fallback 只平移固定渲染所以不卡 = 等于把 relayout 换成了 transform 滤镜重渲染。
+    - 科学解：运动期把内容层 `hostingView.layer.shouldRasterize = true`，blur/阴影只渲染一次成位图，每帧缩放只合成缓存纹理（GPU 廉价）——性质回到 fallback 的"移动固定渲染"，只多了缩放。`rasterizationScale = 屏幕 scale`，且只向下缩放，位图清晰。
+    - 严格门控（关键，否则列表滚动被冻在缓存位图）：仅在**真正驱动 Sheet 移动**时开——`applyLiveDelta(delta != 0)`（含把手拖动、规则 1/3）+ `commitSnap` 吸附期；`applyLiveDelta(0)`（规则 2 列表滚动 / no-op）、两个吸附完成回调、`settleAtCurrentPositionWithoutSnap` 一律关。新增 `setContentRasterized(_:)`（幂等，避免连续帧重复触发重栅格化）。
+    - 已知小代价：拖动第一帧要栅格化一次满屏 host 位图（~一帧），手指刚落下时几乎无感；若真机仍见起手一顿，可预栅格化。
+    - 测试机记录：iPhone 17 Pro，屏幕圆角 `expandedBottomRadius=62`（§ 上条）。
+    - 编译：iphonesimulator Debug `BUILD SUCCEEDED`。
+    - 真机验收：① 下拉收起 / 上拉展开是否已达 fallback 级丝滑（预期质变）；② 展开态列表正常上下滚动是否正常、不被冻结(验证门控正确)；③ 起手第一帧有无可感顿挫。
+
+31. 改动（2026-06-03，根因修自动吸附掉帧 = 改用 Core Animation，待真机验收）：
+    - 用户决定性反驳：把 17 Pro 锁 60Hz，Tripsy 依旧丝滑、我们仍卡 → **掉帧根因不是帧率**（120fps 的 §30 是治标），是吸附**动画方法**错了。手动跟手顺（输入驱动），自动吸附卡。
+    - 根因（确认）：自动吸附是手写 `CADisplayLink` 逐帧动画（`startDirectPositionSync`/`handleDirectPositionTick`），主线程每帧算位置 + 限步（≤18pt/帧）。这种手搓动画在任何刷新率都易抖（时序/限步/追不上理想值）。Tripsy 用 Core Animation：动画交渲染服务器 GPU 插值，与刷新率自适应、天然丝滑。
+    - 为何现在能换（当初不能）：当初用 displayLink 是因为老的 CAShapeLayer mask path 没法被动画器干净插值（§4-5 多通道竞争）。§28 起 mask 已删，位置/缩放/圆角全由可动画的 `transform`/`bounds`/`center`/`cornerRadius` 驱动 + 内容已栅格化 → 单个 `UIViewPropertyAnimator` 一条曲线即可全部插值。
+    - 修复：direct 吸附分支（`sheetPanDirectCollapse`/`Expand`/`listPanUp`）改为 `UIViewPropertyAnimator(duration: 0.4, dampingRatio: 1.0)`，在 addAnimations 里 `placeSheet(target)`+`applyCornerMask(target)`。临界阻尼=无 overshoot（满足直接吸附"不回弹"要求 §5/§13）。栅格化的内容被动画 transform 合成缓存位图 → 任何刷新率丝滑。
+    - 暂留（验证驱动，非偷懒）：`startDirectPositionSync`/`handleDirectPositionTick` + `directPosition*` 状态暂未删（现已无人调用），作为"新方案真机验顺前"的可回退备份；spring 路径（少见 settle）仍用旧 `startSnapShapeFollow` displayLink 驱动 cornerRadius（位置已是 CA，cornerRadius 仅 6pt 变化、无关大局）。用户确认 CA 吸附丝滑后，整体删除这些 displayLink 残骸。
+    - 时长 0.4 是旋钮（之前 displayLink 0.36/0.48）。
+    - 编译：iphonesimulator Debug `BUILD SUCCEEDED`。
+    - 真机验收：① 松手自动上拉/下拉是否已与 Tripsy 同级丝滑（含 60Hz 下）；② 有无 overshoot/回弹（应无）；③ 速度是否合适（调 duration）。验顺后删 displayLink 残骸。
+
+32. 改动（2026-06-03，丝滑确认 + 收口）：
+    - 用户确认 0.33 吸附在真机彻底丝滑、无回弹 → CA 动画根治成立。
+    - 微调：`collapsedBottomRadius 60→54`（收起卡底角不那么鼓）；direct 吸附 `duration 0.33→0.36`（沉稳一点点）。
+    - 彻底删除全部 `CADisplayLink` 残骸：① §30 起已无人调用的 `directPosition*`（startDirectPositionSync/handleDirectPositionTick/stopDirectPositionSync + 9 变量 + 4 调用点）；② spring 路径的 shape displayLink（startSnapShapeFollow/handleShapeDisplayLink/stopShapeDisplayLink/shapeDisplayLink/snapShapeStart/snapShapeTarget + 6 调用点），其 cornerRadius 已并入该路径的 `UIViewPropertyAnimator.addAnimations`。FX 现全程纯 Core Animation 驱动，文件内无任何 displayLink。
+    - **默认变体切到 `.ultimate`（FX）**：`SheetFeatureFlag.activeSheetVariant` 返回值、HomeView `@AppStorage` 默认、HomeView switch 兜底、SettingsView 开关 get 兜底四处统一 `.fallback → .ultimate`。fallback 保留作 Dev Options A/B 备选。详见 §6 已更新。
+    - 编译：iphonesimulator Debug `BUILD SUCCEEDED`。
+    - 至此 §21–§32 这条「FX 缩放从做一半带 bug → 视觉到位 + 纯 CA 丝滑 → 设为默认」长链收口。
+
+## 6. ⚠️ 有两个 Sheet 实现，确认改对文件（默认已于 2026-06-03 改为 FX）
 
 排查 Sheet 问题前**必须**先确认改对文件，否则所有改动“看起来无效”：
 
 - `HomeView` 通过 `SheetVariant`（`@AppStorage(sheetVariantDefaultsKey)`）在两个实现间切换：
-  - `.fallback` → **`CarryBottomSheet.swift`**（`SheetViewController`）← **默认值，真机/用户实际运行的就是它**
-  - `.ultimate`  → `CarryBottomSheetFX.swift`（`FXSheetViewController`）← 仅 Dev Options 手动开启「Ultimate sheet」开关才启用
-- 默认 `SheetVariant.fallback.rawValue`，所以**不开开关时改 `CarryBottomSheetFX.swift` 完全不会生效**。
-- 真实教训（2026-05-30）：连续 4 次改 `CarryBottomSheetFX.swift` 修“快速上滑溢出露地图”，全部“无效”，因为默认根本没实例化 FX。最终靠“把填充块改成鲜红色仍完全看不到”才定位到改错了文件。
-- 排查铁律：动手前先确认当前 `sheetVariantRaw` 的值（或直接在两个文件的关键方法打断点/改色验证哪个在跑），不要假设。
+  - `.ultimate`  → **`CarryBottomSheetFX.swift`**（`FXSheetViewController`）← **现默认值（2026-06-03 起），新装/未手动切换的用户跑的就是它**
+  - `.fallback` → `CarryBottomSheet.swift`（`SheetViewController`）← 无缩放矩形版，现仅作 Dev Options A/B 备选
+- 编译期默认 `SheetVariant.ultimate.rawValue`（`SheetFeatureFlag.activeSheetVariant`、HomeView `@AppStorage` 与 switch 兜底、SettingsView 开关 get 四处一致）。
+- 历史教训（2026-05-30，当时默认还是 fallback）：连续 4 次改 `CarryBottomSheetFX.swift` 全部“无效”，因为默认没实例化 FX。**如今默认反过来了**——若要改 fallback 版需确认开关已切到 fallback，否则改 `CarryBottomSheet.swift` 不生效。
+- 排查铁律：动手前先确认当前 `sheetVariantRaw` 的值（或在关键方法打断点/改色验证哪个在跑），不要假设。
 
 ## 7. 已修复：快速上滑（expand 弹性 overshoot）底部露出 MapKit
 
@@ -337,6 +468,24 @@
 - 根因：`SheetViewController`（fallback）用 `UIViewPropertyAnimator` spring 做 snap，expand 时 presentation 层 overshoot 飞过静止位。`containerView` 高度固定 = `expandedHeight`、背景 `.clear`、底部直角，一上移底部就空出来透到 ZStack 底层的地图。
 - 修复（`placeSheet` + `viewDidLoad`）：`containerView` 向下延伸 `bottomExtension = 400`（静止时在屏幕外、底部本就是直角，正常不可见），并给 `containerView.backgroundColor` 设 `CarrySubtleBackground` 底部渐变色（dark `0.08/0.08/0.09`，light `0.98/0.98/0.97`）。`hostingView` 仍只占 `expandedHeight`，内容布局不受影响；overshoot 露出的是这段延伸背景而非地图。
 - 同类隐患：`CarryBottomSheetFX.swift` 的 ultimate 版用 clippingView/outerView 多层结构，若将来启用 ultimate 需单独验证是否有同样的 overshoot 露底（当前未做）。
+
+## 17. 已修复：下拉中途向上拉导致 Sheet 停在中间 + 内容区滚动锁失效（2026-06-01）
+
+**现象**：把手下拉 Sheet 即将到底时，同时做向上拉动作，概率性阻断 Sheet 落底，停在中间位置，内容区可以滚动（违反 Rule 3）。
+
+**根因链路**（单一、已确认）：
+1. `handleSheetPan .ended` → `commitSnap(to: collapsedOffset)` 启动动画（~0.48s）
+2. 动画进行中，用户手指触碰内容区 → `handleListPan .began` → `beginInteractiveControl()` 中断动画，Sheet 冻在中间（`snappedOffset` = 中间值 > 0）
+3. 用户向上手势 → `isCollapsedState = false`，Rule 2 触发 → `liveDelta = 0`
+4. `handleListPan .ended`：`drag = liveDelta = 0` → 命中 `guard drag != 0 else` → **无条件释放锁**（`lockedOffsetY = nil`）
+5. Sheet 留在中间 + 锁释放 → 内容可滚
+
+**修复**（commit `aeb37fb`，`handleListPan .ended` 两处）：
+- `drag == 0` 的 guard 分支：加判断 `snappedOffset > 0 && !isCollapsedState`，若是中间位置则 `commitSnap` 到最近极点（`listPanInterruptedSettle`），不直接释放锁
+- 原 `settleAtCurrentPositionWithoutSnap()` 分支：同样替换为 snap 到最近极点（`listPanMidwaySettle`），关闭第二条留在中间的路径
+- 真机验证通过（用户确认）
+
+---
 
 ## 16. 待解：上拉内容区「概率性滚动」（2026-06-01，非钩子失效）
 

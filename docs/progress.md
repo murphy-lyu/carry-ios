@@ -1,7 +1,21 @@
 # 项目进度
 
 ## 最后更新
-2026-06-02
+2026-06-03
+
+## 上次改动摘要（FX 缩放 Sheet 丝滑根治 + 设为默认 · 2026-06-03）
+
+把"做一半带 bug"的 FX 缩放 Sheet（`CarryBottomSheetFX`）打磨到生产级：**彻底丝滑 + 视觉定稿 + 设为默认**。完整经过见 `docs/home-sheet-debug-playbook.md` §21–§32。
+
+- **根因链（层层递进，前面是后面的前提）**：① 内容固定尺寸、不每帧 relayout，侧边收窄改**等比 transform**（内容+内边距同步缩，对齐 Flighty/Tripsy）；② 圆角用**嵌套 cornerRadius 层**替代每帧 `CAShapeLayer.path`；③ 运动期 `shouldRasterize` 缓存 blur/阴影，避免 transform 每帧重渲染滤镜；④ **吸附改 `UIViewPropertyAnimator`（纯 Core Animation）替换手写 `CADisplayLink`** —— 这才是掉帧的真根因（锁 60Hz 下 Tripsy 仍丝滑，证伪了"帧率不够"假设）。
+- **掉帧定位教训**：纯试错走了 3–4 天才到 CA 这个真解；已把"性能/动画排查纪律"写进 `CLAUDE.md`（先用对照组/竞品做单变量隔离、动画不丝滑先查"机制"是否 CA、历史 workaround 前提变了要重新质疑等）。
+- **默认变体切到 FX**（`.ultimate`）；fallback（无缩放）降为 Dev Options A/B 备选，**暂留不删**。`Info.plist` 加 `CADisableMinimumFrameDurationOnPhone`（ProMotion 高刷）。删尽全部 CADisplayLink 机制。
+- **最终调定值**：`expandedBottomRadius=40`（≤屏幕圆角、过裁防漏地图）/ `collapsedBottomRadius=56` / 顶角 36 / 收起间距各 8 / 吸附 `0.36s` 临界阻尼无回弹。
+- 顺带提交了用户在途的 **Accent Color 主题选择器 + `toggleTint`** 功能（已确认）。两个 commit 已推送：`f358be5`（FX 实现）+ `80ba129`（主题 + 默认切换）。
+
+**待办**：
+- 真机 / TestFlight 多跑，确认 FX 长期稳定、无需回退 A/B 后，**退役 fallback**：删 `CarryBottomSheet.swift` + `SheetFeatureFlag.swift` + Dev Options 的 Sheet Implementation 开关，HomeView 直调 `CarryBottomSheetFX`（清洁路径见 `specs/sheet-fallback.md`）。
+- 仍有独立 WIP 未提交：`CarryWidget/Localizable.xcstrings`（529 行改动，提交前先确认非格式重排）+ `docs/app-store-metadata.md` / `design-system.md` / `release-checklist.md` / 新文件 `app-store-screenshots.md`。
 
 ## 上次改动摘要（QA 全量审计 + 修复 · 2026-06-02）
 

@@ -167,6 +167,10 @@ struct GlobeMapView: View, Equatable {
     @State private var userPulseAnimating: Bool = false
     @State private var userPulseAnimating2: Bool = false
     @State private var cameraDistance: Double = 20_230_330
+    /// Holds the in-flight camera animation. A new animation cancels the previous one,
+    /// so two camera sequences can never write `position` concurrently (which caused the
+    /// distance to oscillate when the user pulled the sheet before stage 2 finished).
+    @State private var cameraTask: Task<Void, Never>?
 
     /// City labels appear when zoomed in past this distance (~regional level).
     private let labelVisibleDistance: Double = 8_000_000
@@ -226,8 +230,9 @@ struct GlobeMapView: View, Equatable {
                 heading: 0,
                 pitch: 0
             )
-            Task { @MainActor in
+            startCameraSequence {
                 try? await Task.sleep(for: .seconds(1))
+                guard !Task.isCancelled else { return }
                 await animateCamera(to: stage2Target, duration: 1.0)
             }
         }
@@ -246,7 +251,7 @@ struct GlobeMapView: View, Equatable {
                 heading: cam?.heading ?? 0,
                 pitch: 0
             )
-            Task { @MainActor in
+            startCameraSequence {
                 await animateCamera(to: stage3Target, duration: 1.0)
             }
         }
@@ -371,6 +376,17 @@ struct GlobeMapView: View, Equatable {
 
     // MARK: - Camera animation
 
+    /// Starts a camera animation sequence, cancelling any in-flight one first.
+    /// Guarantees only one sequence writes `position` at a time — the new sequence
+    /// picks up from wherever the cancelled one left off, so the handoff is seamless.
+    @MainActor
+    private func startCameraSequence(_ work: @escaping @MainActor () async -> Void) {
+        cameraTask?.cancel()
+        cameraTask = Task { @MainActor in
+            await work()
+        }
+    }
+
     /// Manually interpolates the camera from the current position to `target` over
     /// `duration` seconds using an easeInOut curve, driven frame-by-frame via async/await.
     /// This bypasses MapKit's internal animation duration cap which silently clamps
@@ -389,6 +405,10 @@ struct GlobeMapView: View, Equatable {
         let interval = duration / Double(steps)
 
         for step in 1...steps {
+            // A newer animation superseded this one — stop writing `position` immediately
+            // so the two sequences never fight over the camera.
+            if Task.isCancelled { return }
+
             let t = Double(step) / Double(steps)
             // easeInOut: slow start, fast middle, slow end
             let eased = t < 0.5 ? 2 * t * t : 1 - pow(-2 * t + 2, 2) / 2
@@ -400,6 +420,7 @@ struct GlobeMapView: View, Equatable {
             let pitch    = start.pitch   + eased * (target.pitch   - start.pitch)
 
             try? await Task.sleep(for: .milliseconds(Int(interval * 1_000)))
+            if Task.isCancelled { return }
             position = .camera(MapCamera(
                 centerCoordinate: CLLocationCoordinate2D(latitude: lat, longitude: lon),
                 distance: distance,
