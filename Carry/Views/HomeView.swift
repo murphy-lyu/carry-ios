@@ -156,7 +156,7 @@ struct HomeView: View {
     private var expandedSheetHeight: CGFloat {
         // Reduce sheet height when empty so the CTA sits centered without
         // large blank areas. Full height is restored once trips exist.
-        UIScreen.main.bounds.height * (isEffectivelyEmpty ? 0.58 : 0.90)
+        UIScreen.main.bounds.height * (isEffectivelyEmpty ? 0.58 : 0.86)
     }
 
     private var collapsedSheetOffset: CGFloat {

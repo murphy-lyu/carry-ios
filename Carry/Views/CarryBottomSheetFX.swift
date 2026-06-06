@@ -549,7 +549,7 @@ final class FXSheetViewController: UIViewController {
             // animation. The content is rasterised, so the animated transform just composites a
             // cached bitmap → smooth at any refresh rate. dampingRatio 1.0 = critically damped,
             // NO overshoot — direct collapse/expand must be one-way & non-bouncy (playbook §5/§13).
-            let anim = UIViewPropertyAnimator(duration: 0.36, dampingRatio: 1.0) { [weak self] in
+            let anim = UIViewPropertyAnimator(duration: 0.42, dampingRatio: 1.0) { [weak self] in
                 guard let self else { return }
                 self.placeSheet(at: target)
                 self.applyCornerMask(top: self.topRadius(targetProgress),
