@@ -82,10 +82,14 @@ struct ReorderableItemCollection: UIViewRepresentable {
                 config.backgroundColor = .clear
                 config.headerMode = (coordinator?.isInfoSection(sectionIndex) ?? false)
                     ? .none : .supplementary
+                // plain list 默认在表头上方加一段系统间距（约 20pt），旧 SwiftUI List 没有。
+                // 清零，让段间距完全由各行自身 padding 决定（对齐旧版）。
+                config.headerTopPadding = 0
                 config.trailingSwipeActionsConfigurationProvider = { [weak coordinator] indexPath in
                     coordinator?.trailingSwipe(at: indexPath)
                 }
                 let section = NSCollectionLayoutSection.list(using: config, layoutEnvironment: env)
+                section.contentInsets = .zero
                 section.boundarySupplementaryItems.forEach { $0.pinToVisibleBounds = true }
                 return section
             },
