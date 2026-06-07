@@ -106,7 +106,6 @@ struct ReorderableItemCollection: UIViewRepresentable {
         /// 拖拽起点所在 section，用于把目标位置夹断在同一 section 内。
         private var movingFromSection: Int?
         private let liftHaptic = UIImpactFeedbackGenerator(style: .medium)
-        private let stepHaptic = UISelectionFeedbackGenerator()
 
         init(_ parent: ReorderableItemCollection) {
             self.parent = parent
@@ -207,6 +206,10 @@ struct ReorderableItemCollection: UIViewRepresentable {
             let previousEditing = lastEditingItemId
             self.parent = parent
             self.lastEditingItemId = parent.editingItemId
+            // 拖拽进行中绝不 apply 快照——否则会用父视图的旧顺序覆盖 UIKit 正在做的
+            // interactive movement，导致被拖行中途“弹回”。落手后 didReorder→写库→重渲染
+            // 会再次触发 update，届时再应用（此时顺序已与 store 一致，无可见跳变）。
+            guard movingFromSection == nil else { return }
             applySnapshot(animated: true, previousEditing: previousEditing)
         }
 

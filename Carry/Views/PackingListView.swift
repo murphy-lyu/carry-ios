@@ -486,8 +486,8 @@ struct PackingListView: View {
             onDelete: { deleteItem(itemId: $0) },
             onReorder: { sid, ids in store.reorderItems(tripId: tripId, sectionId: sid, newOrder: ids) },
             onReorderBegan: {
+                // 起拖前提交在编辑的行；起拖触感由 collection 的 liftHaptic 负责。
                 if let id = editingItemId { commitEdit(itemId: id) }
-                UIImpactFeedbackGenerator(style: .medium).prepare()
             }
         )
         .ignoresSafeArea(.container, edges: .bottom)
