@@ -76,11 +76,19 @@ struct BackgroundRepositionView: View {
     /// height (grows taller for long text / progress, never wider), so framing is never cut.
     static let displayAspect: CGFloat = 4.0
 
-    let image: UIImage
-    let onSave: (BackgroundCrop) -> Void
+    /// Called with the FINAL image (may differ from the initial if the user re-picked) + crop.
+    let onSave: (UIImage, BackgroundCrop) -> Void
 
     @Environment(\.dismiss) private var dismiss
+    @State private var image: UIImage
     @State private var crop: BackgroundCrop = .full
+    @State private var showPicker = false
+    @State private var isLoading = false
+
+    init(image: UIImage, onSave: @escaping (UIImage, BackgroundCrop) -> Void) {
+        _image = State(initialValue: image)
+        self.onSave = onSave
+    }
 
     var body: some View {
         NavigationStack {
@@ -102,6 +110,14 @@ struct BackgroundRepositionView: View {
                     .multilineTextAlignment(.center)
                     .padding(.horizontal, 24)
 
+                Button {
+                    showPicker = true
+                } label: {
+                    Label("trip.background.reselect", systemImage: "photo.on.rectangle")
+                        .font(.subheadline.weight(.medium))
+                }
+                .padding(.top, 2)
+
                 Spacer()
             }
             .padding(.top, 12)
@@ -113,11 +129,36 @@ struct BackgroundRepositionView: View {
                 }
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Save") {
-                        onSave(crop)
+                        onSave(image, crop)
                         dismiss()
                     }
                     .fontWeight(.semibold)
                 }
+            }
+            .overlay {
+                if isLoading {
+                    ZStack {
+                        Color(UIColor.systemBackground).opacity(0.55).ignoresSafeArea()
+                        ProgressView().controlSize(.large)
+                    }
+                }
+            }
+            .sheet(isPresented: $showPicker) {
+                PhotoPicker(
+                    onPick: { provider in
+                        showPicker = false
+                        isLoading = true
+                        loadBackgroundImage(from: provider) { newImage in
+                            isLoading = false
+                            if let newImage {
+                                image = newImage
+                                crop = .full
+                            }
+                        }
+                    },
+                    onCancel: { showPicker = false }
+                )
+                .ignoresSafeArea()
             }
         }
     }
@@ -131,7 +172,7 @@ private struct ZoomableImageView: UIViewRepresentable {
     let onCropChange: (BackgroundCrop) -> Void
 
     func makeUIView(context: Context) -> UIScrollView {
-        let scrollView = UIScrollView()
+        let scrollView = LayoutCallbackScrollView()
         scrollView.delegate = context.coordinator
         scrollView.showsHorizontalScrollIndicator = false
         scrollView.showsVerticalScrollIndicator = false
@@ -146,10 +187,22 @@ private struct ZoomableImageView: UIViewRepresentable {
 
         context.coordinator.scrollView = scrollView
         context.coordinator.imageView = imageView
+        context.coordinator.currentImage = image
+        // Configure once bounds are real (updateUIView can fire before first layout, which left
+        // the view stuck blank after a `.id`/image swap — the yellow-box bug).
+        scrollView.onLayout = { [weak coordinator = context.coordinator] in
+            coordinator?.configureIfNeeded()
+        }
         return scrollView
     }
 
     func updateUIView(_ uiView: UIScrollView, context: Context) {
+        // Image swapped in place ("Choose Another Photo") — reset and reconfigure for the new one.
+        if context.coordinator.currentImage !== image {
+            context.coordinator.currentImage = image
+            context.coordinator.imageView?.image = image
+            context.coordinator.resetConfiguration()
+        }
         context.coordinator.configureIfNeeded()
     }
 
@@ -158,12 +211,15 @@ private struct ZoomableImageView: UIViewRepresentable {
     final class Coordinator: NSObject, UIScrollViewDelegate {
         weak var scrollView: UIScrollView?
         weak var imageView: UIImageView?
+        var currentImage: UIImage?
         private let onCropChange: (BackgroundCrop) -> Void
         private var configured = false
 
         init(onCropChange: @escaping (BackgroundCrop) -> Void) {
             self.onCropChange = onCropChange
         }
+
+        func resetConfiguration() { configured = false }
 
         func configureIfNeeded() {
             guard !configured,
@@ -210,5 +266,15 @@ private struct ZoomableImageView: UIViewRepresentable {
 
             onCropChange(BackgroundCrop(x: x, y: y, width: cw, height: ch))
         }
+    }
+}
+
+/// UIScrollView that notifies on layout, so the zoom/crop setup runs once bounds are valid
+/// (SwiftUI's updateUIView can fire before the first layout pass).
+private final class LayoutCallbackScrollView: UIScrollView {
+    var onLayout: (() -> Void)?
+    override func layoutSubviews() {
+        super.layoutSubviews()
+        onLayout?()
     }
 }

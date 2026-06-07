@@ -330,8 +330,8 @@ struct PackingListView: View {
             .ignoresSafeArea()
         }
         .sheet(item: $repositionImage) { picked in
-            BackgroundRepositionView(image: picked.image) { crop in
-                if let name = BackgroundImageStore.save(picked.image) {
+            BackgroundRepositionView(image: picked.image) { finalImage, crop in
+                if let name = BackgroundImageStore.save(finalImage) {
                     store.setLocalBackground(fileName: name, crop: crop, forTripId: tripId)
                     // The cover shows on the home card, not here — a success haptic confirms
                     // the save registered (the detail screen otherwise doesn't visibly change).
