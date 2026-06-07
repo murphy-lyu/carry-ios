@@ -72,13 +72,6 @@
           "status": "done"
         },
         {
-          "id": "trip-background",
-          "title": "行程背景图",
-          "titleEn": "Trip background photo",
-          "titleZhHant": "行程背景圖",
-          "status": "done"
-        },
-        {
           "id": "period-reminder",
           "title": "经期打包提醒",
           "titleEn": "Period-aware packing",
@@ -111,6 +104,13 @@
           "title": "小确幸",
           "titleEn": "Little Joys",
           "titleZhHant": "小確幸",
+          "status": "done"
+        },
+        {
+          "id": "trip-background",
+          "title": "行程背景图",
+          "titleEn": "Trip background photo",
+          "titleZhHant": "行程背景圖",
           "status": "done"
         },
         {
