@@ -91,6 +91,7 @@ private struct RoadmapPayload: Codable {
                     RoadmapItem(id: "weather", title: RoadmapL10n.text(en: "Weather forecast", zhHans: "目的地天气预报", zhHant: "目的地天氣預報"), status: .done, note: nil),
                     RoadmapItem(id: "live-activity", title: RoadmapL10n.text(en: "Live Activity (Dynamic Island & Lock Screen)", zhHans: "灵动岛 & 锁屏打包进度", zhHant: "靈動島 & 鎖定畫面打包進度"), status: .done, note: nil),
                     RoadmapItem(id: "home-widget", title: RoadmapL10n.text(en: "Home Screen widget", zhHans: "桌面小组件", zhHant: "主畫面小工具"), status: .done, note: nil),
+                    RoadmapItem(id: "trip-background", title: RoadmapL10n.text(en: "Trip background photo", zhHans: "行程背景图", zhHant: "行程背景圖"), status: .done, note: nil),
                     RoadmapItem(id: "period-reminder", title: RoadmapL10n.text(en: "Period-aware packing", zhHans: "经期打包提醒", zhHant: "生理期打包提醒"), status: .done, note: nil),
                     RoadmapItem(id: "quick-actions", title: RoadmapL10n.text(en: "Home Screen quick actions", zhHans: "主屏快捷操作", zhHant: "主畫面快速操作"), status: .done, note: nil),
                     RoadmapItem(id: "calendar-sync", title: RoadmapL10n.text(en: "Calendar sync", zhHans: "日历同步", zhHant: "行事曆同步"), status: .done, note: nil),
