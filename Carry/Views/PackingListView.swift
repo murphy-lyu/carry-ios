@@ -6,10 +6,12 @@
 import SwiftUI
 import UIKit
 
-/// Identifiable wrapper so a freshly-picked image can drive the reposition `.sheet(item:)`.
-private struct PickedBackgroundImage: Identifiable {
+/// Identifiable wrapper so a freshly-picked photo (its item provider) can drive the reposition
+/// `.sheet(item:)`. The image is loaded INSIDE the reposition sheet (so iCloud downloads show a
+/// spinner there, not on the packing list).
+private struct PickedBackgroundProvider: Identifiable {
     let id = UUID()
-    let image: UIImage
+    let provider: NSItemProvider
 }
 
 // MARK: - PackingListView
@@ -46,8 +48,8 @@ struct PackingListView: View {
     @State private var showReminderSheet = false
     @State private var showSuggestSheet = false
     @State private var showBackgroundPicker = false
-    @State private var isLoadingBackground = false
-    @State private var repositionImage: PickedBackgroundImage?
+    @State private var pendingPickedProvider: NSItemProvider?
+    @State private var repositionProvider: PickedBackgroundProvider?
 
     @State private var draggingItemId: UUID? = nil
     @State private var dragStartIds: [UUID] = []
@@ -315,42 +317,31 @@ struct PackingListView: View {
             router.path.append(CreationRoute.addItems(tripId))
             showAddItemsRoute = false
         }
-        .sheet(isPresented: $showBackgroundPicker) {
+        .sheet(isPresented: $showBackgroundPicker, onDismiss: {
+            // Present the reposition sheet only after the picker fully dismisses (avoids the
+            // two-sheets-at-once race). The image then loads INSIDE the reposition sheet.
+            if let provider = pendingPickedProvider {
+                pendingPickedProvider = nil
+                repositionProvider = PickedBackgroundProvider(provider: provider)
+            }
+        }) {
             PhotoPicker(
                 onPick: { provider in
+                    pendingPickedProvider = provider
                     showBackgroundPicker = false
-                    isLoadingBackground = true
-                    loadBackgroundImage(from: provider) { image in
-                        isLoadingBackground = false
-                        if let image { repositionImage = PickedBackgroundImage(image: image) }
-                    }
                 },
                 onCancel: { showBackgroundPicker = false }
             )
             .ignoresSafeArea()
         }
-        .sheet(item: $repositionImage) { picked in
-            BackgroundRepositionView(image: picked.image) { finalImage, crop in
+        .sheet(item: $repositionProvider) { picked in
+            BackgroundRepositionView(provider: picked.provider) { finalImage, crop in
                 if let name = BackgroundImageStore.save(finalImage) {
                     store.setLocalBackground(fileName: name, crop: crop, forTripId: tripId)
                     // The cover shows on the home card, not here — a success haptic confirms
                     // the save registered (the detail screen otherwise doesn't visibly change).
                     UINotificationFeedbackGenerator().notificationOccurred(.success)
                 }
-            }
-        }
-        .overlay {
-            // Covers the gap while a photo (esp. an iCloud asset) downloads, between the
-            // picker dismissing and the reposition sheet appearing.
-            if isLoadingBackground {
-                ZStack {
-                    Color.black.opacity(0.18).ignoresSafeArea()
-                    ProgressView()
-                        .controlSize(.large)
-                        .padding(22)
-                        .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
-                }
-                .transition(.opacity)
             }
         }
         .sheet(isPresented: $showReminderSheet) {

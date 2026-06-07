@@ -76,33 +76,44 @@ struct BackgroundRepositionView: View {
     /// height (grows taller for long text / progress, never wider), so framing is never cut.
     static let displayAspect: CGFloat = 4.0
 
-    /// Called with the FINAL image (may differ from the initial if the user re-picked) + crop.
+    /// Called with the FINAL image + crop. Save is disabled until an image has loaded.
     let onSave: (UIImage, BackgroundCrop) -> Void
+    private let initialProvider: NSItemProvider
 
     @Environment(\.dismiss) private var dismiss
-    @State private var image: UIImage
+    @State private var image: UIImage?
     @State private var crop: BackgroundCrop = .full
     @State private var showPicker = false
     @State private var isLoading = false
+    @State private var didStartInitialLoad = false
 
-    init(image: UIImage, onSave: @escaping (UIImage, BackgroundCrop) -> Void) {
-        _image = State(initialValue: image)
+    init(provider: NSItemProvider, onSave: @escaping (UIImage, BackgroundCrop) -> Void) {
+        self.initialProvider = provider
         self.onSave = onSave
     }
 
     var body: some View {
         NavigationStack {
             VStack(spacing: 16) {
-                ZoomableImageView(image: image) { crop = $0 }
-                    .aspectRatio(Self.displayAspect, contentMode: .fit)
-                    .frame(maxWidth: .infinity)
-                    .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
-                    .overlay(
+                Group {
+                    if let image {
+                        ZoomableImageView(image: image) { crop = $0 }
+                    } else {
+                        // Initial load (incl. iCloud download) happens INSIDE this sheet — the
+                        // spinner shows here, not on the packing list behind it.
                         RoundedRectangle(cornerRadius: 16, style: .continuous)
-                            .strokeBorder(Color.primary.opacity(0.10), lineWidth: 1)
-                    )
-                    .padding(.horizontal, 16)
-                    .padding(.top, 8)
+                            .fill(Color(UIColor.secondarySystemBackground))
+                    }
+                }
+                .aspectRatio(Self.displayAspect, contentMode: .fit)
+                .frame(maxWidth: .infinity)
+                .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 16, style: .continuous)
+                        .strokeBorder(Color.primary.opacity(0.10), lineWidth: 1)
+                )
+                .padding(.horizontal, 16)
+                .padding(.top, 8)
 
                 Text("trip.background.adjust.hint")
                     .font(.subheadline)
@@ -117,6 +128,7 @@ struct BackgroundRepositionView: View {
                         .font(.subheadline.weight(.medium))
                 }
                 .padding(.top, 2)
+                .disabled(isLoading)
 
                 Spacer()
             }
@@ -129,36 +141,44 @@ struct BackgroundRepositionView: View {
                 }
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Save") {
-                        onSave(image, crop)
-                        dismiss()
+                        if let image { onSave(image, crop); dismiss() }
                     }
                     .fontWeight(.semibold)
+                    .disabled(image == nil)
                 }
             }
             .overlay {
                 if isLoading {
-                    ZStack {
-                        Color(UIColor.systemBackground).opacity(0.55).ignoresSafeArea()
-                        ProgressView().controlSize(.large)
-                    }
+                    ProgressView()
+                        .controlSize(.large)
+                        .padding(20)
+                        .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
                 }
             }
             .sheet(isPresented: $showPicker) {
                 PhotoPicker(
-                    onPick: { provider in
-                        showPicker = false
-                        isLoading = true
-                        loadBackgroundImage(from: provider) { newImage in
-                            isLoading = false
-                            if let newImage {
-                                image = newImage
-                                crop = .full
-                            }
-                        }
-                    },
+                    onPick: { provider in showPicker = false; load(provider, isInitial: false) },
                     onCancel: { showPicker = false }
                 )
                 .ignoresSafeArea()
+            }
+            .onAppear {
+                guard !didStartInitialLoad else { return }
+                didStartInitialLoad = true
+                load(initialProvider, isInitial: true)
+            }
+        }
+    }
+
+    private func load(_ provider: NSItemProvider, isInitial: Bool) {
+        isLoading = true
+        loadBackgroundImage(from: provider) { newImage in
+            isLoading = false
+            if let newImage {
+                image = newImage
+                crop = .full
+            } else if isInitial {
+                dismiss()   // initial load failed (e.g. offline iCloud) → nothing to adjust
             }
         }
     }
@@ -213,20 +233,25 @@ private struct ZoomableImageView: UIViewRepresentable {
         weak var imageView: UIImageView?
         var currentImage: UIImage?
         private let onCropChange: (BackgroundCrop) -> Void
-        private var configured = false
+        /// Bounds the zoom was last configured for. Reconfiguring only when bounds actually change
+        /// fixes the "stuck zoomed-in, can't pinch out" bug: an early config during the sheet's
+        /// present transition (non-final bounds) locked too-large a minimumZoomScale; once bounds
+        /// settle we recompute fill/min/max for the real size. After settle, bounds stay constant
+        /// so the user's framing is preserved (no reset on normal interaction).
+        private var lastConfiguredBounds: CGRect = .zero
 
         init(onCropChange: @escaping (BackgroundCrop) -> Void) {
             self.onCropChange = onCropChange
         }
 
-        func resetConfiguration() { configured = false }
+        func resetConfiguration() { lastConfiguredBounds = .zero }
 
         func configureIfNeeded() {
-            guard !configured,
-                  let scrollView, let imageView,
+            guard let scrollView, let imageView,
                   let img = imageView.image,
-                  scrollView.bounds.width > 0, scrollView.bounds.height > 0 else { return }
-            configured = true
+                  scrollView.bounds.width > 0, scrollView.bounds.height > 0,
+                  scrollView.bounds != lastConfiguredBounds else { return }
+            lastConfiguredBounds = scrollView.bounds
 
             let imgSize = img.size
             imageView.frame = CGRect(origin: .zero, size: imgSize)
@@ -251,7 +276,7 @@ private struct ZoomableImageView: UIViewRepresentable {
         func scrollViewDidZoom(_ scrollView: UIScrollView) { emitCrop() }
 
         private func emitCrop() {
-            guard configured, let scrollView, let imageView,
+            guard lastConfiguredBounds != .zero, let scrollView, let imageView,
                   imageView.bounds.width > 0, imageView.bounds.height > 0 else { return }
             // The window mapped into the imageView's own (unzoomed, image-point) coordinate space.
             let visible = scrollView.convert(scrollView.bounds, to: imageView)
