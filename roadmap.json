@@ -1,5 +1,5 @@
 {
-  "updatedAt": "2026-06-01",
+  "updatedAt": "2026-06-07",
   "sections": [
     {
       "id": "upcoming",
@@ -69,6 +69,13 @@
           "title": "桌面小组件",
           "titleEn": "Home Screen widget",
           "titleZhHant": "主畫面小工具",
+          "status": "done"
+        },
+        {
+          "id": "trip-background",
+          "title": "行程背景图",
+          "titleEn": "Trip background photo",
+          "titleZhHant": "行程背景圖",
           "status": "done"
         },
         {
