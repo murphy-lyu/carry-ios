@@ -34,9 +34,11 @@ struct SplashView: View {
 
             VStack(spacing: 14) {
                 // 跟随用户所选 App 图标：显示其 preview 图，取不到则回退 LaunchIcon。
+                // 用 SwiftUI Image(name)（而非 Image(uiImage: UIImage(named:))）渲染，
+                // 它会跟随 colorScheme 自动解析 imageset 的明/暗变体；UIImage(named:) 仅用于存在性判断。
                 Group {
-                    if let icon = UIImage(named: currentAppIconPreviewName()) {
-                        Image(uiImage: icon).resizable().interpolation(.high)
+                    if UIImage(named: currentAppIconPreviewName()) != nil {
+                        Image(currentAppIconPreviewName()).resizable().interpolation(.high)
                     } else {
                         Image("LaunchIcon").resizable().interpolation(.high)
                     }

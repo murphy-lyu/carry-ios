@@ -16558,55 +16558,55 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Das originale Carry-Symbol"
+            "value" : "Entdecke das Unerwartete"
           }
         },
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "The original Carry icon"
+            "value" : "Discover the unexpected"
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "El icono original de Carry"
+            "value" : "Descubre lo inesperado"
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "L'icône Carry originale"
+            "value" : "Découvrez l'inattendu"
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "オリジナルのCarryアイコン"
+            "value" : "未知の驚きを見つける"
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "오리지널 Carry 아이콘"
+            "value" : "뜻밖의 즐거움 발견"
           }
         },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "O ícone original do Carry"
+            "value" : "Descubra o inesperado"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Carry 原版图标"
+            "value" : "发现未知的惊喜"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Carry 原版圖示"
+            "value" : "發現未知的驚喜"
           }
         }
       }
@@ -16617,55 +16617,55 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Standard"
+            "value" : "Inspiration"
           }
         },
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Default"
+            "value" : "Inspiration"
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Predeterminado"
+            "value" : "Inspiración"
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Par défaut"
+            "value" : "Inspiration"
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "デフォルト"
+            "value" : "ひらめき"
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "기본"
+            "value" : "영감"
           }
         },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Padrão"
+            "value" : "Inspiração"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "默认"
+            "value" : "探索灵感"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "預設"
+            "value" : "探索靈感"
           }
         }
       }
