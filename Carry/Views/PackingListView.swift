@@ -151,6 +151,12 @@ struct PackingListView: View {
                         } label: {
                             Label("Edit trip", systemImage: "pencil")
                         }
+                        Button {
+                            showReorderSheet = true
+                        } label: {
+                            Label("Edit sections", systemImage: "arrow.up.arrow.down")
+                        }
+                        // Cosmetic, optional — sits below the two Edit actions.
                         // Single entry, toggled by state: has a cover → remove; none → add.
                         if backgroundImage != nil {
                             Button(role: .destructive) {
@@ -164,11 +170,6 @@ struct PackingListView: View {
                             } label: {
                                 Label("trip.background.add", systemImage: "photo")
                             }
-                        }
-                        Button {
-                            showReorderSheet = true
-                        } label: {
-                            Label("Edit sections", systemImage: "arrow.up.arrow.down")
                         }
                         Button {
                             CarryLogger.shared.log(.packingListShared)
