@@ -29,8 +29,6 @@ struct PackingListView: View {
 
     @State private var editingItemId: UUID? = nil
     @State private var editingText: String = ""
-    @State private var isAdvancingEdit = false
-    @FocusState private var focusedItemId: UUID?
 
     @State private var showEditSheet = false
     @State private var showEditScenesSheet = false
@@ -51,10 +49,6 @@ struct PackingListView: View {
     @State private var pendingPickedProvider: NSItemProvider?
     @State private var repositionProvider: PickedBackgroundProvider?
 
-    @State private var draggingItemId: UUID? = nil
-    @State private var dragStartIds: [UUID] = []
-    @State private var dragStartIndex: Int = 0
-    @State private var currentDragIndex: Int = 0
     /// 新建预览页内容的入场揭示开关：landing 时由 false→true 驱动 chips 交错淡入上浮。
     /// 用"内容入场"本身作为"已添加"的确认，替代会顶内容的浮层 toast。
     @State private var didRevealPreview = false
@@ -266,11 +260,6 @@ struct PackingListView: View {
                 }
             }
         }
-        .onChange(of: focusedItemId) { _, newValue in
-            if newValue == nil, let id = editingItemId, !isAdvancingEdit {
-                commitEdit(itemId: id)
-            }
-        }
         .onDisappear {
             store.refresh()
         }
@@ -372,8 +361,10 @@ struct PackingListView: View {
 
             if sections.isEmpty {
                 emptyState
+            } else if isNewTrip {
+                previewPackingList
             } else {
-                packingList
+                normalPackingList
             }
         }
         .safeAreaInset(edge: .top, spacing: 0) {
@@ -393,19 +384,10 @@ struct PackingListView: View {
         return BackgroundImageStore.image(named: name)
     }
 
-    private var packingList: some View {
+    /// 新建预览模式：纯展示内容（件数行 / chips / surprise / scenePrompt），无重排需求，沿用 List。
+    private var previewPackingList: some View {
         List {
-            if !isNewTrip, let trip = bundle, trip.departureDate >= Calendar.current.startOfDay(for: Date()) {
-                Section {
-                    DestinationInfoView(trip: trip, weatherManager: weatherManager)
-                        .listRowInsets(EdgeInsets(top: 14, leading: 0, bottom: 8, trailing: 0))
-                        .listRowSeparator(.hidden)
-                        .listRowBackground(Color.clear)
-                }
-                .listSectionSeparator(.hidden)
-            }
-
-            if isNewTrip && totalCount > 0 {
+            if totalCount > 0 {
                 Section {
                     previewSummaryRow
                         .opacity(didRevealPreview ? 1 : 0)
@@ -420,26 +402,13 @@ struct PackingListView: View {
 
             ForEach(Array(sections.enumerated()), id: \.element.id) { index, section in
                 Section {
-                    if isNewTrip {
-                        previewChipsRow(items: section.sortedItems.filter { !$0.name.isEmpty })
-                            .opacity(didRevealPreview ? 1 : 0)
-                            .offset(y: didRevealPreview ? 0 : 12)
-                            .animation(.easeOut(duration: 0.34).delay(Double(min(index, 6)) * 0.05), value: didRevealPreview)
-                            .listRowInsets(EdgeInsets(top: 4, leading: 16, bottom: 16, trailing: 16))
-                            .listRowSeparator(.hidden)
-                            .listRowBackground(Color.clear)
-                    } else {
-                        ForEach(section.sortedItems.filter { !$0.name.isEmpty || $0.id == editingItemId }, id: \.id) { item in
-                            row(for: item, sectionId: section.id)
-                                .listRowInsets(EdgeInsets(top: 4, leading: 16, bottom: 4, trailing: 16))
-                                .listRowSeparator(.hidden)
-                                .listRowBackground(Color.clear)
-                        }
-                        addItemRow(sectionId: section.id)
-                            .listRowInsets(EdgeInsets(top: 4, leading: 16, bottom: 16, trailing: 16))
-                            .listRowSeparator(.hidden)
-                            .listRowBackground(Color.clear)
-                    }
+                    previewChipsRow(items: section.sortedItems.filter { !$0.name.isEmpty })
+                        .opacity(didRevealPreview ? 1 : 0)
+                        .offset(y: didRevealPreview ? 0 : 12)
+                        .animation(.easeOut(duration: 0.34).delay(Double(min(index, 6)) * 0.05), value: didRevealPreview)
+                        .listRowInsets(EdgeInsets(top: 4, leading: 16, bottom: 16, trailing: 16))
+                        .listRowSeparator(.hidden)
+                        .listRowBackground(Color.clear)
                 } header: {
                     sectionTitle(section.title, isFirst: index == 0)
                         .listRowInsets(EdgeInsets())
@@ -447,7 +416,7 @@ struct PackingListView: View {
                 .listSectionSeparator(.hidden)
             }
 
-            if isNewTrip && hasScenes && !surpriseItems.isEmpty {
+            if hasScenes && !surpriseItems.isEmpty {
                 Section {
                     ForEach(surpriseItems) { item in
                         surpriseItemRow(item)
@@ -465,7 +434,7 @@ struct PackingListView: View {
                 .animation(.easeOut(duration: 0.34).delay(Double(min(sections.count, 6)) * 0.05), value: didRevealPreview)
             }
 
-            if isNewTrip && !hasScenes {
+            if !hasScenes {
                 Section {
                     scenePromptCard
                         .opacity(didRevealPreview ? 1 : 0)
@@ -477,16 +446,51 @@ struct PackingListView: View {
                 }
                 .listSectionSeparator(.hidden)
             }
-
         }
         .listStyle(.plain)
         .scrollContentBackground(.hidden)
-        .contentMargins(.top, isNewTrip ? 8 : -8, for: .scrollContent)
+        .contentMargins(.top, 8, for: .scrollContent)
         .environment(\.defaultMinListRowHeight, 0)
         .environment(\.defaultMinListHeaderHeight, 0)
         .listSectionSpacing(0)
         .scrollIndicators(.hidden)
         .safeAreaPadding(.bottom, 83)
+    }
+
+    /// 正常模式：UICollectionView 原生 interactive movement 列表（长按拖拽 1:1 跟手）。
+    private var normalPackingList: some View {
+        ReorderableItemCollection(
+            sections: sections.map { section in
+                ReorderableItemCollection.Section(
+                    id: section.id,
+                    title: section.title,
+                    isFirst: false,
+                    itemIDs: section.sortedItems
+                        .filter { !$0.name.isEmpty || $0.id == editingItemId }
+                        .map(\.id)
+                )
+            },
+            editingItemId: editingItemId,
+            infoContent: destinationInfoContent,
+            itemContent: { id in AnyView(itemRowContent(id: id)) },
+            editingContent: { id in AnyView(inlineEditRowContent(itemId: id)) },
+            addContent: { sid in
+                AnyView(
+                    addItemRow(sectionId: sid)
+                        .padding(.horizontal, 16)
+                        .padding(.top, 4)
+                        .padding(.bottom, 16)
+                )
+            },
+            headerContent: { model in AnyView(sectionTitle(model.title, isFirst: model.isFirst)) },
+            onDelete: { deleteItem(itemId: $0) },
+            onReorder: { sid, ids in store.reorderItems(tripId: tripId, sectionId: sid, newOrder: ids) },
+            onReorderBegan: {
+                if let id = editingItemId { commitEdit(itemId: id) }
+                UIImpactFeedbackGenerator(style: .medium).prepare()
+            }
+        )
+        .ignoresSafeArea(.container, edges: .bottom)
         .safeAreaInset(edge: .top, spacing: 0) {
             if showCompletionBanner {
                 completionBanner
@@ -495,98 +499,53 @@ struct PackingListView: View {
         }
     }
 
-    @ViewBuilder
-    private func row(for item: PackingItem, sectionId: UUID) -> some View {
-        contentRow(for: item, sectionId: sectionId)
-            .swipeActions(edge: .trailing, allowsFullSwipe: false) {
-                // Do NOT use role: .destructive — it maps to UIContextualAction(.destructive)
-                // which plays a UIKit expand-then-collapse animation on tap, causing a ghost
-                // artifact. A plain button with .tint(.red) gives identical visuals without
-                // the animation, and the explicit white foreground fixes dark-mode visibility.
-                Button {
-                    deleteItem(itemId: item.id)
-                } label: {
-                    Image(systemName: "trash")
-                        .foregroundStyle(.white)
-                }
-                .tint(.red)
-            }
-    }
-
-    @ViewBuilder
-    private func contentRow(for item: PackingItem, sectionId: UUID) -> some View {
-        if editingItemId == item.id {
-            editableRow(itemId: item.id, sectionId: sectionId)
-                .padding(.horizontal, 6)
-                .padding(.vertical, 4)
-        } else {
-            PackingItemRow(
-                item: item,
-                showCheckmark: !isNewTrip,
-                showQuantity: !isNewTrip,
-                onTap: {
-                    toggleItem(itemId: item.id)
-                },
-                onDecrement: { decrementItemQuantity(itemId: item.id, current: item.quantity) },
-                onIncrement: { incrementItemQuantity(itemId: item.id, current: item.quantity) },
-                onSetQuantity: { newValue in
-                    store.updateItemQuantity(tripId: tripId, itemId: item.id, quantity: newValue)
-                }
-            )
-            .padding(.horizontal, 6)
-            .padding(.vertical, 4)
-            .allowsHitTesting(draggingItemId == nil)
-            .opacity(draggingItemId != nil && draggingItemId != item.id ? 0.55 : 1.0)
-            .overlay {
-                RoundedRectangle(cornerRadius: 10)
-                    .strokeBorder(Color.primary.opacity(draggingItemId == item.id ? 0.45 : 0), lineWidth: 2.5)
-                    .background(
-                        RoundedRectangle(cornerRadius: 10)
-                            .fill(Color.primary.opacity(draggingItemId == item.id ? 0.05 : 0))
-                    )
-                    .padding(.vertical, 2)
-            }
-            .scaleEffect(draggingItemId == item.id ? 1.04 : 1.0)
-            .shadow(
-                color: draggingItemId == item.id ? .black.opacity(0.18) : .clear,
-                radius: 10, x: 0, y: 5
-            )
-            .animation(.easeInOut(duration: 0.18), value: draggingItemId == item.id)
-            .animation(.easeInOut(duration: 0.18), value: draggingItemId != nil)
-            .background(
-                LongPressDragBridge(
-                    onBegan: {
-                        guard !isNewTrip else { return }
-                        guard let section = sections.first(where: { $0.id == sectionId }) else { return }
-                        let sectionItems = section.sortedItems.filter { !$0.name.isEmpty }
-                        dragStartIds = sectionItems.map(\.id)
-                        dragStartIndex = sectionItems.firstIndex(where: { $0.id == item.id }) ?? 0
-                        currentDragIndex = dragStartIndex
-                        draggingItemId = item.id
-                    },
-                    onChanged: { translation in
-                        guard draggingItemId == item.id else { return }
-                        let delta = Int((translation / 44).rounded())
-                        let newIndex = max(0, min(dragStartIds.count - 1, dragStartIndex + delta))
-                        guard newIndex != currentDragIndex else { return }
-                        currentDragIndex = newIndex
-                        UIImpactFeedbackGenerator(style: .light).impactOccurred()
-                        var ids = dragStartIds
-                        guard let fromIdx = ids.firstIndex(of: item.id) else { return }
-                        ids.remove(at: fromIdx)
-                        ids.insert(item.id, at: min(newIndex, ids.count))
-                        store.reorderItems(tripId: tripId, sectionId: sectionId, newOrder: ids)
-                    },
-                    onEnded: {
-                        draggingItemId = nil
-                        dragStartIds = []
-                        dragStartIndex = 0
-                        currentDragIndex = 0
-                    }
-                )
+    /// DestinationInfo 作为 collection 顶部不可重排行（随列表滚动）。无则 nil。
+    private var destinationInfoContent: (() -> AnyView)? {
+        guard let trip = bundle,
+              trip.departureDate >= Calendar.current.startOfDay(for: Date()) else { return nil }
+        return {
+            AnyView(
+                DestinationInfoView(trip: trip, weatherManager: weatherManager)
+                    .padding(.top, 14)
+                    .padding(.bottom, 8)
             )
         }
     }
+
+    @ViewBuilder
+    private func itemRowContent(id: UUID) -> some View {
+        if let item = packingItem(id) {
+            PackingItemRow(
+                item: item,
+                showCheckmark: true,
+                showQuantity: true,
+                onTap: { toggleItem(itemId: id) },
+                onDecrement: { decrementItemQuantity(itemId: id, current: item.quantity) },
+                onIncrement: { incrementItemQuantity(itemId: id, current: item.quantity) },
+                onSetQuantity: { store.updateItemQuantity(tripId: tripId, itemId: id, quantity: $0) }
+            )
+            .padding(.horizontal, 22)
+            .padding(.vertical, 8)
+        }
+    }
+
+    @ViewBuilder
+    private func inlineEditRowContent(itemId: UUID) -> some View {
+        InlineEditRow(
+            text: $editingText,
+            onEnd: { if editingItemId == itemId { commitEdit(itemId: itemId) } }
+        )
+        .padding(.horizontal, 22)
+        .padding(.vertical, 4)
+    }
+
+    private func packingItem(_ id: UUID) -> PackingItem? {
+        for section in sections {
+            if let item = (section.items ?? []).first(where: { $0.id == id }) { return item }
+        }
+        return nil
+    }
+
 
     // MARK: Actions
 
@@ -691,14 +650,6 @@ struct PackingListView: View {
         let next = max(current - 1, 1)
         guard next != current else { return }
         store.updateItemQuantity(tripId: tripId, itemId: itemId, quantity: next)
-        UIImpactFeedbackGenerator(style: .light).impactOccurred()
-    }
-
-    private func moveItems(in section: PackingSection, source: IndexSet, destination: Int) {
-        if let id = editingItemId { commitEdit(itemId: id) }
-        var ids = section.sortedItems.map(\.id)
-        ids.move(fromOffsets: source, toOffset: destination)
-        store.reorderItems(tripId: tripId, sectionId: section.id, newOrder: ids)
         UIImpactFeedbackGenerator(style: .light).impactOccurred()
     }
 
@@ -1099,29 +1050,6 @@ struct PackingListView: View {
             .zIndex(3)
     }
 
-    private func editableRow(itemId: UUID, sectionId: UUID) -> some View {
-        HStack(spacing: 12) {
-            Circle()
-                .strokeBorder(Color.secondary.opacity(0.3), lineWidth: 1.5)
-                .frame(width: 24, height: 24)
-
-            TextField("", text: $editingText)
-                .font(.subheadline)
-                .tint(.primary)
-                .focused($focusedItemId, equals: itemId)
-                .submitLabel(.done)
-                .onSubmit { focusedItemId = nil }
-                .textFieldStyle(.plain)
-
-            Spacer()
-
-            Circle()
-                .fill(Color.clear)
-                .frame(width: 5, height: 5)
-        }
-        .frame(height: 44)
-    }
-
     private func previewChipsRow(items: [PackingItem]) -> some View {
         FlowLayout(spacing: 8, lineSpacing: 8) {
             ForEach(items) { item in
@@ -1275,7 +1203,8 @@ struct PackingListView: View {
     }
 
     private func dismissInlineEditing() {
-        focusedItemId = nil
+        // 失焦由 InlineEditRow 内部 @FocusState 管；这里负责收起键盘并提交在编辑的行
+        // （响应清单区域的全局点击）。
         UIApplication.shared.sendAction(
             #selector(UIResponder.resignFirstResponder),
             to: nil,
@@ -1289,17 +1218,11 @@ struct PackingListView: View {
 
     private func appendNewItem(sectionId: UUID) {
         guard let sectionIndex = sections.firstIndex(where: { $0.id == sectionId }) else { return }
-        isAdvancingEdit = true
-        withAnimation(.easeInOut(duration: 0.2)) {
-            if let id = editingItemId { commitEdit(itemId: id) }
-            let newId = store.addItem(tripId: tripId, sectionIndex: sectionIndex)
-            editingItemId = newId
-            editingText = ""
-            DispatchQueue.main.async {
-                focusedItemId = newId
-                isAdvancingEdit = false
-            }
-        }
+        // 先提交当前在编辑的行，再插入新空行；新行的 InlineEditRow 出现即自动聚焦。
+        if let id = editingItemId { commitEdit(itemId: id) }
+        let newId = store.addItem(tripId: tripId, sectionIndex: sectionIndex)
+        editingItemId = newId
+        editingText = ""
     }
 }
 
@@ -1906,92 +1829,39 @@ private struct MyItemsCollectionPickerView: View {
     }
 }
 
-// MARK: - LongPressDragBridge
+// MARK: - InlineEditRow
 
-private struct LongPressDragBridge: UIViewRepresentable {
-    let onBegan: () -> Void
-    let onChanged: (CGFloat) -> Void
-    let onEnded: () -> Void
+/// 正常模式下新增物品的内联编辑行。自带 @FocusState：cell 出现即聚焦（编辑行永远是
+/// 新插入的 cell，onAppear 聚焦可靠）；回车或失焦时回调提交。样式对齐旧 editableRow。
+private struct InlineEditRow: View {
+    @Binding var text: String
+    let onEnd: () -> Void
+    @FocusState private var focused: Bool
 
-    func makeUIView(context: Context) -> UIView {
-        let view = UIView()
-        view.backgroundColor = .clear
-        view.isOpaque = false
-        return view
-    }
+    var body: some View {
+        HStack(spacing: 12) {
+            Circle()
+                .strokeBorder(Color.secondary.opacity(0.3), lineWidth: 1.5)
+                .frame(width: 24, height: 24)
 
-    func updateUIView(_ uiView: UIView, context: Context) {
-        context.coordinator.onBegan = onBegan
-        context.coordinator.onChanged = onChanged
-        context.coordinator.onEnded = onEnded
-        // Only search for the cell once — skip the view-tree walk on every
-        // subsequent SwiftUI update (inline edit keystrokes, etc.)
-        guard context.coordinator.attachedRecognizer == nil else { return }
-        DispatchQueue.main.async {
-            var v: UIView? = uiView
-            while let current = v {
-                if let cell = current as? UICollectionViewCell {
-                    let alreadyAttached = (cell.gestureRecognizers ?? []).contains {
-                        ($0 as? UILongPressGestureRecognizer)?.delegate === context.coordinator
-                    }
-                    if !alreadyAttached {
-                        let r = UILongPressGestureRecognizer(
-                            target: context.coordinator,
-                            action: #selector(Coordinator.handle(_:))
-                        )
-                        r.minimumPressDuration = 0.4
-                        r.allowableMovement = 10
-                        r.cancelsTouchesInView = false
-                        r.delaysTouchesBegan = false
-                        r.delaysTouchesEnded = false
-                        r.delegate = context.coordinator
-                        cell.addGestureRecognizer(r)
-                        context.coordinator.attachedRecognizer = r
-                    }
-                    break
-                }
-                v = current.superview
-            }
+            TextField("", text: $text)
+                .font(.subheadline)
+                .tint(.primary)
+                .focused($focused)
+                .submitLabel(.done)
+                .onSubmit { focused = false }
+                .textFieldStyle(.plain)
+
+            Spacer()
+
+            Circle()
+                .fill(Color.clear)
+                .frame(width: 5, height: 5)
         }
-    }
-
-    func makeCoordinator() -> Coordinator { Coordinator() }
-
-    class Coordinator: NSObject, UIGestureRecognizerDelegate {
-        var onBegan: (() -> Void)?
-        var onChanged: ((CGFloat) -> Void)?
-        var onEnded: (() -> Void)?
-        weak var attachedRecognizer: UILongPressGestureRecognizer?
-        private var startY: CGFloat = 0
-        private let impactFeedback = UIImpactFeedbackGenerator(style: .medium)
-
-        @objc func handle(_ r: UILongPressGestureRecognizer) {
-            guard let view = r.view?.superview else { return }
-            let y = r.location(in: view).y
-            switch r.state {
-            case .began:
-                startY = y
-                impactFeedback.prepare()
-                DispatchQueue.main.async { self.onBegan?() }
-                impactFeedback.impactOccurred()
-            case .changed:
-                DispatchQueue.main.async { self.onChanged?(y - self.startY) }
-            case .ended, .cancelled, .failed:
-                DispatchQueue.main.async { self.onEnded?() }
-            default: break
-            }
-        }
-
-        func gestureRecognizer(_ gr: UIGestureRecognizer, shouldRecognizeSimultaneouslyWith other: UIGestureRecognizer) -> Bool {
-            false
-        }
-
-        func gestureRecognizer(_ gestureRecognizer: UIGestureRecognizer, shouldRequireFailureOf otherGestureRecognizer: UIGestureRecognizer) -> Bool {
-            false
-        }
-
-        func gestureRecognizer(_ gestureRecognizer: UIGestureRecognizer, shouldBeRequiredToFailBy otherGestureRecognizer: UIGestureRecognizer) -> Bool {
-            false
+        .frame(height: 44)
+        .onAppear { focused = true }
+        .onChange(of: focused) { _, isFocused in
+            if !isFocused { onEnd() }
         }
     }
 }

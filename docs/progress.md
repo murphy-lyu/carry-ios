@@ -3,6 +3,22 @@
 ## 最后更新
 2026-06-07
 
+## 上次改动摘要（物品行拖拽重排换 UICollectionView 原生 interactive movement · 2026-06-07）
+
+> 分支 `feat/smooth-drag-reorder`，**未合并**。spec：`specs/smooth-drag-reorder.md`。全程编译绿 + 模拟器实跑验证。
+
+- **根因**：旧实现（已删的 `LongPressDragBridge` + `row/contentRow` 拖拽视觉）被拖行从不跟手——只加 `scaleEffect`，靠 `translation/44` 量化跳格且拖拽中反复写 SwiftData。机制错，非参数问题。
+- **方案（用户选 B：整页换 UICollectionView）**：新增 `Carry/Views/ReorderableItemCollection.swift`（`UIViewRepresentable` 隔离 UIKit），正常模式物品行改用 `UICollectionView` compositional list layout + diffable data source + 原生 `beginInteractiveMovementForItem`/`updateInteractiveMovementTargetPosition`/`endInteractiveMovement`。被拖行快照贴手指 1:1 跟随，其它行 rubber-band 让位，**松手经 `reorderingHandlers.didReorder` 只提交一次** `store.reorderItems`。
+  - 行内容（`PackingItemRow`/内联编辑/add-item/section header/DestinationInfo）全部经闭包从 `PackingListView` 传入、`UIHostingConfiguration` 承载，**样式/本地化/动画零重复**。
+  - 内容刷新（勾选/数量/名称）**不手动 reconfigure**——`PackingItem` 是 SwiftData `@Model`（Observable），属性变化自动刷新宿主 SwiftUI；只在"进/出编辑态"那一行 reconfigure（切 `PackingItemRow`↔`InlineEditRow`）。
+  - 内联编辑改为 `InlineEditRow`（自带 `@FocusState`，新 cell `onAppear` 聚焦——编辑行永远是新插入 cell，可靠）；删旧 `@FocusState focusedItemId` / `isAdvancingEdit` 全套残留管线。
+  - DestinationInfo 作为 collection 顶部**不可重排、随列表滚动**的第一个 section（用户确认保持原滚动行为）。
+  - 跨 section 拖拽**夹断**：手势级 Y 夹断（把目标 Y 限制在起点 section 首/末行之间，比 `targetIndexPathForMoveFromItemAt` 委托可靠）。section 重排（独立编辑视图）/ 新建预览 / 跨 section 拖拽**不动**。
+- **拆分**：`packingList` → `previewPackingList`（新建模式，留旧 List）+ `normalPackingList`（走新 collection）。删 `row`/`contentRow`/`editableRow`/`moveItems`/`LongPressDragBridge` 及 `draggingItemId` 等 4 个死 @State。净 −258/+125 行（PackingListView）+ 新文件 357 行。
+- **模拟器实测通过**：无崩溃（修了一处 header elementKind 不匹配的 SIGABRT）、布局对齐、长按 1:1 跟手重排提交并持久化（有/无 info section 均正确）、跨组夹断生效、内联新增提交、点击别处提交编辑、点击勾选经 Observable 自动刷新。修了一处 info-section 在时 `lastReorderableRow` 的 off-by-one。
+
+**待办**：真机验收（拖拽手感/掉帧观感、swipe 删除视觉、Dark Mode、9 语言）；确认无回归后合并 `main`。
+
 ## 上次改动摘要（样式定稿收尾：精简样式 + 退役 Sheet fallback + 单一强调色 · 2026-06-07）
 
 > 接上一条同日工作。本轮"定稿 + 清理"三件事 + 合并上线,全程编译绿。**已合并到 `main` 并推送**(`d033a8f`,feature 分支整包快进合并)。
