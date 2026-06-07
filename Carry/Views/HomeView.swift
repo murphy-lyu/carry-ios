@@ -22,7 +22,6 @@ fileprivate let homeDarkCardBottomRefined = Color(red: 0.12, green: 0.12, blue: 
 struct HomeView: View {
 
     @Environment(\.colorScheme) private var colorScheme
-    @Environment(\.toggleTint) private var toggleTint
     @EnvironmentObject var store: TripStore
     @EnvironmentObject var router: NavigationRouter
 
@@ -140,8 +139,6 @@ struct HomeView: View {
     @State private var mapCityOpacity: Double = 0
     /// Set to true to programmatically collapse the sheet (Siri, map button).
     @State private var collapseRequest: Bool = false
-    /// Observes the UserDefaults key written by the Dev Options toggle.
-    @AppStorage(sheetVariantDefaultsKey) private var sheetVariantRaw: String = SheetVariant.ultimate.rawValue
     @AppStorage("mapStyleOption") private var mapStyleRaw: String = MapStyleOption.hybrid.rawValue
     @AppStorage("hasShownFirstTripShimmer") private var hasShownFirstTripShimmer = false
     @AppStorage("firstTripCreatedAt") private var firstTripCreatedAtInterval: Double = 0
@@ -299,30 +296,14 @@ struct HomeView: View {
                 .ignoresSafeArea(edges: .top)
 
             // Bottom sheet — UIKit-driven, zero SwiftUI re-evaluates during animation.
-            // Variant is controlled by SheetFeatureFlag / Dev Options toggle.
-            Group {
-                switch SheetVariant(rawValue: sheetVariantRaw) ?? .ultimate {
-                case .fallback:
-                    CarryBottomSheet(
-                        expandedHeight: expandedSheetHeight,
-                        collapsedOffset: collapsedSheetOffset,
-                        mapCityOpacity: $mapCityOpacity,
-                        collapseRequest: $collapseRequest,
-                        isListEmpty: isEffectivelyEmpty
-                    ) {
-                        sheetContent
-                    }
-                case .ultimate:
-                    CarryBottomSheetFX(
-                        expandedHeight: expandedSheetHeight,
-                        collapsedOffset: collapsedSheetOffset,
-                        mapCityOpacity: $mapCityOpacity,
-                        collapseRequest: $collapseRequest,
-                        isListEmpty: isEffectivelyEmpty
-                    ) {
-                        sheetContent
-                    }
-                }
+            CarryBottomSheetFX(
+                expandedHeight: expandedSheetHeight,
+                collapsedOffset: collapsedSheetOffset,
+                mapCityOpacity: $mapCityOpacity,
+                collapseRequest: $collapseRequest,
+                isListEmpty: isEffectivelyEmpty
+            ) {
+                sheetContent
             }
             .ignoresSafeArea()
         }
@@ -997,7 +978,7 @@ struct HomeView: View {
             } label: {
                 Label("trip.swipe.duplicate", systemImage: "doc.on.doc")
             }
-            .tint(toggleTint)
+            .tint(CarryAccent.color)
         }
         .listRowInsets(EdgeInsets(top: 0, leading: 16, bottom: 12, trailing: 16))
         .listRowBackground(Color.clear)
@@ -1016,8 +997,35 @@ struct TripCard: View {
     var isPast: Bool = false
     var shimmer: Bool = false
 
+    @AppStorage(homeCardStyleKey) private var homeStyleRaw: String = HomeCardStyle.featured.rawValue
+    private var homeStyle: HomeCardStyle { HomeCardStyle(rawValue: homeStyleRaw) ?? .featured }
+
+    /// 2·Map only: the trip's background entry (photo + chosen crop).
+    private var featuredEntry: TripBackgroundEntry? {
+        guard homeStyle == .featured,
+              let entry = bundle.primaryBackground,
+              entry.localFileName != nil else { return nil }
+        return entry
+    }
+
+    /// The full (uncropped) photo — framing is applied at display by PositionedImage.
+    private var featuredPhoto: UIImage? {
+        guard let name = featuredEntry?.localFileName else { return nil }
+        return BackgroundImageStore.image(named: name)
+    }
+
+    /// True when the card is rendered over a filled photo → text/chips switch to light.
+    private var onPhoto: Bool { featuredPhoto != nil }
+
     @State private var shimmerProgress: CGFloat = 0
     @State private var didPlayShimmer = false
+
+    // MARK: Redesign style helpers
+
+    /// The "live" accent for spine + progress.
+    // Over a photo the accent (a dark colour in Light mode) reads as a black bar; switch the
+    // spine + progress fill to white so they match the white text on the scrimmed photo.
+    private var styleAccent: Color { onPhoto ? .white : Color.accentColor }
 
     private var progress: Double {
         bundle.totalCount == 0 ? 0 : Double(bundle.packedCount) / Double(bundle.totalCount)
@@ -1062,9 +1070,10 @@ struct TripCard: View {
     }
 
     private var progressTrackColor: Color {
-        colorScheme == .dark
+        if onPhoto { return Color.white.opacity(0.28) }   // translucent white track over a photo
+        return colorScheme == .dark
             ? Color.white.opacity(0.05)
-            : Color(uiColor: .systemGray5)
+            : Color.primary.opacity(0.14)
     }
 
     private var cardFill: LinearGradient {
@@ -1081,8 +1090,8 @@ struct TripCard: View {
 
         return LinearGradient(
             colors: [
-                Color(UIColor.systemBackground).opacity(0.90),
-                Color(UIColor.systemBackground).opacity(0.84)
+                Color(UIColor.systemBackground).opacity(0.88),
+                Color(UIColor.systemBackground).opacity(0.82)
             ],
             startPoint: .topLeading,
             endPoint: .bottomTrailing
@@ -1094,6 +1103,82 @@ struct TripCard: View {
             return Color.black.opacity(0.16)
         }
         return Color.black.opacity(0.068)
+    }
+
+    /// Leading element for the COMPACT card: a small destination map thumb (map style,
+    /// e.g. past trips) or the accent spine (plain style).
+    @ViewBuilder
+    private var cardLeading: some View {
+        if homeStyle == .glass {
+            // 4·Map only: 56pt destination-map thumbnail (live MKMapView; experimental).
+            TripBackgroundView(bundle: bundle, fallback: .map)
+            .frame(width: 56, height: 56)
+            .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+            .overlay(
+                RoundedRectangle(cornerRadius: 12, style: .continuous)
+                    .strokeBorder(Color.primary.opacity(0.10), lineWidth: 1)
+            )
+            .padding(.top, 1)
+        } else {
+            RoundedRectangle(cornerRadius: 3, style: .continuous)
+                .fill(
+                    LinearGradient(
+                        colors: onPhoto
+                            ? [Color.white.opacity(0.95), Color.white.opacity(0.6)]   // white spine over a photo (incl. past)
+                            : (isPast
+                                ? [Color.primary.opacity(0.10), Color.primary.opacity(0.04)]
+                                : [styleAccent.opacity(0.95), styleAccent.opacity(0.55)]),
+                        startPoint: .top,
+                        endPoint: .bottom
+                    )
+                )
+                .frame(width: isPast ? 2.5 : 3.5, height: isPast ? 48 : 62)
+                .padding(.top, 2)
+        }
+    }
+
+    /// The card's actual background: a filled photo (2·Map with a user photo) over the original
+    /// card, else the normal style surface. Photo gets a dark scrim so the text stays legible.
+    @ViewBuilder
+    private var cardBackground: some View {
+        if let photo = featuredPhoto {
+            RoundedRectangle(cornerRadius: 18, style: .continuous)
+                .fill(Color(UIColor.secondarySystemBackground))
+                .overlay(
+                    PositionedImage(image: photo, crop: featuredEntry?.crop)
+                )
+                .overlay(
+                    LinearGradient(
+                        colors: [.black.opacity(0.14), .black.opacity(0.28), .black.opacity(0.66)],
+                        startPoint: .top,
+                        endPoint: .bottom
+                    )
+                )
+                .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+        } else {
+            cardSurface
+                .overlay(
+                    LinearGradient(
+                        colors: [
+                            Color.white.opacity(colorScheme == .dark ? 0.03 : 0.06),
+                            Color.clear,
+                            Color.black.opacity(colorScheme == .dark ? 0.06 : 0.06)
+                        ],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    )
+                )
+                .overlay(
+                    RoundedRectangle(cornerRadius: 18, style: .continuous)
+                        .strokeBorder(Color.primary.opacity(colorScheme == .dark ? 0.045 : 0.045), lineWidth: 1)
+                )
+        }
+    }
+
+    /// The card's monochrome surface (used when there's no photo to fill it).
+    private var cardSurface: some View {
+        RoundedRectangle(cornerRadius: 18, style: .continuous).fill(cardFill)
+            .shadow(color: colorScheme == .dark ? .clear : Color.black.opacity(0.028), radius: 7, x: 0, y: 3)
     }
 
     private var statusPillText: String? {
@@ -1111,7 +1196,7 @@ struct TripCard: View {
 
     private var statusPillFillColor: Color {
         if bundle.totalCount == 0 {
-            return colorScheme == .dark ? Color.white.opacity(0.028) : Color(UIColor.systemGray5).opacity(0.58)
+            return colorScheme == .dark ? Color.white.opacity(0.022) : Color(UIColor.systemGray5).opacity(0.52)
         }
         if isComplete {
             return colorScheme == .dark ? Color.white.opacity(0.032) : Color(UIColor.systemGray5).opacity(0.72)
@@ -1145,41 +1230,38 @@ struct TripCard: View {
         return .primary
     }
 
+    /// True when this card should render as a full-bleed destination banner (map style,
+    /// upcoming/planning trips with a coordinate). Past trips stay compact thumbnail rows.
     var body: some View {
+        compactCard
+    }
+
+    private var cardInner: some View {
         HStack(alignment: .top, spacing: 12) {
-            RoundedRectangle(cornerRadius: 2.5, style: .continuous)
-                .fill(
-                    LinearGradient(
-                        colors: [
-                            Color.primary.opacity(isPast ? 0.10 : 0.34),
-                            Color.primary.opacity(isPast ? 0.04 : 0.14)
-                        ],
-                        startPoint: .top,
-                        endPoint: .bottom
-                    )
-                )
-                .frame(width: 2.5, height: isPast ? 48 : 62)
-                .padding(.top, 2)
+            cardLeading
 
             VStack(alignment: .leading, spacing: 0) {
                 HStack(alignment: .firstTextBaseline, spacing: 8) {
                     Text(bundle.name)
                         .font(.headline.weight(.semibold))
-                        .foregroundColor(.primary)
+                        .foregroundColor(onPhoto ? .white : .primary)
+                        .shadow(color: onPhoto ? .black.opacity(0.35) : .clear, radius: 2, y: 1)
                         .lineLimit(1)
                 }
                 .padding(.bottom, 3)
 
                 Text(bundle.destinationCity)
                     .font(.subheadline.weight(.medium))
-                    .foregroundColor(colorScheme == .dark ? Color.white.opacity(0.64) : Color(.systemGray))
+                    .foregroundColor(onPhoto ? Color.white.opacity(0.88) : (colorScheme == .dark ? Color.white.opacity(0.64) : Color(.systemGray)))
+                    .shadow(color: onPhoto ? .black.opacity(0.3) : .clear, radius: 1.5, y: 0.5)
                     .lineLimit(1)
                     .padding(.bottom, 4)
 
                 HStack(spacing: 8) {
                     Text(dateAndDurationText)
                         .font(.caption.weight(.medium))
-                        .foregroundColor(colorScheme == .dark ? Color.white.opacity(0.40) : Color(.systemGray2))
+                        .foregroundColor(onPhoto ? Color.white.opacity(0.78) : (colorScheme == .dark ? Color.white.opacity(0.40) : Color(.systemGray2)))
+                        .shadow(color: onPhoto ? .black.opacity(0.3) : .clear, radius: 1.5, y: 0.5)
                         .lineLimit(1)
 
                     if let statusPillText {
@@ -1190,7 +1272,7 @@ struct TripCard: View {
                 .animation(.easeInOut(duration: 0.3), value: isComplete)
 
                 if !isPast && !isComplete {
-                    Color.clear.frame(height: 10)
+                    Color.clear.frame(height: 8)
                     GeometryReader { geo in
                         ZStack(alignment: .leading) {
                             Capsule()
@@ -1200,8 +1282,8 @@ struct TripCard: View {
                                 .fill(
                                     LinearGradient(
                                         colors: [
-                                            Color.primary.opacity(0.90),
-                                            Color.primary.opacity(0.64)
+                                            styleAccent,
+                                            styleAccent.opacity(0.7)
                                         ],
                                         startPoint: .leading,
                                         endPoint: .trailing
@@ -1216,17 +1298,39 @@ struct TripCard: View {
             }
             .frame(maxWidth: .infinity, alignment: .leading)
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(.top, 13)
-        .padding(.bottom, 13)
-        .padding(.horizontal, 18)
-        .background(
-            RoundedRectangle(cornerRadius: 18, style: .continuous)
-                .fill(cardFill)
-        )
+    }
+
+    private var compactCard: some View {
+        Group {
+            if onPhoto {
+                // Photo card = fixed aspect K (== reposition preview) so framing is WYSIWYG.
+                // The clear spacer sets a MINIMUM height (width/K); content top-aligned, so long
+                // text / a progress bar just grows the card taller (revealing more photo), never
+                // clipping text and never cropping the framed subject.
+                ZStack(alignment: .topLeading) {
+                    Color.clear
+                        .frame(maxWidth: .infinity)
+                        .aspectRatio(BackgroundRepositionView.displayAspect, contentMode: .fit)
+                    cardInner
+                        .padding(.top, 13)
+                        .padding(.bottom, 13)
+                        .padding(.horizontal, 18)
+                }
+            } else {
+                cardInner
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(.top, 14)
+                    .padding(.bottom, 14)
+                    .padding(.horizontal, 18)
+            }
+        }
+        .background(cardBackground)
         .overlay(
             RoundedRectangle(cornerRadius: 18, style: .continuous)
-                .strokeBorder(Color.primary.opacity(0.05), lineWidth: 1)
+                .strokeBorder(
+                    onPhoto ? Color.white.opacity(0.16) : Color.primary.opacity(0.05),
+                    lineWidth: 1
+                )
         )
         .shadow(color: cardShadow, radius: 14, x: 0, y: 7)
         .contentShape(RoundedRectangle(cornerRadius: 18))
@@ -1278,16 +1382,18 @@ struct TripCard: View {
     private func statusPill(_ text: String) -> some View {
         Text(text)
             .font(.system(size: 9, weight: .medium))
-            .foregroundStyle(statusPillForeground)
+            // Over a photo the default translucent-grey chip washes out; use a dark scrim chip
+            // with white text so it reads on any photo, bright or dark.
+            .foregroundStyle(onPhoto ? Color.white : statusPillForeground)
             .padding(.horizontal, 6)
             .padding(.vertical, 2)
             .background(
                 Capsule(style: .continuous)
-                    .fill(statusPillFillColor)
+                    .fill(onPhoto ? Color.black.opacity(0.32) : statusPillFillColor)
             )
             .overlay(
                 Capsule(style: .continuous)
-                    .strokeBorder(statusPillStrokeColor, lineWidth: 1)
+                    .strokeBorder(onPhoto ? Color.white.opacity(0.22) : statusPillStrokeColor, lineWidth: 1)
             )
     }
 }
