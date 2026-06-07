@@ -141,6 +141,18 @@ struct PackingListView: View {
                         } label: {
                             Label("packing.menu.add_from_library", systemImage: "shippingbox")
                         }
+                        // Grouped with Quick-add — both act on the packing items themselves.
+                        if totalCount > 0 {
+                            Button {
+                                if isComplete {
+                                    markTripUncompleted()
+                                } else {
+                                    markTripCompleted()
+                                }
+                            } label: {
+                                Label(isComplete ? "packing.mark_uncomplete" : "packing.mark_complete", systemImage: isComplete ? "arrow.uturn.left.circle" : "checkmark.circle")
+                            }
+                        }
                         Button {
                             showReminderSheet = true
                         } label: {
@@ -186,17 +198,6 @@ struct PackingListView: View {
                             Label("Share list", systemImage: "square.and.arrow.up")
                         }
                         Divider()
-                        if totalCount > 0 {
-                            Button {
-                                if isComplete {
-                                    markTripUncompleted()
-                                } else {
-                                    markTripCompleted()
-                                }
-                            } label: {
-                                Label(isComplete ? "packing.mark_uncomplete" : "packing.mark_complete", systemImage: isComplete ? "arrow.uturn.left.circle" : "checkmark.circle")
-                            }
-                        }
                         Button(role: .destructive) {
                             showDeleteConfirmation = true
                         } label: {
