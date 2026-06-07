@@ -332,41 +332,9 @@ struct ReorderableItemCollection: UIViewRepresentable {
             return p
         }
 
-        /// 把拖拽目标夹断在起点 section 内、且不越过该 section 末尾的 add-item 行。
-        func collectionView(_ collectionView: UICollectionView,
-                            targetIndexPathForMoveFromItemAt originalIndexPath: IndexPath,
-                            toProposedIndexPath proposedIndexPath: IndexPath) -> IndexPath {
-            let section = movingFromSection ?? originalIndexPath.section
-            guard proposedIndexPath.section != section else {
-                return clampWithinSection(proposedIndexPath, section: section)
-            }
-            // 越到别的 section → 夹回本 section 的最近端。
-            if proposedIndexPath.section < section {
-                return clampWithinSection(IndexPath(item: 0, section: section), section: section)
-            } else {
-                let lastItem = lastReorderableRow(in: section)
-                return IndexPath(item: lastItem, section: section)
-            }
-        }
-
-        private func clampWithinSection(_ indexPath: IndexPath, section: Int) -> IndexPath {
-            let lastItem = lastReorderableRow(in: section)
-            return IndexPath(item: min(indexPath.item, lastItem), section: section)
-        }
-
-        /// 该 section 内最后一个可重排行的 index（add-item 行之前）。
-        /// 从 data source snapshot 取真实 .item 计数——与顶部是否有 info section 的偏移无关，
-        /// 避免用 parent.sections[section] 索引时因 info 偏移产生 off-by-one。
-        private func lastReorderableRow(in section: Int) -> Int {
-            let snapshot = dataSource.snapshot()
-            guard section < snapshot.sectionIdentifiers.count else { return 0 }
-            let sectionID = snapshot.sectionIdentifiers[section]
-            let itemCount = snapshot.itemIdentifiers(inSection: sectionID).filter {
-                if case .item = $0 { return true }
-                return false
-            }.count
-            return max(0, itemCount - 1)
-        }
+        // 跨 section 拦截完全由上面的手势级 Y 夹断（clampLocationToSection）负责。
+        // 注：UICollectionViewDelegate 的 targetIndexPathForMoveFromItemAt 在 diffable +
+        // interactive movement 下实测不被调用，故不实现它。
 
         // MARK: Swipe
 
