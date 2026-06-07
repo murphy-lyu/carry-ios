@@ -95,6 +95,22 @@ enum BackgroundImageStore {
         try? FileManager.default.removeItem(at: fileURL(named: name))
     }
 
+    /// Every image filename currently stored in the sandbox.
+    static func allStoredFileNames() -> [String] {
+        (try? FileManager.default.contentsOfDirectory(atPath: directory.path)) ?? []
+    }
+
+    /// Deletes any stored file NOT in `referenced`. This is the lifecycle backstop: trip
+    /// removal happens through several paths (per-trip delete, and full-wipe during restore),
+    /// and sandbox files aren't in SwiftData so no cascade frees them. Reconciling against the
+    /// set of still-referenced names reclaims orphans regardless of which path removed the trip.
+    /// Idempotent and cheap (a directory listing + a few unlinks).
+    static func deleteOrphans(keeping referenced: Set<String>) {
+        for name in allStoredFileNames() where !referenced.contains(name) {
+            delete(named: name)
+        }
+    }
+
     /// Raw stored bytes — for backup export.
     static func data(named name: String) -> Data? {
         try? Data(contentsOf: fileURL(named: name))
@@ -104,6 +120,16 @@ enum BackgroundImageStore {
     @discardableResult
     static func write(data: Data, named name: String) -> Bool {
         do { try data.write(to: fileURL(named: name), options: .atomic); return true } catch { return false }
+    }
+
+    /// Copies a stored image to a NEW filename and returns it — used when duplicating a trip so
+    /// the copy owns its own bytes. Never share a filename between trips: the per-trip cleanup
+    /// (delete on trip removal / background replacement) would otherwise delete a file still in
+    /// use by the other trip. Returns nil on failure (caller then leaves the copy photo-less).
+    static func copy(of name: String) -> String? {
+        guard let bytes = data(named: name) else { return nil }
+        let newName = UUID().uuidString + ".jpg"
+        return write(data: bytes, named: newName) ? newName : nil
     }
 
     /// Always re-renders the image upright at scale 1 (orientation baked in) and downsized to

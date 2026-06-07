@@ -171,24 +171,11 @@ struct SettingsView: View {
     }
 
     private func shareBackupFile() {
-        guard let sourceURL = DataBackupManager.shared.backupFileURL,
-              FileManager.default.fileExists(atPath: sourceURL.path) else {
+        // Build a self-contained export file on demand (WITH embedded background-image bytes).
+        // The auto-backup on disk is text-only — images are embedded here, only when the user
+        // actually exports — so a shared file restores intact on another device / after reinstall.
+        guard let exportURL = DataBackupManager.shared.makeExportFile(trips: store.trips, myItems: store.myItems) else {
             showToast(NSLocalizedString("settings.data.restore.error.not_found", comment: ""))
-            return
-        }
-        // Copy to a temp file with a timestamped name so the share sheet
-        // shows something like "carry_backup_2026-05-24_15-41.json".
-        let fmt = DateFormatter()
-        fmt.dateFormat = "yyyy-MM-dd_HH-mm"
-        let exportName = "carry_backup_\(fmt.string(from: Date())).json"
-        let exportURL = FileManager.default.temporaryDirectory.appendingPathComponent(exportName)
-        do {
-            if FileManager.default.fileExists(atPath: exportURL.path) {
-                try FileManager.default.removeItem(at: exportURL)
-            }
-            try FileManager.default.copyItem(at: sourceURL, to: exportURL)
-        } catch {
-            showToast(error.localizedDescription)
             return
         }
         let activityVC = UIActivityViewController(activityItems: [exportURL], applicationActivities: nil)
@@ -1029,23 +1016,9 @@ private struct DeveloperModeView: View {
     @State private var toastMessage: String?
     @State private var showResetAllConfirm = false
     @AppStorage("debug_mock_weather_enabled") private var debugMockWeatherEnabled = false
-    @AppStorage(homeCardStyleKey) private var homeCardStyleRaw = HomeCardStyle.featured.rawValue
 
     var body: some View {
         List {
-
-            Section {
-                Picker("Style", selection: $homeCardStyleRaw) {
-                    ForEach(HomeCardStyle.allCases) { style in
-                        Text(style.devLabel).tag(style.rawValue)
-                    }
-                }
-                .pickerStyle(.segmented)
-            } header: {
-                Text(verbatim: "Home card style (redesign A/B)")
-            } footer: {
-                Text(verbatim: "1 Accent · 2 Hero · 3 Hue · 4 Glass — switch to compare home trip-card directions.")
-            }
 
             Section("settings.developer.mock_group") {
                 Toggle(isOn: Binding(

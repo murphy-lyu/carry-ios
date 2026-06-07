@@ -189,7 +189,17 @@ final class TripStore: ObservableObject {
         self.isHomeEmptyStateMockEnabled = defaults.bool(forKey: Self.homeEmptyStateMockKey)
         Task { @MainActor in
             fetchTrips()
+            reconcileBackgroundFiles()
         }
+    }
+
+    /// Reclaims background-image files no longer referenced by any trip. The inline delete in
+    /// `removeTrip` handles the common path promptly; this is the lifecycle backstop that also
+    /// covers full-wipe restores (where trips are deleted without going through `removeTrip`).
+    /// Runs on launch and after each restore/merge — robust to every trip-removal path.
+    private func reconcileBackgroundFiles() {
+        let referenced = Set(trips.flatMap { $0.backgrounds.compactMap(\.localFileName) })
+        BackgroundImageStore.deleteOrphans(keeping: referenced)
     }
 
     func setHomeEmptyStateMockEnabled(_ enabled: Bool) {
@@ -246,6 +256,8 @@ final class TripStore: ObservableObject {
         }
         // 5. 写一份新 widget snapshot
         writeWidgetSnapshot()
+        // 6. 回收旧数据残留的孤儿背景图（整库 wipe 不走 removeTrip，靠这里兜底）
+        reconcileBackgroundFiles()
     }
 
     /// 合并后清理副作用：与 restore 不同，**不能清旧通知 / 不能 endAll LA**——
@@ -260,6 +272,7 @@ final class TripStore: ObservableObject {
             NotificationManager.scheduleReminders(for: trip)
         }
         writeWidgetSnapshot()
+        reconcileBackgroundFiles()
     }
 
     func setDraftTrip(_ trip: TripBundle?) {
@@ -447,6 +460,11 @@ final class TripStore: ObservableObject {
         if UserDefaults.standard.bool(forKey: "calendar_sync_enabled") {
             Task { CalendarManager.shared.removeTrip(id) }
         }
+        // 清理沙盒里的背景图字节，避免"删行程但图片残留"的孤儿文件（文件名是 UUID，
+        // 各 trip 独立不共享，删除安全）。setLocalBackground/clearBackground 已对应处理。
+        for name in trip.backgrounds.compactMap(\.localFileName) {
+            BackgroundImageStore.delete(named: name)
+        }
         context.delete(trip)
         save()
         CarryLogger.shared.log(.tripDeleted)
@@ -480,6 +498,16 @@ final class TripStore: ObservableObject {
             selectedSceneKeys: original.selectedSceneKeys,
             sections: newSections
         )
+        // 背景图深拷贝：每个条目的文件复制成独立新文件，副本拥有自己的字节（不与原行程共享
+        // 文件名，否则删/换任一方都会误伤另一方）。无本地文件的条目（未来在线源）原样带过；
+        // 复制失败的条目直接丢弃（副本退回 monogram 兜底），绝不残留共享引用。crop 等元数据保留。
+        newBundle.backgrounds = original.backgrounds.compactMap { entry in
+            guard let name = entry.localFileName else { return entry }
+            guard let copiedName = BackgroundImageStore.copy(of: name) else { return nil }
+            var copied = entry
+            copied.localFileName = copiedName
+            return copied
+        }
         context.insert(newBundle)
         // Insert in-memory first to avoid full-list refetch jumpiness in UI.
         let insertIndex = min(originalIndex + 1, trips.count)

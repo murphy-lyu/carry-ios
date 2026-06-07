@@ -8,7 +8,7 @@ import SwiftData
 
 // MARK: - Codable Mirror Types
 
-struct BackupPackingItem: Codable {
+struct BackupPackingItem: Codable, Sendable {
     var id: UUID
     var name: String
     var quantity: Int
@@ -17,14 +17,14 @@ struct BackupPackingItem: Codable {
     var sortOrder: Int
 }
 
-struct BackupPackingSection: Codable {
+struct BackupPackingSection: Codable, Sendable {
     var id: UUID
     var title: String
     var sortOrder: Int
     var items: [BackupPackingItem]
 }
 
-struct BackupTrip: Codable {
+struct BackupTrip: Codable, Sendable {
     var id: UUID
     var name: String
     var destinationCity: String
@@ -51,7 +51,7 @@ struct BackupTrip: Codable {
     var sections: [BackupPackingSection]
 }
 
-struct BackupMyItem: Codable {
+struct BackupMyItem: Codable, Sendable {
     var id: UUID
     var name: String
     var collectionName: String
@@ -64,7 +64,7 @@ struct BackupMyItem: Codable {
     var updatedAt: Date
 }
 
-struct CarryBackup: Codable {
+struct CarryBackup: Codable, Sendable {
     var version: Int
     var createdAt: Date
     var trips: [BackupTrip]
@@ -109,10 +109,12 @@ final class DataBackupManager {
 
     // MARK: - Write
 
-    /// Serialize all current data to JSON. Called after every successful save so the backup stays fresh.
-    func backup(trips: [TripBundle], myItems: [MyItem]) {
-        guard let url = backupURL else { return }
-
+    /// Builds the value-type snapshot of all data. MUST run where SwiftData models are safe to
+    /// read (the main actor). `embedImages`: when true, reads each referenced background image's
+    /// bytes off disk and embeds them — for the portable EXPORT file. The per-save auto-backup
+    /// passes false: the bytes already persist as sandbox files, so re-reading + base64-encoding
+    /// them on every save (e.g. ticking a packing item) would be pure waste.
+    private func makeBackup(trips: [TripBundle], myItems: [MyItem], embedImages: Bool) -> CarryBackup {
         let backupTrips: [BackupTrip] = trips.map { trip in
             let sections: [BackupPackingSection] = (trip.sections ?? []).map { section in
                 let items: [BackupPackingItem] = (section.items ?? []).map {
@@ -156,17 +158,6 @@ final class DataBackupManager {
             )
         }
 
-        // Embed the referenced background image bytes (keyed by filename) so a fresh-install
-        // restore can rewrite them to the sandbox. Deduped across trips.
-        var backgroundImages: [String: Data] = [:]
-        for trip in trips {
-            for entry in trip.backgrounds {
-                guard let name = entry.localFileName, backgroundImages[name] == nil,
-                      let bytes = BackgroundImageStore.data(named: name) else { continue }
-                backgroundImages[name] = bytes
-            }
-        }
-
         let backupMyItems: [BackupMyItem] = myItems.map {
             BackupMyItem(
                 id: $0.id,
@@ -182,21 +173,36 @@ final class DataBackupManager {
             )
         }
 
-        let backup = CarryBackup(
+        var backgroundImages: [String: Data]? = nil
+        if embedImages {
+            var dict: [String: Data] = [:]
+            for name in Set(trips.flatMap { $0.backgrounds.compactMap(\.localFileName) }) {
+                if let bytes = BackgroundImageStore.data(named: name) { dict[name] = bytes }
+            }
+            backgroundImages = dict.isEmpty ? nil : dict
+        }
+
+        return CarryBackup(
             version: Self.currentBackupVersion,
             createdAt: Date(),
             trips: backupTrips,
             myItems: backupMyItems,
             defaultReminderOffsets: ReminderPreferences.enabledOffsets.sorted(),
-            backgroundImages: backgroundImages.isEmpty ? nil : backgroundImages
+            backgroundImages: backgroundImages
         )
+    }
 
-        // Encode on the calling thread (main actor) so the Codable conformance stays
-        // in its correct isolation context. Only the disk write is offloaded.
-        let e = JSONEncoder()
-        e.dateEncodingStrategy = .iso8601
-        e.outputFormatting = .prettyPrinted
-        guard let data = try? e.encode(backup) else {
+    /// Auto-backup after every save. Hot path → stays cheap: builds a TEXT-ONLY snapshot (no
+    /// embedded image bytes — the images live on as sandbox files and are reconciled separately),
+    /// then encodes + writes it off the main thread. The portable, self-contained file with image
+    /// bytes is produced on demand by `makeExportFile` only when the user actually exports.
+    func backup(trips: [TripBundle], myItems: [MyItem]) {
+        guard let url = backupURL else { return }
+        // Text-only snapshot → encoding is sub-millisecond, so it stays on the main actor; only
+        // the disk write (IO) is offloaded. (Image bytes are no longer embedded here, which is
+        // exactly what used to make per-save encoding expensive.)
+        let snapshot = makeBackup(trips: trips, myItems: myItems, embedImages: false)
+        guard let data = Self.encode(snapshot) else {
             CarryLogger.shared.log(.backupWriteFailed, context: "reason=encode_failed")
             return
         }
@@ -204,10 +210,38 @@ final class DataBackupManager {
             do {
                 try data.write(to: url, options: .atomic)
             } catch {
-                await CarryLogger.shared.log(.backupWriteFailed,
+                CarryLogger.shared.log(.backupWriteFailed,
                     context: "reason=write_failed error=\(error.localizedDescription)")
             }
         }
+    }
+
+    /// Builds a self-contained export file (WITH embedded image bytes) to a temp URL for sharing.
+    /// User-initiated and infrequent, so the one-time image read + encode runs inline. Returns the
+    /// temp file URL, or nil on failure.
+    func makeExportFile(trips: [TripBundle], myItems: [MyItem]) -> URL? {
+        let snapshot = makeBackup(trips: trips, myItems: myItems, embedImages: true)
+        guard let data = Self.encode(snapshot) else { return nil }
+        let fmt = DateFormatter()
+        fmt.dateFormat = "yyyy-MM-dd_HH-mm"
+        let url = FileManager.default.temporaryDirectory
+            .appendingPathComponent("carry_backup_\(fmt.string(from: Date())).json")
+        do {
+            if FileManager.default.fileExists(atPath: url.path) {
+                try FileManager.default.removeItem(at: url)
+            }
+            try data.write(to: url, options: .atomic)
+            return url
+        } catch {
+            return nil
+        }
+    }
+
+    private static func encode(_ backup: CarryBackup) -> Data? {
+        let e = JSONEncoder()
+        e.dateEncodingStrategy = .iso8601
+        e.outputFormatting = .prettyPrinted
+        return try? e.encode(backup)
     }
 
     // MARK: - Query

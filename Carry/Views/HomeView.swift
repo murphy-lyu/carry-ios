@@ -997,13 +997,9 @@ struct TripCard: View {
     var isPast: Bool = false
     var shimmer: Bool = false
 
-    @AppStorage(homeCardStyleKey) private var homeStyleRaw: String = HomeCardStyle.featured.rawValue
-    private var homeStyle: HomeCardStyle { HomeCardStyle(rawValue: homeStyleRaw) ?? .featured }
-
-    /// 2·Map only: the trip's background entry (photo + chosen crop).
+    /// The trip's background entry (photo + chosen crop), if the user set one.
     private var featuredEntry: TripBackgroundEntry? {
-        guard homeStyle == .featured,
-              let entry = bundle.primaryBackground,
+        guard let entry = bundle.primaryBackground,
               entry.localFileName != nil else { return nil }
         return entry
     }
@@ -1105,36 +1101,22 @@ struct TripCard: View {
         return Color.black.opacity(0.068)
     }
 
-    /// Leading element for the COMPACT card: a small destination map thumb (map style,
-    /// e.g. past trips) or the accent spine (plain style).
-    @ViewBuilder
+    /// Leading accent spine for the compact card (white over a photo, muted for past trips).
     private var cardLeading: some View {
-        if homeStyle == .glass {
-            // 4·Map only: 56pt destination-map thumbnail (live MKMapView; experimental).
-            TripBackgroundView(bundle: bundle, fallback: .map)
-            .frame(width: 56, height: 56)
-            .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
-            .overlay(
-                RoundedRectangle(cornerRadius: 12, style: .continuous)
-                    .strokeBorder(Color.primary.opacity(0.10), lineWidth: 1)
-            )
-            .padding(.top, 1)
-        } else {
-            RoundedRectangle(cornerRadius: 3, style: .continuous)
-                .fill(
-                    LinearGradient(
-                        colors: onPhoto
-                            ? [Color.white.opacity(0.95), Color.white.opacity(0.6)]   // white spine over a photo (incl. past)
-                            : (isPast
-                                ? [Color.primary.opacity(0.10), Color.primary.opacity(0.04)]
-                                : [styleAccent.opacity(0.95), styleAccent.opacity(0.55)]),
-                        startPoint: .top,
-                        endPoint: .bottom
-                    )
+        RoundedRectangle(cornerRadius: 3, style: .continuous)
+            .fill(
+                LinearGradient(
+                    colors: onPhoto
+                        ? [Color.white.opacity(0.95), Color.white.opacity(0.6)]   // white spine over a photo (incl. past)
+                        : (isPast
+                            ? [Color.primary.opacity(0.10), Color.primary.opacity(0.04)]
+                            : [styleAccent.opacity(0.95), styleAccent.opacity(0.55)]),
+                    startPoint: .top,
+                    endPoint: .bottom
                 )
-                .frame(width: isPast ? 2.5 : 3.5, height: isPast ? 48 : 62)
-                .padding(.top, 2)
-        }
+            )
+            .frame(width: isPast ? 2.5 : 3.5, height: isPast ? 48 : 62)
+            .padding(.top, 2)
     }
 
     /// The card's actual background: a filled photo (2·Map with a user photo) over the original
