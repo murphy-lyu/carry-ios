@@ -6,6 +6,12 @@
 import SwiftUI
 import UIKit
 
+/// Identifiable wrapper so a freshly-picked image can drive the reposition `.sheet(item:)`.
+private struct PickedBackgroundImage: Identifiable {
+    let id = UUID()
+    let image: UIImage
+}
+
 // MARK: - PackingListView
 
 struct PackingListView: View {
@@ -39,6 +45,9 @@ struct PackingListView: View {
 
     @State private var showReminderSheet = false
     @State private var showSuggestSheet = false
+    @State private var showBackgroundPicker = false
+    @State private var isLoadingBackground = false
+    @State private var repositionImage: PickedBackgroundImage?
 
     @State private var draggingItemId: UUID? = nil
     @State private var dragStartIds: [UUID] = []
@@ -141,6 +150,20 @@ struct PackingListView: View {
                             showEditSheet = true
                         } label: {
                             Label("Edit trip", systemImage: "pencil")
+                        }
+                        // Single entry, toggled by state: has a cover → remove; none → add.
+                        if backgroundImage != nil {
+                            Button(role: .destructive) {
+                                store.clearBackground(forTripId: tripId)
+                            } label: {
+                                Label("trip.background.remove", systemImage: "trash")
+                            }
+                        } else {
+                            Button {
+                                showBackgroundPicker = true
+                            } label: {
+                                Label("trip.background.add", systemImage: "photo")
+                            }
                         }
                         Button {
                             showReorderSheet = true
@@ -290,6 +313,44 @@ struct PackingListView: View {
             router.path.append(CreationRoute.addItems(tripId))
             showAddItemsRoute = false
         }
+        .sheet(isPresented: $showBackgroundPicker) {
+            PhotoPicker(
+                onPick: { provider in
+                    showBackgroundPicker = false
+                    isLoadingBackground = true
+                    loadBackgroundImage(from: provider) { image in
+                        isLoadingBackground = false
+                        if let image { repositionImage = PickedBackgroundImage(image: image) }
+                    }
+                },
+                onCancel: { showBackgroundPicker = false }
+            )
+            .ignoresSafeArea()
+        }
+        .sheet(item: $repositionImage) { picked in
+            BackgroundRepositionView(image: picked.image) { crop in
+                if let name = BackgroundImageStore.save(picked.image) {
+                    store.setLocalBackground(fileName: name, crop: crop, forTripId: tripId)
+                    // The cover shows on the home card, not here — a success haptic confirms
+                    // the save registered (the detail screen otherwise doesn't visibly change).
+                    UINotificationFeedbackGenerator().notificationOccurred(.success)
+                }
+            }
+        }
+        .overlay {
+            // Covers the gap while a photo (esp. an iCloud asset) downloads, between the
+            // picker dismissing and the reposition sheet appearing.
+            if isLoadingBackground {
+                ZStack {
+                    Color.black.opacity(0.18).ignoresSafeArea()
+                    ProgressView()
+                        .controlSize(.large)
+                        .padding(22)
+                        .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+                }
+                .transition(.opacity)
+            }
+        }
         .sheet(isPresented: $showReminderSheet) {
             if let bundle = bundle {
                 TripReminderSheet(bundle: bundle)
@@ -332,6 +393,11 @@ struct PackingListView: View {
     private var contentSurface: some View {
         Color(UIColor.systemBackground)
             .ignoresSafeArea()
+    }
+
+    private var backgroundImage: UIImage? {
+        guard let entry = bundle?.primaryBackground, let name = entry.localFileName else { return nil }
+        return BackgroundImageStore.image(named: name)
     }
 
     private var packingList: some View {

@@ -48,6 +48,12 @@ struct CarryApp: App {
         AppearanceMode(rawValue: appearanceModeRaw) ?? .system
     }
 
+    init() {
+        // App-wide UIKit tint so system-presented UI (confirmationDialogs, alerts, context
+        // menus) uses the single accent too — SwiftUI's `.tint()` doesn't reach these.
+        UIWindow.appearance().tintColor = CarryAccent.uiColor
+    }
+
     var body: some Scene {
         WindowGroup {
             SplashView()
@@ -106,13 +112,17 @@ struct CarryApp: App {
 
     /// Installs the three home-screen Quick Actions. Content is fixed; icons reuse
     /// the SF Symbols from CarryAppShortcuts and titles come from Localizable.xcstrings.
+    /// NOTE: iOS shows the FIRST array item closest to the app icon, so with the icon in the
+    /// lower half of the screen (the common case — dock / lower rows) the menu opens upward and
+    /// the list reads bottom-up. We therefore define the array in reverse (footprint → nearest →
+    /// new trip) so it reads top-to-bottom as: New Trip · Nearest Trip · Footprint.
     private static func installQuickActions() {
         UIApplication.shared.shortcutItems = [
             UIApplicationShortcutItem(
-                type: CarryQuickAction.newTrip,
-                localizedTitle: NSLocalizedString("New Trip", comment: "Quick action title"),
+                type: CarryQuickAction.footprint,
+                localizedTitle: NSLocalizedString("Footprint", comment: "Quick action title"),
                 localizedSubtitle: nil,
-                icon: UIApplicationShortcutIcon(systemImageName: "plus.circle"),
+                icon: UIApplicationShortcutIcon(systemImageName: "globe.asia.australia"),
                 userInfo: nil
             ),
             UIApplicationShortcutItem(
@@ -123,10 +133,10 @@ struct CarryApp: App {
                 userInfo: nil
             ),
             UIApplicationShortcutItem(
-                type: CarryQuickAction.footprint,
-                localizedTitle: NSLocalizedString("Footprint", comment: "Quick action title"),
+                type: CarryQuickAction.newTrip,
+                localizedTitle: NSLocalizedString("New Trip", comment: "Quick action title"),
                 localizedSubtitle: nil,
-                icon: UIApplicationShortcutIcon(systemImageName: "globe.asia.australia"),
+                icon: UIApplicationShortcutIcon(systemImageName: "plus.circle"),
                 userInfo: nil
             )
         ]

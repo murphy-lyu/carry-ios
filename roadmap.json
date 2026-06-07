@@ -8,17 +8,17 @@
       "titleZhHant": "即將推出",
       "items": [
         {
+          "id": "trip-planning",
+          "title": "行程规划",
+          "titleEn": "Trip planning",
+          "titleZhHant": "行程規劃",
+          "status": "in_progress"
+        },
+        {
           "id": "calendar-import",
           "title": "从日历导入行程",
           "titleEn": "Import trips from Calendar",
           "titleZhHant": "從行事曆匯入行程",
-          "status": "in_progress"
-        },
-        {
-          "id": "icloud-sync",
-          "title": "iCloud 同步",
-          "titleEn": "iCloud sync",
-          "titleZhHant": "iCloud 同步",
           "status": "planned"
         },
         {
@@ -36,6 +36,13 @@
       "titleEn": "Shipped",
       "titleZhHant": "已上線",
       "items": [
+        {
+          "id": "icloud-sync",
+          "title": "iCloud 同步",
+          "titleEn": "iCloud sync",
+          "titleZhHant": "iCloud 同步",
+          "status": "done"
+        },
         {
           "id": "destination-info",
           "title": "目的地实用信息（充电插头、电压、货币）",

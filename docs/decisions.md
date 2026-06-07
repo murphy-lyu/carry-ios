@@ -1,5 +1,49 @@
 # 决策日志
 
+## 2026-06-07 样式定稿收尾：精简样式 / 退役 Sheet fallback / 单一强调色
+
+### 首页样式精简：保留 2·Map(默认)+ 4·Map(实验),删其余
+原因：背景图方向已定(2·Map 照片卡),1·Plain(纯文字)与 3·Thumb(字母块小图)是探索期的对照样式,不再需要;留着徒增维护面与认知。4·Map(地图)用户想继续探索,保留。
+决策：`HomeCardStyle` 收为 `.featured` / `.glass` 两个 case;删 `.accent`/`.hue`。连带按"最小必要集合"清死代码:`HomeStylePalette`(渐变兜底)、`bannerCard`/`bannerChip`/`isHero`/`isBanner`/`isFeatured`/`countdownText`/`daysToDeparture`、`croppedImage`(展示改走 `PositionedImage`)、6 个无引用 xcstrings key。`HomeStyleFlag.swift` + Dev Options 切换器**暂留**(因 4·Map 仍探索),最终只留 2·Map 时再删。
+
+### 退役 FX Sheet fallback(无缩放保底版)
+原因：FX(`CarryBottomSheetFX`)已长期稳定丝滑、设为默认;当初为按时上线保留的无缩放保底版(`CarryBottomSheet`)+ A/B 开关已无价值,纯维护负担。CLAUDE.md「历史 workaround 前提变了要重新质疑」。
+决策：删 `CarryBottomSheet.swift` + `SheetFeatureFlag.swift`(`SheetVariant`)+ Dev Options「Sheet Implementation」开关 + 5 个相关 key;`HomeView` 直接调 `CarryBottomSheetFX`。`specs/sheet-fallback.md` 标「已退役」,其"行为要求"(手势/吸附/禁止行为)仍是 FX 的有效规范。
+
+### 单一强调色「烟蓝」,不做用户可见主题切换(反转 06-02「无品牌色/Toggle 用 .primary」)
+原因：用户问要不要在 Appearance 加主题切换菜单。判断:① 一个有自信的产品该替用户定下样子,摆一排颜色让用户挑反而稀释身份、违背克制(Apple 自家也不让换 app 强调色);② 强调色会重染全 App 交互元素,是大身份杠杆,不宜交给用户。Dev Options 里那 11 个色是探索工具,不是可上线功能。用户喜欢「烟蓝」。**这反转了 06-02「主题黑白、无品牌色、Toggle 用 .primary」的决策——当时前提是"还没定品牌色",现在烟蓝成了正式强调色,Toggle 用烟蓝是标准做法。**
+决策：① 确立 `CarryAccent`(烟蓝 #5B7A96 / 暗 #7A9CB8,明暗自适应)为**唯一**强调色;删 `ThemeAccent`(11 选项)+ `toggleTint` 环境键(其存在理由 classic 过渡特例已不在)+ Dev Options「Accent Color」选择器;**不在 Settings 加任何主题切换菜单**。② **双层覆盖**:SwiftUI 层 `.tint(CarryAccent.color)` 全局;**UIKit 层 `UIWindow.appearance().tintColor = CarryAccent.uiColor`**——因 `.confirmationDialog`/`.alert`/上下文菜单/导航栏等系统组件**不跟随 SwiftUI `.tint()`**(证据:旧版全局 tint 为 .primary 黑白,这些菜单仍显系统蓝),必须靠 UIKit 窗口 tint 才能统一。以后新增彩色交互元素一律继承全局 tint / 用 `CarryAccent`,不要散落硬编码 systemBlue 或其它色。
+
+## 2026-06-07 首页改版：行程背景图 / 卡片样式 / 备份
+
+### 首页图像策略：工具期克制缩略图，大图留给规划/回忆期
+原因：纠结"首页太素 vs 上大图"时回到产品定位——Carry 当前是打包工具,首页的活是"找行程/看进度/进去打包",真信息是日期/进度/剩余件数。而且**绝大多数行程用户不会专门传图**,围绕"大图"做主设计等于为少数情况优化、把默认体验逼成"渐变/地图兜底"。
+决策:**图是可选的锦上添花,不是主角**。卡片设计本身不依赖图(无图也成立)。全幅大图(Tripsy 那种)属于"中期规划功能成熟、一趟行程变成完整的'地方'"之后才配得上,现在不上。本轮落点:2·Map=原始卡 + 有图则照片铺满。
+
+### 背景图定位＝行程后的回忆；入口只在详情页「…」菜单、单项随状态切换
+原因：创建行程时人还没到目的地、根本没有那里的照片;这个功能真正的使用时机是**行程结束后回头挑一张最有代表性的照片**。多入口(创建/编辑/详情)既冗余又难维护。
+决策:**不放创建流程**;**编辑页入口也撤掉**(避免两处);唯一入口=详情页「…」菜单,**单项随状态切换**(无图「上传背景图」/ 有图「移除背景图」)。曾试详情页清单顶部放封面块→破坏打包专注界面,撤。曾试子菜单/两项平铺/confirmationDialog→分别因丑、累赘、从菜单触发弹窗锚点错乱被否。移除不加二次确认(纯视觉、可逆、原图仍在系统相册)。
+
+### 背景图非破坏式裁剪 + 焦点居中 + 固定比例卡(WYSIWYG 根因解)
+原因:照片有横有竖、背景卡是宽幅,用户选的图常需调整露出区域。先后试过:固定比例预览 + 先裁后 `scaledToFill`(二次裁切、切头顶)、焦点居中但卡片比例动态/随设备变(仍切)。根因:**预览裁切比例必须 = 展示卡片比例**,而卡片高度内容/设备相关,任何"猜一个固定比例"都跨设备失准(band-aid)。
+决策:① 存原图 + 归一化 `BackgroundCrop`(可反复重调);② 展示用 `PositionedImage` 以选区中心为焦点、按选区大小定缩放、钳制铺满(主体永不被切);③ 照片卡用共享常量 `K=4.0` 作**最小高度**(= 预览窗口比例),内容更多则自然长高、只多露不切。预览与展示共用同一 K,设备无关、WYSIWYG。iOS 无任意比例系统裁剪件,故 UIScrollView 自建 pan/zoom。
+
+### 4·Map(Apple 地图缩略图)仅作实验,不上线
+原因:用户问"Luggy 在大陆就这么用,为何不行"。查证后纠正了我之前的过度保守——Apple 地图(含大陆高德底图+审图号)经 MapKit 是**正常授权用法**,关键只是**不能遮挡/裁掉 MapKit 自渲染的署名**,且**不能自叠 Apple logo**(商标禁止;我一度叠 `applelogo` SF Symbol 是错的,已撤)。但:`MKMapSnapshotter` 快照**不带**署名;实时 `MKMapView` 带署名但在 56pt 上署名固定尺寸会"占半块"。
+决策:小尺寸(列表 56pt)地图**合规与美观无法两全**,故 4·Map 仅留 Dev Options 实验、**不作上线样式**。若将来要地图,只能用在**够大、能容纳 MapKit 自带署名**的尺寸(详情页大图/banner)。
+
+### 首页默认样式 = 2·Map
+原因:背景图功能只在 2·Map(铺满)/3·Thumb·4·Map(小图)显示,1·Plain 不显示;用户确认 2·Map 是方向,且重装会把 `@AppStorage` 重置回默认。
+决策:`HomeView` 与 `SettingsView` 两处默认改 `.featured`,新装/重装即显示照片卡。(其余样式仍留作实验,定稿后清理。)
+
+### 备份格式:发布前新增可选字段不升版本号;大文件随备份带上字节
+原因:背景图的裁剪元数据在 `TripBundle.backgroundsData`(SwiftData),但图片是沙盒独立文件——之前备份两者都没带,重装/还原会丢封面。另:版本号此前 1→2(也在发布前,按同逻辑本无必要)。
+决策:① 备份把每趟 `backgroundsData`(条目+裁剪)+ 顶层 `backgroundImages`(图片字节 base64)一起带上,还原写回沙盒;② **产品未发布、无在野旧备份,发布前新增可选字段一律归 v1、不升版本号**;版本号只在**发布后**因破坏性格式变更才递增(防"新格式备份在旧 App 还原")。已把版本从 2 重置回 1。
+
+### PHPicker 选图加载:loadObject 失败回退 loadDataRepresentation + .compatible
+原因:iCloud 未下载的照片(尤其 HEIC),`loadObject(ofClass: UIImage.self)` 常静默返回 nil → "选完毫无反应"。
+决策:`preferredAssetRepresentationMode = .compatible`;`loadObject` 失败时回退 `loadDataRepresentation`(强制触发 iCloud 下载),下载期 UI 显 loading 蒙层。选图/裁剪用两个独立 sheet + 蒙层串联,**不要"单 sheet 内把 PHPicker 换成 SwiftUI 视图"**(presentation 状态错乱:背景透明/无法交互)。
+
 ## 2026-06-03 FX 缩放 Sheet 根治 + 设为默认
 
 ### 自动吸附动画用 Core Animation，禁止手写 CADisplayLink 逐帧动画

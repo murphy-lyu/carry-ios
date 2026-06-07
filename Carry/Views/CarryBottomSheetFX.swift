@@ -4,7 +4,7 @@
 //
 //  High-performance bottom sheet driven entirely by UIKit.
 //  UIViewPropertyAnimator + CALayer — SwiftUI body never re-evaluates
-//  during spring animations.
+//  during spring animations.nag
 //
 //  View hierarchy inside FXSheetViewController.view (full-screen):
 //
@@ -100,15 +100,13 @@ final class FXSheetViewController: UIViewController {
     private let expandedRadius:        CGFloat = 36
     /// Bottom-left / bottom-right radius when fully expanded (sheet bottom flush + full-width,
     /// so its bottom corners sit on the device's screen corners).
-    /// MUST be ≤ the screen's physical corner radius — counter-intuitively, SMALLER not larger:
-    ///   • larger than the screen → the sheet corner curves in MORE than the display → a
-    ///     crescent of map shows in the corner (the leak);
-    ///   • ≤ screen → the sheet over-fills into the corner and the display's hardware mask
-    ///     clips it, so the visible corner exactly follows the screen (no public API exposes
-    ///     the real display radius; private API banned, so this is a hand-set constant).
-    /// 40 on iPhone 17 Pro (screen ≈ 55) clears even a faint sub-pixel left-corner sliver with
-    /// margin to spare. Since the screen clips it anyway, the expanded corner still LOOKS like
-    /// the screen's ~55 radius — 40 only controls "enough over-fill to never leak".
+    /// At the flush-expanded rest state the bottom corners sit on the screen's physical corners,
+    /// so this MUST stay ≤ the screen radius or a faint crescent of map leaks in the corner.
+    /// 40 over-fills into the screen's corner so the display's hardware mask clips it cleanly
+    /// (the corner still LOOKS like the screen's ~55 radius). It's a SEPARATE knob from
+    /// collapsedBottomRadius on purpose: the flush state needs a small radius for no-leak, the
+    /// floating collapsed card wants a large one (56). They can't be unified to one constant
+    /// without either a leak (constant 56) or a flatter collapsed card (constant ~44).
     private let expandedBottomRadius:  CGFloat = 40
     /// Top-left / top-right radius when fully collapsed.
     private let collapsedTopRadius:    CGFloat = 36

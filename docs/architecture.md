@@ -45,6 +45,7 @@ ZStack（全窗口）
 - TripStore（@StateObject，全局）：行程数据的读写、refresh
 - NavigationRouter（@StateObject，全局）：导航路径管理
 - AppearanceMode（@AppStorage）：外观模式（system/light/dark）
+- CarryAccent（`AppearanceMode.swift`）：App 唯一强调色「烟蓝」。SwiftUI 层 `.tint(CarryAccent.color)`（ContentView 注入）+ UIKit 层 `UIWindow.appearance().tintColor = CarryAccent.uiColor`（`CarryApp.init`，覆盖系统弹窗/菜单/导航栏）。无用户可见主题切换
 
 ## 持久化
 - SwiftData，versioned schema（CarrySchema.swift）
@@ -55,17 +56,20 @@ ZStack（全窗口）
 - CarryLogger：单例日志，记录关键生命周期事件和 DB 错误
 - NotificationManager：本地通知（行程提醒）；`tripId(fromIdentifier:)` 从通知 ID 解析行程 UUID
 - PackReminderNotificationDelegate：`UNUserNotificationCenterDelegate`，点击打包提醒后解析 tripId 写入 `NavigationRouter.pendingTripId`，实现自动跳转
-- DataBackupManager：数据备份
+- DataBackupManager：数据备份（JSON 镜像 + 还原/合并）。**含非 SwiftData 关联文件**：背景图字节随备份带上（`CarryBackup.backgroundImages` 文件名→base64），还原时写回沙盒；裁剪元数据走 `BackupTrip.backgroundsData`
+- 行程背景图（`feature/home-ui-redesign` 分支，Phase 1）：
+  - `TripBackground.swift`：`TripBackgroundEntry`（条目，含归一化裁剪框 `BackgroundCrop`，存于 `TripBundle.backgroundsData`）+ `BackgroundImageStore`（沙盒 `Application Support/TripBackgrounds/`，压缩存图/取图/裁剪缓存；存图时烘焙方向+scale 1 以保裁剪坐标正确）
+  - `BackgroundPicker.swift`：`PhotoPicker`（PHPicker 封装，`.compatible`，只转发 itemProvider/cancel，不自行 dismiss/加载）
+  - `BackgroundReposition.swift`：`loadBackgroundImage`(loadObject→loadDataRepresentation 回退，iCloud 健壮加载) + `BackgroundRepositionView`(UIScrollView pan/zoom 选裁剪框) + `PositionedImage`(焦点居中、固定比例展示，设备无关 WYSIWYG)
+  - `DestinationMapThumbnail.swift`：`TripBackgroundView`(有图→`PositionedImage`；无图→`.monogram` 墨色字母块 / `.map` 实时 MKMapView)；入口在 `PackingListView` 详情页「…」菜单
+  - `HomeStyleFlag.swift`：`HomeCardStyle`（现仅 `.featured`=2·Map 默认正式样式 / `.glass`=4·Map 实验；1·Plain/3·Thumb 已删）。Dev Options 仍可切 2↔4；若最终只留 2·Map,再删此文件 + 切换器
 - CoffeeStore：StoreKit 内购（打赏功能）
 - CarryShortcuts / AppIntents：Siri/Spotlight 快捷指令
   - create_trip：创建新行程
   - open_trip：打开指定行程
   - show_map：展示地球地图
 - GlobeView：3D 地球视图（MapKit Annotation pin 点亮到访国家，不绘制多边形边界）
-- 首页底部 Sheet：`UIViewControllerRepresentable` 桥接的 UIKit 自定义 sheet，两个变体经 `SheetVariant`（`@AppStorage`，Dev Options 开关 + 编译期默认）切换：
-  - `CarryBottomSheetFX`（`.ultimate`，**现默认**）：两侧/底部缩放视觉，纯 Core Animation 驱动（吸附用 `UIViewPropertyAnimator`，无 CADisplayLink）；内容固定尺寸 + transform 缩放 + 运动期 `shouldRasterize`，嵌套 cornerRadius 层做上下异半径圆角。详见 `docs/home-sheet-debug-playbook.md`。
-  - `CarryBottomSheet`（`.fallback`）：无缩放矩形版，现仅作 A/B 备选，暂留待退役。
-  - 触碰此模块**必读** `docs/home-sheet-debug-playbook.md`（手势/吸附/滚动锁的踩坑史与纪律）。
+- 首页底部 Sheet：`CarryBottomSheetFX`——`UIViewControllerRepresentable` 桥接的 UIKit 自定义 sheet。两侧/底部缩放视觉，纯 Core Animation 驱动（吸附用 `UIViewPropertyAnimator`，无 CADisplayLink）；内容固定尺寸 + transform 缩放 + 运动期 `shouldRasterize`，嵌套 cornerRadius 层做上下异半径圆角。HomeView 直接调用,无变体开关（无缩放 fallback 与 `SheetFeatureFlag` 已于 2026-06-07 退役删除）。触碰此模块**必读** `docs/home-sheet-debug-playbook.md`（手势/吸附/滚动锁的踩坑史与纪律）。
 - RoadmapView：产品路线图（支持远程 JSON 更新）
 - LiveActivityManager：`@MainActor` 单例，管理打包进度 Live Activity 生命周期（start / update / end / endIfDeparted）
 

@@ -77,8 +77,8 @@ private struct RoadmapPayload: Codable {
                 id: "upcoming",
                 title: RoadmapL10n.text(en: "Upcoming", zhHans: "即将推出", zhHant: "即將推出"),
                 items: [
-                    RoadmapItem(id: "calendar-import", title: RoadmapL10n.text(en: "Import trips from Calendar", zhHans: "从日历导入行程", zhHant: "從行事曆匯入行程"), status: .inProgress, note: nil),
-                    RoadmapItem(id: "icloud-sync", title: RoadmapL10n.text(en: "iCloud sync", zhHans: "iCloud 同步", zhHant: "iCloud 同步"), status: .planned, note: nil),
+                    RoadmapItem(id: "trip-planning", title: RoadmapL10n.text(en: "Trip planning", zhHans: "行程规划", zhHant: "行程規劃"), status: .inProgress, note: nil),
+                    RoadmapItem(id: "calendar-import", title: RoadmapL10n.text(en: "Import trips from Calendar", zhHans: "从日历导入行程", zhHant: "從行事曆匯入行程"), status: .planned, note: nil),
                     RoadmapItem(id: "apple-watch", title: RoadmapL10n.text(en: "Apple Watch app", zhHans: "Apple Watch 支持", zhHant: "Apple Watch 支援"), status: .planned, note: nil)
                 ]
             ),
@@ -86,6 +86,7 @@ private struct RoadmapPayload: Codable {
                 id: "done",
                 title: RoadmapL10n.text(en: "Shipped", zhHans: "已上线", zhHant: "已上線"),
                 items: [
+                    RoadmapItem(id: "icloud-sync", title: RoadmapL10n.text(en: "iCloud sync", zhHans: "iCloud 同步", zhHant: "iCloud 同步"), status: .done, note: nil),
                     RoadmapItem(id: "destination-info", title: RoadmapL10n.text(en: "Destination info (plugs, voltage, currency)", zhHans: "目的地实用信息（充电插头、电压、货币）", zhHant: "目的地實用資訊（充電插頭、電壓、貨幣）"), status: .done, note: nil),
                     RoadmapItem(id: "weather", title: RoadmapL10n.text(en: "Weather forecast", zhHans: "目的地天气预报", zhHant: "目的地天氣預報"), status: .done, note: nil),
                     RoadmapItem(id: "live-activity", title: RoadmapL10n.text(en: "Live Activity (Dynamic Island & Lock Screen)", zhHans: "灵动岛 & 锁屏打包进度", zhHant: "靈動島 & 鎖定畫面打包進度"), status: .done, note: nil),

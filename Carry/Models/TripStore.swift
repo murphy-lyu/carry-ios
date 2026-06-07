@@ -47,6 +47,10 @@ final class TripBundle {
     var longitude: Double = 0
     /// JSON-encoded [DestinationEntry] for the 2nd+ cities in a multi-destination trip.
     var additionalDestinationsData: Data = Data()
+    /// JSON-encoded [TripBackgroundEntry] — user-chosen background image(s).
+    /// Single entry for now; the array is multi-destination-ready (see specs/trip-background-image.md).
+    /// Adding this field is a lightweight SwiftData migration (default value) — no SchemaV2 needed.
+    var backgroundsData: Data = Data()
     @Relationship(deleteRule: .cascade, inverse: \PackingSection.bundle) var sections: [PackingSection]? = []
 
     var reminderConfigs: [TripReminderConfig] {
@@ -84,6 +88,26 @@ final class TripBundle {
             additionalDestinationsData = (try? JSONEncoder().encode(newValue)) ?? Data()
         }
     }
+
+    /// Decoded user-chosen background images. Single for now; array = multi-destination ready.
+    var backgrounds: [TripBackgroundEntry] {
+        get {
+            guard !backgroundsData.isEmpty else { return [] }
+            do {
+                return try JSONDecoder().decode([TripBackgroundEntry].self, from: backgroundsData)
+            } catch {
+                CarryLogger.shared.log(.dataCorrupted,
+                    context: "backgrounds decode failed, len=\(backgroundsData.count)")
+                return []
+            }
+        }
+        set {
+            backgroundsData = (try? JSONEncoder().encode(newValue)) ?? Data()
+        }
+    }
+
+    /// The primary (first) background entry, if any.
+    var primaryBackground: TripBackgroundEntry? { backgrounds.first }
 
     init(
         id: UUID = UUID(),
@@ -340,6 +364,29 @@ final class TripStore: ObservableObject {
             CarryLogger.shared.log(.persistFailed, context: "caller=\(caller)")
         }
         fetchTrips()
+    }
+
+    // MARK: - Trip background image (specs/trip-background-image.md)
+
+    /// Sets a local background image (already saved to the sandbox via BackgroundImageStore).
+    /// The caller saves the image and passes the stored filename; we delete any prior file.
+    func setLocalBackground(fileName: String, crop: BackgroundCrop? = nil, forTripId id: UUID) {
+        guard let trip = trips.first(where: { $0.id == id }) else { return }
+        if let old = trip.primaryBackground?.localFileName, old != fileName {
+            BackgroundImageStore.delete(named: old)
+        }
+        trip.backgrounds = [TripBackgroundEntry(source: .local, localFileName: fileName, destinationIndex: 0, crop: crop)]
+        save()
+    }
+
+    /// Removes the custom background → card falls back to the style's default (monogram/map).
+    func clearBackground(forTripId id: UUID) {
+        guard let trip = trips.first(where: { $0.id == id }) else { return }
+        if let old = trip.primaryBackground?.localFileName {
+            BackgroundImageStore.delete(named: old)
+        }
+        trip.backgrounds = []
+        save()
     }
 
     private let defaultMyItemCollection = "Default"

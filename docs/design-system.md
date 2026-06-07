@@ -18,14 +18,17 @@ Apple 原生风格，极简、克制、优雅。
 - Separator：Color(.separator)
 - Destructive：Color(.systemRed)
 
-### 品牌色 / Accent
-- **品牌主题色：海湾青（Bay Teal）**
-  - Light：`#3DB8A4`（sRGB r=0.239, g=0.722, b=0.643）
-  - Dark：`#4ECBB7`（sRGB r=0.306, g=0.796, b=0.718）
-  - 定义在 `Assets.xcassets/AccentColor.colorset`，代码中通过 `Color.accentColor` 或 `.tint(.accentColor)` 引用
-- Accent（全局 tint）：`.accentColor`（ContentView 中已设置 `.tint(.accentColor)`）
-- **禁止**在代码里硬编码 `.tint(.blue)` / `.foregroundStyle(.blue)`，统一用 `.accentColor`
-- **开关（Toggle）启用态**：跟随 `.accentColor`（海湾青），无需单独指定
+### 品牌色 / Accent（2026-06-07 定稿：单一「烟蓝」）
+- **唯一强调色：烟蓝（Smoky Blue）** —— 定义在代码 `CarryAccent`（`AppearanceMode.swift`），明暗自适应：
+  - Light：`#5B7A96`（sRGB r=0.357, g=0.478, b=0.588）
+  - Dark：`#7A9CB8`（sRGB r=0.478, g=0.612, b=0.722）
+- **两层注入,缺一不可**（见 `docs/decisions.md` 2026-06-07）：
+  - SwiftUI 层：`ContentView` 根 `.tint(CarryAccent.color)` → FAB / 进度 / Toggle / 选中态 / 日期选择器等所有读 `Color.accentColor` 的元素。
+  - UIKit 层：`CarryApp.init` 设 `UIWindow.appearance().tintColor = CarryAccent.uiColor` → 系统组件（`.confirmationDialog`/`.alert`/上下文菜单/导航栏按钮）——这些**不跟随** SwiftUI `.tint()`。
+- **开关（Toggle）启用态**：继承全局 tint（烟蓝），不单独指定。
+- **禁止**硬编码 `.tint(.blue)` / `systemBlue` / 其它强调色;新增彩色交互元素一律继承全局 tint 或显式用 `CarryAccent.color`。
+- **无用户可见主题切换**;旧的 `ThemeAccent`(多色备选)/`toggleTint` 环境键已删除。
+- 注：`Assets.xcassets/AccentColor.colorset`（旧「海湾青」）已被 `.tint()` 覆盖,不再是有效来源。
 
 ### Tab Bar 背景（已实现）
 - Dark：Color(red: 0.09, green: 0.09, blue: 0.10)
@@ -60,6 +63,15 @@ Apple 原生风格，极简、克制、优雅。
 - 圆角上下异半径、随状态过渡：顶角 36pt；底角 展开 40 / 收起 56（`cornerCurve = .continuous`）。
 - 展开贴屏时底角半径必须 **≤ 设备屏幕物理圆角**，靠屏幕硬件圆角过裁、与屏幕严丝合缝（大于会露月牙地图）。
 - 这些是真机调定值，实现/调参锚点见 `CarryBottomSheetFX.swift` 常量 + `docs/home-sheet-debug-playbook.md`；改前必读 playbook。
+
+### 首页行程卡 · 背景照片（feature/home-ui-redesign 分支，实验中）
+> 样式尚未定稿（Dev Options 仍可切 1·Plain/2·Map/3·Thumb/4·Map，默认 2·Map）。定稿后转正为正式规范。
+- **2·Map 照片卡**：沿用原始紧凑卡布局，有用户照片时照片**铺满整张卡**为背景。
+  - 卡片用**固定宽高比 `K=4.0` 作最小高度**（内容更多则自然长高），该 K 与裁剪预览窗口共用同一常量（`BackgroundRepositionView.displayAspect`），保证"所见即所得"。
+  - 蒙层：整体 `black 0.16` + 顶 `0.30→透明` + 底 `透明→0.58`（保证白字与顶部 chip 可读，中段最透显照片）。
+  - 有图态：标题/城市/日期转**白字 + 轻阴影**，色条与进度填充转白，状态药丸转**深半透明底 + 白字**。无图态完全沿用原始卡(深色文字)。
+- **背景图展示统一走 `PositionedImage`**：以用户所选裁剪框中心为焦点居中、按选区大小定缩放并钳制铺满——主体永不被切，不同尺寸/机型只多露周边（非破坏式，原图+归一化 `BackgroundCrop`）。
+- 3·Thumb / 4·Map 的 56pt 小图同样走 `PositionedImage`；无图兜底分别为墨色字母块 / 实时地图（地图仅实验，见 decisions）。
 
 ## 阴影（仅 Light Mode 使用，Dark Mode 禁用阴影）
 - 卡片：shadow(color: .black.opacity(0.06), radius: 8, y: 2)

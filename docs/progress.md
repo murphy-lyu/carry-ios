@@ -1,7 +1,46 @@
 # 项目进度
 
 ## 最后更新
-2026-06-03
+2026-06-07
+
+## 上次改动摘要（样式定稿收尾：精简样式 + 退役 Sheet fallback + 单一强调色 · 2026-06-07）
+
+> 接上一条同日工作。仍在 `feature/home-ui-redesign` 分支,**未合并**。本轮是"定稿 + 清理"三件事,全程编译绿。
+
+- **首页样式精简(保留 2·Map 默认 + 4·Map 实验,删其余)**:
+  - `HomeCardStyle` 4 个 → **2 个**(`.featured` / `.glass`);删 `.accent`(1·Plain)/`.hue`(3·Thumb)。
+  - 连带删一批死代码:`HomeStylePalette`(随机渐变兜底,无人引用)、`bannerCard`/`bannerChip`/`bannerLeadChipText`、`isHero`/`isBanner`/`isFeatured`/`countdownText`/`daysToDeparture`;`cardSurface` 化简为单一 `cardFill`;`BackgroundImageStore.croppedImage`(+ `croppedCache`/`round4`,展示已改走 `PositionedImage`)。
+  - 删 6 个无引用 xcstrings key(`trip.countdown.today/.tomorrow/.days_left`、`trip.background.choose/.hint/.title`)。
+- **退役 FX Sheet fallback**:删 `CarryBottomSheet.swift`(无缩放保底)+ `SheetFeatureFlag.swift`(`SheetVariant`)+ Dev Options「Sheet Implementation」开关 + 5 个相关 key;`HomeView` 直接调 `CarryBottomSheetFX`。`specs/sheet-fallback.md` 标记「已退役」,其"行为要求"仍是 FX 的有效规范。
+- **单一强调色「烟蓝」**(决定:不做用户可见主题切换,见 decisions):
+  - 删 `ThemeAccent`(11 个备选)+ `toggleTint` 环境键(其存在理由 classic 过渡特例已不在)+ Dev Options「Accent Color」选择器。
+  - 新建 `CarryAccent`(烟蓝 #5B7A96 / 暗 #7A9CB8,明暗自适应);**SwiftUI 层** `.tint(CarryAccent.color)` 全局注入;**UIKit 层** `UIWindow.appearance().tintColor = CarryAccent.uiColor`——覆盖 SwiftUI tint 够不到的系统组件(`.confirmationDialog`/`.alert`/上下文菜单/导航栏)。所有 `.tint(toggleTint)` → `.tint(CarryAccent.color)`。
+  - **有意反转**之前"Toggle 用 .primary 黑白 / 无品牌色"的决策——前提(无品牌色)已变。
+
+**待办**:
+- 真机统一验收(单一烟蓝在亮/暗 + 系统弹窗/导航栏的观感;Toggle 烟蓝对比度)。
+- 4·Map 仍为实验(不上线);首页若最终只留 2·Map,可再删 4·Map + `HomeStyleFlag.swift` + Dev Options 切换器。
+- 分支合并前回归 + 背景图埋点(下同)。
+
+## 上次改动摘要（首页改版：行程背景图 + 卡片样式 + 备份纳入 · 2026-06-07）
+
+> 全部在 `feature/home-ui-redesign` 分支,**未合并**。首页卡片样式仍是 Dev Options 可切的实验(1·Plain / 2·Map / 3·Thumb / 4·Map),本轮把"行程背景图"这条功能从 0 做到可用,并定下方向:**2·Map(照片铺满原始卡)设为默认**。
+
+- **行程背景图(Phase 1,本地上传)**:
+  - **入口**:行程详情页右上「…」菜单**单项随状态切换**——无图=「上传背景图」、有图=「移除背景图」。**不放创建流程**(那时还没到目的地、没有照片),**编辑页入口也撤掉**(避免两处);曾在清单顶部放过封面块,因破坏打包界面而移除。
+  - **选图 + iCloud 健壮加载**:PHPicker(`.compatible`),`loadObject` 失败回退 `loadDataRepresentation`(触发 iCloud 下载),下载期一个 loading 蒙层兜住。两个独立 sheet(选图 + 裁剪),中间用蒙层串联——曾试"单 sheet 内 picker→裁剪 切换"导致 presentation 错乱(背景透明/无法操作),已回退。
+  - **非破坏式裁剪/调位**:存原图 + 归一化 `BackgroundCrop`(可反复重调,原图不损)。`BackgroundRepositionView`(UIScrollView pan/zoom)选区域 → `PositionedImage` 以选区中心为焦点居中展示。**WYSIWYG 根因解**:照片卡用固定比例 `K=4.0`(= 预览窗口比例)作**最小高度**,内容更多时自然长高、只多露不切——设备无关,主体(头顶)不再被裁。
+  - **展示**:2·Map=照片铺满整张卡(白字 + 蒙层,色条/进度/状态药丸有图态转白/深底);3·Thumb / 4·Map=56pt 小图。1·Plain 不显示照片(设计如此)。
+- **首页样式定向**:**默认样式改为 2·Map**(`HomeView` + `SettingsView` 两处 `@AppStorage` 默认 `.featured`)。3·Thumb=通讯录式"墨色底+城市首字"字母块兜底。4·Map=实时 `MKMapView` 兜底——**仅实验、不上线**(56pt 上 MapKit 署名/大陆审图号无法两全;Apple 商标禁止自叠 logo)。
+- **备份/还原纳入背景图**:`BackupTrip.backgroundsData`(条目+裁剪框)+ `CarryBackup.backgroundImages`(图片字节,base64),还原时写回沙盒。均为可选字段。**备份版本号从 2 重置回 1**——产品未发布、无在野旧备份,发布前新增可选字段不升版本。
+- **Quick Actions 顺序修正**:`shortcutItems` 数组按"第一个离图标最近"的 iOS 行为倒序定义(footprint→nearest→newTrip),使图标在下半屏时从上到下读作 新建行程 / 最近一趟 / 我的足迹。
+- 顺带:帮用户把之前一份真实备份(16 趟、v1)定位出来用于还原(已是 v1,无需转换);清掉模拟器里残留的 v2 备份文件。
+
+**待办**:
+- ~~首页样式定稿~~ → **已收尾**(见上方同日新条目:删 1·Plain/3·Thumb + 死代码 + 无用 key + croppedImage;保留 2·Map 默认 + 4·Map 实验)。
+- **4·Map 上线合规未解**:若最终想要地图样式,只能用在"够大、能显示 MapKit 自带署名"的尺寸(详情页大图/banner),不能是 56pt 小图。
+- **Phase 2(在线图库,已搁置)**:Unsplash/Pexels 搜索 + 大陆可用性 + 署名合规(见 `specs/trip-background-image.md`)。
+- 真机全流程验收(裁剪精度用户已确认 OK);背景图功能补埋点(当前实验阶段未加);分支合并前回归。
 
 ## 上次改动摘要（FX 缩放 Sheet 丝滑根治 + 设为默认 · 2026-06-03）
 

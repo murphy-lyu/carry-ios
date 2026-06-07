@@ -48,19 +48,19 @@ struct CoffeeSheetView: View {
 
                     // — Big emoji
                     Text("☕️")
-                        .font(.system(size: 50))
-                        .padding(.top, 8)
-                        .padding(.bottom, 6)
+                        .font(.system(size: 48))
+                        .padding(.top, 4)
+                        .padding(.bottom, 2)
 
                     VStack(spacing: 0) {
                         // — Title
                         Text(supportToneTitleKey)
-                            .font(.system(size: 32, weight: .semibold))
+                            .font(.system(size: 30, weight: .semibold))
                             .lineLimit(2)
                             .minimumScaleFactor(0.85)
                             .multilineTextAlignment(.center)
                             .padding(.horizontal, 24)
-                            .padding(.bottom, 6)
+                            .padding(.bottom, 4)
 
                         // — Subtitle
                         Text(supportToneSubtitleKey)
@@ -69,11 +69,11 @@ struct CoffeeSheetView: View {
                             .multilineTextAlignment(.center)
                             .padding(.horizontal, 28)
                     }
-                    .frame(minHeight: 86, alignment: .top)
-                    .padding(.bottom, 4)
+                    .frame(minHeight: 74, alignment: .top)
+                    .padding(.bottom, 2)
 
                     // — Coffee cards
-                    VStack(spacing: 10) {
+                    VStack(spacing: 8) {
                         coffeeCard(emoji: "🧃", nameKey: "support.drink.juice",
                                    id: "com.murphy.carry.juice",      fallback: "$0.99")
                         coffeeCard(emoji: "☕️", nameKey: "support.drink.americano",
@@ -112,16 +112,16 @@ struct CoffeeSheetView: View {
                         .padding(.horizontal, 6)
                         .padding(.vertical, 2)
                         .background(
-                            RoundedRectangle(cornerRadius: 12, style: .continuous)
-                                .fill(Color(.secondarySystemBackground))
+                            RoundedRectangle(cornerRadius: 10, style: .continuous)
+                                .fill(Color(.secondarySystemBackground).opacity(0.82))
                                 .overlay(
-                                    RoundedRectangle(cornerRadius: 12, style: .continuous)
-                                        .stroke(Color.primary.opacity(0.06), lineWidth: 1)
+                                    RoundedRectangle(cornerRadius: 10, style: .continuous)
+                                        .stroke(Color.primary.opacity(0.05), lineWidth: 1)
                                 )
                         )
                     }
                     .padding(.horizontal, 20)
-                    .padding(.top, 6)
+                    .padding(.top, 2)
                     .padding(.bottom, 6)
 
                 }
@@ -174,7 +174,7 @@ struct CoffeeSheetView: View {
         } label: {
             HStack(spacing: 12) {
                 Text(emoji)
-                    .font(.system(size: 24))
+                    .font(.system(size: 23))
                     .frame(width: 28, alignment: .center)
                 Text(nameKey)
                     .font(.body.weight(.semibold))
@@ -191,13 +191,13 @@ struct CoffeeSheetView: View {
                 }
             }
             .padding(.horizontal, 20)
-            .frame(height: 56)
+            .frame(height: 54)
             .background(
                 RoundedRectangle(cornerRadius: 16)
                     .fill(Color(.secondarySystemBackground))
                     .overlay(
                         RoundedRectangle(cornerRadius: 16)
-                            .stroke(Color.primary.opacity(0.08), lineWidth: 1)
+                            .stroke(Color.primary.opacity(0.07), lineWidth: 1)
                     )
             )
         }
@@ -242,10 +242,10 @@ struct CoffeeSheetView: View {
                 Spacer()
                 Image(systemName: "chevron.right")
                     .font(.caption)
-                    .foregroundStyle(Color.secondary.opacity(0.52))
+                    .foregroundStyle(Color.secondary.opacity(0.46))
             }
             .padding(.horizontal, 16)
-            .frame(height: 44)
+            .frame(height: 42)
             .frame(maxWidth: .infinity, alignment: .leading)
             .contentShape(Rectangle())
         }

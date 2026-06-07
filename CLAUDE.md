@@ -148,6 +148,7 @@ Carry 在中国大陆 App Store 上架，涉及地理政治敏感内容时必须
 - 新 View 必须注入 store / router（通过 @EnvironmentObject）
 - NavigationRouter.path 操作统一走 router，禁止在子 View 里自行维护 NavigationPath
 - SwiftData 变更必须考虑 migration，不能直接改 model schema
+- **备份/还原格式变更**：新增字段一律用**可选类型**保持向后兼容；产品**发布前**新增可选字段**不升 `currentBackupVersion`**（无在野旧备份，统一归当前版本），版本号只在**发布后**因破坏性格式变更才递增（它唯一作用是拦截"更新格式的备份在旧 App 还原"）。任何**不在 SwiftData 里的关联文件**（如背景图字节存在沙盒、仅文件名进 model）必须**显式随备份带上字节并在还原时写回**，否则重装/还原会丢失——`DataBackupManager` 改动时同步检查这点。
 - 新功能开发前先写 specs/ 下的 spec 文件，确认后再实现
 - **Live Activity 数据同步**：TripStore 中任何修改物品数量（add/remove/merge）、行程信息（name/destination/date）、打包状态的函数，必须调用 `LiveActivityManager.shared.update(for:)` 或 `end(for:)`。删除行程调用 `end`，其余调用 `update`。仅 iOS（`#if !targetEnvironment(macCatalyst)`）。
 - **Widget Extension 文件约定**：`CarryWidget/` 下所有文件仅属于 CarryWidgetExtension target，不得与主 app target 混用；跨 target 共享的类型统一放 `SharedSources/`，通过 pbxproj `PBXSourcesBuildPhase` 显式加入两个 target

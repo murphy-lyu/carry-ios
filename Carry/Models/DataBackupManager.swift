@@ -45,6 +45,9 @@ struct BackupTrip: Codable {
     var longitude: Double
     /// 多目的地行程的次目的地（2nd city onward）JSON。可选以兼容旧备份。
     var additionalDestinationsData: Data?
+    /// 用户背景图条目（含裁剪框 crop）的 JSON。可选以兼容旧备份。
+    /// 对应的图片字节存在 CarryBackup.backgroundImages（按文件名索引）。
+    var backgroundsData: Data?
     var sections: [BackupPackingSection]
 }
 
@@ -68,6 +71,9 @@ struct CarryBackup: Codable {
     var myItems: [BackupMyItem]
     /// 用户的默认提醒档位偏好（设置 →「通知」）。可选：旧备份无此字段时还原后保持现状。
     var defaultReminderOffsets: [Int]?
+    /// 用户上传的背景图字节，按 sandbox 文件名索引（JSON 中以 base64 编码）。
+    /// 可选：旧备份无此字段；还原时写回沙盒，配合各 trip 的 backgroundsData 复原封面。
+    var backgroundImages: [String: Data]?
 }
 
 // MARK: - DataBackupManager
@@ -145,8 +151,20 @@ final class DataBackupManager {
                 latitude: trip.latitude,
                 longitude: trip.longitude,
                 additionalDestinationsData: trip.additionalDestinationsData.isEmpty ? nil : trip.additionalDestinationsData,
+                backgroundsData: trip.backgroundsData.isEmpty ? nil : trip.backgroundsData,
                 sections: sections
             )
+        }
+
+        // Embed the referenced background image bytes (keyed by filename) so a fresh-install
+        // restore can rewrite them to the sandbox. Deduped across trips.
+        var backgroundImages: [String: Data] = [:]
+        for trip in trips {
+            for entry in trip.backgrounds {
+                guard let name = entry.localFileName, backgroundImages[name] == nil,
+                      let bytes = BackgroundImageStore.data(named: name) else { continue }
+                backgroundImages[name] = bytes
+            }
         }
 
         let backupMyItems: [BackupMyItem] = myItems.map {
@@ -169,7 +187,8 @@ final class DataBackupManager {
             createdAt: Date(),
             trips: backupTrips,
             myItems: backupMyItems,
-            defaultReminderOffsets: ReminderPreferences.enabledOffsets.sorted()
+            defaultReminderOffsets: ReminderPreferences.enabledOffsets.sorted(),
+            backgroundImages: backgroundImages.isEmpty ? nil : backgroundImages
         )
 
         // Encode on the calling thread (main actor) so the Codable conformance stays
@@ -221,12 +240,11 @@ final class DataBackupManager {
     /// 用来防止"用新版备份在旧版 App 还原"——若 backup.version > currentBackupVersion
     /// 则提示用户先更新 App，而不是崩溃或静默还原出错误数据。
     ///
-    /// 版本历史：
-    /// - v1（首版）：基础字段
-    /// - v2：BackupTrip 加 additionalDestinationsData（多目的地）；CarryBackup 加
-    ///   defaultReminderOffsets（通知偏好）；二者均为可选，v1 旧备份在 v2 App 还原
-    ///   时按 nil 处理（多目的地丢失/偏好保持现状）。
-    static let currentBackupVersion = 2
+    /// 产品尚未发布、不存在在野旧备份，因此发布前所有字段新增都归入 v1（launch 基线），
+    /// 不递增版本号。版本号的唯一作用是发布后拦截"用更新格式的备份在旧 App 还原";
+    /// 发布后再因破坏性格式变更才升到 v2、v3…。当前 v1 字段即 BackupTrip/CarryBackup
+    /// 的全部字段（含可选的 additionalDestinations / 通知偏好 / 背景图条目+裁剪 / 图片字节）。
+    static let currentBackupVersion = 1
 
     enum BackupError: LocalizedError {
         case fileNotFound
@@ -295,7 +313,17 @@ final class DataBackupManager {
         return try performMerge(from: backup, into: context)
     }
 
+    /// Rewrite the backed-up background image bytes to the sandbox (filenames are UUIDs, so
+    /// overwriting is safe/idempotent). Trip `backgroundsData` then references them.
+    private func restoreBackgroundImages(from backup: CarryBackup) {
+        for (name, data) in backup.backgroundImages ?? [:] {
+            BackgroundImageStore.write(data: data, named: name)
+        }
+    }
+
     private func performMerge(from backup: CarryBackup, into context: ModelContext) throws -> (trips: Int, myItems: Int) {
+        restoreBackgroundImages(from: backup)
+
         // 取出现有 UUID 集合，用于去重判断
         let existingTripIDs = Set(try context.fetch(FetchDescriptor<TripBundle>()).map(\.id))
         let existingMyItemIDs = Set(try context.fetch(FetchDescriptor<MyItem>()).map(\.id))
@@ -323,6 +351,9 @@ final class DataBackupManager {
             trip.longitude = bt.longitude
             if let extra = bt.additionalDestinationsData {
                 trip.additionalDestinationsData = extra
+            }
+            if let bg = bt.backgroundsData {
+                trip.backgroundsData = bg
             }
             context.insert(trip)
 
@@ -389,6 +420,9 @@ final class DataBackupManager {
         try context.delete(model: TripBundle.self)
         try context.delete(model: MyItem.self)
 
+        // Rewrite background image files to the sandbox before relinking trips.
+        restoreBackgroundImages(from: backup)
+
         // 还原默认提醒偏好（旧备份无此字段则保持现状）
         if let offsets = backup.defaultReminderOffsets {
             ReminderPreferences.enabledOffsets = Set(offsets)
@@ -418,6 +452,10 @@ final class DataBackupManager {
             // 还原多目的地数据（旧备份无此字段时保持默认空 Data）
             if let extra = bt.additionalDestinationsData {
                 trip.additionalDestinationsData = extra
+            }
+            // 还原背景图条目（含裁剪框）；图片字节已在上面写回沙盒
+            if let bg = bt.backgroundsData {
+                trip.backgroundsData = bg
             }
             context.insert(trip)
 

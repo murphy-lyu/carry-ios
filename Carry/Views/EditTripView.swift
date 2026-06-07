@@ -130,6 +130,7 @@ struct EditTripView: View {
                                 .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
                             }
                         }
+
                     }
                     .padding(.top, 8)
                     .padding(.bottom, 16)

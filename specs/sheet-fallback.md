@@ -1,8 +1,10 @@
 # Sheet Fallback Implementation — Spec
 
-> **Status: 方向已反转（2026-06-03）** — 终极方案（FX）已达成视觉到位 + 纯 Core Animation 丝滑，
-> **已设为默认**；保底方案（无缩放）降级为 Dev Options A/B 备选，暂保留（用户决定先不删）。
-> 调试全过程详见 `docs/home-sheet-debug-playbook.md` §21–§32。
+> **Status: 已退役（2026-06-07）** — 终极方案（`CarryBottomSheetFX`）长期稳定后,无缩放保底方案
+> 已删除:`CarryBottomSheet.swift` + `SheetFeatureFlag.swift` + Dev Options「Sheet Implementation」
+> 开关 + 相关 xcstrings key 全部移除,HomeView 直接调用 FX。本 spec 仅作历史留档;**下文「行为要求」
+> (手势跟手/三条联动规则/吸附策略/禁止行为)仍是 FX 的有效规范**。FX 调试全过程见
+> `docs/home-sheet-debug-playbook.md` §21–§32。
 >
 > ⚠️ 术语/文件名提醒：本 spec 早期用 `CarryBottomSheetFallback.swift` 指保底方案，
 > 但**实际实现**为：保底=`CarryBottomSheet.swift`（无缩放），终极=`CarryBottomSheetFX.swift`（缩放）。
