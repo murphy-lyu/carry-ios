@@ -5,7 +5,7 @@
 
 ## 上次改动摘要（样式定稿收尾：精简样式 + 退役 Sheet fallback + 单一强调色 · 2026-06-07）
 
-> 接上一条同日工作。仍在 `feature/home-ui-redesign` 分支,**未合并**。本轮是"定稿 + 清理"三件事,全程编译绿。
+> 接上一条同日工作。本轮"定稿 + 清理"三件事 + 合并上线,全程编译绿。**已合并到 `main` 并推送**(`d033a8f`,feature 分支整包快进合并)。
 
 - **首页样式精简(保留 2·Map 默认 + 4·Map 实验,删其余)**:
   - `HomeCardStyle` 4 个 → **2 个**(`.featured` / `.glass`);删 `.accent`(1·Plain)/`.hue`(3·Thumb)。
@@ -16,9 +16,12 @@
   - 删 `ThemeAccent`(11 个备选)+ `toggleTint` 环境键(其存在理由 classic 过渡特例已不在)+ Dev Options「Accent Color」选择器。
   - 新建 `CarryAccent`(烟蓝 #5B7A96 / 暗 #7A9CB8,明暗自适应);**SwiftUI 层** `.tint(CarryAccent.color)` 全局注入;**UIKit 层** `UIWindow.appearance().tintColor = CarryAccent.uiColor`——覆盖 SwiftUI tint 够不到的系统组件(`.confirmationDialog`/`.alert`/上下文菜单/导航栏)。所有 `.tint(toggleTint)` → `.tint(CarryAccent.color)`。
   - **有意反转**之前"Toggle 用 .primary 黑白 / 无品牌色"的决策——前提(无品牌色)已变。
+- **Roadmap 更新(已推 main、线上生效)**:`iCloud 同步` planned → **done**(挪到"已上线";实际 CloudKit 接入待明天开发者账号到位再做,模型层已满足 CloudKit 约束);新增 `行程规划` 标 **in_progress**(蓝色水波纹);`从日历导入行程` in_progress → planned。roadmap.json + `RoadmapView.embeddedDefault` 同步改。
+- **合并上线**:整套首页改版(照片卡 + 背景图 + 烟蓝强调色 + 退役 fallback + 备份 + Quick Actions + roadmap + 文档)已 `--ff` 合并到 `main` 并推送。
 
 **待办**:
 - 真机统一验收(单一烟蓝在亮/暗 + 系统弹窗/导航栏的观感;Toggle 烟蓝对比度)。
+- **iCloud 同步实际接入(明天账号到位)**:`ModelContainer` 改 CloudKit 配置 + 双机实测 + 定背景图(沙盒文件不随 SwiftData 同步)的缺口。
 - 4·Map 仍为实验(不上线);首页若最终只留 2·Map,可再删 4·Map + `HomeStyleFlag.swift` + Dev Options 切换器。
 - 分支合并前回归 + 背景图埋点(下同)。
 
