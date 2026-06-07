@@ -69,14 +69,28 @@ struct ReorderableItemCollection: UIViewRepresentable {
     func makeUIView(context: Context) -> UICollectionView {
         let coordinator = context.coordinator
 
-        var config = UICollectionLayoutListConfiguration(appearance: .plain)
-        config.showsSeparators = false
-        config.headerMode = .supplementary
-        config.backgroundColor = .clear
-        config.trailingSwipeActionsConfigurationProvider = { [weak coordinator] indexPath in
-            coordinator?.trailingSwipe(at: indexPath)
-        }
-        let layout = UICollectionViewCompositionalLayout.list(using: config)
+        // 段间距 0，对齐旧 List 的 .listSectionSpacing(0)。
+        let layoutConfig = UICollectionViewCompositionalLayoutConfiguration()
+        layoutConfig.interSectionSpacing = 0
+
+        // 用 sectionProvider 逐 section 配置：info section 无表头（否则空表头会撑出间距），
+        // 其余 section 才有吸顶表头（对齐旧 .listStyle(.plain) 的 sticky header）。
+        let layout = UICollectionViewCompositionalLayout(
+            sectionProvider: { [weak coordinator] sectionIndex, env in
+                var config = UICollectionLayoutListConfiguration(appearance: .plain)
+                config.showsSeparators = false
+                config.backgroundColor = .clear
+                config.headerMode = (coordinator?.isInfoSection(sectionIndex) ?? false)
+                    ? .none : .supplementary
+                config.trailingSwipeActionsConfigurationProvider = { [weak coordinator] indexPath in
+                    coordinator?.trailingSwipe(at: indexPath)
+                }
+                let section = NSCollectionLayoutSection.list(using: config, layoutEnvironment: env)
+                section.boundarySupplementaryItems.forEach { $0.pinToVisibleBounds = true }
+                return section
+            },
+            configuration: layoutConfig
+        )
 
         let cv = UICollectionView(frame: .zero, collectionViewLayout: layout)
         cv.backgroundColor = .clear
@@ -84,6 +98,7 @@ struct ReorderableItemCollection: UIViewRepresentable {
         cv.alwaysBounceVertical = true
         cv.keyboardDismissMode = .interactive
         cv.showsVerticalScrollIndicator = false
+        cv.contentInset.top = -8      // 对齐旧 List 的 .contentMargins(.top, -8)
         cv.contentInset.bottom = 83   // 让末行让出底部 tab/悬浮按钮（对齐旧 safeAreaPadding(.bottom, 83)）
         cv.delegate = coordinator
 
@@ -109,6 +124,11 @@ struct ReorderableItemCollection: UIViewRepresentable {
 
         init(_ parent: ReorderableItemCollection) {
             self.parent = parent
+        }
+
+        /// 顶部 info section 的 sectionIndex（有 info 时恒为 0）。供 layout 决定该 section 不要表头。
+        func isInfoSection(_ index: Int) -> Bool {
+            parent.infoContent != nil && index == 0
         }
 
         // MARK: Setup
@@ -280,26 +300,31 @@ struct ReorderableItemCollection: UIViewRepresentable {
             }
         }
 
-        /// 把目标位置的 Y 夹在起点 section 首/末 .item 行的中心之间，使拖拽不越出本 section。
+        /// 把目标位置的 Y 夹在起点 section 内，使拖拽不越出本 section。
+        /// 关键：用拖拽中**不动的**锚点——表头底边 + add-item 行顶边——而非 .item 行的实时
+        /// 布局。后者在重排动画期会移动、且当被拖行是端点时边界会取到它自己的浮动位置，喂回
+        /// updateInteractiveMovementTargetPosition 会形成反馈，造成相邻 item 上下横跳。
         private func clampLocationToSection(_ location: CGPoint,
                                             section: Int,
                                             in collectionView: UICollectionView) -> CGPoint {
             let snapshot = dataSource.snapshot()
             guard section < snapshot.sectionIdentifiers.count else { return location }
             let sectionID = snapshot.sectionIdentifiers[section]
-            let itemRows = snapshot.itemIdentifiers(inSection: sectionID).filter {
-                if case .item = $0 { return true }
-                return false
+
+            var lower = -CGFloat.greatestFiniteMagnitude   // 上界：表头底边
+            var upper =  CGFloat.greatestFiniteMagnitude    // 下界：add-item 行顶边
+            if let headerAttr = collectionView.layoutAttributesForSupplementaryElement(
+                ofKind: UICollectionView.elementKindSectionHeader,
+                at: IndexPath(item: 0, section: section)) {
+                lower = headerAttr.frame.maxY
             }
-            guard let first = itemRows.first, let last = itemRows.last,
-                  let firstIdx = dataSource.indexPath(for: first),
-                  let lastIdx = dataSource.indexPath(for: last),
-                  let firstAttr = collectionView.layoutAttributesForItem(at: firstIdx),
-                  let lastAttr = collectionView.layoutAttributesForItem(at: lastIdx) else {
-                return location
+            if let addIdx = dataSource.indexPath(for: .add(sectionID)),
+               let addAttr = collectionView.layoutAttributesForItem(at: addIdx) {
+                upper = addAttr.frame.minY
             }
+            guard lower <= upper else { return location }
             var p = location
-            p.y = min(max(location.y, firstAttr.frame.midY), lastAttr.frame.midY)
+            p.y = min(max(location.y, lower), upper)
             return p
         }
 
