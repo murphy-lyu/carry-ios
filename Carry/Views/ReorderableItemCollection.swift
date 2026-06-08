@@ -125,6 +125,11 @@ struct ReorderableItemCollection: UIViewRepresentable {
         /// 拖拽起点所在 section，用于把目标位置夹断在同一 section 内。
         private var movingFromSection: Int?
         private let liftHaptic = UIImpactFeedbackGenerator(style: .medium)
+        /// 逐格重排触感（每跨一行一次），还原旧实现的手感。
+        private let stepHaptic = UISelectionFeedbackGenerator()
+        private var lastHapticIndexPath: IndexPath?
+        /// 长按手势引用——auto-scroll 期间用它的实时位置在 scrollViewDidScroll 里重夹断。
+        private weak var longPressRecognizer: UILongPressGestureRecognizer?
 
         init(_ parent: ReorderableItemCollection) {
             self.parent = parent
@@ -216,6 +221,7 @@ struct ReorderableItemCollection: UIViewRepresentable {
             let longPress = UILongPressGestureRecognizer(target: self, action: #selector(handleLongPress(_:)))
             longPress.minimumPressDuration = 0.4
             collectionView.addGestureRecognizer(longPress)
+            longPressRecognizer = longPress
 
             lastEditingItemId = parent.editingItemId
             applySnapshot(animated: false, previousEditing: nil)
@@ -280,8 +286,16 @@ struct ReorderableItemCollection: UIViewRepresentable {
                       let rowID = dataSource.itemIdentifier(for: indexPath),
                       case .item(let id) = rowID,
                       id != parent.editingItemId else { return }
+                // 若此刻正有别的行在内联编辑：先提交它，并放弃本次拖拽——让快照刷新、空编辑行
+                // 先消失，避免拖拽期间（update 被 guard 跳过）残留一行。用户再次长按即可拖。
+                if parent.editingItemId != nil {
+                    parent.onReorderBegan()
+                    return
+                }
                 parent.onReorderBegan()
                 movingFromSection = indexPath.section
+                lastHapticIndexPath = indexPath
+                stepHaptic.prepare()
                 liftHaptic.prepare()
                 liftHaptic.impactOccurred()
                 if !collectionView.beginInteractiveMovementForItem(at: indexPath) {
@@ -289,19 +303,43 @@ struct ReorderableItemCollection: UIViewRepresentable {
                 }
             case .changed:
                 guard let from = movingFromSection else { return }
-                // 手势级 Y 夹断：把目标位置限制在起点 section 的首/末行之间，物理上无法越界到
-                // 别的 section（比 targetIndexPath 委托更可靠，不依赖布局对它的采纳）。
+                // 手势级 Y 夹断：把目标位置限制在起点 section 内，物理上无法越界到别的 section。
                 let clamped = clampLocationToSection(location, section: from, in: collectionView)
                 collectionView.updateInteractiveMovementTargetPosition(clamped)
+                fireStepHapticIfCrossed(at: clamped, in: collectionView)
             case .ended:
                 guard movingFromSection != nil else { return }
                 collectionView.endInteractiveMovement()
-                movingFromSection = nil
+                endDrag()
             default:
                 guard movingFromSection != nil else { return }
                 collectionView.cancelInteractiveMovement()
-                movingFromSection = nil
+                endDrag()
             }
+        }
+
+        private func endDrag() {
+            movingFromSection = nil
+            lastHapticIndexPath = nil
+        }
+
+        /// 跨过一行（手指所在 slot 变化）就补一次 selection 触感，还原旧版"哒哒"手感。
+        private func fireStepHapticIfCrossed(at point: CGPoint, in collectionView: UICollectionView) {
+            guard let ip = collectionView.indexPathForItem(at: point), ip != lastHapticIndexPath else { return }
+            lastHapticIndexPath = ip
+            stepHaptic.selectionChanged()
+            stepHaptic.prepare()
+        }
+
+        /// auto-scroll 期间手势不发 .changed，但这里会持续触发：用长按手势的实时位置重夹断，
+        /// 使被拖行在自动滚动时也不越出本 section（夹到非边缘位置后 auto-scroll 自然停下）。
+        func scrollViewDidScroll(_ scrollView: UIScrollView) {
+            guard let from = movingFromSection,
+                  let collectionView,
+                  let recognizer = longPressRecognizer else { return }
+            let clamped = clampLocationToSection(recognizer.location(in: collectionView),
+                                                 section: from, in: collectionView)
+            collectionView.updateInteractiveMovementTargetPosition(clamped)
         }
 
         /// 把目标位置的 Y 夹在起点 section 内，使拖拽不越出本 section。
