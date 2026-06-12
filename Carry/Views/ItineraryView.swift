@@ -318,17 +318,24 @@ private struct TimelineStopRow: View {
     private let railWidth: CGFloat = 26
     private let circleSize: CGFloat = 24
     private let railSpacing: CGFloat = 12
+    /// 固定行高——rail 连线与行间距由此完全确定，全程无 `maxHeight: .infinity` 贪婪 frame，
+    /// 故自适应 cell 不会被撑高、各行（含首/末行）几何严格一致。
+    private let rowHeight: CGFloat = 46
     /// 相邻停靠点之间的固定竖向间距；距离标签压在其正中。
     private let legGap: CGFloat = 24
+    /// 圆点上/下连线的固定半段长度（圆点在固定行高里垂直居中）。
+    private var halfLine: CGFloat { (rowHeight - circleSize) / 2 }
 
     var body: some View {
         VStack(spacing: 0) {
-            // 连接段（首点无）：竖线贯穿，段间距离标签压在正中。
+            // 连接段（首点无）：竖线 + 段间距离标签压在正中。
             if index > 0 { legSegment }
-            // 停靠点主行：内容决定高度，rail（圆点+连线）以 overlay 贴合，不反过来撑高内容。
-            content
-                .padding(.leading, railWidth + railSpacing)
-                .overlay(alignment: .leading) { rail }
+            // 停靠点主行：固定行高 + 居中对齐；rail 圆点与内容同在行中心，自然对齐。
+            HStack(alignment: .center, spacing: railSpacing) {
+                rail
+                content
+            }
+            .frame(height: rowHeight)
         }
     }
 
@@ -349,27 +356,24 @@ private struct TimelineStopRow: View {
         .frame(maxWidth: .infinity, alignment: .leading)
     }
 
-    /// 序号圆点垂直居中于内容，上/下连线对称延伸——使相邻两圆点间的连线对称，
-    /// 连接段里的距离标签因此落在两点正中。整条贴合内容高度（overlay 不会撑高内容）。
+    /// 固定高度的 rail：上半连线（首点透明）+ 序号圆点 + 下半连线（末点透明）。
+    /// 全部固定尺寸、无贪婪 frame——圆点恒在行高正中，相邻两圆点间连线对称、距离标签自然居中。
     private var rail: some View {
         VStack(spacing: 0) {
-            // 圆点上方连线：首点无（不画悬空线）。
             Rectangle()
                 .fill(index == 0 ? Color.clear : railColor)
-                .frame(width: 1.5)
-                .frame(maxHeight: .infinity)
+                .frame(width: 1.5, height: halfLine)
             ZStack {
+                Circle().fill(Color(uiColor: .systemBackground))
                 Circle().fill(dayColor.opacity(0.15))
                 Text("\(index + 1)")
                     .font(.system(size: 12, weight: .semibold).monospacedDigit())
                     .foregroundStyle(dayColor)
             }
             .frame(width: circleSize, height: circleSize)
-            // 圆点下方连线：末点无。
             Rectangle()
                 .fill(isLast ? Color.clear : railColor)
-                .frame(width: 1.5)
-                .frame(maxHeight: .infinity)
+                .frame(width: 1.5, height: halfLine)
         }
         .frame(width: railWidth)
     }
