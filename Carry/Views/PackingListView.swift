@@ -16,6 +16,23 @@ private struct PickedBackgroundProvider: Identifiable {
 
 // MARK: - PackingListView
 
+/// 行程详情页的两张脸（spec: itinerary-route-planning.md）：打包清单 / 行程路线规划。
+private enum DetailTab: Hashable {
+    case packing
+    case itinerary
+}
+
+/// 每个行程「上次看的面」记忆（spec: app-navigation-framework.md）。已有行程默认行程规划。
+private enum TripDetailFaceStore {
+    private static func key(_ id: UUID) -> String { "trip_detail_face_\(id.uuidString)" }
+    static func load(tripId: UUID) -> DetailTab {
+        UserDefaults.standard.string(forKey: key(tripId)) == "packing" ? .packing : .itinerary
+    }
+    static func save(_ face: DetailTab, tripId: UUID) {
+        UserDefaults.standard.set(face == .packing ? "packing" : "itinerary", forKey: key(tripId))
+    }
+}
+
 struct PackingListView: View {
 
     let tripId: UUID
@@ -24,6 +41,10 @@ struct PackingListView: View {
     @EnvironmentObject var store: TripStore
     @EnvironmentObject var router: NavigationRouter
     @Environment(\.colorScheme) private var colorScheme
+
+    /// 当前选中的面。新建流程（isNewTrip）始终停在打包；已有行程在 onAppear 按记忆/规则设定。
+    @State private var detailTab: DetailTab = .packing
+    @State private var didInitFace = false
 
     @StateObject private var weatherManager = WeatherManager()
 
@@ -76,26 +97,31 @@ struct PackingListView: View {
     var body: some View {
         ZStack {
             CarrySubtleBackground()
-            mainContent
-        }
-        .contentShape(Rectangle())
-        .simultaneousGesture(
-            TapGesture().onEnded {
-                if editingItemId != nil {
-                    dismissInlineEditing()
+            // 两张脸由底部胶囊切换（spec: app-navigation-framework.md）；不再用顶部 Segmented。
+            Group {
+                switch detailTab {
+                case .packing:
+                    packingContent
+                case .itinerary:
+                    ItineraryView(tripId: tripId)
                 }
-                UIApplication.shared.sendAction(
-                    #selector(UIResponder.resignFirstResponder),
-                    to: nil,
-                    from: nil,
-                    for: nil
-                )
             }
-        )
+        }
         .safeAreaInset(edge: .bottom) {
             if isNewTrip {
                 saveTripButton
+            } else {
+                bottomFaceSwitch
             }
+        }
+        .onAppear {
+            guard !didInitFace else { return }
+            didInitFace = true
+            // 默认面规则：新建→打包；已有→记住的上次面（无记录则行程规划）。
+            if !isNewTrip { detailTab = TripDetailFaceStore.load(tripId: tripId) }
+        }
+        .onChange(of: detailTab) { _, newFace in
+            if !isNewTrip { TripDetailFaceStore.save(newFace, tripId: tripId) }
         }
         .coordinateSpace(name: "packingRoot")
         .toolbarBackground(Color(UIColor.systemBackground), for: .navigationBar)
@@ -129,24 +155,26 @@ struct PackingListView: View {
                     dismissInlineEditing()
                 }
             }
+            // 行程动作「…」两面常驻；打包专属动作仅在打包面出现（spec: app-navigation-framework.md）。
             if !isNewTrip {
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Menu {
-                        Button {
-                            router.path.append(CreationRoute.addItems(tripId))
-                        } label: {
-                            Label("packing.menu.add_from_library", systemImage: "shippingbox")
-                        }
-                        // Grouped with Quick-add — both act on the packing items themselves.
-                        if totalCount > 0 {
+                        if detailTab == .packing {
                             Button {
-                                if isComplete {
-                                    markTripUncompleted()
-                                } else {
-                                    markTripCompleted()
-                                }
+                                router.path.append(CreationRoute.addItems(tripId))
                             } label: {
-                                Label(isComplete ? "packing.mark_uncomplete" : "packing.mark_complete", systemImage: isComplete ? "arrow.uturn.left.circle" : "checkmark.circle")
+                                Label("packing.menu.add_from_library", systemImage: "shippingbox")
+                            }
+                            if totalCount > 0 {
+                                Button {
+                                    if isComplete {
+                                        markTripUncompleted()
+                                    } else {
+                                        markTripCompleted()
+                                    }
+                                } label: {
+                                    Label(isComplete ? "packing.mark_uncomplete" : "packing.mark_complete", systemImage: isComplete ? "arrow.uturn.left.circle" : "checkmark.circle")
+                                }
                             }
                         }
                         Button {
@@ -159,10 +187,12 @@ struct PackingListView: View {
                         } label: {
                             Label("Edit trip", systemImage: "pencil")
                         }
-                        Button {
-                            showReorderSheet = true
-                        } label: {
-                            Label("Edit sections", systemImage: "arrow.up.arrow.down")
+                        if detailTab == .packing {
+                            Button {
+                                showReorderSheet = true
+                            } label: {
+                                Label("Edit sections", systemImage: "arrow.up.arrow.down")
+                            }
                         }
                         // Cosmetic, optional — sits below the two Edit actions.
                         // Single entry, toggled by state: has a cover → remove; none → add.
@@ -179,19 +209,21 @@ struct PackingListView: View {
                                 Label("trip.background.add", systemImage: "photo")
                             }
                         }
-                        Button {
-                            CarryLogger.shared.log(.packingListShared)
-                            let activityVC = UIActivityViewController(
-                                activityItems: [shareText],
-                                applicationActivities: nil
-                            )
-                            if let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
-                               let window = windowScene.windows.first,
-                               let rootVC = window.rootViewController {
-                                rootVC.present(activityVC, animated: true)
+                        if detailTab == .packing {
+                            Button {
+                                CarryLogger.shared.log(.packingListShared)
+                                let activityVC = UIActivityViewController(
+                                    activityItems: [shareText],
+                                    applicationActivities: nil
+                                )
+                                if let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
+                                   let window = windowScene.windows.first,
+                                   let rootVC = window.rootViewController {
+                                    rootVC.present(activityVC, animated: true)
+                                }
+                            } label: {
+                                Label("Share list", systemImage: "square.and.arrow.up")
                             }
-                        } label: {
-                            Label("Share list", systemImage: "square.and.arrow.up")
                         }
                         Divider()
                         Button(role: .destructive) {
@@ -354,6 +386,65 @@ struct PackingListView: View {
     }
 
     // MARK: Row dispatch
+
+    // MARK: - 底部胶囊切换（行程 ｜ 打包）
+
+    /// 拇指可达的底部切换。居中悬浮，区别于通用 Tab 栏的「程序化」。
+    private var bottomFaceSwitch: some View {
+        HStack(spacing: 0) {
+            faceSegment(.itinerary, title: "detail.tab.itinerary", icon: "map")
+            faceSegment(.packing, title: "detail.tab.packing", icon: "checklist")
+        }
+        .padding(4)
+        .background(.regularMaterial, in: Capsule())
+        .overlay(Capsule().strokeBorder(Color.primary.opacity(0.06)))
+        .shadow(color: .black.opacity(0.14), radius: 10, x: 0, y: 3)
+        .frame(maxWidth: .infinity, alignment: .center)
+        .padding(.bottom, 4)
+    }
+
+    private func faceSegment(_ face: DetailTab, title: LocalizedStringKey, icon: String) -> some View {
+        let selected = detailTab == face
+        return Button {
+            guard detailTab != face else { return }
+            withAnimation(.spring(duration: 0.3, bounce: 0.2)) { detailTab = face }
+            UIImpactFeedbackGenerator(style: .light).impactOccurred()
+            CarryLogger.shared.log(.detailFaceSwitched, context: "to=\(face == .packing ? "packing" : "itinerary")")
+        } label: {
+            HStack(spacing: 6) {
+                Image(systemName: icon).font(.system(size: 14, weight: .semibold))
+                Text(title).font(.subheadline.weight(.medium))
+            }
+            .padding(.horizontal, 18)
+            .padding(.vertical, 9)
+            .foregroundStyle(selected ? Color.white : Color.secondary)
+            .background {
+                if selected { Capsule().fill(CarryAccent.color) }
+            }
+            .contentShape(Capsule())
+        }
+        .buttonStyle(.plain)
+    }
+
+    /// 打包内容 + 「点空白处收起内联编辑/键盘」手势。该手势**只作用于打包页**——
+    /// 早先放在根 ZStack 上时会吞掉行程页 List 行内按钮的 touch-up（导致加停靠点/加一天无响应）。
+    private var packingContent: some View {
+        mainContent
+            .contentShape(Rectangle())
+            .simultaneousGesture(
+                TapGesture().onEnded {
+                    if editingItemId != nil {
+                        dismissInlineEditing()
+                    }
+                    UIApplication.shared.sendAction(
+                        #selector(UIResponder.resignFirstResponder),
+                        to: nil,
+                        from: nil,
+                        for: nil
+                    )
+                }
+            )
+    }
 
     private var mainContent: some View {
         ZStack(alignment: .top) {

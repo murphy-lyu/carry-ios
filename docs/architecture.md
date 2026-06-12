@@ -2,19 +2,18 @@
 
 ## 整体结构
 
-### iOS
+### iOS（2026-06-12 起：根级不再是 TabView，见 `specs/app-navigation-framework.md`，feature 分支未合并）
 SplashView（启动过渡）
-└─► ContentView（TabView）
-    ├─► Tab 0：NavigationStack → HomeView
-    │   └─► navigationDestination
-    │       ├─► UUID → PackingListView（直接打开行程）
-    │       └─► CreationRoute → 创建流程
-    │           ├─► tripInfo → TripInfoView（行程基本信息）
-    │           ├─► itemPicker → ItemPickerView（选物品）
-    │           ├─► scenePicker → ScenePickerView（选场景）
-    │           ├─► packingList → PackingListView（新建完成）
-    │           └─► editScenes → ScenePickerView（编辑场景）
-    └─► Tab 1：NavigationStack → SettingsView
+└─► ContentView → **单个 NavigationStack → HomeView**（根=行程首页，足迹地球 + UIKit Sheet）
+    ├─► HomeView hero 右上 gear → **SettingsView（sheet 呈现，非 tab）**；右下 FAB → 创建
+    └─► navigationDestination
+        ├─► UUID → PackingListView（行程详情，**两张脸**）
+        └─► CreationRoute → 创建流程（tripInfo / itemPicker / scenePicker / packingList(isNewTrip) / editScenes）
+
+**行程详情（PackingListView）两张脸**——底部悬浮胶囊切换「行程 ｜ 打包」：
+- **打包**：`packingContent`（正常态走 `ReorderableItemCollection` 拖拽重排）。
+- **行程规划**：`ItineraryView`（地图头 + `ItineraryReorderCollection` 按天时间轴，停靠点可**跨天拖拽**）。
+- 默认面：新建→打包；已有→`TripDetailFaceStore`（UserDefaults per trip）记的上次面，无则行程规划。trip 动作「…」两面常驻。
 
 ### Mac Catalyst
 ContentView 在 `#if targetEnvironment(macCatalyst)` 下使用 `macLayout`（独立属性，同样用条件编译包裹）：
@@ -32,9 +31,10 @@ ZStack（全窗口）
 - **导航**：统一走 `NavigationRouter`，与 iOS 共用同一套 `CreationRoute`
 
 ## 核心数据模型
-- TripBundle：行程容器（包含 PackingList、TripInfo 等）
+- TripBundle：行程容器（包含 PackingList、TripInfo、`itineraryDays` 等）
 - MyItem：用户自定义物品
 - PackingList：打包清单
+- **ItineraryDay / ItineraryStop**（`Models/Itinerary.swift`，行程路线规划）：行程=多个有序 Day，每 Day=有序 Stop（name/坐标/类别/计划时段/停留/note/sortOrder）。挂在 `TripBundle.itineraryDays`（级联）。新增 model 属 SwiftData 轻量迁移（加表，保持单一 SchemaV1）。备份经 `BackupItineraryDay/Stop`（可选字段，兼容旧备份）
 - Scene / SceneItemMap：场景与物品映射（智能推荐基础）
 - ItemCatalog：物品目录（预置数据）
 - TripReminderConfig：行程提醒配置（含 `presets` 档位、`localizedLabel`）
@@ -51,6 +51,16 @@ ZStack（全窗口）
 - SwiftData，versioned schema（CarrySchema.swift）
 - MigrationPlan（CarryMigrationPlan）保障升级安全
 - ModelContainer 初始化失败时 fallback 到 in-memory store
+
+## 行程路线规划模块（`feature/itinerary-route-planning`，未合并；spec: `specs/itinerary-route-planning.md`）
+- **ItineraryView**：行程规划主视图（地图头 + 按天时间轴 + 加天/加点/优化入口 + sheets）
+- **ItineraryReorderCollection**：按天的 `UICollectionView` 拖拽容器，**放开跨 section（跨天）**——复刻打包 `ReorderableItemCollection` 但去掉 `clampLocationToSection` 夹断；松手经 `TripStore.applyItineraryArrangement` 提交所有受影响天（重设 stop 的 `day` + `sortOrder`）
+- **ItineraryMapView**：地图头（`Marker` 按访问序号编号 + `MapPolyline` 每天连线；坐标点 <2 不显示；整块可点全屏）
+- **AddStopView**：`MKLocalSearchCompleter` 地理搜索选点（偏置到目的地）或手动无坐标点
+- **OptimizeRouteView**：单日重排预览→采纳（距离对比 + 新路线地图）
+- **StopEditView**：停靠点编辑（名/类别/时间锚点/备注/删）
+- **RouteOptimizer**（纯函数）：最近邻 + 2-opt，起点固定，时间锚点作段端固定（Haversine）
+- **RouteDistanceService**（actor）：仅供「优化预览」展示真实道路距离——`MKDirections` 串行+会话缓存+失败回退直线
 
 ## 其他模块
 - CarryLogger：单例日志，记录关键生命周期事件和 DB 错误

@@ -20,6 +20,8 @@ enum SchemaV1: VersionedSchema {
             PackingSection.self,
             PackingItem.self,
             MyItem.self,
+            ItineraryDay.self,
+            ItineraryStop.self,
         ]
     }
 }
@@ -31,8 +33,9 @@ enum SchemaV1: VersionedSchema {
 // TripBundle），新旧两版 checksum 会相同 → 启动崩溃 "Duplicate version
 // checksums detected"。正确的多版本写法需要为旧版本冻结一份独立的模型快照。
 //
-// 本项目尚未发布、无线上老数据，新增的 `isDateless` 又是「带默认值的可加字段」，
-// 属 SwiftData 可自动处理的轻量变更。因此保持**单一 SchemaV1**、空 stages，
+// 本项目尚未发布、无线上老数据，新增的 `isDateless` 是「带默认值的可加字段」、
+// 新增的 `ItineraryDay`/`ItineraryStop` 是「新加 model（建新表）」——两者都属
+// SwiftData 可自动处理的轻量变更。因此保持**单一 SchemaV1**、空 stages，
 // 让 SwiftData 对本地 store 做自动轻量迁移即可——无需引入第二个版本。
 // 待将来发布后若有「重命名/删除字段、改关系」等非轻量变更，再按"冻结旧快照 +
 // 显式 stage"的方式补 SchemaV2。

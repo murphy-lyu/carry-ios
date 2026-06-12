@@ -52,6 +52,9 @@ final class TripBundle {
     /// Adding this field is a lightweight SwiftData migration (default value) — no SchemaV2 needed.
     var backgroundsData: Data = Data()
     @Relationship(deleteRule: .cascade, inverse: \PackingSection.bundle) var sections: [PackingSection]? = []
+    /// 行程路线规划（spec: itinerary-route-planning.md）。打包清单的并列「第二张脸」，
+    /// 默认空 → 所有存量行程零数据风险。新增 model 属轻量迁移（加表），无需 SchemaV2。
+    @Relationship(deleteRule: .cascade, inverse: \ItineraryDay.bundle) var itineraryDays: [ItineraryDay]? = []
 
     var reminderConfigs: [TripReminderConfig] {
         get {
@@ -144,6 +147,8 @@ final class TripBundle {
     }
 
     var safeSections: [PackingSection] { (sections ?? []).sorted { $0.sortOrder < $1.sortOrder } }
+    /// 行程规划：按 sortOrder 升序的天。
+    var safeItineraryDays: [ItineraryDay] { (itineraryDays ?? []).sorted { $0.sortOrder < $1.sortOrder } }
     var packedCount: Int { safeSections.flatMap { $0.items ?? [] }.filter { $0.isPacked && !$0.name.isEmpty }.count }
     var totalCount:  Int { safeSections.flatMap { $0.items ?? [] }.filter { !$0.name.isEmpty }.count }
 
@@ -507,6 +512,24 @@ final class TripStore: ObservableObject {
             var copied = entry
             copied.localFileName = copiedName
             return copied
+        }
+        // 行程规划深拷贝：每天及其停靠点都建新实例（新 UUID），否则副本会与原行程
+        // 共享/丢失规划数据。坐标全在 SwiftData 内，无沙盒外关联文件，直接复制字段即可。
+        newBundle.itineraryDays = original.safeItineraryDays.map { day in
+            let copiedStops = day.sortedStops.map { stop in
+                ItineraryStop(
+                    name: stop.name,
+                    latitude: stop.latitude,
+                    longitude: stop.longitude,
+                    address: stop.address,
+                    category: stop.category,
+                    plannedStartMinutes: stop.plannedStartMinutes,
+                    stayMinutes: stop.stayMinutes,
+                    note: stop.note,
+                    sortOrder: stop.sortOrder
+                )
+            }
+            return ItineraryDay(sortOrder: day.sortOrder, title: day.title, note: day.note, stops: copiedStops)
         }
         context.insert(newBundle)
         // Insert in-memory first to avoid full-list refetch jumpiness in UI.
@@ -955,6 +978,148 @@ final class TripStore: ObservableObject {
 #if !targetEnvironment(macCatalyst)
         Task { @MainActor in LiveActivityManager.shared.update(for: trip) }
 #endif
+    }
+
+    // MARK: - Itinerary (行程路线规划, spec: itinerary-route-planning.md)
+
+    /// 新增一天，sortOrder = 末尾。返回新 Day 的 id。
+    @discardableResult
+    func addItineraryDay(tripId: UUID) -> UUID? {
+        guard let trip = trips.first(where: { $0.id == tripId }) else { return nil }
+        let nextOrder = (trip.safeItineraryDays.map(\.sortOrder).max() ?? -1) + 1
+        let day = ItineraryDay(sortOrder: nextOrder)
+        context.insert(day)
+        if trip.itineraryDays == nil { trip.itineraryDays = [] }
+        trip.itineraryDays?.append(day)
+        save()
+        CarryLogger.shared.log(.itineraryDayAdded)
+        return day.id
+    }
+
+    /// 删除一天（级联删其停靠点）。删除后重排剩余天的 sortOrder 为 0,1,2…保持连续。
+    func removeItineraryDay(tripId: UUID, dayId: UUID) {
+        guard let trip = trips.first(where: { $0.id == tripId }),
+              let day = trip.safeItineraryDays.first(where: { $0.id == dayId }) else { return }
+        context.delete(day)
+        trip.itineraryDays?.removeAll { $0.id == dayId }
+        for (index, d) in trip.safeItineraryDays.enumerated() { d.sortOrder = index }
+        save()
+        CarryLogger.shared.log(.itineraryDayRemoved)
+    }
+
+    /// 更新某天的标题/备注（任一为 nil 表示不改）。
+    func updateItineraryDay(tripId: UUID, dayId: UUID, title: String? = nil, note: String? = nil) {
+        guard let trip = trips.first(where: { $0.id == tripId }),
+              let day = trip.safeItineraryDays.first(where: { $0.id == dayId }) else { return }
+        if let title { day.title = title }
+        if let note { day.note = note }
+        save()
+    }
+
+    /// 在某天末尾新增停靠点。坐标可缺省（手动输名的无坐标点）。返回新 Stop 的 id。
+    @discardableResult
+    func addItineraryStop(
+        tripId: UUID,
+        dayId: UUID,
+        name: String,
+        latitude: Double = 0,
+        longitude: Double = 0,
+        address: String = "",
+        category: StopCategory = .other
+    ) -> UUID? {
+        guard let trip = trips.first(where: { $0.id == tripId }),
+              let day = trip.safeItineraryDays.first(where: { $0.id == dayId }) else { return nil }
+        let nextOrder = (day.sortedStops.map(\.sortOrder).max() ?? -1) + 1
+        let stop = ItineraryStop(
+            name: name,
+            latitude: latitude,
+            longitude: longitude,
+            address: address,
+            category: category,
+            sortOrder: nextOrder
+        )
+        context.insert(stop)
+        if day.stops == nil { day.stops = [] }
+        day.stops?.append(stop)
+        save()
+        CarryLogger.shared.log(.itineraryStopAdded)
+        return stop.id
+    }
+
+    /// 更新停靠点字段（nil 表示该字段不改）。
+    func updateItineraryStop(
+        tripId: UUID,
+        stopId: UUID,
+        name: String? = nil,
+        category: StopCategory? = nil,
+        plannedStartMinutes: Int? = nil,
+        stayMinutes: Int? = nil,
+        note: String? = nil
+    ) {
+        guard let trip = trips.first(where: { $0.id == tripId }),
+              let stop = trip.safeItineraryDays.flatMap({ $0.stops ?? [] }).first(where: { $0.id == stopId }) else { return }
+        if let name { stop.name = name }
+        if let category { stop.category = category }
+        if let plannedStartMinutes { stop.plannedStartMinutes = plannedStartMinutes }
+        if let stayMinutes { stop.stayMinutes = stayMinutes }
+        if let note { stop.note = note }
+        save()
+    }
+
+    func removeItineraryStop(tripId: UUID, dayId: UUID, stopId: UUID) {
+        guard let trip = trips.first(where: { $0.id == tripId }),
+              let day = trip.safeItineraryDays.first(where: { $0.id == dayId }),
+              let stop = (day.stops ?? []).first(where: { $0.id == stopId }) else { return }
+        context.delete(stop)
+        day.stops?.removeAll { $0.id == stopId }
+        for (index, s) in day.sortedStops.enumerated() { s.sortOrder = index }
+        save()
+        CarryLogger.shared.log(.itineraryStopRemoved)
+    }
+
+    /// 重排某天内停靠点。`newOrder` 为期望顺序的 stop id 数组，sortOrder 重写为 0,1,2…
+    /// 既服务手动拖拽，也服务单日智能重排「采纳」（Phase 3）。
+    func reorderItineraryStops(tripId: UUID, dayId: UUID, newOrder: [UUID]) {
+        guard let trip = trips.first(where: { $0.id == tripId }),
+              let day = trip.safeItineraryDays.first(where: { $0.id == dayId }) else { return }
+        let stops = day.stops ?? []
+        if newOrder.count > stops.count {
+            CarryLogger.shared.log(.sortIndexOutOfBounds,
+                                   context: "index=\(newOrder.count) count=\(stops.count)")
+        }
+        for (index, id) in newOrder.enumerated() {
+            if let stop = stops.first(where: { $0.id == id }) {
+                stop.sortOrder = index
+            }
+        }
+        save()
+        CarryLogger.shared.log(.itineraryStopReordered)
+    }
+
+    /// 跨天/日内一次性应用「天→停靠点顺序」映射（spec: itinerary-route-planning.md，跨天拖拽）。
+    /// 为每个停靠点重设所属 `day`（SwiftData 关系，inverse 自动维护两边数组）与 `sortOrder`。
+    /// 调用方传入拖拽落定后的**完整结构**（每天一条 stopID 顺序）。
+    func applyItineraryArrangement(tripId: UUID, dayOrders: [(dayID: UUID, stopIDs: [UUID])]) {
+        guard let trip = trips.first(where: { $0.id == tripId }) else { return }
+        let daysByID = Dictionary(trip.safeItineraryDays.map { ($0.id, $0) }, uniquingKeysWith: { a, _ in a })
+        let stopsByID = Dictionary(
+            trip.safeItineraryDays.flatMap { $0.sortedStops }.map { ($0.id, $0) },
+            uniquingKeysWith: { a, _ in a }
+        )
+        var didCross = false
+        for (dayID, stopIDs) in dayOrders {
+            guard let day = daysByID[dayID] else { continue }
+            for (index, sid) in stopIDs.enumerated() {
+                guard let stop = stopsByID[sid] else { continue }
+                if stop.day?.id != dayID {
+                    stop.day = day        // 关系反向自动从旧天移除、加入新天
+                    didCross = true
+                }
+                stop.sortOrder = index
+            }
+        }
+        save()
+        CarryLogger.shared.log(didCross ? .itineraryStopMovedDay : .itineraryStopReordered)
     }
 
     /// Adds scene keys to a trip and merges the supplied sections.

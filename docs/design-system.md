@@ -119,6 +119,21 @@ Apple 原生风格，极简、克制、优雅。
 - 内容顶部留 20pt padding
 - 有标题栏时用 .navigationTitle + .navigationBarTitleDisplayMode(.inline)
 
+### 导航框架（2026-06-12，feature 分支：app-navigation-framework）
+- **根级无 Tab Bar**：根=行程首页（足迹地球 + Sheet）。上文「Tab Bar 背景」token 现仅历史参考，根级已不再使用 TabView。
+- **设置入口**：首页 hero 右上 gear（圆形，`secondary` 色）→ 以 sheet 打开（带「完成」关闭）；空状态另置一枚 gear（零行程也可达）。
+- **创建 FAB**：右下悬浮，56pt 圆，`CarryAccent` 实心 + 白 `plus`，阴影 radius 10 / y 4，按压缩 0.92。
+- **底部胶囊切换（行程 ｜ 打包）**：居中悬浮于安全区底部；`.regularMaterial` 胶囊 + `primary.opacity(0.06)` 描边 + 阴影；选中段 `CarryAccent` 实心胶囊 + 白字、未选 `.secondary`；切换用 `.spring(duration:0.3, bounce:0.2)` + light 触感。
+
+### 行程规划组件（2026-06-12，feature 分支：itinerary-route-planning）
+
+> ⚠️ **按天分色 = 单一强调色原则的唯一破例（2026-06-13 定，仅限行程规划）**：见 `decisions.md`。`ItineraryDayPalette`（`AppearanceMode.swift`）按 `ItineraryDay.sortOrder` 取色：7 色循环、明暗自适应、克制低饱和，**第 1 天＝烟蓝（CarryAccent）**，其余陶土/鼠尾草绿/梅紫/赭黄/暮蓝/玫灰。**只**用于行程的「数据节点」（地图针/路线、时间轴序号圆点/连线/类别图标、Day 头部色点）；行程内的**控件**（按钮 tint）仍用 `CarryAccent`。`ItineraryDayPalette` 禁止在行程规划之外引用。
+
+- **时间轴行（TimelineStopRow）**：leading 24pt 序号圆点（`dayColor.opacity(0.15)` 底 + `dayColor` 数字）+ 上下 1.5pt 连线（`dayColor.opacity(0.25)`，首/末点对应半段隐藏）。**序号圆点垂直居中于整条内容**（上下两段对称连线撑出）——使相邻两圆点间连线对称，连接段（固定 `legGap`）里的**直线距离**标签（9pt secondary，systemBackground 垫底）落在两点正中。内容=类别 SF Symbol（`dayColor`）+ 名称 + 地址（caption secondary）；设了时间显示 `pin.fill`+时间，无坐标显示 `mappin.slash`（tertiary）。rail 以 `.overlay` 贴合内容高度（不反向撑高内容，避免自适应 cell 的幽灵高度）。水平内边距 16，行内分隔线隐藏（连线即分隔）。
+- **Day 头部**：leading 8pt 当天色点（图例）+ 主行「Day N」或自定义标题；有日期行程次行「周几 月/日」（`Date.formatted` 本地化）；右侧 `ellipsis.circle`（secondary）菜单重命名/删除。吸顶（`systemBackground` 垫底，与 cv 背景一致）。
+- **停靠点类别图标（StopCategory）**：sightseeing=camera · food=fork.knife · lodging=bed.double · transport=tram.fill · activity=figure.walk · other=mappin。
+- **地图按天编号 + 按天分色**：地图针 label = **当天**序号（每天从 1 重置，与列表一致，非全程连号）+ 类别图标；针 tint 与路线 `MapPolyline` 按天取 `ItineraryDayPalette` 色。
+
 ### 创建流程视觉统一规范（2026-05）
 - 适用范围：
 - 一级页面：`New trip`（TripInfoView）、`Add item`（ItemPickerView）、`List preview / Packing list`（PackingListView）。

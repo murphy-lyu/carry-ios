@@ -32,9 +32,7 @@ struct ContentView: View {
     @EnvironmentObject private var router: NavigationRouter
     @Environment(\.scenePhase) private var scenePhase
     @Environment(\.colorScheme) private var colorScheme
-    @State private var selectedTab = 0
-    // Settings 二级导航路径，提到外层用 isEmpty 驱动 tab bar 显隐，
-    // 与 Trips 链路同构，避免「挂在目标视图上」导致返回时 tab bar 慢半拍。
+    // Mac Catalyst 的设置 sheet 仍用此路径；iPhone 设置已迁入 HomeView 自管（spec: app-navigation-framework.md）。
     @State private var settingsPath = NavigationPath()
     @State private var didApplyStartupReset = false
     @State private var didRefreshOnLaunch = false
@@ -109,45 +107,22 @@ struct ContentView: View {
 
     @ViewBuilder
     private var iPhoneLayout: some View {
-        TabView(selection: $selectedTab) {
-            NavigationStack(path: $router.path) {
-                HomeView()
-                    .navigationDestination(for: UUID.self) { id in
-                        PackingListView(tripId: id)
-                    }
-                    .navigationDestination(for: CreationRoute.self) { route in
-                        routeDestination(route)
-                    }
-            }
-            .toolbar(router.path.isEmpty ? .visible : .hidden, for: .tabBar)
-            .tabItem { Label("Trips", systemImage: "suitcase") }
-            .tag(0)
-
-            NavigationStack(path: $settingsPath) {
-                SettingsView(path: $settingsPath)
-            }
-            .toolbar(settingsPath.isEmpty ? .visible : .hidden, for: .tabBar)
-            .tabItem { Label("Settings", systemImage: "gear") }
-            .tag(1)
+        // 根级不再是 TabView：根就是行程首页（足迹地球 + Sheet）。设置迁入 HomeView 右上入口，
+        // 创建迁到 HomeView 右下悬浮。（spec: app-navigation-framework.md）
+        NavigationStack(path: $router.path) {
+            HomeView()
+                .navigationDestination(for: UUID.self) { id in
+                    PackingListView(tripId: id)
+                }
+                .navigationDestination(for: CreationRoute.self) { route in
+                    routeDestination(route)
+                }
         }
         .tint(CarryAccent.color)
-        .toolbarBackground(
-            colorScheme == .dark
-                ? Color(red: 0.11, green: 0.11, blue: 0.12)
-                : Color(UIColor.systemGray6).opacity(0.92),
-            for: .tabBar
-        )
-        .toolbarBackground(.visible, for: .tabBar)
         .environmentObject(store)
         .environmentObject(router)
         .onAppear { onAppearCommon() }
-        .onChange(of: router.pendingTripId) { _, tripId in
-            guard let tripId else { return }
-            selectedTab = 0
-            router.path = NavigationPath()
-            router.path.append(tripId)
-            router.pendingTripId = nil
-        }
+        .onChange(of: router.pendingTripId) { _, tripId in handlePendingTripId(tripId) }
         .onChange(of: scenePhase) { _, phase in onScenePhaseChange(phase) }
         .onReceive(NotificationCenter.default.publisher(for: UserDefaults.didChangeNotification)) { _ in
             if didApplyStartupReset { handlePendingShortcut() }
@@ -197,7 +172,6 @@ struct ContentView: View {
 
     private func handlePendingTripId(_ tripId: UUID?) {
         guard let tripId else { return }
-        selectedTab = 0
         router.path = NavigationPath()
         router.path.append(tripId)
         router.pendingTripId = nil
@@ -214,7 +188,6 @@ struct ContentView: View {
     private func applyStartupResetIfNeeded() {
         guard !didApplyStartupReset else { return }
         // Prevent iOS state restoration from reopening stale navigation/sheet routes.
-        selectedTab = 0
         router.path = NavigationPath()
         didApplyStartupReset = true
         // Handle any Spotlight / Siri shortcut that launched the app.

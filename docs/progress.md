@@ -1,7 +1,122 @@
 # 项目进度
 
 ## 最后更新
-2026-06-07
+2026-06-12
+
+## 待办 / 下一步（截至 2026-06-12）
+
+> 行程规划 Phase 1–5 + 导航框架 + 跨天拖拽：均在 `feature/itinerary-route-planning` 分支，**已实现 + 模拟器验证，未提交 / 未合并**。
+
+- [ ] **合并前真机验收**：跨天拖拽手感/掉帧、时间轴长清单观感、底部胶囊单手可达、设置 sheet、Dark Mode、9 语言、大陆 storefront 高德底图。
+- [ ] **首页搜索（自定义 in-sheet）**：原生 `.searchable` 在「足迹地球 + UIKit Sheet、无 nav bar」首页不适用；需自定义 Sheet 内搜索，单独排期（待用户拍板）。
+- [ ] **主列表段间「道路耗时」**（可选）：目前是 Haversine 直线距离（即时/离线）；如需真实耗时，做懒加载 + 缓存的 MKDirections 增量。
+- [ ] **跨天拖拽落点软夹断**（可选打磨）：目前不夹断，可把 stop 拖到某天 add/optimize 行下方——落库会正确归该天、不报错；若觉天边界落点不够精准再加软夹断。
+- [ ] **提交 / 合并**：用户验收后再 commit 到分支并评估合并。
+
+## 视觉修正：时间轴行序号与名称对齐（2026-06-13）
+
+> 用户反馈「视觉重叠错乱」。根因：`TimelineStopRow` 的 leading 是 `[16pt 上连线][圆点]` 竖排，圆点中心被压到 ~28pt，而名称在 ~14pt → 序号圆点掉到**地址行**，整列错位。
+> 修法（顺结构、不硬调偏移）：把段间距离拆成名称上方的**间隙段**（仅连线+距离），主行里圆点与名称**顶对齐**。模拟器在真实昆明 7 停靠点 Day 1 上验证：序号 1–7 各对齐名称、间隙距离在连线上、无重叠 ✓。
+
+## 上次改动摘要（单日重排：固定首尾、只优化中间 · 2026-06-13）
+
+> 分支 `feature/itinerary-route-planning`，**未合并/未提交**。编译绿 + 算法单测三例通过。spec 已更新（方案 A）。
+
+- **问题**：旧重排只固定起点、末尾浮动 → 「酒店出发→景点→回酒店」往返日里，末尾那个酒店会被算法挪到中间，这天"结束在某景点"。
+- **方案 A（类似 Google Maps 优化途经点）**：`RouteOptimizer` 锚点集合从 `{0}∪timed` 改为 **`{首, 尾}∪timed`**——固定当天第 1 和最后 1 个停靠点，只重排中间（复用现成的端点固定 NN+2-opt）。往返=两端填酒店；单程=末尾点（机场）也不被挪。
+- **入口阈值** `showsOptimize` 由坐标点 ≥3 → **≥4**（固定首尾后需中间 ≥2 点才有可优化空间）。
+- **预览提示**：优化预览加 footer「起点与终点保持不变，只重排中间」（`itinerary.optimize.endpoints_fixed`，9 语言），解释首尾为何不动。
+- **算法单测**：① 往返 [0,1,2,3,4]→[0,2,3,1,4]（首尾 0/4 固定、中间重排、1556→1112km）；② 单程末尾机场固定；③ 往返+中间时间锚点三者都钉住。✓
+
+## 上次改动摘要（行程跨天拖拽：原生 UICollectionView · 2026-06-12）
+
+> 分支 `feature/itinerary-route-planning`，**未合并/未提交**。编译绿 + 模拟器实测跨天拖拽通过。解决「停靠点只能日内重排、跨天得删了重加」。
+
+- **新组件** `ItineraryReorderCollection.swift`：复刻打包清单 `ReorderableItemCollection` 的原生 interactive movement（长按 1:1 跟手），但**放开跨 section（跨天）拖拽**——去掉 `clampLocationToSection` 夹断，`.changed`/auto-scroll 直接喂原始位置，UIKit 自然把被拖行带过天边界。**不碰稳定敏感的打包 collection**（姊妹实现，隔离）。行类型 `.stop` 可拖、`.addStop`/`.optimize` 不可拖；日期表头非吸顶（免背景透出）。
+- **落库** `TripStore.applyItineraryArrangement(tripId:dayOrders:)`：松手时 `didReorder` 从 finalSnapshot 取**所有天**的新 stop 顺序，一次性重设每个 stop 的 `day`（SwiftData 关系 inverse 自动维护两边）+ `sortOrder`。跨天则 log `itineraryStopMovedDay`，否则 `itineraryStopReordered`。
+- **ItineraryView 接入**：`List` → `ItineraryReorderCollection`；时间轴行/日期头/加点/优化按钮经闭包 + `UIHostingConfiguration` 承载（样式复用）；移除 `EditButton`（长按拖拽常驻）、`.onMove`/`.onDelete`、`editMode`。地图头/加天按钮/sheets 保留。
+- **实测**：Day1(Temple) + Day2(空) → 长按 Temple 拖入 Day2 → Day1 空、Day2 得 Temple 并重编号为 1，落库持久；日期头/加点/优化/删天菜单在 collection 内均正常 ✓。
+
+## 上次改动摘要（导航框架重构：去 TabView + 底部胶囊切换 · 2026-06-12）
+
+> 分支 `feature/itinerary-route-planning`，**未合并**。spec：`specs/app-navigation-framework.md`。编译绿 + 模拟器逐项验证。解决「打包/行程顶部 Segmented 不对等、高频行程规划难单手够到」的结构问题。
+
+- **根级去 TabView**：`ContentView` iPhone 不再是 TabView；根=`HomeView`（足迹地球 + UIKit Sheet 原样）。设置→`HomeView` 右上 gear 以 sheet 打开（`SettingsView` 加 `dismiss` + path 为空时的 Done）；创建→右下悬浮 FAB（烟蓝）。空状态也放了设置 gear（零行程用户可达）。**首页 TRIP OVERVIEW/足迹/分组列表原样保留**。
+- **行程内顶部 Segmented → 底部胶囊切换**：`PackingListView` 移除顶部 Picker；底部 `bottomFaceSwitch` 胶囊（行程 ｜ 打包，拇指可达，spring 0.3/0.2）。**默认面规则**：新建→打包；已有→`TripDetailFaceStore`（UserDefaults per trip）记住的上次面，无记录则行程规划。**已验证记忆生效**。
+- **「…」trip 动作两面常驻**：ungate 到 `if !isNewTrip`，打包专属动作（从库添加/标记完成/编辑分区/分享清单）用 `if detailTab == .packing` 内部门控；trip 级（提醒/编辑/封面/删除）两面都在。
+- **埋点**：`detailFaceSwitched`（to=packing/itinerary），衡量两面频次。
+- **有意延后（见 spec）**：① 首页搜索——首页是地球+UIKit Sheet 无 nav bar，原生 `.searchable` 不适用，需自定义 in-sheet 搜索，单独排期；② 行程内底部「+」——两面已有清晰内联添加，全局「+」语义含糊且不克制，不做。
+- **模拟器验证**：根无 Tab 栏、设置 sheet 带 Done、创建 FAB、概览/足迹保留 ✓；已有行程默认行程规划、切到打包、记忆生效、「…」两面常驻 ✓。
+
+## 上次改动摘要（行程路线规划 Phase 5：行程视图视觉升级 · 2026-06-12）
+
+> 分支 `feature/itinerary-route-planning`，**未合并**。编译绿 + 模拟器截图验证。本轮是视觉/交互打磨，无新增用户文案（删了 1 个废弃 key `itinerary.map.empty`）。
+
+- **Day 头部显示真实日期**：有日期行程显示「Day N」+ 次行「周几 月/日」（由 `departureDate + sortOrder` 推算，`Date.formatted` 本地化）；isDateless 仍纯序号。`ItineraryView.dayDateLabel`。
+- **停靠点列表改时间轴**：`StopRow` → `TimelineStopRow`——leading 序号圆点 + 上下连线（首/末点半段隐藏）；`index>0` 在连线上显示与上一点的 **Haversine 直线距离**（即时本地，不在主屏发 MKDirections，保「即时/离线」）。List 隐藏分隔线，保留 onMove/onDelete/EditButton。
+- **主地图升级**：Marker 改用**访问序号**作 label（+ 类别图标）；预览**整块可点**进全屏（原来只有小按钮）；**坐标点 <2 时不显示地图块**（省垂直空间，单点不再占 200px）。
+- **时间锚点 pin 图标**：设了时间的行显示 `pin.fill` + 时间，传达「优化时不动」。
+- **模拟器实跑验证**：日期头部「Day 1 · Fri, Jun 19」✓；时间轴序号圆点 + 连线 + 「48 km」段间距离 ✓；地图标注 1/2 + ≥2 才出现 + 点整块展开全屏 ✓。
+
+**待办**：合并前真机验收（时间轴在长清单的性能/观感、Dark Mode、9 语言、大陆 storefront 高德底图）。可选：主列表段间补「道路耗时」（懒加载+缓存，目前是直线距离）。
+
+## 上次改动摘要（行程路线规划 Phase 4：时间锚点 + 真实道路距离 · 2026-06-11）
+
+> 分支 `feature/itinerary-route-planning`，**未合并**。spec：`specs/itinerary-route-planning.md`。编译绿 + 算法单测 + 模拟器真机数据实跑验证通过。
+> **产品决策**：MKDirections「**只用于展示**」（排序仍 Haversine，保即时/离线），不改排序为联网道路矩阵。
+
+- **时间锚点（Phase 4-B）**：
+  - `StopEditView` 加「设定时间」开关 + 时间选择器（写 `plannedStartMinutes`，-1=未设）；`StopRow` 有时间则显示（如「9:00」）。让时间锚点有可达入口（此前字段无 UI = 不可达）。
+  - `RouteOptimizer` 改为锚点感知：设了时间的停靠点 + 起点 = 固定锚点保持原位；只在相邻锚点之间的「自由段」内重排，用端点固定的 NN+2-opt。无时间则退化为现有行为。
+- **真实道路距离（Phase 4-A）**：
+  - `RouteDistanceService`（actor）：MKDirections `calculateETA` 逐段算驾车距离，**串行**发出防限流 + 按 (from→to) 会话缓存；任一段失败/离线返回 nil。
+  - `OptimizeRouteView`：先显示 Haversine，异步算到道路距离后替换原始/优化两个数字，加「🚗 By road / 直线距离 / 计算中」说明；道路下若无节省则隐藏 saves 标签（诚实）。失败记 `itineraryRouteCalcFailed`。
+- **本地化**：6 个新文案 × 9 语言（append-only 干净 diff）。
+- **算法单测**（standalone swift）：无锚点 → 50% 优化；钉住 idx1 → 该点留在原位仅重排其余；钉住 idx2 → 单元素段不动，锚点保持位置。
+- **真机实跑验证**：①StopEditView 时间开关/选择器/footer 渲染，存档后 StopRow 显示「9:00」；②优化预览数字换成 **MKDirections 真实道路距离**（实测昆明三点：7,163 km → 3,632 km，省 3,531 km，「By road」标识），采用/放弃两段式正常；③拖拽重排实测生效。
+
+**行程规划 Phase 1–4 全部完成。** 待办：合并前真机验收（拖拽手感、Dark Mode、9 语言显示、大陆 storefront 高德底图、道路距离在大陆的可用性）。
+
+## 上次改动摘要（行程路线规划 Phase 3：单日智能重排 · 2026-06-11）
+
+> 分支 `feature/itinerary-route-planning`，**未合并**。spec：`specs/itinerary-route-planning.md`。编译绿 + 算法单测 + 模拟器真机数据实跑全流程验证通过。
+
+- **算法**：`RouteOptimizer.swift`（纯函数）——最近邻构造 + 2-opt 局部优化，Haversine 直线距离，**起点固定**为当天第一个停靠点（开放路径，非闭环）。`isImprovement` 阈值：节省 >50m 且 >1% 才算改进（滤噪声）。`optimize` 仅在有坐标停靠点 ≥3 时返回结果。
+- **UI**：`OptimizeRouteView.swift` 两段式——预览（新路线地图带编号 Marker + 距离对比「旧→新 + 省 X」+ 建议顺序列表）→「采用」才走 `store.reorderItineraryStops`（坐标点新序 + 无坐标点原序追加）；「放弃」不动；已近最优时只读「Already efficient」提示。入口按钮在 `ItineraryView` 当天 section，**当天坐标停靠点 ≥3 才露**。
+- **埋点**：`itineraryOptimizeShown/Applied/Discarded`（applied 带 saved_m），定义即接线。
+- **本地化**：9 个 optimize 文案 × 9 语言（append-only 干净 diff）。
+- **算法单测**（standalone swift）：zig-zag 顺序 [0,1,2,3] → 优化为 [0,2,3,1]，省 50%，起点固定；已排序输入保持不变（→ already efficient）。
+- **真机实跑验证**：①≥3 坐标点时按钮出现；②真实数据（昆明 Temple/机场 + 误落在西安的 GREE）正确判「已最优」（不乱重排）；③手动拖成「昆明→西安→昆明」回折后优化，预览显示 **2,306 km → 1,188 km，省 1,118 km**，采用后列表写回优化顺序；④拖拽重排实测生效。
+
+**待办**：合并前真机验收（拖拽手感、Dark Mode、9 语言显示、大陆 storefront 高德底图）；可选 Phase 4（重排距离从 Haversine 升级 MKDirections 实际耗时校验、时间锚点约束）。
+
+## 上次改动摘要（行程路线规划 Phase 2：行程视图 + 地图 + 地理搜索 · 2026-06-11）
+
+> 分支 `feature/itinerary-route-planning`，**未合并**。spec：`specs/itinerary-route-planning.md`。编译绿 + **模拟器真机数据实跑全流程验证通过**（在带真实行程的 iPhone 17 Pro 上跑，迁移后 17 个行程数据完好）。
+
+- **入口**：`PackingListView` 顶部 **Segmented**（`detail.tab.packing/itinerary`），`!isNewTrip` 才露；行程 tab 渲染 `ItineraryView`。打包页的 trailing 菜单按 `detailTab == .packing` 收起。
+- **新视图**：`ItineraryView.swift`（空状态 / 按 Day 分组 / 加 Day·Stop / `.onMove` 拖拽重排 / `.onDelete` / EditButton·≥2 stop 才露 / StopEditView 改名·类型·备注·删）、`AddStopView.swift`（`MKLocalSearchCompleter` 边输边补全，区域偏置到行程目的地坐标；选中走 `MKLocalSearch` 解析真实坐标+地址入库；无补全时「手动加无地点停靠点」）、`ItineraryMapView.swift`（顶部常驻预览+可全屏，`Marker` 按 category 标注、每天 `MapPolyline` 直线连线、`fittedRegion` 自动包络）、`StopCategoryStyle.swift`（category→SF Symbol/标题 key）。
+- **Store/埋点**：`TripStore` 加 itinerary CRUD（addDay/removeDay+重排 sortOrder/updateDay、addStop/updateStop/removeStop/reorderStops）；`CarryLogger` 加 6 个 itinerary 事件（含 `itineraryRouteCalcFailed` 入 errorEvents），定义即接线。
+- **本地化**：29 个新 key × 9 语言已补全（脚本 round-trip 验证格式，append-only 干净 diff，中文全角，zh-Hant 台湾用语）。复用既有 `Save`/`common.cancel`/`common.done`。
+- **本轮修的两个真机 bug**（都已根因修复并复验）：
+  1. **同一视图挂两个 `.sheet(item:)` 相互抑制** → 合并为单一 `ItinerarySheet` 枚举驱动。
+  2. **根 ZStack 的 `.simultaneousGesture(TapGesture)`（点空白收键盘）吞掉行程页 List 行内按钮的 touch-up**（加 Day/加 Stop 无响应，而 Menu 走 touch-down 正常）→ 把该手势从根 ZStack 收窄到只包打包内容的 `packingContent`。
+- **范围说明（诚实记录）**：地图为**直线连线**基线；`MKDirections` 实际道路路径/逐段耗时**未做**——在没有展示耗时的「路线详情」UI 前先建 RouteCalculator 会是零调用死代码，违反「定义即接线」，故留待有承载 UI 时再接（spec Phase 4 / 后续）。
+
+**待办**：Phase 3（单日智能重排：最近邻+2-opt、预览→采纳两段式）。合并前真机验收（拖拽手感、Dark Mode、9 语言、大陆 storefront 底图）。
+
+## 上次改动摘要（行程路线规划 Phase 1：数据地基 · 2026-06-11）
+
+> 分支 `feature/itinerary-route-planning`，**未合并**。spec：`specs/itinerary-route-planning.md`（已确认产品/UI 决策：单日智能重排 / 顶部 Segmented 切换 / 地图常驻+可展开 / StopCategory 6 类）。本轮只做 Phase 1 数据地基，编译绿 + 模拟器启动验证（轻量迁移无崩溃）。
+
+- **新模型**：`Carry/Models/Itinerary.swift` — `ItineraryDay`（按天，`sortOrder` 驱动顺序，兼容 isDateless）/ `ItineraryStop`（POI：name/lat-long/address/category/计划时段/停留时长/note/sortOrder，含 `hasCoordinate`、`coordinate`、未知 category 兜底 `.other`）/ `StopCategory` 6 类枚举。`TripBundle` 加 `itineraryDays` 级联关系 + `safeItineraryDays`。
+- **迁移**：新增 model（建新表）属轻量迁移，保持单一 `SchemaV1`、空 stages（model 列表已加两类），**不引入 SchemaV2**（避免 checksum 重复崩溃）。模拟器启动验证：app 正常进入空状态首页，进程存活、无 crash log → 迁移干净。
+- **备份**：`DataBackupManager` 新增 `BackupItineraryDay`/`BackupItineraryStop` 镜像类型，`BackupTrip.itineraryDays` 可选（兼容旧备份），`makeBackup` 序列化 + restore/merge 共用 `restoreItineraryDays` 重建（id 保真）。发布前不升 `currentBackupVersion`。
+- **复制行程**：`duplicateTrip` 深拷贝 days/stops（新 UUID），避免共享/丢失。
+
+**Phase 1 验证现状**：✅ build 通过 ✅ 启动迁移无崩溃。⏳ 建/删 Day·Stop、备份还原、复制独立等数据流**尚无 UI 可触发**，待 Phase 2 接入「行程」视图后实跑验证（当前为编译期正确 + 逻辑对齐既有 sections/backgrounds 范式）。
+
+**待办**：Phase 2（行程视图 + Segmented 切换 + 地理搜索选点 + 地图 Annotation/Polyline + MKDirections 节流缓存 + 拖拽重排 + 9 语言 + 埋点）→ Phase 3（单日重排）。
 
 ## 上次改动摘要（物品行拖拽重排换 UICollectionView 原生 interactive movement · 2026-06-07）
 

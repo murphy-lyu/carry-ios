@@ -25,6 +25,8 @@ enum SettingsRoute: Hashable {
 
 struct SettingsView: View {
     @Binding var path: NavigationPath
+    // 设置现以 sheet 呈现（根级去 TabView 后），根页需要关闭入口。
+    @Environment(\.dismiss) private var dismiss
 
     @State private var notificationStatus: UNAuthorizationStatus = .notDetermined
     @State private var showAppearancePicker = false
@@ -437,6 +439,14 @@ struct SettingsView: View {
         }
         .navigationTitle(Text("settings.title"))
         .navigationBarTitleDisplayMode(.large)
+        .toolbar {
+            // 仅在作为 sheet 根（path 为空）时显示关闭；二级页用系统返回。
+            if path.isEmpty {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button("common.done") { dismiss() }
+                }
+            }
+        }
         .task { await refreshNotificationStatus() }
         .onAppear {
             refreshBackupCache()

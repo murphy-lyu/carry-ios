@@ -24,6 +24,27 @@ struct BackupPackingSection: Codable, Sendable {
     var items: [BackupPackingItem]
 }
 
+struct BackupItineraryStop: Codable, Sendable {
+    var id: UUID
+    var name: String
+    var latitude: Double
+    var longitude: Double
+    var address: String
+    var categoryRaw: String
+    var plannedStartMinutes: Int
+    var stayMinutes: Int
+    var note: String
+    var sortOrder: Int
+}
+
+struct BackupItineraryDay: Codable, Sendable {
+    var id: UUID
+    var sortOrder: Int
+    var title: String
+    var note: String
+    var stops: [BackupItineraryStop]
+}
+
 struct BackupTrip: Codable, Sendable {
     var id: UUID
     var name: String
@@ -49,6 +70,9 @@ struct BackupTrip: Codable, Sendable {
     /// 对应的图片字节存在 CarryBackup.backgroundImages（按文件名索引）。
     var backgroundsData: Data?
     var sections: [BackupPackingSection]
+    /// 行程路线规划（spec: itinerary-route-planning.md）。可选以兼容旧备份
+    /// （无此键时解码不报错，还原后该行程无规划数据）。
+    var itineraryDays: [BackupItineraryDay]?
 }
 
 struct BackupMyItem: Codable, Sendable {
@@ -134,6 +158,29 @@ final class DataBackupManager {
                     items: items
                 )
             }
+            let itineraryDays: [BackupItineraryDay] = trip.safeItineraryDays.map { day in
+                let stops: [BackupItineraryStop] = day.sortedStops.map {
+                    BackupItineraryStop(
+                        id: $0.id,
+                        name: $0.name,
+                        latitude: $0.latitude,
+                        longitude: $0.longitude,
+                        address: $0.address,
+                        categoryRaw: $0.categoryRaw,
+                        plannedStartMinutes: $0.plannedStartMinutes,
+                        stayMinutes: $0.stayMinutes,
+                        note: $0.note,
+                        sortOrder: $0.sortOrder
+                    )
+                }
+                return BackupItineraryDay(
+                    id: day.id,
+                    sortOrder: day.sortOrder,
+                    title: day.title,
+                    note: day.note,
+                    stops: stops
+                )
+            }
             return BackupTrip(
                 id: trip.id,
                 name: trip.name,
@@ -154,7 +201,8 @@ final class DataBackupManager {
                 longitude: trip.longitude,
                 additionalDestinationsData: trip.additionalDestinationsData.isEmpty ? nil : trip.additionalDestinationsData,
                 backgroundsData: trip.backgroundsData.isEmpty ? nil : trip.backgroundsData,
-                sections: sections
+                sections: sections,
+                itineraryDays: itineraryDays.isEmpty ? nil : itineraryDays
             )
         }
 
@@ -210,8 +258,11 @@ final class DataBackupManager {
             do {
                 try data.write(to: url, options: .atomic)
             } catch {
-                CarryLogger.shared.log(.backupWriteFailed,
-                    context: "reason=write_failed error=\(error.localizedDescription)")
+                let errorDesc = error.localizedDescription
+                await MainActor.run {
+                    CarryLogger.shared.log(.backupWriteFailed,
+                        context: "reason=write_failed error=\(errorDesc)")
+                }
             }
         }
     }
@@ -355,6 +406,34 @@ final class DataBackupManager {
         }
     }
 
+    /// 重建行程规划的天/停靠点并挂到 trip（restore 与 merge 共用）。
+    /// 旧备份无 itineraryDays（nil）→ 不建任何规划数据；id 沿用备份值保真。
+    private func restoreItineraryDays(_ days: [BackupItineraryDay]?, for trip: TripBundle, into context: ModelContext) {
+        guard let days else { return }
+        for bd in days.sorted(by: { $0.sortOrder < $1.sortOrder }) {
+            let day = ItineraryDay(sortOrder: bd.sortOrder, title: bd.title, note: bd.note)
+            day.id = bd.id
+            day.bundle = trip
+            context.insert(day)
+            for bs in bd.stops.sorted(by: { $0.sortOrder < $1.sortOrder }) {
+                let stop = ItineraryStop(
+                    name: bs.name,
+                    latitude: bs.latitude,
+                    longitude: bs.longitude,
+                    address: bs.address,
+                    category: StopCategory(rawValueOrOther: bs.categoryRaw),
+                    plannedStartMinutes: bs.plannedStartMinutes,
+                    stayMinutes: bs.stayMinutes,
+                    note: bs.note,
+                    sortOrder: bs.sortOrder
+                )
+                stop.id = bs.id
+                stop.day = day
+                context.insert(stop)
+            }
+        }
+    }
+
     private func performMerge(from backup: CarryBackup, into context: ModelContext) throws -> (trips: Int, myItems: Int) {
         restoreBackgroundImages(from: backup)
 
@@ -410,6 +489,7 @@ final class DataBackupManager {
                     context.insert(item)
                 }
             }
+            restoreItineraryDays(bt.itineraryDays, for: trip, into: context)
             newTripCount += 1
         }
 
@@ -512,6 +592,7 @@ final class DataBackupManager {
                     context.insert(item)
                 }
             }
+            restoreItineraryDays(bt.itineraryDays, for: trip, into: context)
         }
 
         // Restore MyItems

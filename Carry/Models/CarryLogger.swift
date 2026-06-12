@@ -124,6 +124,21 @@ final class CarryLogger {
         // 预留（API 扩展用）
         case apiTimeout             = "api_timeout"
         case apiError               = "api_error"
+
+        // 行程路线规划（spec: itinerary-route-planning.md）
+        case itineraryDayAdded      = "itinerary_day_added"
+        case itineraryDayRemoved    = "itinerary_day_removed"
+        case itineraryStopAdded     = "itinerary_stop_added"
+        case itineraryStopRemoved   = "itinerary_stop_removed"
+        case itineraryStopReordered = "itinerary_stop_reordered"
+        case itineraryStopMovedDay  = "itinerary_stop_moved_day"
+        case itineraryRouteCalcFailed = "itinerary_route_calc_failed"
+        case itineraryOptimizeShown    = "itinerary_optimize_shown"
+        case itineraryOptimizeApplied  = "itinerary_optimize_applied"
+        case itineraryOptimizeDiscarded = "itinerary_optimize_discarded"
+
+        // 行程详情两面切换（spec: app-navigation-framework.md）——衡量行程/打包频次
+        case detailFaceSwitched        = "detail_face_switched"
     }
 
     private static let errorEvents: Set<Event> = [
@@ -137,6 +152,7 @@ final class CarryLogger {
         .destinationDecodeFailed, .coffeePurchaseFailed, .coffeeProductsFetchFailed,
         .calendarSaveFailed, .liveActivityStartFailed,
         .reminderScheduleFailed, .apiTimeout, .apiError,
+        .itineraryRouteCalcFailed,
     ]
 
     private let sessionActiveKey = "carry_session_active"
