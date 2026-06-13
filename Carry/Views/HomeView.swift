@@ -886,22 +886,6 @@ struct HomeView: View {
                     statRow(value: "\(upcomingTrips.count)", label: "home.upcoming")
                     statRow(value: "\(visitedCountriesCount)", label: visitedCountriesCount == 1 ? "home.country" : "home.countries")
                 }
-
-                Section {
-                    Button {
-                        openSearch()
-                    } label: {
-                        Label("Search trips", systemImage: "magnifyingglass")
-                    }
-                    Button {
-                        showTripBook = false
-                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
-                            startNewTrip()
-                        }
-                    } label: {
-                        Label("Create trip", systemImage: "plus")
-                    }
-                }
             }
             .navigationTitle("home.tripbook.title")
             .navigationBarTitleDisplayMode(.inline)
