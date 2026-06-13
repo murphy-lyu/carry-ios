@@ -214,7 +214,9 @@ struct ItineraryView: View {
             dayHeader(day)
                 .padding(.horizontal, 16)
                 .padding(.top, 14)
-                .padding(.bottom, 16)
+                // 首个停靠点 cell 顶部已有 legGap(24) 透明占位充当表头→首点的间距，
+                // 故表头底部只留少量呼吸，避免与透明 leg 叠加导致间距过大。
+                .padding(.bottom, 2)
                 .background(Rectangle().fill(Color(UIColor.systemBackground)))
         }
     }
@@ -328,8 +330,15 @@ private struct TimelineStopRow: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            // 连接段（首点无）：竖线 + 段间距离标签压在正中。
-            if index > 0 { legSegment }
+            // 连接段：有上一点时画竖线 + 居中距离标签；首点画等高透明占位。
+            // 关键：首点也保留 legGap 高度，使每个 stop cell 恒为 legGap+rowHeight。
+            // 否则首点 cell（仅 rowHeight）比其余矮，UICollectionView 自适应列表会因
+            // 估算高度错配在其前后插入间距（实测每处约 14pt），导致首点间距偏大。
+            if index > 0 {
+                legSegment
+            } else {
+                Color.clear.frame(height: legGap)
+            }
             // 停靠点主行：固定行高 + 居中对齐；rail 圆点与内容同在行中心，自然对齐。
             HStack(alignment: .center, spacing: railSpacing) {
                 rail
