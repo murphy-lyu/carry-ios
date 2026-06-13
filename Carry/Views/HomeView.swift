@@ -27,7 +27,6 @@ struct HomeView: View {
 
     @State private var tripToDelete: TripBundle?
     @State private var showDeleteConfirmation = false
-    // 设置入口（spec: app-navigation-framework.md）：根级去 TabView 后，设置以 sheet 从首页右上入口打开。
     @State private var showSettings = false
     @State private var settingsPath = NavigationPath()
     @State private var listIdentity = UUID()
@@ -123,20 +122,16 @@ struct HomeView: View {
     private var planningTrips: [TripBundle] { cachedPlanning }
     private var pastTripsByYear: [(year: Int, trips: [TripBundle])] { cachedPastByYear }
 
-    /// hero 头部右上按钮图标：iPhone=设置齿轮（创建在右下悬浮）；Mac=创建加号。
-    private var heroTrailingIcon: String {
-        #if targetEnvironment(macCatalyst)
-        "plus"
-        #else
-        "gearshape"
-        #endif
-    }
-
     private func startNewTrip() {
         UIImpactFeedbackGenerator(style: .light).impactOccurred()
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.06) {
             router.path.append(CreationRoute.tripInfo(UUID(), startInMyItems: false))
         }
+    }
+
+    private func openSettings() {
+        UIImpactFeedbackGenerator(style: .light).impactOccurred()
+        showSettings = true
     }
 
     private func openTrip(_ bundle: TripBundle) {
@@ -320,14 +315,6 @@ struct HomeView: View {
             .ignoresSafeArea()
         }
         .ignoresSafeArea(edges: .bottom)
-        // 创建行程：右下悬浮（拇指可达）。空状态由 emptyState 自带 CTA，故仅非空时显示。
-        .overlay(alignment: .bottomTrailing) {
-            if !isEffectivelyEmpty {
-                createFAB
-                    .padding(.trailing, 20)
-                    .padding(.bottom, 28)
-            }
-        }
         .sheet(isPresented: $showSettings) {
             NavigationStack(path: $settingsPath) {
                 SettingsView(path: $settingsPath)
@@ -335,22 +322,6 @@ struct HomeView: View {
             .tint(CarryAccent.color)
         }
         #endif
-    }
-
-    /// 右下悬浮创建按钮（iPhone）。
-    private var createFAB: some View {
-        Button {
-            startNewTrip()
-        } label: {
-            Image(systemName: "plus")
-                .font(.system(size: 24, weight: .semibold))
-                .foregroundStyle(.white)
-                .frame(width: 56, height: 56)
-                .background(Circle().fill(CarryAccent.color))
-                .shadow(color: .black.opacity(0.22), radius: 10, x: 0, y: 4)
-        }
-        .buttonStyle(PressableScaleButtonStyle(scale: 0.92, pressedBrightness: -0.03, pressedOpacity: 0.94))
-        .accessibilityLabel(Text("home.create_trip"))
     }
 
     // MARK: - Mac Catalyst layout
@@ -424,17 +395,6 @@ struct HomeView: View {
 
             if isEffectivelyEmpty {
                 VStack(spacing: 4) {
-                    // 空状态也要能进设置（零行程用户）：右上放设置入口。
-                    HStack {
-                        Spacer()
-                        Button { showSettings = true } label: {
-                            Image(systemName: "gearshape")
-                                .font(.system(size: 16, weight: .semibold))
-                                .foregroundStyle(.secondary)
-                                .frame(width: 34, height: 34)
-                        }
-                        .accessibilityLabel(Text("Settings"))
-                    }
                     Text("home.empty.header.title")
                         .font(.system(size: 22, weight: .semibold, design: .rounded))
                         .foregroundStyle(.primary)
@@ -449,6 +409,13 @@ struct HomeView: View {
                 .frame(maxWidth: .infinity)
             }
 
+            if !isEffectivelyEmpty {
+                homeTopBar
+                    .padding(.horizontal, 16)
+                    .padding(.top, 6)
+                    .padding(.bottom, 8)
+            }
+
             ZStack {
                 List {
                     if !isEffectivelyEmpty {
@@ -457,7 +424,7 @@ struct HomeView: View {
                             .offset(y: initialRevealProgress >= heroRevealThreshold ? 0 : 12)
                             .scaleEffect(initialRevealProgress >= heroRevealThreshold ? 1 : 0.99)
                             .animation(.easeOut(duration: 0.26), value: initialRevealProgress)
-                            .listRowInsets(EdgeInsets(top: 2, leading: 12, bottom: 4, trailing: 12))
+                            .listRowInsets(EdgeInsets(top: 8, leading: 12, bottom: 4, trailing: 12))
                             .listRowBackground(Color.clear)
                             .listRowSeparator(.hidden)
 
@@ -694,58 +661,6 @@ struct HomeView: View {
 
     private var heroSection: some View {
         VStack(alignment: .leading, spacing: 12) {
-            HStack(spacing: 8) {
-                Image(systemName: "airplane.departure")
-                    .font(.system(size: 11, weight: .semibold))
-                    .foregroundStyle(.secondary)
-                Text("home.overview.title")
-                    .font(.caption.weight(.semibold))
-                    .foregroundStyle(.secondary)
-                    .textCase(.uppercase)
-                    .tracking(1.4)
-            }
-
-            HStack(alignment: .top) {
-                Text("home.title")
-                    .font(.system(size: 30, weight: .bold, design: .rounded))
-                    .foregroundStyle(.primary)
-
-                Spacer(minLength: 12)
-
-                Button {
-                    // iPhone：右上=设置入口（创建已迁到右下悬浮）；Mac：保留创建。
-                    #if targetEnvironment(macCatalyst)
-                    startNewTrip()
-                    #else
-                    showSettings = true
-                    #endif
-                } label: {
-                    Image(systemName: heroTrailingIcon)
-                        .font(.system(size: 15, weight: .semibold))
-                        .foregroundStyle(Color(UIColor.systemBackground))
-                        .frame(width: 34, height: 34)
-                        .background(
-                            Circle()
-                                .fill(
-                                    LinearGradient(
-                                        colors: [
-                                            Color.primary.opacity(0.95),
-                                            Color.primary.opacity(0.82)
-                                        ],
-                                        startPoint: .topLeading,
-                                        endPoint: .bottomTrailing
-                                    )
-                            )
-                        )
-                        .overlay(
-                            Circle()
-                                .strokeBorder(Color.primary.opacity(0.10), lineWidth: 1)
-                        )
-                        .shadow(color: Color.black.opacity(0.08), radius: 8, x: 0, y: 4)
-                }
-                .buttonStyle(PressableScaleButtonStyle(scale: 0.92, pressedBrightness: -0.03, pressedOpacity: 0.94))
-            }
-
             if !isEffectivelyEmpty {
                 HStack(spacing: 10) {
                     statPill(value: "\(store.trips.count)", label: "home.allTrips")
@@ -753,8 +668,60 @@ struct HomeView: View {
                     statPill(value: "\(visitedCountriesCount)", label: visitedCountriesCount == 1 ? "home.country" : "home.countries")
                 }
             }
+
+            Button {
+                startNewTrip()
+            } label: {
+                HStack(spacing: 12) {
+                    ZStack {
+                        Circle()
+                            .fill(
+                                LinearGradient(
+                                    colors: [
+                                        CarryAccent.color.opacity(colorScheme == .dark ? 0.94 : 0.97),
+                                        CarryAccent.color.opacity(colorScheme == .dark ? 0.78 : 0.85)
+                                    ],
+                                    startPoint: .topLeading,
+                                    endPoint: .bottomTrailing
+                                )
+                            )
+                            .frame(width: 34, height: 34)
+
+                        Image(systemName: "plus")
+                            .font(.system(size: 16, weight: .semibold))
+                            .foregroundStyle(.white)
+                    }
+
+                    Text("home.create_trip")
+                        .font(.system(size: 16, weight: .semibold, design: .rounded))
+                        .foregroundStyle(.primary)
+
+                    Spacer(minLength: 8)
+
+                    Image(systemName: "chevron.right")
+                        .font(.system(size: 11, weight: .semibold))
+                        .foregroundStyle(.secondary.opacity(0.55))
+                }
+                .padding(.horizontal, 14)
+                .padding(.vertical, 12)
+                .frame(maxWidth: .infinity)
+                .background(
+                    RoundedRectangle(cornerRadius: 16, style: .continuous)
+                        .fill(
+                            colorScheme == .dark
+                            ? AnyShapeStyle(Color(UIColor.secondarySystemBackground).opacity(0.90))
+                            : AnyShapeStyle(Color(UIColor.systemBackground).opacity(0.94))
+                        )
+                )
+                .overlay(
+                    RoundedRectangle(cornerRadius: 16, style: .continuous)
+                        .strokeBorder(Color.primary.opacity(colorScheme == .dark ? 0.03 : 0.04), lineWidth: 1)
+                )
+            }
+            .buttonStyle(PressableScaleButtonStyle(scale: 0.99, pressedBrightness: -0.01, pressedOpacity: 0.97))
+            .accessibilityLabel(Text("home.create_trip"))
         }
-        .padding(.vertical, 14)
+        .padding(.vertical, 12)
         .padding(.horizontal, 16)
         .background(
             RoundedRectangle(cornerRadius: 24, style: .continuous)
@@ -787,6 +754,39 @@ struct HomeView: View {
                 .strokeBorder(Color.primary.opacity(colorScheme == .dark ? 0.03 : 0.05), lineWidth: 1)
         )
         .shadow(color: Color.black.opacity(colorScheme == .dark ? 0.14 : 0.045), radius: colorScheme == .dark ? 12 : 16, x: 0, y: colorScheme == .dark ? 8 : 10)
+    }
+
+    private var homeTopBar: some View {
+        HStack(alignment: .center) {
+            Text("home.title")
+                .font(.system(size: 30, weight: .bold, design: .rounded))
+                .foregroundStyle(.primary)
+                .lineLimit(1)
+                .minimumScaleFactor(0.85)
+
+            Spacer(minLength: 12)
+
+            Button {
+                openSettings()
+            } label: {
+                Image("Murphy")
+                    .resizable()
+                    .scaledToFill()
+                    .frame(width: 40, height: 40)
+                    .clipShape(Circle())
+                    .background(
+                        Circle()
+                            .fill(Color(UIColor.systemBackground).opacity(colorScheme == .dark ? 0.92 : 0.98))
+                    )
+                    .overlay(
+                        Circle()
+                            .strokeBorder(Color.primary.opacity(colorScheme == .dark ? 0.06 : 0.04), lineWidth: 1)
+                    )
+                    .shadow(color: Color.black.opacity(colorScheme == .dark ? 0.08 : 0.05), radius: 5, x: 0, y: 2)
+            }
+            .buttonStyle(PressableScaleButtonStyle(scale: 0.94, pressedBrightness: -0.02, pressedOpacity: 0.95))
+            .accessibilityLabel(Text("Settings"))
+        }
     }
 
     private func sectionLabel(_ key: LocalizedStringKey, uppercase: Bool = false) -> some View {
