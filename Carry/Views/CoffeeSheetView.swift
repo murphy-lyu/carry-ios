@@ -155,12 +155,7 @@ struct CoffeeSheetView: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
-                    Button {
-                        dismiss()
-                    } label: {
-                        Image(systemName: "xmark")
-                            .font(.system(size: 13, weight: .semibold))
-                    }
+                    SheetCloseButton { dismiss() }
                 }
             }
             .presentationDetents([.large])

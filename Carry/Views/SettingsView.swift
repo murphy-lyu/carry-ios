@@ -443,23 +443,7 @@ struct SettingsView: View {
             // 仅在作为 sheet 根（path 为空）时显示关闭；二级页用系统返回。
             if path.isEmpty {
                 ToolbarItem(placement: .topBarTrailing) {
-                    if #available(iOS 26.0, *) {
-                        // 原生关闭按钮：系统提供单层 Liquid Glass 圆形 X +
-                        // 无障碍标签，不在工具栏自带玻璃之上再叠一层。
-                        Button(role: .close) { dismiss() }
-                    } else {
-                        // iOS 17–25：工具栏不自动加玻璃，glassCircleButton
-                        // 回退为灰色圆底，单层、不叠加。
-                        Button { dismiss() } label: {
-                            Image(systemName: "xmark")
-                                .font(.system(size: 13, weight: .semibold))
-                                .foregroundStyle(.primary)
-                                .frame(width: 32, height: 32)
-                                .glassCircleButton()
-                        }
-                        .buttonStyle(.plain)
-                        .accessibilityLabel(Text("common.close"))
-                    }
+                    SheetCloseButton { dismiss() }
                 }
             }
         }
