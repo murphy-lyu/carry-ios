@@ -140,6 +140,7 @@ struct ItineraryView: View {
             // 原生 collection：长按拖拽，停靠点可跨天移动（spec: 跨天拖拽）。
             ItineraryReorderCollection(
                 sections: daySections,
+                scrollTargetDayId: activeFocusedDayId,
                 stopContent: { AnyView(stopRow($0)) },
                 addStopContent: { AnyView(addStopRow($0)) },
                 optimizeContent: { AnyView(optimizeRow($0)) },
@@ -147,7 +148,8 @@ struct ItineraryView: View {
                 onDelete: { deleteStop($0) },
                 onEdit: { editStop($0) },
                 onArrange: { store.applyItineraryArrangement(tripId: tripId, dayOrders: $0) },
-                onReorderBegan: { }
+                onReorderBegan: { },
+                onFocusDay: { focusedDayId = $0 }
             )
             // Day header 依赖行程级日期态（isDateless / departureDate）算标签，而这状态不在
             // collection 的 diffable 快照里 → section id 不变时旧 header 不会重配（转有/无日期后
@@ -166,19 +168,28 @@ struct ItineraryView: View {
     private var itineraryCalendarStrip: some View {
         VStack(alignment: .leading, spacing: 2) {
             if !calendarEntries.isEmpty {
-                ScrollView(.horizontal, showsIndicators: false) {
-                    HStack(alignment: .top, spacing: 11) {
-                        ForEach(calendarEntries) { entry in
-                            dayCalendarCell(
-                                entry: entry,
-                                isSelected: activeFocusedDayId == entry.day?.id
-                            ) {
-                                guard entry.isInTrip, let day = entry.day else { return }
-                                focusedDayId = day.id
+                ScrollViewReader { proxy in
+                    ScrollView(.horizontal, showsIndicators: false) {
+                        HStack(alignment: .top, spacing: 11) {
+                            ForEach(calendarEntries) { entry in
+                                dayCalendarCell(
+                                    entry: entry,
+                                    isSelected: activeFocusedDayId == entry.day?.id
+                                ) {
+                                    guard entry.isInTrip, let day = entry.day else { return }
+                                    focusedDayId = day.id
+                                }
                             }
                         }
+                        .padding(.horizontal, 2)
                     }
-                    .padding(.horizontal, 2)
+                    // 选中天变化（点选或随列表反向联动）→ 把该天日历格滚到可见居中，长行程不脱屏。
+                    .onChange(of: activeFocusedDayId) { _, _ in
+                        guard let day = days.first(where: { $0.id == activeFocusedDayId }) else { return }
+                        withAnimation(.spring(duration: 0.3, bounce: 0.2)) {
+                            proxy.scrollTo(day.sortOrder, anchor: .center)
+                        }
+                    }
                 }
             }
         }
