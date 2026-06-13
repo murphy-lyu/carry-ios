@@ -433,6 +433,13 @@ struct HomeView: View {
                 bottomActionBar
                     .padding(.horizontal, 18)
                     .padding(.bottom, 18)
+                    .background(
+                        // 透明触摸吸收层：底栏整条拦截「点击」，堵住按钮间隙/内边距穿透到下方行程列表
+                        // （按钮在前，仍正常响应）。只吸收 tap、不拦拖动，故从底栏区域上滑仍能滚动列表。
+                        Color.clear
+                            .contentShape(Rectangle())
+                            .onTapGesture { }
+                    )
             }
         }
         .sheet(isPresented: $showSettings) {
@@ -841,6 +848,7 @@ struct HomeView: View {
                 .foregroundStyle(.primary)
                 .frame(width: 54, height: 54)
                 .modifier(BottomBarGlass(shape: Circle()))
+                .contentShape(Rectangle())   // 满帧命中区，避免 glass 把命中区裁成圆、边角点空穿透
         }
         .bottomGlassPressStyle(fallbackScale: 0.95)
         .accessibilityLabel(Text("Search"))
@@ -872,6 +880,7 @@ struct HomeView: View {
             .padding(.horizontal, 16)
             .frame(height: 54)
             .modifier(BottomBarGlass(shape: RoundedRectangle(cornerRadius: 26, style: .continuous)))
+            .contentShape(Rectangle())   // 满帧命中区
         }
         .bottomGlassPressStyle(fallbackScale: 0.985)
         .accessibilityLabel(Text("home.tripbook.title"))
@@ -887,6 +896,7 @@ struct HomeView: View {
                 .foregroundStyle(.white)
                 .frame(width: 54, height: 54)
                 .modifier(FABGlass())
+                .contentShape(Rectangle())   // 满帧命中区
         }
         .bottomGlassPressStyle(fallbackScale: 0.95)
         .accessibilityLabel(Text("home.create_trip"))
