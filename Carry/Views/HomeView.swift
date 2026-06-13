@@ -819,8 +819,10 @@ struct HomeView: View {
         Group {
             if #available(iOS 26.0, *) {
                 // Liquid Glass：同容器内相邻玻璃元素（搜索圆 ⇄ Trip Book 胶囊）会在边缘
-                // 像液滴一样融合/吸附（spacing 控制融合距离），.interactive() 让玻璃跟手。
-                GlassEffectContainer(spacing: 20) {
+                // 像液滴一样融合/吸附，.interactive() 让玻璃跟手。
+                // spacing 必须 < 按钮间隙（HStack 14）——否则静止态就融合，会把边缘元素
+                // 拉成水滴尖尾；调小后静止态保持干净圆形，只在长按胀大时才融合。
+                GlassEffectContainer(spacing: 13.5) {
                     bottomBarStack
                 }
             } else {
