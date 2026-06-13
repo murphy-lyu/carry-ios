@@ -37,6 +37,8 @@ struct ContentView: View {
     @State private var didApplyStartupReset = false
     @State private var didRefreshOnLaunch = false
     @State private var showSettingsOnMac = false
+    // 同 HomeView：sheet 独立呈现，需自带 preferredColorScheme，否则在设置页内切外观不立即生效。
+    @AppStorage("appearance_mode") private var appearanceModeRaw = AppearanceMode.system.rawValue
 
     var body: some View {
         #if targetEnvironment(macCatalyst)
@@ -89,6 +91,7 @@ struct ContentView: View {
             .sheet(isPresented: $showSettingsOnMac) {
                 NavigationStack(path: $settingsPath) { SettingsView(path: $settingsPath) }
                     .frame(minWidth: 420, minHeight: 560)
+                    .preferredColorScheme((AppearanceMode(rawValue: appearanceModeRaw) ?? .system).colorScheme)
             }
         }
         .tint(CarryAccent.color)
