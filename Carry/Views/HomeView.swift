@@ -713,23 +713,20 @@ struct HomeView: View {
 
             Spacer(minLength: 12)
 
+            // Settings entry — a circular gear (secondary), per design-system.md §124.
+            // 未登录态就是这枚齿轮；登录功能落地后，在此按登录态切换为用户头像
+            // （已登录 → Image(avatar)，未登录 → 本齿轮）。现在不写空壳分支以免留死代码。
             Button {
                 openSettings()
             } label: {
-                Image("Murphy")
-                    .resizable()
-                    .scaledToFill()
+                Image(systemName: "gearshape.fill")
+                    .font(.system(size: 18, weight: .semibold))
+                    .foregroundStyle(.secondary)
                     .frame(width: 40, height: 40)
-                    .clipShape(Circle())
-                    .background(
-                        Circle()
-                            .fill(Color(UIColor.systemBackground).opacity(colorScheme == .dark ? 0.92 : 0.98))
-                    )
-                    .overlay(
-                        Circle()
-                            .strokeBorder(Color.primary.opacity(colorScheme == .dark ? 0.06 : 0.04), lineWidth: 1)
-                    )
-                    .shadow(color: Color.black.opacity(colorScheme == .dark ? 0.08 : 0.05), radius: 5, x: 0, y: 2)
+                    // Soft neutral fill (adaptive light/dark) so it reads clearly as a
+                    // tappable button on the near-white sheet — like Apple's circular
+                    // toolbar buttons. No border/shadow: the fill alone defines the chip.
+                    .background(Circle().fill(Color(UIColor.tertiarySystemFill)))
             }
             .buttonStyle(PressableScaleButtonStyle(scale: 0.94, pressedBrightness: -0.02, pressedOpacity: 0.95))
             .accessibilityLabel(Text("Settings"))
