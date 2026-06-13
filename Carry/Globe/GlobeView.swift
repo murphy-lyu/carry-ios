@@ -432,13 +432,6 @@ struct GlobeMapView: View, Equatable {
 
     // MARK: - Helpers
 
-    private func flagEmoji(for code: String) -> String {
-        guard code.count == 2 else { return "📍" }
-        let base: UInt32 = 0x1F1E6 - 65
-        return code.uppercased().unicodeScalars.compactMap {
-            UnicodeScalar(base + $0.value)
-        }.map(String.init).joined()
-    }
 
     private func centroid(of countries: [VisitedCountry]) -> CLLocationCoordinate2D? {
         guard !countries.isEmpty else { return nil }

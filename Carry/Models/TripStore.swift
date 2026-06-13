@@ -138,12 +138,13 @@ final class TripBundle {
 
     /// `true` = at least one destination is outside China, `false` = all destinations are China, `nil` = unknown (geocoding pending or no destination set).
     var isInternational: Bool? {
+        // 基准 = 用户本国（storefront 推导，大陆→CN，零回归）；所有目的地都在本国 = 国内。
+        let home = homeCountryCode
         let allCodes = ([countryCode] + additionalDestinations.map(\.countryCode))
             .filter { !$0.isEmpty }
+            .map { $0.uppercased() }
         guard !allCodes.isEmpty else { return nil }
-        if allCodes.contains(where: { $0 != "CN" }) { return true }
-        if allCodes.allSatisfy({ $0 == "CN" }) { return false }
-        return nil
+        return allCodes.contains(where: { $0 != home })
     }
 
     var safeSections: [PackingSection] { (sections ?? []).sorted { $0.sortOrder < $1.sortOrder } }
@@ -2142,11 +2143,10 @@ final class TripStore: ObservableObject {
     /// Returns nil if the city can't be resolved (geocoding still needed).
     /// Used to avoid showing Passport for domestic trips before geocoding completes.
     func inferIsInternational(for city: String) -> Bool? {
-        let codes = inferCountryCodes(for: city)
+        let home = homeCountryCode
+        let codes = inferCountryCodes(for: city).map { $0.uppercased() }
         guard !codes.isEmpty else { return nil }
-        if codes.contains(where: { $0 != "CN" }) { return true }
-        if codes.allSatisfy({ $0 == "CN" }) { return false }
-        return nil
+        return codes.contains(where: { $0 != home })
     }
 
     /// Synchronously resolves destination city to country codes using the local city table.

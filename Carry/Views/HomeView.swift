@@ -247,26 +247,15 @@ struct HomeView: View {
         max(0, expandedSheetHeight - 188)
     }
 
-    /// Normalizes HK, MO, TW → CN only for the mainland China App Store storefront,
-    /// where local regulations require treating them as part of China.
-    /// All other storefronts preserve the original country code.
-    private static func normalizedCountryCode(_ code: String) -> String {
-        guard isChinaStorefront else { return code.uppercased() }
-        switch code.uppercased() {
-        case "HK", "MO", "TW": return "CN"
-        default: return code.uppercased()
-        }
-    }
-
     /// Unique country codes from all trips whose departure date has passed.
     /// Includes both the primary destination and any additional destinations
     /// stored for multi-city trips.
     private var visitedCountriesCount: Int {
         var codes = Set<String>()
         for trip in store.trips where trip.countsAsVisited {
-            if !trip.countryCode.isEmpty { codes.insert(Self.normalizedCountryCode(trip.countryCode)) }
+            if !trip.countryCode.isEmpty { codes.insert(normalizedCountryCode(trip.countryCode)) }
             for dest in trip.additionalDestinations where !dest.countryCode.isEmpty {
-                codes.insert(Self.normalizedCountryCode(dest.countryCode))
+                codes.insert(normalizedCountryCode(dest.countryCode))
             }
         }
         return codes.count
@@ -329,7 +318,7 @@ struct HomeView: View {
 
         func consider(code: String, lat: Double, lon: Double, date: Date) {
             guard !code.isEmpty, lat != 0 else { return }
-            let normalized = Self.normalizedCountryCode(code)
+            let normalized = normalizedCountryCode(code)
             // When normalizing to CN, use the China centroid so the pin lands correctly.
             let (pinLat, pinLon): (Double, Double) = {
                 if normalized != code.uppercased(),
@@ -422,7 +411,6 @@ struct HomeView: View {
         }
         .sheet(isPresented: $showTripBook) {
             tripBookSheet
-                .presentationDetents([.medium])
                 .presentationDragIndicator(.visible)
         }
         #endif
@@ -879,16 +867,299 @@ struct HomeView: View {
     }
 
     private var tripBookSheet: some View {
-        NavigationStack {
-            List {
-                Section {
-                    statRow(value: "\(store.trips.count)", label: "home.allTrips")
-                    statRow(value: "\(upcomingTrips.count)", label: "home.upcoming")
-                    statRow(value: "\(visitedCountriesCount)", label: visitedCountriesCount == 1 ? "home.country" : "home.countries")
+        let stats = TripBookStats.from(trips: store.trips)
+        return NavigationStack {
+            ScrollView {
+                VStack(spacing: 14) {
+                    tripBookOverviewCard(stats)
+                    tripBookCountriesCard(stats)
+                    if stats.visitedContinentCount > 0 { tripBookContinentsCard(stats) }
+                    if stats.domesticCount + stats.internationalCount > 0 { tripBookScopeCard(stats) }
+                    if stats.seasonCounts.values.reduce(0, +) > 0 { tripBookSeasonsCard(stats) }
                 }
+                .padding(.horizontal, 16)
+                .padding(.top, 8)
+                .padding(.bottom, 32)
             }
+            .scrollContentBackground(.hidden)
+            .background(CarrySubtleBackground())
             .navigationTitle("home.tripbook.title")
             .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .topBarTrailing) {
+                    SheetCloseButton { showTripBook = false }
+                }
+            }
+        }
+    }
+
+    // MARK: Trip Book cards
+
+    private func tripBookCard<Content: View>(_ titleKey: LocalizedStringKey,
+                                             systemImage: String,
+                                             @ViewBuilder content: () -> Content) -> some View {
+        VStack(alignment: .leading, spacing: 14) {
+            Label(titleKey, systemImage: systemImage)
+                .font(.subheadline.weight(.semibold))
+                .foregroundStyle(.secondary)
+            content()
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(16)
+        .carrySurfaceCardBackground(cornerRadius: 20)
+    }
+
+    private func tripBookBigStat(_ value: Int, _ label: LocalizedStringKey) -> some View {
+        VStack(spacing: 4) {
+            CountUpText(value: value, font: .system(size: 34, weight: .bold, design: .rounded))
+                .foregroundStyle(.primary)
+            Text(label)
+                .font(.caption)
+                .foregroundStyle(.secondary)
+        }
+        .frame(maxWidth: .infinity)
+    }
+
+    private func tripBookOverviewCard(_ s: TripBookStats) -> some View {
+        ZStack {
+            tripBookArcOrnament()
+            VStack(spacing: 14) {
+                if !s.countryTallies.isEmpty {
+                    tripBookFlagsRow(s.countryTallies.map(\.code))
+                }
+                if let year = s.firstTravelYear {
+                    Text(String(format: NSLocalizedString("tripbook.since", comment: "traveling since year"), Int64(year)))
+                        .font(.footnote.weight(.medium))
+                        .foregroundStyle(.secondary)
+                }
+                HStack(spacing: 0) {
+                    tripBookBigStat(s.tripCount, "tripbook.trips")
+                    Divider().frame(height: 36)
+                    tripBookBigStat(s.totalDays, "tripbook.days")
+                }
+                .padding(.top, 2)
+            }
+            .padding(.vertical, 22)
+            .padding(.horizontal, 16)
+            .frame(maxWidth: .infinity)
+        }
+        .frame(maxWidth: .infinity)
+        .carryHeroCardBackground(cornerRadius: 24)
+        .clipShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
+    }
+
+    /// 到访国家国旗排（重叠圆形徽章，最多 8 枚 + 余量）。
+    private func tripBookFlagsRow(_ codes: [String]) -> some View {
+        let shown = Array(codes.prefix(8))
+        let extra = codes.count - shown.count
+        return HStack(spacing: -7) {
+            ForEach(Array(shown.enumerated()), id: \.offset) { _, code in
+                Text(flagEmoji(for: code))
+                    .font(.system(size: 17))
+                    .frame(width: 30, height: 30)
+                    .background(Circle().fill(Color(.secondarySystemBackground)))
+                    .overlay(Circle().strokeBorder(Color(.systemBackground), lineWidth: 2))
+            }
+            if extra > 0 {
+                Text(verbatim: "+\(extra)")
+                    .font(.system(size: 12, weight: .semibold, design: .rounded))
+                    .foregroundStyle(.secondary)
+                    .frame(width: 30, height: 30)
+                    .background(Circle().fill(Color(.secondarySystemBackground)))
+                    .overlay(Circle().strokeBorder(Color(.systemBackground), lineWidth: 2))
+            }
+        }
+    }
+
+    /// 装饰性「航线」弧线 + 端点圆点（抽象，非地理地图）。烟蓝低透明，随明暗自适应。
+    private func tripBookArcOrnament() -> some View {
+        // 浅色底上弧线更易被冲淡，提一档透明度让点缀读得到；深色维持低调。
+        let lineOpacity = colorScheme == .dark ? 0.13 : 0.20
+        let dotOpacity = colorScheme == .dark ? 0.28 : 0.40
+        return Canvas { ctx, size in
+            let accent = CarryAccent.color
+            for i in 0..<3 {
+                let y = size.height * (0.30 + 0.20 * CGFloat(i))
+                let startX = size.width * 0.06
+                let endX = size.width * 0.94
+                let ctrlY = y - size.height * 0.24
+                var path = Path()
+                path.move(to: CGPoint(x: startX, y: y))
+                path.addQuadCurve(to: CGPoint(x: endX, y: y),
+                                  control: CGPoint(x: (startX + endX) / 2, y: ctrlY))
+                ctx.stroke(path, with: .color(accent.opacity(lineOpacity)),
+                           style: StrokeStyle(lineWidth: 1.5, lineCap: .round, dash: [2.5, 5]))
+                for x in [startX, endX] {
+                    ctx.fill(Path(ellipseIn: CGRect(x: x - 2.5, y: y - 2.5, width: 5, height: 5)),
+                             with: .color(accent.opacity(dotOpacity)))
+                }
+            }
+        }
+        .allowsHitTesting(false)
+    }
+
+    private func tripBookCountriesCard(_ s: TripBookStats) -> some View {
+        let percent = s.globalCountryTotal > 0
+            ? Int((Double(s.visitedCountryCount) / Double(s.globalCountryTotal) * 100).rounded())
+            : 0
+        return tripBookCard("tripbook.countries.title", systemImage: "globe.asia.australia.fill") {
+            HStack(alignment: .firstTextBaseline, spacing: 6) {
+                CountUpText(value: s.visitedCountryCount,
+                            font: .system(size: 34, weight: .bold, design: .rounded))
+                    .foregroundStyle(.primary)
+                Text(verbatim: "/ \(s.globalCountryTotal) · \(percent)%")
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+            }
+            if !s.topCountries.isEmpty {
+                VStack(spacing: 10) {
+                    ForEach(s.topCountries, id: \.code) { tally in
+                        HStack(spacing: 10) {
+                            Text(flagEmoji(for: tally.code))
+                                .font(.system(size: 18))
+                            Text(countryDisplayName(tally.code))
+                                .font(.subheadline)
+                                .foregroundStyle(.primary)
+                            Spacer()
+                            Text(verbatim: "\(tally.count)×")
+                                .font(.subheadline.weight(.semibold))
+                                .foregroundStyle(.secondary)
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    private func tripBookContinentsCard(_ s: TripBookStats) -> some View {
+        let ordered = s.continentCounts
+            .sorted { $0.value != $1.value ? $0.value > $1.value : $0.key.rawValue < $1.key.rawValue }
+        return tripBookCard("tripbook.continents.title", systemImage: "globe") {
+            HStack(alignment: .firstTextBaseline, spacing: 6) {
+                CountUpText(value: s.visitedContinentCount,
+                            font: .system(size: 34, weight: .bold, design: .rounded))
+                    .foregroundStyle(.primary)
+            }
+            VStack(spacing: 10) {
+                ForEach(ordered, id: \.key) { item in
+                    HStack {
+                        Text(continentNameKey(item.key))
+                            .font(.subheadline)
+                            .foregroundStyle(.primary)
+                        Spacer()
+                        Text(verbatim: "\(item.value)×")
+                            .font(.subheadline.weight(.semibold))
+                            .foregroundStyle(.secondary)
+                    }
+                }
+            }
+        }
+    }
+
+    private func tripBookScopeCard(_ s: TripBookStats) -> some View {
+        let total = max(1, s.domesticCount + s.internationalCount)
+        let intlFrac = CGFloat(s.internationalCount) / CGFloat(total)
+        return tripBookCard("tripbook.scope.title", systemImage: "airplane.departure") {
+            GeometryReader { geo in
+                HStack(spacing: 0) {
+                    Rectangle().fill(CarryAccent.color)
+                        .frame(width: geo.size.width * intlFrac)
+                    Rectangle().fill(Color(.quaternaryLabel))
+                }
+            }
+            .frame(height: 12)
+            .clipShape(Capsule())
+
+            HStack(spacing: 16) {
+                tripBookLegend(color: CarryAccent.color, label: "tripbook.scope.international", count: s.internationalCount)
+                tripBookLegend(color: Color(.quaternaryLabel), label: "tripbook.scope.domestic", count: s.domesticCount)
+                Spacer()
+            }
+        }
+    }
+
+    private func tripBookLegend(color: Color, label: LocalizedStringKey, count: Int) -> some View {
+        HStack(spacing: 6) {
+            Circle().fill(color).frame(width: 8, height: 8)
+            Text(label).font(.footnote).foregroundStyle(.secondary)
+            Text(verbatim: "\(count)").font(.footnote.weight(.semibold)).foregroundStyle(.primary)
+        }
+    }
+
+    private func tripBookSeasonsCard(_ s: TripBookStats) -> some View {
+        tripBookCard("tripbook.seasons.title", systemImage: "calendar") {
+            HStack(spacing: 0) {
+                ForEach(Season.allCases, id: \.self) { season in
+                    VStack(spacing: 6) {
+                        Image(systemName: seasonIcon(season))
+                            .font(.system(size: 18, weight: .regular))
+                            .foregroundStyle(.secondary)
+                        Text("\(s.seasonCounts[season] ?? 0)")
+                            .font(.system(size: 20, weight: .bold, design: .rounded))
+                            .foregroundStyle(.primary)
+                        Text(seasonNameKey(season))
+                            .font(.caption2)
+                            .foregroundStyle(.secondary)
+                    }
+                    .frame(maxWidth: .infinity)
+                }
+            }
+        }
+    }
+
+    // MARK: Trip Book helpers
+
+    /// 系统本地化国家/地区名（归并码亦适用，如 CN → 中国 / China）。
+    private func countryDisplayName(_ code: String) -> String {
+        Locale.current.localizedString(forRegionCode: code) ?? code
+    }
+
+    private func continentNameKey(_ c: Continent) -> LocalizedStringKey {
+        switch c {
+        case .asia:          return "tripbook.continent.asia"
+        case .europe:        return "tripbook.continent.europe"
+        case .africa:        return "tripbook.continent.africa"
+        case .northAmerica:  return "tripbook.continent.northAmerica"
+        case .southAmerica:  return "tripbook.continent.southAmerica"
+        case .oceania:       return "tripbook.continent.oceania"
+        case .antarctica:    return "tripbook.continent.antarctica"
+        }
+    }
+
+    private func seasonNameKey(_ s: Season) -> LocalizedStringKey {
+        switch s {
+        case .spring: return "tripbook.season.spring"
+        case .summer: return "tripbook.season.summer"
+        case .autumn: return "tripbook.season.autumn"
+        case .winter: return "tripbook.season.winter"
+        }
+    }
+
+    private func seasonIcon(_ s: Season) -> String {
+        switch s {
+        case .spring: return "leaf"
+        case .summer: return "sun.max"
+        case .autumn: return "wind"
+        case .winter: return "snowflake"
+        }
+    }
+
+    /// 打开行程册时从 0 数到目标值，给「翻开回忆」的仪式感；尊重「减弱动态效果」。
+    private struct CountUpText: View {
+        let value: Int
+        let font: Font
+        @Environment(\.accessibilityReduceMotion) private var reduceMotion
+        @State private var shown: Double = 0
+
+        var body: some View {
+            Text("\(Int(shown.rounded()))")
+                .font(font)
+                .monospacedDigit()
+                .onAppear {
+                    guard !reduceMotion else { shown = Double(value); return }
+                    shown = 0
+                    withAnimation(.easeOut(duration: 0.7)) { shown = Double(value) }
+                }
         }
     }
 
@@ -999,20 +1270,6 @@ struct HomeView: View {
                 .padding(.horizontal, 40)
         }
         .padding(.bottom, 48)
-    }
-
-    private func statRow(value: String, label: LocalizedStringKey) -> some View {
-        HStack {
-            VStack(alignment: .leading, spacing: 2) {
-                Text(value)
-                    .font(.headline.weight(.bold))
-                Text(label)
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-            }
-            Spacer()
-        }
-        .padding(.vertical, 6)
     }
 
     private func sectionLabel(_ key: LocalizedStringKey, uppercase: Bool = false) -> some View {

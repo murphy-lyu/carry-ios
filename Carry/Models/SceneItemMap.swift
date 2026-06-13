@@ -14,6 +14,41 @@ var isChinaStorefront: Bool {
     return SKPaymentQueue.default().storefront?.countryCode == "CHN"
 }
 
+/// 用户「本国」单一来源（跟随 storefront，非硬编码 CN）。storefront 返回 ISO alpha-3
+/// （如 `CHN`/`USA`），转 alpha-2（`CN`/`US`）；取不到或大陆 storefront 默认 `CN`。
+/// 国内/国际判定（`isInternational` / `inferIsInternational`）与行程册统计共用此基准，
+/// 避免两处口径漂移。大陆 storefront → `CN`，与历史行为逐字节一致（launch 市场零回归）。
+var homeCountryCode: String {
+    #if DEBUG
+    if UserDefaults.standard.bool(forKey: "debugChinaStorefront") { return "CN" }
+    #endif
+    guard let sf = SKPaymentQueue.default().storefront?.countryCode,
+          let alpha2 = CountryData.alpha3ToAlpha2[sf.uppercased()] else { return "CN" }
+    return alpha2
+}
+
+/// HK/MO/TW 归并：大陆 storefront 下将港澳台归并为 CN（用于地图点亮 / 到访国家计数 /
+/// 大洲统计的**展示层**）。**全 App 唯一实现**——HomeView 与行程册统计都调用此处，
+/// 禁止在别处重复做此归并（见 CLAUDE.md 政策合规约定）。存储层 `countryCode` 永远保持
+/// ISO 原始值（HK/MO/TW），归并只发生在展示层。
+func normalizedCountryCode(_ code: String) -> String {
+    guard isChinaStorefront else { return code.uppercased() }
+    switch code.uppercased() {
+    case "HK", "MO", "TW": return "CN"
+    default: return code.uppercased()
+    }
+}
+
+/// alpha-2 国家码 → 国旗 emoji（区域指示符拼接）。非两位码返回 📍。
+/// 全 App 唯一实现——GlobeView 地球、行程册 Top 国家都用此处。
+func flagEmoji(for code: String) -> String {
+    guard code.count == 2 else { return "📍" }
+    let base: UInt32 = 0x1F1E6 - 65
+    return code.uppercased().unicodeScalars.compactMap {
+        UnicodeScalar(base + $0.value)
+    }.map(String.init).joined()
+}
+
 struct SceneItem {
     let name: String
     let category: ItemCategory
