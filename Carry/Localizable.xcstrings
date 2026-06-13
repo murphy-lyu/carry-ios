@@ -8196,120 +8196,61 @@
         }
       }
     },
-    "date.night" : {
+    "date.days_nights" : {
       "extractionState" : "manual",
       "localizations" : {
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Nacht"
+            "value" : "%1$lld Tage, %2$lld Nächte"
           }
         },
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "night"
+            "value" : "%1$lld days, %2$lld nights"
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "noche"
+            "value" : "%1$lld días, %2$lld noches"
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "nuit"
+            "value" : "%1$lld jours, %2$lld nuits"
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "泊"
+            "value" : "%2$lld泊%1$lld日"
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "박"
+            "value" : "%2$lld박 %1$lld일"
           }
         },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "noite"
+            "value" : "%1$lld dias, %2$lld noites"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "晚"
+            "value" : "%1$lld 天 %2$lld 晚"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "晚"
-          }
-        }
-      }
-    },
-    "date.nights" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Nächte"
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "nights"
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "noches"
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "nuits"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "泊"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "박"
-          }
-        },
-        "pt-BR" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "noites"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "晚"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "晚"
+            "value" : "%1$lld 天 %2$lld 晚"
           }
         }
       }
@@ -19383,31 +19324,31 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Stopp hinzufügen"
+            "value" : "Ort hinzufügen"
           }
         },
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Add stop"
+            "value" : "Add place"
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Añadir parada"
+            "value" : "Añadir lugar"
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Ajouter une étape"
+            "value" : "Ajouter un lieu"
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "立ち寄り先を追加"
+            "value" : "場所を追加"
           }
         },
         "ko" : {
@@ -19419,19 +19360,19 @@
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Adicionar parada"
+            "value" : "Adicionar local"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "添加停靠点"
+            "value" : "添加地点"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "加入停靠點"
+            "value" : "加入地點"
           }
         }
       }
@@ -19501,55 +19442,55 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Einen Stop hinzufügen"
+            "value" : "Einen Ort hinzufügen"
           }
         },
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Add a stop to a day"
+            "value" : "Add a place to a day"
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Añadir una parada a un día"
+            "value" : "Añadir un lugar a un día"
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Ajouter une étape à une journée"
+            "value" : "Ajouter un lieu à une journée"
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "日に停車地点を追加"
+            "value" : "日に場所を追加"
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "날짜에 경유지 추가"
+            "value" : "날짜에 장소 추가"
           }
         },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Adicionar uma parada ao dia"
+            "value" : "Adicionar um local ao dia"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "为某一天添加停靠点"
+            "value" : "为某一天添加地点"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "為某一天新增停靠點"
+            "value" : "為某一天新增地點"
           }
         }
       }
@@ -19737,31 +19678,31 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Stopp hinzufügen"
+            "value" : "Ort hinzufügen"
           }
         },
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Add stop"
+            "value" : "Add place"
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Añadir parada"
+            "value" : "Añadir lugar"
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Ajouter une étape"
+            "value" : "Ajouter un lieu"
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "立ち寄り先を追加"
+            "value" : "場所を追加"
           }
         },
         "ko" : {
@@ -19773,19 +19714,19 @@
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Adicionar parada"
+            "value" : "Adicionar local"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "添加停靠点"
+            "value" : "添加地点"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "加入停靠點"
+            "value" : "加入地點"
           }
         }
       }
@@ -20380,242 +20321,6 @@
         }
       }
     },
-    "itinerary.day.menu.delete" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Tag löschen"
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Delete day"
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Eliminar día"
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Supprimer le jour"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "日を削除"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "날짜 삭제"
-          }
-        },
-        "pt-BR" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Excluir dia"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "删除这天"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "刪除這天"
-          }
-        }
-      }
-    },
-    "itinerary.day.menu.rename" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Umbenennen"
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Rename"
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Cambiar nombre"
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Renommer"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "名前を変更"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "이름 변경"
-          }
-        },
-        "pt-BR" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Renomear"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "重命名"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "重新命名"
-          }
-        }
-      }
-    },
-    "itinerary.day.rename.placeholder" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "z. B. Alte Tempel von Kyoto"
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "e.g. Old temples of Kyoto"
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "p. ej., Templos antiguos de Kioto"
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "ex. : temples anciens de Kyoto"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "例：京都の古寺めぐり"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "예: 교토의 옛 사찰"
-          }
-        },
-        "pt-BR" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "ex.: templos antigos de Quioto"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "例如：京都古寺线"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "例如：京都古寺線"
-          }
-        }
-      }
-    },
-    "itinerary.day.rename.title" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Tag umbenennen"
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Rename day"
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Cambiar nombre del día"
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Renommer le jour"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "日の名前を変更"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "날짜 이름 변경"
-          }
-        },
-        "pt-BR" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Renomear dia"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "重命名这天"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "重新命名這天"
-          }
-        }
-      }
-    },
     "itinerary.day.title" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -20675,78 +20380,61 @@
         }
       }
     },
-    "itinerary.empty.add_first_day" : {
+    "itinerary.empty.map.subtitle" : {
       "extractionState" : "manual",
       "localizations" : {
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Ersten Tag hinzufügen"
+            "value" : "Füge mindestens einen Ort hinzu, um eine Route zu erstellen."
           }
         },
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Add first day"
+            "value" : "Add at least one place to start building a route."
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Añadir primer día"
+            "value" : "Añade al menos un lugar para empezar a crear una ruta."
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Ajouter le premier jour"
+            "value" : "Ajoute au moins un lieu pour commencer à tracer un itinéraire."
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "1日目を追加"
+            "value" : "場所を 1 つ以上追加すると、ルートを作成できます。"
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "첫째 날 추가"
+            "value" : "장소를 하나 이상 추가하면 경로를 만들 수 있어요."
           }
         },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Adicionar primeiro dia"
+            "value" : "Adicione pelo menos um local para começar a criar uma rota."
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "添加第一天"
+            "value" : "添加至少一个地点，就能开始生成路线。"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "加入第一天"
-          }
-        }
-      }
-    },
-    "itinerary.empty.map.subtitle" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Add at least one stop to start building a route."
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "添加至少一个停靠点，就能开始生成路线。"
+            "value" : "加入至少一個地點，就能開始生成路線。"
           }
         }
       }
@@ -20754,134 +20442,58 @@
     "itinerary.empty.map.title" : {
       "extractionState" : "manual",
       "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "No stops yet"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "还没有停靠点"
-          }
-        }
-      }
-    },
-    "itinerary.empty.subtitle" : {
-      "extractionState" : "manual",
-      "localizations" : {
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Füge Tag für Tag deine Orte hinzu und sieh deine Route auf der Karte."
+            "value" : "Noch keine Orte"
           }
         },
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Add the places you’ll visit, day by day, and see your route on the map."
+            "value" : "No places yet"
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Añade los lugares que visitarás, día a día, y ve tu ruta en el mapa."
+            "value" : "Aún no hay lugares"
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Ajoute les lieux à visiter, jour après jour, et visualise ton itinéraire sur la carte."
+            "value" : "Aucun lieu pour l’instant"
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "訪れる場所を日ごとに追加して、地図でルートを確認しましょう。"
+            "value" : "場所がまだありません"
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "날짜별로 방문할 장소를 추가하고 지도에서 경로를 확인하세요."
+            "value" : "아직 장소가 없어요"
           }
         },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Adicione os lugares que vai visitar, dia a dia, e veja seu roteiro no mapa."
+            "value" : "Nenhum local ainda"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "按天添加想去的地方，在地图上看清整条路线。"
+            "value" : "还没有地点"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "按天加入想去的地方，在地圖上看清整條路線。"
-          }
-        }
-      }
-    },
-    "itinerary.empty.title" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Noch keine Pläne"
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "No plans yet"
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Aún no hay planes"
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Aucun plan pour l’instant"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "まだ予定がありません"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "아직 일정이 없어요"
-          }
-        },
-        "pt-BR" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Ainda sem planos"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "还没有行程安排"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "還沒有行程安排"
+            "value" : "還沒有地點"
           }
         }
       }
@@ -21364,31 +20976,31 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Start und Ziel bleiben fest; nur die Stopps dazwischen werden neu sortiert."
+            "value" : "Start und Ziel bleiben fest; nur die Orte dazwischen werden neu sortiert."
           }
         },
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Start and end stay fixed; only the stops in between are reordered."
+            "value" : "Start and end stay fixed; only the places in between are reordered."
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "El inicio y el final no cambian; solo se reordenan las paradas intermedias."
+            "value" : "El inicio y el final no cambian; solo se reordenan los lugares intermedios."
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Le départ et l’arrivée restent fixes ; seules les étapes intermédiaires sont réordonnées."
+            "value" : "Le départ et l’arrivée restent fixes ; seuls les lieux intermédiaires sont réordonnés."
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "出発地と到着地は固定され、間の立ち寄り先だけが並べ替えられます。"
+            "value" : "出発地と到着地は固定され、間の場所だけが並べ替えられます。"
           }
         },
         "ko" : {
@@ -21400,19 +21012,19 @@
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "O início e o fim permanecem fixos; apenas as paradas intermediárias são reordenadas."
+            "value" : "O início e o fim permanecem fixos; apenas os locais intermediários são reordenados."
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "起点与终点保持不变，只重排中间的停靠点。"
+            "value" : "起点与终点保持不变，只重排中间的地点。"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "起點與終點保持不變，只重排中間的停靠點。"
+            "value" : "起點與終點保持不變，只重排中間的地點。"
           }
         }
       }
@@ -21482,55 +21094,55 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Die heutigen Stopps sind bereits nahezu optimal angeordnet."
+            "value" : "Die heutigen Orte sind bereits nahezu optimal angeordnet."
           }
         },
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Today’s stops are already in a near-shortest order."
+            "value" : "Today’s places are already in a near-shortest order."
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Las paradas de hoy ya están en un orden casi óptimo."
+            "value" : "Los lugares de hoy ya están en un orden casi óptimo."
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Les étapes du jour sont déjà presque dans l’ordre le plus court."
+            "value" : "Les lieux du jour sont déjà presque dans l’ordre le plus court."
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "今日の立ち寄り先はすでにほぼ最短の順序です。"
+            "value" : "今日の場所はすでにほぼ最短の順序です。"
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "오늘 방문지는 이미 거의 최단 순서예요."
+            "value" : "오늘 장소는 이미 거의 최단 순서예요."
           }
         },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "As paradas de hoje já estão em uma ordem quase ideal."
+            "value" : "Os locais de hoje já estão em uma ordem quase ideal."
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "今天的停靠点顺序已经接近最短了。"
+            "value" : "今天的地点顺序已经接近最短了。"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "今天的停靠點順序已經接近最短了。"
+            "value" : "今天的地點順序已經接近最短了。"
           }
         }
       }
@@ -22013,25 +21625,25 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Stopps"
+            "value" : "Orte"
           }
         },
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "stops"
+            "value" : "places"
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "paradas"
+            "value" : "lugares"
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "étapes"
+            "value" : "lieux"
           }
         },
         "ja" : {
@@ -22043,25 +21655,25 @@
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "개 정차지"
+            "value" : "개 장소"
           }
         },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "paradas"
+            "value" : "lugares"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "个停靠点"
+            "value" : "个地点"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "個停靠點"
+            "value" : "個地點"
           }
         }
       }
@@ -22308,55 +21920,55 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "%d fokussierte Stopps, %d mit Koordinaten"
+            "value" : "%d fokussierte Orte, %d mit Koordinaten"
           }
         },
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "%d stops in focus, %d with coordinates"
+            "value" : "%d places in focus, %d with coordinates"
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "%d paradas en foco, %d con coordenadas"
+            "value" : "%d lugares en foco, %d con coordenadas"
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "%d étapes en vue, %d avec coordonnées"
+            "value" : "%d lieux en vue, %d avec coordonnées"
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "注目中の立ち寄り先 %d 件、座標あり %d 件"
+            "value" : "注目中の場所 %d 件、座標あり %d 件"
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "집중 보기 정차지 %d개, 좌표 있음 %d개"
+            "value" : "집중 보기 장소 %d개, 좌표 있음 %d개"
           }
         },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "%d paradas em foco, %d com coordenadas"
+            "value" : "%d lugares em foco, %d com coordenadas"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "当前聚焦 %d 个停靠点，%d 个有坐标"
+            "value" : "当前聚焦 %d 个地点，%d 个有坐标"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "目前聚焦 %d 個停靠點，%d 個有座標"
+            "value" : "目前聚焦 %d 個地點，%d 個有座標"
           }
         }
       }
@@ -22367,55 +21979,55 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "%d Stopps, %d mit Koordinaten"
+            "value" : "%d Orte, %d mit Koordinaten"
           }
         },
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "%d stops, %d with coordinates"
+            "value" : "%d places, %d with coordinates"
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "%d paradas, %d con coordenadas"
+            "value" : "%d lugares, %d con coordenadas"
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "%d étapes, %d avec coordonnées"
+            "value" : "%d lieux, %d avec coordonnées"
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "立ち寄り先 %d 件、座標あり %d 件"
+            "value" : "場所 %d 件、座標あり %d 件"
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "정차지 %d개, 좌표 있음 %d개"
+            "value" : "장소 %d개, 좌표 있음 %d개"
           }
         },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "%d paradas, %d com coordenadas"
+            "value" : "%d locais, %d com coordenadas"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "%d 个停靠点，%d 个有坐标"
+            "value" : "%d 个地点，%d 个有坐标"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "%d 個停靠點，%d 個有座標"
+            "value" : "%d 個地點，%d 個有座標"
           }
         }
       }
@@ -22423,16 +22035,58 @@
     "itinerary.single.map.hint" : {
       "extractionState" : "manual",
       "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Füge einen weiteren Ort hinzu, um die Route zu zeichnen."
+          }
+        },
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Add one more stop to draw the route."
+            "value" : "Add one more place to draw the route."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Añade un lugar más para trazar la ruta."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ajoute un lieu de plus pour tracer l’itinéraire."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "場所をもう 1 つ追加すると、ルートが描けます。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "장소를 하나 더 추가하면 경로가 그려져요."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Adicione mais um local para traçar a rota."
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "再加一个停靠点，就能连成路线。"
+            "value" : "再加一个地点，就能连成路线。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "再加一個地點，就能連成路線。"
           }
         }
       }
@@ -22443,31 +22097,31 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Stopp löschen"
+            "value" : "Ort löschen"
           }
         },
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Delete stop"
+            "value" : "Delete place"
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Eliminar parada"
+            "value" : "Eliminar lugar"
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Supprimer l’étape"
+            "value" : "Supprimer le lieu"
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "立ち寄り先を削除"
+            "value" : "場所を削除"
           }
         },
         "ko" : {
@@ -22479,19 +22133,19 @@
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Excluir parada"
+            "value" : "Excluir local"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "删除停靠点"
+            "value" : "删除地点"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "刪除停靠點"
+            "value" : "刪除地點"
           }
         }
       }
@@ -22738,31 +22392,31 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Stopps mit Uhrzeit bleiben beim Optimieren an ihrem Platz."
+            "value" : "Orte mit Uhrzeit bleiben beim Optimieren an ihrem Platz."
           }
         },
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Stops with a time stay put when you optimize the order."
+            "value" : "Places with a time stay put when you optimize the order."
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Las paradas con hora no se mueven al optimizar el orden."
+            "value" : "Los lugares con hora no se mueven al optimizar el orden."
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Les étapes avec une heure ne bougent pas lors de l’optimisation."
+            "value" : "Les lieux avec une heure ne bougent pas lors de l’optimisation."
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "時刻を設定した立ち寄り先は、順序の最適化でも動きません。"
+            "value" : "時刻を設定した場所は、順序の最適化でも動きません。"
           }
         },
         "ko" : {
@@ -22774,19 +22428,19 @@
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Paradas com horário não se movem ao otimizar a ordem."
+            "value" : "Locais com horário não se movem ao otimizar a ordem."
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "设了时间的停靠点在优化顺序时会保持不动。"
+            "value" : "设了时间的地点在优化顺序时会保持不动。"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "設了時間的停靠點在最佳化順序時會保持不動。"
+            "value" : "設了時間的地點在最佳化順序時會保持不動。"
           }
         }
       }
@@ -22797,31 +22451,31 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Stopp bearbeiten"
+            "value" : "Ort bearbeiten"
           }
         },
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Edit stop"
+            "value" : "Edit place"
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Editar parada"
+            "value" : "Editar lugar"
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Modifier l’étape"
+            "value" : "Modifier le lieu"
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "立ち寄り先を編集"
+            "value" : "場所を編集"
           }
         },
         "ko" : {
@@ -22833,19 +22487,19 @@
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Editar parada"
+            "value" : "Editar lugar"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "编辑停靠点"
+            "value" : "编辑地点"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "編輯停靠點"
+            "value" : "編輯地點"
           }
         }
       }
