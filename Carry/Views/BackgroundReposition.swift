@@ -233,25 +233,26 @@ private struct ZoomableImageView: UIViewRepresentable {
         weak var imageView: UIImageView?
         var currentImage: UIImage?
         private let onCropChange: (BackgroundCrop) -> Void
-        /// Bounds the zoom was last configured for. Reconfiguring only when bounds actually change
-        /// fixes the "stuck zoomed-in, can't pinch out" bug: an early config during the sheet's
-        /// present transition (non-final bounds) locked too-large a minimumZoomScale; once bounds
-        /// settle we recompute fill/min/max for the real size. After settle, bounds stay constant
-        /// so the user's framing is preserved (no reset on normal interaction).
-        private var lastConfiguredBounds: CGRect = .zero
+        /// The window SIZE the zoom was last configured for. We key off `bounds.size`, NOT the full
+        /// `bounds`: a UIScrollView's `bounds.origin` IS its `contentOffset`, so it changes on every
+        /// pan/zoom. Comparing the whole rect made `configureIfNeeded` re-fire on every gesture and
+        /// snap `zoomScale`/offset back to fill — i.e. the image couldn't be zoomed or moved at all.
+        /// Size-only means we recompute when the window is genuinely resized (present-transition
+        /// settle, rotation) but leave the user's framing untouched while they interact.
+        private var lastConfiguredSize: CGSize = .zero
 
         init(onCropChange: @escaping (BackgroundCrop) -> Void) {
             self.onCropChange = onCropChange
         }
 
-        func resetConfiguration() { lastConfiguredBounds = .zero }
+        func resetConfiguration() { lastConfiguredSize = .zero }
 
         func configureIfNeeded() {
             guard let scrollView, let imageView,
                   let img = imageView.image,
                   scrollView.bounds.width > 0, scrollView.bounds.height > 0,
-                  scrollView.bounds != lastConfiguredBounds else { return }
-            lastConfiguredBounds = scrollView.bounds
+                  scrollView.bounds.size != lastConfiguredSize else { return }
+            lastConfiguredSize = scrollView.bounds.size
 
             let imgSize = img.size
             imageView.frame = CGRect(origin: .zero, size: imgSize)
@@ -276,7 +277,7 @@ private struct ZoomableImageView: UIViewRepresentable {
         func scrollViewDidZoom(_ scrollView: UIScrollView) { emitCrop() }
 
         private func emitCrop() {
-            guard lastConfiguredBounds != .zero, let scrollView, let imageView,
+            guard lastConfiguredSize != .zero, let scrollView, let imageView,
                   imageView.bounds.width > 0, imageView.bounds.height > 0 else { return }
             // The window mapped into the imageView's own (unzoomed, image-point) coordinate space.
             let visible = scrollView.convert(scrollView.bounds, to: imageView)
