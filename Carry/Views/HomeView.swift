@@ -17,6 +17,25 @@ fileprivate let homeDarkCardBottom = Color(red: 0.14, green: 0.14, blue: 0.15)
 fileprivate let homeDarkCardTopRefined = Color(red: 0.09, green: 0.09, blue: 0.10)
 fileprivate let homeDarkCardBottomRefined = Color(red: 0.12, green: 0.12, blue: 0.13)
 
+// MARK: - DEBUG-only：模拟空态开关变化时重建行程列表
+//
+// 「模拟首页数据为空」只能由 DEBUG-only 的开发者选项拨动；该 flag 是 rebuildTripLists
+// 的输入（开启时清空缓存列表），故它变化时必须重建（尤其关闭时要把列表填回来）。
+// 用 ViewModifier 而非内联 `#if`：#if 落在函数体内、两个分支各返回一个完整视图，
+// DEBUG / Release 两种构建配置都能确定性编译；release 下为 no-op，不携带该逻辑。
+private struct DebugMockEmptyStateRefresh: ViewModifier {
+    let mockEnabled: Bool
+    let rebuild: () -> Void
+
+    func body(content: Content) -> some View {
+        #if DEBUG
+        content.onChange(of: mockEnabled) { _, _ in rebuild() }
+        #else
+        content
+        #endif
+    }
+}
+
 // MARK: - Empty-state card height measurement
 
 private struct EmptyCardHeightKey: PreferenceKey {
@@ -558,6 +577,15 @@ struct HomeView: View {
                     firstTripCreatedAtInterval = Date().timeIntervalSince1970
                 }
             }
+            // 模拟空态 flag 也是 rebuildTripLists 的输入（开启时把缓存列表置空），
+            // 故它变化时必须重建——否则关闭开关后缓存仍为空，列表空白直到重启。
+            // 该 flag 只能由 DEBUG-only 的开发者选项拨动，故响应逻辑同样 DEBUG-only：
+            // 用 ViewModifier 封装（#if 在函数体内返回两种完整视图，两种构建配置都成立），
+            // release 包里这层是 no-op，不带该逻辑。
+            .modifier(DebugMockEmptyStateRefresh(
+                mockEnabled: store.isHomeEmptyStateMockEnabled,
+                rebuild: rebuildTripLists
+            ))
             .onChange(of: router.showMapFullscreen) { _, show in
                 guard show else { return }
                 router.showMapFullscreen = false
