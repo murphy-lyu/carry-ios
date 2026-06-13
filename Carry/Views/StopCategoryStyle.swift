@@ -15,6 +15,7 @@ extension StopCategory {
         case .food:        return "fork.knife"
         case .lodging:     return "bed.double"
         case .transport:   return "tram.fill"
+        case .flight:      return "airplane"
         case .activity:    return "figure.walk"
         case .other:       return "mappin"
         }

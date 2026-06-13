@@ -146,6 +146,7 @@ struct ItineraryView: View {
                 optimizeContent: { AnyView(optimizeRow($0)) },
                 headerContent: { AnyView(dayHeaderRow($0)) },
                 onDelete: { deleteStop($0) },
+                onEdit: { editStop($0) },
                 onArrange: { store.applyItineraryArrangement(tripId: tripId, dayOrders: $0) },
                 onReorderBegan: { }
             )
@@ -181,8 +182,7 @@ struct ItineraryView: View {
                 dayColor: ItineraryDayPalette.color(forDayIndex: day.sortOrder)
             )
             .padding(.horizontal, 16)
-            .contentShape(Rectangle())
-            .onTapGesture { activeSheet = .editStop(stop) }
+            // 不再「点击整行=编辑」；编辑改由向左滑动出现的「编辑」按钮触发（见 onEdit）。
         }
     }
 
@@ -300,6 +300,12 @@ struct ItineraryView: View {
     private func deleteStop(_ stopID: UUID) {
         guard let day = days.first(where: { ($0.stops ?? []).contains { $0.id == stopID } }) else { return }
         store.removeItineraryStop(tripId: tripId, dayId: day.id, stopId: stopID)
+    }
+
+    /// 滑动编辑（collection 的 swipe action）：找到停靠点并唤起编辑 sheet。
+    private func editStop(_ stopID: UUID) {
+        guard let stop = days.flatMap({ $0.stops ?? [] }).first(where: { $0.id == stopID }) else { return }
+        activeSheet = .editStop(stop)
     }
 }
 

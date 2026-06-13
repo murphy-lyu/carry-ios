@@ -131,7 +131,8 @@ Apple 原生风格，极简、克制、优雅。
 
 - **时间轴行（TimelineStopRow）**：leading 24pt 序号圆点（`dayColor.opacity(0.15)` 底 + `dayColor` 数字）+ 上下 1.5pt 连线（`dayColor.opacity(0.25)`，首/末点对应半段隐藏）。**序号圆点垂直居中于整条内容**（上下两段对称连线撑出）——使相邻两圆点间连线对称，连接段（固定 `legGap`）里的**直线距离**标签（9pt secondary，systemBackground 垫底）落在两点正中。内容=类别 SF Symbol（`dayColor`）+ 名称 + 地址（caption secondary）；设了时间显示 `pin.fill`+时间，无坐标显示 `mappin.slash`（tertiary）。rail 以 `.overlay` 贴合内容高度（不反向撑高内容，避免自适应 cell 的幽灵高度）。水平内边距 16，行内分隔线隐藏（连线即分隔）。
 - **Day 头部**：leading 8pt 当天色点（图例）+ 主行「Day N」或自定义标题；有日期行程次行「周几 月/日」（`Date.formatted` 本地化）；右侧 `ellipsis.circle`（secondary）菜单重命名/删除。吸顶（`systemBackground` 垫底，与 cv 背景一致）。
-- **停靠点类别图标（StopCategory）**：sightseeing=camera · food=fork.knife · lodging=bed.double · transport=tram.fill · activity=figure.walk · other=mappin。
+- **停靠点类别图标（StopCategory）**：sightseeing=camera · food=fork.knife · lodging=bed.double · transport=tram.fill · flight=airplane · activity=figure.walk · other=mappin。
+- **停靠点行交互**：**点击整行不触发编辑**（避免误触）；编辑改由**向左滑动**出现的「✏️ 编辑」按钮触发（与「🗑 删除」并列，删除在最外侧）。长按仍为拖拽重排。
 - **地图按天编号 + 按天分色**：地图针 label = **当天**序号（每天从 1 重置，与列表一致，非全程连号）+ 类别图标；针 tint 与路线 `MapPolyline` 按天取 `ItineraryDayPalette` 色。
 
 ### 创建流程视觉统一规范（2026-05）

@@ -19,7 +19,8 @@ enum StopCategory: String, Codable, CaseIterable {
     case sightseeing   // 景点
     case food          // 餐饮
     case lodging       // 住宿
-    case transport     // 交通节点
+    case transport     // 交通节点（高铁/地铁/公交）
+    case flight        // 航班（机场/飞机）
     case activity      // 活动
     case other         // 其他
 
