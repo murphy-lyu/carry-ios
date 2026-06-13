@@ -391,16 +391,40 @@ struct PackingListView: View {
 
     /// 拇指可达的底部切换。居中悬浮，区别于通用 Tab 栏的「程序化」。
     private var bottomFaceSwitch: some View {
-        HStack(spacing: 0) {
-            faceSegment(.itinerary, title: "detail.tab.itinerary", icon: "map")
-            faceSegment(.packing, title: "detail.tab.packing", icon: "checklist")
+        VStack(spacing: 0) {
+            HStack(spacing: 0) {
+                faceSegment(.itinerary, title: "detail.tab.itinerary", icon: "map")
+                faceSegment(.packing, title: "detail.tab.packing", icon: "checklist")
+            }
+            .padding(6)
+            .background(
+                RoundedRectangle(cornerRadius: 18, style: .continuous)
+                    .fill(
+                        colorScheme == .dark
+                            ? Color.white.opacity(0.04)
+                            : Color.black.opacity(0.03)
+                    )
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 18, style: .continuous)
+                    .strokeBorder(Color.primary.opacity(colorScheme == .dark ? 0.08 : 0.06), lineWidth: 1)
+            )
+            .shadow(color: .black.opacity(colorScheme == .dark ? 0.18 : 0.08), radius: 14, x: 0, y: 5)
+            .padding(.horizontal, 16)
         }
-        .padding(4)
-        .background(.regularMaterial, in: Capsule())
-        .overlay(Capsule().strokeBorder(Color.primary.opacity(0.06)))
-        .shadow(color: .black.opacity(0.14), radius: 10, x: 0, y: 3)
-        .frame(maxWidth: .infinity, alignment: .center)
-        .padding(.bottom, 4)
+        .frame(maxWidth: .infinity)
+        .padding(.bottom, 10)
+        .background(
+            LinearGradient(
+                colors: [
+                    Color(UIColor.systemBackground).opacity(0.0),
+                    Color(UIColor.systemBackground).opacity(colorScheme == .dark ? 0.92 : 0.96),
+                    Color(UIColor.systemBackground)
+                ],
+                startPoint: .top,
+                endPoint: .bottom
+            )
+        )
     }
 
     private func faceSegment(_ face: DetailTab, title: LocalizedStringKey, icon: String) -> some View {
@@ -419,9 +443,12 @@ struct PackingListView: View {
             .padding(.vertical, 9)
             .foregroundStyle(selected ? Color.white : Color.secondary)
             .background {
-                if selected { Capsule().fill(CarryAccent.color) }
+                if selected {
+                    RoundedRectangle(cornerRadius: 14, style: .continuous)
+                        .fill(CarryAccent.color)
+                }
             }
-            .contentShape(Capsule())
+            .contentShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
         }
         .buttonStyle(.plain)
     }
