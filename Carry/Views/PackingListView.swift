@@ -66,7 +66,7 @@ struct PackingListView: View {
     @State private var showDeleteConfirmation = false
     @State private var showAddSectionAlert = false
     @State private var newSectionName = ""
-    @State private var showAddItemsRoute = false
+    @State private var showAddItemsSheet = false
     @State private var isSaved = false
     @State private var showConfetti = false
     @State private var showCompletionBanner = false
@@ -164,7 +164,7 @@ struct PackingListView: View {
                     Menu {
                         if detailTab == .packing {
                             Button {
-                                router.path.append(CreationRoute.addItems(tripId))
+                                showAddItemsSheet = true
                             } label: {
                                 Label("packing.menu.add_from_library", systemImage: "shippingbox")
                             }
@@ -336,10 +336,13 @@ struct PackingListView: View {
                 newSectionName = ""
             }
         }
-        .onChange(of: showAddItemsRoute) { _, newValue in
-            guard newValue else { return }
-            router.path.append(CreationRoute.addItems(tripId))
-            showAddItemsRoute = false
+        // 快速添加物品：自包含子任务（挑完回到清单），用 sheet 而非 push——与编辑场景/分类/
+        // 提醒等行程内子任务一致（spec: app-navigation-framework.md「Carry Modal Convention」）。
+        .sheet(isPresented: $showAddItemsSheet) {
+            NavigationStack {
+                ItemPickerView(tripId: tripId)
+            }
+            .tint(CarryAccent.color)
         }
         .sheet(isPresented: $showBackgroundPicker, onDismiss: {
             // Present the reposition sheet only after the picker fully dismisses (avoids the
@@ -1119,11 +1122,7 @@ struct PackingListView: View {
 
             // CTA：全 App 空态统一胶囊（与首页/行程空态共用 CarryEmptyStatePrimaryButtonStyle）。
             Button {
-                if sections.isEmpty {
-                    showAddItemsRoute = true
-                } else {
-                    router.path.append(CreationRoute.addItems(tripId))
-                }
+                showAddItemsSheet = true
             } label: {
                 HStack(spacing: 8) {
                     Image(systemName: "plus")

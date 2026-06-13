@@ -115,6 +115,8 @@ struct ItemPickerView: View {
     @EnvironmentObject var store: TripStore
     @EnvironmentObject var router: NavigationRouter
     @Environment(\.colorScheme) private var colorScheme
+    // merge 模式（快速添加物品）以 sheet 呈现，用 dismiss 收起；create/autoPack 仍走导航栈。
+    @Environment(\.dismiss) private var dismiss
 
     @State private var searchText = ""
     @FocusState private var isSearchFocused: Bool
@@ -603,6 +605,13 @@ struct ItemPickerView: View {
         .navigationTitle("")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
+            // merge（快速添加物品）以 sheet 呈现、无返回 chevron，给「取消」收起。
+            // create/autoPack 走导航栈，自带返回，不需要。
+            if case .merge = mode {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button(LocalizedStringKey("common.cancel")) { dismiss() }
+                }
+            }
             ToolbarItem(placement: .topBarTrailing) {
                 Button {
                     confirmSelection()
@@ -1748,7 +1757,7 @@ struct ItemPickerView: View {
             }
             Task { @MainActor in
                 try? await Task.sleep(for: .milliseconds(600))
-                router.path.removeLast()
+                dismiss()   // merge 模式现以 sheet 呈现，收起即返回打包清单
                 isConfirmingSelection = false
             }
         }
