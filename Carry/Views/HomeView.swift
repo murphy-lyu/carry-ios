@@ -206,8 +206,8 @@ struct HomeView: View {
         let handle: CGFloat = 21          // capsule: padding(top10) + h5 + padding(bottom6)
         let topBar: CGFloat = 6 + 40 + 8  // homeTopBar padding(top6,bottom8) + 40pt avatar row
         let cardTopInset: CGFloat = 6     // emptyState .padding(.top, 6)
-        let bottomBreathing: CGFloat = 28 // gap between card bottom and the safe-area inset
-        let card = emptyCardHeight > 0 ? emptyCardHeight : 271  // 271 ≈ natural height (fallback)
+        let bottomBreathing: CGFloat = 28 // gap between content bottom and the safe-area inset
+        let card = emptyCardHeight > 0 ? emptyCardHeight : 244  // 244 ≈ natural content height (fallback)
         return handle + topBar + cardTopInset + card + bottomBreathing + Self.bottomSafeAreaInset
     }
 
@@ -1074,56 +1074,56 @@ struct HomeView: View {
 
     private var emptyState: some View {
         VStack(spacing: 0) {
-            VStack(spacing: 12) {
-                VStack(spacing: 10) {
-                    ZStack {
-                        Image("HomeEmptyTrip1")
-                            .resizable()
-                            .scaledToFill()
-                            .frame(width: 114, height: 78)
-                            .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
-                            .rotationEffect(.degrees(-14))
-                            .offset(x: -52, y: 2)
-                            .shadow(color: Color.black.opacity(colorScheme == .dark ? 0.10 : 0.08), radius: 10, x: 0, y: 5)
+            // Single clean surface: photos / title / CTA breathe directly on the sheet —
+            // no nested card panel (panel-on-panel reads heavier than Apple's empty states).
+            VStack(spacing: 0) {
+                ZStack {
+                    Image("HomeEmptyTrip1")
+                        .resizable()
+                        .scaledToFill()
+                        .frame(width: 114, height: 78)
+                        .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+                        .rotationEffect(.degrees(-14))
+                        .offset(x: -52, y: 2)
+                        .shadow(color: Color.black.opacity(colorScheme == .dark ? 0.10 : 0.08), radius: 10, x: 0, y: 5)
 
-                        Image("HomeEmptyTrip2")
-                            .resizable()
-                            .scaledToFill()
-                            .frame(width: 118, height: 80)
-                            .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
-                            .shadow(color: Color.black.opacity(colorScheme == .dark ? 0.10 : 0.08), radius: 10, x: 0, y: 5)
+                    Image("HomeEmptyTrip2")
+                        .resizable()
+                        .scaledToFill()
+                        .frame(width: 118, height: 80)
+                        .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+                        .shadow(color: Color.black.opacity(colorScheme == .dark ? 0.10 : 0.08), radius: 10, x: 0, y: 5)
 
-                        Image("HomeEmptyTrip3")
-                            .resizable()
-                            .scaledToFill()
-                            .frame(width: 114, height: 78)
-                            .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
-                            .rotationEffect(.degrees(14))
-                            .offset(x: 52, y: 2)
-                            .shadow(color: Color.black.opacity(colorScheme == .dark ? 0.10 : 0.08), radius: 10, x: 0, y: 5)
-                    }
-                    .frame(height: 130)
-                    .padding(.top, 6)
-
-                    Text("home.empty.title")
-                        .font(.title2.weight(.semibold))
-                        .foregroundStyle(.primary)
-                        .padding(.top, -1)
-                        .padding(.horizontal, 26)
+                    Image("HomeEmptyTrip3")
+                        .resizable()
+                        .scaledToFill()
+                        .frame(width: 114, height: 78)
+                        .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+                        .rotationEffect(.degrees(14))
+                        .offset(x: 52, y: 2)
+                        .shadow(color: Color.black.opacity(colorScheme == .dark ? 0.10 : 0.08), radius: 10, x: 0, y: 5)
                 }
+                .frame(height: 108)  // hug the photo stack (≈105pt rotated extent) — trims the dead air under the header
 
+                // Title — rounded to match the 30pt "我的行程" header (same typeface family).
+                Text("home.empty.title")
+                    .font(.system(.title2, design: .rounded).weight(.semibold))
+                    .foregroundStyle(.primary)
+                    .padding(.top, 14)
+
+                // CTA gets the most air below the message (clear message → action hierarchy).
                 Button {
                     startNewTrip()
                 } label: {
-                    HStack(spacing: 7) {
+                    HStack(spacing: 8) {
                         Image(systemName: "airplane.departure")
-                            .font(.system(size: 13, weight: .semibold))
+                            .font(.system(size: 14, weight: .semibold))
                         Text("home.empty.cta")
-                            .font(.subheadline.weight(.semibold))
+                            .font(.system(.subheadline, design: .rounded).weight(.semibold))
                     }
                     .foregroundStyle(Color(UIColor.systemBackground))
-                    .frame(maxWidth: .infinity)
-                    .frame(height: 50)
+                    .padding(.horizontal, 28)  // hug the label — a centered invitation pill,
+                    .frame(height: 52)         // not an edge-to-edge form bar (matches the centered column)
                     .background(
                         RoundedRectangle(cornerRadius: 16, style: .continuous)
                             .fill(
@@ -1144,38 +1144,17 @@ struct HomeView: View {
                     .shadow(color: Color.black.opacity(colorScheme == .dark ? 0.14 : 0.08), radius: 10, x: 0, y: 5)
                 }
                 .buttonStyle(PressableScaleButtonStyle(scale: 0.97, pressedBrightness: -0.02, pressedOpacity: 0.95))
-                .padding(.horizontal, 26)
+                .padding(.top, 22)
             }
-            .padding(.vertical, 18)
-            .padding(.horizontal, 22)
+            .padding(.horizontal, 24)
             .frame(maxWidth: .infinity)
             .background(
-                RoundedRectangle(cornerRadius: 30, style: .continuous)
-                    .fill(
-                        LinearGradient(
-                            colors: [
-                                Color(UIColor.systemBackground).opacity(colorScheme == .dark ? 0.60 : 0.86),
-                                Color(UIColor.systemBackground).opacity(colorScheme == .dark ? 0.48 : 0.74)
-                            ],
-                            startPoint: .topLeading,
-                            endPoint: .bottomTrailing
-                        )
-                    )
-            )
-            .overlay(
-                RoundedRectangle(cornerRadius: 30, style: .continuous)
-                    .strokeBorder(Color.primary.opacity(colorScheme == .dark ? 0.08 : 0.035), lineWidth: 1)
-            )
-            .shadow(color: Color.black.opacity(colorScheme == .dark ? 0.10 : 0.08), radius: 14, x: 0, y: 8)
-            .background(
-                // Measure the card's natural height so expandedSheetHeight can size the
-                // sheet to content (device-independent bottom gap). Height-only — the
-                // horizontal padding below doesn't affect it.
+                // Measure the content's natural height so expandedSheetHeight can size the
+                // sheet to content (device-independent bottom gap).
                 GeometryReader { proxy in
                     Color.clear.preference(key: EmptyCardHeightKey.self, value: proxy.size.height)
                 }
             )
-            .padding(.horizontal, 16)  // align card edges with the title + trip rows (16pt)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
         .padding(.top, 6)
