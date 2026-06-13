@@ -22,7 +22,9 @@ private enum DetailTab: Hashable {
     case itinerary
 }
 
-/// 每个行程「上次看的面」记忆（spec: app-navigation-framework.md）。已有行程默认行程规划。
+/// 每个行程「上次看的面」记忆（spec: app-navigation-framework.md）。
+/// 已有行程开在「记住的上次面」，仅在无记录时才默认行程规划——
+/// 不是「已有行程一律行程规划」（旧注释如此，与实际不符，易误导）。
 private enum TripDetailFaceStore {
     private static func key(_ id: UUID) -> String { "trip_detail_face_\(id.uuidString)" }
     static func load(tripId: UUID) -> DetailTab {
@@ -42,9 +44,16 @@ struct PackingListView: View {
     @EnvironmentObject var router: NavigationRouter
     @Environment(\.colorScheme) private var colorScheme
 
-    /// 当前选中的面。新建流程（isNewTrip）始终停在打包；已有行程在 onAppear 按记忆/规则设定。
-    @State private var detailTab: DetailTab = .packing
-    @State private var didInitFace = false
+    /// 当前选中的面。初始面在 `init` 里就解析好，使**首帧即为正确的面**——
+    /// 不再靠 onAppear 把默认 `.packing` 纠正过来（那会在打开「行程规划」行程时，
+    /// 于 push 动画里先闪一下打包）。新建流程始终打包；已有行程开在记住的上次面。
+    @State private var detailTab: DetailTab
+
+    init(tripId: UUID, isNewTrip: Bool = false) {
+        self.tripId = tripId
+        self.isNewTrip = isNewTrip
+        _detailTab = State(initialValue: isNewTrip ? .packing : TripDetailFaceStore.load(tripId: tripId))
+    }
 
     @StateObject private var weatherManager = WeatherManager()
 
@@ -113,12 +122,6 @@ struct PackingListView: View {
             } else {
                 bottomFaceSwitch
             }
-        }
-        .onAppear {
-            guard !didInitFace else { return }
-            didInitFace = true
-            // 默认面规则：新建→打包；已有→记住的上次面（无记录则行程规划）。
-            if !isNewTrip { detailTab = TripDetailFaceStore.load(tripId: tripId) }
         }
         .onChange(of: detailTab) { _, newFace in
             if !isNewTrip { TripDetailFaceStore.save(newFace, tripId: tripId) }
