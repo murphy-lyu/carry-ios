@@ -45,6 +45,20 @@ private struct EmptyCardHeightKey: PreferenceKey {
     }
 }
 
+private extension View {
+    /// 底栏玻璃按钮的按压样式。iOS 26 用 `.plain`——交给 `.glassEffect(.interactive())`
+    /// 处理按压反馈与跟手形变；额外的缩放会把玻璃往里缩、抵消与相邻元素的水滴融合。
+    /// iOS 17–25 无原生 glass，保留 `PressableScaleButtonStyle` 提供按压缩放反馈。
+    @ViewBuilder
+    func bottomGlassPressStyle(fallbackScale: CGFloat) -> some View {
+        if #available(iOS 26.0, *) {
+            buttonStyle(.plain)
+        } else {
+            buttonStyle(PressableScaleButtonStyle(scale: fallbackScale, pressedBrightness: -0.02, pressedOpacity: 0.96))
+        }
+    }
+}
+
 // MARK: - HomeView
 
 struct HomeView: View {
@@ -793,12 +807,26 @@ struct HomeView: View {
     }
 
     private var bottomActionBar: some View {
+        Group {
+            if #available(iOS 26.0, *) {
+                // Liquid Glass：同容器内相邻玻璃元素（搜索圆 ⇄ Trip Book 胶囊）会在边缘
+                // 像液滴一样融合/吸附（spacing 控制融合距离），.interactive() 让玻璃跟手。
+                GlassEffectContainer(spacing: 20) {
+                    bottomBarStack
+                }
+            } else {
+                bottomBarStack
+            }
+        }
+        .padding(.horizontal, 4)
+    }
+
+    private var bottomBarStack: some View {
         HStack(spacing: 14) {
             bottomSearchButton
             bottomTripBookButton
             bottomCreateButton
         }
-        .padding(.horizontal, 4)
     }
 
     @ViewBuilder
@@ -810,10 +838,9 @@ struct HomeView: View {
                 .font(.system(size: 18, weight: .semibold))
                 .foregroundStyle(.primary)
                 .frame(width: 54, height: 54)
-                .background(glassSurfaceBackground(Circle()))
-                .clipShape(Circle())
+                .modifier(BottomBarGlass(shape: Circle()))
         }
-        .buttonStyle(PressableScaleButtonStyle(scale: 0.95, pressedBrightness: -0.02, pressedOpacity: 0.95))
+        .bottomGlassPressStyle(fallbackScale: 0.95)
         .accessibilityLabel(Text("Search"))
     }
 
@@ -842,10 +869,9 @@ struct HomeView: View {
             }
             .padding(.horizontal, 16)
             .frame(height: 54)
-            .background(glassSurfaceBackground(RoundedRectangle(cornerRadius: 26, style: .continuous)))
-            .clipShape(RoundedRectangle(cornerRadius: 26, style: .continuous))
+            .modifier(BottomBarGlass(shape: RoundedRectangle(cornerRadius: 26, style: .continuous)))
         }
-        .buttonStyle(PressableScaleButtonStyle(scale: 0.985, pressedBrightness: -0.02, pressedOpacity: 0.97))
+        .bottomGlassPressStyle(fallbackScale: 0.985)
         .accessibilityLabel(Text("home.tripbook.title"))
     }
 
@@ -858,45 +884,57 @@ struct HomeView: View {
                 .font(.system(size: 20, weight: .semibold))
                 .foregroundStyle(.white)
                 .frame(width: 54, height: 54)
-                .background(
+                .modifier(FABGlass())
+        }
+        .bottomGlassPressStyle(fallbackScale: 0.95)
+        .accessibilityLabel(Text("home.create_trip"))
+    }
+
+    /// 创建 FAB 的背景。iOS 26 用**带 accent tint 的 Liquid Glass**——保留烟蓝身份，
+    /// 同时在 `GlassEffectContainer` 内可与左侧 Trip Book 胶囊水滴融合；
+    /// iOS 17–25 回退为原实心烟蓝渐变 + 描边 + 阴影（无融合）。
+    private struct FABGlass: ViewModifier {
+        @Environment(\.colorScheme) private var colorScheme
+        func body(content: Content) -> some View {
+            if #available(iOS 26.0, *) {
+                content.glassEffect(.regular.tint(CarryAccent.color).interactive(), in: Circle())
+            } else {
+                content.background(
                     Circle()
                         .fill(
                             LinearGradient(
-                                colors: [
-                                    CarryAccent.color.opacity(0.96),
-                                    CarryAccent.color.opacity(0.86)
-                                ],
+                                colors: [CarryAccent.color.opacity(0.96), CarryAccent.color.opacity(0.86)],
                                 startPoint: .topLeading,
                                 endPoint: .bottomTrailing
                             )
                         )
-                        .overlay(
-                            Circle()
-                                .strokeBorder(Color.white.opacity(colorScheme == .dark ? 0.18 : 0.26), lineWidth: 1)
-                        )
-                        // 与 search/tripbook 统一阴影几何（radius 20 / y 7）使三件读成一组；
-                        // FAB 是主操作，不透明度略高一档作为焦点。
+                        .overlay(Circle().strokeBorder(Color.white.opacity(colorScheme == .dark ? 0.18 : 0.26), lineWidth: 1))
                         .shadow(color: Color.black.opacity(colorScheme == .dark ? 0.30 : 0.16), radius: 20, x: 0, y: 7)
                 )
+            }
         }
-        .buttonStyle(PressableScaleButtonStyle(scale: 0.95, pressedBrightness: -0.03, pressedOpacity: 0.96))
-        .accessibilityLabel(Text("home.create_trip"))
     }
 
-    private func glassSurfaceBackground<S: InsettableShape>(_ shape: S) -> some View {
-        shape
-            .fill(.ultraThinMaterial)
-            .overlay(
-                shape
-                    .fill(Color.white.opacity(colorScheme == .dark ? 0.02 : 0.20))
-            )
-            .overlay(
-                shape
-                    .strokeBorder(Color.white.opacity(colorScheme == .dark ? 0.18 : 0.34), lineWidth: 1)
-            )
-            // 单层、大扩散的柔和阴影：去掉了 search/tripbook 原先叠的第二层阴影（双层=又重又散）。
-            // 大模糊半径(20)保证与背后列表的分离感（不会贴在一起），低不透明度保持轻盈。
-            .shadow(color: Color.black.opacity(colorScheme == .dark ? 0.26 : 0.13), radius: 20, x: 0, y: 7)
+    /// 底栏玻璃背景：iOS 26 用原生 Liquid Glass（在 `GlassEffectContainer` 内可与相邻
+    /// 元素融合/吸附）；iOS 17–25 回退为 ultraThinMaterial 自定义玻璃面（无融合）。
+    private struct BottomBarGlass<S: InsettableShape>: ViewModifier {
+        let shape: S
+        @Environment(\.colorScheme) private var colorScheme
+        func body(content: Content) -> some View {
+            if #available(iOS 26.0, *) {
+                content.glassEffect(.regular.interactive(), in: shape)
+            } else {
+                content
+                    .background(
+                        shape
+                            .fill(.ultraThinMaterial)
+                            .overlay(shape.fill(Color.white.opacity(colorScheme == .dark ? 0.02 : 0.20)))
+                            .overlay(shape.strokeBorder(Color.white.opacity(colorScheme == .dark ? 0.18 : 0.34), lineWidth: 1))
+                            .shadow(color: Color.black.opacity(colorScheme == .dark ? 0.26 : 0.13), radius: 20, x: 0, y: 7)
+                    )
+                    .clipShape(shape)
+            }
+        }
     }
 
     private var tripBookSheet: some View {
