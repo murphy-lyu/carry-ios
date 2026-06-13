@@ -15,11 +15,18 @@ import MapKit
 
 struct ItineraryMapView: View {
     let tripId: UUID
+    let focusedDayId: UUID?
 
     @EnvironmentObject var store: TripStore
     @State private var showFullScreen = false
 
     private var bundle: TripBundle? { store.bundle(for: tripId) }
+
+    private var allDays: [ItineraryDay] { bundle?.safeItineraryDays ?? [] }
+    private var displayDays: [ItineraryDay] {
+        guard let focusedDayId else { return allDays }
+        return allDays.filter { $0.id == focusedDayId }
+    }
 
     /// 一天在地图上的绘制数据：颜色（按天）、按天编号的有坐标停靠点、连线坐标。
     private struct DayMapData: Identifiable {
@@ -33,7 +40,7 @@ struct ItineraryMapView: View {
 
     /// 按天聚合的地图数据。编号按天重置、颜色按天区分，与列表完全对应。
     private var dayMapData: [DayMapData] {
-        (bundle?.safeItineraryDays ?? []).map { day in
+        displayDays.map { day in
             let coordStops = day.sortedStops.filter { $0.hasCoordinate }
             return DayMapData(
                 id: day.id,
@@ -46,39 +53,102 @@ struct ItineraryMapView: View {
 
     /// 所有有坐标的停靠点（用于阈值判断 + 计算可视区域）。
     private var coordinateStops: [ItineraryStop] {
-        (bundle?.safeItineraryDays ?? []).flatMap { $0.sortedStops }.filter { $0.hasCoordinate }
+        displayDays.flatMap { $0.sortedStops }.filter { $0.hasCoordinate }
     }
 
+    private var scopeLabel: String? {
+        guard let day = displayDays.first else { return nil }
+        let trimmed = day.title.trimmingCharacters(in: .whitespacesAndNewlines)
+        return trimmed.isEmpty ? String(format: NSLocalizedString("itinerary.day.title", comment: ""), day.sortOrder + 1) : trimmed
+    }
+
+    private var coordinateCount: Int { coordinateStops.count }
+
     var body: some View {
-        // 只有 ≥2 个有坐标的停靠点（构成真实路线）才显示地图；否则不占垂直空间。
-        if coordinateStops.count >= 2 {
-            mapPreview
-                .frame(height: 200)
-                .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
-                .padding(.horizontal, 16)
-                .padding(.top, 12)
-                .padding(.bottom, 4)
-                .sheet(isPresented: $showFullScreen) {
-                    fullScreenMap
-                }
-        }
+        mapPreview
+            .frame(height: 176)
+            .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+            .padding(.horizontal, 16)
+            .padding(.top, 10)
+            .padding(.bottom, 2)
+            .sheet(isPresented: $showFullScreen) {
+                fullScreenMap
+            }
     }
 
     // MARK: Preview
 
     private var mapPreview: some View {
-        mapContent
-            .allowsHitTesting(false)   // 预览不抢地图手势；点整块进全屏交互
-            .overlay(alignment: .topTrailing) {
-                Image(systemName: "arrow.up.left.and.arrow.down.right")
-                    .font(.system(size: 13, weight: .semibold))
-                    .padding(8)
-                    .background(.regularMaterial, in: Circle())
-                    .padding(8)
-                    .foregroundStyle(CarryAccent.color)
+        Group {
+            if coordinateCount == 0 {
+                emptyMapState
+            } else {
+                mapContent
+                    .allowsHitTesting(false)   // 预览不抢地图手势；点整块进全屏交互
+                    .overlay(alignment: .topLeading) {
+                        if let scopeLabel {
+                            Text(scopeLabel)
+                                .font(.caption.weight(.semibold))
+                                .foregroundStyle(.primary)
+                                .padding(.horizontal, 10)
+                                .padding(.vertical, 7)
+                                .background(.regularMaterial, in: Capsule())
+                                .padding(10)
+                        }
+                    }
+                    .overlay(alignment: .topTrailing) {
+                        Image(systemName: "arrow.up.left.and.arrow.down.right")
+                            .font(.system(size: 13, weight: .semibold))
+                            .padding(8)
+                            .background(.regularMaterial, in: Circle())
+                            .padding(8)
+                            .foregroundStyle(CarryAccent.color)
+                    }
+                    .overlay(alignment: .bottomLeading) {
+                        if coordinateCount == 1 {
+                            singleStopHint
+                        }
+                    }
             }
-            .contentShape(Rectangle())
-            .onTapGesture { showFullScreen = true }   // 整块预览可点展开
+        }
+        .contentShape(Rectangle())
+        .onTapGesture { showFullScreen = true }   // 整块预览可点展开
+    }
+
+    private var emptyMapState: some View {
+        VStack(spacing: 10) {
+            Image(systemName: "map")
+                .font(.system(size: 30, weight: .light))
+                .foregroundStyle(.secondary.opacity(0.7))
+            Text("itinerary.empty.map.title")
+                .font(.subheadline.weight(.semibold))
+                .foregroundStyle(.primary)
+            Text("itinerary.empty.map.subtitle")
+                .font(.footnote)
+                .foregroundStyle(.secondary)
+                .multilineTextAlignment(.center)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .background(
+            LinearGradient(
+                colors: [
+                    Color(UIColor.secondarySystemBackground),
+                    Color(UIColor.systemBackground)
+                ],
+                startPoint: .top,
+                endPoint: .bottom
+            )
+        )
+    }
+
+    private var singleStopHint: some View {
+        Text("itinerary.single.map.hint")
+            .font(.caption.weight(.semibold))
+            .foregroundStyle(.secondary)
+            .padding(.horizontal, 10)
+            .padding(.vertical, 6)
+            .background(.regularMaterial, in: Capsule())
+            .padding(10)
     }
 
     // MARK: Full screen
@@ -90,8 +160,8 @@ struct ItineraryMapView: View {
                 .navigationTitle(Text("itinerary.map.title"))
                 .navigationBarTitleDisplayMode(.inline)
                 .toolbar {
-                    ToolbarItem(placement: .confirmationAction) {
-                        Button("common.done") { showFullScreen = false }
+                    ToolbarItem(placement: .topBarTrailing) {
+                        SheetCloseButton { showFullScreen = false }
                     }
                 }
         }
