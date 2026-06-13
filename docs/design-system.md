@@ -43,6 +43,11 @@ Apple 原生风格，极简、克制、优雅。
 - **工具栏的「提交 / 确认」动作**（Save · Done · ✓ · Add）= 烟蓝 + `.fontWeight(.semibold)`——它是该屏主操作、要跳出来；Apple 惯例即「工具栏主操作 = tint + bold」。实现：`Label(..., systemImage: "checkmark")` 继承 sheet/根的 `.tint(CarryAccent)`，不必显式设色。
 - 依据：彩色 = 意义（可点 / 选中 / 强调）。
 
+> **「选中 vs 完成」铁律：选中用强调色，完成则退后变灰，方向相反，别混。**
+> - **选中（selection）** = 用户正在「挑」要包含什么（ItemPicker 勾选、场景、顺手考虑、分段切换）→ 前进/激活 → **烟蓝跳出来**。
+> - **完成（completion）** = 这件已搞定（打包清单 `isPacked`）→ 应**退后**：灰圆（`systemGray2`）+ 文字置灰 + 删除线 + 降透明度，让注意力落到**还没完成的**项。
+> - 反例（禁止）：把打包「已打包」勾改成烟蓝——会把视线吸到已完成项上，与「还差什么没打包」的目标相反。
+
 **Tier 3 · Chrome / 工具图标（退后）** —— 中性 `.secondary` 灰 + 玻璃 / 材质圆底。
 - 用于：设置齿轮、**关闭 X**、「…」更多菜单。这些是「离开 / 导航」，不提交，显式 `.secondary`。
 - **返回 `<` 例外：用系统返回（NavigationStack 自带），不手动改色**——iOS 26 自动渲染成玻璃圆 chevron，顺平台纹理（north-star §9 native-first），别自造 chevron 按钮去硬调色。
