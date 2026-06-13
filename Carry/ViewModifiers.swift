@@ -211,6 +211,49 @@ struct SolidPressButtonStyle: ButtonStyle {
     }
 }
 
+/// 全 App「空状态」主操作的统一胶囊样式：contained、`primary` 渐变、continuous 16 圆角、
+/// `systemBackground` 文字、轻阴影、按压缩放（与 PressableScaleButtonStyle 同一 spring）。
+/// 首页空态 / 行程空态共用，杜绝两份内联样式漂移；新增空状态直接套用本样式。
+/// 用法：`Button { … } label: { HStack(spacing: 8) { Image(systemName:).font(.system(size: 14, weight: .semibold)); Text("…") } }.buttonStyle(CarryEmptyStatePrimaryButtonStyle())`
+/// 文字默认继承下方 rounded subheadline；图标如需固定尺寸，在 label 内对 Image 单独 `.font(...)`。
+struct CarryEmptyStatePrimaryButtonStyle: ButtonStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        Pill(configuration: configuration)
+    }
+
+    private struct Pill: View {
+        let configuration: Configuration
+        @Environment(\.colorScheme) private var colorScheme
+
+        var body: some View {
+            configuration.label
+                .font(.system(.subheadline, design: .rounded).weight(.semibold))
+                .foregroundStyle(Color(UIColor.systemBackground))
+                .padding(.horizontal, 28)
+                .frame(height: 52)
+                .background(
+                    RoundedRectangle(cornerRadius: 16, style: .continuous)
+                        .fill(
+                            LinearGradient(
+                                colors: [Color.primary.opacity(0.90), Color.primary.opacity(0.76)],
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            )
+                        )
+                )
+                .overlay(
+                    RoundedRectangle(cornerRadius: 16, style: .continuous)
+                        .strokeBorder(Color.primary.opacity(0.06), lineWidth: 1)
+                )
+                .shadow(color: Color.black.opacity(colorScheme == .dark ? 0.14 : 0.08), radius: 10, x: 0, y: 5)
+                .scaleEffect(configuration.isPressed ? 0.97 : 1.0)
+                .brightness(configuration.isPressed ? -0.02 : 0)
+                .opacity(configuration.isPressed ? 0.95 : 1.0)
+                .animation(.spring(response: 0.22, dampingFraction: 0.72), value: configuration.isPressed)
+        }
+    }
+}
+
 struct FlowLayout: Layout {
     var spacing: CGFloat = 8
     var lineSpacing: CGFloat = 8

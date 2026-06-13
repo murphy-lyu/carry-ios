@@ -60,6 +60,10 @@ struct HomeView: View {
     @State private var showSearch = false
     @State private var showTripBook = false
     @State private var searchText = ""
+    @FocusState private var searchFieldFocused: Bool
+    /// 点搜索结果时暂存目标行程；在 sheet 真正 dismiss 完成后（onDismiss）再跳转，
+    /// 避免在 sheet 关闭动画期间向根 router 压栈（事件驱动，非定时延迟）。
+    @State private var pendingSearchTrip: UUID?
     @State private var listIdentity = UUID()
     @State private var didPlayInitialReveal = false
     @State private var initialRevealProgress: Double = 0
@@ -404,7 +408,13 @@ struct HomeView: View {
             }
             .tint(CarryAccent.color)
         }
-        .sheet(isPresented: $showSearch) {
+        .sheet(isPresented: $showSearch, onDismiss: {
+            // sheet 已完全收起，此刻压栈不会与关闭动画相互打断。
+            if let id = pendingSearchTrip {
+                pendingSearchTrip = nil
+                if let trip = store.bundle(for: id) { openTrip(trip) }
+            }
+        }) {
             NavigationStack {
                 searchSheet
             }
@@ -908,7 +918,21 @@ struct HomeView: View {
                         .textInputAutocapitalization(.never)
                         .autocorrectionDisabled(true)
                         .submitLabel(.search)
+                        .focused($searchFieldFocused)
+                    if !searchText.isEmpty {
+                        Button {
+                            searchText = ""
+                            searchFieldFocused = true
+                        } label: {
+                            Image(systemName: "xmark.circle.fill")
+                                .foregroundStyle(.secondary)
+                        }
+                        .buttonStyle(.plain)
+                        .accessibilityLabel(Text("common.clear"))
+                        .transition(.opacity)
+                    }
                 }
+                .animation(.easeInOut(duration: 0.15), value: searchText.isEmpty)
                 .padding(.horizontal, 16)
                 .padding(.vertical, 14)
                 .frame(maxWidth: .infinity)
@@ -928,47 +952,69 @@ struct HomeView: View {
             .padding(.top, 12)
             .padding(.bottom, 10)
 
-            List {
-                if filteredSearchTrips.isEmpty {
-                    Text(searchText.isEmpty ? "No trips yet" : "No matching trips")
-                        .foregroundStyle(.secondary)
-                        .listRowBackground(Color.clear)
-                        .listRowSeparator(.hidden)
-                } else {
-                    ForEach(filteredSearchTrips, id: \.id) { trip in
-                        Button {
-                            showSearch = false
-                            DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
-                                openTrip(trip)
+            if filteredSearchTrips.isEmpty {
+                searchEmptyState
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+            } else {
+                ScrollView {
+                    LazyVStack(alignment: .leading, spacing: 0) {
+                        ForEach(filteredSearchTrips, id: \.id) { trip in
+                            Button {
+                                // 暂存目标，收起 sheet；真正跳转在 onDismiss 完成后发生。
+                                pendingSearchTrip = trip.id
+                                searchText = ""
+                                showSearch = false
+                            } label: {
+                                VStack(alignment: .leading, spacing: 3) {
+                                    Text(trip.name)
+                                        .font(.headline)
+                                        .foregroundStyle(.primary)
+                                    Text(trip.destinationCity)
+                                        .font(.subheadline)
+                                        .foregroundStyle(.secondary)
+                                    Text(trip.localizedDateRange)
+                                        .font(.caption)
+                                        .foregroundStyle(.secondary.opacity(0.8))
+                                }
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                                .padding(.vertical, 11)
+                                .padding(.horizontal, 16)
+                                .contentShape(Rectangle())
                             }
-                        } label: {
-                            VStack(alignment: .leading, spacing: 4) {
-                                Text(trip.name)
-                                    .font(.headline)
-                                    .foregroundStyle(.primary)
-                                Text(trip.destinationCity)
-                                    .font(.subheadline)
-                                    .foregroundStyle(.secondary)
-                                Text(trip.localizedDateRange)
-                                    .font(.caption)
-                                    .foregroundStyle(.secondary.opacity(0.8))
-                            }
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                            .padding(.vertical, 8)
+                            .buttonStyle(.plain)
                         }
-                        .buttonStyle(.plain)
-                        .listRowBackground(Color.clear)
-                        .listRowSeparator(.hidden)
                     }
+                    .padding(.top, 4)
                 }
+                .scrollDismissesKeyboard(.immediately)
             }
-            .listStyle(.plain)
-            .scrollContentBackground(.hidden)
         }
         .background(CarrySubtleBackground())
         .onAppear {
             searchText = ""
+            searchFieldFocused = true
         }
+    }
+
+    /// 搜索无结果 / 尚无行程时的居中空状态。沿用行程页空状态的视觉规格
+    /// （SF Symbol 44pt light · headline 标题 · subheadline 副标题），不带卡片/CTA。
+    private var searchEmptyState: some View {
+        VStack(spacing: 12) {
+            Image(systemName: searchText.isEmpty ? "suitcase" : "magnifyingglass")
+                .font(.system(size: 44, weight: .light))
+                .foregroundStyle(.secondary)
+            Text(searchText.isEmpty ? "No trips yet" : "No matching trips")
+                .font(.headline)
+                .foregroundStyle(.primary)
+            Text(searchText.isEmpty
+                 ? "Your trips will appear here."
+                 : "Try a different name or destination.")
+                .font(.subheadline)
+                .foregroundStyle(.secondary)
+                .multilineTextAlignment(.center)
+                .padding(.horizontal, 40)
+        }
+        .padding(.bottom, 48)
     }
 
     private func statRow(value: String, label: LocalizedStringKey) -> some View {
@@ -1139,6 +1185,7 @@ struct HomeView: View {
                     .padding(.top, 14)
 
                 // CTA gets the most air below the message (clear message → action hierarchy).
+                // 统一空态胶囊样式（与行程空态共用 CarryEmptyStatePrimaryButtonStyle）。
                 Button {
                     startNewTrip()
                 } label: {
@@ -1146,31 +1193,9 @@ struct HomeView: View {
                         Image(systemName: "airplane.departure")
                             .font(.system(size: 14, weight: .semibold))
                         Text("home.empty.cta")
-                            .font(.system(.subheadline, design: .rounded).weight(.semibold))
                     }
-                    .foregroundStyle(Color(UIColor.systemBackground))
-                    .padding(.horizontal, 28)  // hug the label — a centered invitation pill,
-                    .frame(height: 52)         // not an edge-to-edge form bar (matches the centered column)
-                    .background(
-                        RoundedRectangle(cornerRadius: 16, style: .continuous)
-                            .fill(
-                                LinearGradient(
-                                    colors: [
-                                        Color.primary.opacity(0.90),
-                                        Color.primary.opacity(0.76)
-                                    ],
-                                    startPoint: .topLeading,
-                                    endPoint: .bottomTrailing
-                                )
-                            )
-                    )
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 16, style: .continuous)
-                            .strokeBorder(Color.primary.opacity(0.06), lineWidth: 1)
-                    )
-                    .shadow(color: Color.black.opacity(colorScheme == .dark ? 0.14 : 0.08), radius: 10, x: 0, y: 5)
                 }
-                .buttonStyle(PressableScaleButtonStyle(scale: 0.97, pressedBrightness: -0.02, pressedOpacity: 0.95))
+                .buttonStyle(CarryEmptyStatePrimaryButtonStyle())
                 .padding(.top, 22)
             }
             .padding(.horizontal, 24)

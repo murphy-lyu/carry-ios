@@ -64,17 +64,50 @@ struct ItineraryView: View {
     @State private var activeSheet: ItinerarySheet?
     @State private var renameDayTarget: ItineraryDay?
     @State private var renameDayText: String = ""
+    @State private var focusedDayId: UUID?
 
     private var bundle: TripBundle? { store.bundle(for: tripId) }
     private var days: [ItineraryDay] { bundle?.safeItineraryDays ?? [] }
-    private var totalStops: Int { days.reduce(0) { $0 + ($1.stops?.count ?? 0) } }
+    private var activeFocusedDayId: UUID? {
+        guard let focusedDayId, days.contains(where: { $0.id == focusedDayId }) else { return nil }
+        return focusedDayId
+    }
+    private var visibleStartDate: Date? {
+        guard let bundle, !bundle.isDateless else { return nil }
+        return Calendar.current.startOfDay(for: bundle.departureDate)
+    }
+
+    private struct CalendarEntry: Identifiable {
+        let offset: Int
+        let date: Date
+        let day: ItineraryDay?
+
+        var isInTrip: Bool { day != nil }
+        var id: Int { offset }
+    }
+
+    private var calendarEntries: [CalendarEntry] {
+        guard let bundle, let startDate = visibleStartDate else { return [] }
+        let tripDays = max(1, bundle.days)
+        let visibleDays = max(7, tripDays)
+
+        return (0..<visibleDays).map { offset in
+            let date = Calendar.current.date(byAdding: .day, value: offset, to: startDate) ?? startDate
+            let day = days.first(where: { $0.sortOrder == offset })
+            return CalendarEntry(offset: offset, date: date, day: day)
+        }
+    }
 
     var body: some View {
-        Group {
-            if days.isEmpty {
-                emptyState
-            } else {
-                dayList
+        ZStack {
+            Color(UIColor.systemBackground)
+                .ignoresSafeArea()
+            Group {
+                if days.isEmpty {
+                    emptyState
+                } else {
+                    dayList
+                }
             }
         }
         .sheet(item: $activeSheet) { sheet in
@@ -102,42 +135,75 @@ struct ItineraryView: View {
                 renameDayTarget = nil
             }
         }
+        .toolbarBackground(Color(UIColor.systemBackground), for: .navigationBar)
+        .toolbarBackground(.visible, for: .navigationBar)
+        .toolbarBackground(.visible, for: .tabBar)
+        .onAppear { syncFocusedDaySelectionIfNeeded() }
+        .onChange(of: days.map(\.id)) { _, _ in
+            syncFocusedDaySelectionIfNeeded()
+        }
     }
 
     // MARK: Empty state
 
     private var emptyState: some View {
+        GeometryReader { proxy in
+            VStack(spacing: 0) {
+                itineraryCalendarStrip
+                    .padding(.bottom, 10)
+
+                Spacer(minLength: 0)
+
+                emptyStateContent
+
+                Spacer(minLength: 0)
+            }
+            .frame(width: proxy.size.width, height: proxy.size.height, alignment: .top)
+        }
+    }
+
+    // 单一表面居中列（与首页空态同构）：内容直接落在背景上，不套卡片面板——
+    // 与全 App 空态语言统一，更轻、更 Apple。
+    private var emptyStateContent: some View {
         VStack(spacing: 16) {
             Image(systemName: "map")
                 .font(.system(size: 44, weight: .light))
                 .foregroundStyle(.secondary)
-            Text("itinerary.empty.title")
-                .font(.headline)
-            Text("itinerary.empty.subtitle")
-                .font(.subheadline)
-                .foregroundStyle(.secondary)
-                .multilineTextAlignment(.center)
-                .padding(.horizontal, 40)
+
+            VStack(spacing: 6) {
+                Text("itinerary.empty.title")
+                    .font(.system(.title2, design: .rounded).weight(.semibold))  // rounded，与首页标题同嗓音
+                    .foregroundStyle(.primary)
+                Text("itinerary.empty.subtitle")
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+                    .multilineTextAlignment(.center)
+                    .padding(.horizontal, 32)
+            }
+
+            // CTA：全 App 空态统一胶囊样式（与首页空态共用 CarryEmptyStatePrimaryButtonStyle）。
             Button {
                 store.addItineraryDay(tripId: tripId)
             } label: {
-                Label("itinerary.empty.add_first_day", systemImage: "plus")
-                    .font(.subheadline.weight(.semibold))
-                    .padding(.horizontal, 18)
-                    .padding(.vertical, 10)
+                HStack(spacing: 8) {
+                    Image(systemName: "plus")
+                        .font(.system(size: 14, weight: .semibold))
+                    Text("itinerary.empty.add_first_day")
+                }
             }
-            .buttonStyle(.borderedProminent)
-            .tint(CarryAccent.color)
-            .padding(.top, 4)
+            .buttonStyle(CarryEmptyStatePrimaryButtonStyle())
+            .padding(.top, 6)
         }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .frame(maxWidth: .infinity)
+        .padding(.horizontal, 24)
     }
 
     // MARK: Day list
 
     private var dayList: some View {
-        VStack(spacing: 0) {
-            ItineraryMapView(tripId: tripId)
+        VStack(spacing: 8) {
+            ItineraryMapView(tripId: tripId, focusedDayId: activeFocusedDayId)
+            itineraryCalendarStrip
             // 原生 collection：长按拖拽，停靠点可跨天移动（spec: 跨天拖拽）。
             ItineraryReorderCollection(
                 sections: daySections,
@@ -150,8 +216,106 @@ struct ItineraryView: View {
                 onArrange: { store.applyItineraryArrangement(tripId: tripId, dayOrders: $0) },
                 onReorderBegan: { }
             )
-            addDayButton
         }
+    }
+
+    private var itineraryCalendarStrip: some View {
+        VStack(alignment: .leading, spacing: 2) {
+            if !calendarEntries.isEmpty {
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(alignment: .top, spacing: 11) {
+                        ForEach(calendarEntries) { entry in
+                            dayCalendarCell(
+                                entry: entry,
+                                isSelected: activeFocusedDayId == entry.day?.id
+                            ) {
+                                guard entry.isInTrip, let day = entry.day else { return }
+                                focusedDayId = day.id
+                            }
+                        }
+                    }
+                    .padding(.horizontal, 2)
+                }
+            }
+        }
+        .padding(.horizontal, 16)
+        .padding(.top, 0)
+        .padding(.bottom, 0)
+    }
+
+    @ViewBuilder
+    private func dayCalendarCell(
+        entry: CalendarEntry,
+        isSelected: Bool,
+        action: @escaping () -> Void
+    ) -> some View {
+        let isDimmed = !entry.isInTrip && !isSelected
+
+        Button(action: action) {
+            VStack(spacing: 2) {
+                Text(entry.date.formatted(.dateTime.weekday(.abbreviated)))
+                    .font(.system(size: 10, weight: .medium))
+                    .foregroundStyle(isSelected ? CarryAccent.color : (isDimmed ? .secondary.opacity(0.35) : .secondary))
+                    .tracking(0.03)
+
+                ZStack {
+                    if isSelected {
+                        Circle()
+                            .fill(CarryAccent.color)
+                            .frame(width: 28, height: 28)
+                    }
+                    Text("\(Calendar.current.component(.day, from: entry.date))")
+                        .font(.system(size: 16, weight: .regular, design: .rounded))
+                        .foregroundStyle(isSelected ? .white : (isDimmed ? .secondary.opacity(0.35) : .primary))
+                        .minimumScaleFactor(0.8)
+                }
+                .frame(width: 28, height: 28)
+                .frame(maxWidth: .infinity)
+
+                HStack(spacing: 2) {
+                    ForEach(0..<dayDotCount(for: entry), id: \.self) { index in
+                        Circle()
+                            .fill(dayDotColor(for: entry, index: index))
+                            .frame(width: 3.5, height: 3.5)
+                    }
+                }
+                .frame(height: 4)
+            }
+            .frame(width: 40, height: 60)
+        }
+        .buttonStyle(.plain)
+        .disabled(!entry.isInTrip)
+    }
+
+    private func syncFocusedDaySelectionIfNeeded() {
+        if let focusedDayId, days.contains(where: { $0.id == focusedDayId }) {
+            return
+        }
+        focusedDayId = days.first?.id
+    }
+
+    private func dayDotCount(for entry: CalendarEntry) -> Int {
+        guard let day = entry.day else { return 0 }
+        return min(3, max(0, day.sortedStops.count))
+    }
+
+    private func dayDotColor(for entry: CalendarEntry, index: Int) -> Color {
+        guard let day = entry.day else { return .clear }
+        let dots = day.sortedStops
+            .prefix(3)
+            .map { stop -> Color in
+                switch stop.category {
+                case .sightseeing: return Color(red: 0.43, green: 0.59, blue: 0.79)
+                case .food: return Color(red: 0.91, green: 0.53, blue: 0.28)
+                case .lodging: return Color(red: 0.52, green: 0.41, blue: 0.71)
+                case .transport: return Color(red: 0.34, green: 0.64, blue: 0.52)
+                case .flight: return Color(red: 0.32, green: 0.54, blue: 0.90)
+                case .activity: return Color(red: 0.76, green: 0.44, blue: 0.59)
+                case .other: return Color(red: 0.47, green: 0.54, blue: 0.63)
+                }
+            }
+        guard index < dots.count else { return CarryAccent.color }
+        return dots[index]
     }
 
     /// 每天的结构快照（供 collection diffable）。
@@ -212,35 +376,20 @@ struct ItineraryView: View {
     private func dayHeaderRow(_ section: ItineraryDaySection) -> some View {
         if let day = days.first(where: { $0.id == section.id }) {
             dayHeader(day)
-                .padding(.horizontal, 16)
-                .padding(.top, 14)
-                // 首个停靠点 cell 顶部已有 legGap(24) 透明占位充当表头→首点的间距，
-                // 故表头底部只留少量呼吸，避免与透明 leg 叠加导致间距过大。
-                .padding(.bottom, 2)
-                .background(Rectangle().fill(Color(UIColor.systemBackground)))
+                .frame(maxWidth: .infinity, alignment: .leading)
         }
-    }
-
-    private var addDayButton: some View {
-        Button { store.addItineraryDay(tripId: tripId) } label: {
-            Label("itinerary.add_day", systemImage: "calendar.badge.plus").font(.subheadline)
-        }
-        .tint(CarryAccent.color)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(.horizontal, 16)
-        .padding(.vertical, 12)
     }
 
     private func dayHeader(_ day: ItineraryDay) -> some View {
         HStack(spacing: 8) {
-            // 当天色点：与该天的地图针 / 路线 / 时间轴节点同色，作为图例。
             Circle()
                 .fill(ItineraryDayPalette.color(forDayIndex: day.sortOrder))
-                .frame(width: 8, height: 8)
+                .frame(width: 7, height: 7)
             VStack(alignment: .leading, spacing: 2) {
-                Text(dayTitle(day))
-                if let date = dayDateLabel(day) {
-                    Text(date)
+                Text(dayDateLabel(day) ?? dayDisplayTitle(day))
+                    .font(.headline.weight(.semibold))
+                if let title = customDayTitle(day) {
+                    Text(title)
                         .font(.caption2)
                         .foregroundStyle(.secondary)
                 }
@@ -263,12 +412,33 @@ struct ItineraryView: View {
                     .foregroundStyle(.secondary)
             }
         }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(.horizontal, 16)
+        .padding(.top, 16)
+        .padding(.bottom, 4)
+        .overlay(alignment: .bottom) {
+            Rectangle()
+                .fill(Color.primary.opacity(0.03))
+                .frame(height: 1)
+        }
+        .background(
+            Rectangle()
+                .fill(Color(UIColor.systemBackground))
+        )
+        // 与 Packing 的 sectionTitle 一样，把 header 变成稳定的 section surface，
+        // 避免吸顶时直接露出下面的渐变/透明层，造成“分块感”。
+        .offset(y: -1)
+        .zIndex(3)
     }
 
-    /// 自定义标题优先；否则「Day N」（N = sortOrder + 1，对 isDateless 同样成立）。
-    private func dayTitle(_ day: ItineraryDay) -> String {
+    private func customDayTitle(_ day: ItineraryDay) -> String? {
         let trimmed = day.title.trimmingCharacters(in: .whitespacesAndNewlines)
-        if !trimmed.isEmpty { return trimmed }
+        return trimmed.isEmpty ? nil : trimmed
+    }
+
+    /// 有日期行程：优先显示真实日期；无日期行程退回 Day N。
+    private func dayDisplayTitle(_ day: ItineraryDay) -> String {
+        if let date = dayDateLabel(day) { return date }
         let format = NSLocalizedString("itinerary.day.title", comment: "")
         return String(format: format, day.sortOrder + 1)
     }
