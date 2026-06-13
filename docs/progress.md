@@ -3,6 +3,21 @@
 ## 最后更新
 2026-06-13
 
+## 上次改动摘要（设计北极星 + 三大界面走查 + 行程天自动生成 · 2026-06-13）
+
+> 本会话聚焦视觉优化,均在 `main`,已分模块提交、编译绿、真机验收。与并行的「我的行程册」会话共用部分文件(HomeView/TripStore/xcstrings),提交时按显式路径隔离、互不覆盖。
+
+- **设计最高标准**:新增 `docs/design-north-star.md`(奔 Apple 年度最佳应用的 9 条 ADA 审视框架),凌驾于 `design-system.md` 之上;CLAUDE.md 设计段落与文件索引指向它。原则:克制是手段、卓越是目标,不用「不为设计而设计」当借口停在「够用」。
+- **统一空态语言**:抽 `CarryEmptyStatePrimaryButtonStyle`(ViewModifiers)——首页/行程/打包三处空态共用同款胶囊 CTA。三处空态全部重构为**单一表面居中列**(图标→rounded 标题→副标题→统一 CTA),不再套卡片面板。
+- **首页空态**:Sheet 高度由「屏高比例」改为**内容实测驱动**(GeometryReader,设备无关);右上角写死头像 → 圆形齿轮(secondary,回设计系统 §124);卡片对齐 16pt。
+- **首页有数据态**:`Trip Book`→`My Trip Book`;hero(即将出发)用 elevation **抬起**成三级深度阶梯(hero>规划中>已结束);0 物品不画空进度条;**规划中行程隐藏件数 pill + 进度条**(日期未定、打包信息不可行动);底部三件去冗余双层阴影、统一柔和。
+- **行程规划有数据态**:**自定义圆形地图针**(当天色+白序号,替代原生气泡);地图预览 176→200;日历圆点改当天色、非行程日灰度语义化;Day 头 rounded;时间轴名称加粗;内联动作行(添加地点/优化顺序)统一 secondary 灰(对齐打包)。
+- **🔴 天按行程日期自动生成(不再手动增删)**:`TripStore.syncItineraryDays` 把 ItineraryDay 数量幂等对齐到行程实际天数;缩短行程时被删天的地点并入最后保留的天(不丢数据)。在 `updateTripInfo`(改日期后)+ `ItineraryView.onAppear`(兜底/存量)调用。移除「添加第一天」空态、Day 头「⋯」菜单(重命名/删除天)及随之死掉的 `addItineraryDay/removeItineraryDay/updateItineraryDay` + 2 个埋点事件。转有/无日期用 `.id` 强制 collection 重建刷新 Day header。
+- **🔴 天数两套口径**:`TripBundle.spanDays` = 含两端**实际天数**(首页卡片、行程页、My Trip Book 旅行天数、日期选择器/分享文本显示);`trip.days` = **晚数/时长**(打包数量、提醒沿用,不变)。日期选择器与分享文本改为「A 天 B 晚」(新增 `date.days_nights`,位置化、日/韩先晚后天)。
+- **文案·停靠点→地点**:全 App 用户可见「停靠点」统一改「地点」(14 key × 9 语言,es/fr/pt 阴阳性/冠词随改);补全 `itinerary.empty.map.*`/`single.map.hint` 缺失的 7 语言;清理一批死 key(empty.*/day.menu.*/day.rename.*/date.night/nights)。
+- **修复**:① 关闭「模拟空态」开关后首页列表空白需重启(rebuildTripLists 漏听 flag,DEBUG-only 加 onChange);② **Release 构建崩溃**——Swift 6.3.2 优化器 `EarlyPerfInliner` 内联 `CarryBottomSheetFX.Coordinator` 合成 deinit 时无限递归,加显式 `@_optimize(none) deinit{}` 绕开(详见 playbook §18);③ 点「添加地点」**SIGABRT**——`ItineraryReorderCollection.sizeThatFits` 内 `layoutIfNeeded()` 在 SwiftUI 更新周期重入,移除即解。
+- **Apple 登录**:spec 写好(`specs/apple-sign-in-icloud-sync.md`,身份+iCloud 同步/登录可选,schema 已核实兼容),**搁置等付费开发者账号**(约 2026-06-16)后做 Phase A。
+
 ## 上次改动摘要（行程册 + 首页搜索 + 按钮配色系统 + 外观修复 · 2026-06-13）
 
 > 分支已切到 `main`（用户有意）。以下均已提交，编译绿 + 纯函数单测 + 真机截图验证。注：部分修复（PackingList `ellipsis`/勾选圈、ItineraryMapView `stopMarker`、HomeView 设置 sheet `preferredColorScheme`）夹在用户 itinerary WIP 文件里，随该 WIP 一起提交。
