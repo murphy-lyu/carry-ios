@@ -189,6 +189,20 @@ Apple 原生风格，极简、克制、优雅。
 - 内容顶部留 20pt padding
 - 有标题栏时用 .navigationTitle + .navigationBarTitleDisplayMode(.inline)
 
+#### Carry Modal Convention（呈现方式按「语义」选，2026-06-14）
+一屏该用 push / sheet / cover，取决于**它和当前内容的关系**，而非"看起来顺手"：
+
+1. **创建新对象、且完成后「进入/成为」它** → `fullScreenCover`（自包含任务 + 专注 + 落进新对象的动量）。当前仅**创建行程**（`router.beginCreation` → cover 内独立 `NavigationStack(creationPath)` 跑 TripInfo→ItemPicker→PackingList，`finishCreation` 关 cover 并把根 path 落到新行程）。
+2. **对「当前对象」的自包含子任务（编辑/挑选/配置），完成后回到原处** → `.sheet`。绝大多数属此类：编辑行程、编辑/推荐场景、编辑分类·分区、行程提醒、上传背景图、**快速添加物品**、日期选择、My Item 添加。
+3. **单字段输入/确认** → `alert`（如新建分区）。
+4. **层级浏览（点进一个已存在的对象看详情）** → push。仅「行程列表 → 行程详情」「设置 → 设置子页（关于/图标/法务等）」。
+5. **chrome 语义铁律**：
+   - 模态（cover/sheet）离开 = **取消 / Done / Save / X**，**禁止用返回 chevron**当离开（chevron 只表达"层级内返回上一级"）。
+   - cover/sheet 的**根步**无系统返回，必须自带「取消」（语义=放弃草稿，如创建流 TripInfoView、快速添加 ItemPicker merge 模式）；其内部 push 出的子步沿用系统返回 chevron（正确）。
+   - 脏数据（已输入）时模态加 `interactiveDismissDisabled` + 放弃确认（按需）。
+   - drag indicator：用**导航栏 Cancel/Done** 的 sheet 不显示抓手；用**自定义头部**（Roadmap/场景等）的显示抓手——两类各自自洽。
+   - Mac Catalyst 例外：创建流仍走 push（`#if targetEnvironment(macCatalyst)`），`pushCreation`/`finishCreation` 在 `showCreation==false` 时自动退化为根 path 行为，一套代码两平台。
+
 ### 导航框架（2026-06-12，feature 分支：app-navigation-framework）
 - **根级无 Tab Bar**：根=行程首页（足迹地球 + Sheet）。上文「Tab Bar 背景」token 现仅历史参考，根级已不再使用 TabView。
 - **设置入口**：首页 hero 右上 gear（圆形，`secondary` 色）→ 以 sheet 打开（带「完成」关闭）；空状态另置一枚 gear（零行程也可达）。

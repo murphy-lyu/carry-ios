@@ -1,5 +1,13 @@
 # 决策日志
 
+## 2026-06-14 确立 Carry Modal Convention + 创建/快速添加改模态
+
+> 起因：UI 走查发现创建行程、快速添加物品用的是 push（层级导航），而它们语义上是"自包含任务"。借机把呈现方式（push / sheet / cover）按统一语义规范一遍。
+
+- **规范（详见 `design-system.md` §Carry Modal Convention）**：① 创建新对象且完成后进入它 → `fullScreenCover`；② 对当前对象的子任务 → `.sheet`；③ 单字段 → `alert`；④ 层级浏览 → push；⑤ chrome：模态离开用取消/Done/X、禁用返回 chevron，cover/sheet 根步自带取消。
+- **改动**：创建行程 push→`fullScreenCover`（commit `195f362`）；快速添加物品 push→`.sheet`（commit `bdcbb66`）。其余行程内子任务（编辑行程/场景/分类/提醒/背景图）经核对**本就是合规 sheet**，未改（不为改而改）。
+- **未做全 App 模态总审计**：仅覆盖行程生命周期相关流程；设置 hub 及其子 sheet、Roadmap、关于、行程内部 sheet、地图全屏、各 picker 等尚未逐一对照规范（多数目测合规，待需要时全量扫）。
+
 ## 2026-06-13 行程「天」按行程日期自动生成（用户不手动增删）
 
 > 起因：行程规划页原本天只能手动「添加第一天/删除当天」，与「行程天数由创建/编辑行程的日期决定」的产品认知冲突。

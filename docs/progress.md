@@ -1,9 +1,16 @@
 # 项目进度
 
 ## 最后更新
-2026-06-13
+2026-06-14
 
-## 上次改动摘要（行程规划视觉审查 P1/P2 落地 + 字体判断微调 · 2026-06-13）
+## 上次改动摘要（模态呈现规范统一：创建/快速添加改 cover/sheet · 2026-06-14）
+
+> UI 走查呈现方式。确立 **Carry Modal Convention**（详见 `design-system.md` §Carry Modal Convention + `decisions.md` 2026-06-14）：按语义选 push/sheet/cover。均已提交、编译绿、真机/模拟器验。
+
+- **创建行程：push → `fullScreenCover`**（commit `195f362`）。自包含任务而非根层级——iPhone 用 cover + 独立 `NavigationStack(creationPath)` 跑三步链，`finishCreation` 关 cover 并把根 path 落到新行程（保留建完即进入的动量）。`NavigationRouter` 加 `creationPath/showCreation/seed` + `begin/finish/cancel/pushCreation`；后两者在 `showCreation==false` 时退化为根 path → Mac Catalyst（仍 push）与 autoPack 流不受影响、一套代码两平台。TripInfoView cover 内显示「取消」。
+- **快速添加物品：push → `.sheet`**（commit `bdcbb66`）。行程内子任务，与编辑场景/分类/提醒一致。PackingListView 三处 `.addItems` push → `showAddItemsSheet`；ItemPicker merge 模式 `removeLast`→`dismiss` + 加「取消」；清掉死掉的 `.addItems` 路由。
+- **其余流程（编辑行程/场景/分类/提醒/背景图）经 chrome 核对本就合规，未改**（不为改而改）。
+- **范围**：仅行程生命周期相关流程；全 App 模态总审计（设置 hub/Roadmap/关于/行程内部 sheet/地图全屏/picker 等）未做。
 
 > 接字体系统对齐之后，处理视觉审查里剩下的 P1/P2，并把字体走查中三处「保守判定」按拍板回调。均编译绿（独立 DerivedData），未提交。
 
