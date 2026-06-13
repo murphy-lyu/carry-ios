@@ -781,7 +781,6 @@ struct HomeView: View {
                 .frame(width: 54, height: 54)
                 .background(glassSurfaceBackground(Circle()))
                 .clipShape(Circle())
-                .shadow(color: Color.black.opacity(colorScheme == .dark ? 0.28 : 0.14), radius: 16, x: 0, y: 9)
         }
         .buttonStyle(PressableScaleButtonStyle(scale: 0.95, pressedBrightness: -0.02, pressedOpacity: 0.95))
         .accessibilityLabel(Text("Search"))
@@ -799,10 +798,10 @@ struct HomeView: View {
                     .frame(width: 34, height: 34)
 
                 VStack(alignment: .leading, spacing: 1) {
-                    Text("Trip Book")
+                    Text("home.tripbook.title")
                         .font(.system(size: 16, weight: .semibold, design: .rounded))
                         .foregroundStyle(.primary)
-                    Text("\(store.trips.count) 个行程，\(visitedCountriesCount) 个国家")
+                    Text(String(format: NSLocalizedString("home.tripbook.subtitle", comment: "Trip Book subtitle: trip count · visited country count"), Int64(store.trips.count), Int64(visitedCountriesCount)))
                         .font(.system(size: 12, weight: .medium, design: .rounded))
                         .foregroundStyle(.secondary)
                         .lineLimit(1)
@@ -814,10 +813,9 @@ struct HomeView: View {
             .frame(height: 54)
             .background(glassSurfaceBackground(RoundedRectangle(cornerRadius: 26, style: .continuous)))
             .clipShape(RoundedRectangle(cornerRadius: 26, style: .continuous))
-            .shadow(color: Color.black.opacity(colorScheme == .dark ? 0.28 : 0.14), radius: 16, x: 0, y: 9)
         }
         .buttonStyle(PressableScaleButtonStyle(scale: 0.985, pressedBrightness: -0.02, pressedOpacity: 0.97))
-        .accessibilityLabel(Text("Trip Book"))
+        .accessibilityLabel(Text("home.tripbook.title"))
     }
 
     @ViewBuilder
@@ -845,7 +843,9 @@ struct HomeView: View {
                             Circle()
                                 .strokeBorder(Color.white.opacity(colorScheme == .dark ? 0.18 : 0.26), lineWidth: 1)
                         )
-                        .shadow(color: Color.black.opacity(colorScheme == .dark ? 0.40 : 0.22), radius: 18, x: 0, y: 10)
+                        // 与 search/tripbook 统一阴影几何（radius 20 / y 7）使三件读成一组；
+                        // FAB 是主操作，不透明度略高一档作为焦点。
+                        .shadow(color: Color.black.opacity(colorScheme == .dark ? 0.30 : 0.16), radius: 20, x: 0, y: 7)
                 )
         }
         .buttonStyle(PressableScaleButtonStyle(scale: 0.95, pressedBrightness: -0.03, pressedOpacity: 0.96))
@@ -863,7 +863,9 @@ struct HomeView: View {
                 shape
                     .strokeBorder(Color.white.opacity(colorScheme == .dark ? 0.18 : 0.34), lineWidth: 1)
             )
-            .shadow(color: Color.black.opacity(colorScheme == .dark ? 0.24 : 0.10), radius: 14, x: 0, y: 8)
+            // 单层、大扩散的柔和阴影：去掉了 search/tripbook 原先叠的第二层阴影（双层=又重又散）。
+            // 大模糊半径(20)保证与背后列表的分离感（不会贴在一起），低不透明度保持轻盈。
+            .shadow(color: Color.black.opacity(colorScheme == .dark ? 0.26 : 0.13), radius: 20, x: 0, y: 7)
     }
 
     private var tripBookSheet: some View {
@@ -891,7 +893,7 @@ struct HomeView: View {
                     }
                 }
             }
-            .navigationTitle("Trip Book")
+            .navigationTitle("home.tripbook.title")
             .navigationBarTitleDisplayMode(.inline)
         }
     }
@@ -1313,23 +1315,28 @@ struct TripCard: View {
             : Color.primary.opacity(0.14)
     }
 
+    /// 最高一级层级：临近、要行动的「即将出发」行程（非已结束、非无日期规划）。
+    /// 三级深度阶梯：hero 抬起（表面更实 + 阴影更大更强）＞ 规划中 平放 ＞ 已结束 扁平。
+    /// 只用 elevation/材质拉层级，不加任何装饰——契合「克制 + 深度」。
+    private var isHero: Bool { !isPast && !bundle.isDateless }
+
     private var cardFill: LinearGradient {
         if colorScheme == .dark {
             return LinearGradient(
-                colors: [
-                    homeDarkCardTopRefined,
-                    homeDarkCardBottomRefined
-                ],
+                colors: isHero
+                    ? [homeDarkCardTop, homeDarkCardBottom]            // 略亮 → 抬起
+                    : [homeDarkCardTopRefined, homeDarkCardBottomRefined],
                 startPoint: .topLeading,
                 endPoint: .bottomTrailing
             )
         }
 
         return LinearGradient(
-            colors: [
-                Color(UIColor.systemBackground).opacity(0.88),
-                Color(UIColor.systemBackground).opacity(0.82)
-            ],
+            colors: isHero
+                ? [Color(UIColor.systemBackground).opacity(1.0),      // 接近纯白、最实 → 抬起
+                   Color(UIColor.systemBackground).opacity(0.96)]
+                : [Color(UIColor.systemBackground).opacity(0.88),
+                   Color(UIColor.systemBackground).opacity(0.82)],
             startPoint: .topLeading,
             endPoint: .bottomTrailing
         )
@@ -1337,9 +1344,9 @@ struct TripCard: View {
 
     private var cardShadow: Color {
         if colorScheme == .dark {
-            return Color.black.opacity(0.16)
+            return Color.black.opacity(isHero ? 0.24 : 0.16)
         }
-        return Color.black.opacity(0.068)
+        return Color.black.opacity(isHero ? 0.14 : 0.068)
     }
 
     /// Leading accent spine for the compact card (white over a photo, muted for past trips).
@@ -1405,7 +1412,9 @@ struct TripCard: View {
     }
 
     private var statusPillText: String? {
-        guard !isPast else { return nil }
+        // 仅「即将出发」展示打包件数：规划中行程日期未定、打包信息不可行动 → 不展示（噪音）；
+        // 已结束行程同样不展示。isHero = !isPast && !isDateless。
+        guard isHero else { return nil }
         if bundle.totalCount == 0 {
             return NSLocalizedString("home.empty.items", comment: "No items in packing list")
         }
@@ -1494,7 +1503,9 @@ struct TripCard: View {
                 }
                 .animation(.easeInOut(duration: 0.3), value: isComplete)
 
-                if !isPast && !isComplete {
+                // 仅「即将出发」展示打包进度：规划中（日期未定）与已结束行程不展示打包信息；
+                // 且 0 件时也不画空轨（噪音）。与上方件数 pill 的显隐口径一致（都用 isHero）。
+                if isHero && !isComplete && bundle.totalCount > 0 {
                     Color.clear.frame(height: 8)
                     GeometryReader { geo in
                         ZStack(alignment: .leading) {
@@ -1556,7 +1567,7 @@ struct TripCard: View {
                     lineWidth: 1
                 )
         )
-        .shadow(color: cardShadow, radius: 14, x: 0, y: 7)
+        .shadow(color: cardShadow, radius: isHero ? 18 : 14, x: 0, y: isHero ? 9 : 7)
         .contentShape(RoundedRectangle(cornerRadius: 18))
         .overlay {
             if shimmer {
