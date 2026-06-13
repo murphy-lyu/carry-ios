@@ -17,6 +17,15 @@ fileprivate let homeDarkCardBottom = Color(red: 0.14, green: 0.14, blue: 0.15)
 fileprivate let homeDarkCardTopRefined = Color(red: 0.09, green: 0.09, blue: 0.10)
 fileprivate let homeDarkCardBottomRefined = Color(red: 0.12, green: 0.12, blue: 0.13)
 
+// MARK: - Empty-state card height measurement
+
+private struct EmptyCardHeightKey: PreferenceKey {
+    static var defaultValue: CGFloat = 0
+    static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) {
+        value = max(value, nextValue())
+    }
+}
+
 // MARK: - HomeView
 
 struct HomeView: View {
@@ -29,6 +38,9 @@ struct HomeView: View {
     @State private var showDeleteConfirmation = false
     @State private var showSettings = false
     @State private var settingsPath = NavigationPath()
+    @State private var showSearch = false
+    @State private var showTripBook = false
+    @State private var searchText = ""
     @State private var listIdentity = UUID()
     @State private var didPlayInitialReveal = false
     @State private var initialRevealProgress: Double = 0
@@ -121,6 +133,17 @@ struct HomeView: View {
     private var upcomingTrips: [TripBundle] { cachedUpcoming }
     private var planningTrips: [TripBundle] { cachedPlanning }
     private var pastTripsByYear: [(year: Int, trips: [TripBundle])] { cachedPastByYear }
+    private var searchableTrips: [TripBundle] { store.trips }
+    private var filteredSearchTrips: [TripBundle] {
+        let query = searchText.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !query.isEmpty else { return searchableTrips }
+        let lowered = query.lowercased()
+        return searchableTrips.filter {
+            $0.name.lowercased().contains(lowered)
+                || $0.destinationCity.lowercased().contains(lowered)
+                || $0.localizedDateRange.lowercased().contains(lowered)
+        }
+    }
 
     private func startNewTrip() {
         UIImpactFeedbackGenerator(style: .light).impactOccurred()
@@ -132,6 +155,16 @@ struct HomeView: View {
     private func openSettings() {
         UIImpactFeedbackGenerator(style: .light).impactOccurred()
         showSettings = true
+    }
+
+    private func openSearch() {
+        UIImpactFeedbackGenerator(style: .light).impactOccurred()
+        showSearch = true
+    }
+
+    private func openTripBook() {
+        UIImpactFeedbackGenerator(style: .light).impactOccurred()
+        showTripBook = true
     }
 
     private func openTrip(_ bundle: TripBundle) {
@@ -157,10 +190,34 @@ struct HomeView: View {
         MapStyleOption(rawValue: mapStyleRaw) ?? .hybrid
     }
 
+    /// Measured natural height of the empty-state card (driven by SwiftUI layout,
+    /// so it tracks Dynamic Type / localized title length instead of a guessed constant).
+    @State private var emptyCardHeight: CGFloat = 0
+
     private var expandedSheetHeight: CGFloat {
-        // Reduce sheet height when empty so the CTA sits centered without
-        // large blank areas. Full height is restored once trips exist.
-        UIScreen.main.bounds.height * (isEffectivelyEmpty ? 0.58 : 0.86)
+        guard isEffectivelyEmpty else {
+            return UIScreen.main.bounds.height * 0.86
+        }
+        // Empty state: size the sheet to its CONTENT, not a screen-height fraction —
+        // so the gap below the card is constant across devices (the old 0.44 fraction
+        // left ~65pt of slack on large phones, ~15pt on small ones). The card is laid
+        // out at its natural height (measured below) and we add a fixed breathing gap +
+        // the home-indicator safe area so the CTA always clears the bottom edge.
+        let handle: CGFloat = 21          // capsule: padding(top10) + h5 + padding(bottom6)
+        let topBar: CGFloat = 6 + 40 + 8  // homeTopBar padding(top6,bottom8) + 40pt avatar row
+        let cardTopInset: CGFloat = 6     // emptyState .padding(.top, 6)
+        let bottomBreathing: CGFloat = 28 // gap between card bottom and the safe-area inset
+        let card = emptyCardHeight > 0 ? emptyCardHeight : 271  // 271 ≈ natural height (fallback)
+        return handle + topBar + cardTopInset + card + bottomBreathing + Self.bottomSafeAreaInset
+    }
+
+    /// Bottom safe-area inset (home indicator). The sheet's content host is flush with
+    /// the physical screen bottom, so this must be folded into the empty-state height.
+    private static var bottomSafeAreaInset: CGFloat {
+        UIApplication.shared.connectedScenes
+            .compactMap { $0 as? UIWindowScene }
+            .flatMap { $0.windows }
+            .first { $0.isKeyWindow }?.safeAreaInsets.bottom ?? 0
     }
 
     private var collapsedSheetOffset: CGFloat {
@@ -315,11 +372,29 @@ struct HomeView: View {
             .ignoresSafeArea()
         }
         .ignoresSafeArea(edges: .bottom)
+        .safeAreaInset(edge: .bottom) {
+            if !isEffectivelyEmpty {
+                bottomActionBar
+                    .padding(.horizontal, 18)
+                    .padding(.bottom, 18)
+            }
+        }
         .sheet(isPresented: $showSettings) {
             NavigationStack(path: $settingsPath) {
                 SettingsView(path: $settingsPath)
             }
             .tint(CarryAccent.color)
+        }
+        .sheet(isPresented: $showSearch) {
+            NavigationStack {
+                searchSheet
+            }
+            .tint(CarryAccent.color)
+        }
+        .sheet(isPresented: $showTripBook) {
+            tripBookSheet
+                .presentationDetents([.medium])
+                .presentationDragIndicator(.visible)
         }
         #endif
     }
@@ -330,10 +405,6 @@ struct HomeView: View {
     private var macBody: some View {
         List {
             if !isEffectivelyEmpty {
-                heroSection
-                    .listRowInsets(EdgeInsets(top: 8, leading: 12, bottom: 4, trailing: 12))
-                    .listRowBackground(Color.clear)
-                    .listRowSeparator(.hidden)
                 upcomingSection
                 planningSection
                 pastSection
@@ -393,41 +464,14 @@ struct HomeView: View {
                 .padding(.bottom, 6)
                 .frame(maxWidth: .infinity)
 
-            if isEffectivelyEmpty {
-                VStack(spacing: 4) {
-                    Text("home.empty.header.title")
-                        .font(.system(size: 22, weight: .semibold, design: .rounded))
-                        .foregroundStyle(.primary)
-                    Text("home.empty.header.subtitle")
-                        .font(.subheadline)
-                        .foregroundStyle(.secondary.opacity(colorScheme == .dark ? 0.97 : 0.89))
-                        .multilineTextAlignment(.center)
-                }
-                .padding(.top, 8)
-                .padding(.bottom, 20)
-                .padding(.horizontal, 26)
-                .frame(maxWidth: .infinity)
-            }
-
-            if !isEffectivelyEmpty {
-                homeTopBar
-                    .padding(.horizontal, 16)
-                    .padding(.top, 6)
-                    .padding(.bottom, 8)
-            }
+            homeTopBar
+                .padding(.horizontal, 16)
+                .padding(.top, 6)
+                .padding(.bottom, 8)
 
             ZStack {
                 List {
                     if !isEffectivelyEmpty {
-                        heroSection
-                            .opacity(initialRevealProgress >= heroRevealThreshold ? 1 : 0)
-                            .offset(y: initialRevealProgress >= heroRevealThreshold ? 0 : 12)
-                            .scaleEffect(initialRevealProgress >= heroRevealThreshold ? 1 : 0.99)
-                            .animation(.easeOut(duration: 0.26), value: initialRevealProgress)
-                            .listRowInsets(EdgeInsets(top: 8, leading: 12, bottom: 4, trailing: 12))
-                            .listRowBackground(Color.clear)
-                            .listRowSeparator(.hidden)
-
                         upcomingSection
                         planningSection
                         pastSection
@@ -441,7 +485,7 @@ struct HomeView: View {
                             .listRowSeparator(.hidden)
 
                         Color.clear
-                            .frame(height: colorScheme == .dark ? 124 : 72)
+                            .frame(height: colorScheme == .dark ? 176 : 124)
                             .listRowBackground(Color.clear)
                             .listRowSeparator(.hidden)
                     }
@@ -659,103 +703,6 @@ struct HomeView: View {
         }
     }
 
-    private var heroSection: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            if !isEffectivelyEmpty {
-                HStack(spacing: 10) {
-                    statPill(value: "\(store.trips.count)", label: "home.allTrips")
-                    statPill(value: "\(upcomingTrips.count)", label: "home.upcoming")
-                    statPill(value: "\(visitedCountriesCount)", label: visitedCountriesCount == 1 ? "home.country" : "home.countries")
-                }
-            }
-
-            Button {
-                startNewTrip()
-            } label: {
-                HStack(spacing: 12) {
-                    ZStack {
-                        Circle()
-                            .fill(
-                                LinearGradient(
-                                    colors: [
-                                        CarryAccent.color.opacity(colorScheme == .dark ? 0.94 : 0.97),
-                                        CarryAccent.color.opacity(colorScheme == .dark ? 0.78 : 0.85)
-                                    ],
-                                    startPoint: .topLeading,
-                                    endPoint: .bottomTrailing
-                                )
-                            )
-                            .frame(width: 34, height: 34)
-
-                        Image(systemName: "plus")
-                            .font(.system(size: 16, weight: .semibold))
-                            .foregroundStyle(.white)
-                    }
-
-                    Text("home.create_trip")
-                        .font(.system(size: 16, weight: .semibold, design: .rounded))
-                        .foregroundStyle(.primary)
-
-                    Spacer(minLength: 8)
-
-                    Image(systemName: "chevron.right")
-                        .font(.system(size: 11, weight: .semibold))
-                        .foregroundStyle(.secondary.opacity(0.55))
-                }
-                .padding(.horizontal, 14)
-                .padding(.vertical, 12)
-                .frame(maxWidth: .infinity)
-                .background(
-                    RoundedRectangle(cornerRadius: 16, style: .continuous)
-                        .fill(
-                            colorScheme == .dark
-                            ? AnyShapeStyle(Color(UIColor.secondarySystemBackground).opacity(0.90))
-                            : AnyShapeStyle(Color(UIColor.systemBackground).opacity(0.94))
-                        )
-                )
-                .overlay(
-                    RoundedRectangle(cornerRadius: 16, style: .continuous)
-                        .strokeBorder(Color.primary.opacity(colorScheme == .dark ? 0.03 : 0.04), lineWidth: 1)
-                )
-            }
-            .buttonStyle(PressableScaleButtonStyle(scale: 0.99, pressedBrightness: -0.01, pressedOpacity: 0.97))
-            .accessibilityLabel(Text("home.create_trip"))
-        }
-        .padding(.vertical, 12)
-        .padding(.horizontal, 16)
-        .background(
-            RoundedRectangle(cornerRadius: 24, style: .continuous)
-                .fill(
-                    colorScheme == .dark
-                    ? AnyShapeStyle(
-                        LinearGradient(
-                            colors: [
-                                homeDarkHeroTop.opacity(0.92),
-                                homeDarkHeroBottom.opacity(0.88)
-                            ],
-                            startPoint: .topLeading,
-                            endPoint: .bottomTrailing
-                        )
-                    )
-                    : AnyShapeStyle(
-                        LinearGradient(
-                            colors: [
-                                Color(UIColor.systemBackground).opacity(0.95),
-                                Color(UIColor.systemBackground).opacity(0.82)
-                            ],
-                            startPoint: .topLeading,
-                            endPoint: .bottomTrailing
-                        )
-                    )
-                )
-        )
-        .overlay(
-            RoundedRectangle(cornerRadius: 24, style: .continuous)
-                .strokeBorder(Color.primary.opacity(colorScheme == .dark ? 0.03 : 0.05), lineWidth: 1)
-        )
-        .shadow(color: Color.black.opacity(colorScheme == .dark ? 0.14 : 0.045), radius: colorScheme == .dark ? 12 : 16, x: 0, y: colorScheme == .dark ? 8 : 10)
-    }
-
     private var homeTopBar: some View {
         HStack(alignment: .center) {
             Text("home.title")
@@ -787,6 +734,228 @@ struct HomeView: View {
             .buttonStyle(PressableScaleButtonStyle(scale: 0.94, pressedBrightness: -0.02, pressedOpacity: 0.95))
             .accessibilityLabel(Text("Settings"))
         }
+    }
+
+    private var bottomActionBar: some View {
+        HStack(spacing: 14) {
+            bottomSearchButton
+            bottomTripBookButton
+            bottomCreateButton
+        }
+        .padding(.horizontal, 4)
+    }
+
+    @ViewBuilder
+    private var bottomSearchButton: some View {
+        Button {
+            openSearch()
+        } label: {
+            Image(systemName: "magnifyingglass")
+                .font(.system(size: 18, weight: .semibold))
+                .foregroundStyle(.primary)
+                .frame(width: 54, height: 54)
+                .background(glassSurfaceBackground(Circle()))
+                .clipShape(Circle())
+                .shadow(color: Color.black.opacity(colorScheme == .dark ? 0.28 : 0.14), radius: 16, x: 0, y: 9)
+        }
+        .buttonStyle(PressableScaleButtonStyle(scale: 0.95, pressedBrightness: -0.02, pressedOpacity: 0.95))
+        .accessibilityLabel(Text("Search"))
+    }
+
+    @ViewBuilder
+    private var bottomTripBookButton: some View {
+        Button {
+            openTripBook()
+        } label: {
+            HStack(spacing: 10) {
+                Image(systemName: "globe")
+                    .font(.system(size: 16, weight: .semibold))
+                    .foregroundStyle(.secondary)
+                    .frame(width: 34, height: 34)
+
+                VStack(alignment: .leading, spacing: 1) {
+                    Text("Trip Book")
+                        .font(.system(size: 16, weight: .semibold, design: .rounded))
+                        .foregroundStyle(.primary)
+                    Text("\(store.trips.count) 个行程，\(visitedCountriesCount) 个国家")
+                        .font(.system(size: 12, weight: .medium, design: .rounded))
+                        .foregroundStyle(.secondary)
+                        .lineLimit(1)
+                }
+
+                Spacer(minLength: 0)
+            }
+            .padding(.horizontal, 16)
+            .frame(height: 54)
+            .background(glassSurfaceBackground(RoundedRectangle(cornerRadius: 26, style: .continuous)))
+            .clipShape(RoundedRectangle(cornerRadius: 26, style: .continuous))
+            .shadow(color: Color.black.opacity(colorScheme == .dark ? 0.28 : 0.14), radius: 16, x: 0, y: 9)
+        }
+        .buttonStyle(PressableScaleButtonStyle(scale: 0.985, pressedBrightness: -0.02, pressedOpacity: 0.97))
+        .accessibilityLabel(Text("Trip Book"))
+    }
+
+    @ViewBuilder
+    private var bottomCreateButton: some View {
+        Button {
+            startNewTrip()
+        } label: {
+            Image(systemName: "plus")
+                .font(.system(size: 20, weight: .semibold))
+                .foregroundStyle(.white)
+                .frame(width: 54, height: 54)
+                .background(
+                    Circle()
+                        .fill(
+                            LinearGradient(
+                                colors: [
+                                    CarryAccent.color.opacity(0.96),
+                                    CarryAccent.color.opacity(0.86)
+                                ],
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            )
+                        )
+                        .overlay(
+                            Circle()
+                                .strokeBorder(Color.white.opacity(colorScheme == .dark ? 0.18 : 0.26), lineWidth: 1)
+                        )
+                        .shadow(color: Color.black.opacity(colorScheme == .dark ? 0.40 : 0.22), radius: 18, x: 0, y: 10)
+                )
+        }
+        .buttonStyle(PressableScaleButtonStyle(scale: 0.95, pressedBrightness: -0.03, pressedOpacity: 0.96))
+        .accessibilityLabel(Text("home.create_trip"))
+    }
+
+    private func glassSurfaceBackground<S: InsettableShape>(_ shape: S) -> some View {
+        shape
+            .fill(.ultraThinMaterial)
+            .overlay(
+                shape
+                    .fill(Color.white.opacity(colorScheme == .dark ? 0.02 : 0.20))
+            )
+            .overlay(
+                shape
+                    .strokeBorder(Color.white.opacity(colorScheme == .dark ? 0.18 : 0.34), lineWidth: 1)
+            )
+            .shadow(color: Color.black.opacity(colorScheme == .dark ? 0.24 : 0.10), radius: 14, x: 0, y: 8)
+    }
+
+    private var tripBookSheet: some View {
+        NavigationStack {
+            List {
+                Section {
+                    statRow(value: "\(store.trips.count)", label: "home.allTrips")
+                    statRow(value: "\(upcomingTrips.count)", label: "home.upcoming")
+                    statRow(value: "\(visitedCountriesCount)", label: visitedCountriesCount == 1 ? "home.country" : "home.countries")
+                }
+
+                Section {
+                    Button {
+                        openSearch()
+                    } label: {
+                        Label("Search trips", systemImage: "magnifyingglass")
+                    }
+                    Button {
+                        showTripBook = false
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
+                            startNewTrip()
+                        }
+                    } label: {
+                        Label("Create trip", systemImage: "plus")
+                    }
+                }
+            }
+            .navigationTitle("Trip Book")
+            .navigationBarTitleDisplayMode(.inline)
+        }
+    }
+
+    private var searchSheet: some View {
+        VStack(spacing: 0) {
+            HStack(spacing: 12) {
+                HStack(spacing: 10) {
+                    Image(systemName: "magnifyingglass")
+                        .foregroundStyle(.secondary)
+                    TextField("Search trips", text: $searchText)
+                        .textInputAutocapitalization(.never)
+                        .autocorrectionDisabled(true)
+                        .submitLabel(.search)
+                }
+                .padding(.horizontal, 16)
+                .padding(.vertical, 14)
+                .frame(maxWidth: .infinity)
+                .background(
+                    RoundedRectangle(cornerRadius: 24, style: .continuous)
+                        .fill(Color(UIColor.secondarySystemBackground))
+                )
+
+                Button("Cancel") {
+                    searchText = ""
+                    showSearch = false
+                }
+                .font(.system(size: 17, weight: .semibold, design: .rounded))
+                .foregroundStyle(CarryAccent.color)
+            }
+            .padding(.horizontal, 16)
+            .padding(.top, 12)
+            .padding(.bottom, 10)
+
+            List {
+                if filteredSearchTrips.isEmpty {
+                    Text(searchText.isEmpty ? "No trips yet" : "No matching trips")
+                        .foregroundStyle(.secondary)
+                        .listRowBackground(Color.clear)
+                        .listRowSeparator(.hidden)
+                } else {
+                    ForEach(filteredSearchTrips, id: \.id) { trip in
+                        Button {
+                            showSearch = false
+                            DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
+                                openTrip(trip)
+                            }
+                        } label: {
+                            VStack(alignment: .leading, spacing: 4) {
+                                Text(trip.name)
+                                    .font(.headline)
+                                    .foregroundStyle(.primary)
+                                Text(trip.destinationCity)
+                                    .font(.subheadline)
+                                    .foregroundStyle(.secondary)
+                                Text(trip.localizedDateRange)
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary.opacity(0.8))
+                            }
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .padding(.vertical, 8)
+                        }
+                        .buttonStyle(.plain)
+                        .listRowBackground(Color.clear)
+                        .listRowSeparator(.hidden)
+                    }
+                }
+            }
+            .listStyle(.plain)
+            .scrollContentBackground(.hidden)
+        }
+        .background(CarrySubtleBackground())
+        .onAppear {
+            searchText = ""
+        }
+    }
+
+    private func statRow(value: String, label: LocalizedStringKey) -> some View {
+        HStack {
+            VStack(alignment: .leading, spacing: 2) {
+                Text(value)
+                    .font(.headline.weight(.bold))
+                Text(label)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+            Spacer()
+        }
+        .padding(.vertical, 6)
     }
 
     private func sectionLabel(_ key: LocalizedStringKey, uppercase: Bool = false) -> some View {
@@ -905,9 +1074,8 @@ struct HomeView: View {
 
     private var emptyState: some View {
         VStack(spacing: 0) {
-            Spacer(minLength: 0).frame(maxHeight: 8)
-            VStack(spacing: 18) {
-                VStack(spacing: 14) {
+            VStack(spacing: 12) {
+                VStack(spacing: 10) {
                     ZStack {
                         Image("HomeEmptyTrip1")
                             .resizable()
@@ -978,7 +1146,7 @@ struct HomeView: View {
                 .buttonStyle(PressableScaleButtonStyle(scale: 0.97, pressedBrightness: -0.02, pressedOpacity: 0.95))
                 .padding(.horizontal, 26)
             }
-            .padding(.vertical, 22)
+            .padding(.vertical, 18)
             .padding(.horizontal, 22)
             .frame(maxWidth: .infinity)
             .background(
@@ -999,10 +1167,21 @@ struct HomeView: View {
                     .strokeBorder(Color.primary.opacity(colorScheme == .dark ? 0.08 : 0.035), lineWidth: 1)
             )
             .shadow(color: Color.black.opacity(colorScheme == .dark ? 0.10 : 0.08), radius: 14, x: 0, y: 8)
-            .padding(.horizontal, 22)
-            Spacer(minLength: 72)
+            .background(
+                // Measure the card's natural height so expandedSheetHeight can size the
+                // sheet to content (device-independent bottom gap). Height-only — the
+                // horizontal padding below doesn't affect it.
+                GeometryReader { proxy in
+                    Color.clear.preference(key: EmptyCardHeightKey.self, value: proxy.size.height)
+                }
+            )
+            .padding(.horizontal, 16)  // align card edges with the title + trip rows (16pt)
         }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+        .padding(.top, 6)
+        .onPreferenceChange(EmptyCardHeightKey.self) { height in
+            if height > 0 { emptyCardHeight = height }
+        }
         // Sheet drag in empty-state area handled by SheetViewController.sheetPan
     }
 
