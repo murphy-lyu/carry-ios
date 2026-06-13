@@ -62,6 +62,7 @@ struct AddStopView: View {
     @StateObject private var completer = StopSearchCompleter()
     @State private var category: StopCategory = .other
     @State private var isResolving = false
+    @FocusState private var searchFocused: Bool
 
     var body: some View {
         NavigationStack {
@@ -105,11 +106,8 @@ struct AddStopView: View {
                 }
             }
             .listStyle(.insetGrouped)
-            .searchable(
-                text: $completer.query,
-                placement: .navigationBarDrawer(displayMode: .always),
-                prompt: Text("itinerary.add_stop.search_placeholder")
-            )
+            // 自定义常驻搜索框（替代 .searchable）：点击只弹键盘，不切换导航栏形态、不变背景。
+            .safeAreaInset(edge: .top) { searchField }
             .disabled(isResolving)
             .overlay { if isResolving { ProgressView() } }
             .navigationTitle(Text("itinerary.add_stop.title"))
@@ -119,8 +117,41 @@ struct AddStopView: View {
                     Button("common.cancel") { dismiss() }
                 }
             }
-            .onAppear { completer.biasRegion(toLatitude: biasLatitude, longitude: biasLongitude) }
+            .onAppear {
+                completer.biasRegion(toLatitude: biasLatitude, longitude: biasLongitude)
+                searchFocused = true   // 进入即聚焦，键盘就绪可直接输入
+            }
         }
+    }
+
+    /// 常驻搜索框：放大镜 + 输入框 + 清除按钮，固定在导航栏下方。
+    private var searchField: some View {
+        HStack(spacing: 8) {
+            Image(systemName: "magnifyingglass")
+                .foregroundStyle(.secondary)
+            TextField(text: $completer.query) {
+                Text("itinerary.add_stop.search_placeholder")
+            }
+            .focused($searchFocused)
+            .submitLabel(.search)
+            .autocorrectionDisabled()
+            if !completer.query.isEmpty {
+                Button {
+                    completer.query = ""
+                } label: {
+                    Image(systemName: "xmark.circle.fill")
+                        .foregroundStyle(.secondary)
+                }
+                .buttonStyle(.plain)
+            }
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 10)
+        .background(Color(.secondarySystemBackground), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+        .padding(.horizontal, 16)
+        .padding(.top, 8)
+        .padding(.bottom, 8)
+        .background(Color(.systemGroupedBackground))
     }
 
     private var categoryPicker: some View {
