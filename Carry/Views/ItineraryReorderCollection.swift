@@ -117,7 +117,10 @@ struct ItineraryReorderCollection: UIViewRepresentable {
     }
 
     func sizeThatFits(_ proposal: ProposedViewSize, uiView: UICollectionView, context: Context) -> CGSize? {
-        uiView.layoutIfNeeded()
+        // 禁止在此调 layoutIfNeeded()：sizeThatFits 处于 SwiftUI 测量/更新周期内，强制同步布局会
+        // 连带重渲染 cell 内的 SwiftUI 内容（UIHostingConfiguration）→「setting value during update」
+        // AttributeGraph 重入崩溃（点「添加地点」必现）。本屏 collection 由父 VStack 给定剩余高度
+        // （proposal.height 非 nil），尺寸不依赖强制布局；nil 时才读 contentSize 兜底，亦不强制布局。
         let width = proposal.width ?? uiView.bounds.width
         let height = proposal.height ?? uiView.collectionViewLayout.collectionViewContentSize.height
         return CGSize(width: width, height: max(height, 1))

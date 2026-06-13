@@ -119,7 +119,9 @@ struct AddStopView: View {
             }
             .onAppear {
                 completer.biasRegion(toLatitude: biasLatitude, longitude: biasLongitude)
-                searchFocused = true   // 进入即聚焦，键盘就绪可直接输入
+                // 聚焦推迟到下一帧：在 sheet 呈现的更新周期内同步设置 @FocusState 会触发
+                // AttributeGraph「setting value during update」硬崩溃；且延后设置程序化聚焦更可靠。
+                DispatchQueue.main.async { searchFocused = true }
             }
         }
     }
