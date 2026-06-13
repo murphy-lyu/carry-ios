@@ -443,7 +443,15 @@ struct SettingsView: View {
             // 仅在作为 sheet 根（path 为空）时显示关闭；二级页用系统返回。
             if path.isEmpty {
                 ToolbarItem(placement: .topBarTrailing) {
-                    Button("common.done") { dismiss() }
+                    Button { dismiss() } label: {
+                        Image(systemName: "xmark")
+                            .font(.system(size: 13, weight: .semibold))
+                            .foregroundStyle(.primary)
+                            .frame(width: 32, height: 32)
+                            .glassCircleButton()
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityLabel(Text("common.close"))
                 }
             }
         }
