@@ -1,5 +1,16 @@
 # 决策日志
 
+## 2026-06-13 首页根 Sheet 弹出时复刻系统「堆叠卡片」退后效果
+
+> 起因：UI 走查发现，「设置 → 支持 Carry」是 Sheet 叠 Sheet，享受系统原生的下层缩放退后（丝滑、跟手）；而「首页 → 设置」因为首页是**根页面**（且首页 Sheet 是自绘 FX，非系统 Sheet），弹设置时首页不缩放，缺这份质感。
+
+- **结论**：iOS 的「下层缩成卡片退后」只在 *Sheet 叠 Sheet* 时发生；根之上弹 Sheet 不缩放是平台标准行为，**本非缺陷**。决定主动复刻以提升质感。
+- **否决路径 A（`@State` 布尔驱动 `scaleEffect`）**：真机验证——交互式下拉关闭时**拿不到手势进度**，首页脱节不跟手，属 band-aid，弃。
+- **采纳路径 B**：在被呈现的系统 Sheet 内部挂一个不可见 `PresenterRecedeEffect`（`UIViewControllerRepresentable`），于 `viewWillAppear/Disappear` 拿 `transitionCoordinator.animate(alongsideTransition:)` 变换**呈现者视图**（首页层）。动画挂在系统转场上 → present/dismiss（含交互式下拉）全程跟手。保留 SwiftUI `.sheet`，不自造呈现。已接 设置 / 搜索 / 行程册 三张根 Sheet。
+- **工程要点**：① iPad（form sheet 居中）与 Reduce Motion 下整段跳过；② 圆角 `cornerCurve = .continuous`；③ 静止退后态开 `shouldRasterize`（消除全屏 `cornerRadius+masksToBounds` 每帧离屏渲染），动画期严格关闭——同 §30 性能纪律。
+- **踩坑（已根因修复，务必勿重蹈）**：completion 里**不能用「取消就取反端态」判定最终缩放**。交互式下拉被取消时，UIKit 会先 `viewWillDisappear` 再补一次 `viewWillAppear`，两者都挂在同一被取消转场上、completion 均报 `cancelled=true`；取反逻辑会让 `appear(true)` 那次反成 identity，使首页在 Sheet 仍呈现时被错误复位 → 之后每次下拉都没了跟手。**正解：终态以现实判定 `presentingViewController != nil`（Sheet 还在就保持退后，没了才复位）**，与回调次数无关。
+- **数值旋钮**：`PresenterRecedeEffect.scale = 0.92` / `cornerRadius = 16`，真机对照系统效果可调。
+
 ## 2026-06-13 首页 Sheet 默认展开高度：从屏高分数改为安全区推导（地球只留干净一线）
 
 > 起因：UI 走查首页 Sheet 默认高度。原非空态用 `UIScreen.main.bounds.height * 0.86`，地球露出 ~14%，露出的是 MapKit 截断的海洋标签（北冰洋/巴伦支海）——一条噪音带，既够不上 north-star §8 的「叙事/惊喜」，又违背 §1 的 deference（两头不靠）。且 `0.86` 是无依据的 magic number，与隔壁空态「按内容逐项推导」的严谨度不对等。

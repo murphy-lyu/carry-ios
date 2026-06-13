@@ -57,6 +57,10 @@ struct HomeView: View {
     @State private var showDeleteConfirmation = false
     @State private var showSettings = false
     @State private var settingsPath = NavigationPath()
+    // Settings 以 sheet 呈现，是独立呈现上下文，不会自动继承根的 .preferredColorScheme。
+    // 读同一份 appearance 设置，给 sheet 内容显式套 preferredColorScheme，使在设置页内
+    // 切换外观时设置页本身也立即生效（否则要关掉重开才更新）。
+    @AppStorage("appearance_mode") private var appearanceModeRaw = AppearanceMode.system.rawValue
     @State private var showSearch = false
     @State private var showTripBook = false
     @State private var searchText = ""
@@ -420,6 +424,9 @@ struct HomeView: View {
                 SettingsView(path: $settingsPath)
             }
             .tint(CarryAccent.color)
+            .preferredColorScheme((AppearanceMode(rawValue: appearanceModeRaw) ?? .system).colorScheme)
+            // Invisible driver: recedes the home behind this sheet, tracking the drag.
+            .background(PresenterRecedeEffect())
         }
         .sheet(isPresented: $showSearch, onDismiss: {
             // sheet 已完全收起，此刻压栈不会与关闭动画相互打断。
@@ -432,10 +439,12 @@ struct HomeView: View {
                 searchSheet
             }
             .tint(CarryAccent.color)
+            .background(PresenterRecedeEffect())
         }
         .sheet(isPresented: $showTripBook) {
             tripBookSheet
                 .presentationDragIndicator(.visible)
+                .background(PresenterRecedeEffect())
         }
         #endif
     }
@@ -1939,6 +1948,98 @@ struct PressableScaleButtonStyle: ButtonStyle {
     }
 }
 
+
+// MARK: - Presenter recede effect (native sheet-stacking look over the root)
+
+#if !targetEnvironment(macCatalyst)
+/// Recreates iOS's "stacked sheets" recede for a sheet presented over the *root*
+/// HomeView (which UIKit normally does NOT scale). Hosted invisibly inside the sheet
+/// content; on present/dismiss it transforms the **presenting** view alongside the
+/// system transition via `transitionCoordinator`, so the recede tracks the interactive
+/// drag-to-dismiss — something a `@State`-bool-driven SwiftUI animation cannot do.
+private struct PresenterRecedeEffect: UIViewControllerRepresentable {
+    var scale: CGFloat = 0.92
+    var cornerRadius: CGFloat = 16
+
+    func makeUIViewController(context: Context) -> RecedeController {
+        let c = RecedeController()
+        c.scale = scale
+        c.cornerRadius = cornerRadius
+        return c
+    }
+    func updateUIViewController(_ controller: RecedeController, context: Context) {}
+
+    final class RecedeController: UIViewController {
+        var scale: CGFloat = 0.92
+        var cornerRadius: CGFloat = 16
+
+        /// The presenter of our sheet = the HomeView host. `presentingViewController`
+        /// resolves up from this embedded child to the controller that presented the sheet.
+        private var presenterView: UIView? { presentingViewController?.view }
+
+        /// The recede only reads as native when the sheet is a bottom sheet — i.e. iPhone.
+        /// On iPad sheets are centered form/page sheets; scaling the root behind one looks
+        /// wrong, so skip there entirely.
+        private var effectApplies: Bool {
+            UIDevice.current.userInterfaceIdiom == .phone
+                && !UIAccessibility.isReduceMotionEnabled
+        }
+
+        override func viewWillAppear(_ animated: Bool) {
+            super.viewWillAppear(animated)
+            animateRecede(to: true)
+        }
+
+        override func viewWillDisappear(_ animated: Bool) {
+            super.viewWillDisappear(animated)
+            animateRecede(to: false)
+        }
+
+        private func animateRecede(to receded: Bool) {
+            guard effectApplies, let v = presenterView else { return }
+
+            // Never rasterize while the transform is animating (it would re-cache every
+            // frame). Continuous curve matches Apple's card squircle.
+            v.layer.shouldRasterize = false
+            let displayScale = v.traitCollection.displayScale
+            v.layer.rasterizationScale = displayScale > 0 ? displayScale : 3
+            v.layer.masksToBounds = true
+            v.layer.cornerCurve = .continuous
+
+            let apply: (Bool) -> Void = { on in
+                v.transform = on ? CGAffineTransform(scaleX: self.scale, y: self.scale) : .identity
+                v.layer.cornerRadius = on ? self.cornerRadius : 0
+            }
+            let settle: (Bool) -> Void = { finalReceded in
+                apply(finalReceded)
+                if finalReceded {
+                    // Static held state (Settings sitting open): cache the receded home as
+                    // a bitmap so the live globe behind it doesn't force a full-screen
+                    // offscreen pass (cornerRadius + masksToBounds) on every frame. The
+                    // globe freezes in the cache, but it's hidden behind Settings anyway.
+                    v.layer.shouldRasterize = true
+                } else {
+                    v.layer.masksToBounds = false
+                }
+            }
+            guard let coordinator = transitionCoordinator else {
+                settle(receded)
+                return
+            }
+            coordinator.animate(alongsideTransition: { _ in apply(receded) },
+                                completion: { _ in
+                // End state = reality, not cancel-arithmetic. A cancelled interactive
+                // dismiss fires viewWillDisappear THEN a spurious viewWillAppear, and BOTH
+                // complete as `cancelled=true`; inverting `receded` there wrongly drove the
+                // home to identity (un-receded) while the sheet was still up, which killed
+                // the scale tracking on every subsequent drag. Instead: if our sheet is
+                // still presented, the home stays receded; if it's gone, restore identity.
+                settle(self.presentingViewController != nil)
+            })
+        }
+    }
+}
+#endif
 
 // MARK: - Preview
 
