@@ -133,7 +133,7 @@ struct PackingListView: View {
             ToolbarItem(placement: .principal) {
                 VStack(spacing: 0) {
                     Text(bundle?.name ?? "")
-                        .font(.headline)
+                        .font(.system(.headline, design: .rounded))
                         .foregroundStyle(.primary)
                         .lineLimit(1)
                         .truncationMode(.tail)
@@ -234,7 +234,7 @@ struct PackingListView: View {
                     } label: {
                         Image(systemName: "ellipsis")
                             .font(.system(size: 14, weight: .medium))
-                            .foregroundColor(.primary)
+                            .foregroundColor(.secondary)
                     }
                 }
             }
@@ -777,7 +777,6 @@ struct PackingListView: View {
         guard let bundle = bundle else { return "" }
         let sep = String(repeating: "━", count: 32)
         var lines: [String] = []
-        let daysFormat = NSLocalizedString("%@ · %lld days", comment: "Trip date range and duration")
         let packedFormat = NSLocalizedString("%lld / %lld packed", comment: "Packed count over total count")
 
         // — Header
@@ -786,7 +785,10 @@ struct PackingListView: View {
         lines.append("🧳 \(heading)")
         lines.append("")
         if !bundle.isDateless {
-            lines.append("📅 \(String(format: daysFormat, locale: Locale.current, bundle.localizedDateRange, Int64(bundle.days)))")
+            // 「A 天 B 晚」：天 = 含两端实际天数(spanDays)、晚 = 晚数(days)；与日期选择器同口径。
+            let span = String(format: NSLocalizedString("date.days_nights", comment: "Trip span: N days M nights"),
+                              Int64(bundle.spanDays), Int64(bundle.days))
+            lines.append("📅 \(bundle.localizedDateRange) · \(span)")
         }
         if packedCount == totalCount && totalCount > 0 {
             let allPackedFormat = NSLocalizedString("packing.share.all_packed", comment: "")
@@ -1066,8 +1068,8 @@ struct PackingListView: View {
         } label: {
             HStack(spacing: 12) {
                 ZStack {
-                    Circle().fill(isSelected ? Color.primary : Color.clear)
-                    Circle().strokeBorder(isSelected ? Color.primary : Color.secondary.opacity(0.4), lineWidth: 1.5)
+                    Circle().fill(isSelected ? CarryAccent.color : Color.clear)
+                    Circle().strokeBorder(isSelected ? CarryAccent.color : Color.secondary.opacity(0.4), lineWidth: 1.5)
                     if isSelected {
                         Image(systemName: "checkmark")
                             .font(.system(size: 11, weight: .bold))

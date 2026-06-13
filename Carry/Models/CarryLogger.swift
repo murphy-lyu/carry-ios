@@ -126,8 +126,6 @@ final class CarryLogger {
         case apiError               = "api_error"
 
         // 行程路线规划（spec: itinerary-route-planning.md）
-        case itineraryDayAdded      = "itinerary_day_added"
-        case itineraryDayRemoved    = "itinerary_day_removed"
         case itineraryStopAdded     = "itinerary_stop_added"
         case itineraryStopRemoved   = "itinerary_stop_removed"
         case itineraryStopReordered = "itinerary_stop_reordered"

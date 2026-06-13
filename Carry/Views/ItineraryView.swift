@@ -62,8 +62,6 @@ struct ItineraryView: View {
     @EnvironmentObject var store: TripStore
 
     @State private var activeSheet: ItinerarySheet?
-    @State private var renameDayTarget: ItineraryDay?
-    @State private var renameDayText: String = ""
     @State private var focusedDayId: UUID?
 
     private var bundle: TripBundle? { store.bundle(for: tripId) }
@@ -88,7 +86,7 @@ struct ItineraryView: View {
 
     private var calendarEntries: [CalendarEntry] {
         guard let bundle, let startDate = visibleStartDate else { return [] }
-        let tripDays = max(1, bundle.days)
+        let tripDays = bundle.spanDays   // 实际天数（含两端），与行程页/首页一致
         let visibleDays = max(7, tripDays)
 
         return (0..<visibleDays).map { offset in
@@ -102,13 +100,9 @@ struct ItineraryView: View {
         ZStack {
             Color(UIColor.systemBackground)
                 .ignoresSafeArea()
-            Group {
-                if days.isEmpty {
-                    emptyState
-                } else {
-                    dayList
-                }
-            }
+            // 天恒等于行程天数（自动生成），行程页始终展示「天」结构，无「整屏空态」；
+            // 「整趟还没加地点」即表现为每天下方的「+ 添加地点」（决策 A）。
+            dayList
         }
         .sheet(item: $activeSheet) { sheet in
             switch sheet {
@@ -125,77 +119,16 @@ struct ItineraryView: View {
                 OptimizeRouteView(tripId: tripId, dayId: dayId)
             }
         }
-        .alert(Text("itinerary.day.rename.title"), isPresented: renameDayPresented) {
-            TextField(text: $renameDayText) { Text("itinerary.day.rename.placeholder") }
-            Button("common.cancel", role: .cancel) { renameDayTarget = nil }
-            Button("Save") {
-                if let day = renameDayTarget {
-                    store.updateItineraryDay(tripId: tripId, dayId: day.id, title: renameDayText)
-                }
-                renameDayTarget = nil
-            }
-        }
         .toolbarBackground(Color(UIColor.systemBackground), for: .navigationBar)
         .toolbarBackground(.visible, for: .navigationBar)
         .toolbarBackground(.visible, for: .tabBar)
-        .onAppear { syncFocusedDaySelectionIfNeeded() }
+        .onAppear {
+            store.syncItineraryDays(tripId: tripId)   // 兜底：天对齐到行程天数（存量行程/新建首开）
+            syncFocusedDaySelectionIfNeeded()
+        }
         .onChange(of: days.map(\.id)) { _, _ in
             syncFocusedDaySelectionIfNeeded()
         }
-    }
-
-    // MARK: Empty state
-
-    private var emptyState: some View {
-        GeometryReader { proxy in
-            VStack(spacing: 0) {
-                itineraryCalendarStrip
-                    .padding(.bottom, 10)
-
-                Spacer(minLength: 0)
-
-                emptyStateContent
-
-                Spacer(minLength: 0)
-            }
-            .frame(width: proxy.size.width, height: proxy.size.height, alignment: .top)
-        }
-    }
-
-    // 单一表面居中列（与首页空态同构）：内容直接落在背景上，不套卡片面板——
-    // 与全 App 空态语言统一，更轻、更 Apple。
-    private var emptyStateContent: some View {
-        VStack(spacing: 16) {
-            Image(systemName: "map")
-                .font(.system(size: 44, weight: .light))
-                .foregroundStyle(.secondary)
-
-            VStack(spacing: 6) {
-                Text("itinerary.empty.title")
-                    .font(.system(.title2, design: .rounded).weight(.semibold))  // rounded，与首页标题同嗓音
-                    .foregroundStyle(.primary)
-                Text("itinerary.empty.subtitle")
-                    .font(.subheadline)
-                    .foregroundStyle(.secondary)
-                    .multilineTextAlignment(.center)
-                    .padding(.horizontal, 32)
-            }
-
-            // CTA：全 App 空态统一胶囊样式（与首页空态共用 CarryEmptyStatePrimaryButtonStyle）。
-            Button {
-                store.addItineraryDay(tripId: tripId)
-            } label: {
-                HStack(spacing: 8) {
-                    Image(systemName: "plus")
-                        .font(.system(size: 14, weight: .semibold))
-                    Text("itinerary.empty.add_first_day")
-                }
-            }
-            .buttonStyle(CarryEmptyStatePrimaryButtonStyle())
-            .padding(.top, 6)
-        }
-        .frame(maxWidth: .infinity)
-        .padding(.horizontal, 24)
     }
 
     // MARK: Day list
@@ -216,7 +149,18 @@ struct ItineraryView: View {
                 onArrange: { store.applyItineraryArrangement(tripId: tripId, dayOrders: $0) },
                 onReorderBegan: { }
             )
+            // Day header 依赖行程级日期态（isDateless / departureDate）算标签，而这状态不在
+            // collection 的 diffable 快照里 → section id 不变时旧 header 不会重配（转有/无日期后
+            // 旧天仍显示「第 N 天」）。日期态变化时用 .id 强制重建 collection 一次刷新所有 header；
+            // 日常加减地点不改此 key、不触发重建。
+            .id(itineraryDateStateKey)
         }
+    }
+
+    /// 影响 Day header 标签的行程级日期态。变化即强制 collection 重建（罕见操作，代价可忽略）。
+    private var itineraryDateStateKey: String {
+        guard let bundle else { return "none" }
+        return "\(bundle.isDateless)_\(bundle.departureDate.timeIntervalSince1970)"
     }
 
     private var itineraryCalendarStrip: some View {
@@ -255,7 +199,8 @@ struct ItineraryView: View {
             VStack(spacing: 2) {
                 Text(entry.date.formatted(.dateTime.weekday(.abbreviated)))
                     .font(.system(size: 10, weight: .medium))
-                    .foregroundStyle(isSelected ? CarryAccent.color : (isDimmed ? .secondary.opacity(0.35) : .secondary))
+                    // 非行程日用语义色 tertiaryLabel（明暗自适应、克制），明确「仅作整周上下文、不可操作」。
+                    .foregroundStyle(isSelected ? CarryAccent.color : (isDimmed ? Color(.tertiaryLabel) : .secondary))
                     .tracking(0.03)
 
                 ZStack {
@@ -266,7 +211,7 @@ struct ItineraryView: View {
                     }
                     Text("\(Calendar.current.component(.day, from: entry.date))")
                         .font(.system(size: 16, weight: .regular, design: .rounded))
-                        .foregroundStyle(isSelected ? .white : (isDimmed ? .secondary.opacity(0.35) : .primary))
+                        .foregroundStyle(isSelected ? .white : (isDimmed ? Color(.tertiaryLabel) : .primary))
                         .minimumScaleFactor(0.8)
                 }
                 .frame(width: 28, height: 28)
@@ -299,23 +244,11 @@ struct ItineraryView: View {
         return min(3, max(0, day.sortedStops.count))
     }
 
+    /// 圆点统一用「当天配色」（与 Day 头圆点 / 地图针 / 时间轴序号同色），表达「这天有安排 + 粗略数量」。
+    /// 不再用类别色——类别色含义太隐，用户难以解读，反而成噪音。
     private func dayDotColor(for entry: CalendarEntry, index: Int) -> Color {
         guard let day = entry.day else { return .clear }
-        let dots = day.sortedStops
-            .prefix(3)
-            .map { stop -> Color in
-                switch stop.category {
-                case .sightseeing: return Color(red: 0.43, green: 0.59, blue: 0.79)
-                case .food: return Color(red: 0.91, green: 0.53, blue: 0.28)
-                case .lodging: return Color(red: 0.52, green: 0.41, blue: 0.71)
-                case .transport: return Color(red: 0.34, green: 0.64, blue: 0.52)
-                case .flight: return Color(red: 0.32, green: 0.54, blue: 0.90)
-                case .activity: return Color(red: 0.76, green: 0.44, blue: 0.59)
-                case .other: return Color(red: 0.47, green: 0.54, blue: 0.63)
-                }
-            }
-        guard index < dots.count else { return CarryAccent.color }
-        return dots[index]
+        return ItineraryDayPalette.color(forDayIndex: day.sortOrder)
     }
 
     /// 每天的结构快照（供 collection diffable）。
@@ -387,29 +320,12 @@ struct ItineraryView: View {
                 .frame(width: 7, height: 7)
             VStack(alignment: .leading, spacing: 2) {
                 Text(dayDateLabel(day) ?? dayDisplayTitle(day))
-                    .font(.headline.weight(.semibold))
+                    .font(.system(.headline, design: .rounded).weight(.semibold))
                 if let title = customDayTitle(day) {
                     Text(title)
                         .font(.caption2)
                         .foregroundStyle(.secondary)
                 }
-            }
-            Spacer()
-            Menu {
-                Button {
-                    renameDayText = day.title
-                    renameDayTarget = day
-                } label: {
-                    Label("itinerary.day.menu.rename", systemImage: "pencil")
-                }
-                Button(role: .destructive) {
-                    store.removeItineraryDay(tripId: tripId, dayId: day.id)
-                } label: {
-                    Label("itinerary.day.menu.delete", systemImage: "trash")
-                }
-            } label: {
-                Image(systemName: "ellipsis.circle")
-                    .foregroundStyle(.secondary)
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -460,9 +376,6 @@ struct ItineraryView: View {
         return legDistanceFormatter.string(fromDistance: meters)
     }
 
-    private var renameDayPresented: Binding<Bool> {
-        Binding(get: { renameDayTarget != nil }, set: { if !$0 { renameDayTarget = nil } })
-    }
 
     // MARK: Mutations
 
@@ -572,6 +485,7 @@ private struct TimelineStopRow: View {
                 .padding(.top, 1)
             VStack(alignment: .leading, spacing: 2) {
                 Text(stop.name)
+                    .fontWeight(.semibold)   // 名称加粗，作为每行的视觉锚
                     .foregroundStyle(.primary)
                     .lineLimit(1)
                 if !stop.address.isEmpty {

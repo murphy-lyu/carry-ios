@@ -145,7 +145,10 @@ struct TripDateRangePickerSheet: View {
             Spacer()
 
             if nightsCount > 0 {
-                Text("\(nightsCount) \(nightsCount == 1 ? NSLocalizedString("date.night", comment: "") : NSLocalizedString("date.nights", comment: ""))")
+                // 「A 天 B 晚」：天 = 含两端实际天数（晚数+1，与 TripBundle.spanDays 同口径），晚 = 晚数。
+                // 位置化占位符让各语言自排语序（日/韩为「N 泊 M 日」，先晚后天）。
+                Text(String(format: NSLocalizedString("date.days_nights", comment: "Trip span: N days M nights"),
+                            Int64(nightsCount + 1), Int64(nightsCount)))
                     .font(.caption.weight(.semibold))
                     .foregroundStyle(.secondary.opacity(0.90))
                     .padding(.horizontal, 10)

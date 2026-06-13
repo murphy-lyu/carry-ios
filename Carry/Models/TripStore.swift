@@ -56,6 +56,11 @@ final class TripBundle {
     /// 默认空 → 所有存量行程零数据风险。新增 model 属轻量迁移（加表），无需 SchemaV2。
     @Relationship(deleteRule: .cascade, inverse: \ItineraryDay.bundle) var itineraryDays: [ItineraryDay]? = []
 
+    /// 行程跨越的「实际天数」= 含出发日与返程日两端的日历天数。用于**显示**（首页卡片、行程页）
+    /// 与行程页「天」的生成。与 `days` 区分：`days` 是「晚数/时长」（= returnDate − departureDate，
+    /// 打包数量与提醒沿用，不变）；实际天数含两端 = days + 1。无日期「规划中」行程固定 1 天。
+    var spanDays: Int { isDateless ? 1 : max(1, days + 1) }
+
     var reminderConfigs: [TripReminderConfig] {
         get {
             guard !reminderConfigData.isEmpty else { return TripReminderConfig.defaults }
@@ -579,6 +584,8 @@ final class TripStore: ObservableObject {
         } catch {
             CarryLogger.shared.log(.tripEditSaveFailed)
         }
+        // 天数随行程日期/天数变化自动对齐（编辑日期 = 天数变化的主路径）。
+        syncItineraryDays(tripId: tripId)
         fetchTrips()
         // scheduleReminders 内部已 guard isDateless：退回规划中时自动取消提醒，转正时重新排期。
         if trip.remindersEnabled {
@@ -983,38 +990,50 @@ final class TripStore: ObservableObject {
 
     // MARK: - Itinerary (行程路线规划, spec: itinerary-route-planning.md)
 
-    /// 新增一天，sortOrder = 末尾。返回新 Day 的 id。
-    @discardableResult
-    func addItineraryDay(tripId: UUID) -> UUID? {
-        guard let trip = trips.first(where: { $0.id == tripId }) else { return nil }
-        let nextOrder = (trip.safeItineraryDays.map(\.sortOrder).max() ?? -1) + 1
-        let day = ItineraryDay(sortOrder: nextOrder)
-        context.insert(day)
+    /// 把行程的 ItineraryDay 数量对齐到 `trip.days`（天 = 行程天数，自动生成，用户永不手动增删）。
+    /// - 不足 → 末尾补天（sortOrder 连续）。
+    /// - 超出 → 删尾部多余的天；被删天的停靠点**按原序挪到「最后保留的那天」**（决策 B：不丢数据）。
+    /// - 幂等：数量已匹配且 sortOrder 连续时**不写库**（避免 onAppear 兜底时反复 save → 多余刷新）。
+    /// 调用点：编辑行程日期/天数后（updateTripInfo）、打开行程页兜底（ItineraryView.onAppear）。
+    func syncItineraryDays(tripId: UUID) {
+        guard let trip = trips.first(where: { $0.id == tripId }) else { return }
+        // 行程页的「天」= 含两端的实际天数（见 TripBundle.spanDays）。
+        let target = trip.spanDays
         if trip.itineraryDays == nil { trip.itineraryDays = [] }
-        trip.itineraryDays?.append(day)
-        save()
-        CarryLogger.shared.log(.itineraryDayAdded)
-        return day.id
-    }
+        let current = trip.safeItineraryDays   // 按 sortOrder 排序的快照数组
+        var changed = false
 
-    /// 删除一天（级联删其停靠点）。删除后重排剩余天的 sortOrder 为 0,1,2…保持连续。
-    func removeItineraryDay(tripId: UUID, dayId: UUID) {
-        guard let trip = trips.first(where: { $0.id == tripId }),
-              let day = trip.safeItineraryDays.first(where: { $0.id == dayId }) else { return }
-        context.delete(day)
-        trip.itineraryDays?.removeAll { $0.id == dayId }
-        for (index, d) in trip.safeItineraryDays.enumerated() { d.sortOrder = index }
-        save()
-        CarryLogger.shared.log(.itineraryDayRemoved)
-    }
-
-    /// 更新某天的标题/备注（任一为 nil 表示不改）。
-    func updateItineraryDay(tripId: UUID, dayId: UUID, title: String? = nil, note: String? = nil) {
-        guard let trip = trips.first(where: { $0.id == tripId }),
-              let day = trip.safeItineraryDays.first(where: { $0.id == dayId }) else { return }
-        if let title { day.title = title }
-        if let note { day.note = note }
-        save()
+        if current.count < target {
+            for order in current.count..<target {
+                let day = ItineraryDay(sortOrder: order)
+                context.insert(day)
+                trip.itineraryDays?.append(day)
+            }
+            changed = true
+        } else if current.count > target {
+            // 保留前 target 天；多余尾部天的停靠点挪到最后保留的那天。
+            let keep = Array(current.prefix(target))
+            let remove = Array(current.suffix(current.count - target))
+            if let lastKept = keep.last {
+                var nextOrder = (lastKept.sortedStops.map(\.sortOrder).max() ?? -1) + 1
+                for day in remove {
+                    for stop in day.sortedStops {     // sortedStops 是快照，移动时安全
+                        stop.day = lastKept           // 关系反向自动从旧天移除、加入新天
+                        stop.sortOrder = nextOrder
+                        nextOrder += 1
+                    }
+                    trip.itineraryDays?.removeAll { $0.id == day.id }
+                    context.delete(day)
+                }
+            }
+            changed = true
+        }
+        // 规整 sortOrder 连续（仅在确有错位时才标记写库）。
+        for (i, d) in trip.safeItineraryDays.enumerated() where d.sortOrder != i {
+            d.sortOrder = i
+            changed = true
+        }
+        if changed { save() }
     }
 
     /// 在某天末尾新增停靠点。坐标可缺省（手动输名的无坐标点）。返回新 Stop 的 id。

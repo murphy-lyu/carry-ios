@@ -17,7 +17,7 @@ extension TripBookStats {
             let month: Int? = t.isDateless ? nil : cal.component(.month, from: t.departureDate)
             let year: Int? = t.isDateless ? nil : cal.component(.year, from: t.departureDate)
             return TripStatInput(
-                days: t.days,
+                days: t.spanDays,   // 旅行天数 = 含两端实际天数（非晚数）；与首页/行程页同口径
                 isDateless: t.isDateless,
                 countsAsVisited: t.countsAsVisited,
                 countryCodes: codes,

@@ -66,7 +66,7 @@ struct ItineraryMapView: View {
 
     var body: some View {
         mapPreview
-            .frame(height: 176)
+            .frame(height: 200)   // 略加高：多点行程在 176 里偏挤，200 可读性更好
             .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
             .padding(.horizontal, 16)
             .padding(.top, 10)
@@ -173,14 +173,13 @@ struct ItineraryMapView: View {
     private var mapContent: some View {
         Map(initialPosition: .region(fittedRegion)) {
             // 按天编号（当天内 1、2、3…）+ 按天着色，与列表一一对应。
+            // 自定义圆形针（当天色实心圆 + 白序号 + 白描边 + 阴影），与列表序号圆点同语言、
+            // 比原生气泡针更干净、更品牌化；序号是与列表交叉对照的锚点。
             ForEach(dayMapData) { day in
                 ForEach(day.stops, id: \.stop.id) { entry in
-                    Marker(
-                        "\(entry.localIndex + 1)",
-                        systemImage: entry.stop.category.symbolName,
-                        coordinate: entry.stop.coordinate!
-                    )
-                    .tint(day.color)
+                    Annotation(entry.stop.name, coordinate: entry.stop.coordinate!) {
+                        stopMarker(index: entry.localIndex + 1, color: day.color)
+                    }
                 }
                 if day.routeCoords.count >= 2 {
                     MapPolyline(coordinates: day.routeCoords)
@@ -188,6 +187,19 @@ struct ItineraryMapView: View {
                 }
             }
         }
+    }
+
+    /// 地图针标注内容（抽出以缓解 Map 闭包的类型检查负担）。
+    private func stopMarker(index: Int, color: Color) -> some View {
+        ZStack {
+            Circle().fill(color)
+            Circle().strokeBorder(.white, lineWidth: 1.5)
+            Text("\(index)")
+                .font(.system(size: 12, weight: .bold).monospacedDigit())
+                .foregroundStyle(.white)
+        }
+        .frame(width: 24, height: 24)
+        .shadow(color: .black.opacity(0.22), radius: 2.5, x: 0, y: 1)
     }
 
     /// 包住所有坐标点的可视区域（带 padding）；单点时给固定小 span。
