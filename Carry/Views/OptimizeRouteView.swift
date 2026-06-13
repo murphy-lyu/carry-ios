@@ -37,6 +37,12 @@ struct OptimizeRouteView: View {
         return result.orderedStopIDs.compactMap { byId[$0] }
     }
 
+    private var dayTitle: String {
+        guard let day else { return NSLocalizedString("itinerary.scope.day_unknown", comment: "") }
+        let trimmed = day.title.trimmingCharacters(in: .whitespacesAndNewlines)
+        return trimmed.isEmpty ? String(format: NSLocalizedString("itinerary.day.title", comment: ""), day.sortOrder + 1) : trimmed
+    }
+
     var body: some View {
         NavigationStack {
             Group {
@@ -90,89 +96,130 @@ struct OptimizeRouteView: View {
     // MARK: Improvement
 
     private func improvementContent(_ result: RouteOptimizer.Result) -> some View {
-        VStack(spacing: 0) {
-            routeMap
-                .frame(height: 200)
-                .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
-                .padding(.horizontal, 16)
-                .padding(.top, 12)
-
-            distanceBar
-                .padding(.horizontal, 16)
-                .padding(.top, 12)
-                .padding(.bottom, 4)
-
-            distanceCaption
-                .padding(.horizontal, 16)
-                .padding(.bottom, 8)
-
-            List {
-                Section {
-                    ForEach(Array(optimizedStops.enumerated()), id: \.element.id) { index, stop in
-                        HStack(spacing: 12) {
-                            Text("\(index + 1)")
-                                .font(.subheadline.weight(.semibold).monospacedDigit())
-                                .foregroundStyle(CarryAccent.color)
-                                .frame(width: 22)
-                            Image(systemName: stop.category.symbolName)
-                                .font(.system(size: 14))
+        ScrollView {
+            VStack(spacing: 16) {
+                VStack(alignment: .leading, spacing: 14) {
+                    HStack(alignment: .top) {
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text(dayTitle)
+                                .font(.headline.weight(.semibold))
+                            Text("itinerary.optimize.title")
+                                .font(.title3.weight(.semibold))
+                                .foregroundStyle(.primary)
+                            Text("itinerary.optimize.preview_subtitle")
+                                .font(.caption)
                                 .foregroundStyle(.secondary)
-                                .frame(width: 20)
-                            Text(stop.name).lineLimit(1)
+                        }
+                        Spacer()
+                        VStack(alignment: .trailing, spacing: 4) {
+                            Text(distanceString(displaySaved))
+                                .font(.title3.weight(.bold).monospacedDigit())
+                                .foregroundStyle(CarryAccent.color)
+                            Text("itinerary.optimize.saved_short")
+                                .font(.caption2)
+                                .foregroundStyle(.secondary)
                         }
                     }
-                } header: {
-                    Text("itinerary.optimize.new_order")
-                } footer: {
+
+                    routeMap
+                        .frame(height: 210)
+                        .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
+
+                    distanceBar
+
+                    distanceCaption
+
+                    VStack(alignment: .leading, spacing: 10) {
+                        Text("itinerary.optimize.new_order")
+                            .font(.subheadline.weight(.semibold))
+                        ForEach(Array(optimizedStops.enumerated()), id: \.element.id) { index, stop in
+                            HStack(spacing: 12) {
+                                Text("\(index + 1)")
+                                    .font(.subheadline.weight(.semibold).monospacedDigit())
+                                    .foregroundStyle(CarryAccent.color)
+                                    .frame(width: 24, height: 24)
+                                    .background(CarryAccent.color.opacity(0.10), in: Circle())
+                                Image(systemName: stop.category.symbolName)
+                                    .font(.system(size: 14))
+                                    .foregroundStyle(.secondary)
+                                    .frame(width: 20)
+                                VStack(alignment: .leading, spacing: 2) {
+                                    Text(stop.name)
+                                        .font(.subheadline)
+                                        .lineLimit(1)
+                                    if stop.plannedStartMinutes >= 0 {
+                                        Text(timeLabel(dayMinutes: stop.plannedStartMinutes))
+                                            .font(.caption2)
+                                            .foregroundStyle(.secondary)
+                                    }
+                                }
+                                Spacer(minLength: 0)
+                            }
+                            .padding(.vertical, 6)
+                            .padding(.horizontal, 12)
+                            .background(Color(UIColor.secondarySystemBackground), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+                        }
+                    }
+                    .padding(.top, 2)
+
                     // 让用户理解为何首尾不动（方案 A：固定首尾、只优化中间）。
                     Label("itinerary.optimize.endpoints_fixed", systemImage: "pin")
                         .font(.caption2)
                         .foregroundStyle(.secondary)
+                        .padding(.top, 2)
                 }
-            }
-            .listStyle(.insetGrouped)
-            .scrollContentBackground(.hidden)
-
-            applyButton(result)
+                .padding(16)
+                .background(
+                    RoundedRectangle(cornerRadius: 28, style: .continuous)
+                        .fill(Color(UIColor.systemBackground).opacity(0.72))
+                )
                 .padding(.horizontal, 16)
-                .padding(.bottom, 12)
+
+                actionRow(result)
+                    .padding(.horizontal, 16)
+                    .padding(.bottom, 12)
+            }
+            .padding(.top, 12)
         }
         .background(CarrySubtleBackground())
     }
 
     private var distanceBar: some View {
-        HStack {
-            VStack(alignment: .leading, spacing: 2) {
-                Text("itinerary.optimize.current")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                Text(distanceString(displayOriginal))
-                    .font(.headline)
-                    .foregroundStyle(.secondary)
-                    .strikethrough()
+        VStack(spacing: 10) {
+            HStack {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("itinerary.optimize.current")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                    Text(distanceString(displayOriginal))
+                        .font(.headline)
+                        .foregroundStyle(.secondary)
+                        .strikethrough()
+                }
+                Image(systemName: "arrow.right")
+                    .foregroundStyle(.tertiary)
+                    .padding(.horizontal, 8)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("itinerary.optimize.optimized")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                    Text(distanceString(displayOptimized))
+                        .font(.headline)
+                        .foregroundStyle(CarryAccent.color)
+                }
+                Spacer()
+                if displaySaved > 0 {
+                    Text(String(format: NSLocalizedString("itinerary.optimize.saved", comment: ""),
+                                distanceString(displaySaved)))
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(CarryAccent.color)
+                        .padding(.horizontal, 10)
+                        .padding(.vertical, 6)
+                        .background(CarryAccent.color.opacity(0.12), in: Capsule())
+                }
             }
-            Image(systemName: "arrow.right")
-                .foregroundStyle(.tertiary)
-                .padding(.horizontal, 8)
-            VStack(alignment: .leading, spacing: 2) {
-                Text("itinerary.optimize.optimized")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                Text(distanceString(displayOptimized))
-                    .font(.headline)
-                    .foregroundStyle(CarryAccent.color)
-            }
-            Spacer()
-            // 道路距离下若无节省（罕见：Haversine 最优但道路并非）则不显示 saves 标签，诚实。
-            if displaySaved > 0 {
-                Text(String(format: NSLocalizedString("itinerary.optimize.saved", comment: ""),
-                            distanceString(displaySaved)))
-                    .font(.caption.weight(.semibold))
-                    .foregroundStyle(CarryAccent.color)
-                    .padding(.horizontal, 10)
-                    .padding(.vertical, 6)
-                    .background(CarryAccent.color.opacity(0.12), in: Capsule())
-            }
+            .padding(14)
+            .background(Color(UIColor.secondarySystemBackground), in: RoundedRectangle(cornerRadius: 18, style: .continuous))
         }
     }
 
@@ -195,19 +242,31 @@ struct OptimizeRouteView: View {
         .foregroundStyle(.tertiary)
     }
 
-    private func applyButton(_ result: RouteOptimizer.Result) -> some View {
-        // 主按钮规格（design-system）：高 50、圆角 12、半粗体；不叠额外内边距。
-        Button {
-            apply(result)
-        } label: {
-            Text("itinerary.optimize.apply")
-                .font(.body.weight(.semibold))
-                .foregroundStyle(.white)
-                .frame(maxWidth: .infinity)
-                .frame(height: 50)
-                .background(CarryAccent.color, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+    private func actionRow(_ result: RouteOptimizer.Result) -> some View {
+        HStack(spacing: 12) {
+            Button {
+                discard()
+            } label: {
+                Text("common.cancel")
+                    .font(.body.weight(.semibold))
+                    .frame(maxWidth: .infinity)
+                    .frame(height: 50)
+            }
+            .buttonStyle(.bordered)
+            .tint(CarryAccent.color)
+
+            Button {
+                apply(result)
+            } label: {
+                Text("itinerary.optimize.apply")
+                    .font(.body.weight(.semibold))
+                    .foregroundStyle(.white)
+                    .frame(maxWidth: .infinity)
+                    .frame(height: 50)
+                    .background(CarryAccent.color, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+            }
+            .buttonStyle(PressableScaleButtonStyle(scale: 0.97, pressedBrightness: -0.03, pressedOpacity: 0.96))
         }
-        .buttonStyle(PressableScaleButtonStyle(scale: 0.97, pressedBrightness: -0.03, pressedOpacity: 0.96))
     }
 
     // MARK: Already optimal
