@@ -147,7 +147,9 @@ struct AddStopView: View {
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 10)
-        .background(Color(.secondarySystemBackground), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+        // 用与列表卡片一致的分组背景（浅色=白 / 深色=深灰），与外层 systemGroupedBackground
+        // 形成对比，搜索框有清晰可见的边界——切勿用 secondarySystemBackground（浅色下与外层同灰、隐形）。
+        .background(Color(.secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
         .padding(.horizontal, 16)
         .padding(.top, 8)
         .padding(.bottom, 8)
