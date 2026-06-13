@@ -1,5 +1,23 @@
 # 决策日志
 
+## 2026-06-13 国内/国际基准改为 storefront 单一来源（home country）
+
+> 起因：「我的行程册」要做国内/国际占比统计。原 `TripBundle.isInternational` 与 `TripStore.inferIsInternational` **硬编码 CN**，且 `isInternational` 还被打包推荐（`generatePackingSections` 过滤 `internationalOnly`）多处使用。
+
+- **决策（用户拍板）**：建唯一来源 `homeCountryCode`（`SceneItemMap.swift`）——读 storefront `countryCode`（ISO alpha-3，如 `CHN`/`USA`），经新增静态表 `CountryData.alpha3ToAlpha2` 转 alpha-2；取不到/大陆默认 `CN`。统计与打包**共用**此基准，避免两处口径漂移、日后重复维护。
+- **零回归保证**：大陆 storefront → `homeCountryCode == "CN"`，与历史 CN 硬编码逐字节一致（launch 市场无行为变化）；非大陆 storefront 才按其本国判定（对打包也更正确：US→US 不再误判国际/塞护照）。
+- **不用 Locale 替代**：home country 取自 storefront，**禁止**用设备 Locale/Region 替代（与 `isChinaStorefront` 同纪律）。
+- **合规未受影响**：旅行证件差异化（护照↔港澳/台湾通行证）在 `generatePackingSections(destinationCodes:)` 内、基于 `isChinaStorefront`+目的地码，不依赖 `isInternational`，未改。
+- **测试/已知现象**：`TripBookStats` 单测覆盖 CN 与 US 两种 home 基准；模拟器为美区 storefront 时国内/国际按 home=US 算（去中国算国际），开 Settings「模拟大陆 storefront」开关或真机大陆才是 CN 口径——非 bug。
+
+## 2026-06-13 行程册区域名用系统、不自定义（规避命名合规风险）
+
+> 起因：行程册「国家和地区」里 CN 显示为 Apple 系统名「中国大陆 / China mainland」，用户问可否改成「中国」（Tripsy 风格）、是否有政策风险。
+
+- **决策（用户选保守方案）**：**不自定义区域显示名，一律用系统 `Locale.localizedString(forRegionCode:)`**。大陆 storefront 下 Apple 的区域命名已由 Apple 替大陆市场审定，App 自己越少插手越安全；「中国大陆」本身是正常用语。
+- **判断**：显示「中国」本身**无**政策风险（风险方向是把台湾/港澳显示成独立国家，而我们恰恰归并进 CN）；但自定义区域名会开「自己命名争议区域」的口子，保守起见统一交给系统。
+- **边界**：港澳台/争议区域永不自定义名；展示层归并仍走 `normalizedCountryCode`（大陆 storefront HK/MO/TW→CN），存储层保持 ISO 原值。
+
 ## 2026-06-13 行程按天编号 + 按天分色（破例覆盖单一强调色）
 
 > spec：`specs/itinerary-route-planning.md`「按天编号与按天分色」一节。

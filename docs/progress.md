@@ -1,7 +1,17 @@
 # 项目进度
 
 ## 最后更新
-2026-06-12
+2026-06-13
+
+## 上次改动摘要（关闭按钮统一 + 首页搜索 + 我的行程册 · 2026-06-13）
+
+> 分支已切到 `main`（用户有意）。本轮均已提交，编译绿 + 纯函数单测 + 模拟器截图验证。
+
+- **设置/sheet 关闭按钮统一**：抽 `SheetCloseButton`（ViewModifiers）——iOS 26 用原生 `Button(role:.close)`（系统单层玻璃 X，修掉「自定义 glassCircleButton 塞进工具栏 → 双层玻璃」），iOS 17–25 回退 toolbar xmark + `common.close`。SettingsView / CoffeeSheetView / ItineraryMapView 三处工具栏关闭统一走它；自定义头部（Roadmap/ScenePicker/SuggestionPreview）保留 glassCircleButton（不在工具栏、单层正确）。
+- **首页搜索（自定义 in-sheet）落地**：`HomeView.searchSheet`——补齐本地化（`Search trips`/`No matching trips` 原为空块→ 9 语言）、无结果居中空状态、自动聚焦、`onDismiss` 事件驱动跳转（去掉 `asyncAfter` 延迟 hack）、结果列表 `ScrollView+LazyVStack` 收紧行距 + 下拉收键盘、右侧 `xmark.circle.fill` 清空按钮（`common.clear`）。
+- **我的行程册升级为旅行数据回顾**（spec: `specs/trip-book.md`）：3 行统计 → 可滚动卡片流。hero（国旗排 + 自 YYYY 起旅行 + 抽象航线弧线点缀 + count-up 数字，尊重减弱动态）、国家和地区（Top + 全球占比）、大洲、国内/国际比例条、季节（南北半球翻转）。**明确不做航班里程/住宿晚数/花费**（无数据 + 越界定位）。区域名用系统、不自定义（合规）。20 个 `tripbook.*` key × 9 语言。
+- **数据层**：`TripBookStats`（纯函数 + 27 项单测）/ `TripBookStats+Trips` 适配器；`CountryData`（脚本 `scripts/gen_country_data.py` 生成校验：ISO alpha-3→alpha-2 + 国家→大洲 249 条）。
+- **`homeCountryCode` 单一来源重构**：见 decisions 2026-06-13。`isInternational`/`inferIsInternational` 改 storefront 基准（大陆→CN 零回归）；`normalizedCountryCode`/`flagEmoji` 移共享、去重。
 
 ## 待办 / 下一步（截至 2026-06-12）
 

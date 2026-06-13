@@ -1109,7 +1109,8 @@ struct HomeView: View {
 
     // MARK: Trip Book helpers
 
-    /// 系统本地化国家/地区名（归并码亦适用，如 CN → 中国 / China）。
+    /// 本地化国家/地区名，直接用系统（大陆 storefront 下的区域命名已由 Apple 审定，
+    /// 我们不自定义区域名以规避合规风险）。
     private func countryDisplayName(_ code: String) -> String {
         Locale.current.localizedString(forRegionCode: code) ?? code
     }
