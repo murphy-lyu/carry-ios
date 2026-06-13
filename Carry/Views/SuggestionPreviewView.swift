@@ -198,9 +198,9 @@ struct SuggestionPreviewView: View {
             HStack(spacing: 12) {
                 ZStack {
                     Circle()
-                        .fill(isSelected ? Color.primary : Color.clear)
+                        .fill(isSelected ? CarryAccent.color : Color.clear)
                     Circle()
-                        .strokeBorder(isSelected ? Color.primary : Color.secondary.opacity(0.4), lineWidth: 1.5)
+                        .strokeBorder(isSelected ? CarryAccent.color : Color.secondary.opacity(0.4), lineWidth: 1.5)
                     if isSelected {
                         Image(systemName: "checkmark")
                             .font(.system(size: 11, weight: .bold))
@@ -231,9 +231,9 @@ struct SuggestionPreviewView: View {
             HStack(spacing: 12) {
                 ZStack {
                     Circle()
-                        .fill(isSelected ? Color.primary : Color.clear)
+                        .fill(isSelected ? CarryAccent.color : Color.clear)
                     Circle()
-                        .strokeBorder(isSelected ? Color.primary : Color.secondary.opacity(0.4), lineWidth: 1.5)
+                        .strokeBorder(isSelected ? CarryAccent.color : Color.secondary.opacity(0.4), lineWidth: 1.5)
                     if isSelected {
                         Image(systemName: "checkmark")
                             .font(.system(size: 11, weight: .bold))

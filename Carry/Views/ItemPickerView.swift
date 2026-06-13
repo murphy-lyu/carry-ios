@@ -734,9 +734,9 @@ struct ItemPickerView: View {
             HStack(spacing: 12) {
                 ZStack {
                     Circle()
-                        .fill(isSearchResultSelected(result) ? Color.primary : Color.clear)
+                        .fill(isSearchResultSelected(result) ? CarryAccent.color : Color.clear)
                     Circle()
-                        .strokeBorder(isSearchResultSelected(result) ? Color.primary : Color.secondary.opacity(0.4), lineWidth: 1.5)
+                        .strokeBorder(isSearchResultSelected(result) ? CarryAccent.color : Color.secondary.opacity(0.4), lineWidth: 1.5)
                     if isSearchResultSelected(result) {
                         Image(systemName: "checkmark")
                             .font(.system(size: 11, weight: .bold))
@@ -875,8 +875,8 @@ struct ItemPickerView: View {
                             sourceMode == .smart
                                 ? LinearGradient(
                                     colors: [
-                                        colorScheme == .dark ? Color(white: 0.26) : Color.primary.opacity(1.0),
-                                        colorScheme == .dark ? Color(white: 0.21) : Color.primary.opacity(0.92)
+                                        CarryAccent.color,
+                                        CarryAccent.color.opacity(0.86)
                                     ],
                                     startPoint: .topLeading,
                                     endPoint: .bottomTrailing
@@ -1130,7 +1130,7 @@ struct ItemPickerView: View {
                         Capsule(style: .continuous)
                             .fill(
                                 isSelected
-                                    ? Color.primary
+                                    ? CarryAccent.color
                                     : Color.clear
                             )
                     )
@@ -1242,8 +1242,8 @@ struct ItemPickerView: View {
                         isSelected
                             ? LinearGradient(
                                 colors: [
-                                    isDarkMode ? Color(white: 0.28) : Color.primary.opacity(0.98),
-                                    isDarkMode ? Color(white: 0.22) : Color.primary.opacity(0.84)
+                                    CarryAccent.color,
+                                    CarryAccent.color.opacity(0.86)
                                 ],
                                 startPoint: .topLeading,
                                 endPoint: .bottomTrailing
@@ -1351,9 +1351,9 @@ struct ItemPickerView: View {
             HStack(spacing: 12) {
                 ZStack {
                     Circle()
-                        .fill((isSelected || isAlreadyAdded) ? Color.primary : Color.clear)
+                        .fill((isSelected || isAlreadyAdded) ? CarryAccent.color : Color.clear)
                     Circle()
-                        .strokeBorder((isSelected || isAlreadyAdded) ? Color.primary : Color.secondary.opacity(0.4), lineWidth: 1.5)
+                        .strokeBorder((isSelected || isAlreadyAdded) ? CarryAccent.color : Color.secondary.opacity(0.4), lineWidth: 1.5)
                     if isSelected || isAlreadyAdded {
                         Image(systemName: "checkmark")
                             .font(.system(size: 11, weight: .bold))
@@ -1578,9 +1578,9 @@ struct ItemPickerView: View {
                 HStack(spacing: 12) {
                     ZStack {
                         Circle()
-                            .fill((isSelected || isAlreadyAdded) ? Color.primary : Color.clear)
+                            .fill((isSelected || isAlreadyAdded) ? CarryAccent.color : Color.clear)
                         Circle()
-                            .strokeBorder((isSelected || isAlreadyAdded) ? Color.primary : Color.secondary.opacity(0.4), lineWidth: 1.5)
+                            .strokeBorder((isSelected || isAlreadyAdded) ? CarryAccent.color : Color.secondary.opacity(0.4), lineWidth: 1.5)
                         if isSelected || isAlreadyAdded {
                             Image(systemName: "checkmark")
                                 .font(.system(size: 11, weight: .bold))

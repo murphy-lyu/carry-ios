@@ -535,7 +535,7 @@ struct SceneChip: View {
             }
             .padding(.horizontal, 10)
             .padding(.vertical, 6)
-            .background(isSelected ? Color.primary : Color.clear)
+            .background(isSelected ? CarryAccent.color : Color.clear)
             .clipShape(Capsule())
             .overlay(
                 Capsule()
