@@ -1252,34 +1252,10 @@ struct HomeView: View {
     private var searchSheet: some View {
         VStack(spacing: 0) {
             HStack(spacing: 12) {
-                HStack(spacing: 10) {
-                    Image(systemName: "magnifyingglass")
-                        .foregroundStyle(.secondary)
-                    TextField("Search trips", text: $searchText)
-                        .textInputAutocapitalization(.never)
-                        .autocorrectionDisabled(true)
-                        .submitLabel(.search)
-                        .focused($searchFieldFocused)
-                    if !searchText.isEmpty {
-                        Button {
-                            searchText = ""
-                            searchFieldFocused = true
-                        } label: {
-                            Image(systemName: "xmark.circle.fill")
-                                .foregroundStyle(.secondary)
-                        }
-                        .buttonStyle(.plain)
-                        .accessibilityLabel(Text("common.clear"))
-                        .transition(.opacity)
-                    }
-                }
-                .animation(.easeInOut(duration: 0.15), value: searchText.isEmpty)
-                .padding(.horizontal, 16)
-                .padding(.vertical, 14)
-                .frame(maxWidth: .infinity)
-                .background(
-                    RoundedRectangle(cornerRadius: 24, style: .continuous)
-                        .fill(Color(UIColor.secondarySystemBackground))
+                CarrySearchField(
+                    text: $searchText,
+                    placeholder: "Search trips",
+                    focus: $searchFieldFocused
                 )
 
                 Button("Cancel") {

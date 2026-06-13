@@ -122,35 +122,17 @@ struct AddStopView: View {
         }
     }
 
-    /// 常驻搜索框：放大镜 + 输入框 + 清除按钮，固定在导航栏下方。
+    /// 常驻搜索框：统一 CarrySearchField（.grouped 表面），尾部收进类别菜单，固定在导航栏下方。
     private var searchField: some View {
-        HStack(spacing: 8) {
-            Image(systemName: "magnifyingglass")
-                .foregroundStyle(.secondary)
-            TextField(text: $completer.query) {
-                Text("itinerary.add_stop.search_placeholder")
-            }
-            .focused($searchFocused)
-            .submitLabel(.search)
-            .autocorrectionDisabled()
-            if !completer.query.isEmpty {
-                Button {
-                    completer.query = ""
-                } label: {
-                    Image(systemName: "xmark.circle.fill")
-                        .foregroundStyle(.secondary)
-                }
-                .buttonStyle(.plain)
-            }
+        CarrySearchField(
+            text: $completer.query,
+            placeholder: "itinerary.add_stop.search_placeholder",
+            focus: $searchFocused
+        ) {
             Divider()
                 .frame(height: 18)
             categoryMenu
         }
-        .padding(.horizontal, 12)
-        .padding(.vertical, 10)
-        // 用与列表卡片一致的分组背景（浅色=白 / 深色=深灰），与外层 systemGroupedBackground
-        // 形成对比，搜索框有清晰可见的边界——切勿用 secondarySystemBackground（浅色下与外层同灰、隐形）。
-        .background(Color(.secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
         .padding(.horizontal, 16)
         .padding(.top, 8)
         .padding(.bottom, 8)

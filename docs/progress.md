@@ -3,6 +3,14 @@
 ## 最后更新
 2026-06-14
 
+## 上次改动摘要（搜索框统一组件 CarrySearchField · 2026-06-14）
+
+> 三处搜索框（首页搜索行程 / 添加地点 / 添加物品）原各写一份、圆角不一致（首页 24pt、其余 12pt）。抽共享组件收成单一真源。编译绿（独立 DerivedData）；明暗双模真机/模拟器走查，三框已视觉一致。未提交。
+
+- **新增 `CarrySearchField`**（`ViewModifiers.swift`，与其它共享 View 组件同处，无需改 pbxproj）：单一形态——12pt `.continuous` 圆角 / 44pt 高 / body 字号 / 放大镜 + 清除按钮（`common.clear` a11y）+ `.spring(0.2,0.1)` 清除动画。表面走 design-system「描边主导」唯一款：`systemBackground.opacity(0.84)` + 细描边（Dark 0.12 / Light 0.08）——描边让它通吃任何底色，故不分上下文（曾短暂引入 `.plain/.grouped/.floating` 三表面枚举，后按用户拍板「全描边主导」删枚举、收单一形态，避免死代码）。带可选 `trailing` slot。
+- **三处替换**：HomeView `searchSheet`（24→12，去掉内联实心框，旁留「取消」）；AddStopView `searchField`（`.grouped` slot 放类别菜单，外层 `systemGroupedBackground` 底条保留）；ItemPickerView `searchBar`（删随之失效的 `searchPlaceholderText` 死代码）。
+- **回写 design-system.md** §搜索框：组件 + 形状 + 描边主导唯一表面 + 通吃底色的原理（纯实心才有「同灰隐形」坑）。
+
 ## 上次改动摘要（模态呈现规范统一：创建/快速添加改 cover/sheet · 2026-06-14）
 
 > UI 走查呈现方式。确立 **Carry Modal Convention**（详见 `design-system.md` §Carry Modal Convention + `decisions.md` 2026-06-14）：按语义选 push/sheet/cover。均已提交、编译绿、真机/模拟器验。

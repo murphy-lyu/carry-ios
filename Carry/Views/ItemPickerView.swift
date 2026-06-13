@@ -423,12 +423,6 @@ struct ItemPickerView: View {
         normalizedForSearch(canonicalItemName(name))
     }
 
-    private var searchPlaceholderText: String {
-        sourceMode == .smart
-            ? NSLocalizedString("itempicker.search.placeholder.scenes", comment: "")
-            : NSLocalizedString("itempicker.search.placeholder.items", comment: "")
-    }
-
     private func hideKeyboard() {
         UIApplication.shared.sendAction(
             #selector(UIResponder.resignFirstResponder),
@@ -1430,38 +1424,13 @@ struct ItemPickerView: View {
     // MARK: - Search bar
 
     private var searchBar: some View {
-        HStack(spacing: 8) {
-            Image(systemName: "magnifyingglass")
-                .foregroundColor(Color(UIColor.placeholderText))
-                .font(.subheadline)
-            ZStack(alignment: .leading) {
-                if searchText.isEmpty {
-                    Text(searchPlaceholderText)
-                        .font(.subheadline)
-                        .foregroundColor(Color(UIColor.placeholderText))
-                        .allowsHitTesting(false)
-                }
-                TextField("", text: $searchText)
-                    .font(.subheadline)
-                    .tint(.primary)
-                    .focused($isSearchFocused)
-                    .textFieldStyle(.plain)
-            }
-            if !searchText.isEmpty {
-                Button { searchText = "" } label: {
-                    Image(systemName: "xmark.circle.fill")
-                        .foregroundColor(Color(UIColor.placeholderText))
-                }
-            }
-        }
-        .frame(height: 44)
-        .padding(.horizontal, 12)
-        .background(Color(UIColor.systemBackground).opacity(0.84))
-        .overlay(
-            RoundedRectangle(cornerRadius: 12, style: .continuous)
-                .strokeBorder(Color.primary.opacity(colorScheme == .dark ? 0.12 : 0.08), lineWidth: 1)
+        CarrySearchField(
+            text: $searchText,
+            placeholder: sourceMode == .smart
+                ? "itempicker.search.placeholder.scenes"
+                : "itempicker.search.placeholder.items",
+            focus: $isSearchFocused
         )
-        .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
     }
 
     // MARK: - Category header (pinned)

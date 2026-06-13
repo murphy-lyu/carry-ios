@@ -177,6 +177,12 @@ Apple 原生风格，极简、克制、优雅。
 - 内边距：水平 12pt，垂直 10pt
 - 字体：.body
 
+### 搜索框（Search Field · CarrySearchField）
+全 App 搜索框统一走 `CarrySearchField`（`ViewModifiers.swift`），**单一形态**，禁止各页另起炉灶——历史上首页用过 24pt、其余 12pt，靠组件收成单一真源。
+- **形状**：圆角 **12pt** `.continuous`、高度 **44pt**、水平内边距 12pt、字体 `.body`；放大镜 + 清除按钮（`xmark.circle.fill`，`common.clear` 无障碍）+ 清除动画 `.spring(0.2, 0.1)`。
+- **表面（描边主导，唯一）**：`systemBackground.opacity(0.84)` + 细描边（`primary.opacity` Dark 0.12 / Light 0.08，线宽 1）。描边让它在**任何底色**上都立得住——灰底是白底+描边、白底是描边定界、暗色是深底+描边，因此不按上下文分多种填充。注意：纯实心填充（如 `secondarySystemBackground`）才会有「衬在同灰分组背景上整框隐形」的坑，描边主导式不受此影响。
+- 尾部可选 slot（`trailing`）：放类别菜单等紧凑控件（见 AddStopView）。
+
 ### 创建/编辑行程输入容器统一（TripInfoView / EditTripView）
 - 输入框与日期框采用“描边主导”视觉，不使用厚重实心填充块。
 - 容器背景：`Color(.systemBackground).opacity(0.64~0.66)`。

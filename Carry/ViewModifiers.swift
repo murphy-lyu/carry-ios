@@ -86,6 +86,14 @@ struct CarryAtmosphereBackground: View {
 }
 
 struct CarrySubtleBackground: View {
+    /// 与背景渐变**底端**同色（明暗自适应）。供悬浮在背景上的底部条做"内容淡出到背景"的渐隐，
+    /// 避免底部出现色带接缝（如 OptimizeRouteView 钉底 CTA）。
+    static let baseColor = Color(UIColor { traits in
+        traits.userInterfaceStyle == .dark
+            ? UIColor(red: 0.08, green: 0.08, blue: 0.09, alpha: 1)   // 暗：渐变底端
+            : UIColor(red: 0.98, green: 0.98, blue: 0.97, alpha: 1)   // 浅：渐变底端
+    })
+
     @Environment(\.colorScheme) private var colorScheme
 
     var body: some View {
@@ -308,6 +316,80 @@ extension View {
         } else {
             self.background(Circle().fill(Color(.secondarySystemFill)))
         }
+    }
+}
+
+// MARK: - CarrySearchField
+
+/// 全 App 统一的搜索框，单一形态。规格收成唯一真源：12pt 圆角 / 44pt 高 / body 字号 /
+/// 放大镜 + 清除按钮 + 无障碍——杜绝各页各写一份导致圆角等规格漂移（曾出现首页 24pt、
+/// 其余 12pt 不一致）。
+///
+/// 表面采用 design-system「描边主导」输入容器规范：半透明系统底 `systemBackground.opacity(0.84)`
+/// + 细描边。描边让它在**任何底色**上都立得住——灰底是白底+描边、白底是描边定界、暗色是深底+描边，
+/// 故不需要按上下文分多种填充（描边是通吃的关键，纯实心填充才会有「同灰隐形」问题）。
+struct CarrySearchField<Trailing: View>: View {
+    @Binding var text: String
+    let placeholder: LocalizedStringKey
+    var focus: FocusState<Bool>.Binding
+    @ViewBuilder var trailing: () -> Trailing
+
+    @Environment(\.colorScheme) private var colorScheme
+
+    var body: some View {
+        HStack(spacing: 8) {
+            Image(systemName: "magnifyingglass")
+                .foregroundStyle(.secondary)
+
+            TextField(placeholder, text: $text)
+            .focused(focus)
+            .font(.body)
+            .tint(.primary)
+            .submitLabel(.search)
+            .autocorrectionDisabled()
+            .textInputAutocapitalization(.never)
+
+            if !text.isEmpty {
+                Button {
+                    text = ""
+                } label: {
+                    Image(systemName: "xmark.circle.fill")
+                        .foregroundStyle(.secondary)
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel(Text("common.clear"))
+                .transition(.opacity)
+            }
+
+            trailing()
+        }
+        .animation(.spring(duration: 0.2, bounce: 0.1), value: text.isEmpty)
+        .padding(.horizontal, 12)
+        .frame(height: 44)
+        .background(Color(.systemBackground).opacity(0.84))
+        .overlay {
+            RoundedRectangle(cornerRadius: 12, style: .continuous)
+                .strokeBorder(
+                    Color.primary.opacity(colorScheme == .dark ? 0.12 : 0.08),
+                    lineWidth: 1
+                )
+        }
+        .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+    }
+}
+
+extension CarrySearchField where Trailing == EmptyView {
+    init(
+        text: Binding<String>,
+        placeholder: LocalizedStringKey,
+        focus: FocusState<Bool>.Binding
+    ) {
+        self.init(
+            text: text,
+            placeholder: placeholder,
+            focus: focus,
+            trailing: { EmptyView() }
+        )
     }
 }
 
