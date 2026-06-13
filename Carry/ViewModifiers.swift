@@ -10,16 +10,20 @@ import SwiftUI
 /// + 无障碍标签，不在工具栏自带玻璃之上再叠一层；iOS 17–25 工具栏不自动加玻璃，
 /// 回退为裸 `xmark` + 显式无障碍标签。
 /// 注意：仅用于工具栏；自定义头部（非 toolbar）的关闭按钮用 `glassCircleButton()`。
+/// 颜色：按按钮颜色规范 Tier 3（chrome 工具图标）走中性 `.secondary` 灰——显式盖掉
+/// sheet 的 `.tint(CarryAccent)`，让关闭 X 与设置齿轮、Apple 原生关闭按钮一致（不染强调色）。
 struct SheetCloseButton: View {
     var action: () -> Void
 
     var body: some View {
         if #available(iOS 26.0, *) {
             Button(role: .close, action: action)
+                .tint(Color(.secondaryLabel))
         } else {
             Button(action: action) {
                 Image(systemName: "xmark")
                     .font(.system(size: 13, weight: .semibold))
+                    .foregroundStyle(.secondary)
             }
             .accessibilityLabel(Text("common.close"))
         }

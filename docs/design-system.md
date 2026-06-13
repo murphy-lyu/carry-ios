@@ -30,6 +30,27 @@ Apple 原生风格，极简、克制、优雅。
 - **无用户可见主题切换**;旧的 `ThemeAccent`(多色备选)/`toggleTint` 环境键已删除。
 - 注：`Assets.xcassets/AccentColor.colorset`（旧「海湾青」）已被 `.tint()` 覆盖,不再是有效来源。
 
+## 按钮颜色规范（三档 · 2026-06-13 定稿）
+
+> **同一类按钮必须同色。** 按「这颗按钮在信息层级里是什么角色」选档，不靠手感随意上色。依据：north-star §1（chrome 退后）/ §4（彩色=意义）。来源：用户发现关闭 X 在不同界面出现蓝/黑/灰三色不一致，借此统一全 App 按钮配色。
+
+**Tier 1 · 主操作 CTA（每屏 ≤ 1）** —— 实心 `Color(.label)`（黑/白自适应）+ `Color(.systemBackground)` 文字。
+- 用于：空状态主行动（创建第一个行程 / 添加第一天）、底部 Save·确认·主 CTA。
+- 为什么不用烟蓝：label-黑对比最强、最「压得住场」；把烟蓝让给彩色控件，避免主按钮与一堆彩色控件抢色。
+
+**Tier 2 · 强调 / 可点的彩色** —— 烟蓝 `CarryAccent`。
+- 用于：FAB、Toggle 开启态、选中 / 分段选中、进度填充、日期选择器、链接、「采用优化」类彩色动作。
+- 依据：彩色 = 意义（可点 / 选中 / 强调）。
+
+**Tier 3 · Chrome / 工具图标（退后）** —— 中性 `.secondary` 灰 + 玻璃 / 材质圆底。
+- 用于：设置齿轮、**关闭 X**、「…」更多菜单、返回。
+- 依据：chrome 退后；与 Apple 原生一致（齿轮 / 关闭从不染 app 强调色）。
+- 实现：工具栏关闭用 `SheetCloseButton`（已显式 `.tint(Color(.secondaryLabel))` 盖掉 sheet 的 accent tint）；自定义头部关闭用 `glassCircleButton()` + xmark `.foregroundStyle(.secondary)`。
+
+**有意区分（非违规）**：「创建行程」在空状态是 Tier 1 黑（该屏主操作），在首页是 Tier 2 蓝 FAB（常驻悬浮、足迹地球上唯一一抹彩色）——语境不同、分属不同档，颜色不同是对的。
+
+**禁止**：同类按钮混用多色（如关闭 X 一处蓝、一处黑、一处灰）；给工具 / chrome 图标染强调色。
+
 ### Tab Bar 背景（已实现）
 - Dark：Color(red: 0.09, green: 0.09, blue: 0.10)
 - Light：Color(UIColor.systemBackground)

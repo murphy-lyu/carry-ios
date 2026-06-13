@@ -277,7 +277,7 @@ struct RoadmapView: View {
                     } label: {
                         Image(systemName: "xmark")
                             .font(.system(size: 12, weight: .semibold))
-                            .foregroundStyle(.primary)
+                            .foregroundStyle(.secondary)
                             .frame(width: 32, height: 32)
                             .glassCircleButton()
                     }

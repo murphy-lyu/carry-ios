@@ -109,7 +109,7 @@ struct SuggestionPreviewView: View {
                 Button { dismiss() } label: {
                     Image(systemName: "xmark")
                         .font(.system(size: 13, weight: .semibold))
-                        .foregroundStyle(.primary)
+                        .foregroundStyle(.secondary)
                         .frame(width: 36, height: 36)
                         .glassCircleButton()
                 }
