@@ -103,7 +103,11 @@ SharedSources/              ← 两个 target 共用的代码
 └── PackingActivityAttributes.swift ← ActivityKit 共享数据模型
 
 ## 设计规范
-→ 详见 docs/design-system.md
+
+> **最高标准：`docs/design-north-star.md`（设计北极星）—— 凌驾于 design-system.md 之上。**
+> Carry 奔着 Apple 年度最佳设计应用（Apple Design Award）的水准做。`design-system.md` 是「当前决策的记录」、不是上限；每次碰 UI 都按 north-star 重新审视、往上推，再把抬高后的标准回写 design-system.md。克制是手段（去噪聚焦），卓越是目标——别用「不为设计而设计」当借口停在「够用」。
+
+→ 具体落地（token、组件规格）详见 docs/design-system.md
 关键约定：全部 View 支持 Dark Mode，颜色使用 token 禁止硬编码。
 
 ## 当前进度
@@ -332,7 +336,8 @@ private let itemNameAliases: [String: String] = [
 - 用脚本改 `Localizable.xcstrings` 时序列化格式不匹配 Xcode → 整文件重排出 6 万行 diff。Xcode 用 `" : "`（冒号前空格）；脚本须用 `json.dumps(..., ensure_ascii=False, indent=2, separators=(',', ' : '))` 且无尾换行，先做零改动 round-trip 验证再改。另：Xcode 构建会重写该文件、可能覆盖未提交的脚本编辑（编辑前最好确认 Xcode 未在构建）。`git commit` 用显式路径，避免误并入用户在 Xcode 内换图标等在途改动。
 
 ## 文件索引
-- docs/design-system.md：视觉规范与组件标准
+- docs/design-north-star.md：设计最高标准（ADA 级评判框架，凌驾于 design-system.md）
+- docs/design-system.md：视觉规范与组件标准（当前落地，非上限）
 - docs/architecture.md：架构与模块说明
 - docs/decisions.md：决策日志
 - docs/progress.md：进度追踪
@@ -345,7 +350,7 @@ private let itemNameAliases: [String: String] = [
 | 场景 | 需要读取 |
 |------|---------|
 | 每次会话开始（建议） | `docs/progress.md` — 了解当前进度与上次改动 |
-| 实现任何 UI / 视觉需求 | `docs/design-system.md` — Color Token、组件规范、Mac Catalyst 面板规格 |
+| 实现任何 UI / 视觉需求 | **先** `docs/design-north-star.md`（最高标准/评判框架）+ `docs/design-system.md`（Color Token、组件规范、Mac Catalyst 面板规格） |
 | 触碰 `CarryBottomSheet.swift` | `docs/home-sheet-debug-playbook.md` — 必读，避免重踩已知问题 |
 | 架构新增或模块重构 | `docs/architecture.md` |
 | 遇到可能重复讨论的设计决策 | `docs/decisions.md` — 确认是否已有定论 |
