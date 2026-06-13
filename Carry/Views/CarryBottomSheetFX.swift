@@ -76,6 +76,14 @@ struct CarryBottomSheetFX<Content: View>: UIViewControllerRepresentable {
         weak var sheetVC: FXSheetViewController?
         var hostingVC: UIHostingController<AnyView>?
         var mapCityOpacityBinding: Binding<Double>?
+
+        // Swift 6.3.2 优化器 bug：EarlyPerfInliner 在内联本类(合成) deinit 时，
+        // isCallerAndCalleeLayoutConstraintsCompatible 无限递归 → 栈溢出，Release(-O)
+        // 构建崩溃（DEBUG 不触发）。根因在编译器、无法修复；用最小作用域把这个 deinit
+        // 排除出该优化 pass。deinit 非性能热点，关其优化零运行时代价。
+        // 显式空 deinit 让 @_optimize(none) 有可标注的声明（合成 ivar 释放仍受此约束）。
+        @_optimize(none)
+        deinit {}
     }
 }
 
