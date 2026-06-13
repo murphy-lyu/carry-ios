@@ -23,6 +23,44 @@ final class NavigationRouter: ObservableObject {
     @Published var path = NavigationPath()
     @Published var showMapFullscreen = false
     @Published var pendingTripId: UUID? = nil
+
+    // 创建行程是「自包含任务」而非根层级——在独立的 fullScreenCover + 自有 NavigationStack
+    // 里跑（iPhone）。三步链（TripInfo → ItemPicker → PackingList 新建）压在 creationPath 上，
+    // 不污染根 path；完成后关 cover、把根 path 落到新行程。（spec: app-navigation-framework.md）
+    @Published var showCreation = false
+    @Published var creationPath = NavigationPath()
+    @Published var creationSeed: CreationSeed? = nil
+
+    struct CreationSeed: Equatable { let id: UUID; let startInMyItems: Bool }
+
+    /// 打开创建 cover（iPhone）。每次重置 creationPath，从 TripInfoView 起步。
+    func beginCreation(startInMyItems: Bool = false) {
+        creationSeed = CreationSeed(id: UUID(), startInMyItems: startInMyItems)
+        creationPath = NavigationPath()
+        showCreation = true
+    }
+
+    /// 创建流内前进一步。iPhone（cover 开着）压 creationPath；Mac（无 cover）退回根 path 推进。
+    /// 让 TripInfoView / ItemPickerView 共用一套代码、不必到处 `#if`。
+    func pushCreation(_ route: CreationRoute) {
+        if showCreation { creationPath.append(route) } else { path.append(route) }
+    }
+
+    /// 创建完成：关 cover、清空创建栈，根 path 落到新行程（保留「建完即进入行程」的动量）。
+    /// Mac 无 cover 时 showCreation 本就 false，等价于旧行为 `path = [id]`（弹掉创建步、进入行程）。
+    func finishCreation(landingTripId: UUID) {
+        path = NavigationPath([landingTripId])
+        creationPath = NavigationPath()
+        creationSeed = nil
+        showCreation = false
+    }
+
+    /// 放弃创建：关 cover、清空创建栈，不建任何行程。
+    func cancelCreation() {
+        creationPath = NavigationPath()
+        creationSeed = nil
+        showCreation = false
+    }
 }
 
 // MARK: - ContentView
@@ -121,6 +159,19 @@ struct ContentView: View {
                     routeDestination(route)
                 }
         }
+        // 创建行程：模态全屏盖层（自包含任务），内含独立 NavigationStack 跑三步链。
+        .fullScreenCover(isPresented: $router.showCreation) {
+            if let seed = router.creationSeed {
+                NavigationStack(path: $router.creationPath) {
+                    TripInfoView(routeID: seed.id, startInMyItems: seed.startInMyItems)
+                        .navigationDestination(for: CreationRoute.self) { route in
+                            routeDestination(route)
+                        }
+                }
+                .tint(CarryAccent.color)
+                .preferredColorScheme((AppearanceMode(rawValue: appearanceModeRaw) ?? .system).colorScheme)
+            }
+        }
         .tint(CarryAccent.color)
         .environmentObject(store)
         .environmentObject(router)
@@ -211,7 +262,11 @@ struct ContentView: View {
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) {
             switch action {
             case "create_trip":
+                #if targetEnvironment(macCatalyst)
                 router.path.append(CreationRoute.tripInfo(UUID(), startInMyItems: false))
+                #else
+                router.beginCreation()
+                #endif
             case "open_trip":
                 if let idStr = defaults.string(forKey: "carry_shortcut_trip_id"),
                    let id = UUID(uuidString: idStr) {

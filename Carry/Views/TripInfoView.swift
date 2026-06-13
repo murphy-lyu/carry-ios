@@ -147,7 +147,7 @@ struct TripInfoView: View {
                 Button(action: {
                     guard canContinue else { return }
                     hideKeyboard()
-                    router.path.append(CreationRoute.itemPicker(info, startInMyItems: startInMyItems))
+                    router.pushCreation(.itemPicker(info, startInMyItems: startInMyItems))
                 }) {
                     Text("Continue")
                         .font(.subheadline)
@@ -173,6 +173,15 @@ struct TripInfoView: View {
         }
         .navigationTitle("")
         .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            // 创建 cover 的根步无返回 chevron——给「取消」放弃草稿。push 流（Mac）不显示，
+            // 沿用系统返回。语义：离开模态 = 放弃草稿，而非「返回上一级」。
+            if router.showCreation {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button(LocalizedStringKey("common.cancel")) { router.cancelCreation() }
+                }
+            }
+        }
         .sheet(isPresented: $showDatePicker) {
             TripDateRangePickerSheet(
                 departure: departureDate,

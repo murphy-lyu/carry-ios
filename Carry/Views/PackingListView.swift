@@ -1259,7 +1259,9 @@ struct PackingListView: View {
                             store.updateCountryCode(for: tripId, city: city)
                         }
                     }
-                    router.path = NavigationPath([tripId])
+                    // 保存新行程：关创建 cover（iPhone）并把根 path 落到该行程；
+                    // Mac（无 cover）等价于旧的 path = [tripId]，弹掉创建步进入行程。
+                    router.finishCreation(landingTripId: tripId)
                     await NotificationManager.requestAuthorizationIfNeeded()
                 }
             } label: {
