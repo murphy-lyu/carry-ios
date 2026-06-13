@@ -23,14 +23,20 @@ enum RouteOptimizer {
         let originalDistanceMeters: Double
         let optimizedDistanceMeters: Double
 
-        /// 优化是否带来可感知的缩短（>1% 且 >50m，避免把噪声当成改进）。
+        /// 优化是否带来可感知的缩短（直线口径）。
         var isImprovement: Bool {
-            guard originalDistanceMeters > 0 else { return false }
-            let saved = originalDistanceMeters - optimizedDistanceMeters
-            return saved > 50 && saved / originalDistanceMeters > 0.01
+            RouteOptimizer.isImprovement(original: originalDistanceMeters, optimized: optimizedDistanceMeters)
         }
 
         var savedMeters: Double { max(0, originalDistanceMeters - optimizedDistanceMeters) }
+    }
+
+    /// 是否带来可感知的缩短：省 >1% 且 >50m，避免把噪声当成改进。
+    /// 直线（排序口径）与道路（展示/判定口径）共用同一阈值，保证两口径一致。
+    static func isImprovement(original: Double, optimized: Double) -> Bool {
+        guard original > 0 else { return false }
+        let saved = original - optimized
+        return saved > 50 && saved / original > 0.01
     }
 
     /// 当天有坐标停靠点 ≥ 3 才有意义（2 个点无可重排）。返回 nil 表示不适用。

@@ -52,6 +52,8 @@ struct OptimizeRouteView: View {
                     alreadyOptimal
                 }
             }
+            // 背景铺满整屏（含底部钉条背后），与钉条渐隐同源——避免底部色带接缝。
+            .background(CarrySubtleBackground().ignoresSafeArea())
             .navigationTitle(Text("itinerary.optimize.title"))
             .navigationBarTitleDisplayMode(.inline)
             // 导航栏「取消」常驻可见：长清单时底部按钮需滚到底才看得到，顶部需要一个随时可退出的入口
@@ -71,7 +73,8 @@ struct OptimizeRouteView: View {
         }
     }
 
-    /// 异步算两条顺序的真实道路距离；任一失败保留 Haversine 展示。
+    /// 异步算两条顺序的真实道路距离，与 6s 超时竞速；超时/失败则保持 nil → 退回直线判定与展示。
+    /// 道路是「是否改进」的判定口径（在可得时），不再只是展示——见 spec: itinerary-optimize-road-gating。
     private func loadRoadDistances() async {
         guard let result, result.isImprovement else { return }
         roadLoading = true
@@ -79,13 +82,27 @@ struct OptimizeRouteView: View {
         let byId = Dictionary(stops.map { ($0.id, $0) }, uniquingKeysWith: { a, _ in a })
         let originalCoords = stops.filter { $0.hasCoordinate }.compactMap(\.coordinate)
         let optimizedCoords = result.orderedStopIDs.compactMap { byId[$0]?.coordinate }
-        let original = await RouteDistanceService.shared.totalRoadDistance(coordinates: originalCoords)
-        let optimized = await RouteDistanceService.shared.totalRoadDistance(coordinates: optimizedCoords)
-        if let original, let optimized {
-            roadOriginal = original
-            roadOptimized = optimized
+
+        let road: (Double, Double)? = await withTaskGroup(of: (Double, Double)?.self) { group in
+            group.addTask {
+                guard let o = await RouteDistanceService.shared.totalRoadDistance(coordinates: originalCoords),
+                      let p = await RouteDistanceService.shared.totalRoadDistance(coordinates: optimizedCoords) else { return nil }
+                return (o, p)
+            }
+            group.addTask {
+                try? await Task.sleep(nanoseconds: 6_000_000_000)   // 6s 超时哨兵
+                return nil
+            }
+            let first = await group.next() ?? nil
+            group.cancelAll()
+            return first
+        }
+
+        if let (o, p) = road {
+            roadOriginal = o
+            roadOptimized = p
         } else {
-            CarryLogger.shared.log(.itineraryRouteCalcFailed)
+            CarryLogger.shared.log(.itineraryRouteCalcFailed)   // 超时/失败 → verdict 退回 .unavailable
         }
     }
 
@@ -95,87 +112,106 @@ struct OptimizeRouteView: View {
     private var displaySaved: Double { max(0, displayOriginal - displayOptimized) }
     private var usingRoad: Bool { roadOriginal != nil && roadOptimized != nil }
 
+    /// 道路口径下的最终判定（方案 A 的"判定区"据此定调）。
+    private enum RoadVerdict {
+        case computing      // 道路正在算，未定调
+        case improved       // 道路确认有省 → 显示节省 + 「采用」
+        case notImproved    // 道路没省/更长 → 「已是较优」+ 「完成」
+        case unavailable    // 离线/超时/失败 → 退回直线判定（带「按直线距离」注脚）
+    }
+
+    private var roadVerdict: RoadVerdict {
+        if let o = roadOriginal, let p = roadOptimized {
+            return RouteOptimizer.isImprovement(original: o, optimized: p) ? .improved : .notImproved
+        }
+        return roadLoading ? .computing : .unavailable
+    }
+
     // MARK: Improvement
 
     private func improvementContent(_ result: RouteOptimizer.Result) -> some View {
         ScrollView {
-            VStack(spacing: 16) {
-                VStack(alignment: .leading, spacing: 14) {
-                    HStack(alignment: .top) {
-                        VStack(alignment: .leading, spacing: 4) {
-                            // 正文头部以「第 N 天」（在优化哪天）为主行；不再重复「优化路线」——导航栏已承担该标题。
-                            Text(dayTitle)
-                                .font(.system(.title3, design: .rounded).weight(.semibold))
-                                .foregroundStyle(.primary)
-                            Text("itinerary.optimize.preview_subtitle")
-                                .font(.system(.caption, design: .rounded))
-                                .foregroundStyle(.secondary)
-                        }
-                        Spacer()
-                        VStack(alignment: .trailing, spacing: 4) {
-                            Text(distanceString(displaySaved))
-                                .font(.system(.title3, design: .rounded).weight(.bold).monospacedDigit())
-                                .foregroundStyle(CarryAccent.color)
-                            Text("itinerary.optimize.saved_short")
-                                .font(.system(.caption2, design: .rounded))
-                                .foregroundStyle(.secondary)
-                        }
+            VStack(alignment: .leading, spacing: 14) {
+                HStack(alignment: .top) {
+                    VStack(alignment: .leading, spacing: 4) {
+                        // 正文头部以「第 N 天」（在优化哪天）为主行；不再重复「优化路线」——导航栏已承担该标题。
+                        Text(dayTitle)
+                            .font(.system(.title3, design: .rounded).weight(.semibold))
+                            .foregroundStyle(.primary)
+                        Text("itinerary.optimize.preview_subtitle")
+                            .font(.system(.caption, design: .rounded))
+                            .foregroundStyle(.secondary)
                     }
-
-                    routeMap
-                        .frame(height: 210)
-                        .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
-
-                    distanceBar
-
-                    distanceCaption
-
-                    VStack(alignment: .leading, spacing: 10) {
-                        Text("itinerary.optimize.new_order")
-                            .font(.system(.subheadline, design: .rounded).weight(.semibold))
-                        ForEach(Array(optimizedStops.enumerated()), id: \.element.id) { index, stop in
-                            HStack(spacing: 12) {
-                                Text("\(index + 1)")
-                                    .font(.system(.subheadline, design: .rounded).weight(.semibold).monospacedDigit())
-                                    .foregroundStyle(CarryAccent.color)
-                                    .frame(width: 24, height: 24)
-                                    .background(CarryAccent.color.opacity(0.10), in: Circle())
-                                Image(systemName: stop.category.symbolName)
-                                    .font(.system(size: 14))
-                                    .foregroundStyle(.secondary)
-                                    .frame(width: 20)
-                                VStack(alignment: .leading, spacing: 2) {
-                                    Text(stop.name)
-                                        .font(.system(.subheadline, design: .rounded))
-                                        .lineLimit(1)
-                                    if stop.plannedStartMinutes >= 0 {
-                                        Text(timeLabel(dayMinutes: stop.plannedStartMinutes))
-                                            .font(.system(.caption2, design: .rounded))
-                                            .foregroundStyle(.secondary)
-                                    }
-                                }
-                                Spacer(minLength: 0)
-                            }
-                            .padding(.vertical, 6)
-                        }
+                    Spacer()
+                    VStack(alignment: .trailing, spacing: 4) {
+                        savedBadge
                     }
-                    .padding(.top, 2)
-
-                    // 让用户理解为何首尾不动（方案 A：固定首尾、只优化中间）。
-                    Label("itinerary.optimize.endpoints_fixed", systemImage: "pin")
-                        .font(.system(.caption2, design: .rounded))
-                        .foregroundStyle(.secondary)
-                        .padding(.top, 2)
                 }
-                .padding(.horizontal, 16)
 
-                actionRow(result)
-                    .padding(.horizontal, 16)
-                    .padding(.bottom, 12)
+                routeMap
+                    .frame(height: 210)
+                    .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
+
+                verdictBlock
+
+                VStack(alignment: .leading, spacing: 10) {
+                    Text("itinerary.optimize.new_order")
+                        .font(.system(.subheadline, design: .rounded).weight(.semibold))
+                    ForEach(Array(optimizedStops.enumerated()), id: \.element.id) { index, stop in
+                        HStack(spacing: 12) {
+                            Text("\(index + 1)")
+                                .font(.system(.subheadline, design: .rounded).weight(.semibold).monospacedDigit())
+                                .foregroundStyle(CarryAccent.color)
+                                .frame(width: 24, height: 24)
+                                .background(CarryAccent.color.opacity(0.10), in: Circle())
+                            Image(systemName: stop.category.symbolName)
+                                .font(.system(size: 14))
+                                .foregroundStyle(.secondary)
+                                .frame(width: 20)
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text(stop.name)
+                                    .font(.system(.subheadline, design: .rounded))
+                                    .lineLimit(1)
+                                if stop.plannedStartMinutes >= 0 {
+                                    Text(timeLabel(dayMinutes: stop.plannedStartMinutes))
+                                        .font(.system(.caption2, design: .rounded))
+                                        .foregroundStyle(.secondary)
+                                }
+                            }
+                            Spacer(minLength: 0)
+                        }
+                        .padding(.vertical, 6)
+                    }
+                }
+                .padding(.top, 2)
+
+                // 让用户理解为何首尾不动（方案 A：固定首尾、只优化中间）。
+                Label("itinerary.optimize.endpoints_fixed", systemImage: "pin")
+                    .font(.system(.caption2, design: .rounded))
+                    .foregroundStyle(.secondary)
+                    .padding(.top, 2)
             }
+            .padding(.horizontal, 16)
             .padding(.top, 12)
+            .padding(.bottom, 8)
         }
-        .background(CarrySubtleBackground())
+        // 背景由 body 的 Group 统一铺（含本条背后），此处不再各自垫，避免与钉条不同源造成色带。
+        // 主 CTA 钉底部常驻：长清单也无需滚到底即可采用（顶部「取消」同样常驻、随时可退）。
+        .safeAreaInset(edge: .bottom) {
+            actionBar(result)
+                .padding(.horizontal, 16)
+                .padding(.top, 10)
+                .padding(.bottom, 8)
+                // 上透明 → 底部与背景同色：内容滚动时柔和淡出，且与整屏背景无缝（取代磨砂材质的色带接缝）。
+                .background(
+                    LinearGradient(
+                        colors: [CarrySubtleBackground.baseColor.opacity(0), CarrySubtleBackground.baseColor],
+                        startPoint: .top,
+                        endPoint: .bottom
+                    )
+                    .ignoresSafeArea(edges: .bottom)
+                )
+        }
     }
 
     private var distanceBar: some View {
@@ -227,8 +263,85 @@ struct OptimizeRouteView: View {
         .foregroundStyle(.tertiary)
     }
 
-    private func actionRow(_ result: RouteOptimizer.Result) -> some View {
-        // 单个全宽主 CTA（accent 实心）。离开走导航栏常驻「取消」，不在底部重复一个取消。
+    /// 顶部右上「节省 X」徽标：道路确认有省/退回直线→显示节省；计算中→spinner；已较优→不显示。
+    @ViewBuilder
+    private var savedBadge: some View {
+        switch roadVerdict {
+        case .improved, .unavailable:
+            Text(distanceString(displaySaved))
+                .font(.system(.title3, design: .rounded).weight(.bold).monospacedDigit())
+                .foregroundStyle(CarryAccent.color)
+            Text("itinerary.optimize.saved_short")
+                .font(.system(.caption2, design: .rounded))
+                .foregroundStyle(.secondary)
+        case .computing:
+            ProgressView().controlSize(.small)
+        case .notImproved:
+            EmptyView()
+        }
+    }
+
+    /// 判定区：计算中 / 道路对比 / 已较优，随 roadVerdict 定调。地图与建议顺序在区外、全程不跳变。
+    @ViewBuilder
+    private var verdictBlock: some View {
+        switch roadVerdict {
+        case .computing:
+            HStack(spacing: 8) {
+                ProgressView().controlSize(.small)
+                Text("itinerary.optimize.calculating")
+                    .font(.system(.subheadline, design: .rounded))
+                    .foregroundStyle(.secondary)
+                Spacer()
+            }
+            .padding(14)
+            .background(Color(UIColor.secondarySystemBackground), in: RoundedRectangle(cornerRadius: 20, style: .continuous))
+        case .improved, .unavailable:
+            distanceBar
+            distanceCaption
+        case .notImproved:
+            HStack(spacing: 10) {
+                Image(systemName: "checkmark.seal.fill")
+                    .foregroundStyle(CarryAccent.color)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("itinerary.optimize.optimal.title")
+                        .font(.system(.subheadline, design: .rounded).weight(.semibold))
+                    Text("itinerary.optimize.optimal.subtitle")
+                        .font(.system(.caption, design: .rounded))
+                        .foregroundStyle(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+                Spacer()
+            }
+            .padding(14)
+            .background(Color(UIColor.secondarySystemBackground), in: RoundedRectangle(cornerRadius: 20, style: .continuous))
+        }
+    }
+
+    /// 底部常驻动作区：改进/退回直线=「采用」；计算中=禁用；已较优=中性「完成」（走 discard）。
+    @ViewBuilder
+    private func actionBar(_ result: RouteOptimizer.Result) -> some View {
+        switch roadVerdict {
+        case .improved, .unavailable:
+            applyButton(result)
+        case .computing:
+            applyButton(result)
+                .disabled(true)
+                .opacity(0.5)
+        case .notImproved:
+            Button { discard() } label: {
+                Text("common.done")
+                    .font(.system(.body, design: .rounded).weight(.semibold))
+                    .foregroundStyle(.secondary)
+                    .frame(maxWidth: .infinity)
+                    .frame(height: 50)
+                    .background(Color(UIColor.secondarySystemBackground), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+            }
+            .buttonStyle(PressableScaleButtonStyle(scale: 0.97, pressedBrightness: -0.03, pressedOpacity: 0.96))
+        }
+    }
+
+    /// 全宽主 CTA（accent 实心）。离开走导航栏常驻「取消」，不在底部重复取消。
+    private func applyButton(_ result: RouteOptimizer.Result) -> some View {
         Button {
             apply(result)
         } label: {
@@ -262,7 +375,6 @@ struct OptimizeRouteView: View {
                 .padding(.top, 4)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .background(CarrySubtleBackground())
     }
 
     // MARK: Map

@@ -20723,13 +20723,13 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "采用这个顺序"
+            "value" : "采用此顺序"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "採用這個順序"
+            "value" : "採用此順序"
           }
         }
       }
