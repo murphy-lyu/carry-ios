@@ -1092,54 +1092,46 @@ struct PackingListView: View {
         .buttonStyle(.plain)
     }
 
+    // 单一表面居中列，与首页/行程空态同构：图标 → rounded 标题 → 副标题 → 统一 CTA 胶囊。
     private var emptyState: some View {
-        VStack(spacing: 18) {
+        VStack(spacing: 16) {
             Spacer()
-            Image(systemName: "suitcase")
-                .font(.system(size: 48))
-                .foregroundColor(.secondary)
-            Text("packing.empty.title")
-                .font(.headline)
-                .foregroundColor(.primary)
-            Text("packing.empty.subtitle")
-                .font(.subheadline)
-                .foregroundColor(.secondary)
-                .multilineTextAlignment(.center)
-                .padding(.horizontal, 4)
 
-            VStack(spacing: 10) {
-                Button {
-                    if sections.isEmpty {
-                        showAddItemsRoute = true
-                    } else {
-                        router.path.append(CreationRoute.addItems(tripId))
-                    }
-                } label: {
-                    HStack(spacing: 10) {
-                        Image(systemName: "plus.circle.fill")
-                            .font(.system(size: 13, weight: .semibold))
-                        Text("Add item")
-                    }
-                    .font(.subheadline.weight(.semibold))
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 13)
+            Image(systemName: "suitcase")
+                .font(.system(size: 44, weight: .light))
+                .foregroundStyle(.secondary)
+
+            VStack(spacing: 6) {
+                Text("packing.empty.title")
+                    .font(.system(.title2, design: .rounded).weight(.semibold))
                     .foregroundStyle(.primary)
-                    .background(
-                        RoundedRectangle(cornerRadius: 14, style: .continuous)
-                            .fill(colorScheme == .dark ? Color.white.opacity(0.06) : Color.primary.opacity(0.055))
-                    )
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 14, style: .continuous)
-                            .strokeBorder(Color.primary.opacity(colorScheme == .dark ? 0.05 : 0.06), lineWidth: 1)
-                    )
-                }
-                .buttonStyle(.plain)
+                Text("packing.empty.subtitle")
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+                    .multilineTextAlignment(.center)
+                    .padding(.horizontal, 32)
             }
+
+            // CTA：全 App 空态统一胶囊（与首页/行程空态共用 CarryEmptyStatePrimaryButtonStyle）。
+            Button {
+                if sections.isEmpty {
+                    showAddItemsRoute = true
+                } else {
+                    router.path.append(CreationRoute.addItems(tripId))
+                }
+            } label: {
+                HStack(spacing: 8) {
+                    Image(systemName: "plus")
+                        .font(.system(size: 14, weight: .semibold))
+                    Text("Add item")
+                }
+            }
+            .buttonStyle(CarryEmptyStatePrimaryButtonStyle())
             .padding(.top, 6)
 
             Spacer()
         }
-        .padding(.horizontal, 32)
+        .padding(.horizontal, 24)
         .frame(maxWidth: .infinity)
     }
 

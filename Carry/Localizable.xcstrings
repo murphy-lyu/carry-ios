@@ -29358,56 +29358,56 @@
       "localizations" : {
         "de" : {
           "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Tap Add item below to start, and use the ⋯ menu to edit sections."
+            "state" : "translated",
+            "value" : "Füge Gegenstände hinzu, um zu beginnen. Kategorien bearbeitest du über das Menü ⋯."
           }
         },
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Tap Add item below to start, and use the ⋯ menu to edit sections."
+            "value" : "Add items to get started. Edit categories from the ⋯ menu."
           }
         },
         "es" : {
           "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Tap Add item below to start, and use the ⋯ menu to edit sections."
+            "state" : "translated",
+            "value" : "Añade artículos para empezar. Edita las categorías desde el menú ⋯."
           }
         },
         "fr" : {
           "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Tap Add item below to start, and use the ⋯ menu to edit sections."
+            "state" : "translated",
+            "value" : "Ajoute des articles pour commencer. Modifie les catégories depuis le menu ⋯."
           }
         },
         "ja" : {
           "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Tap Add item below to start, and use the ⋯ menu to edit sections."
+            "state" : "translated",
+            "value" : "アイテムを追加して始めよう。カテゴリは ⋯ メニューから編集できる。"
           }
         },
         "ko" : {
           "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Tap Add item below to start, and use the ⋯ menu to edit sections."
+            "state" : "translated",
+            "value" : "항목을 추가해 시작하세요. 분류는 ⋯ 메뉴에서 편집할 수 있어요."
           }
         },
         "pt-BR" : {
           "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Tap Add item below to start, and use the ⋯ menu to edit sections."
+            "state" : "translated",
+            "value" : "Adicione itens para começar. Edite as categorias no menu ⋯."
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "点击下方 Add item 开始，分类可在右上角 ⋯ 中编辑。"
+            "value" : "添加物品开始，分类可在右上角 ⋯ 中编辑。"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "點擊下方 Add item 開始，分類可在右上角 ⋯ 中編輯。"
+            "value" : "新增物品開始，分類可在右上角 ⋯ 中編輯。"
           }
         }
       }
