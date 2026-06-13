@@ -284,10 +284,13 @@ struct ItineraryView: View {
     }
 
     private func addStopRow(_ dayID: UUID) -> some View {
+        // 次级内联动作用 secondary 灰，与打包「添加物品」一致（避免每组一行 accent 蓝、喧宾夺主）。
         Button { activeSheet = .addStop(dayId: dayID) } label: {
-            Label("itinerary.add_stop", systemImage: "plus").font(.subheadline)
+            Label("itinerary.add_stop", systemImage: "plus")
+                .font(.subheadline)
+                .foregroundStyle(.secondary)
         }
-        .tint(CarryAccent.color)
+        .buttonStyle(.plain)
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(.horizontal, 16)
         // 末个停靠点的连线在其自身行内终止（无底部留白），动作行用顶部留白与之分隔。
@@ -297,9 +300,11 @@ struct ItineraryView: View {
 
     private func optimizeRow(_ dayID: UUID) -> some View {
         Button { activeSheet = .optimize(dayId: dayID) } label: {
-            Label("itinerary.optimize.button", systemImage: "wand.and.stars").font(.subheadline)
+            Label("itinerary.optimize.button", systemImage: "wand.and.stars")
+                .font(.subheadline)
+                .foregroundStyle(.secondary)
         }
-        .tint(CarryAccent.color)
+        .buttonStyle(.plain)
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(.horizontal, 16)
         .padding(.vertical, 6)
