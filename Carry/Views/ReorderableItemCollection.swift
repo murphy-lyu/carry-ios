@@ -145,10 +145,11 @@ struct ReorderableItemCollection: UIViewRepresentable {
         func configure(collectionView: UICollectionView, headerKind: String) {
             self.collectionView = collectionView
 
-            let cellRegistration = UICollectionView.CellRegistration<UICollectionViewListCell, RowID> {
+            let cellRegistration = UICollectionView.CellRegistration<UICollectionViewCell, RowID> {
                 [weak self] cell, _, rowID in
                 guard let self else { return }
                 cell.backgroundConfiguration = .clear()
+                cell.contentView.backgroundColor = .clear
                 switch rowID {
                 case .item(let id):
                     let content: AnyView = (id == self.parent.editingItemId)
@@ -166,12 +167,13 @@ struct ReorderableItemCollection: UIViewRepresentable {
                 }
             }
 
-            let headerRegistration = UICollectionView.SupplementaryRegistration<UICollectionViewListCell>(
+            let headerRegistration = UICollectionView.SupplementaryRegistration<UICollectionViewCell>(
                 elementKind: headerKind
             ) { [weak self] header, _, indexPath in
                 guard let self,
                       let sectionID = self.dataSource.sectionIdentifier(for: indexPath.section) else { return }
                 header.backgroundConfiguration = .clear()
+                header.contentView.backgroundColor = .clear
                 // info section 无表头：给一个零高度内容，list 自尺寸会收起。
                 guard sectionID != ReorderableItemCollection.infoSectionID,
                       let model = self.parent.sections.first(where: { $0.id == sectionID }) else {

@@ -58,28 +58,54 @@ struct ItineraryReorderCollection: UIViewRepresentable {
         layoutConfig.interSectionSpacing = 0
 
         let layout = UICollectionViewCompositionalLayout(
-            sectionProvider: { [weak coordinator] _, env in
-                var config = UICollectionLayoutListConfiguration(appearance: .plain)
-                config.showsSeparators = false
-                config.backgroundColor = .clear
-                config.headerMode = .supplementary
-                config.headerTopPadding = 0
-                config.trailingSwipeActionsConfigurationProvider = { [weak coordinator] indexPath in
-                    coordinator?.trailingSwipe(at: indexPath)
-                }
-                let section = NSCollectionLayoutSection.list(using: config, layoutEnvironment: env)
+            sectionProvider: { [weak coordinator] sectionIndex, _ in
+                let rowCount = max(1, coordinator?.rowCount(in: sectionIndex) ?? 1)
+
+                let itemSize = NSCollectionLayoutSize(
+                    widthDimension: .fractionalWidth(1.0),
+                    heightDimension: .estimated(56)
+                )
+                let item = NSCollectionLayoutItem(layoutSize: itemSize)
+                item.contentInsets = .zero
+
+                let groupSize = NSCollectionLayoutSize(
+                    widthDimension: .fractionalWidth(1.0),
+                    heightDimension: .estimated(CGFloat(rowCount) * 56)
+                )
+                let group = NSCollectionLayoutGroup.vertical(
+                    layoutSize: groupSize,
+                    repeatingSubitem: item,
+                    count: rowCount
+                )
+
+                let section = NSCollectionLayoutSection(group: group)
                 section.contentInsets = .zero
+                section.interGroupSpacing = 0
+                section.supplementaryContentInsetsReference = .none
+
+                let headerSize = NSCollectionLayoutSize(
+                    widthDimension: .fractionalWidth(1.0),
+                    heightDimension: .estimated(56)
+                )
+                let header = NSCollectionLayoutBoundarySupplementaryItem(
+                    layoutSize: headerSize,
+                    elementKind: Self.headerKind,
+                    alignment: .top
+                )
+                header.pinToVisibleBounds = true
+                section.boundarySupplementaryItems = [header]
                 return section
             },
             configuration: layoutConfig
         )
 
         let cv = UICollectionView(frame: .zero, collectionViewLayout: layout)
+        // 让整个 itinerary 列表共享一个稳定底板，避免透明 row / 吸顶 header 直接透出页面渐变，
+        // 形成“分块感”。
         cv.backgroundColor = .systemBackground
         cv.delaysContentTouches = false
-        cv.alwaysBounceVertical = true
+        cv.isScrollEnabled = true
         cv.showsVerticalScrollIndicator = false
-        cv.contentInset.bottom = 12
         cv.delegate = coordinator
 
         coordinator.configure(collectionView: cv, headerKind: Self.headerKind)
@@ -88,6 +114,13 @@ struct ItineraryReorderCollection: UIViewRepresentable {
 
     func updateUIView(_ collectionView: UICollectionView, context: Context) {
         context.coordinator.update(with: self)
+    }
+
+    func sizeThatFits(_ proposal: ProposedViewSize, uiView: UICollectionView, context: Context) -> CGSize? {
+        uiView.layoutIfNeeded()
+        let width = proposal.width ?? uiView.bounds.width
+        let height = proposal.height ?? uiView.collectionViewLayout.collectionViewContentSize.height
+        return CGSize(width: width, height: max(height, 1))
     }
 
     // MARK: - Coordinator
@@ -111,10 +144,13 @@ struct ItineraryReorderCollection: UIViewRepresentable {
         func configure(collectionView: UICollectionView, headerKind: String) {
             self.collectionView = collectionView
 
-            let cellRegistration = UICollectionView.CellRegistration<UICollectionViewListCell, ItineraryRowID> {
+            let cellRegistration = UICollectionView.CellRegistration<UICollectionViewCell, ItineraryRowID> {
                 [weak self] cell, _, rowID in
                 guard let self else { return }
+                cell.isOpaque = false
+                cell.backgroundColor = .clear
                 cell.backgroundConfiguration = .clear()
+                cell.contentView.backgroundColor = .clear
                 switch rowID {
                 case .stop(let id):
                     cell.contentConfiguration = UIHostingConfiguration { self.parent.stopContent(id) }.margins(.all, 0)
@@ -125,14 +161,18 @@ struct ItineraryReorderCollection: UIViewRepresentable {
                 }
             }
 
-            let headerRegistration = UICollectionView.SupplementaryRegistration<UICollectionViewListCell>(
+            let headerRegistration = UICollectionView.SupplementaryRegistration<UICollectionViewCell>(
                 elementKind: headerKind
             ) { [weak self] header, _, indexPath in
                 guard let self,
-                      let sectionID = self.dataSource.sectionIdentifier(for: indexPath.section),
-                      let model = self.parent.sections.first(where: { $0.id == sectionID }) else { return }
+                      let sectionID = self.dataSource.sectionIdentifier(for: indexPath.section) else { return }
+                header.isOpaque = false
+                header.backgroundColor = .clear
                 header.backgroundConfiguration = .clear()
-                header.contentConfiguration = UIHostingConfiguration { self.parent.headerContent(model) }.margins(.all, 0)
+                header.contentView.backgroundColor = .clear
+                guard let model = self.parent.sections.first(where: { $0.id == sectionID }) else { return }
+                header.contentConfiguration = UIHostingConfiguration { self.parent.headerContent(model) }
+                    .margins(.all, 0)
             }
 
             let ds = UICollectionViewDiffableDataSource<UUID, ItineraryRowID>(collectionView: collectionView) {
@@ -173,6 +213,12 @@ struct ItineraryReorderCollection: UIViewRepresentable {
             applySnapshot(animated: false)
         }
 
+        func rowCount(in sectionIndex: Int) -> Int {
+            guard sectionIndex < parent.sections.count else { return 1 }
+            let section = parent.sections[sectionIndex]
+            return max(1, section.stopIDs.count + 1 + (section.showsOptimize ? 1 : 0))
+        }
+
         // MARK: Update
 
         func update(with parent: ItineraryReorderCollection) {
@@ -193,6 +239,12 @@ struct ItineraryReorderCollection: UIViewRepresentable {
                 snapshot.appendItems(rows, toSection: section.id)
             }
             dataSource.apply(snapshot, animatingDifferences: animated)
+            collectionView?.setNeedsLayout()
+            collectionView?.layoutIfNeeded()
+            DispatchQueue.main.async { [weak collectionView] in
+                collectionView?.setNeedsLayout()
+                collectionView?.layoutIfNeeded()
+            }
         }
 
         // MARK: Interactive movement（跨天放开，无夹断）
