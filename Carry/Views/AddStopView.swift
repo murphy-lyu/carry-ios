@@ -102,6 +102,11 @@ struct AddStopView: View {
                 }
             }
             .listStyle(.insetGrouped)
+            // 统一整屏底色：不依赖 List 在 sheet 里的隐式分组底（实测会渲染成白、与下方搜索框
+            // band 的 systemGroupedBackground 割裂）。显式铺一层 grouped 底，让 band 与列表区
+            // 共用同一表面，接缝从根上消除。
+            .scrollContentBackground(.hidden)
+            .background(Color(.systemGroupedBackground).ignoresSafeArea())
             // 自定义常驻搜索框（替代 .searchable）：点击只弹键盘，不切换导航栏形态、不变背景。
             .safeAreaInset(edge: .top) { searchField }
             .disabled(isResolving)
