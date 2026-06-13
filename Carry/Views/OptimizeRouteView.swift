@@ -54,6 +54,8 @@ struct OptimizeRouteView: View {
             }
             .navigationTitle(Text("itinerary.optimize.title"))
             .navigationBarTitleDisplayMode(.inline)
+            // 导航栏「取消」常驻可见：长清单时底部按钮需滚到底才看得到，顶部需要一个随时可退出的入口
+            // （下拉手势并非人人会想到）。这是 Apple 标准——可滚动长内容 + 底部提交时，导航栏 Cancel 作退出口。
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("common.cancel") { discard() }
@@ -101,9 +103,8 @@ struct OptimizeRouteView: View {
                 VStack(alignment: .leading, spacing: 14) {
                     HStack(alignment: .top) {
                         VStack(alignment: .leading, spacing: 4) {
+                            // 正文头部以「第 N 天」（在优化哪天）为主行；不再重复「优化路线」——导航栏已承担该标题。
                             Text(dayTitle)
-                                .font(.system(.headline, design: .rounded).weight(.semibold))
-                            Text("itinerary.optimize.title")
                                 .font(.system(.title3, design: .rounded).weight(.semibold))
                                 .foregroundStyle(.primary)
                             Text("itinerary.optimize.preview_subtitle")
@@ -227,30 +228,18 @@ struct OptimizeRouteView: View {
     }
 
     private func actionRow(_ result: RouteOptimizer.Result) -> some View {
-        HStack(spacing: 12) {
-            Button {
-                discard()
-            } label: {
-                Text("common.cancel")
-                    .font(.system(.body, design: .rounded).weight(.semibold))
-                    .frame(maxWidth: .infinity)
-                    .frame(height: 50)
-            }
-            .buttonStyle(.bordered)
-            .tint(CarryAccent.color)
-
-            Button {
-                apply(result)
-            } label: {
-                Text("itinerary.optimize.apply")
-                    .font(.system(.body, design: .rounded).weight(.semibold))
-                    .foregroundStyle(.white)
-                    .frame(maxWidth: .infinity)
-                    .frame(height: 50)
-                    .background(CarryAccent.color, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
-            }
-            .buttonStyle(PressableScaleButtonStyle(scale: 0.97, pressedBrightness: -0.03, pressedOpacity: 0.96))
+        // 单个全宽主 CTA（accent 实心）。离开走导航栏常驻「取消」，不在底部重复一个取消。
+        Button {
+            apply(result)
+        } label: {
+            Text("itinerary.optimize.apply")
+                .font(.system(.body, design: .rounded).weight(.semibold))
+                .foregroundStyle(.white)
+                .frame(maxWidth: .infinity)
+                .frame(height: 50)
+                .background(CarryAccent.color, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
         }
+        .buttonStyle(PressableScaleButtonStyle(scale: 0.97, pressedBrightness: -0.03, pressedOpacity: 0.96))
     }
 
     // MARK: Already optimal
@@ -282,15 +271,31 @@ struct OptimizeRouteView: View {
     private var routeMap: some View {
         let coords = optimizedStops.compactMap(\.coordinate)
         Map(initialPosition: .region(region(for: coords))) {
+            // 自定义圆形序号针（accent 实心 + 白序号 + 白描边 + 阴影），与行程主图 stopMarker 同语言，
+            // 不用系统 Marker 气泡（两张地图两套针不一致）。
             ForEach(Array(optimizedStops.enumerated()), id: \.element.id) { index, stop in
                 if let coord = stop.coordinate {
-                    Marker("\(index + 1)", coordinate: coord)
-                        .tint(CarryAccent.color)
+                    Annotation(stop.name, coordinate: coord) {
+                        optimizeMarker(index: index + 1)
+                    }
                 }
             }
             MapPolyline(coordinates: coords)
                 .stroke(CarryAccent.color, style: StrokeStyle(lineWidth: 3, lineCap: .round, lineJoin: .round))
         }
+    }
+
+    /// 圆形序号针：accent 实心 + 白序号 + 白描边 + 阴影。与 ItineraryMapView.stopMarker 同规格。
+    private func optimizeMarker(index: Int) -> some View {
+        ZStack {
+            Circle().fill(CarryAccent.color)
+            Circle().strokeBorder(.white, lineWidth: 1.5)
+            Text("\(index)")
+                .font(.system(size: 12, weight: .bold, design: .rounded).monospacedDigit())
+                .foregroundStyle(.white)
+        }
+        .frame(width: 24, height: 24)
+        .shadow(color: .black.opacity(0.22), radius: 2.5, x: 0, y: 1)
     }
 
     // MARK: Actions
