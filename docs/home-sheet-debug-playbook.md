@@ -516,3 +516,18 @@
 自带 DEBUG 日志：`🩺[Sheet] contentOffset KVO clamp: 漏滚 y=… → 拉回 … · 此刻 delegate 是代理? false/true`。
 
 真机验收：① 上拉内容区不再漏滚 = 修复有效；② 日志出现 `delegate 是代理? false` = 证实 delegate 被顶替假设。通过后删 🩺。若仍漏滚且 KVO 从不触发 → 是 `lockedOffsetY`/`activePanDriver` 未在该路径正确设置（状态分支），转查 `handleListPan` 的 `.began`。
+
+## 18. 已修复：Release 构建崩溃（Swift 6.3.2 优化器无限递归，2026-06-13）
+
+**现象**：`-O`（Release）构建时 `swift-frontend` 崩溃；DEBUG（`-Onone`）正常，故日常开发不报、易被忽略，直到打发布包才暴露。崩溃栈：
+```
+While running pass "EarlyPerfInliner" on SILFunction "...BottomSheetFXV11CoordinatorCfD"
+  for 'deinit' (at CarryBottomSheetFX.swift)
+isCallerAndCalleeLayoutConstraintsCompatible(...)  ← 同地址连续栈帧 = 无限递归 → 栈溢出
+```
+
+**根因**：编译器优化器 bug——内联 `CarryBottomSheetFX.Coordinator`（持 `UIHostingController<AnyView>?` + `Binding<Double>?`）的合成 `deinit` 时，布局约束兼容性检查无限递归。非本项目逻辑问题。
+
+**修复**：给 `Coordinator` 加显式 `@_optimize(none) deinit {}`，把这单个函数排除出该内联 pass。deinit 非性能热点，零运行时代价。
+
+> ⚠️ **不要删掉那个「看起来多余的空 deinit + @_optimize(none)」**——它在 DEBUG 下毫无作用、极像可清理的死代码，但一删 Release 就再次崩溃、无法发布。升级 Xcode/Swift 后可重新验证该 bug 是否已修，确认修复后才可移除。
