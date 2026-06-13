@@ -3,6 +3,13 @@
 ## 最后更新
 2026-06-13
 
+## 上次改动摘要（首页 Sheet 走查：默认高度 + 根 Sheet 退后效果 · 2026-06-13）
+
+> 接续本日设计走查，聚焦首页底部 Sheet。两条均已提交 `main`、编译绿、真机验收。与并行的 appearance 修复会话共用 `HomeView`，按 hunk 隔离提交。注：退后效果那条 commit (`7d25e52`) 因误用 `git commit -- <path>`（提交工作区而非暂存的 index），把并行未提交的 `preferredColorScheme` 4 行一并带入——功能无误、无丢失/重复，因未 push 且用户在并行提交，未改写历史。
+
+- **首页 Sheet 默认展开高度（有数据态）**（commit `85a6184`）：`屏高 × 0.86` → `屏高 −（topSafeAreaInset + 28）`，与空态一致地从真实安全区推导。地球露出带跨机型恒为「安全区下方 28pt」一线（不随屏高浮动），原本顶端被截断的海洋标签噪音随括高一并裁掉；内容优先、地球作下拉彩蛋。新增 `topSafeAreaInset` helper 镜像既有 `bottomSafeAreaInset`，未碰 FX 吸附/手势/mask 雷区。详见 decisions 2026-06-13。
+- **首页根 Sheet 弹出复刻系统「堆叠卡片」退后**（commit `7d25e52`）：设置 / 搜索 / 行程册三张根 Sheet 弹出时，首页整体缩放退后（`continuous` 圆角 + 黑底露边），复刻 iOS Sheet 叠 Sheet 的原生质感（根之上弹 Sheet 本不缩放，非缺陷，主动复刻）。实现 `PresenterRecedeEffect`：挂在被呈现 Sheet 内的不可见 `UIViewControllerRepresentable`，借 `transitionCoordinator.animate(alongsideTransition:)` 变换呈现者视图（首页层）→ 交互式下拉全程跟手（`@State` 布尔驱动的 `scaleEffect` 做不到，已否决）。iPad / Reduce Motion 跳过；静止退后态 `shouldRasterize` 防每帧离屏渲染。根因坑：取消式下拉会补发 `viewWillAppear`，completion 终态须以 `presentingViewController != nil` 判定，不能用「取消取反」（否则首页被误复位、后续下拉失去跟手）。详见 decisions 2026-06-13。
+
 ## 上次改动摘要（设计北极星 + 三大界面走查 + 行程天自动生成 · 2026-06-13）
 
 > 本会话聚焦视觉优化,均在 `main`,已分模块提交、编译绿、真机验收。与并行的「我的行程册」会话共用部分文件(HomeView/TripStore/xcstrings),提交时按显式路径隔离、互不覆盖。
