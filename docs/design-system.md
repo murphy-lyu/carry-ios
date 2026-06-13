@@ -40,12 +40,18 @@ Apple 原生风格，极简、克制、优雅。
 
 **Tier 2 · 强调 / 可点的彩色** —— 烟蓝 `CarryAccent`。
 - 用于：FAB、Toggle 开启态、选中 / 分段选中、进度填充、日期选择器、链接、「采用优化」类彩色动作。
+- **工具栏的「提交 / 确认」动作**（Save · Done · ✓ · Add）= 烟蓝 + `.fontWeight(.semibold)`——它是该屏主操作、要跳出来；Apple 惯例即「工具栏主操作 = tint + bold」。实现：`Label(..., systemImage: "checkmark")` 继承 sheet/根的 `.tint(CarryAccent)`，不必显式设色。
 - 依据：彩色 = 意义（可点 / 选中 / 强调）。
 
 **Tier 3 · Chrome / 工具图标（退后）** —— 中性 `.secondary` 灰 + 玻璃 / 材质圆底。
-- 用于：设置齿轮、**关闭 X**、「…」更多菜单、返回。
+- 用于：设置齿轮、**关闭 X**、**返回 `<`**、「…」更多菜单。这些是「离开 / 导航」，不提交。
 - 依据：chrome 退后；与 Apple 原生一致（齿轮 / 关闭从不染 app 强调色）。
 - 实现：工具栏关闭用 `SheetCloseButton`（已显式 `.tint(Color(.secondaryLabel))` 盖掉 sheet 的 accent tint）；自定义头部关闭用 `glassCircleButton()` + xmark `.foregroundStyle(.secondary)`。
+
+> **工具栏分色铁律：按「提交 vs 离开」分，不是「凡图标都灰」。**
+> - 提交 / 确认（Save · Done · ✓ · Add）→ Tier 2 烟蓝 + semibold。
+> - 离开 / 导航（关闭 X · 返回 · 更多）→ Tier 3 中性灰。
+> 同一条工具栏上两者并存正常：右上 ✓ 蓝、左上返回灰。
 
 **有意区分（非违规）**：「创建行程」在空状态是 Tier 1 黑（该屏主操作），在首页是 Tier 2 蓝 FAB（常驻悬浮、足迹地球上唯一一抹彩色）——语境不同、分属不同档，颜色不同是对的。
 
