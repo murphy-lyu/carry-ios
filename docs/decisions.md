@@ -1,5 +1,14 @@
 # 决策日志
 
+## 2026-06-13 首页 Sheet 默认展开高度：从屏高分数改为安全区推导（地球只留干净一线）
+
+> 起因：UI 走查首页 Sheet 默认高度。原非空态用 `UIScreen.main.bounds.height * 0.86`，地球露出 ~14%，露出的是 MapKit 截断的海洋标签（北冰洋/巴伦支海）——一条噪音带，既够不上 north-star §8 的「叙事/惊喜」，又违背 §1 的 deference（两头不靠）。且 `0.86` 是无依据的 magic number，与隔壁空态「按内容逐项推导」的严谨度不对等。
+
+- **决策（用户选「内容优先、收干净」方向）**：展开态改为 `屏高 - (topSafeAreaInset + 28)`，与空态一样**从真实安全区推导**。露出的地球带在所有机型上恒为「安全区下方 28pt」（不随屏高浮动），呈一条干净的星空 + 地球弧线；地球作为**下拉才露的彩蛋**，不是默认主角。
+- **为何括高反而更干净**：相机中心锁在到访国质心（默认 lat 25），屏幕顶端永远是高纬度（北冰洋标签所在）。括高裁掉的是地球底部，但顶端那条噪音标签落在更靠下、被一起裁掉了——真机/模拟器确认括高后顶端只剩冰盖弧线，无标签戳入。
+- **不碰雷区**：只改 `expandedSheetHeight` 一个值（`HomeView.swift`），新增 `topSafeAreaInset` helper 镜像既有 `bottomSafeAreaInset`。`collapsedOffset = expandedHeight - 188` 自动跟随；FX 的吸附/手势/mask 链路（playbook §5 雷区）完全未动。
+- **回写**：本条即 north-star「抬高标准后回写」的落地记录。
+
 ## 2026-06-13 国内/国际基准改为 storefront 单一来源（home country）
 
 > 起因：「我的行程册」要做国内/国际占比统计。原 `TripBundle.isInternational` 与 `TripStore.inferIsInternational` **硬编码 CN**，且 `isInternational` 还被打包推荐（`generatePackingSections` 过滤 `internationalOnly`）多处使用。

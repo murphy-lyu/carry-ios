@@ -219,7 +219,16 @@ struct HomeView: View {
 
     private var expandedSheetHeight: CGFloat {
         guard isEffectivelyEmpty else {
-            return UIScreen.main.bounds.height * 0.86
+            // Populated state: content-first. Leave only a deliberate, device-constant
+            // sliver of globe above the sheet — a clean starry edge, not the old ~14%
+            // mid-size peek that showed cut-off ocean labels (北冰洋…) and read as noise.
+            // Derived from the real top safe area (like the empty state below) instead of
+            // a screen-height fraction, so the gap below the status bar / Dynamic Island
+            // is the same on every device. The globe is the pull-down reveal, not the
+            // default hero. topBreathing mirrors the 28pt used in the empty state.
+            let topBreathing: CGFloat = 28
+            let peek = Self.topSafeAreaInset + topBreathing
+            return UIScreen.main.bounds.height - peek
         }
         // Empty state: size the sheet to its CONTENT, not a screen-height fraction —
         // so the gap below the card is constant across devices (the old 0.44 fraction
@@ -241,6 +250,15 @@ struct HomeView: View {
             .compactMap { $0 as? UIWindowScene }
             .flatMap { $0.windows }
             .first { $0.isKeyWindow }?.safeAreaInsets.bottom ?? 0
+    }
+
+    /// Top safe-area inset (status bar / Dynamic Island). Used to keep the globe peek
+    /// above the expanded sheet a device-constant band rather than a screen fraction.
+    private static var topSafeAreaInset: CGFloat {
+        UIApplication.shared.connectedScenes
+            .compactMap { $0 as? UIWindowScene }
+            .flatMap { $0.windows }
+            .first { $0.isKeyWindow }?.safeAreaInsets.top ?? 0
     }
 
     private var collapsedSheetOffset: CGFloat {
@@ -1549,7 +1567,8 @@ struct TripCard: View {
             return NSLocalizedString("trip.card.no_dates", comment: "Planning trip with no dates set")
         }
         let format = NSLocalizedString("%@ · %lld days", comment: "Trip date range and duration")
-        return String(format: format, locale: Locale.current, bundle.localizedDateRange, Int64(bundle.days))
+        // 显示「实际天数」（含两端），与行程页一致；bundle.days 是晚数、仅打包数量用。
+        return String(format: format, locale: Locale.current, bundle.localizedDateRange, Int64(bundle.spanDays))
     }
 
     private var remainingText: String {
