@@ -10,8 +10,6 @@ fileprivate let homeDarkBackdropTop = Color(red: 0.03, green: 0.03, blue: 0.04)
 fileprivate let homeDarkBackdropBottom = Color(red: 0.07, green: 0.07, blue: 0.08)
 fileprivate let homeDarkHeroTop = Color(red: 0.12, green: 0.12, blue: 0.13)
 fileprivate let homeDarkHeroBottom = Color(red: 0.17, green: 0.17, blue: 0.18)
-fileprivate let homeDarkStatTop = Color(red: 0.15, green: 0.15, blue: 0.16)
-fileprivate let homeDarkStatBottom = Color(red: 0.20, green: 0.20, blue: 0.21)
 fileprivate let homeDarkCardTop = Color(red: 0.10, green: 0.10, blue: 0.11)
 fileprivate let homeDarkCardBottom = Color(red: 0.14, green: 0.14, blue: 0.15)
 fileprivate let homeDarkCardTopRefined = Color(red: 0.09, green: 0.09, blue: 0.10)
@@ -975,7 +973,7 @@ struct HomeView: View {
                                              @ViewBuilder content: () -> Content) -> some View {
         VStack(alignment: .leading, spacing: 14) {
             Label(titleKey, systemImage: systemImage)
-                .font(.subheadline.weight(.semibold))
+                .font(.system(.subheadline, design: .rounded).weight(.semibold))
                 .foregroundStyle(.secondary)
             content()
         }
@@ -1083,7 +1081,7 @@ struct HomeView: View {
                             font: .system(size: 34, weight: .bold, design: .rounded))
                     .foregroundStyle(.primary)
                 Text(verbatim: "/ \(s.globalCountryTotal) · \(percent)%")
-                    .font(.subheadline)
+                    .font(.system(.subheadline, design: .rounded))
                     .foregroundStyle(.secondary)
             }
             if !s.countryTallies.isEmpty {
@@ -1097,7 +1095,7 @@ struct HomeView: View {
                                 .foregroundStyle(.primary)
                             Spacer()
                             Text(verbatim: "\(tally.count)×")
-                                .font(.subheadline.weight(.semibold))
+                                .font(.system(.subheadline, design: .rounded).weight(.semibold))
                                 .foregroundStyle(.secondary)
                         }
                     }
@@ -1123,7 +1121,7 @@ struct HomeView: View {
                             .foregroundStyle(.primary)
                         Spacer()
                         Text(verbatim: "\(item.value)×")
-                            .font(.subheadline.weight(.semibold))
+                            .font(.system(.subheadline, design: .rounded).weight(.semibold))
                             .foregroundStyle(.secondary)
                     }
                 }
@@ -1157,7 +1155,7 @@ struct HomeView: View {
         HStack(spacing: 6) {
             Circle().fill(color).frame(width: 8, height: 8)
             Text(label).font(.footnote).foregroundStyle(.secondary)
-            Text(verbatim: "\(count)").font(.footnote.weight(.semibold)).foregroundStyle(.primary)
+            Text(verbatim: "\(count)").font(.system(.footnote, design: .rounded).weight(.semibold)).foregroundStyle(.primary)
         }
     }
 
@@ -1379,49 +1377,6 @@ struct HomeView: View {
             .offset(y: initialRevealProgress >= pastRevealThreshold ? 0 : 10)
             .scaleEffect(initialRevealProgress >= pastRevealThreshold ? 1 : 0.99)
             .animation(.easeOut(duration: 0.22).delay(delay), value: initialRevealProgress)
-    }
-
-    private func statPill(value: String, label: LocalizedStringKey) -> some View {
-        VStack(alignment: .leading, spacing: 2) {
-            Text(value)
-                .font(.headline.weight(.bold))
-                .foregroundStyle(.primary)
-            Text(label)
-                .font(.caption.weight(.semibold))
-                .foregroundStyle(.secondary)
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(.horizontal, 14)
-        .padding(.vertical, 10)
-        .background(
-            RoundedRectangle(cornerRadius: 16, style: .continuous)
-                .fill(statPillFill)
-        )
-        .overlay(
-            RoundedRectangle(cornerRadius: 16, style: .continuous)
-                .strokeBorder(Color.primary.opacity(colorScheme == .dark ? 0.015 : 0.04), lineWidth: 1)
-        )
-    }
-
-    private var statPillFill: LinearGradient {
-        if colorScheme == .dark {
-            return LinearGradient(
-                colors: [
-                    homeDarkStatTop,
-                    homeDarkStatBottom
-                ],
-                startPoint: .topLeading,
-                endPoint: .bottomTrailing
-            )
-        }
-        return LinearGradient(
-            colors: [
-                Color(UIColor.systemBackground).opacity(0.96),
-                Color(UIColor.systemBackground).opacity(0.88)
-            ],
-            startPoint: .topLeading,
-            endPoint: .bottomTrailing
-        )
     }
 
     private var listFooter: some View {

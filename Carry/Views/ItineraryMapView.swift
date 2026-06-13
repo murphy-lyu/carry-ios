@@ -56,12 +56,6 @@ struct ItineraryMapView: View {
         displayDays.flatMap { $0.sortedStops }.filter { $0.hasCoordinate }
     }
 
-    private var scopeLabel: String? {
-        guard let day = displayDays.first else { return nil }
-        let trimmed = day.title.trimmingCharacters(in: .whitespacesAndNewlines)
-        return trimmed.isEmpty ? String(format: NSLocalizedString("itinerary.day.title", comment: ""), day.sortOrder + 1) : trimmed
-    }
-
     private var coordinateCount: Int { coordinateStops.count }
 
     var body: some View {
@@ -85,24 +79,15 @@ struct ItineraryMapView: View {
             } else {
                 mapContent
                     .allowsHitTesting(false)   // 预览不抢地图手势；点整块进全屏交互
-                    .overlay(alignment: .topLeading) {
-                        if let scopeLabel {
-                            Text(scopeLabel)
-                                .font(.caption.weight(.semibold))
-                                .foregroundStyle(.primary)
-                                .padding(.horizontal, 10)
-                                .padding(.vertical, 7)
-                                .background(.regularMaterial, in: Capsule())
-                                .padding(10)
-                        }
-                    }
+                    // 不再画 scope 胶囊：「当前是哪天」与正下方日历条的选中态重复（north-star §1）。
                     .overlay(alignment: .topTrailing) {
                         Image(systemName: "arrow.up.left.and.arrow.down.right")
                             .font(.system(size: 13, weight: .semibold))
                             .padding(8)
                             .background(.regularMaterial, in: Circle())
                             .padding(8)
-                            .foregroundStyle(CarryAccent.color)
+                            // 「看大图」是 chrome/工具性 affordance，用中性色（对齐 Apple Maps 地图控件）。
+                            .foregroundStyle(.secondary)
                     }
                     .overlay(alignment: .bottomLeading) {
                         if coordinateCount == 1 {
@@ -121,10 +106,10 @@ struct ItineraryMapView: View {
                 .font(.system(size: 30, weight: .light))
                 .foregroundStyle(.secondary.opacity(0.7))
             Text("itinerary.empty.map.title")
-                .font(.subheadline.weight(.semibold))
+                .font(.system(.subheadline, design: .rounded).weight(.semibold))
                 .foregroundStyle(.primary)
             Text("itinerary.empty.map.subtitle")
-                .font(.footnote)
+                .font(.system(.footnote, design: .rounded))
                 .foregroundStyle(.secondary)
                 .multilineTextAlignment(.center)
         }
@@ -143,7 +128,7 @@ struct ItineraryMapView: View {
 
     private var singleStopHint: some View {
         Text("itinerary.single.map.hint")
-            .font(.caption.weight(.semibold))
+            .font(.system(.caption, design: .rounded).weight(.semibold))
             .foregroundStyle(.secondary)
             .padding(.horizontal, 10)
             .padding(.vertical, 6)
@@ -195,7 +180,7 @@ struct ItineraryMapView: View {
             Circle().fill(color)
             Circle().strokeBorder(.white, lineWidth: 1.5)
             Text("\(index)")
-                .font(.system(size: 12, weight: .bold).monospacedDigit())
+                .font(.system(size: 12, weight: .bold, design: .rounded).monospacedDigit())
                 .foregroundStyle(.white)
         }
         .frame(width: 24, height: 24)

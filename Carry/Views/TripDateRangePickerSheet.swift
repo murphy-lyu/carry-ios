@@ -122,10 +122,10 @@ struct TripDateRangePickerSheet: View {
         HStack(spacing: 16) {
             VStack(alignment: .leading, spacing: 3) {
                 Text("Departure")
-                    .font(.caption.weight(.semibold))
+                    .font(.system(.caption, design: .rounded).weight(.semibold))
                     .foregroundStyle(!isSelectingEnd ? AnyShapeStyle(Color.accentColor.opacity(0.92)) : AnyShapeStyle(.secondary))
                 Text(selectedStart.formatted(.dateTime.month(.abbreviated).day().year()))
-                    .font(.subheadline.weight(.medium))
+                    .font(.system(.subheadline, design: .rounded).weight(.medium))
                     .foregroundStyle(.primary)
             }
 
@@ -135,10 +135,10 @@ struct TripDateRangePickerSheet: View {
 
             VStack(alignment: .leading, spacing: 3) {
                 Text("Return")
-                    .font(.caption.weight(.semibold))
+                    .font(.system(.caption, design: .rounded).weight(.semibold))
                     .foregroundStyle(isSelectingEnd ? AnyShapeStyle(Color.accentColor.opacity(0.92)) : AnyShapeStyle(.secondary))
                 Text(selectedEnd.formatted(.dateTime.month(.abbreviated).day().year()))
-                    .font(.subheadline.weight(.medium))
+                    .font(.system(.subheadline, design: .rounded).weight(.medium))
                     .foregroundStyle(.primary)
             }
 
@@ -149,7 +149,7 @@ struct TripDateRangePickerSheet: View {
                 // 位置化占位符让各语言自排语序（日/韩为「N 泊 M 日」，先晚后天）。
                 Text(String(format: NSLocalizedString("date.days_nights", comment: "Trip span: N days M nights"),
                             Int64(nightsCount + 1), Int64(nightsCount)))
-                    .font(.caption.weight(.semibold))
+                    .font(.system(.caption, design: .rounded).weight(.semibold))
                     .foregroundStyle(.secondary.opacity(0.90))
                     .padding(.horizontal, 10)
                     .padding(.vertical, 5)
@@ -168,7 +168,7 @@ struct TripDateRangePickerSheet: View {
         return HStack(spacing: 0) {
             ForEach(ordered, id: \.self) { symbol in
                 Text(symbol)
-                    .font(.caption.weight(.medium))
+                    .font(.system(.caption, design: .rounded).weight(.medium))
                     .foregroundStyle(.tertiary.opacity(0.86))
                     .frame(maxWidth: .infinity)
             }
@@ -344,7 +344,7 @@ private struct DayCell: View {
             }
 
             Text("\(calendar.component(.day, from: date))")
-                .font(.system(size: 15, weight: (isStart || isEnd) ? .semibold : .regular))
+                .font(.system(size: 15, weight: (isStart || isEnd) ? .semibold : .regular, design: .rounded))
                 .foregroundStyle(
                     (isStart || isEnd) ? AnyShapeStyle(selectedDayForeground) :
                     AnyShapeStyle(Color.primary)

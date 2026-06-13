@@ -270,7 +270,7 @@ struct GlobeMapView: View, Equatable {
             cityDot
             if showCityLabels && !city.cityName.isEmpty {
                 Text(city.cityName)
-                    .font(.system(size: 11, weight: .semibold))
+                    .font(.system(size: 11, weight: .semibold, design: .rounded))
                     .foregroundStyle(.white)
                     .lineLimit(1)
                     .padding(.horizontal, 5)
@@ -355,7 +355,7 @@ struct GlobeMapView: View, Equatable {
             flagCircle(for: country.countryCode)
                 .shadow(color: .black.opacity(0.4), radius: 6, x: 0, y: 3)
             Text(country.name)
-                .font(.system(size: 11, weight: .semibold))
+                .font(.system(size: 11, weight: .semibold, design: .rounded))
                 .foregroundStyle(.white)
                 .lineLimit(1)
                 .padding(.horizontal, 7)

@@ -68,10 +68,6 @@ struct AddStopView: View {
         NavigationStack {
             List {
                 Section {
-                    categoryPicker
-                }
-
-                Section {
                     if completer.results.isEmpty && !completer.query.trimmingCharacters(in: .whitespaces).isEmpty {
                         // 无补全结果时提供「手动添加无地点停靠点」入口。
                         Button {
@@ -146,6 +142,9 @@ struct AddStopView: View {
                 }
                 .buttonStyle(.plain)
             }
+            Divider()
+                .frame(height: 18)
+            categoryMenu
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 10)
@@ -158,15 +157,26 @@ struct AddStopView: View {
         .background(Color(.systemGroupedBackground))
     }
 
-    private var categoryPicker: some View {
-        Picker(selection: $category) {
-            ForEach(StopCategory.allCases, id: \.self) { cat in
-                Label(cat.titleKey, systemImage: cat.symbolName).tag(cat)
+    /// 类别收进搜索框尾部的紧凑 Menu：当前类别图标，一点切换。
+    /// 加地点的主任务是搜索，类别是次要属性 → 退出结果上方、不挤占首屏（north-star §2）。
+    private var categoryMenu: some View {
+        Menu {
+            Picker(selection: $category) {
+                ForEach(StopCategory.allCases, id: \.self) { cat in
+                    Label(cat.titleKey, systemImage: cat.symbolName).tag(cat)
+                }
+            } label: {
+                Text("itinerary.add_stop.category")
             }
         } label: {
-            Text("itinerary.add_stop.category")
+            Image(systemName: category.symbolName)
+                .font(.system(size: 15))
+                .foregroundStyle(CarryAccent.color)
+                .frame(width: 30, height: 30)
+                .contentShape(Rectangle())
         }
         .tint(CarryAccent.color)
+        .accessibilityLabel(Text("itinerary.add_stop.category"))
     }
 
     /// 解析补全项的真实坐标后入库。解析失败则退回无坐标停靠点（仍保留名字）。

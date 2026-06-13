@@ -52,7 +52,7 @@ struct SplashView: View {
                         .font(.system(size: 30, weight: .bold, design: .rounded))
                         .foregroundColor(.primary)
                     Text("Ready before you go.")
-                        .font(.subheadline)
+                        .font(.system(.subheadline, design: .rounded))
                         .foregroundStyle(.secondary)
                 }
             }

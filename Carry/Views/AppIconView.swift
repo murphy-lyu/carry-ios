@@ -91,7 +91,7 @@ struct AppIconView: View {
 
     private var sectionHeader: some View {
         Text("icon.section.header")
-            .font(.system(size: 11, weight: .medium))
+            .font(.system(size: 11, weight: .medium, design: .rounded))
             .foregroundStyle(colorScheme == .dark
                 ? Color.secondary.opacity(0.65)
                 : Color(UIColor.tertiaryLabel))
@@ -136,7 +136,7 @@ struct AppIconView: View {
 
                 VStack(alignment: .leading, spacing: 2) {
                     Text(option.name)
-                        .font(.subheadline.weight(.semibold))
+                        .font(.system(.subheadline, design: .rounded).weight(.semibold))
                         .foregroundColor(.primary)
                     Text(option.description)
                         .font(.caption)

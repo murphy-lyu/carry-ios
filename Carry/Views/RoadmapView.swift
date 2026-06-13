@@ -161,7 +161,7 @@ struct RoadmapView: View {
                                 zhHans: "留空将使用内置默认数据；填入后会优先拉取远程。",
                                 zhHant: "留空將使用內建預設資料；填入後會優先拉取遠端。"
                             ))
-                                .font(.subheadline)
+                                .font(.system(.subheadline, design: .rounded))
                                 .foregroundStyle(.secondary)
                                 .lineLimit(2)
                         }
@@ -250,7 +250,7 @@ struct RoadmapView: View {
                 }
                 if let updatedAt = payload?.updatedAt, !updatedAt.isEmpty {
                     Text(RoadmapL10n.text(en: "Updated: \(updatedAt)", zhHans: "更新于：\(updatedAt)", zhHant: "更新於：\(updatedAt)"))
-                        .font(.caption)
+                        .font(.system(.caption, design: .rounded))
                         .foregroundStyle(.secondary)
                 }
             }
@@ -299,7 +299,7 @@ struct RoadmapView: View {
     private func sectionBlock(_ section: RoadmapSection) -> some View {
         VStack(alignment: .leading, spacing: 8) {
             Text(section.localizedTitle)
-                .font(.system(size: 11, weight: .medium))
+                .font(.system(size: 11, weight: .medium, design: .rounded))
                 .foregroundStyle(colorScheme == .dark ? Color.secondary.opacity(0.68) : Color(UIColor.tertiaryLabel))
                 .kerning(1.4)
                 .textCase(.uppercase)
@@ -340,12 +340,12 @@ struct RoadmapView: View {
             VStack(alignment: .leading, spacing: 3) {
                 HStack(spacing: 6) {
                     Text(item.localizedTitle)
-                        .font(.body.weight(.semibold))
+                        .font(.system(.body, design: .rounded).weight(.semibold))
                         .foregroundStyle(.primary)
 
                     if showLatestBadge {
                         Text(RoadmapL10n.text(en: "Latest", zhHans: "最新", zhHant: "最新"))
-                            .font(.system(size: 10, weight: .semibold))
+                            .font(.system(size: 10, weight: .semibold, design: .rounded))
                             .foregroundStyle(Color.accentColor)
                             .padding(.horizontal, 6)
                             .padding(.vertical, 2)

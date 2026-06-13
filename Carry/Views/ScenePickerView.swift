@@ -228,7 +228,7 @@ struct ScenePickerView: View {
     private func nudgeSection(titleKey: String, labels: [String], logAccepted: Bool) -> some View {
         VStack(alignment: .leading, spacing: 10) {
             Text(LocalizedStringKey(titleKey))
-                .font(.system(size: 11, weight: .medium))
+                .font(.system(size: 11, weight: .medium, design: .rounded))
                 .foregroundStyle(Color(.systemGray))
                 .kerning(1.5)
                 .textCase(.uppercase)
@@ -267,7 +267,7 @@ struct ScenePickerView: View {
                         .font(.system(size: 30, weight: .bold, design: .rounded))
                         .foregroundStyle(.primary)
                     Text("Pick travel scenes to generate a better list")
-                        .font(.subheadline)
+                        .font(.system(.subheadline, design: .rounded))
                         .foregroundStyle(.secondary)
                 }
                 Spacer()
@@ -411,7 +411,7 @@ struct SceneGroupSection: View {
         if !visibleItems.isEmpty {
             VStack(alignment: .leading, spacing: 10) {
                 Text(LocalizedStringKey(group.title))
-                    .font(.system(size: 11, weight: .medium))
+                    .font(.system(size: 11, weight: .medium, design: .rounded))
                     .foregroundStyle(colorScheme == .dark ? Color(.systemGray2) : Color(.systemGray))
                     .kerning(1.5)
                     .textCase(.uppercase)
@@ -530,7 +530,7 @@ struct SceneChip: View {
                         .foregroundStyle(isSelected ? Color(UIColor.systemBackground) : .primary)
                 }
                 Text(displayKey)
-                    .font(.caption)
+                    .font(.system(.caption, design: .rounded))
                     .foregroundStyle(isSelected ? Color(UIColor.systemBackground) : .primary)
             }
             .padding(.horizontal, 10)

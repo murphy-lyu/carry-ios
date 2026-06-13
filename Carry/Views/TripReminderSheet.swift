@@ -76,7 +76,7 @@ struct TripReminderSheet: View {
                 .frame(maxWidth: .infinity, alignment: .center)
                 .multilineTextAlignment(.center)
             Text("reminder.sheet.subtitle")
-                .font(.subheadline)
+                .font(.system(.subheadline, design: .rounded))
                 .foregroundStyle(colorScheme == .dark ? Color.secondary.opacity(0.88) : .secondary)
                 .frame(maxWidth: .infinity, alignment: .center)
                 .multilineTextAlignment(.center)
@@ -143,7 +143,7 @@ struct TripReminderSheet: View {
                     .font(.system(size: 15, weight: .semibold))
                     .foregroundStyle(colorScheme == .dark ? Color.accentColor.opacity(0.82) : Color.accentColor.opacity(0.92))
                 Text(LocalizedStringKey("reminder.add"))
-                    .font(.subheadline.weight(.medium))
+                    .font(.system(.subheadline, design: .rounded).weight(.medium))
                 Spacer()
             }
             .padding(.horizontal, 16)
@@ -264,7 +264,7 @@ private struct ReminderRow: View {
                         Spacer()
                         HStack(spacing: 4) {
                             Text(config.timeString)
-                                .font(.subheadline)
+                                .font(.system(.subheadline, design: .rounded))
                                 .foregroundStyle(reminderTimeColor)
                             Image(systemName: isExpanded ? "chevron.up" : "chevron.down")
                                 .font(.caption2.weight(.semibold))
@@ -308,7 +308,7 @@ private struct ReminderRow: View {
                         onSaveTime(comps.hour ?? config.hour, comps.minute ?? config.minute)
                     } label: {
                         Text(LocalizedStringKey("Done"))
-                            .font(.subheadline.weight(.medium))
+                            .font(.system(.subheadline, design: .rounded).weight(.medium))
                             .foregroundStyle(colorScheme == .dark ? Color.accentColor.opacity(0.92) : Color.accentColor)
                             .frame(maxWidth: .infinity)
                             .padding(.vertical, 13)
@@ -358,7 +358,7 @@ struct ReminderPickerSheet: View {
                                 .font(.system(size: 24, weight: .semibold))
                                 .foregroundStyle(.secondary)
                             Text("All reminders added")
-                                .font(.subheadline.weight(.semibold))
+                                .font(.system(.subheadline, design: .rounded).weight(.semibold))
                                 .foregroundStyle(.primary)
                             Text("You have already added all available reminder presets.")
                                 .font(.caption)
@@ -377,11 +377,11 @@ struct ReminderPickerSheet: View {
                                 } label: {
                                     HStack {
                                         Text(presetLabel(for: preset))
-                                            .font(.subheadline)
+                                            .font(.system(.subheadline, design: .rounded))
                                             .foregroundStyle(.primary)
                                         Spacer()
                                         Text(preset.timeString)
-                                            .font(.subheadline)
+                                            .font(.system(.subheadline, design: .rounded))
                                             .foregroundStyle(.secondary)
                                     }
                                     .padding(.horizontal, 16)

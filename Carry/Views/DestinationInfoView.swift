@@ -210,7 +210,7 @@ struct DestinationInfoView: View {
                             .font(.system(size: 12, weight: .medium))
                             .foregroundStyle(.secondary)
                         Text(dest.name)
-                            .font(.subheadline.weight(.semibold))
+                            .font(.system(.subheadline, design: .rounded).weight(.semibold))
                             .foregroundStyle(.primary)
                             .lineLimit(1)
                             .minimumScaleFactor(0.85)
@@ -305,14 +305,14 @@ struct DestinationInfoView: View {
 
         return VStack(spacing: 3) {
             Text(dayAbbrev)
-                .font(.caption2.weight(.medium))
+                .font(.system(.caption2, design: .rounded).weight(.medium))
                 .foregroundStyle(.secondary)
             Image(systemName: day.symbolName)
                 .font(.system(size: 13))
                 .foregroundStyle(.primary.opacity(0.8))
                 .frame(width: 20, height: 14)
             Text(day.highTemp)
-                .font(.caption.weight(.semibold))
+                .font(.system(.caption, design: .rounded).weight(.semibold))
                 .foregroundStyle(.primary)
         }
         .frame(width: width)
@@ -342,7 +342,7 @@ struct DestinationInfoView: View {
                         .font(.system(size: 12, weight: .medium))
                         .foregroundStyle(.secondary)
                     Text(LocalizedStringKey("destination.plug.section_title"))
-                        .font(.subheadline.weight(.semibold))
+                        .font(.system(.subheadline, design: .rounded).weight(.semibold))
                         .foregroundStyle(.primary)
                 }
 
@@ -351,7 +351,7 @@ struct DestinationInfoView: View {
                 VStack(alignment: .leading, spacing: 6) {
                     let typesLabel = plugUnion.map { "Type \($0)" }.joined(separator: " · ")
                     Text(typesLabel)
-                        .font(.subheadline.weight(.semibold))
+                        .font(.system(.subheadline, design: .rounded).weight(.semibold))
                         .foregroundStyle(.primary)
                         .lineLimit(1)
                         .minimumScaleFactor(0.85)
@@ -370,10 +370,10 @@ struct DestinationInfoView: View {
                             Text(showConverterWarning
                                  ? "\(voltageLabel) · \(NSLocalizedString("destination.plug.voltage_warning", comment: ""))"
                                  : voltageLabel)
+                                .font(.system(.caption, design: .rounded))
                                 .lineLimit(1)
                                 .minimumScaleFactor(0.8)
                         }
-                        .font(.caption)
                         .foregroundStyle(showConverterWarning ? Color.alertOrange : .secondary)
                     }
                 }
@@ -393,7 +393,7 @@ struct DestinationInfoView: View {
                         .font(.system(size: 12, weight: .medium))
                         .foregroundStyle(.secondary)
                     Text(LocalizedStringKey("destination.currency.section_title"))
-                        .font(.subheadline.weight(.semibold))
+                        .font(.system(.subheadline, design: .rounded).weight(.semibold))
                         .foregroundStyle(.primary)
                 }
 
@@ -405,13 +405,13 @@ struct DestinationInfoView: View {
                             ForEach(Array(foreignCurrencies.prefix(3)), id: \.code) { currency in
                                 VStack(alignment: .leading, spacing: 2) {
                                     Text("\(currency.code) \(currency.symbol)")
-                                        .font(.caption.weight(.semibold))
+                                        .font(.system(.caption, design: .rounded).weight(.semibold))
                                         .foregroundStyle(.primary)
                                         .lineLimit(1)
                                         .minimumScaleFactor(0.8)
                                     if let rate = exchangeRateManager.formattedRate(for: currency.code) {
                                         Text("1 \(exchangeRateManager.baseCurrencyCode)≈\(rate)\(currency.symbol)")
-                                            .font(.caption2)
+                                            .font(.system(.caption2, design: .rounded))
                                             .foregroundStyle(.secondary)
                                             .lineLimit(1)
                                             .minimumScaleFactor(0.72)
@@ -425,11 +425,11 @@ struct DestinationInfoView: View {
                             ForEach(foreignCurrencies, id: \.code) { currency in
                                 VStack(alignment: .leading, spacing: 3) {
                                     Text("\(currency.code) \(currency.symbol)")
-                                        .font(.subheadline.weight(.semibold))
+                                        .font(.system(.subheadline, design: .rounded).weight(.semibold))
                                         .foregroundStyle(.primary)
                                     if let rate = exchangeRateManager.formattedRate(for: currency.code) {
                                         Text("1 \(exchangeRateManager.baseCurrencyCode) ≈ \(rate) \(currency.symbol)")
-                                            .font(.caption)
+                                            .font(.system(.caption, design: .rounded))
                                             .foregroundStyle(.secondary)
                                             .lineLimit(2)
                                             .minimumScaleFactor(0.78)
@@ -442,11 +442,11 @@ struct DestinationInfoView: View {
                         ForEach(foreignCurrencies, id: \.code) { currency in
                             VStack(alignment: .leading, spacing: 2) {
                                 Text("\(currency.code) \(currency.symbol)")
-                                    .font(.headline.weight(.semibold))
+                                    .font(.system(.headline, design: .rounded).weight(.semibold))
                                     .foregroundStyle(.primary)
                                 if let rate = exchangeRateManager.formattedRate(for: currency.code) {
                                     Text("1 \(exchangeRateManager.baseCurrencyCode) ≈ \(rate) \(currency.symbol)")
-                                        .font(.footnote)
+                                        .font(.system(.footnote, design: .rounded))
                                         .foregroundStyle(.secondary)
                                         .lineLimit(1)
                                         .minimumScaleFactor(0.8)

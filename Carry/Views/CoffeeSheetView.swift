@@ -55,7 +55,7 @@ struct CoffeeSheetView: View {
                     VStack(spacing: 0) {
                         // — Title
                         Text(supportToneTitleKey)
-                            .font(.system(size: 30, weight: .semibold))
+                            .font(.system(size: 30, weight: .semibold, design: .rounded))
                             .lineLimit(2)
                             .minimumScaleFactor(0.85)
                             .multilineTextAlignment(.center)
@@ -64,7 +64,7 @@ struct CoffeeSheetView: View {
 
                         // — Subtitle
                         Text(supportToneSubtitleKey)
-                            .font(.subheadline)
+                            .font(.system(.subheadline, design: .rounded))
                             .foregroundStyle(.secondary)
                             .multilineTextAlignment(.center)
                             .padding(.horizontal, 28)
@@ -91,7 +91,7 @@ struct CoffeeSheetView: View {
                     // — Secondary actions
                     VStack(alignment: .leading, spacing: 6) {
                         Text("support.sheet.moreActions")
-                            .font(.system(size: 11, weight: .regular))
+                            .font(.system(size: 11, weight: .regular, design: .rounded))
                             .foregroundStyle(Color.secondary.opacity(0.6))
                             .kerning(1.3)
                             .textCase(.uppercase)
@@ -172,7 +172,7 @@ struct CoffeeSheetView: View {
                     .font(.system(size: 23))
                     .frame(width: 28, alignment: .center)
                 Text(nameKey)
-                    .font(.body.weight(.semibold))
+                    .font(.system(.body, design: .rounded).weight(.semibold))
                     .foregroundColor(.primary)
                     .lineLimit(1)
                 Spacer()
@@ -181,7 +181,7 @@ struct CoffeeSheetView: View {
                         .scaleEffect(0.8)
                 } else {
                     Text(coffeeStore.displayPrice(for: id, fallback: fallback))
-                        .font(.body.weight(.semibold))
+                        .font(.system(.body, design: .rounded).weight(.semibold))
                         .foregroundStyle(Color.primary.opacity(0.72))
                 }
             }

@@ -232,7 +232,7 @@ struct TripInfoView: View {
                 .font(.system(size: 30, weight: .bold, design: .rounded))
                 .foregroundStyle(.primary)
             Text("Add the essentials first, then choose your items")
-                .font(.subheadline)
+                .font(.system(.subheadline, design: .rounded))
                 .foregroundStyle(.secondary.opacity(0.86))
         }
         .padding(16)
@@ -275,7 +275,7 @@ struct TripInfoView: View {
     ) -> some View {
         VStack(alignment: .leading, spacing: 4) {
             Text(label)
-                .font(.system(size: 11, weight: .medium))
+                .font(.system(size: 11, weight: .medium, design: .rounded))
                 .foregroundStyle(.tertiary.opacity(0.86))
                 .kerning(1.5)
                 .textCase(.uppercase)

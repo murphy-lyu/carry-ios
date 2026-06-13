@@ -26,14 +26,14 @@ struct CarryWidgetLiveActivity: Widget {
                             .font(.system(size: 14, weight: .semibold))
                             .foregroundStyle(.primary)
                         Text(context.state.destinationCity)
-                            .font(.system(size: 14, weight: .semibold))
+                            .font(.system(size: 14, weight: .semibold, design: .rounded))
                             .foregroundStyle(.primary)
                             .lineLimit(1)
                     }
                 }
                 DynamicIslandExpandedRegion(.trailing) {
                     Text(departureSummary(date: context.state.departureDate))
-                        .font(.system(size: 12, weight: .medium))
+                        .font(.system(size: 12, weight: .medium, design: .rounded))
                         .foregroundStyle(.secondary)
                         .lineLimit(1)
                 }
@@ -57,7 +57,7 @@ struct CarryWidgetLiveActivity: Widget {
                     ? Int(Double(context.state.packedItems) / Double(context.state.totalItems) * 100)
                     : 0
                 Text("\(pct)%")
-                    .font(.system(size: 13, weight: .semibold))
+                    .font(.system(size: 13, weight: .semibold, design: .rounded))
                     .foregroundStyle(.primary)
             } minimal: {
                 // ── 最小态 ──
@@ -89,12 +89,12 @@ private struct LockScreenView: View {
                     .font(.system(size: 14, weight: .semibold))
                     .foregroundStyle(.primary)
                 Text(context.state.tripName)
-                    .font(.system(size: 15, weight: .semibold))
+                    .font(.system(size: 15, weight: .semibold, design: .rounded))
                     .foregroundStyle(.primary)
                     .lineLimit(1)
                 Spacer()
                 Text(departureSummary(date: context.state.departureDate))
-                    .font(.system(size: 13, weight: .medium))
+                    .font(.system(size: 13, weight: .medium, design: .rounded))
                     .foregroundStyle(.secondary)
             }
 
@@ -105,7 +105,7 @@ private struct LockScreenView: View {
                         .font(.system(size: 30))
                         .foregroundStyle(.green)
                     Text(String(localized: "widget.liveactivity.completed"))
-                        .font(.system(size: 15, weight: .semibold))
+                        .font(.system(size: 15, weight: .semibold, design: .rounded))
                         .foregroundStyle(.green)
                 }
             } else {
@@ -116,7 +116,7 @@ private struct LockScreenView: View {
                         .foregroundStyle(.primary)
                         .monospacedDigit()
                     Text(" / \(context.state.totalItems)")
-                        .font(.system(size: 17, weight: .medium))
+                        .font(.system(size: 17, weight: .medium, design: .rounded))
                         .foregroundStyle(.secondary)
                     Spacer()
                     Text("\(Int(progress * 100))%")
@@ -174,11 +174,11 @@ private struct PackingProgressRow: View {
             HStack {
                 if isCompleted {
                     Label(String(localized: "widget.liveactivity.completed"), systemImage: "checkmark.circle.fill")
-                        .font(.system(size: 12, weight: .medium))
+                        .font(.system(size: 12, weight: .medium, design: .rounded))
                         .foregroundStyle(.green)
                 } else {
                     Text(String(format: String(localized: "widget.liveactivity.progress"), packed, total))
-                        .font(.system(size: 12, weight: .medium))
+                        .font(.system(size: 12, weight: .medium, design: .rounded))
                         .foregroundStyle(.secondary)
                 }
                 Spacer()

@@ -440,7 +440,7 @@ struct PackingListView: View {
         } label: {
             HStack(spacing: 6) {
                 Image(systemName: icon).font(.system(size: 14, weight: .semibold))
-                Text(title).font(.subheadline.weight(.medium))
+                Text(title).font(.system(.subheadline, design: .rounded).weight(.medium))
             }
             .padding(.horizontal, 18)
             .padding(.vertical, 9)
@@ -874,7 +874,7 @@ struct PackingListView: View {
                         .font(.system(size: 10, weight: .medium))
                         .foregroundStyle(.secondary.opacity(colorScheme == .dark ? 0.9 : 0.82))
                     Text(packingStatusText)
-                        .font(.caption.weight(.medium))
+                        .font(.system(.caption, design: .rounded).weight(.medium))
                         .foregroundStyle(.primary.opacity(colorScheme == .dark ? 0.75 : 0.65))
                 }
                     .animation(.easeInOut(duration: 0.2), value: packedCount)
@@ -889,7 +889,7 @@ struct PackingListView: View {
                         Image(systemName: reminderStatusIconName)
                             .font(.system(size: 9, weight: .semibold))
                         Text(reminderStatusText)
-                            .font(.caption2.weight(.medium))
+                            .font(.system(.caption2, design: .rounded).weight(.medium))
                         Image(systemName: "chevron.right")
                             .font(.system(size: 7, weight: .semibold))
                             .foregroundStyle(.tertiary)
@@ -942,7 +942,7 @@ struct PackingListView: View {
             Text("packing.complete.banner")
                 .foregroundStyle(.primary)
         }
-        .font(.subheadline.weight(.medium))
+        .font(.system(.subheadline, design: .rounded).weight(.medium))
         .frame(maxWidth: .infinity, alignment: .center)
         .padding(.vertical, 8)
         .padding(.horizontal, 16)
@@ -993,7 +993,7 @@ struct PackingListView: View {
                     .frame(width: 24)
                 VStack(alignment: .leading, spacing: 3) {
                     Text("Add recommended items")
-                        .font(.subheadline.weight(.medium))
+                        .font(.system(.subheadline, design: .rounded).weight(.medium))
                         .foregroundStyle(.primary)
                     Text("packing.scene_card.subtitle")
                         .font(.caption)
@@ -1028,7 +1028,7 @@ struct PackingListView: View {
                     .font(.system(size: 10, weight: .semibold))
                     .foregroundStyle(colorScheme == .dark ? Color(.systemGray2) : Color(.systemGray))
                 Text("Nice to have")
-                    .font(.caption.weight(.medium))
+                    .font(.system(.caption, design: .rounded).weight(.medium))
                     .foregroundStyle(colorScheme == .dark ? Color(.systemGray2) : Color(.systemGray))
                     .kerning(1.2)
                     .textCase(.uppercase)
@@ -1111,7 +1111,7 @@ struct PackingListView: View {
                     .font(.system(.title2, design: .rounded).weight(.semibold))
                     .foregroundStyle(.primary)
                 Text("packing.empty.subtitle")
-                    .font(.subheadline)
+                    .font(.system(.subheadline, design: .rounded))
                     .foregroundStyle(.secondary)
                     .multilineTextAlignment(.center)
                     .padding(.horizontal, 32)
@@ -1142,7 +1142,7 @@ struct PackingListView: View {
 
     private func sectionTitle(_ title: String, isFirst: Bool) -> some View {
         Text(LocalizedStringKey(title))
-            .font(.caption.weight(.medium))
+            .font(.system(.caption, design: .rounded).weight(.medium))
             .foregroundStyle(colorScheme == .dark ? Color(.systemGray2) : Color(.systemGray))
             .kerning(1.2)
             .textCase(.uppercase)
@@ -1272,7 +1272,7 @@ struct PackingListView: View {
                             .transition(.scale.combined(with: .opacity))
                     }
                     Text(isSaved ? "packing.start.saved" : "packing.start.action")
-                        .font(.subheadline)
+                        .font(.system(.subheadline, design: .rounded))
                         .fontWeight(.medium)
                         .transition(.opacity)
                 }
@@ -1301,7 +1301,7 @@ struct PackingListView: View {
     private var previewSummaryRow: some View {
         Text(String.localizedStringWithFormat(
             NSLocalizedString("packing.preview.summary", comment: ""), totalCount))
-            .font(.footnote.weight(.medium))
+            .font(.system(.footnote, design: .rounded).weight(.medium))
             .foregroundStyle(.secondary)
             .frame(maxWidth: .infinity, alignment: .leading)
     }
@@ -1526,7 +1526,7 @@ struct PackingItemRow: View {
             Group {
                 if isEditingQuantity {
                     TextField("", text: $quantityText)
-                        .font(.subheadline.weight(.semibold))
+                        .font(.system(.subheadline, design: .rounded).weight(.semibold))
                         .monospacedDigit()
                         .foregroundStyle(.primary)
                         .keyboardType(.numberPad)
@@ -1548,7 +1548,7 @@ struct PackingItemRow: View {
                         }
                 } else {
                     Text("\(displayedQuantity)")
-                        .font(.subheadline.weight(.semibold))
+                        .font(.system(.subheadline, design: .rounded).weight(.semibold))
                         .monospacedDigit()
                         .tracking(displayedQuantity >= 1000 ? -0.2 : 0)
                         .foregroundStyle(.secondary)
@@ -1648,10 +1648,10 @@ struct ReorderSectionsView: View {
                         .font(.system(size: 38, weight: .regular))
                         .foregroundStyle(.secondary)
                     Text("No sections yet")
-                        .font(.headline)
+                        .font(.system(.headline, design: .rounded))
                         .foregroundStyle(.primary)
                     Text("Create a section to organize your packing list.")
-                        .font(.subheadline)
+                        .font(.system(.subheadline, design: .rounded))
                         .foregroundStyle(.secondary)
                         .multilineTextAlignment(.center)
                         .frame(maxWidth: 260)
@@ -1660,7 +1660,7 @@ struct ReorderSectionsView: View {
                         showAddAlert = true
                     } label: {
                         Label("New section", systemImage: "plus")
-                            .font(.subheadline.weight(.semibold))
+                            .font(.system(.subheadline, design: .rounded).weight(.semibold))
                             .frame(maxWidth: .infinity)
                             .padding(.vertical, 12)
                     }
@@ -1742,7 +1742,7 @@ struct ReorderSectionsView: View {
             } label: {
                 HStack(spacing: 12) {
                     Text(LocalizedStringKey(pendingRenames[section.id] ?? section.title))
-                        .font(.body.weight(.semibold))
+                        .font(.system(.body, design: .rounded).weight(.semibold))
                         .foregroundStyle(.primary)
                         .frame(maxWidth: .infinity, alignment: .leading)
                     Image(systemName: "pencil")

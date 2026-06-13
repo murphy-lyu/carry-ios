@@ -3,6 +3,26 @@
 ## 最后更新
 2026-06-13
 
+## 上次改动摘要（行程规划视觉审查 P1/P2 落地 + 字体判断微调 · 2026-06-13）
+
+> 接字体系统对齐之后，处理视觉审查里剩下的 P1/P2，并把字体走查中三处「保守判定」按拍板回调。均编译绿（独立 DerivedData），未提交。
+
+- **字体判断微调（拍板后）**：① Departure / Return 日期卡字段标签从圆体**回退 SF**（字段标签属功能角色，与下方日期值同声音、卡内自洽）；② design-system 补**按钮子规则**——主 CTA 圆体 / 次级·工具动作 SF / 字段标签 SF；③「物品名 vs 场景 chip」维持不统一（不同角色，正确）。另：上轮 agent 误报的 `HomeView.statPill` 死代码经 grep 核实**根本不存在**（错记了被调用的 `statusPill`），无清理动作。
+- **P1-① AddStop 类别下沉**（`AddStopView`）：类别从「结果上方一整行 Section」收成**搜索框尾部紧凑 `Menu`**（当前类别图标 + 原生勾选菜单切换），搜索结果紧贴搜索框、首屏不再被「选类别」挤占（north-star §2）。补 `accessibilityLabel`。删原 `categoryPicker`。
+- **P1-② 优化页卡中卡收敛**（`OptimizeRouteView`）：去掉最外层 28pt 半透大卡 → 内容直接铺 `CarrySubtleBackground`；新顺序列表去掉每行 14pt 小卡、改时间轴同款「序号圈 + 名称」plain 行；圆角从 28/20/18/14 四档**收成 20 一档**（地图 + 距离对比条两个面）。删距离条里与右上 hero 大数字重复的 saved 胶囊 + 清孤儿 key `itinerary.optimize.saved`（9 语言）。
+- **P2-③ 地图预览精简**（`ItineraryMapView`）：去左上 scope 胶囊（与正下方日历条选中态重复，并修掉「全部天时误显 Day 1」隐患，删死代码 `scopeLabel`）；展开钮 accent 蓝 → **中性 `.secondary`**（chrome affordance，对齐 Apple Maps）。保留单点引导提示。
+- **P2-④ leg 距离字号**（`TimelineStopRow`）：连线段间距离 9 → **10.5pt**，抬到可读舒适区，几何不变。
+
+## 上次改动摘要（字体系统定稿 + 全 app 对齐 · 2026-06-13）
+
+> 起于行程规划视觉审查发现「同屏混用 SF Rounded / 默认 SF」。先把行程规划三屏整屏圆体化（P0），再确认这是全 app 普遍现象——但「全圆体」并非对的解。**定稿一套角色制字体系统**并全 app 对齐。均编译绿（主 app + Widget Extension，独立 DerivedData），未提交。
+
+- **🔴 字体系统定稿（`design-system.md` Typography 章节重写）**：两种字形按**角色**分配，非按字号、非机械替换。**SF Rounded**＝展示型标题 / 数字（序号·计数·距离·价格·读数）/ 结构性短标题（Day 头·分区标题·卡片标题）/ 短突出标签（胶囊·chip·badge·浮层）/ 紧贴 hero 标题的副标题；**SF（默认）**＝密集列表正文 / 表单输入 / 长段落说明 / 系统控件（Form·Picker·Toggle·navigationTitle·toolbar·Section，绝不强制圆体）。口诀「被展示/醒目/数字/短标签→圆体；密集正文/表单/系统控件→SF」，**拿不准默认 SF**。理由：Apple 自家 Rounded 只给数字/短标签/展示标题，密集正文用 SF——大面积圆体在小字号长列表下可读性降、偏重偏童趣。这才是 north-star §3「字形统一」的正确解（统一＝一致遵守同一套角色规则）。
+- **行程规划三屏整屏对齐**（P0）：`ItineraryView` / `ItineraryMapView` / `OptimizeRouteView` 的停靠点名、地址、序号、距离、时间、标题、按钮、空态、地图针等全部内容文字 → 圆体；SF Symbol 与系统控件保持系统体。
+- **全 app 走查对齐**（约 120 处 / 18 文件）：首页统计数字与卡片标题、打包清单空态/分区标题/进度件数/CTA、物品库空态/分类头/计数 badge、场景选择/智能推荐的标题与 chip、创建/编辑/Splash 的 hero 副标题与分区/日期短标签、提醒与日期选择器的时间数字/日历数字/preset 短标签、目的地实用信息读数（温度/电压/货币/汇率）与卡片标题、路线图条目标题/分区/Latest badge、打赏档位与价格、图标名、`ConfirmDialog` 标题与按钮、足迹地球城市/国家浮层标签、**Widget（锁屏卡片+灵动岛+主屏小组件）的行程名/倒计时/件数/百分比** 等 → 圆体。各文件密集列表正文（物品名/搜索结果）、表单输入、成段说明、系统 `Form` 设置页（Settings/About 等）一律保持 SF。
+- **方法**：定义系统 → 多 agent 按文件并行走查（一文件一 agent、互不冲突）→ 每处回报角色判定与「保守保持 SF」的争议点 → 统一编译绿。判定保守、有据。
+- **遗留**：① 行程规划审查的 P1/P2（AddStop 类别下沉 / 优化页卡中卡收敛 / 地图浮层精简 / leg 距离 9pt 偏小）未做；② 发现 `HomeView.statPill(value:label:)` 为零调用死代码。
+
 ## 上次改动摘要（UI 走查：首页 Sheet 高度 + 根 Sheet 退后 + 行程详情默认面 · 2026-06-13）
 
 > 接续本日设计走查，聚焦首页底部 Sheet。两条均已提交 `main`、编译绿、真机验收。与并行的 appearance 修复会话共用 `HomeView`，按 hunk 隔离提交。注：退后效果那条 commit (`7d25e52`) 因误用 `git commit -- <path>`（提交工作区而非暂存的 index），把并行未提交的 `preferredColorScheme` 4 行一并带入——功能无误、无丢失/重复，因未 push 且用户在并行提交，未改写历史。

@@ -67,17 +67,54 @@ Apple 原生风格，极简、克制、优雅。
 - Dark：Color(red: 0.09, green: 0.09, blue: 0.10)
 - Light：Color(UIColor.systemBackground)
 
-## Typography
-使用 SF Pro（系统默认），通过 Font 语义级别调用：
-- .largeTitle：页面主标题
-- .title / .title2 / .title3：层级标题
-- .headline：列表项标题、卡片标题（semibold）
-- .body：正文（17pt regular）
-- .subheadline：辅助说明（15pt）
-- .footnote：时间戳、标注（13pt）
-- .caption / .caption2：最小标注
+## Typography（字体系统 · 2026-06-13 定稿：角色制双字形）
 
-自定义 weight 示例：.font(.headline).fontWeight(.semibold)
+> **背景**：design-north-star §3 定「Carry 的声音 = SF Rounded」。但「同屏统一」**不等于**「全 app 一律圆体」——
+> Apple 自家 Rounded 只给**数字 / 短而醒目的标签 / 展示型标题**（健身圆环、钱包、表盘），**密集正文一律用 SF**：
+> 大面积圆体在小字号长列表下可读性下降、整体偏重偏童趣，反而偏离原生克制气质。
+> 故 Carry 的「圆体声音」落地为一套**按角色分配**的字体系统，而非机械替换。这才是 §3「字形统一」的正确解：
+> **统一 = 全 app 一致地遵守同一套角色规则**，不是同一种字形。
+
+两种字形，按**角色**分配（不是按字号）：
+
+### SF Rounded（展示声音）— `design: .rounded`
+温暖、有旅行轻盈感，给"被展示、要醒目"的元素：
+- **展示型标题**：hero 大标题、sheet 标题、空态标题、`alreadyOptimal` 等态标题
+- **数字**：统计数字、序号（时间轴/地图针/列表序号）、距离、计数、价格、节省值
+- **结构性短标题**：Day 头、分区标题（section title）、Trip Book 卡标题
+- **短而突出的标签**：胶囊 / chip / badge / 浮层标签上的文字（地图 scope 胶囊、saved chip、底部胶囊切换）
+- **紧贴展示标题的副标题**：hero 标题正下方那一行副标题（让整个"标题区块"是一个声音）
+
+### SF（默认 / 功能声音）— 不写 `design:`，即系统默认
+清晰、密集可读，给"功能性、信息密集"的元素：
+- **密集列表正文**：打包物品名、搜索结果行、设置行、提醒列表项
+- **表单与输入**：`TextField`、placeholder、`Form` 字段
+- **长段落说明**：非紧贴 hero 的成段解释文字、footer 长文案
+- **系统原生控件**：`Form` / `Picker` / `Toggle` / `DatePicker` / `navigationTitle` / toolbar / `Section` header·footer——本就该系统体（顺平台纹理，§9），**禁止**强制圆体
+
+### 判定口诀
+> **"被展示的、要醒目的、是数字/短标签的 → 圆体；信息密集的正文、表单、系统控件 → SF。"**
+> 拿不准时**默认 SF**（保守）——错把正文做成圆体的代价（偏重/糊）大于漏掉一处该圆体的标题。
+
+### 子规则：按钮（避免反复纠结）
+- **主 CTA**（一屏/一个 sheet 的主操作，常为实心胶囊/填充按钮）→ **圆体**。例：优化页「采用」、打包「开始打包」、空状态主行动。
+- **次级 / 工具性动作**（内联动作、流程推进、列表控件）→ **SF**。例：「Continue」「Select all」「重新选图」、行内「添加地点 / 优化顺序」。
+- 同理：**字段标签**（与数据值配对、类表单 label，如日期卡的 Departure / Return）→ **SF**，与其下的数据值同声音、卡内自洽；圆体只留给真正的展示/数字时刻。
+
+### 写法
+- 圆体：`.font(.system(.headline, design: .rounded))` / `.font(.system(size: 30, weight: .bold, design: .rounded))`
+- 带 weight/monospacedDigit：`.font(.system(.title3, design: .rounded).weight(.bold).monospacedDigit())`
+- SF Symbol 的 `.font(...)` 只控符号大小、不涉及字形，不算字体系统范畴
+- 项目惯例：各处内联写 `design: .rounded`，不另造 Font 封装（可读性优先、避免过度抽象）
+
+### 字号语义级别（沿用，两种字形共用）
+- .largeTitle：页面主标题 ｜ .title / .title2 / .title3：层级标题
+- .headline：列表项标题、卡片标题（semibold）｜ .body：正文（17pt regular）
+- .subheadline：辅助说明（15pt）｜ .footnote：时间戳、标注（13pt）｜ .caption / .caption2：最小标注
+
+### 已对齐范围（2026-06-13）
+行程规划三屏（ItineraryView / ItineraryMapView / OptimizeRouteView）整屏按系统对齐；
+全 app 自定义界面按本系统走查对齐（详见 progress.md 当次记录）。系统 `Form` 设置页（Settings/About 等）保持 SF，无需改。
 
 ## Spacing
 基础单位：8pt

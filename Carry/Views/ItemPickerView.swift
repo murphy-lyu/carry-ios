@@ -471,11 +471,11 @@ struct ItemPickerView: View {
                                             .font(.system(size: 20, weight: .semibold))
                                             .foregroundStyle(.secondary)
                                         Text(LocalizedStringKey("myitems.empty.title"))
-                                            .font(.subheadline.weight(.semibold))
+                                            .font(.system(.subheadline, design: .rounded).weight(.semibold))
                                             .foregroundStyle(.primary)
                                             .multilineTextAlignment(.center)
                                         Text(LocalizedStringKey("myitems.empty.subtitle"))
-                                            .font(.caption)
+                                            .font(.system(.caption, design: .rounded))
                                             .foregroundStyle(.secondary)
                                             .multilineTextAlignment(.center)
                                             .lineSpacing(1.5)
@@ -751,7 +751,7 @@ struct ItemPickerView: View {
                             .foregroundStyle(.primary)
                         if result.isAlreadyAdded {
                             Text(LocalizedStringKey("itempicker.already_added"))
-                                .font(.caption2.weight(.semibold))
+                                .font(.system(.caption2, design: .rounded).weight(.semibold))
                                 .foregroundStyle(.secondary)
                                 .padding(.horizontal, 8)
                                 .padding(.vertical, 3)
@@ -791,10 +791,10 @@ struct ItemPickerView: View {
 
             VStack(spacing: 4) {
                 Text(LocalizedStringKey("itempicker.search.empty.title"))
-                    .font(.subheadline.weight(.semibold))
+                    .font(.system(.subheadline, design: .rounded).weight(.semibold))
                     .foregroundStyle(.primary)
                 Text(LocalizedStringKey("itempicker.search.empty.subtitle"))
-                    .font(.caption)
+                    .font(.system(.caption, design: .rounded))
                     .foregroundStyle(.secondary)
             }
         }
@@ -820,7 +820,7 @@ struct ItemPickerView: View {
                 .font(.system(size: 30, weight: .bold, design: .rounded))
                 .foregroundStyle(.primary)
             Text(LocalizedStringKey(isAutoPackReview ? "autopick.review.subtitle" : "myitems.add.subtitle"))
-                .font(.subheadline)
+                .font(.system(.subheadline, design: .rounded))
                 .foregroundStyle(.secondary)
         }
         .padding(.horizontal, 16)
@@ -863,7 +863,7 @@ struct ItemPickerView: View {
                         Image(systemName: "sparkles")
                             .font(.system(size: 12, weight: .semibold))
                         Text(LocalizedStringKey("myitems.source.smart"))
-                            .font(.subheadline.weight(.semibold))
+                            .font(.system(.subheadline, design: .rounded).weight(.semibold))
                     }
                 }
                 .foregroundStyle(sourceMode == .smart ? .white : .secondary)
@@ -944,7 +944,7 @@ struct ItemPickerView: View {
                 if !groupLabels.isEmpty {
                     VStack(alignment: .leading, spacing: 4) {
                         Text(LocalizedStringKey(group.title))
-                            .font(.system(size: 11, weight: .medium))
+                            .font(.system(size: 11, weight: .medium, design: .rounded))
                             .foregroundStyle(colorScheme == .dark ? Color(.systemGray2) : Color(.systemGray))
                             .kerning(1.5)
                             .textCase(.uppercase)
@@ -997,7 +997,7 @@ struct ItemPickerView: View {
     private func nudgeSection(titleKey: String, labels: [String]) -> some View {
         VStack(alignment: .leading, spacing: 4) {
             Text(LocalizedStringKey(titleKey))
-                .font(.system(size: 11, weight: .medium))
+                .font(.system(size: 11, weight: .medium, design: .rounded))
                 .foregroundStyle(colorScheme == .dark ? Color(.systemGray2) : Color(.systemGray))
                 .kerning(1.5)
                 .textCase(.uppercase)
@@ -1120,7 +1120,7 @@ struct ItemPickerView: View {
                                 .foregroundStyle(isSelected ? Color(UIColor.systemBackground) : .primary)
                         }
                         Text(LocalizedStringKey(label))
-                            .font(.caption.weight(.medium))
+                            .font(.system(.caption, design: .rounded).weight(.medium))
                             .foregroundStyle(isSelected ? Color(UIColor.systemBackground) : .primary)
                     }
                     .frame(maxWidth: .infinity)
@@ -1153,10 +1153,10 @@ struct ItemPickerView: View {
                 .font(.system(size: 18, weight: .semibold))
                 .foregroundStyle(.secondary)
             Text(LocalizedStringKey("itempicker.search.smart.empty.title"))
-                .font(.subheadline.weight(.semibold))
+                .font(.system(.subheadline, design: .rounded).weight(.semibold))
                 .foregroundStyle(.primary)
             Text(LocalizedStringKey("itempicker.search.smart.empty.subtitle"))
-                .font(.caption)
+                .font(.system(.caption, design: .rounded))
                 .foregroundStyle(.secondary)
         }
         .frame(maxWidth: .infinity)
@@ -1226,7 +1226,7 @@ struct ItemPickerView: View {
         return Button(action: action) {
             VStack(spacing: 2) {
                 Text(LocalizedStringKey(title))
-                    .font(.subheadline.weight(isSelected ? .semibold : .medium))
+                    .font(.system(.subheadline, design: .rounded).weight(isSelected ? .semibold : .medium))
                 if let subtitle {
                     Text(LocalizedStringKey(subtitle))
                         .font(.caption2)
@@ -1276,7 +1276,7 @@ struct ItemPickerView: View {
         return HStack(alignment: .center, spacing: 12) {
             VStack(alignment: .leading, spacing: 1) {
                 Text(LocalizedStringKey("myitems.panel.subtitle"))
-                    .font(.subheadline.weight(.semibold))
+                    .font(.system(.subheadline, design: .rounded).weight(.semibold))
                     .foregroundStyle(.primary)
                     .lineLimit(1)
                 Text(LocalizedStringKey("myitems.panel.hint"))
@@ -1323,7 +1323,7 @@ struct ItemPickerView: View {
     private func categoryHeaderText(_ title: String) -> some View {
         HStack {
             Text(title)
-                .font(.headline)
+                .font(.system(.headline, design: .rounded))
                 .foregroundColor(.primary)
             Spacer()
         }
@@ -1368,7 +1368,7 @@ struct ItemPickerView: View {
                             .foregroundStyle(.primary)
                         if isAlreadyAdded {
                             Text(LocalizedStringKey("itempicker.already_added"))
-                                .font(.caption2.weight(.semibold))
+                                .font(.system(.caption2, design: .rounded).weight(.semibold))
                                 .foregroundStyle(.secondary)
                                 .padding(.horizontal, 8)
                                 .padding(.vertical, 3)
@@ -1475,11 +1475,11 @@ struct ItemPickerView: View {
         } label: {
             HStack(spacing: 12) {
                 Text(LocalizedStringKey(category.name))
-                    .font(.headline)
+                    .font(.system(.headline, design: .rounded))
                     .foregroundColor(.primary)
                 Spacer()
                 Text("\(selectedCount)/\(category.items.count)")
-                    .font(.caption2.weight(.medium))
+                    .font(.system(.caption2, design: .rounded).weight(.medium).monospacedDigit())
                     .foregroundStyle(.tertiary)
                     .padding(.horizontal, 8)
                     .padding(.vertical, 3)
@@ -1595,7 +1595,7 @@ struct ItemPickerView: View {
                                 .foregroundColor(.primary)
                             if isScenePick && !sceneRecommendedNames.isEmpty {
                                 Text("Scene pick")
-                                    .font(.caption2.weight(.semibold))
+                                    .font(.system(.caption2, design: .rounded).weight(.semibold))
                                     .foregroundStyle(.secondary)
                                     .padding(.horizontal, 8)
                                     .padding(.vertical, 3)
@@ -1606,7 +1606,7 @@ struct ItemPickerView: View {
                             }
                             if isAlreadyAdded {
                                 Text(LocalizedStringKey("itempicker.already_added"))
-                                    .font(.caption2.weight(.semibold))
+                                    .font(.system(.caption2, design: .rounded).weight(.semibold))
                                     .foregroundStyle(.secondary)
                                     .padding(.horizontal, 8)
                                     .padding(.vertical, 3)

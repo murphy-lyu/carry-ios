@@ -198,7 +198,7 @@ struct ItineraryView: View {
         Button(action: action) {
             VStack(spacing: 2) {
                 Text(entry.date.formatted(.dateTime.weekday(.abbreviated)))
-                    .font(.system(size: 10, weight: .medium))
+                    .font(.system(size: 10, weight: .medium, design: .rounded))
                     // 非行程日用语义色 tertiaryLabel（明暗自适应、克制），明确「仅作整周上下文、不可操作」。
                     .foregroundStyle(isSelected ? CarryAccent.color : (isDimmed ? Color(.tertiaryLabel) : .secondary))
                     .tracking(0.03)
@@ -286,9 +286,7 @@ struct ItineraryView: View {
     private func addStopRow(_ dayID: UUID) -> some View {
         // 次级内联动作用 secondary 灰，与打包「添加物品」一致（避免每组一行 accent 蓝、喧宾夺主）。
         Button { activeSheet = .addStop(dayId: dayID) } label: {
-            Label("itinerary.add_stop", systemImage: "plus")
-                .font(.subheadline)
-                .foregroundStyle(.secondary)
+            inlineActionLabel(titleKey: "itinerary.add_stop", icon: "plus")
         }
         .buttonStyle(.plain)
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -300,14 +298,26 @@ struct ItineraryView: View {
 
     private func optimizeRow(_ dayID: UUID) -> some View {
         Button { activeSheet = .optimize(dayId: dayID) } label: {
-            Label("itinerary.optimize.button", systemImage: "wand.and.stars")
-                .font(.subheadline)
-                .foregroundStyle(.secondary)
+            inlineActionLabel(titleKey: "itinerary.optimize.button", icon: "wand.and.stars")
         }
         .buttonStyle(.plain)
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(.horizontal, 16)
         .padding(.vertical, 6)
+    }
+
+    /// 内联动作行（添加地点 / 优化顺序）：图标落在 rail 圆点列、文字落在停靠点内容列，
+    /// 与 `TimelineStopRow` 结构对齐（rail 宽 26 + spacing 12），整天「停靠点 + 动作」读成一列左对齐。
+    private func inlineActionLabel(titleKey: LocalizedStringKey, icon: String) -> some View {
+        HStack(spacing: 12) {                       // = TimelineStopRow.railSpacing
+            Image(systemName: icon)
+                .font(.system(size: 14, weight: .medium))
+                .frame(width: 26)                   // = TimelineStopRow.railWidth，图标居中落在圆点列
+            Text(titleKey)
+                .font(.system(.subheadline, design: .rounded))
+            Spacer(minLength: 0)
+        }
+        .foregroundStyle(.secondary)
     }
 
     @ViewBuilder
@@ -328,7 +338,7 @@ struct ItineraryView: View {
                     .font(.system(.headline, design: .rounded).weight(.semibold))
                 if let title = customDayTitle(day) {
                     Text(title)
-                        .font(.caption2)
+                        .font(.system(.caption2, design: .rounded))
                         .foregroundStyle(.secondary)
                 }
             }
@@ -448,7 +458,7 @@ private struct TimelineStopRow: View {
             Rectangle().fill(railColor).frame(width: 1.5)
             if let legFromPrevious {
                 Text(legFromPrevious)
-                    .font(.system(size: 9, weight: .medium))
+                    .font(.system(size: 10.5, weight: .medium, design: .rounded))
                     .foregroundStyle(.secondary)
                     .padding(.horizontal, 3)
                     .background(Color(uiColor: .systemBackground))
@@ -469,8 +479,10 @@ private struct TimelineStopRow: View {
             ZStack {
                 Circle().fill(Color(uiColor: .systemBackground))
                 Circle().fill(dayColor.opacity(0.15))
-                Text("\(index + 1)")
-                    .font(.system(size: 12, weight: .semibold).monospacedDigit())
+                // 类别图标取代序号：时间轴顺序由位置天然表达，图标更利于扫读「这是什么」。
+                // 地图针仍用序号（地理散布、顺序不直观），分工见 decisions/progress。
+                Image(systemName: stop.category.symbolName)
+                    .font(.system(size: 11, weight: .semibold))
                     .foregroundStyle(dayColor)
             }
             .frame(width: circleSize, height: circleSize)
@@ -482,20 +494,16 @@ private struct TimelineStopRow: View {
     }
 
     private var content: some View {
+        // 类别图标已移到 rail 圆点；此处只剩名称/地址 + 时间/无坐标标记。
         HStack(alignment: .top, spacing: 10) {
-            Image(systemName: stop.category.symbolName)
-                .font(.system(size: 14))
-                .foregroundStyle(dayColor)
-                .frame(width: 20)
-                .padding(.top, 1)
             VStack(alignment: .leading, spacing: 2) {
                 Text(stop.name)
-                    .fontWeight(.semibold)   // 名称加粗，作为每行的视觉锚
+                    .font(.system(.body, design: .rounded).weight(.semibold))   // 名称加粗 + 圆体，作为每行的视觉锚
                     .foregroundStyle(.primary)
                     .lineLimit(1)
                 if !stop.address.isEmpty {
                     Text(stop.address)
-                        .font(.caption)
+                        .font(.system(.caption, design: .rounded))
                         .foregroundStyle(.secondary)
                         .lineLimit(1)
                 }
@@ -506,7 +514,7 @@ private struct TimelineStopRow: View {
                 HStack(spacing: 3) {
                     Image(systemName: "pin.fill").font(.system(size: 9))
                     Text(timeLabel(dayMinutes: stop.plannedStartMinutes))
-                        .font(.caption.weight(.medium))
+                        .font(.system(.caption, design: .rounded).weight(.medium))
                 }
                 .foregroundStyle(.secondary)
             }

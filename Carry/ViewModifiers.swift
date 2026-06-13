@@ -333,7 +333,7 @@ struct CarryConfirmationDialog: View {
             VStack(spacing: 22) {
                 VStack(spacing: 7) {
                     Text(title)
-                        .font(.body).fontWeight(.semibold)
+                        .font(.system(.body, design: .rounded).weight(.semibold))
                         .multilineTextAlignment(.center)
                     Text(message)
                         .font(.subheadline)
@@ -345,7 +345,7 @@ struct CarryConfirmationDialog: View {
                 VStack(spacing: 9) {
                     Button(action: onConfirm) {
                         Text(confirmLabel)
-                            .font(.body).fontWeight(.semibold)
+                            .font(.system(.body, design: .rounded).weight(.semibold))
                             .foregroundStyle(Color(.systemBackground))
                             .frame(maxWidth: .infinity)
                             .frame(height: 50)
@@ -358,7 +358,7 @@ struct CarryConfirmationDialog: View {
 
                     Button(action: onCancel) {
                         Text("Cancel")
-                            .font(.body)
+                            .font(.system(.body, design: .rounded))
                             .foregroundStyle(.secondary)
                             .frame(maxWidth: .infinity)
                             .frame(height: 44)

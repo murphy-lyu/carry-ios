@@ -198,22 +198,22 @@ struct CarryWidgetEntryView: View {
             widgetHeader
             Spacer(minLength: 8)
             Text(trip.name.isEmpty ? trip.destinationCity : trip.name)
-                .font(.title2.weight(.bold))
+                .font(.system(.title2, design: .rounded).weight(.bold))
                 .lineLimit(1)
                 .minimumScaleFactor(0.7)
             Text(countdownText(for: trip.departureDate))
-                .font(.subheadline.weight(.medium))
+                .font(.system(.subheadline, design: .rounded).weight(.medium))
                 .foregroundStyle(.secondary)
             ProgressView(value: trip.progress)
                 .tint(.primary)
                 .padding(.top, 8)
             HStack {
                 Text(progressText(trip))
-                    .font(.caption2)
+                    .font(.system(.caption2, design: .rounded))
                     .foregroundStyle(.secondary)
                 Spacer()
                 Text("\(Int((trip.progress * 100).rounded()))%")
-                    .font(.caption2.weight(.semibold))
+                    .font(.system(.caption2, design: .rounded).weight(.semibold))
                     .foregroundStyle(.secondary)
             }
         }
@@ -227,7 +227,7 @@ struct CarryWidgetEntryView: View {
             Image(systemName: "suitcase.fill")
                 .font(.caption)
             Text("widget.header.upcoming")
-                .font(.caption.weight(.semibold))
+                .font(.system(.caption, design: .rounded).weight(.semibold))
                 .textCase(.uppercase)
                 .tracking(0.5)
         }
@@ -242,13 +242,13 @@ struct CarryWidgetEntryView: View {
                 VStack(alignment: .leading, spacing: 3) {
                     widgetHeader
                     Text(primary.name.isEmpty ? primary.destinationCity : primary.name)
-                        .font(.title2.weight(.bold))
+                        .font(.system(.title2, design: .rounded).weight(.bold))
                         .lineLimit(1)
                     Text(countdownText(for: primary.departureDate))
-                        .font(.caption.weight(.semibold))
+                        .font(.system(.caption, design: .rounded).weight(.semibold))
                         .foregroundStyle(.secondary)
                     Text(progressText(primary))
-                        .font(.caption2)
+                        .font(.system(.caption2, design: .rounded))
                         .foregroundStyle(.secondary)
                 }
                 Spacer()
@@ -265,11 +265,11 @@ struct CarryWidgetEntryView: View {
                         .font(.caption2)
                         .foregroundStyle(.secondary)
                     Text(secondary.name.isEmpty ? secondary.destinationCity : secondary.name)
-                        .font(.caption.weight(.medium))
+                        .font(.system(.caption, design: .rounded).weight(.medium))
                         .lineLimit(1)
                     Spacer()
                     Text(countdownText(for: secondary.departureDate))
-                        .font(.caption2)
+                        .font(.system(.caption2, design: .rounded))
                         .foregroundStyle(.secondary)
                 }
             }
@@ -299,10 +299,10 @@ struct CarryWidgetEntryView: View {
                 .font(.title2)
                 .foregroundStyle(.secondary)
             Text("widget.empty.title")
-                .font(.subheadline.weight(.semibold))
+                .font(.system(.subheadline, design: .rounded).weight(.semibold))
                 .multilineTextAlignment(.center)
             Text("widget.empty.subtitle")
-                .font(.caption2)
+                .font(.system(.caption2, design: .rounded))
                 .foregroundStyle(.secondary)
                 .multilineTextAlignment(.center)
         }

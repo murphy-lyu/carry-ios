@@ -102,21 +102,21 @@ struct OptimizeRouteView: View {
                     HStack(alignment: .top) {
                         VStack(alignment: .leading, spacing: 4) {
                             Text(dayTitle)
-                                .font(.headline.weight(.semibold))
+                                .font(.system(.headline, design: .rounded).weight(.semibold))
                             Text("itinerary.optimize.title")
-                                .font(.title3.weight(.semibold))
+                                .font(.system(.title3, design: .rounded).weight(.semibold))
                                 .foregroundStyle(.primary)
                             Text("itinerary.optimize.preview_subtitle")
-                                .font(.caption)
+                                .font(.system(.caption, design: .rounded))
                                 .foregroundStyle(.secondary)
                         }
                         Spacer()
                         VStack(alignment: .trailing, spacing: 4) {
                             Text(distanceString(displaySaved))
-                                .font(.title3.weight(.bold).monospacedDigit())
+                                .font(.system(.title3, design: .rounded).weight(.bold).monospacedDigit())
                                 .foregroundStyle(CarryAccent.color)
                             Text("itinerary.optimize.saved_short")
-                                .font(.caption2)
+                                .font(.system(.caption2, design: .rounded))
                                 .foregroundStyle(.secondary)
                         }
                     }
@@ -131,11 +131,11 @@ struct OptimizeRouteView: View {
 
                     VStack(alignment: .leading, spacing: 10) {
                         Text("itinerary.optimize.new_order")
-                            .font(.subheadline.weight(.semibold))
+                            .font(.system(.subheadline, design: .rounded).weight(.semibold))
                         ForEach(Array(optimizedStops.enumerated()), id: \.element.id) { index, stop in
                             HStack(spacing: 12) {
                                 Text("\(index + 1)")
-                                    .font(.subheadline.weight(.semibold).monospacedDigit())
+                                    .font(.system(.subheadline, design: .rounded).weight(.semibold).monospacedDigit())
                                     .foregroundStyle(CarryAccent.color)
                                     .frame(width: 24, height: 24)
                                     .background(CarryAccent.color.opacity(0.10), in: Circle())
@@ -145,34 +145,27 @@ struct OptimizeRouteView: View {
                                     .frame(width: 20)
                                 VStack(alignment: .leading, spacing: 2) {
                                     Text(stop.name)
-                                        .font(.subheadline)
+                                        .font(.system(.subheadline, design: .rounded))
                                         .lineLimit(1)
                                     if stop.plannedStartMinutes >= 0 {
                                         Text(timeLabel(dayMinutes: stop.plannedStartMinutes))
-                                            .font(.caption2)
+                                            .font(.system(.caption2, design: .rounded))
                                             .foregroundStyle(.secondary)
                                     }
                                 }
                                 Spacer(minLength: 0)
                             }
                             .padding(.vertical, 6)
-                            .padding(.horizontal, 12)
-                            .background(Color(UIColor.secondarySystemBackground), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
                         }
                     }
                     .padding(.top, 2)
 
                     // 让用户理解为何首尾不动（方案 A：固定首尾、只优化中间）。
                     Label("itinerary.optimize.endpoints_fixed", systemImage: "pin")
-                        .font(.caption2)
+                        .font(.system(.caption2, design: .rounded))
                         .foregroundStyle(.secondary)
                         .padding(.top, 2)
                 }
-                .padding(16)
-                .background(
-                    RoundedRectangle(cornerRadius: 28, style: .continuous)
-                        .fill(Color(UIColor.systemBackground).opacity(0.72))
-                )
                 .padding(.horizontal, 16)
 
                 actionRow(result)
@@ -189,10 +182,10 @@ struct OptimizeRouteView: View {
             HStack {
                 VStack(alignment: .leading, spacing: 2) {
                     Text("itinerary.optimize.current")
-                        .font(.caption)
+                        .font(.system(.caption, design: .rounded))
                         .foregroundStyle(.secondary)
                     Text(distanceString(displayOriginal))
-                        .font(.headline)
+                        .font(.system(.headline, design: .rounded))
                         .foregroundStyle(.secondary)
                         .strikethrough()
                 }
@@ -201,25 +194,16 @@ struct OptimizeRouteView: View {
                     .padding(.horizontal, 8)
                 VStack(alignment: .leading, spacing: 2) {
                     Text("itinerary.optimize.optimized")
-                        .font(.caption)
+                        .font(.system(.caption, design: .rounded))
                         .foregroundStyle(.secondary)
                     Text(distanceString(displayOptimized))
-                        .font(.headline)
+                        .font(.system(.headline, design: .rounded))
                         .foregroundStyle(CarryAccent.color)
                 }
                 Spacer()
-                if displaySaved > 0 {
-                    Text(String(format: NSLocalizedString("itinerary.optimize.saved", comment: ""),
-                                distanceString(displaySaved)))
-                        .font(.caption.weight(.semibold))
-                        .foregroundStyle(CarryAccent.color)
-                        .padding(.horizontal, 10)
-                        .padding(.vertical, 6)
-                        .background(CarryAccent.color.opacity(0.12), in: Capsule())
-                }
             }
             .padding(14)
-            .background(Color(UIColor.secondarySystemBackground), in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+            .background(Color(UIColor.secondarySystemBackground), in: RoundedRectangle(cornerRadius: 20, style: .continuous))
         }
     }
 
@@ -238,7 +222,7 @@ struct OptimizeRouteView: View {
             }
             Spacer()
         }
-        .font(.caption2)
+        .font(.system(.caption2, design: .rounded))
         .foregroundStyle(.tertiary)
     }
 
@@ -248,7 +232,7 @@ struct OptimizeRouteView: View {
                 discard()
             } label: {
                 Text("common.cancel")
-                    .font(.body.weight(.semibold))
+                    .font(.system(.body, design: .rounded).weight(.semibold))
                     .frame(maxWidth: .infinity)
                     .frame(height: 50)
             }
@@ -259,7 +243,7 @@ struct OptimizeRouteView: View {
                 apply(result)
             } label: {
                 Text("itinerary.optimize.apply")
-                    .font(.body.weight(.semibold))
+                    .font(.system(.body, design: .rounded).weight(.semibold))
                     .foregroundStyle(.white)
                     .frame(maxWidth: .infinity)
                     .frame(height: 50)
@@ -277,9 +261,9 @@ struct OptimizeRouteView: View {
                 .font(.system(size: 44, weight: .light))
                 .foregroundStyle(CarryAccent.color)
             Text("itinerary.optimize.optimal.title")
-                .font(.headline)
+                .font(.system(.headline, design: .rounded))
             Text("itinerary.optimize.optimal.subtitle")
-                .font(.subheadline)
+                .font(.system(.subheadline, design: .rounded))
                 .foregroundStyle(.secondary)
                 .multilineTextAlignment(.center)
                 .padding(.horizontal, 40)

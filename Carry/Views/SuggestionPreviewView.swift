@@ -103,7 +103,7 @@ struct SuggestionPreviewView: View {
         VStack(alignment: .leading, spacing: 8) {
             HStack(spacing: 0) {
                 Text("suggestions.title")
-                    .font(.title2)
+                    .font(.system(.title2, design: .rounded))
                     .bold()
                 Spacer()
                 Button { dismiss() } label: {
@@ -125,7 +125,7 @@ struct SuggestionPreviewView: View {
     private func sectionHeader(_ title: String) -> some View {
         VStack(spacing: 0) {
             Text(LocalizedStringKey(title))
-                .font(.caption.weight(.medium))
+                .font(.system(.caption, design: .rounded).weight(.medium))
                 .foregroundStyle(colorScheme == .dark ? Color(.systemGray2) : Color(.systemGray))
                 .kerning(1.1)
                 .textCase(.uppercase)
@@ -149,7 +149,7 @@ struct SuggestionPreviewView: View {
                         .font(.system(size: 10, weight: .semibold))
                         .foregroundStyle(.secondary)
                     Text("Nice to have")
-                        .font(.caption.weight(.medium))
+                        .font(.system(.caption, design: .rounded).weight(.medium))
                         .foregroundStyle(colorScheme == .dark ? Color(.systemGray2) : Color(.systemGray))
                         .kerning(1.1)
                         .textCase(.uppercase)
@@ -299,9 +299,9 @@ struct SuggestionPreviewView: View {
                 .font(.system(size: 48))
                 .foregroundStyle(.secondary)
             Text("suggestions.empty.title")
-                .font(.headline)
+                .font(.system(.headline, design: .rounded))
             Text("suggestions.empty.subtitle")
-                .font(.subheadline)
+                .font(.system(.subheadline, design: .rounded))
                 .foregroundStyle(.secondary)
                 .multilineTextAlignment(.center)
                 .padding(.horizontal, 32)
