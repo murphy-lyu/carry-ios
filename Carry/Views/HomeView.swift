@@ -261,6 +261,12 @@ struct HomeView: View {
         return codes.count
     }
 
+    /// 已发生（已出发 + 进行中）的行程数。与行程册口径一致（同 `countsAsVisited`），
+    /// 使首页 Trip Book 胶囊副标题与行程册内的「旅行」数对齐，不再「胶囊 16 / 册内 13」打架。
+    private var visitedTripsCount: Int {
+        store.trips.filter { $0.countsAsVisited }.count
+    }
+
     /// Deduplicated city dots for departed trips with valid coordinates.
     /// Rounded to ~1 km precision so multiple trips to the same city collapse to one dot.
     /// Includes additional destinations from multi-city trips.
@@ -799,7 +805,7 @@ struct HomeView: View {
                     Text("home.tripbook.title")
                         .font(.system(size: 16, weight: .semibold, design: .rounded))
                         .foregroundStyle(.primary)
-                    Text(String(format: NSLocalizedString("home.tripbook.subtitle", comment: "Trip Book subtitle: trip count · visited country count"), Int64(store.trips.count), Int64(visitedCountriesCount)))
+                    Text(String(format: NSLocalizedString("home.tripbook.subtitle", comment: "Trip Book subtitle: trip count · visited country count"), Int64(visitedTripsCount), Int64(visitedCountriesCount)))
                         .font(.system(size: 12, weight: .medium, design: .rounded))
                         .foregroundStyle(.secondary)
                         .lineLimit(1)
@@ -928,7 +934,7 @@ struct HomeView: View {
                     tripBookFlagsRow(s.countryTallies.map(\.code))
                 }
                 if let year = s.firstTravelYear {
-                    Text(String(format: NSLocalizedString("tripbook.since", comment: "traveling since year"), Int64(year)))
+                    Text(String(format: NSLocalizedString("tripbook.first_trip", comment: "first recorded trip year"), Int64(year)))
                         .font(.footnote.weight(.medium))
                         .foregroundStyle(.secondary)
                 }
@@ -1011,9 +1017,9 @@ struct HomeView: View {
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
             }
-            if !s.topCountries.isEmpty {
+            if !s.countryTallies.isEmpty {
                 VStack(spacing: 10) {
-                    ForEach(s.topCountries, id: \.code) { tally in
+                    ForEach(s.countryTallies, id: \.code) { tally in
                         HStack(spacing: 10) {
                             Text(flagEmoji(for: tally.code))
                                 .font(.system(size: 18))
