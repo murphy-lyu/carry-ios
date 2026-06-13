@@ -44,9 +44,10 @@ Apple 原生风格，极简、克制、优雅。
 - 依据：彩色 = 意义（可点 / 选中 / 强调）。
 
 **Tier 3 · Chrome / 工具图标（退后）** —— 中性 `.secondary` 灰 + 玻璃 / 材质圆底。
-- 用于：设置齿轮、**关闭 X**、**返回 `<`**、「…」更多菜单。这些是「离开 / 导航」，不提交。
-- 依据：chrome 退后；与 Apple 原生一致（齿轮 / 关闭从不染 app 强调色）。
-- 实现：工具栏关闭用 `SheetCloseButton`（已显式 `.tint(Color(.secondaryLabel))` 盖掉 sheet 的 accent tint）；自定义头部关闭用 `glassCircleButton()` + xmark `.foregroundStyle(.secondary)`。
+- 用于：设置齿轮、**关闭 X**、「…」更多菜单。这些是「离开 / 导航」，不提交，显式 `.secondary`。
+- **返回 `<` 例外：用系统返回（NavigationStack 自带），不手动改色**——iOS 26 自动渲染成玻璃圆 chevron，顺平台纹理（north-star §9 native-first），别自造 chevron 按钮去硬调色。
+- 依据：chrome 退后；与 Apple 原生一致（齿轮 / 关闭 / 更多从不染 app 强调色）。
+- 实现：工具栏关闭用 `SheetCloseButton`（已显式 `.tint(Color(.secondaryLabel))` 盖掉 sheet 的 accent tint）；自定义头部关闭用 `glassCircleButton()` + xmark `.foregroundStyle(.secondary)`；更多菜单 `ellipsis` 显式 `.secondary`。
 
 > **工具栏分色铁律：按「提交 vs 离开」分，不是「凡图标都灰」。**
 > - 提交 / 确认（Save · Done · ✓ · Add）→ Tier 2 烟蓝 + semibold。
