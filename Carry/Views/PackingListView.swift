@@ -180,15 +180,16 @@ struct PackingListView: View {
                                 }
                             }
                         }
-                        Button {
-                            showReminderSheet = true
-                        } label: {
-                            Label("reminder.menu.item", systemImage: bundle?.remindersEnabled == true ? "bell" : "bell.slash")
-                        }
+                        // 编辑行程置顶：行程最核心、最常回头用的管理动作 → 放菜单首位、离按钮最近。
                         Button {
                             showEditSheet = true
                         } label: {
                             Label("Edit trip", systemImage: "pencil")
+                        }
+                        Button {
+                            showReminderSheet = true
+                        } label: {
+                            Label("reminder.menu.item", systemImage: bundle?.remindersEnabled == true ? "bell" : "bell.slash")
                         }
                         if detailTab == .packing {
                             Button {
