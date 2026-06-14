@@ -3,6 +3,19 @@
 ## 最后更新
 2026-06-14
 
+## 上次改动摘要（编辑地点重构：标签/位置分离 + 开始结束时间 + 备注预览 · 2026-06-14）
+
+> 经多轮真机走查打磨。合并提交 `bafa93c`（多会话共编同批行程文件 + Xcode 重排 xcstrings，无法干净 hunk 隔离，按用户决定一次合并；编译绿）。
+
+- **编辑地点（StopEditView）重排为「地点 / 详情」两段**：
+  - **地点**段：名称＝**显示标签**（可自定义、不动地图定位）/ 地址（只读 + mappin）/ **更换地点**；footer「在行程里显示的名字，可自定义」——分清「改标签 vs 换地点」（用户原困惑「名称是做啥用的」）。段标题用「地点(Place)」而非「位置(Location)」。
+  - **详情**段：类型 + 设定时间（**开始 + 结束**，结束以现成 `stayMinutes` 存，不改 model）。时间轴行 stayMinutes>0 时显示「开始–结束」。
+- **更换地点**：`AddStopView` 加 relocate 模式（`relocateStopId`/`onRelocated`）——复用搜索，选中结果调 `updateItineraryStop` 改坐标/地址/名称（类别不动、隐藏类别菜单）。`updateItineraryStop` 扩展 `latitude/longitude/address`。
+- **备注行内预览**（TimelineStopRow）：有备注的行在主行下方挂**独立预览行**（note 图标 + 截断 2 行）+ 左侧延续连线列——**不动固定 46pt rail 几何**，零几何风险。
+- **Type 行 原生 Picker → 自定义 Menu**：菜单 Picker 的「收起选中值」由系统紧凑渲染、无视选项自定义间距（下拉松/收起挤、SwiftUI 不可控）；改 Menu 后收起值标签手搓，图标↔文字 6pt 呼吸感；下拉仍系统 Picker。
+- 新增 `itinerary.stop.edit.*` 9 语言（start/end_time·location/details_header·name_footer·relocate·set_location）；`location_header` 值改「地点/Place」。xcstrings 用脚本法（`separators=(',', ' : ')`）原子编辑避开 Xcode 补壳竞争。
+- 注：本批与并行会话的停靠点导航 / leg 行 / 行程分享深度交织，合并一并收进。
+
 ## 上次改动摘要（行程页日历↔列表联动 + 添加地点背景 + 首页搜索标题 · 2026-06-14）
 
 > 三处交互/视觉打磨，均编译绿、iOS 26.5 模拟器实地走查（Light/Dark），按文件隔离提交、未卷入并行会话改动。commit：双向联动 `944ec24`、添加地点背景 `653ef83`、搜索标题 `08dbc2a`。
