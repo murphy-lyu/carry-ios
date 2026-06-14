@@ -85,9 +85,10 @@ struct ItineraryReorderCollection: UIViewRepresentable {
         )
 
         let cv = UICollectionView(frame: .zero, collectionViewLayout: layout)
-        // 让整个 itinerary 列表共享一个稳定底板，避免透明 row / 吸顶 header 直接透出页面渐变，
-        // 形成“分块感”。
-        cv.backgroundColor = .systemBackground
+        // 透明底：与打包 ReorderableItemCollection 一致，让内容在底部「行程/打包」切换器下被其
+        // 渐变淡出（两面统一）。ItineraryView 根 ZStack 已铺实心 systemBackground 作稳定底板，
+        // 故透明不会透出页面渐变（页面本就是实心、非渐变）。
+        cv.backgroundColor = .clear
         cv.delaysContentTouches = false
         cv.isScrollEnabled = true
         cv.showsVerticalScrollIndicator = false
@@ -275,31 +276,33 @@ struct ItineraryReorderCollection: UIViewRepresentable {
             }
         }
 
-        /// 末日地点少时列表下方无内容可顶 → 该天吸不到顶。按需在底部补一段 contentInset，使「最后一天」
-        /// 也能滚到顶部（下方留白）。补的量恰为「视口高 − 末段高」：地点够多的日子算出 0、不补，
-        /// 故不会凭空多出空隙。变化 < 1pt 不写，避免布局抖动。
+        /// 底部「行程/打包」切换器净空（含 home indicator）。collection 用 `.ignoresSafeArea(.bottom)`
+        /// 延伸到切换器下方（内容在其渐变里淡出），故需手动让末行让出这段——与打包 83 对齐。
+        private let bottomBarClearance: CGFloat = 83
+
+        /// 底部 contentInset = max(切换器净空, 末日吸顶所需)。
+        /// - 切换器净空：让末行不被底部切换器盖住（且内容能滚到其下被渐变淡出）。
+        /// - 末日吸顶所需：末日地点少时下方无内容可顶 → 补「视口高 − 末段高」使其也能吸顶到顶部。
+        /// 取两者较大；变化 < 1pt 不写，避免布局抖动。
         private func updateBottomInsetForLastSectionPinning() {
             guard let cv = collectionView, let dataSource else { return }
-            let sections = dataSource.snapshot().sectionIdentifiers
-            // 仅多天才需要（单天本就在顶、无可切换的天）。
-            guard sections.count > 1 else {
-                if cv.contentInset.bottom != 0 { cv.contentInset.bottom = 0 }
-                return
+            func apply(_ value: CGFloat) {
+                if abs(cv.contentInset.bottom - value) > 0.5 { cv.contentInset.bottom = value }
             }
+            let sections = dataSource.snapshot().sectionIdentifiers
+            // 单天：无吸顶切换需求，底部仅需让出切换器净空。
+            guard sections.count > 1 else { apply(bottomBarClearance); return }
             let path = IndexPath(item: 0, section: sections.count - 1)
-            // 用「首行 minY −（cell 不会被 pin）− header 高」反推末段 header 的自然顶，
-            // 避开「末段恰好 pinned 时 header origin 失真」。
+            // 用「首行 minY − header 高」反推末段 header 的自然顶，避开「末段恰好 pinned 时 header origin 失真」。
             guard let itemAttrs = cv.layoutAttributesForItem(at: path),
                   let headerAttrs = cv.layoutAttributesForSupplementaryElement(ofKind: headerKind, at: path)
-            else { return }
+            else { apply(bottomBarClearance); return }
             let naturalHeaderTop = itemAttrs.frame.minY - headerAttrs.frame.height
             let lastSectionHeight = cv.collectionViewLayout.collectionViewContentSize.height - naturalHeaderTop
-            let requiredAdjustedBottom = max(0, cv.bounds.height - cv.adjustedContentInset.top - lastSectionHeight)
-            // contentInset.bottom 之外还有安全区贡献的 bottom，扣掉它得到需自补的净值。
-            let needed = max(0, requiredAdjustedBottom - cv.safeAreaInsets.bottom)
-            if abs(cv.contentInset.bottom - needed) > 0.5 {
-                cv.contentInset.bottom = needed
-            }
+            // 注：cv 用 .ignoresSafeArea(.bottom) → safeAreaInsets.bottom == 0，bounds 已含切换器下方区域，
+            // 故吸顶所需直接 = bounds.height − topInset − 末段高，无需再扣安全区。
+            let pinRequirement = max(0, cv.bounds.height - cv.adjustedContentInset.top - lastSectionHeight)
+            apply(max(bottomBarClearance, pinRequirement))
         }
 
         // MARK: Interactive movement（跨天放开，无夹断）

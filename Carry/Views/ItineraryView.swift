@@ -156,6 +156,9 @@ struct ItineraryView: View {
             // 旧天仍显示「第 N 天」）。日期态变化时用 .id 强制重建 collection 一次刷新所有 header；
             // 日常加减地点不改此 key、不触发重建。
             .id(itineraryDateStateKey)
+            // 延伸到底部「行程/打包」切换器下方，内容在其渐变里淡出（与打包面统一）。
+            // 末行让出切换器净空由 collection 的 contentInset.bottom 负责（见 bottomBarClearance）。
+            .ignoresSafeArea(.container, edges: .bottom)
         }
     }
 
