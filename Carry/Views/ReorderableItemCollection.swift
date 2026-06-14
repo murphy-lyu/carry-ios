@@ -51,6 +51,8 @@ struct ReorderableItemCollection: UIViewRepresentable {
 
     /// swipe 删除（复用上层 deleteItem）。
     let onDelete: (UUID) -> Void
+    /// swipe 编辑（重命名，复用上层 beginRename）。
+    let onEdit: (UUID) -> Void
     /// 松手提交一次：sectionId + 该 section 重排后的完整 itemID 顺序。
     let onReorder: (UUID, [UUID]) -> Void
     /// 拖拽开始：上层借此提交在编辑的行 + 触感准备。
@@ -389,7 +391,14 @@ struct ReorderableItemCollection: UIViewRepresentable {
             }
             delete.image = UIImage(systemName: "trash")
             delete.backgroundColor = .systemRed
-            let config = UISwipeActionsConfiguration(actions: [delete])
+            let edit = UIContextualAction(style: .normal, title: nil) { [weak self] _, _, completion in
+                self?.parent.onEdit(id)
+                completion(true)
+            }
+            edit.image = UIImage(systemName: "pencil")
+            edit.backgroundColor = CarryAccent.uiColor
+            // 顺序与停靠点 swipe 一致：删除在最外侧、编辑紧邻其内。整滑不直接触发（需点按）。
+            let config = UISwipeActionsConfiguration(actions: [delete, edit])
             config.performsFirstActionWithFullSwipe = false
             return config
         }

@@ -641,6 +641,7 @@ struct PackingListView: View {
             },
             headerContent: { model in AnyView(sectionTitle(model.title, isFirst: model.isFirst)) },
             onDelete: { deleteItem(itemId: $0) },
+            onEdit: { beginRename(itemId: $0) },
             onReorder: { sid, ids in store.reorderItems(tripId: tripId, sectionId: sid, newOrder: ids) },
             onReorderBegan: {
                 // 起拖前提交在编辑的行；起拖触感由 collection 的 liftHaptic 负责。
@@ -1340,10 +1341,21 @@ struct PackingListView: View {
 
     // MARK: Editing
 
+    /// 左滑「编辑」重命名：复用行内编辑——该行就地切成 InlineEditRow（出现即自动聚焦），预填当前名。
+    private func beginRename(itemId: UUID) {
+        if let current = editingItemId, current != itemId { commitEdit(itemId: current) }
+        guard let item = packingItem(itemId) else { return }
+        editingText = item.name
+        editingItemId = itemId
+    }
+
     private func commitEdit(itemId: UUID) {
         let trimmed = editingText.trimmingCharacters(in: .whitespaces)
         if trimmed.isEmpty {
-            store.removeItem(tripId: tripId, itemId: itemId)
+            // 新建空行（从未命名）→ 清掉；已命名物品被清空 → 视作取消、保留原名，避免改名误删。
+            if packingItem(itemId)?.name.isEmpty ?? true {
+                store.removeItem(tripId: tripId, itemId: itemId)
+            }
         } else {
             store.updateItemName(tripId: tripId, itemId: itemId, name: trimmed)
         }
