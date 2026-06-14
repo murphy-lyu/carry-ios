@@ -7,3 +7,6 @@ Carry.xcodeproj/xcuserdata/
 # Local debugger artifacts
 Carry.xcodeproj/xcuserdata/**/xcdebugger/
 
+# Claude Code 本地工具配置（非 App 代码，不进版本库）
+.claude/
+
