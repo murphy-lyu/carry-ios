@@ -1,5 +1,15 @@
 # 决策日志
 
+## 2026-06-14 首页底栏随 Sheet 同步缩放：底栏移进 FX 控制器、同一 animator 驱动
+
+> 起因：首页 Sheet 上拉/下拉本就有缩放，用户要底部三键栏（搜索 / 行程册 / 创建 FAB）跟随**同步缩放**。先做了基线近似版（commit `b2be676`：底栏留在 SwiftUI、`.scaleEffect` 追同一目标），用户选「终极/像素级一致」方案。
+
+- **决策**：底栏从 HomeView 的 `.safeAreaInset(edge:.bottom)` **移进 `FXSheetViewController`**，与卡片由**同一个 `UIViewPropertyAnimator`** 驱动 → frame-perfect 同步。两套引擎（SwiftUI 动画 vs Core Animation）只能"高度近似"，快速甩动时初速度对不齐；同 animator 是唯一能根除的架构。
+- **机制**：缩放在唯一漏斗 `placeSheet` 里对 `barView` 施加**底边锚定**同 `scale` transform（`translate(0,(1-s)·h/2)·scale(s)` ≈ `.scaleEffect(anchor:.bottom)`）。吸附时 `placeSheet(at:target)` 在 snap animator 块内被调用 → 底栏被同一 animator 插值；拖拽逐帧直接 set。**不引第二驱动源**（守 playbook §5）；删除基线的 `SheetScaleModel`/`onScaleChanged`/`BottomBarScaleSync`/`import Combine`，不留过渡件。
+- **手势穿透取舍（已知、非 bug）**：底栏作 UIKit 兄弟视图后，「空白区返回 nil 让 pan 穿透到列表」与「透明背景吸 tap」二者**互斥**。选择保留 pan 穿透（用户明确要"从底栏上滑滚列表"），代价是三按钮间两条 ~14pt 空隙的点击会穿透到列表行——按钮各有 54pt 命中区夹住、死区极小、危害可忽略，故接受。
+- **验收**：真机 + iPhone 17 Pro 模拟器双验收通过；全盘审计无 bug/崩溃/约束冲突/循环引用（详见 playbook §19）。
+- **还原点**：`b2be676`（`git checkout b2be676 -- Carry/Views/CarryBottomSheetFX.swift Carry/Views/HomeView.swift`）。commit：`7a5a900`。
+
 ## 2026-06-14 分享行程：海报图（社交）+ 可导入文件（同伴），两条独立线
 
 > 起因：Phase 2「分享行程」。形态选型 + 无后端下的同伴协作方案。
