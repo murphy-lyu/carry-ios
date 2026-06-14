@@ -340,10 +340,14 @@ struct ItineraryView: View {
     }
 
     private func dayHeader(_ day: ItineraryDay) -> some View {
-        HStack(spacing: 8) {
+        // 日期头收进与 TimelineStopRow / 内联动作行同一套两列网格：圆点居中落在 rail 标记列
+        // （26 宽，与类别图标圆 / +·✨ 同一条 spine），标题左缘对齐停靠点名称列（rail 26 + spacing 12）。
+        // 分节层级靠字号/字重 + 上方留白建立，不靠更浅的缩进（north-star §2/§5）。
+        HStack(spacing: 12) {                                     // = TimelineStopRow.railSpacing
             Circle()
                 .fill(ItineraryDayPalette.color(forDayIndex: day.sortOrder))
-                .frame(width: 7, height: 7)
+                .frame(width: 8, height: 8)
+                .frame(width: 26)                                // = railWidth，圆点居中落在标记列、压在 spine 上
             VStack(alignment: .leading, spacing: 2) {
                 Text(dayDateLabel(day) ?? dayDisplayTitle(day))
                     .font(.system(.headline, design: .rounded).weight(.semibold))
