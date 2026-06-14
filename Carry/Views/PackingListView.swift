@@ -67,6 +67,7 @@ struct PackingListView: View {
     @State private var showAddSectionAlert = false
     @State private var newSectionName = ""
     @State private var showAddItemsSheet = false
+    @State private var showSharePreview = false
     @State private var isSaved = false
     @State private var showConfetti = false
     @State private var showCompletionBanner = false
@@ -162,6 +163,7 @@ struct PackingListView: View {
             if !isNewTrip {
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Menu {
+                        // 打包专属「清单操作」成组置顶（本页主任务）：加物品 → 标记 → 编辑分区 → 分享清单。
                         if detailTab == .packing {
                             Button {
                                 showAddItemsSheet = true
@@ -179,41 +181,11 @@ struct PackingListView: View {
                                     Label(isComplete ? "packing.mark_uncomplete" : "packing.mark_complete", systemImage: isComplete ? "arrow.uturn.left.circle" : "checkmark.circle")
                                 }
                             }
-                        }
-                        // 编辑行程置顶：行程最核心、最常回头用的管理动作 → 放菜单首位、离按钮最近。
-                        Button {
-                            showEditSheet = true
-                        } label: {
-                            Label("Edit trip", systemImage: "pencil")
-                        }
-                        Button {
-                            showReminderSheet = true
-                        } label: {
-                            Label("reminder.menu.item", systemImage: bundle?.remindersEnabled == true ? "bell" : "bell.slash")
-                        }
-                        if detailTab == .packing {
                             Button {
                                 showReorderSheet = true
                             } label: {
                                 Label("Edit sections", systemImage: "arrow.up.arrow.down")
                             }
-                        }
-                        // Cosmetic, optional — sits below the two Edit actions.
-                        // Single entry, toggled by state: has a cover → remove; none → add.
-                        if backgroundImage != nil {
-                            Button(role: .destructive) {
-                                store.clearBackground(forTripId: tripId)
-                            } label: {
-                                Label("trip.background.remove", systemImage: "trash")
-                            }
-                        } else {
-                            Button {
-                                showBackgroundPicker = true
-                            } label: {
-                                Label("trip.background.add", systemImage: "photo")
-                            }
-                        }
-                        if detailTab == .packing {
                             Button {
                                 CarryLogger.shared.log(.packingListShared)
                                 let activityVC = UIActivityViewController(
@@ -229,12 +201,37 @@ struct PackingListView: View {
                                 Label("Share list", systemImage: "square.and.arrow.up")
                             }
                         }
-                        // 分享行程（行程规划面）：渲染成海报图 + 文本兜底，走系统分享面板。
+                        // 共享「行程级操作」（两个 tab 通用、顺序一致）：编辑行程 → 行程提醒 → 添加背景图。
+                        Button {
+                            showEditSheet = true
+                        } label: {
+                            Label("Edit trip", systemImage: "pencil")
+                        }
+                        Button {
+                            showReminderSheet = true
+                        } label: {
+                            Label("reminder.menu.item", systemImage: bundle?.remindersEnabled == true ? "bell" : "bell.slash")
+                        }
+                        if backgroundImage != nil {
+                            Button(role: .destructive) {
+                                store.clearBackground(forTripId: tripId)
+                            } label: {
+                                Label("trip.background.remove", systemImage: "trash")
+                            }
+                        } else {
+                            Button {
+                                showBackgroundPicker = true
+                            } label: {
+                                Label("trip.background.add", systemImage: "photo")
+                            }
+                        }
+                        // 分享行程（行程规划面）：弹预览页（大图 + 是否含地图开关 + Share）。
                         if detailTab == .itinerary {
                             Button {
-                                guard let trip = bundle else { return }
+                                guard bundle != nil else { return }
+                                UIImpactFeedbackGenerator(style: .light).impactOccurred()
                                 CarryLogger.shared.log(.itineraryShared)
-                                TripShare.present(for: trip)
+                                showSharePreview = true
                             } label: {
                                 Label("itinerary.share", systemImage: "square.and.arrow.up")
                             }
@@ -364,6 +361,13 @@ struct PackingListView: View {
                 ItemPickerView(tripId: tripId)
             }
             .tint(CarryAccent.color)
+        }
+        // 分享行程：先预览海报（含路线地图开关）再分享。
+        .sheet(isPresented: $showSharePreview) {
+            if let bundle {
+                SharePreviewSheet(trip: bundle)
+                    .tint(CarryAccent.color)
+            }
         }
         .sheet(isPresented: $showBackgroundPicker, onDismiss: {
             // Present the reposition sheet only after the picker fully dismisses (avoids the

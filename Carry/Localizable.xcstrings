@@ -20852,6 +20852,20 @@
         }
       }
     },
+    "itinerary.share.include_map" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : { "stringUnit" : { "state" : "translated", "value" : "Routenkarte einbeziehen" } },
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Include route map" } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Incluir mapa de ruta" } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Inclure la carte de l’itinéraire" } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "ルートマップを含める" } },
+        "ko" : { "stringUnit" : { "state" : "translated", "value" : "경로 지도 포함" } },
+        "pt-BR" : { "stringUnit" : { "state" : "translated", "value" : "Incluir mapa da rota" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "包含路线地图" } },
+        "zh-Hant" : { "stringUnit" : { "state" : "translated", "value" : "包含路線地圖" } }
+      }
+    },
     "itinerary.share" : {
       "extractionState" : "manual",
       "localizations" : {

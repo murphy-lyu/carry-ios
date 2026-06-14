@@ -420,44 +420,6 @@ enum TripShare {
         return lines.joined(separator: "\n")
     }
 
-    /// 弹系统分享面板：图片为主 + 文本兜底。
-    /// 图片以「行程名.png」临时文件分享（而非裸 UIImage），这样存到文件/隔空投送/聊天里
-    /// 是有意义的文件名，而不是「PNG 图像」默认名。
-    @MainActor
-    static func present(for trip: TripBundle) {
-        // 点击即触感反馈（立刻告诉用户"收到"），再异步出底部路线地图 → 合成海报 → 弹面板。
-        // 地图失败/无坐标返回 nil，海报自动降级为无地图带，不阻塞分享。
-        UIImpactFeedbackGenerator(style: .light).impactOccurred()
-        Task { @MainActor in
-            // 防闪烁：仅当准备 >200ms 才出加载 HUD（快网渲染完不闪，慢网才出现转圈）。
-            let hudTask = Task { @MainActor in
-                try? await Task.sleep(for: .milliseconds(200))
-                if !Task.isCancelled { ShareHUD.show() }
-            }
-
-            let mapImage = await renderRouteMap(for: trip)
-            var items: [Any] = []
-            if let image = renderPoster(for: trip, routeMapImage: mapImage),
-               let url = writeTempPoster(image, for: trip) {
-                items.append(url)
-            }
-            items.append(shareText(for: trip))
-
-            hudTask.cancel()
-            ShareHUD.hide()
-
-            guard let scene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
-                  let root = scene.windows.first(where: { $0.isKeyWindow })?.rootViewController else { return }
-            let vc = UIActivityViewController(activityItems: items, applicationActivities: nil)
-            // iPad：锚到屏幕中心，避免无 anchor 崩溃
-            if let pop = vc.popoverPresentationController {
-                pop.sourceView = root.view
-                pop.sourceRect = CGRect(x: root.view.bounds.midX, y: root.view.bounds.midY, width: 0, height: 0)
-                pop.permittedArrowDirections = []
-            }
-            (root.presentedViewController ?? root).present(vc, animated: true)
-        }
-    }
 
     /// 「发送给同行者」：把行程的「行程规划」导出为 `.carrytrip` 文件并弹系统分享面板。
     /// 对方（也用 Carry）收到后点开即可确认导入。文件名 = 行程名（如 `云南.carrytrip`）。
@@ -500,50 +462,3 @@ enum TripShare {
     }
 }
 
-// MARK: - 分享准备 HUD（窗口级、轻量；仅当渲染慢于阈值才出现，避免快渲染时闪一下）
-
-private enum ShareHUD {
-    private static let tag = 0x53485544   // "SHUD"
-
-    @MainActor
-    static func show() {
-        guard let window = keyWindow(), window.viewWithTag(tag) == nil else { return }
-        let dim = UIView(frame: window.bounds)
-        dim.tag = tag
-        dim.backgroundColor = UIColor.black.withAlphaComponent(0.08)
-        dim.autoresizingMask = [.flexibleWidth, .flexibleHeight]
-
-        let blur = UIVisualEffectView(effect: UIBlurEffect(style: .systemThickMaterial))
-        blur.layer.cornerRadius = 18
-        blur.layer.cornerCurve = .continuous
-        blur.clipsToBounds = true
-        blur.translatesAutoresizingMaskIntoConstraints = false
-
-        let spinner = UIActivityIndicatorView(style: .medium)
-        spinner.startAnimating()
-        spinner.translatesAutoresizingMaskIntoConstraints = false
-        blur.contentView.addSubview(spinner)
-
-        dim.addSubview(blur)
-        window.addSubview(dim)
-
-        NSLayoutConstraint.activate([
-            blur.centerXAnchor.constraint(equalTo: dim.centerXAnchor),
-            blur.centerYAnchor.constraint(equalTo: dim.centerYAnchor),
-            blur.widthAnchor.constraint(equalToConstant: 78),
-            blur.heightAnchor.constraint(equalToConstant: 78),
-            spinner.centerXAnchor.constraint(equalTo: blur.contentView.centerXAnchor),
-            spinner.centerYAnchor.constraint(equalTo: blur.contentView.centerYAnchor),
-        ])
-    }
-
-    @MainActor
-    static func hide() {
-        keyWindow()?.viewWithTag(tag)?.removeFromSuperview()
-    }
-
-    private static func keyWindow() -> UIWindow? {
-        (UIApplication.shared.connectedScenes.first as? UIWindowScene)?
-            .windows.first(where: { $0.isKeyWindow })
-    }
-}
