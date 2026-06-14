@@ -11,12 +11,15 @@ extension StopCategory {
     /// SF Symbol 名（技术常量，非用户文案）。
     var symbolName: String {
         switch self {
-        case .sightseeing: return "camera"
+        case .sightseeing: return "binoculars"
         case .food:        return "fork.knife"
         case .lodging:     return "bed.double"
-        case .transport:   return "tram.fill"
+        case .train:       return "train.side.front.car"
+        case .carRental:   return "car.fill"
         case .flight:      return "airplane"
+        case .cruise:      return "ferry.fill"
         case .activity:    return "figure.walk"
+        case .shopping:    return "bag"
         case .other:       return "mappin"
         }
     }

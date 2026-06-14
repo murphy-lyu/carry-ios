@@ -19,9 +19,12 @@ enum StopCategory: String, Codable, CaseIterable {
     case sightseeing   // 景点
     case food          // 餐饮
     case lodging       // 住宿
-    case transport     // 交通节点（高铁/地铁/公交）
+    case train = "transport"  // 火车（高铁/动车/列车）。显式保留旧 rawValue "transport" → 旧数据零迁移
+    case carRental     // 租车（取车门店 / 自驾）
     case flight        // 航班（机场/飞机）
+    case cruise        // 邮轮 / 渡轮
     case activity      // 活动
+    case shopping      // 购物
     case other         // 其他
 
     /// 解析存库字符串；未知值（旧数据/脏数据）一律退化为 .other，绝不崩。
