@@ -862,8 +862,8 @@ struct HomeView: View {
             openTripBook()
         } label: {
             HStack(spacing: 10) {
-                Image(systemName: "globe")
-                    .font(.system(size: 16, weight: .semibold))
+                Image(systemName: "globe.europe.africa.fill")
+                    .font(.system(size: 18, weight: .semibold))
                     .foregroundStyle(.secondary)
                     .frame(width: 34, height: 34)
 
