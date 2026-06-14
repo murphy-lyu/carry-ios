@@ -68,6 +68,7 @@ struct PackingListView: View {
     @State private var newSectionName = ""
     @State private var showAddItemsSheet = false
     @State private var showSharePreview = false
+    @State private var showExportItinerary = false
     @State private var isSaved = false
     @State private var showConfetti = false
     @State private var showCompletionBanner = false
@@ -231,6 +232,14 @@ struct PackingListView: View {
                                 Label("itinerary.send_to_companion", systemImage: "person.badge.plus")
                             }
                             .disabled(!(bundle.map { TripShare.hasShareableItinerary($0) } ?? false))
+                            // 导出签证行程单（双语 PDF）：弹导出选项页。
+                            Button {
+                                guard bundle != nil else { return }
+                                showExportItinerary = true
+                            } label: {
+                                Label("itinerary.export.title", systemImage: "doc.text")
+                            }
+                            .disabled(!(bundle.map { TripShare.hasShareableItinerary($0) } ?? false))
                         }
                         // 分享清单（打包面）：分享低频、且与行程面的分享同位——置于分隔线正上方、删除之上。
                         if detailTab == .packing {
@@ -369,6 +378,12 @@ struct PackingListView: View {
         .sheet(isPresented: $showSharePreview) {
             if let bundle {
                 SharePreviewSheet(trip: bundle)
+                    .tint(CarryAccent.color)
+            }
+        }
+        .sheet(isPresented: $showExportItinerary) {
+            if let bundle {
+                ExportItinerarySheet(trip: bundle)
                     .tint(CarryAccent.color)
             }
         }
