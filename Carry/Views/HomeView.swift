@@ -222,6 +222,9 @@ struct HomeView: View {
     @State private var mapCityOpacity: Double = 0
     /// Set to true to programmatically collapse the sheet (Siri, map button).
     @State private var collapseRequest: Bool = false
+    /// FX Sheet 实时缩放，驱动底栏同步缩放。用 @State 持有引用（不订阅）——逐帧更新只重渲染
+    /// 订阅它的底栏（见 BottomBarScaleSync），不重算 HomeView body / Sheet（保 Sheet 零重算铁律）。
+    @State private var sheetScaleModel = SheetScaleModel()
     @AppStorage("mapStyleOption") private var mapStyleRaw: String = MapStyleOption.hybrid.rawValue
     @AppStorage("hasShownFirstTripShimmer") private var hasShownFirstTripShimmer = false
     @AppStorage("firstTripCreatedAt") private var firstTripCreatedAtInterval: Double = 0
@@ -421,7 +424,8 @@ struct HomeView: View {
                 collapsedOffset: collapsedSheetOffset,
                 mapCityOpacity: $mapCityOpacity,
                 collapseRequest: $collapseRequest,
-                isListEmpty: isEffectivelyEmpty
+                isListEmpty: isEffectivelyEmpty,
+                scaleModel: sheetScaleModel
             ) {
                 sheetContent
             }
@@ -430,16 +434,20 @@ struct HomeView: View {
         .ignoresSafeArea(edges: .bottom)
         .safeAreaInset(edge: .bottom) {
             if !isEffectivelyEmpty {
-                bottomActionBar
-                    .padding(.horizontal, 18)
-                    .padding(.bottom, 18)
-                    .background(
-                        // 透明触摸吸收层：底栏整条拦截「点击」，堵住按钮间隙/内边距穿透到下方行程列表
-                        // （按钮在前，仍正常响应）。只吸收 tap、不拦拖动，故从底栏区域上滑仍能滚动列表。
-                        Color.clear
-                            .contentShape(Rectangle())
-                            .onTapGesture { }
-                    )
+                // 底栏随 Sheet 同步缩放：BottomBarScaleSync 订阅 scaleModel，仅它随缩放重渲染。
+                // scaleEffect 是渲染变换、不改布局 → safeAreaInset 预留高度恒定、不跳动。
+                BottomBarScaleSync(model: sheetScaleModel) {
+                    bottomActionBar
+                        .padding(.horizontal, 18)
+                        .padding(.bottom, 18)
+                        .background(
+                            // 透明触摸吸收层：底栏整条拦截「点击」，堵住按钮间隙/内边距穿透到下方行程列表
+                            // （按钮在前，仍正常响应）。只吸收 tap、不拦拖动，故从底栏区域上滑仍能滚动列表。
+                            Color.clear
+                                .contentShape(Rectangle())
+                                .onTapGesture { }
+                        )
+                }
             }
         }
         .sheet(isPresented: $showSettings) {
@@ -905,6 +913,16 @@ struct HomeView: View {
         }
         .bottomGlassPressStyle(fallbackScale: 0.95)
         .accessibilityLabel(Text("home.create_trip"))
+    }
+
+    /// 底栏同步缩放容器：`@ObservedObject` 订阅 `SheetScaleModel`，**只有本视图**随 Sheet 缩放重渲染，
+    /// 不波及 HomeView body / FX Sheet（保 Sheet「动画期零重算」铁律）。锚定底边，向屏幕底收。
+    private struct BottomBarScaleSync<Content: View>: View {
+        @ObservedObject var model: SheetScaleModel
+        @ViewBuilder var content: () -> Content
+        var body: some View {
+            content().scaleEffect(model.scale, anchor: .bottom)
+        }
     }
 
     /// 创建 FAB 的背景。iOS 26 用**带 accent tint 的 Liquid Glass**——保留烟蓝身份，

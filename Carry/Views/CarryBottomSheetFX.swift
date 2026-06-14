@@ -22,6 +22,15 @@
 
 import UIKit
 import SwiftUI
+import Combine
+
+/// 把 FX Sheet 的实时缩放值发布给「只观察它的」视图（首页底栏，用于同步缩放）。
+/// 单独 ObservableObject、不放 HomeView 顶层 @State——确保逐帧更新只重渲染观察者本身，
+/// 不触发 HomeView body / `CarryBottomSheetFX.updateUIViewController` 重算，
+/// 保住 Sheet「动画期间零 SwiftUI re-evaluate」铁律。
+final class SheetScaleModel: ObservableObject {
+    @Published var scale: CGFloat = 1
+}
 
 // MARK: - SwiftUI interface
 
@@ -34,6 +43,8 @@ struct CarryBottomSheetFX<Content: View>: UIViewControllerRepresentable {
     @Binding var collapseRequest: Bool
     /// Whether the list is empty — affects which gesture zones are active.
     let isListEmpty: Bool
+    /// 接收实时缩放（只被底栏观察，不引起 HomeView/Sheet 重算）。
+    let scaleModel: SheetScaleModel
     @ViewBuilder let content: () -> Content
 
     func makeUIViewController(context: Context) -> FXSheetViewController {
@@ -54,6 +65,17 @@ struct CarryBottomSheetFX<Content: View>: UIViewControllerRepresentable {
                 withAnimation(.easeOut(duration: 0.18)) {
                     coordinator?.mapCityOpacityBinding?.wrappedValue = isCollapsed ? 1 : 0
                 }
+            }
+        }
+        // 实时缩放 → 底栏。直接写「只被底栏观察」的 model：拖拽即时（无动画）、吸附用匹配曲线
+        // （0.42s 无回弹，对齐 Sheet 的 UIViewPropertyAnimator）。不写 HomeView 顶层 state → 不重算 Sheet。
+        let model = scaleModel
+        vc.onScaleChanged = { scale, animation in
+            if let animation {
+                withAnimation(animation) { model.scale = scale }
+            } else {
+                var t = Transaction(); t.disablesAnimations = true
+                withTransaction(t) { model.scale = scale }
             }
         }
         return vc
@@ -145,6 +167,9 @@ final class FXSheetViewController: UIViewController {
 
     /// Called on main thread when a snap animation begins.
     var onSnapChanged: ((Bool) -> Void)?
+    /// 发布实时缩放给"只观察它的"视图（首页底栏同步缩放）。`animation`：拖拽传 nil（跟手即时、无动画）、
+    /// 吸附传与本次 animator 匹配的曲线（让观察者用同曲线追同一目标）。只读 emit，不改 Sheet 任何行为。
+    var onScaleChanged: ((CGFloat, Animation?) -> Void)?
 
     // MARK: State
 
@@ -394,6 +419,10 @@ final class FXSheetViewController: UIViewController {
         // card AND its content+padding together (constant ratio = Flighty's "padding stays
         // fixed" look); the bounds height performs the vertical collapse clip.
         currentScale = g.scale
+        // 仅「拖拽」时逐帧把缩放发给底栏（跟手、无动画）。吸附由各分支单独发"带匹配曲线的 target"，
+        // 故 animator 块里这次 placeSheet **不再** emit（runningAnimator != nil 时跳过）——
+        // 否则会用一个不带动画的同值 set 覆盖掉底栏正在进行的吸附动画、导致底栏瞬跳脱节。
+        if runningAnimator == nil { onScaleChanged?(g.scale, nil) }
         outerView.bounds = CGRect(origin: .zero, size: g.boundsSize)
         outerView.transform = CGAffineTransform(scaleX: g.scale, y: g.scale)
         outerView.center = g.center
@@ -577,6 +606,8 @@ final class FXSheetViewController: UIViewController {
                 }
             }
             runningAnimator = anim
+            // 底栏用匹配曲线追同一目标：direct = 0.42s、无回弹（对齐本 animator 的 dampingRatio 1.0）。
+            onScaleChanged?(geometry(for: target)?.scale ?? currentScale, .spring(duration: 0.42, bounce: 0))
             anim.startAnimation()
             return
         }
@@ -620,6 +651,8 @@ final class FXSheetViewController: UIViewController {
         }
 
         runningAnimator = anim
+        // 底栏匹配 spring：0.68s + 与 dampingRatio 对应的 bounce（收起 0.95→~0.05，展开 0.88→~0.12）。
+        onScaleChanged?(geometry(for: target)?.scale ?? currentScale, .spring(duration: 0.68, bounce: isCollapsing ? 0.05 : 0.12))
         anim.startAnimation()
     }
 
