@@ -54,7 +54,7 @@ ZStack（全窗口）
 
 ## 行程路线规划模块（`feature/itinerary-route-planning`，未合并；spec: `specs/itinerary-route-planning.md`）
 - **ItineraryView**：行程规划主视图（地图头 + 按天时间轴 + 加天/加点/优化入口 + sheets）
-- **ItineraryReorderCollection**：按天的 `UICollectionView` 拖拽容器，**放开跨 section（跨天）**——复刻打包 `ReorderableItemCollection` 但去掉 `clampLocationToSection` 夹断；松手经 `TripStore.applyItineraryArrangement` 提交所有受影响天（重设 stop 的 `day` + `sortOrder`）
+- **ItineraryReorderCollection**：按天的 `UICollectionView` 拖拽容器，**放开跨 section（跨天）**——复刻打包 `ReorderableItemCollection` 但去掉 `clampLocationToSection` 夹断；松手经 `TripStore.applyItineraryArrangement` 提交所有受影响天（重设 stop 的 `day` + `sortOrder`）。另承载**日历 ↔ 列表双向联动**：入参 `scrollTargetDayId`（切日历→吸顶该天）、回调 `onFocusDay`（滚列表→回写选中天），靠 `lastScrolledDayId` 单一真相 + `isProgrammaticScroll` 防回授；末日地点少时按需补底部 `contentInset` 使其也能吸顶（详见 `decisions.md` 2026-06-14）
 - **ItineraryMapView**：地图头（`Marker` 按访问序号编号 + `MapPolyline` 每天连线；坐标点 <2 不显示；整块可点全屏）
 - **AddStopView**：`MKLocalSearchCompleter` 地理搜索选点（偏置到目的地）或手动无坐标点
 - **OptimizeRouteView**：单日重排预览→采纳（距离对比 + 新路线地图）

@@ -1,5 +1,30 @@
 # 决策日志
 
+## 2026-06-14 行程页 日历 ↔ 列表 双向联动（防回授）+ 末日吸顶补偿
+
+> 起因：行程页上方日历条与下方按天列表原本各管各——切日历不滚列表、滚列表不更新日历高亮，两者脱节。用户要双向联动。
+
+- **机制（顺框架，不自造平行态）**：列表 section header 本就 `pinToVisibleBounds`，「吸顶」是 UIKit 现成的，只需把目标 section 滚到顶即可。正向＝切日历改 `scrollTargetDayId` → 滚该天 header 到顶；反向＝`scrollViewDidScroll` 算当前吸顶 section（仍有 cell 越过顶缘的最小 section，用实际 cell frame、对 estimated 高度稳健）→ 回写 `focusedDayId`。
+- **防回授（关键）**：用 `lastScrolledDayId` 作正反向**单一真相**——反向回写时先把它写成新天，使随后 `update()` 判定「已在位」不再反手程序滚动；再加 `isProgrammaticScroll` 标志，正向动画途中屏蔽反向回写（否则穿过的中间天逐一误选、与动画对冲），动画结束 / 用户中途抓住列表时解除。这套切断了「程序滚动→didScroll→改选中→再程序滚动」环。
+- **🔴 末日吸顶补偿**：最后一天地点少时下方无内容可顶、吸不到顶（agenda/日历类列表通病）。解＝按需补底部 `contentInset`，量＝`视口高 − 末段高`（与吸顶偏移在数学上对齐 `maxY == targetY`，不多不少）；够长的日子算 0 不补，故不凭空多空隙，内容增删后随 layout 落定重算。末段高用「首行 minY − header 高」反推，避开「末段恰好 pinned 时 header origin 失真」。
+- 地图安全：`ItineraryMapView` 用 `Map(initialPosition:)`，`focusedDayId` 变只换当天的针、相机不跳，故列表滚动驱动选中天不会让地图乱漂。
+
+## 2026-06-14 页面背景：铺一层统一底色，别让两块区域各自上色赌一致
+
+> 起因：添加地点页（`AddStopView`）Light 模式顶部割裂——搜索框 band 与下方列表区交界一条硬边。
+
+- **根因**：band 显式涂 `systemGroupedBackground`（灰紫），而 `.insetGrouped` 的 `List` **在 sheet 上下文里默认渲染成白底**（`systemBackground`），两块底色对不上。「两个区域各画各的底、赌它们一致」本身就脆。
+- **决策（通用）**：需要整屏一致底色时，**铺一层统一背景**、让前景元素（搜索 band 等）只负责遮挡滚动内容，而不是依赖控件隐式底色去对色。落地＝`List` 加 `.scrollContentBackground(.hidden)` + `.background(Color(.systemGroupedBackground).ignoresSafeArea())`，band 保留遮挡底。语义色自适应，Dark 不受影响。
+- 已回写 `design-system.md` §Sheet / Modal。
+
+## 2026-06-14 首页搜索态保留「我的行程」大标题（连续感 > 冗余标题 / 裸搜索框）
+
+> 起因：用户觉得首页搜索页（`HomeView.searchSheet`）只有搜索框、顶部显空，问是否缺标题。
+
+- **判断**：① **不加**「搜索行程」式标题——与搜索框 placeholder 文字重复，是冗余噪音；② 也不维持「裸搜索框」（虽符合原生搜索态惯例，但解决不了用户的「空」）。**决策＝让首页「我的行程」大标题延续进搜索态**（标题在上、搜索框在下，30pt rounded 与首页主标题同号）——顶部不空、有页面归属感、接近原生大标题搜索，且标题非冗余（是首页标题「留住」而非新增重复）。
+- 字号：用户确认维持 30pt（连续感优先；30pt 已小于原生大标题 34pt，不算大）。
+- 对照：`AddStopView` 有「添加地点」标题是因为它是独立任务模态（标题答「我在干嘛」）；首页搜索是临时筛选态，语境不同，故处理方式不同、各自正确。
+
 ## 2026-06-14 优化路线：以「道路口径」判定是否改进（修订「MKDirections 只用于展示」）
 
 > 起因：真机走查发现优化预览偶尔「当前 83km → 优化后 87km，节省 0 米」——优化后按道路反而更长。根因＝口径不一致：排序用直线（Haversine）搜最优、判定与展示却用道路（MKDirections）；直线更短的顺序换成道路可能更长。

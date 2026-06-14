@@ -182,6 +182,7 @@ Apple 原生风格，极简、克制、优雅。
 - **形状**：圆角 **12pt** `.continuous`、高度 **44pt**、水平内边距 12pt、字体 `.body`；放大镜 + 清除按钮（`xmark.circle.fill`，`common.clear` 无障碍）+ 清除动画 `.spring(0.2, 0.1)`。
 - **表面（描边主导，唯一）**：`systemBackground.opacity(0.84)` + 细描边（`primary.opacity` Dark 0.12 / Light 0.08，线宽 1）。描边让它在**任何底色**上都立得住——灰底是白底+描边、白底是描边定界、暗色是深底+描边，因此不按上下文分多种填充。注意：纯实心填充（如 `secondarySystemBackground`）才会有「衬在同灰分组背景上整框隐形」的坑，描边主导式不受此影响。
 - 尾部可选 slot（`trailing`）：放类别菜单等紧凑控件（见 AddStopView）。
+- **搜索态保留来源页大标题**（2026-06-14）：临时筛选式搜索（如首页「搜索行程」`HomeView.searchSheet`）不另起冗余标题——**让来源页的大标题延续进搜索态**（标题在上、搜索框在下，与首页 `home.title` 同 30pt rounded），顶部不空、有归属感、接近原生大标题搜索。禁止加与 placeholder 重复的标题（如标题又写「搜索行程」）。对比：独立任务模态（如「添加地点」）该有自己的 `navigationTitle`，二者语境不同。
 
 ### 创建/编辑行程输入容器统一（TripInfoView / EditTripView）
 - 输入框与日期框采用“描边主导”视觉，不使用厚重实心填充块。
@@ -194,6 +195,7 @@ Apple 原生风格，极简、克制、优雅。
 - 优先用系统 .sheet()
 - 内容顶部留 20pt padding
 - 有标题栏时用 .navigationTitle + .navigationBarTitleDisplayMode(.inline)
+- **整屏底色要一致时，铺一层统一背景，别让两块区域各自上色赌一致**（2026-06-14）：典型坑——`.insetGrouped` 的 `List` **在 sheet 里默认渲染白底**（`systemBackground`），若上方另有一块涂了 `systemGroupedBackground` 的条（如搜索 band），交界会出现割裂硬边。解＝`List` 加 `.scrollContentBackground(.hidden)` + `.background(Color(.systemGroupedBackground).ignoresSafeArea())`，让前景条只负责遮挡滚动内容、不依赖控件隐式底色对色（见 `AddStopView`）。
 
 #### Carry Modal Convention（呈现方式按「语义」选，2026-06-14）
 一屏该用 push / sheet / cover，取决于**它和当前内容的关系**，而非"看起来顺手"：

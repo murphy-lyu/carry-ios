@@ -3,6 +3,15 @@
 ## 最后更新
 2026-06-14
 
+## 上次改动摘要（行程页日历↔列表联动 + 添加地点背景 + 首页搜索标题 · 2026-06-14）
+
+> 三处交互/视觉打磨，均编译绿、iOS 26.5 模拟器实地走查（Light/Dark），按文件隔离提交、未卷入并行会话改动。commit：双向联动 `944ec24`、添加地点背景 `653ef83`、搜索标题 `08dbc2a`。
+
+- **行程页 日历 ↔ 列表 双向联动**（`944ec24`，`ItineraryReorderCollection` + `ItineraryView`）：切日历某天→列表把该天 section 吸顶（header 本就 `pinToVisibleBounds`，落位即吸顶）；反向手动滚列表→上方日历高亮跟随当前吸顶天 + 日历条横向自动居中。**防回授**：`lastScrolledDayId` 单一真相 + `isProgrammaticScroll` 标志切断「程序滚动→didScroll→回写选中→再程序滚动」环。
+- **🔴 末日吸顶补偿**：最后一天地点少时下方无内容可顶→吸不到顶。按需补底部 `contentInset`（=视口高−末段高，数学上与吸顶偏移对齐 `maxY==targetY`）；够长的日子算 0 不补、内容增删后自动重算。末段高用「首行 minY − header 高」反推，避开 pinned header 坐标失真。
+- **添加地点页 Light 顶部背景割裂**（`653ef83`，`AddStopView`）：根因＝搜索框 band 涂 `systemGroupedBackground`、而 `.insetGrouped` List 在 sheet 里默认渲染白底，两块底色交界出现硬边。改为不靠两块各自上色赌一致→`scrollContentBackground(.hidden)` + 显式铺一层统一 grouped 底，接缝从根上消除。
+- **首页搜索态保留「我的行程」大标题**（`08dbc2a`，`HomeView.searchSheet`）：进搜索后只剩搜索框、顶部失重显空。让首页大标题延续进搜索态（30pt rounded、与首页主标题一致，标题在上搜索框在下），接近原生大标题搜索；不加「搜索行程」这种与 placeholder 重复的冗余标题（用户拍板字号维持 30pt，连续感优先）。
+
 ## 上次改动摘要（行程优化页：钉底 CTA + 道路口径判定 + 背景无缝 · 2026-06-14）
 
 > 接行程规划视觉审查 P1/P2，针对优化路线页做真机走查打磨，并落地「道路口径判定」行为变更。我的三个 commit 已 push 到 `main`（字体系统 `2b1dc4a`、优化页打磨 `035425c`、钉底+道路判定 `50af4ea`）。按 hunk 隔离、未卷入并行会话改动。
@@ -101,9 +110,10 @@
 > 行程规划 Phase 1–5 + 导航框架 + 跨天拖拽：均在 `feature/itinerary-route-planning` 分支，**已实现 + 模拟器验证，未提交 / 未合并**。
 
 - [ ] **合并前真机验收**：跨天拖拽手感/掉帧、时间轴长清单观感、底部胶囊单手可达、设置 sheet、Dark Mode、9 语言、大陆 storefront 高德底图。
-- [ ] **首页搜索（自定义 in-sheet）**：原生 `.searchable` 在「足迹地球 + UIKit Sheet、无 nav bar」首页不适用；需自定义 Sheet 内搜索，单独排期（待用户拍板）。
+- [x] **首页搜索（自定义 in-sheet）**：已落地——自定义 Sheet 内搜索（`HomeView.searchSheet`，`CarrySearchField` + 取消 + 行程列表/空态），2026-06-14 补「我的行程」大标题延续进搜索态。原生 `.searchable` 在「足迹地球 + UIKit Sheet、无 nav bar」首页不适用，故自定义。
 - [ ] **主列表段间「道路耗时」**（可选）：目前是 Haversine 直线距离（即时/离线）；如需真实耗时，做懒加载 + 缓存的 MKDirections 增量。
 - [ ] **跨天拖拽落点软夹断**（可选打磨）：目前不夹断，可把 stop 拖到某天 add/optimize 行下方——落库会正确归该天、不报错；若觉天边界落点不够精准再加软夹断。
+- [ ] **拖拽短距离过冲（待真机录屏确认）**：用户反馈短距离重排易过冲（想 #3→#5 却到 #7，偶发、上下都有）。代码侧确认我们喂的是手指原始位置、换位用 UIKit 原生中点判定（无放大）；大概率是**短视口（地图+日历占上半屏，列表仅露约 5 行）下触发边缘 auto-scroll**，列表在手指下自滚把行带过头。auto-scroll 速度/触发带无公开 API 可调，禁止手写自定义 auto-scroll 对抗框架。**下一步**：真机录 3 秒确认过冲时列表是否在滚——在滚→找不对抗框架的收敛办法；没滚→属实时回流的固有手感、不值得加复杂度。详见 `ItineraryReorderCollection.handleLongPress`。
 - [ ] **提交 / 合并**：用户验收后再 commit 到分支并评估合并。
 
 ## 视觉修正：时间轴行序号与名称对齐（2026-06-13）
