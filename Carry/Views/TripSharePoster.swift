@@ -12,25 +12,41 @@
 
 import SwiftUI
 import UIKit
+import MapKit
 
 // MARK: - 海报视图
 
 struct TripSharePoster: View {
     let trip: TripBundle
     let days: [ItineraryDay]
+    /// 底部路线地图带（异步预渲染好的 MapKit 快照 + 图钉/连线）。nil 则不显示该带。
+    var routeMapImage: UIImage? = nil
 
     /// 海报渲染宽度（pt）。高度随内容自适应。
     static let width: CGFloat = 390
+    static let mapBandHeight: CGFloat = 220
     private let headerHeight: CGFloat = 300
 
     var body: some View {
         VStack(spacing: 0) {
             header
             daysBody
+            if let routeMapImage { routeBand(routeMapImage) }
             footer
         }
         .frame(width: Self.width)
         .background(Color(.systemBackground))
+    }
+
+    // MARK: 路线地图带（地理总览：在哪、怎么走）
+
+    private func routeBand(_ image: UIImage) -> some View {
+        Image(uiImage: image)
+            .resizable()
+            .frame(width: Self.width, height: Self.mapBandHeight)
+            .overlay(alignment: .top) {
+                Rectangle().fill(Color(.separator).opacity(0.5)).frame(height: 0.5)
+            }
     }
 
     // MARK: 封面
@@ -69,9 +85,10 @@ struct TripSharePoster: View {
     private var coverBackground: some View {
         if let name = trip.primaryBackground?.localFileName,
            let image = BackgroundImageStore.image(named: name) {
-            // 复用首页卡片同款 PositionedImage：把用户设的裁剪当「焦点区域」渲染，
-            // 海报封面取景 = 行程卡上看到的取景，保持一致。
-            PositionedImage(image: image, crop: trip.primaryBackground?.crop)
+            // 海报头与首页卡片宽高比不同：卡片裁剪按卡片比例调，直接套到更高的海报头会过度
+            // 放大、构图变怪。改用「焦点对齐 + 整图最小 cover 铺满」——只取裁剪焦点位置、不放大
+            // 到裁剪区域大小，主体保持在用户框的位置，构图更自然（不同于卡片的 PositionedImage）。
+            FocalCoverImage(image: image, crop: trip.primaryBackground?.crop)
         } else {
             // 无封面：用第一天配色做柔和渐变兜底，仍有旅行气质
             LinearGradient(
@@ -200,6 +217,34 @@ struct TripSharePoster: View {
     }
 }
 
+/// 整图以「最小 cover」铺满 frame，并把裁剪框中心（焦点）尽量对齐 frame 中心。
+/// 与 `PositionedImage`（按裁剪「区域」大小缩放）不同——这里只用焦点、不放大到裁剪区域，
+/// 适合与裁剪比例不同的画面（如海报头），避免过度放大、构图变怪。
+private struct FocalCoverImage: View {
+    let image: UIImage
+    let crop: BackgroundCrop?
+
+    var body: some View {
+        GeometryReader { geo in
+            let W = geo.size.width, H = geo.size.height
+            let iw = max(image.size.width, 1), ih = max(image.size.height, 1)
+            let scale = max(W / iw, H / ih)            // 整图最小 cover
+            let dispW = iw * scale, dispH = ih * scale
+            let c = crop ?? .full
+            let fx = (c.x + c.width / 2) * dispW        // 焦点（裁剪中心）在缩放图上的位置
+            let fy = (c.y + c.height / 2) * dispH
+            let offX = min(0, max(W - dispW, W / 2 - fx))   // 焦点居中并钳制铺满
+            let offY = min(0, max(H - dispH, H / 2 - fy))
+            Image(uiImage: image)
+                .resizable()
+                .frame(width: dispW, height: dispH)
+                .offset(x: offX, y: offY)
+                .frame(width: W, height: H, alignment: .topLeading)
+                .clipped()
+        }
+    }
+}
+
 // MARK: - 渲染 + 分享
 
 enum TripShare {
@@ -210,15 +255,89 @@ enum TripShare {
     }
 
     /// 把行程渲染成海报图。@MainActor + ImageRenderer（iOS 16+）。
+    /// `routeMapImage`：异步预渲染的底部路线地图带（可空，空则海报无地图带）。
     @MainActor
-    static func renderPoster(for trip: TripBundle) -> UIImage? {
+    static func renderPoster(for trip: TripBundle, routeMapImage: UIImage? = nil) -> UIImage? {
         let days = trip.safeItineraryDays
-        let poster = TripSharePoster(trip: trip, days: days)
+        let poster = TripSharePoster(trip: trip, days: days, routeMapImage: routeMapImage)
             .environment(\.colorScheme, .light)   // 固定浅色，分享物不随设备深浅
         let renderer = ImageRenderer(content: poster)
         renderer.scale = 3   // 社交分享清晰度
         renderer.proposedSize = ProposedViewSize(width: TripSharePoster.width, height: nil)
         return renderer.uiImage
+    }
+
+    /// 异步渲染底部「路线地图带」：MapKit 静态快照 + 按当天配色的图钉与连线（动线）。
+    /// 自驾/多点行程尤其有用。无坐标的地点跳过；有效点 < 2 则返回 nil（不值得画地图）。
+    /// 固定浅色底图、缩放到框住所有点；失败/超时返回 nil，海报优雅降级为无地图。
+    @MainActor
+    static func renderRouteMap(for trip: TripBundle) async -> UIImage? {
+        struct RoutePoint { let coord: CLLocationCoordinate2D; let color: UIColor }
+        var ordered: [RoutePoint] = []
+        for day in trip.safeItineraryDays {
+            let color = UIColor(ItineraryDayPalette.color(forDayIndex: day.sortOrder))
+            for stop in day.sortedStops {
+                if let c = stop.coordinate { ordered.append(RoutePoint(coord: c, color: color)) }
+            }
+        }
+        guard ordered.count >= 2 else { return nil }
+
+        let options = MKMapSnapshotter.Options()
+        options.region = region(fitting: ordered.map(\.coord))
+        options.size = CGSize(width: TripSharePoster.width, height: TripSharePoster.mapBandHeight)
+        options.mapType = .mutedStandard   // 弱化 POI、更干净
+        options.pointOfInterestFilter = .excludingAll
+        options.traitCollection = UITraitCollection { traits in
+            traits.userInterfaceStyle = .light   // 海报固定浅色
+            traits.displayScale = 3
+        }
+
+        guard let snapshot = try? await MKMapSnapshotter(options: options).start() else { return nil }
+
+        let format = UIGraphicsImageRendererFormat()
+        format.scale = snapshot.image.scale
+        return UIGraphicsImageRenderer(size: options.size, format: format).image { ctx in
+            snapshot.image.draw(at: .zero)
+            let cg = ctx.cgContext
+            let pts = ordered.map { snapshot.point(for: $0.coord) }
+
+            // 连线：按时间顺序连各点，段色 = 起点当天色（连续动线）。
+            cg.setLineCap(.round); cg.setLineJoin(.round)
+            // ① 先画整条路线的白色描边（casing），让线在花花的地图上「浮」起来、更清晰。
+            if pts.count >= 2 {
+                cg.setStrokeColor(UIColor.white.withAlphaComponent(0.95).cgColor)
+                cg.setLineWidth(6)
+                cg.beginPath(); cg.move(to: pts[0])
+                for i in 1..<pts.count { cg.addLine(to: pts[i]) }
+                cg.strokePath()
+            }
+            // ② 再在描边上画按天配色的彩色线段。
+            cg.setLineWidth(3.5)
+            for i in 1..<pts.count {
+                cg.setStrokeColor(ordered[i - 1].color.cgColor)
+                cg.beginPath(); cg.move(to: pts[i - 1]); cg.addLine(to: pts[i]); cg.strokePath()
+            }
+            // 图钉：白圈 + 当天色圆点
+            for (i, p) in pts.enumerated() {
+                let r: CGFloat = 5
+                cg.setFillColor(UIColor.white.cgColor)
+                cg.fillEllipse(in: CGRect(x: p.x - r - 1.5, y: p.y - r - 1.5, width: (r + 1.5) * 2, height: (r + 1.5) * 2))
+                cg.setFillColor(ordered[i].color.cgColor)
+                cg.fillEllipse(in: CGRect(x: p.x - r, y: p.y - r, width: r * 2, height: r * 2))
+            }
+        }
+    }
+
+    /// 框住所有坐标的地图区域：取包围盒中心，跨度乘 1.5 留边、并设最小跨度避免单点过度放大。
+    private static func region(fitting coords: [CLLocationCoordinate2D]) -> MKCoordinateRegion {
+        let lats = coords.map(\.latitude), lons = coords.map(\.longitude)
+        let center = CLLocationCoordinate2D(
+            latitude: ((lats.min() ?? 0) + (lats.max() ?? 0)) / 2,
+            longitude: ((lons.min() ?? 0) + (lons.max() ?? 0)) / 2
+        )
+        let latDelta = max(((lats.max() ?? 0) - (lats.min() ?? 0)) * 1.5, 0.02)
+        let lonDelta = max(((lons.max() ?? 0) - (lons.min() ?? 0)) * 1.5, 0.02)
+        return MKCoordinateRegion(center: center, span: MKCoordinateSpan(latitudeDelta: latDelta, longitudeDelta: lonDelta))
     }
 
     /// 把海报图写成临时 PNG 文件，文件名 = 行程名（净化后）。分享文件 URL 时，
@@ -306,22 +425,38 @@ enum TripShare {
     /// 是有意义的文件名，而不是「PNG 图像」默认名。
     @MainActor
     static func present(for trip: TripBundle) {
-        var items: [Any] = []
-        if let image = renderPoster(for: trip), let url = writeTempPoster(image, for: trip) {
-            items.append(url)
+        // 点击即触感反馈（立刻告诉用户"收到"），再异步出底部路线地图 → 合成海报 → 弹面板。
+        // 地图失败/无坐标返回 nil，海报自动降级为无地图带，不阻塞分享。
+        UIImpactFeedbackGenerator(style: .light).impactOccurred()
+        Task { @MainActor in
+            // 防闪烁：仅当准备 >200ms 才出加载 HUD（快网渲染完不闪，慢网才出现转圈）。
+            let hudTask = Task { @MainActor in
+                try? await Task.sleep(for: .milliseconds(200))
+                if !Task.isCancelled { ShareHUD.show() }
+            }
+
+            let mapImage = await renderRouteMap(for: trip)
+            var items: [Any] = []
+            if let image = renderPoster(for: trip, routeMapImage: mapImage),
+               let url = writeTempPoster(image, for: trip) {
+                items.append(url)
+            }
+            items.append(shareText(for: trip))
+
+            hudTask.cancel()
+            ShareHUD.hide()
+
+            guard let scene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
+                  let root = scene.windows.first(where: { $0.isKeyWindow })?.rootViewController else { return }
+            let vc = UIActivityViewController(activityItems: items, applicationActivities: nil)
+            // iPad：锚到屏幕中心，避免无 anchor 崩溃
+            if let pop = vc.popoverPresentationController {
+                pop.sourceView = root.view
+                pop.sourceRect = CGRect(x: root.view.bounds.midX, y: root.view.bounds.midY, width: 0, height: 0)
+                pop.permittedArrowDirections = []
+            }
+            (root.presentedViewController ?? root).present(vc, animated: true)
         }
-        items.append(shareText(for: trip))
-        guard !items.isEmpty,
-              let scene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
-              let root = scene.windows.first(where: { $0.isKeyWindow })?.rootViewController else { return }
-        let vc = UIActivityViewController(activityItems: items, applicationActivities: nil)
-        // iPad：锚到屏幕中心，避免无 anchor 崩溃
-        if let pop = vc.popoverPresentationController {
-            pop.sourceView = root.view
-            pop.sourceRect = CGRect(x: root.view.bounds.midX, y: root.view.bounds.midY, width: 0, height: 0)
-            pop.permittedArrowDirections = []
-        }
-        (root.presentedViewController ?? root).present(vc, animated: true)
     }
 
     /// 「发送给同行者」：把行程的「行程规划」导出为 `.carrytrip` 文件并弹系统分享面板。
@@ -362,5 +497,53 @@ enum TripShare {
         let cleaned = base.components(separatedBy: invalid).joined(separator: " ")
             .trimmingCharacters(in: .whitespacesAndNewlines)
         return cleaned.isEmpty ? "Carry" : cleaned
+    }
+}
+
+// MARK: - 分享准备 HUD（窗口级、轻量；仅当渲染慢于阈值才出现，避免快渲染时闪一下）
+
+private enum ShareHUD {
+    private static let tag = 0x53485544   // "SHUD"
+
+    @MainActor
+    static func show() {
+        guard let window = keyWindow(), window.viewWithTag(tag) == nil else { return }
+        let dim = UIView(frame: window.bounds)
+        dim.tag = tag
+        dim.backgroundColor = UIColor.black.withAlphaComponent(0.08)
+        dim.autoresizingMask = [.flexibleWidth, .flexibleHeight]
+
+        let blur = UIVisualEffectView(effect: UIBlurEffect(style: .systemThickMaterial))
+        blur.layer.cornerRadius = 18
+        blur.layer.cornerCurve = .continuous
+        blur.clipsToBounds = true
+        blur.translatesAutoresizingMaskIntoConstraints = false
+
+        let spinner = UIActivityIndicatorView(style: .medium)
+        spinner.startAnimating()
+        spinner.translatesAutoresizingMaskIntoConstraints = false
+        blur.contentView.addSubview(spinner)
+
+        dim.addSubview(blur)
+        window.addSubview(dim)
+
+        NSLayoutConstraint.activate([
+            blur.centerXAnchor.constraint(equalTo: dim.centerXAnchor),
+            blur.centerYAnchor.constraint(equalTo: dim.centerYAnchor),
+            blur.widthAnchor.constraint(equalToConstant: 78),
+            blur.heightAnchor.constraint(equalToConstant: 78),
+            spinner.centerXAnchor.constraint(equalTo: blur.contentView.centerXAnchor),
+            spinner.centerYAnchor.constraint(equalTo: blur.contentView.centerYAnchor),
+        ])
+    }
+
+    @MainActor
+    static func hide() {
+        keyWindow()?.viewWithTag(tag)?.removeFromSuperview()
+    }
+
+    private static func keyWindow() -> UIWindow? {
+        (UIApplication.shared.connectedScenes.first as? UIWindowScene)?
+            .windows.first(where: { $0.isKeyWindow })
     }
 }
