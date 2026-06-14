@@ -13,13 +13,13 @@ extension StopCategory {
         switch self {
         case .sightseeing: return "binoculars"
         case .food:        return "fork.knife"
-        case .lodging:     return "bed.double"
-        case .train:       return "train.side.front.car"
-        case .carRental:   return "car.fill"
-        case .flight:      return "airplane"
-        case .cruise:      return "ferry.fill"
         case .activity:    return "figure.walk"
         case .shopping:    return "bag"
+        case .lodging:     return "bed.double"
+        case .flight:      return "airplane"
+        case .train:       return "train.side.front.car"
+        case .carRental:   return "car.fill"
+        case .cruise:      return "ferry.fill"
         case .other:       return "mappin"
         }
     }

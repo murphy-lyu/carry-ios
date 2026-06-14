@@ -16,15 +16,19 @@ import CoreLocation
 /// 停靠点类型。rawValue 存库（技术常量，不面向用户展示）；
 /// UI 文案统一走 localizationKey 对应的 Localizable.xcstrings。
 enum StopCategory: String, Codable, CaseIterable {
+    // 顺序即菜单顺序（allCases 取声明序）。按「在地体验（高频）→ 住宿+交通（后勤）→ 其他」排。
+    // 在地体验
     case sightseeing   // 景点
     case food          // 餐饮
-    case lodging       // 住宿
-    case train = "transport"  // 火车（高铁/动车/列车）。显式保留旧 rawValue "transport" → 旧数据零迁移
-    case carRental     // 租车（取车门店 / 自驾）
-    case flight        // 航班（机场/飞机）
-    case cruise        // 邮轮 / 渡轮
     case activity      // 活动
     case shopping      // 购物
+    // 住宿 + 交通（后勤骨架）
+    case lodging       // 住宿
+    case flight        // 航班（机场/飞机）
+    case train = "transport"  // 火车（高铁/动车/列车）。显式保留旧 rawValue "transport" → 旧数据零迁移
+    case carRental     // 租车（取车门店 / 自驾）
+    case cruise        // 邮轮 / 渡轮
+    // 兜底
     case other         // 其他
 
     /// 解析存库字符串；未知值（旧数据/脏数据）一律退化为 .other，绝不崩。
