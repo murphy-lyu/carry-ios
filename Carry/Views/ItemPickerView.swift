@@ -452,8 +452,9 @@ struct ItemPickerView: View {
 
                 Group {
                     if sourceMode == .smart {
+                        // 仅 smart 有底部圆角预览浮条 → 网格滚到其下柔和消隐。
+                        // Browse / My Items 无浮条，不加消隐（否则内容在底部莫名虚化、像 bug）。
                         smartRecommendationView
-                            // 场景网格滚到底部圆角预览浮条下时柔和消隐（浮条浮于其上，不在其后垫实心）。
                             .bottomContentFade(Color(UIColor.systemBackground), height: 96)
                     } else if sourceMode == .myItems {
                         if searchText.isEmpty {
