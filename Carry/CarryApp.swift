@@ -70,6 +70,17 @@ struct CarryApp: App {
                     UNUserNotificationCenter.current().delegate = notificationDelegate
                 }
                 .onOpenURL { url in
+                    // 同行者发来的行程文件（.carrytrip）：读摘要 → 交给 ContentView 弹确认导入。
+                    if url.isFileURL {
+                        guard url.pathExtension.lowercased() == "carrytrip" else { return }
+                        let scoped = url.startAccessingSecurityScopedResource()
+                        defer { if scoped { url.stopAccessingSecurityScopedResource() } }
+                        if let data = try? Data(contentsOf: url),
+                           let summary = DataBackupManager.shared.readSharedTripSummary(from: data) {
+                            router.pendingSharedTrip = summary
+                        }
+                        return
+                    }
                     guard url.scheme == "carry",
                           let uuidString = url.pathComponents.dropFirst().first,
                           let id = UUID(uuidString: uuidString) else { return }

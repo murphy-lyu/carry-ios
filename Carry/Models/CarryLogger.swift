@@ -120,6 +120,9 @@ final class CarryLogger {
         case sceneSelected          = "scene_selected"
         case packingListShared      = "packing_list_shared"
         case itineraryShared        = "itinerary_shared"
+        case itineraryFileSent      = "itinerary_file_sent"
+        case itineraryImported      = "itinerary_imported"
+        case itineraryImportFailed  = "itinerary_import_failed"
         case cycleNudgeShown        = "cycle_nudge_shown"
         case cycleNudgeAccepted     = "cycle_nudge_accepted"
         // 预留（API 扩展用）
@@ -151,7 +154,7 @@ final class CarryLogger {
         .destinationDecodeFailed, .coffeePurchaseFailed, .coffeeProductsFetchFailed,
         .calendarSaveFailed, .liveActivityStartFailed,
         .reminderScheduleFailed, .apiTimeout, .apiError,
-        .itineraryRouteCalcFailed,
+        .itineraryRouteCalcFailed, .itineraryImportFailed,
     ]
 
     private let sessionActiveKey = "carry_session_active"

@@ -323,4 +323,44 @@ enum TripShare {
         }
         (root.presentedViewController ?? root).present(vc, animated: true)
     }
+
+    /// 「发送给同行者」：把行程的「行程规划」导出为 `.carrytrip` 文件并弹系统分享面板。
+    /// 对方（也用 Carry）收到后点开即可确认导入。文件名 = 行程名（如 `云南.carrytrip`）。
+    @MainActor
+    static func presentItineraryFile(for trip: TripBundle) {
+        guard let url = DataBackupManager.shared.makeItineraryShareFile(trip: trip, baseName: fileBaseName(for: trip)),
+              let scene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
+              let root = scene.windows.first(where: { $0.isKeyWindow })?.rootViewController else { return }
+        let vc = UIActivityViewController(activityItems: [url], applicationActivities: nil)
+        if let pop = vc.popoverPresentationController {
+            pop.sourceView = root.view
+            pop.sourceRect = CGRect(x: root.view.bounds.midX, y: root.view.bounds.midY, width: 0, height: 0)
+            pop.permittedArrowDirections = []
+        }
+        (root.presentedViewController ?? root).present(vc, animated: true)
+    }
+
+    /// 可导入文件的文件名主体：`行程名 (出发月份)`——月份做括号补充（同地不同月攻略不同）。
+    /// 行程名退回目的地/「Carry」；无日期行程省略月份；月份跟随语言（中文「6月」/ 英文「Jun」）。
+    private static func fileBaseName(for trip: TripBundle) -> String {
+        let nameRaw = !trip.name.isEmpty ? trip.name
+            : (!trip.destinationCity.isEmpty ? trip.destinationCity : "Carry")
+        var base = nameRaw
+        if !trip.isDateless {
+            let month: String
+            if Locale.current.language.languageCode == .chinese {
+                month = "\(Calendar.current.component(.month, from: trip.departureDate))月"
+            } else {
+                let mf = DateFormatter()
+                mf.locale = Locale(identifier: "en_US_POSIX")
+                mf.dateFormat = "MMM"
+                month = mf.string(from: trip.departureDate)
+            }
+            base += " (\(month))"
+        }
+        let invalid = CharacterSet(charactersIn: "/\\:*?\"<>|\n\r\t")
+        let cleaned = base.components(separatedBy: invalid).joined(separator: " ")
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+        return cleaned.isEmpty ? "Carry" : cleaned
+    }
 }

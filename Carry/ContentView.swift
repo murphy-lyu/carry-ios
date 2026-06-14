@@ -23,6 +23,10 @@ final class NavigationRouter: ObservableObject {
     @Published var showMapFullscreen = false
     @Published var pendingTripId: UUID? = nil
 
+    // 同行者发来的 .carrytrip 文件（点开后由 CarryApp.onOpenURL 读取摘要写入），
+    // ContentView 观察它弹出「导入行程」确认。
+    @Published var pendingSharedTrip: DataBackupManager.SharedTripSummary? = nil
+
     // 创建行程是「自包含任务」而非根层级——在独立的 fullScreenCover + 自有 NavigationStack
     // 里跑（iPhone）。三步链（TripInfo → ItemPicker → PackingList 新建）压在 creationPath 上，
     // 不污染根 path；完成后关 cover、把根 path 落到新行程。（spec: app-navigation-framework.md）
@@ -170,6 +174,12 @@ struct ContentView: View {
                 .tint(CarryAccent.color)
                 .preferredColorScheme((AppearanceMode(rawValue: appearanceModeRaw) ?? .system).colorScheme)
             }
+        }
+        // 同行者发来的 .carrytrip 文件：弹「导入行程」确认卡片。
+        .sheet(item: $router.pendingSharedTrip) { summary in
+            ImportSharedTripSheet(summary: summary)
+                .tint(CarryAccent.color)
+                .preferredColorScheme((AppearanceMode(rawValue: appearanceModeRaw) ?? .system).colorScheme)
         }
         .tint(CarryAccent.color)
         .environmentObject(store)

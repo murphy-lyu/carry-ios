@@ -21,5 +21,42 @@
 	<string>Carry reads your Cycle Tracking on-device to remind you to pack period essentials when a trip may overlap your period. This data never leaves your device.</string>
 	<key>NSSupportsLiveActivities</key>
 	<true/>
+	<key>LSSupportsOpeningDocumentsInPlace</key>
+	<true/>
+	<key>UTExportedTypeDeclarations</key>
+	<array>
+		<dict>
+			<key>UTTypeIdentifier</key>
+			<string>com.murphy.carry.trip</string>
+			<key>UTTypeDescription</key>
+			<string>Carry Trip</string>
+			<key>UTTypeConformsTo</key>
+			<array>
+				<string>public.json</string>
+			</array>
+			<key>UTTypeTagSpecification</key>
+			<dict>
+				<key>public.filename-extension</key>
+				<array>
+					<string>carrytrip</string>
+				</array>
+			</dict>
+		</dict>
+	</array>
+	<key>CFBundleDocumentTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleTypeName</key>
+			<string>Carry Trip</string>
+			<key>CFBundleTypeRole</key>
+			<string>Viewer</string>
+			<key>LSHandlerRank</key>
+			<string>Owner</string>
+			<key>LSItemContentTypes</key>
+			<array>
+				<string>com.murphy.carry.trip</string>
+			</array>
+		</dict>
+	</array>
 </dict>
 </plist>

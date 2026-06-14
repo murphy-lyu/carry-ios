@@ -237,7 +237,16 @@ struct PackingListView: View {
                             } label: {
                                 Label("itinerary.share", systemImage: "square.and.arrow.up")
                             }
-                            .disabled(!(bundle.map(TripShare.hasShareableItinerary) ?? false))
+                            .disabled(!(bundle.map { TripShare.hasShareableItinerary($0) } ?? false))
+                            // 发送给同行者：可导入的 .carrytrip 文件（仅行程规划），对方点开即可导入。
+                            Button {
+                                guard let trip = bundle else { return }
+                                CarryLogger.shared.log(.itineraryFileSent)
+                                TripShare.presentItineraryFile(for: trip)
+                            } label: {
+                                Label("itinerary.send_to_companion", systemImage: "person.badge.plus")
+                            }
+                            .disabled(!(bundle.map { TripShare.hasShareableItinerary($0) } ?? false))
                         }
                         Divider()
                         Button(role: .destructive) {

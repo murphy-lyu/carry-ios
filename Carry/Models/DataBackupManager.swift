@@ -513,6 +513,137 @@ final class DataBackupManager {
         return (newTripCount, backup.myItems.filter { !existingMyItemIDs.contains($0.id) }.count)
     }
 
+    // MARK: - 单行程「发送给同行者」（仅行程规划，可导入）
+
+    /// 导入前的行程摘要（解码自 `.carrytrip` 文件，不写库）。供确认弹窗展示。
+    struct SharedTripSummary: Identifiable {
+        var id: UUID { tripId }
+        let data: Data
+        let tripId: UUID
+        let name: String
+        let destinationCity: String
+        let isDateless: Bool
+        let departureDate: Date
+        let totalDays: Int
+        let placeCount: Int
+    }
+
+    /// 导出单个行程的「行程规划」为可分享文件（`.carrytrip`，本质是仅含一个行程、
+    /// 且**不带打包清单 / 背景图 / 个人库**的 CarryBackup）。仅天 + 地点 → 更轻、更私密。
+    func makeItineraryShareFile(trip: TripBundle, baseName: String) -> URL? {
+        let days: [BackupItineraryDay] = trip.safeItineraryDays.map { day in
+            let stops: [BackupItineraryStop] = day.sortedStops.map {
+                BackupItineraryStop(
+                    id: $0.id, name: $0.name, latitude: $0.latitude, longitude: $0.longitude,
+                    address: $0.address, categoryRaw: $0.categoryRaw,
+                    plannedStartMinutes: $0.plannedStartMinutes, stayMinutes: $0.stayMinutes,
+                    note: $0.note, sortOrder: $0.sortOrder
+                )
+            }
+            return BackupItineraryDay(id: day.id, sortOrder: day.sortOrder, title: day.title, note: day.note, stops: stops)
+        }
+        let bt = BackupTrip(
+            id: trip.id, name: trip.name, destinationCity: trip.destinationCity,
+            days: trip.days, dateRange: trip.dateRange, departureDate: trip.departureDate,
+            isDateless: trip.isDateless, createdAt: trip.createdAt,
+            selectedSceneKeys: trip.selectedSceneKeys, dismissedSurpriseNames: trip.dismissedSurpriseNames,
+            sceneCardDismissed: trip.sceneCardDismissed, remindersEnabled: false,
+            reminderConfigData: Data(), countryCode: trip.countryCode,
+            latitude: trip.latitude, longitude: trip.longitude,
+            additionalDestinationsData: trip.additionalDestinationsData.isEmpty ? nil : trip.additionalDestinationsData,
+            backgroundsData: nil,          // 不带背景图（私密 + 文件轻）
+            sections: [],                  // 不带打包清单（隐私）
+            itineraryDays: days.isEmpty ? nil : days
+        )
+        let backup = CarryBackup(
+            version: Self.currentBackupVersion, createdAt: Date(),
+            trips: [bt], myItems: [], defaultReminderOffsets: nil, backgroundImages: nil
+        )
+        guard let data = Self.encode(backup) else { return nil }
+        let url = FileManager.default.temporaryDirectory
+            .appendingPathComponent(baseName).appendingPathExtension("carrytrip")
+        do {
+            if FileManager.default.fileExists(atPath: url.path) { try FileManager.default.removeItem(at: url) }
+            try data.write(to: url, options: .atomic)
+            return url
+        } catch { return nil }
+    }
+
+    /// 读取 `.carrytrip` 文件的单行程摘要（不写库）。版本过新或解析失败返回 nil。
+    func readSharedTripSummary(from data: Data) -> SharedTripSummary? {
+        struct VersionStub: Decodable { let version: Int }
+        if let stub = try? decoder.decode(VersionStub.self, from: data),
+           stub.version > Self.currentBackupVersion { return nil }
+        guard let backup = try? decoder.decode(CarryBackup.self, from: data),
+              let bt = backup.trips.first else { return nil }
+        let days = bt.itineraryDays ?? []
+        return SharedTripSummary(
+            data: data, tripId: bt.id, name: bt.name, destinationCity: bt.destinationCity,
+            isDateless: bt.isDateless ?? false, departureDate: bt.departureDate,
+            totalDays: max(bt.days, 1),
+            placeCount: days.reduce(0) { $0 + $1.stops.count }
+        )
+    }
+
+    /// 该行程是否已存在本地（用于「新建 vs 更新」判断）。
+    func tripExists(id: UUID, in context: ModelContext) -> Bool {
+        ((try? context.fetch(FetchDescriptor<TripBundle>())) ?? []).contains { $0.id == id }
+    }
+
+    /// 导入共享行程：不存在 → 新建；已存在（同 UUID）→ **替换其行程规划**（天/地点 + 行程元信息），
+    /// **不动收件方该行程已有的打包清单 / 背景图**。返回行程 id（供导入后跳转）。
+    @discardableResult
+    func importSharedTrip(from data: Data, into context: ModelContext) throws -> UUID {
+        struct VersionStub: Decodable { let version: Int }
+        if let stub = try? decoder.decode(VersionStub.self, from: data),
+           stub.version > Self.currentBackupVersion {
+            throw BackupError.unsupportedVersion(stub.version)
+        }
+        guard let backup = try? decoder.decode(CarryBackup.self, from: data),
+              let bt = backup.trips.first else {
+            throw BackupError.decodingFailed
+        }
+        let allTrips = try context.fetch(FetchDescriptor<TripBundle>())
+
+        if let existing = allTrips.first(where: { $0.id == bt.id }) {
+            // 更新：清掉旧行程规划（天 + 地点），重建为最新；打包清单/背景图保留不动
+            for day in existing.safeItineraryDays {
+                for stop in day.sortedStops { context.delete(stop) }
+                context.delete(day)
+            }
+            existing.itineraryDays = []
+            existing.name = bt.name
+            existing.destinationCity = bt.destinationCity
+            existing.days = bt.days
+            existing.dateRange = bt.dateRange
+            existing.departureDate = bt.departureDate
+            existing.isDateless = bt.isDateless ?? false
+            existing.countryCode = bt.countryCode
+            existing.latitude = bt.latitude
+            existing.longitude = bt.longitude
+            if let extra = bt.additionalDestinationsData { existing.additionalDestinationsData = extra }
+            restoreItineraryDays(bt.itineraryDays, for: existing, into: context)
+        } else {
+            // 新建（沿用发送方 UUID，便于日后再次导入识别为「更新」）
+            let trip = TripBundle(
+                id: bt.id, name: bt.name, destinationCity: bt.destinationCity,
+                days: bt.days, dateRange: bt.dateRange, departureDate: bt.departureDate,
+                isDateless: bt.isDateless ?? false, createdAt: bt.createdAt,
+                selectedSceneKeys: bt.selectedSceneKeys
+            )
+            trip.dismissedSurpriseNames = bt.dismissedSurpriseNames
+            trip.sceneCardDismissed = bt.sceneCardDismissed
+            trip.countryCode = bt.countryCode
+            trip.latitude = bt.latitude
+            trip.longitude = bt.longitude
+            if let extra = bt.additionalDestinationsData { trip.additionalDestinationsData = extra }
+            context.insert(trip)
+            restoreItineraryDays(bt.itineraryDays, for: trip, into: context)
+        }
+        try context.save()
+        return bt.id
+    }
+
     // MARK: - Core restore
 
     private func performRestore(from backup: CarryBackup, into context: ModelContext) throws -> (trips: Int, myItems: Int) {
