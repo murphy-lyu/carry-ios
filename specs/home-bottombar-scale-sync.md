@@ -44,3 +44,38 @@ Sheet 吸附是 CA（GPU）；底栏是 SwiftUI——两套引擎。底栏用尽
 
 ## 数据 / 迁移
 无。纯展示层。
+
+---
+
+# 终极方案（frame-perfect · 同一 animator 驱动）
+
+> **Status: Shipped（已落地，真机验收通过 2026-06-14）。** 底栏移进 `FXSheetViewController`、与卡片同一 `UIViewPropertyAnimator` 驱动，像素级同步缩放。还原点：基线 commit `b2be676`（SwiftUI scaleEffect 近似版）；如需回退：`git checkout b2be676 -- Carry/Views/CarryBottomSheetFX.swift Carry/Views/HomeView.swift`。
+>
+> **实现要点（与下方设计一致）**：删除基线 `SheetScaleModel`/`onScaleChanged`/`BottomBarScaleSync`/`import Combine`；FX 泛型加 `Bar`，新增 `bottomBar:` builder + `installBottomBar(_:)`（底栏钉 `view` 底、约束 = 原 18pt padding、z 序在卡片上、不入 outerView）；`placeSheet` 里对 `barView` 施加底边锚定同 scale transform——吸附时该函数在 snap animator 块内被调用 → 底栏被同一 animator 插值，无第二驱动源（守 §5）。手势穿透靠 HostingController 对空白区返回 nil（pan 落到下方列表/卡片），按钮吃 tap，列表底部 124/176pt 占位行兜底。
+
+## 为什么要它
+基线版底栏（SwiftUI）与 Sheet（Core Animation）是两套引擎，只能"高度近似"；**快速甩动**时 Sheet 的 spring 带手势初速度、底栏不带 → 开头一小段会有可察觉的先后。终极解 = 让底栏与卡片**由同一条 CA 时间线/同一个 `UIViewPropertyAnimator` 驱动**，逐帧像素级一致，吃满物理上限。
+
+## 架构改动
+- 底栏从 HomeView 的 `.safeAreaInset(edge:.bottom)` **移进 `FXSheetViewController`**：新增 `barHost: UIHostingController`，承载现有 SwiftUI `bottomActionBar`（内容仍由 HomeView 经新 `@ViewBuilder bottomBar:` 闭包传入，按钮绑定 HomeView 的 search/tripBook/create 状态不变）。
+- `view` 层级：`outerView`(卡) 先加 → `barHost.view` 后加（z 序在上）；`barHost.view` 钉在 `view` 底（`safeAreaLayoutGuide.bottom`），**不放进 outerView**（否则会随卡片滑走、改变定位）。
+- 缩放：在 `placeSheet(at:)` 里对 `barHost.view` 施加与卡片**相同的 scale**（`layer.anchorPoint = (0.5, 1)` 锚定底边，向屏幕底收）。拖拽逐帧、吸附在**同一个 animator 块**里设 → frame-perfect、同曲线同初速度。
+- **移除**基线的 `SheetScaleModel` / `onScaleChanged` / `BottomBarScaleSync` / safeAreaInset 底栏（终极取代之，不留过渡件）。
+
+## ⚠️ 必须妥善处理的风险点（都在 §5 雷区附近，逐一守住）
+1. **手势穿透**：`sheetPan` 挂在 `view` 上。底栏移进来后，「从底栏区域上滑要仍能拖动/滚动 Sheet」必须保持（基线靠"只吸收 tap、不拦 pan"）。需确认 barHost 的 SwiftUI 内容**不吞 pan**，pan 仍冒泡到 `sheetPan`；按钮/tap 正常消费。**这是头号风险**。
+2. **列表底部净空**：现底栏的 contentInset/clearance 若依赖 safeAreaInset 预留，移走后列表可能被底栏遮挡。需把底栏高度显式喂给列表 `contentInset.bottom`（沿用 `bottomBarClearance` 思路）。
+3. **底锚点缩放**：`anchorPoint=(0.5,1)` 要同步修正 `position`，否则锚点一改位置会跳。
+4. **吸附所有路径**：direct + spring 两个 animator 块都要加 `barHost.view` 的 transform；§5 禁忌（不加第二驱动、不提前推终态）对底栏同样遵守——它就搭在卡片同一 animator 上，天然同步、不引第二源。
+5. **安全区/旋转/Catalyst**：底栏底距随安全区；Catalyst 无 FX sheet 时退化。
+
+## 诚实评估（供你拍板）
+- **收益**：仅"快速甩动"那一小段从"近似"变"像素级一致"；常规拖放基线已"看起来丝滑"。
+- **代价/风险**：改动落在**全 app 最脆弱的 FX 手势/布局/吸附链**（playbook 反复踩坑区），手势穿透/净空若没守住会引入新 bug——正是你担心的那类。
+- 这是你明确选择"要最优、不在乎成本"且已设还原点的前提下推进。基线 `b2be676` 是安全网。
+
+## 验收（比基线更严）
+1. **playbook §10 全回归**（重点：下拉中途上拉不卡中段、direct collapse 不回弹、上拉滚动锁稳）+ **从底栏区域上滑仍能拖/滚 Sheet**。
+2. 快速甩动：底栏与 Sheet 是否逐帧一致（终极的验证目标）。
+3. 底栏按钮（搜索/行程册/创建）功能、列表不被遮挡、底距正确。
+4. 暗色 / 9 语言 / Catalyst。

@@ -22,19 +22,10 @@
 
 import UIKit
 import SwiftUI
-import Combine
-
-/// 把 FX Sheet 的实时缩放值发布给「只观察它的」视图（首页底栏，用于同步缩放）。
-/// 单独 ObservableObject、不放 HomeView 顶层 @State——确保逐帧更新只重渲染观察者本身，
-/// 不触发 HomeView body / `CarryBottomSheetFX.updateUIViewController` 重算，
-/// 保住 Sheet「动画期间零 SwiftUI re-evaluate」铁律。
-final class SheetScaleModel: ObservableObject {
-    @Published var scale: CGFloat = 1
-}
 
 // MARK: - SwiftUI interface
 
-struct CarryBottomSheetFX<Content: View>: UIViewControllerRepresentable {
+struct CarryBottomSheetFX<Content: View, Bar: View>: UIViewControllerRepresentable {
 
     let expandedHeight: CGFloat
     let collapsedOffset: CGFloat
@@ -43,9 +34,11 @@ struct CarryBottomSheetFX<Content: View>: UIViewControllerRepresentable {
     @Binding var collapseRequest: Bool
     /// Whether the list is empty — affects which gesture zones are active.
     let isListEmpty: Bool
-    /// 接收实时缩放（只被底栏观察，不引起 HomeView/Sheet 重算）。
-    let scaleModel: SheetScaleModel
     @ViewBuilder let content: () -> Content
+    /// 首页底栏（搜索行程 / 我的行程册 / 创建）。底栏被「移进控制器」、与卡片由**同一个**
+    /// `UIViewPropertyAnimator` 驱动 → 拖拽逐帧跟手、吸附同曲线同初速度，缩放像素级一致。
+    /// 详见 `placeSheet` 里对 `barView` 施加的 transform。
+    @ViewBuilder let bottomBar: () -> Bar
 
     func makeUIViewController(context: Context) -> FXSheetViewController {
         let vc = FXSheetViewController(
@@ -56,7 +49,12 @@ struct CarryBottomSheetFX<Content: View>: UIViewControllerRepresentable {
         let hosting = UIHostingController(rootView: AnyView(content()))
         hosting.view.backgroundColor = .clear
         vc.installContent(hosting)
+        // 底栏宿主：clear 背景，空白区域不吃 touch（让 pan 穿透到下方列表/卡片，仅按钮吃 tap）。
+        let barHosting = UIHostingController(rootView: AnyView(bottomBar()))
+        barHosting.view.backgroundColor = .clear
+        vc.installBottomBar(barHosting)
         context.coordinator.hostingVC = hosting
+        context.coordinator.barHostingVC = barHosting
         context.coordinator.sheetVC  = vc
         // Store the binding so the snap callback can write to it from UIKit.
         context.coordinator.mapCityOpacityBinding = $mapCityOpacity
@@ -67,23 +65,13 @@ struct CarryBottomSheetFX<Content: View>: UIViewControllerRepresentable {
                 }
             }
         }
-        // 实时缩放 → 底栏。直接写「只被底栏观察」的 model：拖拽即时（无动画）、吸附用匹配曲线
-        // （0.42s 无回弹，对齐 Sheet 的 UIViewPropertyAnimator）。不写 HomeView 顶层 state → 不重算 Sheet。
-        let model = scaleModel
-        vc.onScaleChanged = { scale, animation in
-            if let animation {
-                withAnimation(animation) { model.scale = scale }
-            } else {
-                var t = Transaction(); t.disablesAnimations = true
-                withTransaction(t) { model.scale = scale }
-            }
-        }
         return vc
     }
 
     func updateUIViewController(_ vc: FXSheetViewController, context: Context) {
         context.coordinator.mapCityOpacityBinding = $mapCityOpacity
         context.coordinator.hostingVC?.rootView = AnyView(content())
+        context.coordinator.barHostingVC?.rootView = AnyView(bottomBar())
         vc.isListEmpty = isListEmpty
         vc.updateLayout(expandedHeight: expandedHeight, collapsedOffset: collapsedOffset)
         if collapseRequest {
@@ -97,6 +85,7 @@ struct CarryBottomSheetFX<Content: View>: UIViewControllerRepresentable {
     final class Coordinator {
         weak var sheetVC: FXSheetViewController?
         var hostingVC: UIHostingController<AnyView>?
+        var barHostingVC: UIHostingController<AnyView>?
         var mapCityOpacityBinding: Binding<Double>?
 
         // Swift 6.3.2 优化器 bug：EarlyPerfInliner 在内联本类(合成) deinit 时，
@@ -167,9 +156,6 @@ final class FXSheetViewController: UIViewController {
 
     /// Called on main thread when a snap animation begins.
     var onSnapChanged: ((Bool) -> Void)?
-    /// 发布实时缩放给"只观察它的"视图（首页底栏同步缩放）。`animation`：拖拽传 nil（跟手即时、无动画）、
-    /// 吸附传与本次 animator 匹配的曲线（让观察者用同曲线追同一目标）。只读 emit，不改 Sheet 任何行为。
-    var onScaleChanged: ((CGFloat, Animation?) -> Void)?
 
     // MARK: State
 
@@ -203,6 +189,13 @@ final class FXSheetViewController: UIViewController {
     /// (origin-only shift), so it is never resized during a drag and SwiftUI never
     /// re-lays-out the sheet content mid-gesture.
     private weak var hostingView: UIView?
+    /// 首页底栏的宿主 view（搜索/行程册/创建）。钉在 `view` 底部、z 序在卡片之上，**不**放进
+    /// outerView（否则会随卡片一起滑走、改变定位）。缩放在 `placeSheet` 里与卡片**同一 animator**
+    /// 施加 `transform`（底边锚定）→ 与卡片像素级同步。
+    private weak var barView: UIView?
+    /// 底栏左右边距 / 底边距（替代旧 HomeView 里的 `.padding(.horizontal/.bottom, 18)`）。
+    private let barSideInset:   CGFloat = 18
+    private let barBottomInset: CGFloat = 18
 
     // MARK: Scroll coordination
 
@@ -328,6 +321,28 @@ final class FXSheetViewController: UIViewController {
         }
     }
 
+    /// 把首页底栏移进控制器：钉在 `view` 底部（leading/trailing/bottom 约束 = 旧的 18pt padding），
+    /// z 序在卡片之上。高度由 SwiftUI 内容的固有尺寸决定。缩放不在这里——在 `placeSheet` 里与卡片
+    /// 同 animator 施加 `transform`。访问 `self.view` 会触发 `viewDidLoad`（先建好 outerView），
+    /// 故底栏 addSubview 必在卡片之后 → 天然在上层。
+    func installBottomBar(_ hosting: UIViewController) {
+        if #available(iOS 16.0, *) {
+            (hosting as? UIHostingController<AnyView>)?.safeAreaRegions = []
+        } else {
+            hosting.additionalSafeAreaInsets = .zero
+        }
+        addChild(hosting)
+        hosting.view.translatesAutoresizingMaskIntoConstraints = false
+        view.addSubview(hosting.view)
+        hosting.didMove(toParent: self)
+        barView = hosting.view
+        NSLayoutConstraint.activate([
+            hosting.view.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: barSideInset),
+            hosting.view.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -barSideInset),
+            hosting.view.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.bottomAnchor, constant: -barBottomInset),
+        ])
+    }
+
     func updateLayout(expandedHeight h: CGFloat, collapsedOffset c: CGFloat) {
         guard h != expandedHeight || c != collapsedOffset else { return }
         let wasCollapsed = isCollapsedState
@@ -419,10 +434,20 @@ final class FXSheetViewController: UIViewController {
         // card AND its content+padding together (constant ratio = Flighty's "padding stays
         // fixed" look); the bounds height performs the vertical collapse clip.
         currentScale = g.scale
-        // 仅「拖拽」时逐帧把缩放发给底栏（跟手、无动画）。吸附由各分支单独发"带匹配曲线的 target"，
-        // 故 animator 块里这次 placeSheet **不再** emit（runningAnimator != nil 时跳过）——
-        // 否则会用一个不带动画的同值 set 覆盖掉底栏正在进行的吸附动画、导致底栏瞬跳脱节。
-        if runningAnimator == nil { onScaleChanged?(g.scale, nil) }
+        // 底栏与卡片**同一 scale、底边锚定**缩放。此处对 barView 施加 transform：
+        //  · 拖拽：placeSheet 每帧被调 → 底栏逐帧跟手（UIView transform 直接 set，无隐式动画）。
+        //  · 吸附：placeSheet(at: target) 在 snap 的 UIViewPropertyAnimator 块内被调 → 底栏 transform
+        //    被**同一个 animator** 插值 → 与卡片同曲线、同初速度、逐帧一致（frame-perfect）。
+        // 不引入第二驱动源（playbook §5）——底栏就搭在卡片同一条 CA 时间线上。
+        // 底边锚定公式：默认 anchor=(0.5,0.5)，先按 scale 缩、再下移 (1-s)·h/2 把底边钉回原处，
+        // 等价于 SwiftUI 的 `.scaleEffect(s, anchor: .bottom)`，且不与 Auto Layout 冲突（transform 独立于 frame）。
+        if let bar = barView {
+            let s = g.scale
+            let h = bar.bounds.height
+            bar.transform = h > 0
+                ? CGAffineTransform(translationX: 0, y: (1 - s) * h / 2).scaledBy(x: s, y: s)
+                : CGAffineTransform(scaleX: s, y: s)
+        }
         outerView.bounds = CGRect(origin: .zero, size: g.boundsSize)
         outerView.transform = CGAffineTransform(scaleX: g.scale, y: g.scale)
         outerView.center = g.center
@@ -606,8 +631,7 @@ final class FXSheetViewController: UIViewController {
                 }
             }
             runningAnimator = anim
-            // 底栏用匹配曲线追同一目标：direct = 0.42s、无回弹（对齐本 animator 的 dampingRatio 1.0）。
-            onScaleChanged?(geometry(for: target)?.scale ?? currentScale, .spring(duration: 0.42, bounce: 0))
+            // 底栏缩放由本 animator 块内的 placeSheet(at: target) 同步插值（见 placeSheet）。
             anim.startAnimation()
             return
         }
@@ -651,8 +675,7 @@ final class FXSheetViewController: UIViewController {
         }
 
         runningAnimator = anim
-        // 底栏匹配 spring：0.68s + 与 dampingRatio 对应的 bounce（收起 0.95→~0.05，展开 0.88→~0.12）。
-        onScaleChanged?(geometry(for: target)?.scale ?? currentScale, .spring(duration: 0.68, bounce: isCollapsing ? 0.05 : 0.12))
+        // 底栏缩放由本 animator 块内的 placeSheet(at: target) 同步插值（见 placeSheet）。
         anim.startAnimation()
     }
 
