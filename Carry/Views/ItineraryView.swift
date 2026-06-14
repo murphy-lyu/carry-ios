@@ -44,12 +44,20 @@ private enum ItinerarySheet: Identifiable {
     case addStop(dayId: UUID)
     case editStop(ItineraryStop)
     case optimize(dayId: UUID)
+    case addTransport(dayId: UUID, mode: TransportMode)
+    case editTransport(UUID)
+    case addLodging(checkInDayOrder: Int)
+    case editLodging(UUID)
 
     var id: String {
         switch self {
         case .addStop(let dayId): return "add-\(dayId)"
         case .editStop(let stop): return "edit-\(stop.id)"
         case .optimize(let dayId): return "opt-\(dayId)"
+        case .addTransport(let dayId, let mode): return "addtr-\(dayId)-\(mode.rawValue)"
+        case .editTransport(let id): return "edittr-\(id)"
+        case .addLodging(let order): return "addlg-\(order)"
+        case .editLodging(let id): return "editlg-\(id)"
         }
     }
 }
@@ -120,6 +128,14 @@ struct ItineraryView: View {
                 StopEditView(tripId: tripId, stop: stop)
             case .optimize(let dayId):
                 OptimizeRouteView(tripId: tripId, dayId: dayId)
+            case .addTransport(let dayId, let mode):
+                TransportEditView(tripId: tripId, dayId: dayId, initialMode: mode)
+            case .editTransport(let id):
+                TransportEditView(tripId: tripId, segmentId: id)
+            case .addLodging(let order):
+                LodgingEditView(tripId: tripId, initialCheckInDayOrder: order)
+            case .editLodging(let id):
+                LodgingEditView(tripId: tripId, stayId: id)
             }
         }
         .toolbarBackground(Color(UIColor.systemBackground), for: .navigationBar)
@@ -147,6 +163,8 @@ struct ItineraryView: View {
                 scrollTargetDayId: activeFocusedDayId,
                 stopContent: { AnyView(stopRow($0)) },
                 legContent: { AnyView(legRow($0)) },
+                transportContent: { AnyView(transportRow($0)) },
+                lodgingContent: { AnyView(lodgingRow($0)) },
                 addStopContent: { AnyView(addStopRow($0)) },
                 optimizeContent: { AnyView(optimizeRow($0)) },
                 headerContent: { AnyView(dayHeaderRow($0)) },
@@ -269,12 +287,24 @@ struct ItineraryView: View {
         return ItineraryDayPalette.color(forDayIndex: day.sortOrder)
     }
 
-    /// 每天的结构快照（供 collection diffable）。
+    /// 每天的结构快照（供 collection diffable）。entries 顺序 = 覆盖本天的住宿条 → 时间轴（停靠点 +
+    /// 交通段，按 day.timeline 的共享 sortOrder）。leg / addStop / optimize 由 collection 自行插入/追加。
     private var daySections: [ItineraryDaySection] {
-        days.map { day in
-            ItineraryDaySection(
+        let stays = bundle?.safeLodgingStays ?? []
+        return days.map { day in
+            // 覆盖本天（含入住日、不含退房日）的住宿，置于当天顶部作常驻条。
+            let lodgingRows: [ItineraryRowID] = stays
+                .filter { $0.covers(dayOrder: day.sortOrder) }
+                .map { .lodging($0.id) }
+            let timelineRows: [ItineraryRowID] = day.timeline.map { item in
+                switch item {
+                case .stop(let s): return .stop(s.id)
+                case .transport(let t): return .transport(t.id)
+                }
+            }
+            return ItineraryDaySection(
                 id: day.id,
-                stopIDs: day.sortedStops.map(\.id),
+                entries: lodgingRows + timelineRows,
                 // 固定首尾后，需中间 ≥2 个点才有可优化空间，故坐标点 ≥4 才露入口。
                 showsOptimize: day.sortedStops.filter(\.hasCoordinate).count >= 4
             )
@@ -318,10 +348,48 @@ struct ItineraryView: View {
         }
     }
 
+    /// 交通段连接行（边）：mode 图标落在 rail 列，详情列显示班次 + 起讫站/时间。点击编辑。
+    @ViewBuilder
+    private func transportRow(_ segmentID: UUID) -> some View {
+        if let day = days.first(where: { ($0.segments ?? []).contains { $0.id == segmentID } }),
+           let seg = day.sortedSegments.first(where: { $0.id == segmentID }) {
+            TransportTimelineRow(segment: seg, dayColor: ItineraryDayPalette.color(forDayIndex: day.sortOrder))
+                .padding(.horizontal, 16)
+                .contentShape(Rectangle())
+                .onTapGesture { activeSheet = .editTransport(segmentID) }
+        }
+    }
+
+    /// 住宿常驻条：覆盖本天的住宿，置于当天顶部。点击编辑。
+    @ViewBuilder
+    private func lodgingRow(_ stayID: UUID) -> some View {
+        if let stay = (bundle?.lodgingStays ?? []).first(where: { $0.id == stayID }) {
+            LodgingBannerRow(stay: stay)
+                .padding(.horizontal, 16)
+                .contentShape(Rectangle())
+                .onTapGesture { activeSheet = .editLodging(stayID) }
+        }
+    }
+
+    /// 统一「+ 添加」入口（spec: itinerary-transport-lodging.md）：菜单选类型 → 地点 / 航班 / 火车 / 住宿。
+    /// 次级内联动作用 secondary 灰，与打包「添加物品」一致（避免每组一行 accent 蓝、喧宾夺主）。
     private func addStopRow(_ dayID: UUID) -> some View {
-        // 次级内联动作用 secondary 灰，与打包「添加物品」一致（避免每组一行 accent 蓝、喧宾夺主）。
-        Button { activeSheet = .addStop(dayId: dayID) } label: {
-            inlineActionLabel(titleKey: "itinerary.add_stop", icon: "plus")
+        let order = days.first(where: { $0.id == dayID })?.sortOrder ?? 0
+        return Menu {
+            Button { activeSheet = .addStop(dayId: dayID) } label: {
+                Label("itinerary.kind.place", systemImage: "mappin")
+            }
+            Button { activeSheet = .addTransport(dayId: dayID, mode: .flight) } label: {
+                Label(TransportMode.flight.titleKey, systemImage: TransportMode.flight.symbolName)
+            }
+            Button { activeSheet = .addTransport(dayId: dayID, mode: .train) } label: {
+                Label(TransportMode.train.titleKey, systemImage: TransportMode.train.symbolName)
+            }
+            Button { activeSheet = .addLodging(checkInDayOrder: order) } label: {
+                Label("itinerary.category.lodging", systemImage: "bed.double")
+            }
+        } label: {
+            inlineActionLabel(titleKey: "itinerary.add", icon: "plus")
         }
         .buttonStyle(.plain)
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -472,6 +540,109 @@ private struct ItineraryLegConnector: View {
             Spacer(minLength: 0)
         }
         .frame(height: legGap)
+    }
+}
+
+// MARK: - TransportTimelineRow
+
+/// 交通段（边）行：rail 列放 mode 图标（当天色描边圆），详情列放班次 + 起讫站/时间。
+/// 与 TimelineStopRow 的两列网格（rail 宽 30 + spacing 12）对齐，读成同一条时间轴。
+private struct TransportTimelineRow: View {
+    let segment: TransportSegment
+    let dayColor: Color
+
+    private let railWidth: CGFloat = 30
+    private let railSpacing: CGFloat = 12
+
+    var body: some View {
+        HStack(spacing: railSpacing) {
+            ZStack {
+                Circle().strokeBorder(dayColor.opacity(0.5), lineWidth: 1.5)
+                Image(systemName: segment.mode.symbolName)
+                    .font(.system(size: 12, weight: .semibold))
+                    .foregroundStyle(dayColor)
+            }
+            .frame(width: 24, height: 24)
+            .frame(width: railWidth)
+
+            VStack(alignment: .leading, spacing: 2) {
+                // 主行：班次（航司 · 班次号）；都空则退化用 mode 名。
+                Text(titleText)
+                    .font(.system(.subheadline, design: .rounded).weight(.semibold))
+                    .foregroundStyle(.primary)
+                // 次行：起讫站（+ 时间）。
+                if let route = routeText {
+                    Text(route)
+                        .font(.system(.footnote, design: .rounded))
+                        .foregroundStyle(.secondary)
+                }
+            }
+            Spacer(minLength: 0)
+        }
+        .padding(.vertical, 8)
+    }
+
+    private var titleText: String {
+        let parts = [segment.carrier, segment.number].filter { !$0.isEmpty }
+        if parts.isEmpty {
+            return NSLocalizedString(segment.mode.localizationKey, comment: "")
+        }
+        return parts.joined(separator: " · ")
+    }
+
+    /// 「KMG 09:00 → PEK 12:30」，缺项自适应；跨天到达加「+N」。
+    private var routeText: String? {
+        let from = endpointLabel(name: segment.fromName, code: segment.fromCode, minutes: segment.departLocalMinutes, dayOffset: 0)
+        let to = endpointLabel(name: segment.toName, code: segment.toCode, minutes: segment.arriveLocalMinutes,
+                               dayOffset: segment.arriveDayOrder - segment.departDayOrder)
+        let f = from.trimmingCharacters(in: .whitespaces)
+        let t = to.trimmingCharacters(in: .whitespaces)
+        if f.isEmpty && t.isEmpty { return nil }
+        return "\(f) → \(t)"
+    }
+
+    private func endpointLabel(name: String, code: String, minutes: Int, dayOffset: Int) -> String {
+        let place = !code.isEmpty ? code : name
+        var s = place
+        if minutes >= 0 {
+            let time = timeLabel(dayMinutes: minutes)
+            s = place.isEmpty ? time : "\(place) \(time)"
+            if dayOffset > 0 { s += " +\(dayOffset)" }
+        }
+        return s
+    }
+}
+
+// MARK: - LodgingBannerRow
+
+/// 住宿常驻条：床图标 + 名称 + 晚数。轻量、secondary，置于覆盖天顶部（spec: itinerary-transport-lodging.md）。
+private struct LodgingBannerRow: View {
+    let stay: LodgingStay
+
+    private let railWidth: CGFloat = 30
+    private let railSpacing: CGFloat = 12
+
+    var body: some View {
+        HStack(spacing: railSpacing) {
+            Image(systemName: "bed.double.fill")
+                .font(.system(size: 13))
+                .foregroundStyle(.secondary)
+                .frame(width: railWidth)
+            Text(stay.name.isEmpty ? NSLocalizedString("itinerary.category.lodging", comment: "") : stay.name)
+                .font(.system(.footnote, design: .rounded).weight(.medium))
+                .foregroundStyle(.secondary)
+                .lineLimit(1)
+            Spacer(minLength: 8)
+            Text(String(format: NSLocalizedString("itinerary.lodging.nights_value", comment: ""), stay.nights))
+                .font(.system(.caption, design: .rounded))
+                .foregroundStyle(.tertiary)
+        }
+        .padding(.vertical, 7)
+        .padding(.horizontal, 12)
+        .background(
+            RoundedRectangle(cornerRadius: 10, style: .continuous)
+                .fill(Color(.secondarySystemBackground).opacity(0.6))
+        )
     }
 }
 

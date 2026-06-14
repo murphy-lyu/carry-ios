@@ -140,6 +140,12 @@ final class CarryLogger {
         case itineraryOptimizeApplied  = "itinerary_optimize_applied"
         case itineraryOptimizeDiscarded = "itinerary_optimize_discarded"
 
+        // 行程交通段 + 住宿（spec: itinerary-transport-lodging.md）
+        case transportAdded         = "transport_added"
+        case transportRemoved       = "transport_removed"
+        case lodgingAdded           = "lodging_added"
+        case lodgingRemoved         = "lodging_removed"
+
         // 行程详情两面切换（spec: app-navigation-framework.md）——衡量行程/打包频次
         case detailFaceSwitched        = "detail_face_switched"
     }

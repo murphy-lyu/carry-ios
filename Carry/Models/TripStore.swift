@@ -1255,6 +1255,7 @@ final class TripStore: ObservableObject {
         if day.segments == nil { day.segments = [] }
         day.segments?.append(segment)
         save()
+        CarryLogger.shared.log(.transportAdded, context: "mode=\(mode.rawValue)")
         return segment.id
     }
 
@@ -1319,6 +1320,7 @@ final class TripStore: ObservableObject {
         context.delete(seg)
         day.segments?.removeAll { $0.id == segmentId }
         save()
+        CarryLogger.shared.log(.transportRemoved)
     }
 
     // MARK: - Lodging（住宿跨度 CRUD · spec: itinerary-transport-lodging.md）
@@ -1357,6 +1359,7 @@ final class TripStore: ObservableObject {
         if trip.lodgingStays == nil { trip.lodgingStays = [] }
         trip.lodgingStays?.append(stay)
         save()
+        CarryLogger.shared.log(.lodgingAdded)
         return stay.id
     }
 
@@ -1396,6 +1399,7 @@ final class TripStore: ObservableObject {
         context.delete(stay)
         trip.lodgingStays?.removeAll { $0.id == stayId }
         save()
+        CarryLogger.shared.log(.lodgingRemoved)
     }
 
     /// Adds scene keys to a trip and merges the supplied sections.
