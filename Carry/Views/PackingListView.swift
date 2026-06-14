@@ -228,6 +228,17 @@ struct PackingListView: View {
                                 Label("Share list", systemImage: "square.and.arrow.up")
                             }
                         }
+                        // 分享行程（行程规划面）：渲染成海报图 + 文本兜底，走系统分享面板。
+                        if detailTab == .itinerary {
+                            Button {
+                                guard let trip = bundle else { return }
+                                CarryLogger.shared.log(.itineraryShared)
+                                TripShare.present(for: trip)
+                            } label: {
+                                Label("itinerary.share", systemImage: "square.and.arrow.up")
+                            }
+                            .disabled(!(bundle.map(TripShare.hasShareableItinerary) ?? false))
+                        }
                         Divider()
                         Button(role: .destructive) {
                             showDeleteConfirmation = true
