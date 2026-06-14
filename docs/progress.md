@@ -3,6 +3,16 @@
 ## 最后更新
 2026-06-14
 
+## 上次改动摘要（首页底栏随 Sheet 同步缩放·终极版 + 全盘审计 · 2026-06-14）
+
+> 首页底栏（搜索 / 行程册 / 创建 FAB）从 HomeView 的 `.safeAreaInset` **移进 `FXSheetViewController`**，与卡片由**同一个 `UIViewPropertyAnimator`** 驱动 → 像素级同步缩放（取代基线近似版 `b2be676` 的 SwiftUI `scaleEffect`）。已提交 `main`（`7a5a900` 实现 + `efddd1d` playbook §19 审计存档）、真机+模拟器双验收通过。详见 `docs/home-sheet-debug-playbook.md` §19。
+
+- **机制（同 animator·无第二驱动）**：底栏宿主钉 `view` 底（约束=原 18pt padding）、z 序在卡片上、不入 outerView；缩放在唯一漏斗 `placeSheet` 里对 `barView` 施加**底边锚定**同 `scale` transform（`translate(0,(1-s)·h/2)·scale(s)` ≈ `.scaleEffect(anchor:.bottom)`）。吸附时 `placeSheet(at:target)` 在 snap animator 块内被调用 → 底栏被同一 animator 插值；拖拽时逐帧 set（无隐式动画）跟手。守住 playbook §5（不加第二驱动）。
+- **手势穿透（头号风险·已守住）**：底栏空白区 HostingController 返回 nil → pan 穿透到列表（从底栏上滑仍能滚列表）；按钮吃 tap；列表底部 124/176pt 占位行兜底。删除基线的 `SheetScaleModel`/`onScaleChanged`/`BottomBarScaleSync`/`import Combine`（不留过渡件）。
+- **全盘审计结论**：静态全链路 + iPhone 17 Pro 模拟器实测，无 bug/崩溃/死锁/循环引用；运行时零 Auto Layout 约束冲突、零 AttributeGraph 循环、零泄漏；展开/收起/新建/滚动/三按钮全通过。正确性由构造保证（所有运动经 `placeSheet`、底栏与卡片天然同步）。
+- **唯一已知取舍（非 bug）**：去掉基线"透明吸 tap 背景"后，底栏三按钮间两条 ~14pt 空隙的**点击**会穿透到列表行——为保住"底栏上滑滚列表"而做的架构性取舍（二者在 UIKit 兄弟视图下互斥），危害可忽略，保持现状。
+- **还原点**：`b2be676`（`git checkout b2be676 -- Carry/Views/CarryBottomSheetFX.swift Carry/Views/HomeView.swift`）。
+
 ## 上次改动摘要（行程地图预览：空态改「地图永不为空」· 2026-06-14）
 
 > `ItineraryMapView` 顶部预览的空态原是灰色渐变占位盒（map 图标 + 「还没有地点」），用户反馈「空空的」。根因＝把内容位让给了 chrome 占位盒，且当天空时常谎称整趟空白。按 north-star §1（内容为王）/§8（叙事）/§9（顺平台，对齐 Apple Maps「地图永不是灰盒」）重做。已提交 `main`、编译绿（主 app + Widget）、待真机验收。
