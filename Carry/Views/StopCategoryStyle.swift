@@ -27,3 +27,20 @@ extension StopCategory {
     /// 本地化标题 key（itinerary.category.<raw>，已在 Localizable.xcstrings 显式写 en）。
     var titleKey: LocalizedStringKey { LocalizedStringKey(localizationKey) }
 }
+
+extension TransportMode {
+    /// SF Symbol 名（技术常量，非用户文案）。
+    var symbolName: String {
+        switch self {
+        case .flight:    return "airplane"
+        case .train:     return "train.side.front.car"
+        case .bus:       return "bus"
+        case .ferry:     return "ferry.fill"
+        case .carRental: return "car.fill"
+        case .other:     return "arrow.triangle.swap"
+        }
+    }
+
+    /// 本地化标题 key（itinerary.transport.mode.<raw>，已在 Localizable.xcstrings 显式写 en）。
+    var titleKey: LocalizedStringKey { LocalizedStringKey(localizationKey) }
+}

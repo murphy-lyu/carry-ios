@@ -338,6 +338,15 @@ struct ItineraryMapView: View {
                             style: StrokeStyle(lineWidth: 3, lineCap: .round, lineJoin: .round))
             }
         }
+        // 交通段（边）：起讫两端都有坐标才画**大圆弧虚线**（contourStyle: .geodesic），
+        // 与市内步行/驾车的实线路程区分——一眼看出「这段是飞/跨城的」（spec: itinerary-transport-lodging.md）。
+        ForEach(days, id: \.id) { day in
+            ForEach(day.sortedSegments.filter { $0.hasRouteCoordinates }, id: \.id) { seg in
+                MapPolyline(coordinates: [seg.fromCoordinate!, seg.toCoordinate!], contourStyle: .geodesic)
+                    .stroke(ItineraryDayPalette.color(forDayIndex: day.sortOrder).opacity(dimmed ? 0.3 : 0.9),
+                            style: StrokeStyle(lineWidth: 2.5, lineCap: .round, dash: [2, 7]))
+            }
+        }
     }
 
     /// 地图针标注内容（抽出以缓解 Map 闭包的类型检查负担）。
