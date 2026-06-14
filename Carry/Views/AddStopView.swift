@@ -55,6 +55,12 @@ struct AddStopView: View {
     /// 行程目的地坐标，用于搜索区域偏置（可为 0/0）。
     var biasLatitude: Double = 0
     var biasLongitude: Double = 0
+    /// 非 nil = relocate 模式：选中结果更新该停靠点的坐标/地址/名称，而非新增。
+    var relocateStopId: UUID? = nil
+    /// relocate 成功后回传新名称（供调用方同步显示）。
+    var onRelocated: ((String) -> Void)? = nil
+
+    private var isRelocating: Bool { relocateStopId != nil }
 
     @EnvironmentObject var store: TripStore
     @Environment(\.dismiss) private var dismiss
@@ -111,7 +117,7 @@ struct AddStopView: View {
             .safeAreaInset(edge: .top) { searchField }
             .disabled(isResolving)
             .overlay { if isResolving { ProgressView() } }
-            .navigationTitle(Text("itinerary.add_stop.title"))
+            .navigationTitle(Text(isRelocating ? "itinerary.stop.edit.relocate" : "itinerary.add_stop.title"))
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
@@ -134,9 +140,12 @@ struct AddStopView: View {
             placeholder: "itinerary.add_stop.search_placeholder",
             focus: $searchFocused
         ) {
-            Divider()
-                .frame(height: 18)
-            categoryMenu
+            // relocate 模式只换位置、不改类别，故隐藏类别菜单。
+            if !isRelocating {
+                Divider()
+                    .frame(height: 18)
+                categoryMenu
+            }
         }
         .padding(.horizontal, 16)
         .padding(.top, 8)
@@ -176,15 +185,28 @@ struct AddStopView: View {
                 let item = response?.mapItems.first
                 let coord = item?.placemark.coordinate
                 let address = item?.placemark.title ?? completion.subtitle
-                store.addItineraryStop(
-                    tripId: tripId,
-                    dayId: dayId,
-                    name: completion.title,
-                    latitude: coord?.latitude ?? 0,
-                    longitude: coord?.longitude ?? 0,
-                    address: address,
-                    category: category
-                )
+                if let relocateStopId {
+                    // relocate：更新本停靠点的坐标/地址/名称，类别保持不变。
+                    store.updateItineraryStop(
+                        tripId: tripId,
+                        stopId: relocateStopId,
+                        name: completion.title,
+                        latitude: coord?.latitude ?? 0,
+                        longitude: coord?.longitude ?? 0,
+                        address: address
+                    )
+                    onRelocated?(completion.title)
+                } else {
+                    store.addItineraryStop(
+                        tripId: tripId,
+                        dayId: dayId,
+                        name: completion.title,
+                        latitude: coord?.latitude ?? 0,
+                        longitude: coord?.longitude ?? 0,
+                        address: address,
+                        category: category
+                    )
+                }
                 dismiss()
             }
         }
@@ -193,7 +215,16 @@ struct AddStopView: View {
     private func addManualStop() {
         let name = completer.query.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !name.isEmpty else { return }
-        store.addItineraryStop(tripId: tripId, dayId: dayId, name: name, category: category)
+        if let relocateStopId {
+            // relocate 到无坐标地点：改名并清空坐标/地址（变回「无定位停靠点」）。
+            store.updateItineraryStop(
+                tripId: tripId, stopId: relocateStopId,
+                name: name, latitude: 0, longitude: 0, address: ""
+            )
+            onRelocated?(name)
+        } else {
+            store.addItineraryStop(tripId: tripId, dayId: dayId, name: name, category: category)
+        }
         dismiss()
     }
 }

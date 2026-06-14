@@ -88,13 +88,9 @@ struct TripDateRangePickerSheet: View {
                         .frame(height: 48)
                     }
                     .buttonStyle(.plain)
-                    .background(footerBlendColor)
-                    .overlay(
-                        Rectangle()
-                            .fill(Color.primary.opacity(0.06))
-                            .frame(height: 0.5),
-                        alignment: .top
-                    )
+                    // 月历滚动内容在「跳过日期」栏上沿柔和淡出（全 App 统一，见 BottomBarScrim），
+                    // 取代原硬分隔线；淡出到 footerBlendColor（= 背景底端色）故无缝。
+                    .bottomBarScrim(footerBlendColor)
                 }
             }
             .navigationTitle("Select Dates")

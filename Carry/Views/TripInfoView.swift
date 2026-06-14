@@ -166,10 +166,10 @@ struct TripInfoView: View {
                 .allowsHitTesting(canContinue)
                 .padding(.horizontal, 16)
             }
-            .padding(.top, 12)
             .padding(.bottom, 16)
             .frame(maxWidth: .infinity)
-            .background(Color(UIColor.systemBackground))
+            // 内容在按钮上沿柔和淡出（全 App 统一，见 BottomBarScrim）；一级页淡出到 systemBackground。
+            .bottomBarScrim(Color(UIColor.systemBackground))
         }
         .navigationTitle("")
         .navigationBarTitleDisplayMode(.inline)

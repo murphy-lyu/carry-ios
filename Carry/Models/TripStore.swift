@@ -1074,7 +1074,10 @@ final class TripStore: ObservableObject {
         category: StopCategory? = nil,
         plannedStartMinutes: Int? = nil,
         stayMinutes: Int? = nil,
-        note: String? = nil
+        note: String? = nil,
+        latitude: Double? = nil,
+        longitude: Double? = nil,
+        address: String? = nil
     ) {
         guard let trip = trips.first(where: { $0.id == tripId }),
               let stop = trip.safeItineraryDays.flatMap({ $0.stops ?? [] }).first(where: { $0.id == stopId }) else { return }
@@ -1083,6 +1086,9 @@ final class TripStore: ObservableObject {
         if let plannedStartMinutes { stop.plannedStartMinutes = plannedStartMinutes }
         if let stayMinutes { stop.stayMinutes = stayMinutes }
         if let note { stop.note = note }
+        if let latitude { stop.latitude = latitude }
+        if let longitude { stop.longitude = longitude }
+        if let address { stop.address = address }
         save()
     }
 

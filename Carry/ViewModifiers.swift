@@ -393,6 +393,48 @@ extension CarrySearchField where Trailing == EmptyView {
     }
 }
 
+// MARK: - BottomBarScrim
+
+/// 底部浮动栏 / CTA 的「渐变垫底」——全 App 统一：滚动内容在栏的上沿**柔和淡出**（而非硬切），
+/// 栏本身坐在实心底色上、不透出列表内容。用作底部 `safeAreaInset(.bottom)` 内容的修饰器，单一真源
+/// （替代各页各写一段 LinearGradient）。
+///
+/// 实现：内容上方留出 `fadeHeight` 淡入带；背景 = 顶部 `fadeHeight` 高的「透明→实心」渐变条 + 其下
+/// 实心 `color` 填满。与按钮高度无关（定高淡出带 + 实心兜底），故各页观感一致、不需按高度调比例。
+///
+/// - color: 淡出到的底色 = **该页背景色**（一级页 `systemBackground`；二级弹层用 chrome 同色系），
+///   故渐变底端与页面无缝。
+/// - fadeHeight: 上沿淡出带高度（亦即按钮上方留白），默认 22。
+struct BottomBarScrim: ViewModifier {
+    let color: Color
+    var fadeHeight: CGFloat = 22
+
+    func body(content: Content) -> some View {
+        content
+            .padding(.top, fadeHeight)
+            .background(
+                VStack(spacing: 0) {
+                    LinearGradient(
+                        colors: [color.opacity(0), color],
+                        startPoint: .top,
+                        endPoint: .bottom
+                    )
+                    .frame(height: fadeHeight)
+                    color
+                }
+                // 实心兜底延伸到屏幕底边，盖住 home indicator 条，避免底缘露出页面接缝。
+                .ignoresSafeArea(edges: .bottom)
+            )
+    }
+}
+
+extension View {
+    /// 见 `BottomBarScrim`。把底部栏的实心背景替换为「上沿渐变淡出 + 实心兜底」。
+    func bottomBarScrim(_ color: Color, fadeHeight: CGFloat = 22) -> some View {
+        modifier(BottomBarScrim(color: color, fadeHeight: fadeHeight))
+    }
+}
+
 // MARK: - CarryConfirmationDialog
 
 /// App-styled confirmation dialog — replaces system .alert where visual consistency matters.

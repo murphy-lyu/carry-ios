@@ -146,6 +146,7 @@ struct ItineraryView: View {
                 sections: daySections,
                 scrollTargetDayId: activeFocusedDayId,
                 stopContent: { AnyView(stopRow($0)) },
+                legContent: { AnyView(legRow($0)) },
                 addStopContent: { AnyView(addStopRow($0)) },
                 optimizeContent: { AnyView(optimizeRow($0)) },
                 headerContent: { AnyView(dayHeaderRow($0)) },
@@ -293,12 +294,24 @@ struct ItineraryView: View {
                 stop: stop,
                 index: index,
                 isLast: index == dayStops.count - 1,
-                legFromPrevious: legLabel(stops: dayStops, index: index),
                 dayColor: ItineraryDayPalette.color(forDayIndex: day.sortOrder),
                 navApps: navApps
             )
             .padding(.horizontal, 16)
             // 不再「点击整行=编辑」；编辑改由向左滑动出现的「编辑」按钮触发（见 onEdit）。
+        }
+    }
+
+    /// 连接段（连线 + 距离），独立成行夹在相邻停靠点之间。入参为下方停靠点 id。
+    @ViewBuilder
+    private func legRow(_ toStopID: UUID) -> some View {
+        if let day = days.first(where: { ($0.stops ?? []).contains { $0.id == toStopID } }),
+           let index = day.sortedStops.firstIndex(where: { $0.id == toStopID }), index > 0 {
+            ItineraryLegConnector(
+                distance: legLabel(stops: day.sortedStops, index: index),
+                railColor: ItineraryDayPalette.color(forDayIndex: day.sortOrder).opacity(0.25)
+            )
+            .padding(.horizontal, 16)
         }
     }
 
@@ -430,59 +443,21 @@ struct ItineraryView: View {
     }
 }
 
-// MARK: - TimelineStopRow
+// MARK: - ItineraryLegConnector
 
-/// 时间轴行：leading 序号圆点 + 连线；序号圆点**与停靠点名称对齐**；段间直线距离落在
-/// 名称上方的「间隙」里（压在连线上），不与名称/地址抢同一行。
-private struct TimelineStopRow: View {
-    let stop: ItineraryStop
-    let index: Int
-    let isLast: Bool
-    /// 与上一点的距离标签（首点为 nil）。
-    let legFromPrevious: String?
-    /// 当天配色（与地图针 / 路线同色，便于图文互相对照）。
-    let dayColor: Color
-    /// 已安装的导航 App（仅有坐标时显示导航按钮；≥2 个弹锚定 Menu、1 个直接调起）。
-    let navApps: [MapNavigationApp]
-
-    private var railColor: Color { dayColor.opacity(0.25) }
-    private let railWidth: CGFloat = 26
-    private let circleSize: CGFloat = 24
-    private let railSpacing: CGFloat = 12
-    /// 固定行高——rail 连线与行间距由此完全确定，全程无 `maxHeight: .infinity` 贪婪 frame，
-    /// 故自适应 cell 不会被撑高、各行（含首/末行）几何严格一致。
-    private let rowHeight: CGFloat = 46
-    /// 相邻停靠点之间的固定竖向间距；距离标签压在其正中。
-    private let legGap: CGFloat = 24
-    /// 圆点上/下连线的固定半段长度（圆点在固定行高里垂直居中）。
-    private var halfLine: CGFloat { (rowHeight - circleSize) / 2 }
+/// 相邻停靠点之间的连接段：固定高度的竖线 + 居中距离标签。独立成行（不再塞进 stop cell 顶部），
+/// 使 stop cell 只含主行、左滑按钮按主行高度居中/定大小。竖线与 TimelineStopRow 的 rail 半段首尾相接。
+private struct ItineraryLegConnector: View {
+    let distance: String?
+    let railColor: Color
+    private let railWidth: CGFloat = 26       // = TimelineStopRow.railWidth
+    private let legGap: CGFloat = 24          // = 原 TimelineStopRow.legGap
 
     var body: some View {
-        VStack(spacing: 0) {
-            // 连接段：有上一点时画竖线 + 居中距离标签；首点画等高透明占位。
-            // 关键：首点也保留 legGap 高度，使每个 stop cell 恒为 legGap+rowHeight。
-            // 否则首点 cell（仅 rowHeight）比其余矮，UICollectionView 自适应列表会因
-            // 估算高度错配在其前后插入间距（实测每处约 14pt），导致首点间距偏大。
-            if index > 0 {
-                legSegment
-            } else {
-                Color.clear.frame(height: legGap)
-            }
-            // 停靠点主行：固定行高 + 居中对齐；rail 圆点与内容同在行中心，自然对齐。
-            HStack(alignment: .center, spacing: railSpacing) {
-                rail
-                content
-            }
-            .frame(height: rowHeight)
-        }
-    }
-
-    /// 两个停靠点之间的连接段：竖线 + 居中的距离标签。
-    private var legSegment: some View {
         ZStack {
             Rectangle().fill(railColor).frame(width: 1.5)
-            if let legFromPrevious {
-                Text(legFromPrevious)
+            if let distance {
+                Text(distance)
                     .font(.system(size: 10.5, weight: .medium, design: .rounded))
                     .foregroundStyle(.secondary)
                     .padding(.horizontal, 3)
@@ -492,6 +467,76 @@ private struct TimelineStopRow: View {
         }
         .frame(width: railWidth, height: legGap)
         .frame(maxWidth: .infinity, alignment: .leading)
+    }
+}
+
+// MARK: - TimelineStopRow
+
+/// 时间轴行：leading 序号圆点 + 连线；序号圆点**与停靠点名称对齐**。段间连线/距离已拆为
+/// 独立的 `ItineraryLegConnector` 行夹在相邻停靠点之间（本行只含主行 + 可选备注）。
+private struct TimelineStopRow: View {
+    let stop: ItineraryStop
+    let index: Int
+    let isLast: Bool
+    /// 当天配色（与地图针 / 路线同色，便于图文互相对照）。
+    let dayColor: Color
+    /// 已安装的导航 App（仅有坐标时显示导航按钮；≥2 个弹锚定 Menu、1 个直接调起）。
+    let navApps: [MapNavigationApp]
+
+    private var railColor: Color { dayColor.opacity(0.25) }
+    private let railWidth: CGFloat = 26
+    private let circleSize: CGFloat = 24
+    private let railSpacing: CGFloat = 12
+    /// 固定行高——rail 连线由此完全确定，全程无 `maxHeight: .infinity` 贪婪 frame，
+    /// 故自适应 cell 不会被撑高、各行（含首/末行）几何严格一致。
+    private let rowHeight: CGFloat = 46
+    /// 圆点上/下连线的固定半段长度（圆点在固定行高里垂直居中），与相邻 `ItineraryLegConnector` 首尾相接。
+    private var halfLine: CGFloat { (rowHeight - circleSize) / 2 }
+
+    var body: some View {
+        // cell 只含主行（+ 可选备注）；段间连接段由独立的 ItineraryLegConnector 行承载。
+        // 这样 cell 高度 = 主行高，左滑删除按钮按主行居中/定大小，不再因连接段被撑高而偏上偏大。
+        VStack(spacing: 0) {
+            // 停靠点主行：固定行高 + 居中对齐；rail 圆点与内容同在行中心，自然对齐。
+            HStack(alignment: .center, spacing: railSpacing) {
+                rail
+                content
+            }
+            .frame(height: rowHeight)
+            // 备注预览行：挂在主行下方，不动其固定几何；左侧补一条延续的连线列，使连接线不断开。
+            if !stop.note.isEmpty {
+                noteRow
+            }
+        }
+    }
+
+    /// 备注预览：让用户不进编辑也能看到备注。缩进到内容列、前缀 note 图标、截断 2 行；
+    /// 左侧连线列延续主行圆点→下一段的连接线（末点不画）。
+    private var noteRow: some View {
+        HStack(spacing: railSpacing) {
+            Rectangle()
+                .fill(isLast ? Color.clear : railColor)
+                .frame(width: 1.5)
+                .frame(width: railWidth)
+            HStack(alignment: .top, spacing: 4) {
+                Image(systemName: "note.text")
+                    .font(.system(size: 10))
+                    .padding(.top, 1)
+                Text(stop.note)
+                    .font(.system(.caption, design: .rounded))
+                    .lineLimit(2)
+                Spacer(minLength: 0)
+            }
+            .foregroundStyle(.secondary)
+        }
+        .padding(.bottom, 4)
+    }
+
+    /// 时间标签：设了结束时间（stayMinutes>0）显示「开始–结束」，否则只显示开始。
+    private var timeRangeLabel: String {
+        let start = timeLabel(dayMinutes: stop.plannedStartMinutes)
+        guard stop.stayMinutes > 0 else { return start }
+        return "\(start)–\(timeLabel(dayMinutes: stop.plannedStartMinutes + stop.stayMinutes))"
     }
 
     /// 固定高度的 rail：上半连线（首点透明）+ 序号圆点 + 下半连线（末点透明）。
@@ -538,7 +583,7 @@ private struct TimelineStopRow: View {
                 // 已设时间：重排锚点。pin 图标 + 时间，传达「优化时不会动」。
                 HStack(spacing: 3) {
                     Image(systemName: "pin.fill").font(.system(size: 9))
-                    Text(timeLabel(dayMinutes: stop.plannedStartMinutes))
+                    Text(timeRangeLabel)
                         .font(.system(.caption, design: .rounded).weight(.medium))
                 }
                 .foregroundStyle(.secondary)
@@ -604,7 +649,9 @@ struct StopEditView: View {
     @State private var category: StopCategory
     @State private var note: String
     @State private var hasTime: Bool
-    @State private var time: Date
+    @State private var startTime: Date
+    @State private var endTime: Date
+    @State private var showRelocate = false
 
     init(tripId: UUID, stop: ItineraryStop) {
         self.tripId = tripId
@@ -613,35 +660,86 @@ struct StopEditView: View {
         _category = State(initialValue: stop.category)
         _note = State(initialValue: stop.note)
         _hasTime = State(initialValue: stop.plannedStartMinutes >= 0)
-        _time = State(initialValue: dateFromDayMinutes(stop.plannedStartMinutes >= 0 ? stop.plannedStartMinutes : 9 * 60))
+        let startMin = stop.plannedStartMinutes >= 0 ? stop.plannedStartMinutes : 9 * 60
+        _startTime = State(initialValue: dateFromDayMinutes(startMin))
+        // 结束时间：已存停留则 start+stay，否则默认 start+1h（可选，用户可改/拉平）。
+        _endTime = State(initialValue: dateFromDayMinutes(stop.stayMinutes > 0 ? startMin + stop.stayMinutes : startMin + 60))
     }
 
     var body: some View {
         NavigationStack {
             Form {
+                // 「地点」段：名称（显示标签）/ 地址（只读定位）/ 更换地点 —— 一张「这是什么地方」的卡。
+                // 名称与地址同段、视觉差异化（白底输入 vs 灰色只读 vs 蓝色动作），衔接顺、关系清楚。
                 Section {
                     TextField(text: $name) { Text("itinerary.stop.edit.name") }
-                    Picker(selection: $category) {
-                        ForEach(StopCategory.allCases, id: \.self) { cat in
-                            Label(cat.titleKey, systemImage: cat.symbolName).tag(cat)
+                    if stop.hasCoordinate && !stop.address.isEmpty {
+                        HStack(spacing: 8) {
+                            Image(systemName: "mappin.and.ellipse")
+                                .foregroundStyle(.secondary)
+                            Text(stop.address)
+                                .font(.subheadline)
+                                .foregroundStyle(.secondary)
+                        }
+                    }
+                    Button {
+                        showRelocate = true
+                    } label: {
+                        Label(stop.hasCoordinate ? "itinerary.stop.edit.relocate" : "itinerary.stop.edit.set_location",
+                              systemImage: "mappin.circle")
+                    }
+                } header: {
+                    Text("itinerary.stop.edit.location_header")   // 「地点」（不是「位置」——含名称，语义为「这个地点」）
+                } footer: {
+                    Text("itinerary.stop.edit.name_footer")       // 名称是显示标签，可自定义
+                }
+
+                // 「详情」段：类型 + 可选的「开始 + 结束」时间段（结束以 stayMinutes 存）。
+                Section {
+                    // 自定义 Menu 替代原生 Picker：菜单 Picker 的「收起选中值」由系统按自己的紧凑排版渲染、
+                    // 无视选项里的自定义间距（故下拉松、收起挤，且 SwiftUI 不给改）。改用 Menu 后，收起值标签
+                    // 由我们手搓 → 图标↔文字间距 100% 可控；下拉仍是系统菜单 Picker（用 Label、间距本就合适）。
+                    Menu {
+                        Picker(selection: $category) {
+                            ForEach(StopCategory.allCases, id: \.self) { cat in
+                                Label(cat.titleKey, systemImage: cat.symbolName).tag(cat)
+                            }
+                        } label: {
+                            Text("itinerary.add_stop.category")
                         }
                     } label: {
-                        Text("itinerary.add_stop.category")
+                        HStack {
+                            Text("itinerary.add_stop.category")
+                                .foregroundStyle(.primary)
+                            Spacer()
+                            HStack(spacing: 6) {                       // ← 收起值的呼吸感
+                                Image(systemName: category.symbolName)
+                                Text(category.titleKey)
+                                Image(systemName: "chevron.up.chevron.down")
+                                    .imageScale(.small)
+                            }
+                            .foregroundStyle(CarryAccent.color)
+                        }
                     }
-                }
-                Section {
                     Toggle(isOn: $hasTime) { Text("itinerary.stop.edit.set_time") }
                         .tint(CarryAccent.color)
                     if hasTime {
-                        DatePicker(selection: $time, displayedComponents: .hourAndMinute) {
-                            Text("itinerary.stop.edit.time")
+                        DatePicker(selection: $startTime, displayedComponents: .hourAndMinute) {
+                            Text("itinerary.stop.edit.start_time")
+                        }
+                        DatePicker(selection: $endTime, in: startTime..., displayedComponents: .hourAndMinute) {
+                            Text("itinerary.stop.edit.end_time")
                         }
                     }
+                } header: {
+                    Text("itinerary.stop.edit.details_header")
                 } footer: {
-                    // 提示设了时间的停靠点在「优化顺序」时会被钉住。
                     if hasTime {
                         Text("itinerary.stop.edit.time_footer")
                     }
+                }
+                .onChange(of: startTime) { _, newStart in
+                    if endTime < newStart { endTime = newStart }   // 结束不早于开始
                 }
 
                 Section {
@@ -667,17 +765,31 @@ struct StopEditView: View {
                 }
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Save") {
+                        let startMin = dayMinutes(from: startTime)
+                        let stay = hasTime ? max(0, dayMinutes(from: endTime) - startMin) : 0
                         store.updateItineraryStop(
                             tripId: tripId,
                             stopId: stop.id,
                             name: name.trimmingCharacters(in: .whitespacesAndNewlines),
                             category: category,
-                            plannedStartMinutes: hasTime ? dayMinutes(from: time) : -1,
+                            plannedStartMinutes: hasTime ? startMin : -1,
+                            stayMinutes: stay,
                             note: note
                         )
                         dismiss()
                     }
                 }
+            }
+            // 更换地点：复用 AddStopView 的搜索（relocate 模式更新本停靠点的坐标/地址/名称）。
+            .sheet(isPresented: $showRelocate) {
+                AddStopView(
+                    tripId: tripId,
+                    dayId: stop.day?.id ?? UUID(),
+                    biasLatitude: stop.latitude,
+                    biasLongitude: stop.longitude,
+                    relocateStopId: stop.id,
+                    onRelocated: { newName in name = newName }
+                )
             }
         }
     }

@@ -200,14 +200,11 @@ struct OptimizeRouteView: View {
         .safeAreaInset(edge: .bottom) {
             actionBar(result)
                 .padding(.horizontal, 16)
-                .padding(.top, 10)
                 .padding(.bottom, 8)
-                // 实心不透明、与整屏背景底端同色（baseColor）——遵 design-system「底部主按钮容器实心、
-                // 禁渐变/半透」规范；同色故与 CarrySubtleBackground 底端无缝、不再有磨砂色带。
-                .background(
-                    CarrySubtleBackground.baseColor
-                        .ignoresSafeArea(edges: .bottom)
-                )
+                // 滚动内容在按钮上沿柔和淡出（全 App 统一，见 BottomBarScrim）；淡出到 baseColor
+                // （= CarrySubtleBackground 渐变底端色）故与整屏背景无缝、无磨砂色带。
+                // 2026-06-14 规范更新：底部栏由「一律实心」改为「上沿渐变淡出 + 实心兜底」。
+                .bottomBarScrim(CarrySubtleBackground.baseColor)
         }
     }
 

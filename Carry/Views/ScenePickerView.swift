@@ -163,9 +163,9 @@ struct ScenePickerView: View {
                 .allowsHitTesting(isPrimaryButtonEnabled)
                 .padding(.horizontal, 20)
             }
-            .padding(.top, 12)
             .padding(.bottom, 16)
-            .background(footerBackgroundColor)
+            // 滚动内容在按钮上沿柔和淡出（全 App 统一，见 BottomBarScrim），淡出到本页 footer 底色。
+            .bottomBarScrim(footerBackgroundColor)
         }
         .navigationTitle("")
         .navigationBarTitleDisplayMode(.inline)

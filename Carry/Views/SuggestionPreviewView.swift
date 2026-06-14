@@ -284,10 +284,11 @@ struct SuggestionPreviewView: View {
             }
             .buttonStyle(SolidPressButtonStyle())
             .padding(.horizontal, 20)
-            .padding(.top, 12)
             .padding(.bottom, 16)
         }
-        .background(chromeBackgroundColor)
+        // 滚动内容在按钮上沿柔和淡出（统一全 App 底部栏处理，见 BottomBarScrim）；
+        // 淡出到本页背景色 chromeBackgroundColor，明暗皆无缝。
+        .bottomBarScrim(chromeBackgroundColor)
     }
 
     // MARK: Empty state

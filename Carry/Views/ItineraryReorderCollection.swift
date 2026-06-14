@@ -23,9 +23,13 @@ nonisolated struct ItineraryDaySection: Hashable, Sendable {
     let showsOptimize: Bool
 }
 
-/// 行标识。`.stop` 可拖；`.addStop` / `.optimize` 不可拖（关联 dayID）。
+/// 行标识。`.stop` 可拖；`.leg` / `.addStop` / `.optimize` 不可拖。
+/// `.leg(UUID)` = 该停靠点上方的连接段（与上一点的连线 + 距离），UUID 为「下方那个停靠点」的 id。
+/// 拆成独立行（而非塞进 stop cell 顶部）后，stop cell 仅含主行 → 左滑删除按钮按主行高度居中/定大小，
+/// 不再因连接段把 cell 撑高而偏上、偏大。
 nonisolated enum ItineraryRowID: Hashable, Sendable {
     case stop(UUID)
+    case leg(UUID)
     case addStop(UUID)
     case optimize(UUID)
 }
@@ -36,6 +40,8 @@ struct ItineraryReorderCollection: UIViewRepresentable {
     /// 选中的「天」——变化时把该天 section 吸顶（与上方日历条联动）。nil 不滚动。
     let scrollTargetDayId: UUID?
     let stopContent: (UUID) -> AnyView
+    /// 连接段内容（连线 + 距离），入参为下方停靠点 id。
+    let legContent: (UUID) -> AnyView
     let addStopContent: (UUID) -> AnyView
     let optimizeContent: (UUID) -> AnyView
     let headerContent: (ItineraryDaySection) -> AnyView
@@ -150,6 +156,8 @@ struct ItineraryReorderCollection: UIViewRepresentable {
                 switch rowID {
                 case .stop(let id):
                     cell.contentConfiguration = UIHostingConfiguration { self.parent.stopContent(id) }.margins(.all, 0)
+                case .leg(let toStopID):
+                    cell.contentConfiguration = UIHostingConfiguration { self.parent.legContent(toStopID) }.margins(.all, 0)
                 case .addStop(let dayID):
                     cell.contentConfiguration = UIHostingConfiguration { self.parent.addStopContent(dayID) }.margins(.all, 0)
                 case .optimize(let dayID):
@@ -261,7 +269,12 @@ struct ItineraryReorderCollection: UIViewRepresentable {
             var snapshot = NSDiffableDataSourceSnapshot<UUID, ItineraryRowID>()
             for section in parent.sections {
                 snapshot.appendSections([section.id])
-                var rows: [ItineraryRowID] = section.stopIDs.map { .stop($0) }
+                // 停靠点之间插入独立连接段（首点上方无连接段）：.leg(下个停靠点 id) → .stop。
+                var rows: [ItineraryRowID] = []
+                for (i, sid) in section.stopIDs.enumerated() {
+                    if i > 0 { rows.append(.leg(sid)) }
+                    rows.append(.stop(sid))
+                }
                 rows.append(.addStop(section.id))
                 if section.showsOptimize { rows.append(.optimize(section.id)) }
                 snapshot.appendItems(rows, toSection: section.id)

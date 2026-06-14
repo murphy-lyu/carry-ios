@@ -1,5 +1,14 @@
 # 决策日志
 
+## 2026-06-14 底部主按钮容器：实心 → 上沿渐变淡出（BottomBarScrim，超越「禁渐变」旧规）
+
+> 起因：行程/打包页底部切换器加了「内容在栏下渐变淡出」后，用户认为该效果更佳、要全 App 统一；但 design-system 原有「底部主按钮容器一律实心、禁渐变」规范（曾据此把优化页钉条改实心）与之冲突。用户拍板：以 north-star（ADA 级）为准、采用渐变，规范随之更新。
+
+- **决策**：底部 `safeAreaInset(.bottom)` 栏统一走 **`BottomBarScrim`** 修饰器（`ViewModifiers.swift`，单一真源）——顶部定高「透明→实心」渐变条 + 其下实心兜底（`ignoresSafeArea(.bottom)` 延到屏幕底边）。滚动内容在栏上沿柔和淡出，按钮坐实心、其下不透出内容。淡出色 = **该页背景色**（一级 `systemBackground` / 二级 chrome 同色系 / `CarrySubtleBackground` 上用 `baseColor`）故无缝。
+- **为何推翻「禁渐变」**：原规则是针对 `.regularMaterial` 在深背景上偏亮成**色带**——根因是「材质」不是「渐变」。淡出到页面色的渐变无色带、且让内容优雅消隐，更贴 Apple 浮动栏。**本决策 supersede**「优化页钉条改实心（`CarrySubtleBackground.baseColor`）」那条：优化页同改用 `BottomBarScrim(CarrySubtleBackground.baseColor)`。
+- **落地**：行程/打包页切换器、`SuggestionPreviewView`、`ScenePickerView`、`TripInfoView`、`OptimizeRouteView`、`TripDateRangePickerSheet`（月历滚动内容淡出，取代原硬分隔线）。**待评**：`ItemPickerView` 智能预览**圆角浮条**（非整宽底栏，形状不同）、`HomeView` 底部 glass 胶囊栏（glass + 地球 sheet 语境特殊）——单独设计。
+- 回写 `design-system.md` §底部主按钮容器。
+
 ## 2026-06-14 行程页 日历 ↔ 列表 双向联动（防回授）+ 末日吸顶补偿
 
 > 起因：行程页上方日历条与下方按天列表原本各管各——切日历不滚列表、滚列表不更新日历高亮，两者脱节。用户要双向联动。
