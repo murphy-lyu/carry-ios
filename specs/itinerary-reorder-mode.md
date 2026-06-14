@@ -1,8 +1,12 @@
 # 行程「地点排序」模式（菜单进入 · 压缩行 + 拖拽手柄 + 锁误触）
 
-> **Status: Approved · Parked（设计已拍板 2026-06-15，挂起待实现）。** 形态已确认（压缩行 + 拖拽手柄 + 锁误触 + 保留常驻长按；不做移到第X天/多选/独占）。**等用户处理完 `ItineraryView` / `ItineraryReorderCollection` 上的「交通/住宿」改动、给信号后再实现**——届时拿这份 spec 直接落地即可。关联：`Carry/Views/PackingListView.swift`（行程详情容器 + 共享 "…" 菜单 + 工具栏）、`Carry/Views/ItineraryView.swift`（行程 tab 内容、托管 reorder collection）、`Carry/Views/ItineraryReorderCollection.swift`（原生跨天拖拽引擎）。
+> **Status: Implemented · 模拟器自测通过（2026-06-15，commit `518a121`），待用户真机验收。** 形态如设计（压缩行 + 拖拽手柄 + 锁误触 + 保留常驻长按；未做移到第X天/多选/独占）。
 >
-> ⚠️ **协作冲突预警**：`ItineraryView` / `ItineraryReorderCollection` 正被「交通段 + 住宿」那条线（`TransportSegment`/`LodgingStay`、`transportContent`/`lodgingContent`/`legContent`）活跃改动中。**实现须等那条线收口或与之协调**，避免撞车。本 spec 仅描述设计，不抢先改文件。
+> **自测结论（iPhone 17 Pro 模拟器）**：菜单「Reorder Places」按 ≥2 地点显示、位置/图标/本地化正确；进模式 …→Done、压缩行+≡手柄、底部切换器隐藏、leg/交通/住宿/Add/Optimize 全隐；天内重排 ✅、跨天移动 ✅（自动滚动、无数据丢失）、地图预览随拖拽实时更新 ✅；Done 退出恢复完整行+chrome ✅；正常态常驻长按拖拽仍可用 ✅；运行时无约束冲突/AttributeGraph 重入/崩溃。
+>
+> **一处可选细化（留用户定）**：排序模式下顶部地图预览 + 日历条仍显示。判断：保留更佳——地图随拖拽实时反映新顺序（即时空间反馈）、日历条便于跨天时跳转；故未隐藏。如想更极致聚焦可再隐去地图。
+>
+> 关联：`Carry/Views/PackingListView.swift`、`Carry/Views/ItineraryView.swift`、`Carry/Views/ItineraryReorderCollection.swift`。
 
 ## 背景 / 现状（已验证）
 - 跨天拖拽**能力已存在**：`ItineraryReorderCollection` 用 `UILongPressGestureRecognizer` + `beginInteractiveMovementForItem`，**长按任意 `.stop` 行即可拖、可跨天**（原生 cross-section），带 lift/step 触感（`ItineraryReorderCollection.swift:348`）。行 tap = 进详情、滚动 = 正常滚，三者不冲突。
