@@ -9,7 +9,8 @@
 
 - **预览三档判定（`PreviewMode`）**：① 当天有地点 → 正常路线图（不变）；② 当天空、整趟别处有地点 → 铺**整趟真地图、其它天针/线淡化**（marker opacity 0.4、polyline 0.3）+ 底部胶囊「这天还没安排地点」（`itinerary.empty.map.day_hint`），给地理上下文、不谎称空白；③ 整趟空、目的地已解析 → 居中**目的地真地图**（复用 `TripBundle.latitude/longitude`，0,0=未解析则跳过；span 0.6 区域级、无针）+ 底部胶囊「添加第一个地点」（`itinerary.empty.map.invite`，出发邀请）；④ 兜底（整趟空且目的地未知，如无日期行程/geocode 未完成）→ 保留原灰盒空态。
 - **可展开门控**：`isExpandable` 仅 route/context 为真（有真实路线可看才点开全屏）；destination/placeholder 不可点，避免展开到空世界图。
-- **重构**：抽 `expandControl`、通用 `mapHint(_:systemImage:)`（material 胶囊 + 圆体，单点提示/空当天/邀请共用，原 `singleStopHint` 并入）；`mapContent`/`mapAnnotations`/`stopMarker` 加 `dimmed` 参数（仅 context 预览淡化，全屏与正常态不受影响）。
+- **重构**：抽 `expandControl`、通用 `mapHint(_:systemImage:)`（material 胶囊 + 圆体，空当天/邀请共用）；`mapContent`/`mapAnnotations`/`stopMarker` 加 `dimmed` 参数（仅 context 预览淡化，全屏与正常态不受影响）。
+- **删单点提示**（后续微调）：route 态 `coordinateCount == 1` 原显示「再加一个地点就能连成路线」——针本身自解释、添加入口就在下方列表，属多余 hand-holding（§1），去掉；`itinerary.single.map.hint` 死 key 连 9 语言一并删除（899→898）。
 - **文案**：新增 2 结构化 key × 9 语言（含显式 en），术语沿用「地点」，中文无半角标点；按 Xcode 展开式定向插入（文件为混合格式，避免全量重排大 diff），JSON 校验通过。
 
 ## 上次改动摘要（分享行程：海报 + 路线地图 + 预览 + 发送给朋友/导入 · 2026-06-14）

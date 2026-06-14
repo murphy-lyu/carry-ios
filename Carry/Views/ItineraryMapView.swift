@@ -118,12 +118,10 @@ struct ItineraryMapView: View {
             switch previewMode {
             case .route:
                 // 当天有地点：正常路线图。不画 scope 胶囊（「当前是哪天」与日历条选中态重复，north-star §1）。
+                // 单点不再提示「再加一个就能连线」——针本身自解释、添加入口就在下方列表，提示属多余 hand-holding（§1）。
                 mapContent(for: displayDays)
                     .allowsHitTesting(false)   // 预览不抢地图手势；点整块进全屏交互
                     .overlay(alignment: .topTrailing) { expandControl }
-                    .overlay(alignment: .bottomLeading) {
-                        if coordinateCount == 1 { mapHint("itinerary.single.map.hint") }
-                    }
 
             case .context:
                 // 当天空、整趟别处有地点：铺整趟真地图、其它天针淡化——给出地理上下文，不谎称整趟空白。

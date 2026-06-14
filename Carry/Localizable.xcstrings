@@ -22990,65 +22990,6 @@
         }
       }
     },
-    "itinerary.single.map.hint" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Füge einen weiteren Ort hinzu, um die Route zu zeichnen."
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Add one more place to draw the route."
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Añade un lugar más para trazar la ruta."
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Ajoute un lieu de plus pour tracer l’itinéraire."
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "場所をもう 1 つ追加すると、ルートが描けます。"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "장소를 하나 더 추가하면 경로가 그려져요."
-          }
-        },
-        "pt-BR" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Adicione mais um local para traçar a rota."
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "再加一个地点，就能连成路线。"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "再加一個地點，就能連成路線。"
-          }
-        }
-      }
-    },
     "itinerary.stop.edit.delete" : {
       "extractionState" : "manual",
       "localizations" : {
