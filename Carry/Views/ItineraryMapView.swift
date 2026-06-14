@@ -61,11 +61,24 @@ struct ItineraryMapView: View {
         days.flatMap { $0.sortedStops }.filter { $0.hasCoordinate }
     }
 
-    /// 预览态坐标点数（聚焦当天）——决定空态 / 单点提示。
-    private var coordinateCount: Int { coordinateStops(in: displayDays).count }
+    /// 指定天集合里所有「地理坐标」——停靠点 + 交通段起讫两端。
+    /// 取景与空态判定都用它，使「某天只有航班、没有地点」时地图也能框住航段、不误判为空（spec: transport-lodging）。
+    private func routeCoordinates(in days: [ItineraryDay]) -> [CLLocationCoordinate2D] {
+        var coords = coordinateStops(in: days).compactMap(\.coordinate)
+        for day in days {
+            for seg in day.sortedSegments {
+                if let f = seg.fromCoordinate { coords.append(f) }
+                if let t = seg.toCoordinate { coords.append(t) }
+            }
+        }
+        return coords
+    }
+
+    /// 预览态坐标点数（聚焦当天）——决定空态 / 单点提示。含交通段端点：只有航班的天也算「有内容」。
+    private var coordinateCount: Int { routeCoordinates(in: displayDays).count }
 
     /// 整趟（所有天）有坐标的停靠点——当天为空时用于「上下文态」。
-    private var tripCoordinateCount: Int { coordinateStops(in: allDays).count }
+    private var tripCoordinateCount: Int { routeCoordinates(in: allDays).count }
 
     /// 目的地 geocode 坐标（创建/编辑行程时解析，复用既有字段，无需新 geocode）。
     /// 0,0 = 未解析（无目的地 / geocode 失败 / 无日期占位），返回 nil。
@@ -365,7 +378,7 @@ struct ItineraryMapView: View {
 
     /// 包住指定天集合所有坐标点的可视区域（带 padding）；单点时给固定小 span。
     private func fittedRegion(for days: [ItineraryDay]) -> MKCoordinateRegion {
-        let coords = coordinateStops(in: days).compactMap(\.coordinate)
+        let coords = routeCoordinates(in: days)
         guard let first = coords.first else {
             return MKCoordinateRegion(
                 center: CLLocationCoordinate2D(latitude: 0, longitude: 0),

@@ -28,12 +28,15 @@ nonisolated struct ItineraryDaySection: Hashable, Sendable {
 /// 行标识。`.stop` 可拖；其余（`.leg` / `.transport` / `.lodging` / `.addStop` / `.optimize`）不可拖。
 /// `.leg(UUID)` = 该停靠点上方的连接段（与上一点的连线 + 距离），UUID 为「下方那个停靠点」的 id；
 /// 仅在**相邻两个停靠点之间且其间无交通段**时插入（有交通段时，交通段本身就是连接）。
-/// `.transport(UUID)` = 交通段（边）；`.lodging(UUID)` = 住宿常驻条。
+/// `.transport(UUID)` = 交通段（边）；`.lodging(stay:day:)` = 住宿常驻条。
+/// 住宿跨多天 → 同一 stay 在多个 section 出现，故行 ID 必须带「天序」维度，
+/// 否则 diffable 快照里 item 标识跨 section 重复会崩（item identifiers 须全局唯一）。
+/// `day` 还用于让 LodgingBannerRow 区分入住/过夜/退房三态。
 nonisolated enum ItineraryRowID: Hashable, Sendable {
     case stop(UUID)
     case leg(UUID)
     case transport(UUID)
-    case lodging(UUID)
+    case lodging(stay: UUID, day: Int)
     case addStop(UUID)
     case optimize(UUID)
 }
@@ -48,8 +51,8 @@ struct ItineraryReorderCollection: UIViewRepresentable {
     let legContent: (UUID) -> AnyView
     /// 交通段内容（连接行：mode 图标 + 班次 + 起讫时间），入参为 segment id。
     let transportContent: (UUID) -> AnyView
-    /// 住宿常驻条内容，入参为 lodging stay id。
-    let lodgingContent: (UUID) -> AnyView
+    /// 住宿常驻条内容，入参为 (lodging stay id, 当前天序)。
+    let lodgingContent: (UUID, Int) -> AnyView
     let addStopContent: (UUID) -> AnyView
     let optimizeContent: (UUID) -> AnyView
     let headerContent: (ItineraryDaySection) -> AnyView
@@ -166,8 +169,8 @@ struct ItineraryReorderCollection: UIViewRepresentable {
                     cell.contentConfiguration = UIHostingConfiguration { self.parent.legContent(toStopID) }.margins(.all, 0)
                 case .transport(let id):
                     cell.contentConfiguration = UIHostingConfiguration { self.parent.transportContent(id) }.margins(.all, 0)
-                case .lodging(let id):
-                    cell.contentConfiguration = UIHostingConfiguration { self.parent.lodgingContent(id) }.margins(.all, 0)
+                case .lodging(let stay, let day):
+                    cell.contentConfiguration = UIHostingConfiguration { self.parent.lodgingContent(stay, day) }.margins(.all, 0)
                 case .addStop(let dayID):
                     cell.contentConfiguration = UIHostingConfiguration { self.parent.addStopContent(dayID) }.margins(.all, 0)
                 case .optimize(let dayID):

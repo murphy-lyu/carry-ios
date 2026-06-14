@@ -164,7 +164,7 @@ struct ItineraryView: View {
                 stopContent: { AnyView(stopRow($0)) },
                 legContent: { AnyView(legRow($0)) },
                 transportContent: { AnyView(transportRow($0)) },
-                lodgingContent: { AnyView(lodgingRow($0)) },
+                lodgingContent: { AnyView(lodgingRow($0, $1)) },
                 addStopContent: { AnyView(addStopRow($0)) },
                 optimizeContent: { AnyView(optimizeRow($0)) },
                 headerContent: { AnyView(dayHeaderRow($0)) },
@@ -292,10 +292,11 @@ struct ItineraryView: View {
     private var daySections: [ItineraryDaySection] {
         let stays = bundle?.safeLodgingStays ?? []
         return days.map { day in
-            // 覆盖本天（含入住日、不含退房日）的住宿，置于当天顶部作常驻条。
+            // 覆盖本天的住宿常驻条（含**退房日** = checkIn+nights，用于显「退房」事件）。
+            // 行 ID 带 day 维度，避免同一 stay 跨天在快照里重复（item 标识须全局唯一）。
             let lodgingRows: [ItineraryRowID] = stays
-                .filter { $0.covers(dayOrder: day.sortOrder) }
-                .map { .lodging($0.id) }
+                .filter { $0.checkInDayOrder <= day.sortOrder && day.sortOrder <= $0.checkOutDayOrder }
+                .map { .lodging(stay: $0.id, day: day.sortOrder) }
             let timelineRows: [ItineraryRowID] = day.timeline.map { item in
                 switch item {
                 case .stop(let s): return .stop(s.id)
@@ -361,10 +362,14 @@ struct ItineraryView: View {
     }
 
     /// 住宿常驻条：覆盖本天的住宿，置于当天顶部。点击编辑。
+    /// `dayOrder` 决定显示入住 / 过夜 / 退房三态（spec: itinerary-transport-lodging.md）。
     @ViewBuilder
-    private func lodgingRow(_ stayID: UUID) -> some View {
+    private func lodgingRow(_ stayID: UUID, _ dayOrder: Int) -> some View {
         if let stay = (bundle?.lodgingStays ?? []).first(where: { $0.id == stayID }) {
-            LodgingBannerRow(stay: stay)
+            let phase: LodgingBannerRow.Phase =
+                dayOrder == stay.checkInDayOrder ? .checkIn :
+                dayOrder == stay.checkOutDayOrder ? .checkOut : .night
+            LodgingBannerRow(stay: stay, phase: phase)
                 .padding(.horizontal, 16)
                 .contentShape(Rectangle())
                 .onTapGesture { activeSheet = .editLodging(stayID) }
@@ -615,34 +620,67 @@ private struct TransportTimelineRow: View {
 
 // MARK: - LodgingBannerRow
 
-/// 住宿常驻条：床图标 + 名称 + 晚数。轻量、secondary，置于覆盖天顶部（spec: itinerary-transport-lodging.md）。
+/// 住宿常驻条：床图标 + 名称 + 状态。spec 倾向「入住/退房显事件、中间天极轻灰条」：
+/// - 入住日：实心床 + 「入住 · 名称」（+ 入住时间），最醒目；
+/// - 退房日：「退房 · 名称」（+ 退房时间）；
+/// - 过夜中间天：极轻灰条，仅床轮廓 + 名称 + 晚数，退到背景。
 private struct LodgingBannerRow: View {
+    enum Phase { case checkIn, night, checkOut }
     let stay: LodgingStay
+    let phase: Phase
 
     private let railWidth: CGFloat = 30
     private let railSpacing: CGFloat = 12
 
+    private var displayName: String {
+        stay.name.isEmpty ? NSLocalizedString("itinerary.category.lodging", comment: "") : stay.name
+    }
+
     var body: some View {
         HStack(spacing: railSpacing) {
-            Image(systemName: "bed.double.fill")
+            Image(systemName: phase == .night ? "bed.double" : "bed.double.fill")
                 .font(.system(size: 13))
                 .foregroundStyle(.secondary)
                 .frame(width: railWidth)
-            Text(stay.name.isEmpty ? NSLocalizedString("itinerary.category.lodging", comment: "") : stay.name)
-                .font(.system(.footnote, design: .rounded).weight(.medium))
+            Text(titleText)
+                .font(.system(.footnote, design: .rounded).weight(phase == .night ? .regular : .medium))
                 .foregroundStyle(.secondary)
                 .lineLimit(1)
             Spacer(minLength: 8)
-            Text(String(format: NSLocalizedString("itinerary.lodging.nights_value", comment: ""), stay.nights))
-                .font(.system(.caption, design: .rounded))
-                .foregroundStyle(.tertiary)
+            if let trailing = trailingText {
+                Text(trailing)
+                    .font(.system(.caption, design: .rounded))
+                    .foregroundStyle(.tertiary)
+            }
         }
         .padding(.vertical, 7)
         .padding(.horizontal, 12)
         .background(
             RoundedRectangle(cornerRadius: 10, style: .continuous)
-                .fill(Color(.secondarySystemBackground).opacity(0.6))
+                // 过夜中间天更淡，退到背景；入住/退房日略实，作事件锚点。
+                .fill(Color(.secondarySystemBackground).opacity(phase == .night ? 0.4 : 0.7))
         )
+    }
+
+    /// 入住/退房日带事件词前缀；过夜天仅名称。
+    private var titleText: String {
+        switch phase {
+        case .checkIn:  return NSLocalizedString("itinerary.lodging.event.checkin", comment: "") + " · " + displayName
+        case .checkOut: return NSLocalizedString("itinerary.lodging.event.checkout", comment: "") + " · " + displayName
+        case .night:    return displayName
+        }
+    }
+
+    /// 入住/退房日显对应时间（若设）；过夜天显晚数。
+    private var trailingText: String? {
+        switch phase {
+        case .checkIn:
+            return stay.checkInMinutes >= 0 ? timeLabel(dayMinutes: stay.checkInMinutes) : nil
+        case .checkOut:
+            return stay.checkOutMinutes >= 0 ? timeLabel(dayMinutes: stay.checkOutMinutes) : nil
+        case .night:
+            return String(format: NSLocalizedString("itinerary.lodging.nights_value", comment: ""), stay.nights)
+        }
     }
 }
 
