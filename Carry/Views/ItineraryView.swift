@@ -516,16 +516,16 @@ private struct TimelineStopRow: View {
                 .fill(isLast ? Color.clear : railColor)
                 .frame(width: 1.5)
                 .frame(width: railWidth)
-            HStack(alignment: .top, spacing: 4) {
-                Image(systemName: "note.text")
-                    .font(.system(size: 10))
-                    .padding(.top, 1)
-                Text(stop.note)
-                    .font(.system(.caption, design: .rounded))
-                    .lineLimit(2)
-                Spacer(minLength: 0)
-            }
-            .foregroundStyle(.secondary)
+            // 不加前导图标：图标会把文字推到内容列右侧（x≈56），与名称/地址（x≈42）断成台阶，
+            // 两行时整块「向右倾斜」。纯文本左齐 → 名称/地址/备注共一条左缘（north-star §5 对齐成线）。
+            // 备注是会话化自然语言，内容已自证是备注，图标属冗余 chrome（§1 退后）。
+            // 颜色用 tertiary（比地址 secondary 再淡一档）：落成 primary/secondary/tertiary 三层标签层级，
+            // 与地址一眼分得开、不致读成同一坨；备注是预览（截断两行、完整内容在编辑页），退后正合适。
+            Text(stop.note)
+                .font(.system(.caption, design: .rounded))
+                .foregroundStyle(.tertiary)
+                .lineLimit(2)
+                .frame(maxWidth: .infinity, alignment: .leading)
         }
         .padding(.bottom, 4)
     }
