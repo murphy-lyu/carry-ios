@@ -523,23 +523,23 @@ private struct ItineraryLegConnector: View {
     private let legGap: CGFloat = 24            // = 原 TimelineStopRow.legGap
 
     var body: some View {
-        // 竖线【全程连续不断】（消除「断连」），距离贴在竖线右侧、于两站之间垂直居中（消除「不居中」），
-        // 紧挨连接线作为这段 leg 的标注——既不切断线、也不悬在色块/空隙里（消除「飘」），
-        // 仍明确是「相邻两站间的路程」（紧贴连线，而非挪到名称列下方那种「当前位置→某地」的歧义）。
-        Rectangle()
-            .fill(railColor)
-            .frame(width: 1.5)
-            .frame(width: railWidth, height: legGap)        // 1.5 连续竖线居中落在 rail 列，与圆点同 spine
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .overlay(alignment: .leading) {
-                if let distance {
-                    Text(distance)
-                        .font(.system(size: 10.5, weight: .medium, design: .rounded))
-                        .foregroundStyle(.secondary)
-                        .fixedSize()
-                        .padding(.leading, railWidth / 2 + 6)   // 紧贴竖线右侧（线在 railWidth/2 处）
-                }
+        // 距离【夹在 Timeline 竖线里】：竖线在数字处被数字的背景切断、数字落在上下两段线中间、居中压在
+        // spine 上，明确是这段 leg 的路程（在连接两站的路径上）。上下两段线靠相邻停靠点的 rail（含已修好
+        // 的备注行连线）首尾接住，故数字不孤立、不飘。
+        ZStack {
+            Rectangle().fill(railColor).frame(width: 1.5)
+            if let distance {
+                Text(distance)
+                    .font(.system(size: 10.5, weight: .medium, design: .rounded))
+                    .foregroundStyle(.secondary)
+                    .padding(.horizontal, 5)        // 切口横向留白：数字两侧与线端留气口，不挤
+                    .padding(.vertical, 1.5)        // 上下气口：线端不贴数字、夹得透气
+                    .background(Color(uiColor: .systemBackground))
+                    .fixedSize()
             }
+        }
+        .frame(width: railWidth, height: legGap)
+        .frame(maxWidth: .infinity, alignment: .leading)
     }
 }
 
@@ -723,10 +723,12 @@ private struct TimelineStopRow: View {
     /// 左侧连线列延续主行圆点→下一段的连接线（末点不画）。
     private var noteRow: some View {
         HStack(spacing: railSpacing) {
+            // 连线列【填满整行高，含文字下方留白】——首尾接住主行底部 stub 与下方 leg，备注处不再断线。
             Rectangle()
                 .fill(isLast ? Color.clear : railColor)
                 .frame(width: 1.5)
                 .frame(width: railWidth)
+                .frame(maxHeight: .infinity)
             // 不加前导图标：图标会把文字推到内容列右侧（x≈56），与名称/地址（x≈42）断成台阶，
             // 两行时整块「向右倾斜」。纯文本左齐 → 名称/地址/备注共一条左缘（north-star §5 对齐成线）。
             // 备注是会话化自然语言，内容已自证是备注，图标属冗余 chrome（§1 退后）。
@@ -737,8 +739,8 @@ private struct TimelineStopRow: View {
                 .foregroundStyle(.tertiary)
                 .lineLimit(2)
                 .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.bottom, 4)
         }
-        .padding(.bottom, 4)
     }
 
     /// 时间标签：设了结束时间（stayMinutes>0）显示「开始–结束」，否则只显示开始。
