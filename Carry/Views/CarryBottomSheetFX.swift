@@ -607,9 +607,17 @@ final class FXSheetViewController: UIViewController {
             // smooth — proving the METHOD was wrong, not the refresh rate: a per-frame
             // main-thread position update (with step-clamping) can't match a GPU-interpolated
             // animation. The content is rasterised, so the animated transform just composites a
-            // cached bitmap → smooth at any refresh rate. dampingRatio 1.0 = critically damped,
-            // NO overshoot — direct collapse/expand must be one-way & non-bouncy (playbook §5/§13).
-            let anim = UIViewPropertyAnimator(duration: 0.42, dampingRatio: 1.0) { [weak self] in
+            // cached bitmap → smooth at any refresh rate.
+            //
+            // 「克制果冻」回弹：dampingRatio < 1 给一个受控的轻微过冲再落位。当年禁回弹（§5/§13）
+            // 是为消除「多驱动竞争」的失控伪影（先上弹/中段跳变，§4）——那个根因已随单一 CA 通道 +
+            // 内容固定尺寸 + 删 mask 重构消除。如今过冲由这条**唯一** animator 在 transform 上干净插值、
+            // 且只经唯一漏斗 placeSheet，是设计效果而非伪影。几何上展开过冲把底缘推出屏幕下方、收起过冲
+            // 让浮动间隙短暂变大，**都不漏 MapKit**（见 specs/home-sheet-snap-spring.md）。底栏搭同一
+            // animator → 一起弹，免费同步。阻尼不对称：展开到顶给多一点「到位」精神气；收起贴底缘更收敛。
+            let dampingRatio: CGFloat = isCollapsing ? 0.82 : 0.74
+            let duration: TimeInterval = isCollapsing ? 0.46 : 0.52
+            let anim = UIViewPropertyAnimator(duration: duration, dampingRatio: dampingRatio) { [weak self] in
                 guard let self else { return }
                 self.placeSheet(at: target)
                 self.applyCornerMask(top: self.topRadius(targetProgress),
