@@ -1251,6 +1251,20 @@ struct HomeView: View {
 
     private var searchSheet: some View {
         VStack(spacing: 0) {
+            // 延续首页「我的行程」大标题进入搜索态：顶部不空、保留页面归属感，
+            // 接近原生大标题搜索。标题与 placeholder 文案不重复，避免冗余。
+            HStack {
+                Text("home.title")
+                    .font(.system(size: 30, weight: .bold, design: .rounded))
+                    .foregroundStyle(.primary)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.85)
+                Spacer(minLength: 12)
+            }
+            .padding(.horizontal, 16)
+            .padding(.top, 12)
+            .padding(.bottom, 8)
+
             HStack(spacing: 12) {
                 CarrySearchField(
                     text: $searchText,
@@ -1266,7 +1280,6 @@ struct HomeView: View {
                 .foregroundStyle(CarryAccent.color)
             }
             .padding(.horizontal, 16)
-            .padding(.top, 12)
             .padding(.bottom, 10)
 
             if filteredSearchTrips.isEmpty {
