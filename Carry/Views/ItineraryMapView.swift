@@ -38,9 +38,10 @@ struct ItineraryMapView: View {
         let routeCoords: [CLLocationCoordinate2D]
     }
 
-    /// 按天聚合的地图数据。编号按天重置、颜色按天区分，与列表完全对应。
-    private var dayMapData: [DayMapData] {
-        displayDays.map { day in
+    /// 按天聚合的地图数据（指定天集合）。编号按天重置、颜色按天区分，与列表完全对应。
+    /// 预览传聚焦的当天；全屏传 `allDays`——整趟一张按天分色的多彩图。
+    private func dayMapData(for days: [ItineraryDay]) -> [DayMapData] {
+        days.map { day in
             let coordStops = day.sortedStops.filter { $0.hasCoordinate }
             return DayMapData(
                 id: day.id,
@@ -51,12 +52,13 @@ struct ItineraryMapView: View {
         }
     }
 
-    /// 所有有坐标的停靠点（用于阈值判断 + 计算可视区域）。
-    private var coordinateStops: [ItineraryStop] {
-        displayDays.flatMap { $0.sortedStops }.filter { $0.hasCoordinate }
+    /// 指定天集合里所有有坐标的停靠点（阈值判断 + 计算可视区域）。
+    private func coordinateStops(in days: [ItineraryDay]) -> [ItineraryStop] {
+        days.flatMap { $0.sortedStops }.filter { $0.hasCoordinate }
     }
 
-    private var coordinateCount: Int { coordinateStops.count }
+    /// 预览态坐标点数（聚焦当天）——决定空态 / 单点提示。
+    private var coordinateCount: Int { coordinateStops(in: displayDays).count }
 
     var body: some View {
         mapPreview
@@ -77,7 +79,7 @@ struct ItineraryMapView: View {
             if coordinateCount == 0 {
                 emptyMapState
             } else {
-                mapContent
+                mapContent(for: displayDays)
                     .allowsHitTesting(false)   // 预览不抢地图手势；点整块进全屏交互
                     // 不再画 scope 胶囊：「当前是哪天」与正下方日历条的选中态重复（north-star §1）。
                     .overlay(alignment: .topTrailing) {
@@ -138,10 +140,13 @@ struct ItineraryMapView: View {
 
     // MARK: Full screen
 
+    /// 全屏 = 整趟所有天，按天分色一次铺开（点「展开」的意图是看更全）。
+    /// 多色针靠底部图例对应「色 → 天」，否则按天颜色无法解读。
     private var fullScreenMap: some View {
         NavigationStack {
-            mapContent
+            mapContent(for: allDays)
                 .ignoresSafeArea(edges: .bottom)
+                .overlay(alignment: .bottom) { mapLegend(for: allDays) }
                 .navigationTitle(Text("itinerary.map.title"))
                 .navigationBarTitleDisplayMode(.inline)
                 .toolbar {
@@ -152,15 +157,53 @@ struct ItineraryMapView: View {
         }
     }
 
+    /// 全屏地图底部图例：有坐标停靠点的天，按天色 + 短日期标注「色 → 天」。
+    /// 仅 ≥2 天有点时显示（单天无需图例）。
+    @ViewBuilder
+    private func mapLegend(for days: [ItineraryDay]) -> some View {
+        let daysWithStops = days.filter { $0.sortedStops.contains { $0.hasCoordinate } }
+        if daysWithStops.count >= 2 {
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 14) {
+                    ForEach(daysWithStops, id: \.id) { day in
+                        HStack(spacing: 5) {
+                            Circle()
+                                .fill(ItineraryDayPalette.color(forDayIndex: day.sortOrder))
+                                .frame(width: 8, height: 8)
+                            Text(dayShortLabel(day))
+                                .font(.system(.caption, design: .rounded).weight(.medium))
+                                .foregroundStyle(.primary)
+                        }
+                    }
+                }
+                .padding(.horizontal, 14)
+                .padding(.vertical, 9)
+            }
+            .background(.regularMaterial, in: Capsule())
+            .padding(.horizontal, 16)
+            .padding(.bottom, 12)
+        }
+    }
+
+    /// 图例里的短日期标签：有日期行程「月/日」，无日期行程「Day N」（复用既有 key，无新增文案）。
+    private func dayShortLabel(_ day: ItineraryDay) -> String {
+        if let bundle, !bundle.isDateless {
+            let base = Calendar.current.startOfDay(for: bundle.departureDate)
+            let date = Calendar.current.date(byAdding: .day, value: day.sortOrder, to: base) ?? base
+            return date.formatted(.dateTime.month(.abbreviated).day())
+        }
+        return String(format: NSLocalizedString("itinerary.day.title", comment: ""), day.sortOrder + 1)
+    }
+
     // MARK: Shared map content
 
     @ViewBuilder
-    private var mapContent: some View {
-        Map(initialPosition: .region(fittedRegion)) {
+    private func mapContent(for days: [ItineraryDay]) -> some View {
+        Map(initialPosition: .region(fittedRegion(for: days))) {
             // 按天编号（当天内 1、2、3…）+ 按天着色，与列表一一对应。
             // 自定义圆形针（当天色实心圆 + 白序号 + 白描边 + 阴影），与列表序号圆点同语言、
             // 比原生气泡针更干净、更品牌化；序号是与列表交叉对照的锚点。
-            ForEach(dayMapData) { day in
+            ForEach(dayMapData(for: days)) { day in
                 ForEach(day.stops, id: \.stop.id) { entry in
                     Annotation(entry.stop.name, coordinate: entry.stop.coordinate!) {
                         stopMarker(index: entry.localIndex + 1, color: day.color)
@@ -187,9 +230,9 @@ struct ItineraryMapView: View {
         .shadow(color: .black.opacity(0.22), radius: 2.5, x: 0, y: 1)
     }
 
-    /// 包住所有坐标点的可视区域（带 padding）；单点时给固定小 span。
-    private var fittedRegion: MKCoordinateRegion {
-        let coords = coordinateStops.compactMap(\.coordinate)
+    /// 包住指定天集合所有坐标点的可视区域（带 padding）；单点时给固定小 span。
+    private func fittedRegion(for days: [ItineraryDay]) -> MKCoordinateRegion {
+        let coords = coordinateStops(in: days).compactMap(\.coordinate)
         guard let first = coords.first else {
             return MKCoordinateRegion(
                 center: CLLocationCoordinate2D(latitude: 0, longitude: 0),
