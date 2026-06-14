@@ -1,7 +1,16 @@
 # 项目进度
 
 ## 最后更新
-2026-06-14
+2026-06-15
+
+## 上次改动摘要（首页 Sheet 自动吸附：克制果冻回弹 · 2026-06-15）
+
+> 下拉收起/上拉展开松手落位带**克制 spring 过冲**（非明显果冻）。仅改 `commitSnap` 直接吸附分支两个参数：展开 `dampingRatio 0.74 / 0.52s`、收起 `0.82 / 0.46s`（临界阻尼 1.0 → 欠阻尼）。真机验收 + 全盘审计通过、已提交（未 push）。
+
+- **推翻旧禁令**：playbook §5/§13"直接吸附必须无回弹"已受控放开——旧禁令针对多驱动竞争伪影，根因已随单一 CA 通道重构消除；现过冲由唯一 animator 干净插值、只经唯一漏斗 `placeSheet`，是设计效果。仍禁第二驱动源 / 动画开始推 `shapeProgress` 终态 / `startSnapShapeFollow`。
+- **几何安全**：展开过冲推底缘出屏、收起过冲只放大浮动间隙 → 均不漏 MapKit；底栏搭同一 animator 一起弹。
+- **打断安全**：`beginInteractiveControl` 先增 generation 再停 + presentation 层钳位双保险。
+- 文档：spec `home-sheet-snap-spring.md`（Shipped）、playbook §5 放开注脚、decisions 2026-06-15 条。
 
 ## 上次改动摘要（首页底栏随 Sheet 同步缩放·终极版 + 全盘审计 · 2026-06-14）
 
