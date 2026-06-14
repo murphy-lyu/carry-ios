@@ -1170,8 +1170,9 @@ struct PackingListView: View {
             .padding(.top, 16)
             .padding(.bottom, 4)
             .overlay(alignment: .bottom) {
+                // 吸顶基线：与行程 dayHeader 统一同一档（深 8% / 浅 6%），两种模式都读得清。
                 Rectangle()
-                    .fill(colorScheme == .dark ? Color.white.opacity(0.03) : Color.primary.opacity(0.03))
+                    .fill(colorScheme == .dark ? Color.white.opacity(0.08) : Color.black.opacity(0.06))
                     .frame(height: 1)
             }
             .background(

@@ -342,12 +342,12 @@ struct ItineraryView: View {
     }
 
     /// 内联动作行（添加地点 / 优化顺序）：图标落在 rail 圆点列、文字落在停靠点内容列，
-    /// 与 `TimelineStopRow` 结构对齐（rail 宽 26 + spacing 12），整天「停靠点 + 动作」读成一列左对齐。
+    /// 与 `TimelineStopRow` 结构对齐（rail 宽 30 + spacing 12），整天「停靠点 + 动作」读成一列左对齐。
     private func inlineActionLabel(titleKey: LocalizedStringKey, icon: String) -> some View {
         HStack(spacing: 12) {                       // = TimelineStopRow.railSpacing
             Image(systemName: icon)
                 .font(.system(size: 14, weight: .medium))
-                .frame(width: 26)                   // = TimelineStopRow.railWidth，图标居中落在圆点列
+                .frame(width: 30)                   // = TimelineStopRow.railWidth，图标居中落在圆点列
             Text(titleKey)
                 .font(.system(.subheadline, design: .rounded))
             Spacer(minLength: 0)
@@ -371,7 +371,7 @@ struct ItineraryView: View {
             Circle()
                 .fill(ItineraryDayPalette.color(forDayIndex: day.sortOrder))
                 .frame(width: 8, height: 8)
-                .frame(width: 26)                                // = railWidth，圆点居中落在标记列、压在 spine 上
+                .frame(width: 30)                                // = railWidth，圆点居中落在标记列、压在 spine 上
             VStack(alignment: .leading, spacing: 2) {
                 Text(dayDateLabel(day) ?? dayDisplayTitle(day))
                     .font(.system(.headline, design: .rounded).weight(.semibold))
@@ -385,19 +385,17 @@ struct ItineraryView: View {
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(.horizontal, 16)
         .padding(.top, 16)
-        .padding(.bottom, 4)
-        .overlay(alignment: .bottom) {
-            Rectangle()
-                .fill(Color.primary.opacity(0.03))
-                .frame(height: 1)
-        }
+        // 首点上方原由「首点 cell 顶部占位」给的呼吸，已随连接段拆为独立 leg 而消失；
+        // 在此用 header 底部留白补回（放 header 层、不动 stop cell，故不破坏左滑居中）。
+        .padding(.bottom, 12)
+        // 日期头不画分隔线（含吸顶时）：粗体圆体标题 + 当天彩色圆点 + 留白本身层级已足，吸顶时不透明
+        // systemBackground 已干净切开浮动头与滚动内容，再加线是多余 chrome（north-star §1 退后 / §2 层级
+        // 不靠线框，对标 Tripsy/Flighty/原生）。打包分区头是 ALL-CAPS 小灰字、分量轻，才保留锚定用的基线。
         .background(
+            // header cell 已在 UIKit 层铺不透明 systemBackground；此处再铺一层，保证吸顶时无缝、不透出滚动内容。
             Rectangle()
                 .fill(Color(UIColor.systemBackground))
         )
-        // 与 Packing 的 sectionTitle 一样，把 header 变成稳定的 section surface，
-        // 避免吸顶时直接露出下面的渐变/透明层，造成“分块感”。
-        .offset(y: -1)
         .zIndex(3)
     }
 
@@ -447,23 +445,26 @@ struct ItineraryView: View {
 private struct ItineraryLegConnector: View {
     let distance: String?
     let railColor: Color
-    private let railWidth: CGFloat = 26       // = TimelineStopRow.railWidth
-    private let legGap: CGFloat = 24          // = 原 TimelineStopRow.legGap
+    private let railWidth: CGFloat = 30        // = TimelineStopRow.railWidth
+    private let railSpacing: CGFloat = 12       // = TimelineStopRow.railSpacing
+    private let legGap: CGFloat = 24            // = 原 TimelineStopRow.legGap
 
     var body: some View {
-        ZStack {
-            Rectangle().fill(railColor).frame(width: 1.5)
+        // 竖线保持连续（不再被距离标签的背景块切断）；距离挪到右侧、落在地点名称列、段间垂直居中，
+        // 读作「这段路程」的安静注脚，而非压在线上「挂着飘」。与 TimelineStopRow 同一套两列网格对齐。
+        HStack(spacing: railSpacing) {
+            Rectangle()
+                .fill(railColor)
+                .frame(width: 1.5)
+                .frame(width: railWidth)        // 1.5 线居中落在 rail 列，与停靠点圆点同一条 spine
             if let distance {
                 Text(distance)
-                    .font(.system(size: 10.5, weight: .medium, design: .rounded))
+                    .font(.system(size: 11, weight: .medium, design: .rounded))
                     .foregroundStyle(.secondary)
-                    .padding(.horizontal, 3)
-                    .background(Color(uiColor: .systemBackground))
-                    .fixedSize()
             }
+            Spacer(minLength: 0)
         }
-        .frame(width: railWidth, height: legGap)
-        .frame(maxWidth: .infinity, alignment: .leading)
+        .frame(height: legGap)
     }
 }
 
@@ -481,8 +482,8 @@ private struct TimelineStopRow: View {
     let navApps: [MapNavigationApp]
 
     private var railColor: Color { dayColor.opacity(0.25) }
-    private let railWidth: CGFloat = 26
-    private let circleSize: CGFloat = 24
+    private let railWidth: CGFloat = 30
+    private let circleSize: CGFloat = 28
     private let railSpacing: CGFloat = 12
     /// 固定行高——rail 连线由此完全确定，全程无 `maxHeight: .infinity` 贪婪 frame，
     /// 故自适应 cell 不会被撑高、各行（含首/末行）几何严格一致。
@@ -549,7 +550,7 @@ private struct TimelineStopRow: View {
                 // 类别图标取代序号：时间轴顺序由位置天然表达，图标更利于扫读「这是什么」。
                 // 地图针仍用序号（地理散布、顺序不直观），分工见 decisions/progress。
                 Image(systemName: stop.category.symbolName)
-                    .font(.system(size: 11, weight: .semibold))
+                    .font(.system(size: 13, weight: .semibold))
                     .foregroundStyle(dayColor)
             }
             .frame(width: circleSize, height: circleSize)
@@ -562,7 +563,9 @@ private struct TimelineStopRow: View {
 
     private var content: some View {
         // 类别图标已移到 rail 圆点；此处只剩名称/地址 + 时间/无坐标标记。
-        HStack(alignment: .top, spacing: 10) {
+        // 居中对齐：导航按钮(44pt)比名称块高，若顶对齐会把名称地址顶到上沿、与 rail 圆点(行中线)错位；
+        // .center 让名称块与导航按钮都按行中线居中，名称块重新对齐圆点。
+        HStack(alignment: .center, spacing: 10) {
             VStack(alignment: .leading, spacing: 2) {
                 Text(stop.name)
                     .font(.system(.body, design: .rounded).weight(.semibold))   // 名称加粗 + 圆体，作为每行的视觉锚
