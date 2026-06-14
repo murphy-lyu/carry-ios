@@ -3,6 +3,19 @@
 ## 最后更新
 2026-06-15
 
+## 上次改动摘要（行程交通段 + 住宿 + 签证 PDF 导出 · 2026-06-15）
+
+> 分支 `feature/itinerary-transport-lodging`，**未合并**，全程编译绿（主 app + Widget）、待真机统一验收。spec：`itinerary-transport-lodging.md`（规划层）+ `itinerary-export-document.md`（导出）。借 Tripsy 的「节点+边+跨度」数据模型，用 Carry 克制审美定呈现与范围。
+
+- **数据地基**（`Itinerary.swift`/`CarrySchema`/`TripStore`/`DataBackupManager`）：新增 `TransportSegment`（边：航司/班次、起讫站+代码+坐标+时区+航站楼、跨天起降、预留 `liveStatusData` 给未来航班动态）、`LodgingStay`（跨度：day sortOrder 锚定、`covers`）；`ItineraryDay.timeline` 把 stop+transport 按共享 sortOrder 合并（`TimelineItem`）。轻量迁移加表、单一 SchemaV1；CRUD + duplicate 深拷贝 + 备份/还原/导入全链路（可选字段，向后兼容）。
+- **录入 UI**：`TransportEditView`（航班/火车/通用，起降站可地理搜索）、`LodgingEditView`（名称/地址+入住日+晚数+时间）；抽共享 `ItineraryPlaceSearchSheet`。
+- **接入时间轴**：`ItineraryReorderCollection` 行模型加 `.transport`/`.lodging(stay:day:)`，section 改有序 `entries`，leg 仅在相邻两停靠点间无交通段时插；交通/住宿固定行、仅 `.stop` 参与重排（拖拽逻辑不动）。`ItineraryView` 底部「+」改统一 Menu（地点/航班/火车/住宿）；交通连接行 `TransportTimelineRow`、住宿三态 `LodgingBannerRow`（入住/过夜/退房）。地图航班画大圆弧虚线、取景/空态纳入交通端点。
+- **🔴 修崩溃**：住宿跨 N 天时 `.lodging(stay.id)` 在多 section 重复 → diffable item 标识须全局唯一会崩；行 ID 改带 day 维度。
+- **签证 PDF 导出**：`ItineraryPDFRenderer`（A4 分页，头部+概览图+逐日+住宿汇总+页脚）、`ItineraryDocumentText`（文档文案 EN/ZH 代码字典，按所选语言渲染）、`ExportItinerarySheet`（语言/申请人姓名·目的[选填本地存·不含护照号]/含地图开关）；入口在行程「…」菜单。定位为「行程说明」非预订凭证/官方文件。
+- **埋点**：`transportAdded/Removed`、`lodgingAdded/Removed`、`itineraryExported`、`itineraryExportFailed`。**文案**：交通 24 + 住宿 14 + 菜单 2 + 导出 6 = 46 个 key × 9 语言。
+- **协作注**：与并行会话共享工作区，`ItineraryView.swift` 编辑期间一度被并行进程瞬时回退（已即时编译+提交锁定，无丢失）。
+- **待办/后续**：真机统一验收（建航班/住宿后时间轴+地图+PDF、拖拽在有交通段的天）；航班动态 API、中英对照 PDF、Excel 导出列为后续；交通段在时间轴的手动重排（spec 倾向：有时间自动排）未做。
+
 ## 上次改动摘要（首页 Sheet 自动吸附：克制果冻回弹 · 2026-06-15）
 
 > 下拉收起/上拉展开松手落位带**克制 spring 过冲**（非明显果冻）。仅改 `commitSnap` 直接吸附分支两个参数：展开 `dampingRatio 0.74 / 0.52s`、收起 `0.82 / 0.46s`（临界阻尼 1.0 → 欠阻尼）。真机验收 + 全盘审计通过、已提交（未 push）。
