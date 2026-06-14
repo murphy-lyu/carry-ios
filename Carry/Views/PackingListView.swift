@@ -186,20 +186,6 @@ struct PackingListView: View {
                             } label: {
                                 Label("Edit sections", systemImage: "arrow.up.arrow.down")
                             }
-                            Button {
-                                CarryLogger.shared.log(.packingListShared)
-                                let activityVC = UIActivityViewController(
-                                    activityItems: [shareText],
-                                    applicationActivities: nil
-                                )
-                                if let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
-                                   let window = windowScene.windows.first,
-                                   let rootVC = window.rootViewController {
-                                    rootVC.present(activityVC, animated: true)
-                                }
-                            } label: {
-                                Label("Share list", systemImage: "square.and.arrow.up")
-                            }
                         }
                         // 共享「行程级操作」（两个 tab 通用、顺序一致）：编辑行程 → 行程提醒 → 添加背景图。
                         Button {
@@ -245,6 +231,23 @@ struct PackingListView: View {
                                 Label("itinerary.send_to_companion", systemImage: "person.badge.plus")
                             }
                             .disabled(!(bundle.map { TripShare.hasShareableItinerary($0) } ?? false))
+                        }
+                        // 分享清单（打包面）：分享低频、且与行程面的分享同位——置于分隔线正上方、删除之上。
+                        if detailTab == .packing {
+                            Button {
+                                CarryLogger.shared.log(.packingListShared)
+                                let activityVC = UIActivityViewController(
+                                    activityItems: [shareText],
+                                    applicationActivities: nil
+                                )
+                                if let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
+                                   let window = windowScene.windows.first,
+                                   let rootVC = window.rootViewController {
+                                    rootVC.present(activityVC, animated: true)
+                                }
+                            } label: {
+                                Label("Share list", systemImage: "square.and.arrow.up")
+                            }
                         }
                         Divider()
                         Button(role: .destructive) {
