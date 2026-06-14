@@ -3,6 +3,17 @@
 ## 最后更新
 2026-06-14
 
+## 上次改动摘要（分享行程：海报 + 路线地图 + 预览 + 发送给朋友/导入 · 2026-06-14）
+
+> 「分享」主线落地，均已提交 `main`、编译绿、真机验。两个独立入口（行程「…」菜单，`detailTab==.itinerary` 时）。详见 decisions 2026-06-14。
+
+- **分享行程 → 海报图**（commit `a3affb1`/`83e3488`/`353aecd`；新 `TripSharePoster.swift`/`SharePreviewSheet.swift`）：竖版海报 = 封面照（`FocalCoverImage` 焦点对齐，海报头与卡片比例不同故不用 `PositionedImage`）+ 按天地点时间轴（当天色连接线）+ **底部路线地图带**（`MKMapSnapshotter` + 图钉 + 白描边动线，缩放框住所有点，无坐标/失败降级）+ Carry 水印；固定浅色渲染。**分享前预览页**：点分享先弹大图预览 +「包含路线地图」开关 + `ShareLink`；海报渐进渲染（先无图、地图异步合入）。文件名 `行程名_天数_出发月份_yyyyMMddHHmm.png`。
+- **发送给朋友 → `.carrytrip` 文件**（commit `14b4fa6`/`20d3d74`；新 `ImportSharedTripSheet.swift`）：导出仅行程规划（复用 `CarryBackup` 格式）；Info.plist 注册文档类型（UTI `com.murphy.carry.trip` + `LSSupportsOpeningDocumentsInPlace`）→ 点 `.carrytrip` 即唤起 Carry → `onOpenURL` 读摘要 → 确认卡片（行程名/日期/地点数）→ 导入。**新建 / 更新（同 UUID 替换行程规划、不动打包清单）双路径**，沿用发送方 UUID。文件名 `行程名 (出发月份).carrytrip`。`DataBackupManager` 加 `makeItineraryShareFile`/`readSharedTripSummary`/`importSharedTrip`。
+- **行程详情默认面：消除「偶尔闪打包」**（commit `07f5b0f`）：初始面改在 `PackingListView.init` 解析（记住每个行程上次的面、无记录则行程规划），不再靠 onAppear 把默认 `.packing` 纠正（push 动画里会闪）。
+- **全 App 模态总审计完成**（commit `0cfe203`）：按 Carry Modal Convention 5 条逐个核对，全部合规、无违规。
+- 埋点 `itineraryShared/itineraryFileSent/itineraryImported/itineraryImportFailed`；新增文案均补全 9 语言（`itinerary.share*`/`itinerary.import.*`/`itinerary.send_to_companion`=「Send to friend / 发送给朋友」）。
+- 工程约定：CLAUDE.md 新增「验收默认交给用户、不主动驱动模拟器自跑」（commit `6d923e3`）；`.gitignore` 加 `.claude/`（`bd4578d`）。
+
 ## 上次改动摘要（编辑地点重构：标签/位置分离 + 开始结束时间 + 备注预览 · 2026-06-14）
 
 > 经多轮真机走查打磨。合并提交 `bafa93c`（多会话共编同批行程文件 + Xcode 重排 xcstrings，无法干净 hunk 隔离，按用户决定一次合并；编译绿）。
