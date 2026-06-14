@@ -86,10 +86,12 @@ struct TransportEditView: View {
                 get: { searchingFrom.map { SearchTarget(isFrom: $0) } },
                 set: { searchingFrom = $0?.isFrom }
             )) { target in
-                TransportPlaceSearchSheet(
+                ItineraryPlaceSearchSheet(
+                    titleKey: "itinerary.transport.field.place",
+                    placeholderKey: "itinerary.transport.search.placeholder",
                     biasLatitude: bundle?.latitude ?? 0,
                     biasLongitude: bundle?.longitude ?? 0
-                ) { name, lat, lon in
+                ) { name, lat, lon, _ in
                     if target.isFrom {
                         fromName = name; fromLatitude = lat; fromLongitude = lon
                     } else {
@@ -304,76 +306,4 @@ struct TransportEditView: View {
 private struct SearchTarget: Identifiable {
     let isFrom: Bool
     var id: Bool { isFrom }
-}
-
-// MARK: - 起降地点搜索 sheet
-
-/// 复用 StopSearchCompleter（定义在 AddStopView.swift）搜车站/机场，选中后回传名称 + 坐标。
-private struct TransportPlaceSearchSheet: View {
-    var biasLatitude: Double = 0
-    var biasLongitude: Double = 0
-    var onSelect: (_ name: String, _ latitude: Double, _ longitude: Double) -> Void
-
-    @Environment(\.dismiss) private var dismiss
-    @StateObject private var completer = StopSearchCompleter()
-    @State private var isResolving = false
-    @FocusState private var searchFocused: Bool
-
-    var body: some View {
-        NavigationStack {
-            List {
-                ForEach(completer.results, id: \.self) { result in
-                    Button {
-                        resolve(result)
-                    } label: {
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text(result.title).foregroundStyle(.primary)
-                            if !result.subtitle.isEmpty {
-                                Text(result.subtitle).font(.caption).foregroundStyle(.secondary)
-                            }
-                        }
-                    }
-                }
-            }
-            .listStyle(.insetGrouped)
-            .scrollContentBackground(.hidden)
-            .background(Color(.systemGroupedBackground).ignoresSafeArea())
-            .safeAreaInset(edge: .top) {
-                CarrySearchField(
-                    text: $completer.query,
-                    placeholder: "itinerary.transport.search.placeholder",
-                    focus: $searchFocused
-                )
-                .padding(.horizontal, 16)
-                .padding(.vertical, 8)
-                .background(Color(.systemGroupedBackground))
-            }
-            .disabled(isResolving)
-            .overlay { if isResolving { ProgressView() } }
-            .navigationTitle(Text("itinerary.transport.field.place"))
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    Button("common.cancel") { dismiss() }
-                }
-            }
-            .onAppear {
-                completer.biasRegion(toLatitude: biasLatitude, longitude: biasLongitude)
-                DispatchQueue.main.async { searchFocused = true }
-            }
-        }
-    }
-
-    private func resolve(_ completion: MKLocalSearchCompletion) {
-        isResolving = true
-        let request = MKLocalSearch.Request(completion: completion)
-        MKLocalSearch(request: request).start { response, _ in
-            Task { @MainActor in
-                isResolving = false
-                let coord = response?.mapItems.first?.placemark.coordinate
-                onSelect(completion.title, coord?.latitude ?? 0, coord?.longitude ?? 0)
-                dismiss()
-            }
-        }
-    }
 }
