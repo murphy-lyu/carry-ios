@@ -38,6 +38,8 @@
 - 特别是 `sheetPanDirectCollapse`：**不要启用 `startSnapShapeFollow(...)`**，这会把已收敛的单向收起再次拉回双驱动竞争区，容易复发“先上弹/中弹再下落”。
 - 不要反复在 A/B/C 路径间来回切换，必须先固定单一路径再调参数。
 
+> 📌 **2026-06-15 更新：「直接吸附必须无回弹」已受控放开。** 本节"先上弹/中弹再下落"针对的是**多驱动竞争**伪影，根因已随单一 CA 通道重构消除。直接吸附现用**欠阻尼 spring**（展开 dampingRatio 0.74 / 收起 0.82）做**克制果冻回弹**——它由唯一 animator 干净插值、只经唯一漏斗 `placeSheet`，不是双驱动伪影。**仍禁止**的是：并行第二驱动源、动画开始即把 `shapeProgress` 推终态、`startSnapShapeFollow`。详见 `specs/home-sheet-snap-spring.md` 与 §19。
+
 ## 6. 当前收敛策略（截止本文档）
 
 - 自动吸附统一回到 `commitSnap` 主管线，不再使用独立“第二套”收起路径。
