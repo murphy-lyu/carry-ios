@@ -66,6 +66,8 @@ private enum ItinerarySheet: Identifiable {
 
 struct ItineraryView: View {
     let tripId: UUID
+    /// 「地点排序」模式（由容器 PackingListView 的菜单/工具栏驱动）：压缩行 + 拖拽手柄 + 锁 tap。
+    var isReordering: Binding<Bool> = .constant(false)
 
     @EnvironmentObject var store: TripStore
 
@@ -161,6 +163,7 @@ struct ItineraryView: View {
             ItineraryReorderCollection(
                 sections: daySections,
                 scrollTargetDayId: activeFocusedDayId,
+                isReordering: isReordering.wrappedValue,
                 stopContent: { AnyView(stopRow($0)) },
                 legContent: { AnyView(legRow($0)) },
                 transportContent: { AnyView(transportRow($0)) },
@@ -177,7 +180,8 @@ struct ItineraryView: View {
             // collection 的 diffable 快照里 → section id 不变时旧 header 不会重配（转有/无日期后
             // 旧天仍显示「第 N 天」）。日期态变化时用 .id 强制重建 collection 一次刷新所有 header；
             // 日常加减地点不改此 key、不触发重建。
-            .id(itineraryDateStateKey)
+            // 含 isReordering：进出排序模式时重建 collection，让 .stop cell 刷新为压缩版/常规版。
+            .id("\(itineraryDateStateKey)-reorder:\(isReordering.wrappedValue)")
             // 延伸到底部「行程/打包」切换器下方，内容在其渐变里淡出（与打包面统一）。
             // 末行让出切换器净空由 collection 的 contentInset.bottom 负责（见 bottomBarClearance）。
             .ignoresSafeArea(.container, edges: .bottom)
@@ -320,6 +324,9 @@ struct ItineraryView: View {
            let index = day.sortedStops.firstIndex(where: { $0.id == stopID }) {
             let dayStops = day.sortedStops
             let stop = dayStops[index]
+            if isReordering.wrappedValue {
+                reorderStopRow(stop, dayColor: ItineraryDayPalette.color(forDayIndex: day.sortOrder))
+            } else {
             TimelineStopRow(
                 stop: stop,
                 index: index,
@@ -333,7 +340,31 @@ struct ItineraryView: View {
             // 打开的是可逆 sheet、不静默改数据，误触代价极低；长按仍拖拽重排、左滑仍删除，tap 与之手势类型不同、不冲突。
             // 行内导航按钮（Menu/Button）在自己 44pt 区域内优先接管，不会被这层 tap 抢走。
             .onTapGesture { activeSheet = .editStop(stop) }
+            }
         }
+    }
+
+    /// 排序模式的压缩行：类别图标 + 名称 + 拖拽手柄（≡，纯视觉提示）；不挂 tap（锁误触进详情）。
+    /// 拖拽由 collection 的长按（即抓即拖）承载，整行可拖、手柄只是 affordance。
+    private func reorderStopRow(_ stop: ItineraryStop, dayColor: Color) -> some View {
+        HStack(spacing: 12) {
+            Image(systemName: stop.category.symbolName)
+                .font(.system(size: 15, weight: .semibold))
+                .foregroundStyle(dayColor)
+                .frame(width: 22)
+            Text(stop.name)
+                .font(.system(size: 16, weight: .medium))
+                .foregroundStyle(.primary)
+                .lineLimit(1)
+                .truncationMode(.tail)
+            Spacer(minLength: 8)
+            Image(systemName: "line.3.horizontal")
+                .font(.system(size: 16, weight: .semibold))
+                .foregroundStyle(.tertiary)
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 11)
+        .contentShape(Rectangle())
     }
 
     /// 连接段（连线 + 距离），独立成行夹在相邻停靠点之间。入参为下方停靠点 id。

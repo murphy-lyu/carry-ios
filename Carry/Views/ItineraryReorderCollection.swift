@@ -46,6 +46,9 @@ struct ItineraryReorderCollection: UIViewRepresentable {
     let sections: [ItineraryDaySection]
     /// 选中的「天」——变化时把该天 section 吸顶（与上方日历条联动）。nil 不滚动。
     let scrollTargetDayId: UUID?
+    /// 「地点排序」模式：仅渲染 day header + `.stop` 行（隐去 leg/transport/lodging/addStop/optimize），
+    /// 长按延迟降到「即抓即拖」。上层用 `.id` 在进出模式时重建本组件，故 cell 内容随之刷新为压缩版。
+    let isReordering: Bool
     let stopContent: (UUID) -> AnyView
     /// 连接段内容（连线 + 距离），入参为下方停靠点 id。
     let legContent: (UUID) -> AnyView
@@ -225,7 +228,9 @@ struct ItineraryReorderCollection: UIViewRepresentable {
             self.dataSource = ds
 
             let longPress = UILongPressGestureRecognizer(target: self, action: #selector(handleLongPress(_:)))
-            longPress.minimumPressDuration = 0.4
+            // 排序模式「即抓即拖」（0.15s）：仍 > 0 以免快速滑动滚动被误判为拖拽（移动 >10pt 即失败回退滚动）。
+            // 常态保持 0.4s，避免与点击/滚动冲突。
+            longPress.minimumPressDuration = parent.isReordering ? 0.15 : 0.4
             collectionView.addGestureRecognizer(longPress)
             longPressRecognizer = longPress
 
@@ -239,6 +244,7 @@ struct ItineraryReorderCollection: UIViewRepresentable {
 
         func update(with parent: ItineraryReorderCollection) {
             self.parent = parent
+            longPressRecognizer?.minimumPressDuration = parent.isReordering ? 0.15 : 0.4
             // 拖拽进行中不 apply（否则覆盖 UIKit 正在做的 interactive movement → 弹回）。
             guard !isDragging else { return }
             applySnapshot(animated: true)
@@ -282,6 +288,24 @@ struct ItineraryReorderCollection: UIViewRepresentable {
         private func applySnapshot(animated: Bool) {
             guard let dataSource else { return }
             var snapshot = NSDiffableDataSourceSnapshot<UUID, ItineraryRowID>()
+            // 「地点排序」模式：每天只放 day header + `.stop` 行（无 leg/交通/住宿/Add/Optimize），
+            // 让用户专注拖拽、一屏看更多天；提交仍由 didReorder 收集各 section 的 `.stop` 顺序。
+            if parent.isReordering {
+                for section in parent.sections {
+                    snapshot.appendSections([section.id])
+                    let stopRows = section.entries.filter { if case .stop = $0 { return true }; return false }
+                    snapshot.appendItems(stopRows, toSection: section.id)
+                }
+                dataSource.apply(snapshot, animatingDifferences: animated)
+                collectionView?.setNeedsLayout()
+                collectionView?.layoutIfNeeded()
+                DispatchQueue.main.async { [weak self] in
+                    self?.collectionView?.setNeedsLayout()
+                    self?.collectionView?.layoutIfNeeded()
+                    self?.updateBottomInsetForLastSectionPinning()
+                }
+                return
+            }
             for section in parent.sections {
                 snapshot.appendSections([section.id])
                 // 据 entries 构建最终行：

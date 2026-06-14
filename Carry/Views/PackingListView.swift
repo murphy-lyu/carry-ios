@@ -69,6 +69,8 @@ struct PackingListView: View {
     @State private var showAddItemsSheet = false
     @State private var showSharePreview = false
     @State private var showExportItinerary = false
+    /// 行程「地点排序」模式：菜单进入、工具栏 …↔完成、隐藏底部切换器，传给 ItineraryView 驱动压缩行拖拽。
+    @State private var isReorderingItinerary = false
     @State private var isSaved = false
     @State private var showConfetti = false
     @State private var showCompletionBanner = false
@@ -91,6 +93,10 @@ struct PackingListView: View {
     @State private var shownSurpriseNames: Set<String> = []
 
     private var bundle: TripBundle? { store.bundle(for: tripId) }
+    /// 全行程地点总数——「地点排序」入口仅在 ≥2（有可排空间）时出现。
+    private var itineraryStopCount: Int {
+        (bundle?.safeItineraryDays ?? []).reduce(0) { $0 + $1.sortedStops.count }
+    }
     private var sections: [PackingSection] {
         bundle?.safeSections ?? []
     }
@@ -114,12 +120,15 @@ struct PackingListView: View {
                 case .packing:
                     packingContent
                 case .itinerary:
-                    ItineraryView(tripId: tripId)
+                    ItineraryView(tripId: tripId, isReordering: $isReorderingItinerary)
                 }
             }
         }
         .safeAreaInset(edge: .bottom) {
-            if isNewTrip {
+            if isReorderingItinerary {
+                // 排序模式：隐藏底部「行程/打包」切换器，专注排序、防止误切 tab。
+                EmptyView()
+            } else if isNewTrip {
                 saveTripButton
             } else {
                 bottomFaceSwitch
@@ -163,6 +172,14 @@ struct PackingListView: View {
             // 行程动作「…」两面常驻；打包专属动作仅在打包面出现（spec: app-navigation-framework.md）。
             if !isNewTrip {
                 ToolbarItem(placement: .navigationBarTrailing) {
+                    if isReorderingItinerary {
+                        // 排序模式：把 … 换成「完成」，退出排序态。
+                        Button {
+                            withAnimation(.spring(duration: 0.3, bounce: 0.2)) { isReorderingItinerary = false }
+                        } label: {
+                            Text("common.done").fontWeight(.semibold)
+                        }
+                    } else {
                     Menu {
                         // 打包专属「清单操作」成组置顶（本页主任务）：加物品 → 标记 → 编辑分区 → 分享清单。
                         if detailTab == .packing {
@@ -212,8 +229,17 @@ struct PackingListView: View {
                                 Label("trip.background.add", systemImage: "photo")
                             }
                         }
-                        // 分享行程（行程规划面）：弹预览页（大图 + 是否含地图开关 + Share）。
+                        // 行程专属操作（行程规划面）。「地点排序」置顶——与每日 Optimize（自动）成对：
+                        // 手动排（地点排序）｜自动排（Optimize）。仅 ≥2 地点时出现（有可排空间）。
                         if detailTab == .itinerary {
+                            if itineraryStopCount >= 2 {
+                                Button {
+                                    withAnimation(.spring(duration: 0.3, bounce: 0.2)) { isReorderingItinerary = true }
+                                } label: {
+                                    Label("itinerary.reorder.menu", systemImage: "arrow.up.arrow.down")
+                                }
+                            }
+                            // 分享行程：弹预览页（大图 + 是否含地图开关 + Share）。
                             Button {
                                 guard bundle != nil else { return }
                                 UIImpactFeedbackGenerator(style: .light).impactOccurred()
@@ -268,6 +294,7 @@ struct PackingListView: View {
                         Image(systemName: "ellipsis")
                             .font(.system(size: 14, weight: .medium))
                             .foregroundColor(.secondary)
+                    }
                     }
                 }
             }
