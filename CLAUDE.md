@@ -161,6 +161,7 @@ Carry 在中国大陆 App Store 上架，涉及地理政治敏感内容时必须
 
 - 业务逻辑、页面布局、导航全部 SwiftUI；手势拦截、动画性能优化等场景允许通过 UIViewRepresentable 使用 UIKit，但要隔离在独立文件/组件里，不暴露给上层；禁止使用私有 API
 - 颜色必须使用 docs/design-system.md 中定义的 Color Token，禁止硬编码 hex
+- 字体按 design-system §Typography「角色制双字形系统」：圆体（`design: .rounded`）= 展示型标题 / 数字 / 短突出标签；SF（默认）= 密集正文 / 表单输入 / 系统控件（Form·Picker·navigationTitle·toolbar）。**禁止「全 app 一律圆体」**（密集长列表圆体可读性降、偏重）；拿不准默认 SF。SF Symbol 的 `.font` 只控符号大小、不属字体系统。
 - 禁止硬编码用户可见文案（包括写死在代码中的标题、按钮文案、提示语、错误文案、空状态文案等）；统一使用 `Localizable.xcstrings` 管理并通过本地化 key 调用。仅允许技术性常量（如日志 tag、内部调试标记、协议字段）以代码常量形式存在，且不得直接面向用户展示。
 - 所有 View 必须支持 Dark Mode
 - 动画统一：标准交互用 .spring(duration: 0.3, bounce: 0.2)

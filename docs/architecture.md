@@ -59,8 +59,8 @@ ZStack（全窗口）
 - **AddStopView**：`MKLocalSearchCompleter` 地理搜索选点（偏置到目的地）或手动无坐标点
 - **OptimizeRouteView**：单日重排预览→采纳（距离对比 + 新路线地图）
 - **StopEditView**：停靠点编辑（名/类别/时间锚点/备注/删）
-- **RouteOptimizer**（纯函数）：最近邻 + 2-opt，起点固定，时间锚点作段端固定（Haversine）
-- **RouteDistanceService**（actor）：仅供「优化预览」展示真实道路距离——`MKDirections` 串行+会话缓存+失败回退直线
+- **RouteOptimizer**（纯函数）：最近邻 + 2-opt，**固定首尾** + 时间锚点作段端固定（Haversine 搜序）；`isImprovement(original:optimized:)` 纯函数判定「省 >50m 且 >1%」，直线/道路口径共用
+- **RouteDistanceService**（actor）：优化预览的真实道路距离——`MKDirections` 串行 + 会话缓存 + 失败回退直线。**道路距离不仅用于展示，还是「是否算改进」的判定口径**（道路没省/更长 → 「已较优」不采纳）；离线 / 6s 超时退回直线判定。详见 `specs/itinerary-optimize-road-gating.md`
 
 ## 其他模块
 - CarryLogger：单例日志，记录关键生命周期事件和 DB 错误

@@ -244,6 +244,7 @@ Apple 原生风格，极简、克制、优雅。
 - 一级、二级页面都必须实心不透明。
 - 一级页面统一 `Color(.systemBackground)`。
 - 二级页面使用弹层 chrome 同色系实心底（Dark：`Color(red: 0.08, green: 0.08, blue: 0.09)`；Light：`Color(.systemBackground)`）。
+  - 在 `CarrySubtleBackground` 背景上的钉条优先用命名色 **`CarrySubtleBackground.baseColor`**（= 该背景渐变**底端**色、明暗自适应，封装上述 Dark 值）——与背景底端同色故无缝，避免散落硬编码 hex。
 - 禁止透明、半透明或渐变透出列表内容（包括“按钮下方到屏幕底边”区域）。
 
 - 主按钮统一（Primary CTA）：

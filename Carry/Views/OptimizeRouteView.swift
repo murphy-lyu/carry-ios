@@ -202,14 +202,11 @@ struct OptimizeRouteView: View {
                 .padding(.horizontal, 16)
                 .padding(.top, 10)
                 .padding(.bottom, 8)
-                // 上透明 → 底部与背景同色：内容滚动时柔和淡出，且与整屏背景无缝（取代磨砂材质的色带接缝）。
+                // 实心不透明、与整屏背景底端同色（baseColor）——遵 design-system「底部主按钮容器实心、
+                // 禁渐变/半透」规范；同色故与 CarrySubtleBackground 底端无缝、不再有磨砂色带。
                 .background(
-                    LinearGradient(
-                        colors: [CarrySubtleBackground.baseColor.opacity(0), CarrySubtleBackground.baseColor],
-                        startPoint: .top,
-                        endPoint: .bottom
-                    )
-                    .ignoresSafeArea(edges: .bottom)
+                    CarrySubtleBackground.baseColor
+                        .ignoresSafeArea(edges: .bottom)
                 )
         }
     }
