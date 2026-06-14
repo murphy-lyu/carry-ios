@@ -523,28 +523,23 @@ private struct ItineraryLegConnector: View {
     private let legGap: CGFloat = 24            // = 原 TimelineStopRow.legGap
 
     var body: some View {
-        // 距离落在 rail 竖线上、夹在上下两段连线中间（= 连接两站的那条路径上），语义明确表达
-        // 「相邻两站之间的路程」，而非「当前位置到某地的距离」。用上下两段实线 + 中间留白夹住数字，
-        // 不再用背景色块切断连续线——既保住"两点间"的位置语义，又去掉之前「挂在线上飘」的贴纸感。
-        HStack(spacing: railSpacing) {
-            Group {
+        // 竖线【全程连续不断】（消除「断连」），距离贴在竖线右侧、于两站之间垂直居中（消除「不居中」），
+        // 紧挨连接线作为这段 leg 的标注——既不切断线、也不悬在色块/空隙里（消除「飘」），
+        // 仍明确是「相邻两站间的路程」（紧贴连线，而非挪到名称列下方那种「当前位置→某地」的歧义）。
+        Rectangle()
+            .fill(railColor)
+            .frame(width: 1.5)
+            .frame(width: railWidth, height: legGap)        // 1.5 连续竖线居中落在 rail 列，与圆点同 spine
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .overlay(alignment: .leading) {
                 if let distance {
-                    VStack(spacing: 2) {
-                        Rectangle().fill(railColor).frame(width: 1.5).frame(maxHeight: .infinity)
-                        Text(distance)
-                            .font(.system(size: 10.5, weight: .medium, design: .rounded))
-                            .foregroundStyle(.secondary)
-                            .fixedSize()
-                        Rectangle().fill(railColor).frame(width: 1.5).frame(maxHeight: .infinity)
-                    }
-                } else {
-                    Rectangle().fill(railColor).frame(width: 1.5)
+                    Text(distance)
+                        .font(.system(size: 10.5, weight: .medium, design: .rounded))
+                        .foregroundStyle(.secondary)
+                        .fixedSize()
+                        .padding(.leading, railWidth / 2 + 6)   // 紧贴竖线右侧（线在 railWidth/2 处）
                 }
             }
-            .frame(width: railWidth)            // 1.5 线居中落在 rail 列，与停靠点圆点同一条 spine
-            Spacer(minLength: 0)
-        }
-        .frame(height: legGap)
     }
 }
 
