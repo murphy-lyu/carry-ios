@@ -19,6 +19,10 @@ struct ItineraryMapView: View {
 
     @EnvironmentObject var store: TripStore
     @State private var showFullScreen = false
+    /// 全屏地图的按天筛选：nil = 全部天；非 nil = 只看某天。
+    @State private var fullScreenScope: UUID?
+    /// 全屏相机：切筛选时动画重新 fit 到对应范围。
+    @State private var fullScreenCamera: MapCameraPosition = .automatic
 
     private var bundle: TripBundle? { store.bundle(for: tripId) }
 
@@ -140,49 +144,96 @@ struct ItineraryMapView: View {
 
     // MARK: Full screen
 
-    /// 全屏 = 整趟所有天，按天分色一次铺开（点「展开」的意图是看更全）。
-    /// 多色针靠底部图例对应「色 → 天」，否则按天颜色无法解读。
+    /// 全屏按筛选显示的天集合：nil = 全部；否则只看选中那天。
+    private var fullScreenDays: [ItineraryDay] {
+        guard let id = fullScreenScope else { return allDays }
+        return allDays.filter { $0.id == id }
+    }
+
+    /// 全屏 = 整趟所有天按天分色一次铺开（点「展开」= 看更全）；底部筛选条可切「全部 / 某天」，
+    /// 切时动画重新 fit。多色针靠筛选条对应「色 → 天」。
     private var fullScreenMap: some View {
         NavigationStack {
-            mapContent(for: allDays)
-                .ignoresSafeArea(edges: .bottom)
-                .overlay(alignment: .bottom) { mapLegend(for: allDays) }
-                .navigationTitle(Text("itinerary.map.title"))
-                .navigationBarTitleDisplayMode(.inline)
-                .toolbar {
-                    ToolbarItem(placement: .topBarTrailing) {
-                        SheetCloseButton { showFullScreen = false }
-                    }
+            Map(position: $fullScreenCamera) {
+                mapAnnotations(for: fullScreenDays)
+            }
+            .ignoresSafeArea(edges: .bottom)
+            .overlay(alignment: .bottom) { mapFilterBar }
+            .navigationTitle(Text("itinerary.map.title"))
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .topBarTrailing) {
+                    SheetCloseButton { showFullScreen = false }
                 }
+            }
+            .onAppear {
+                fullScreenScope = nil                                   // 每次展开默认「全部」
+                fullScreenCamera = .region(fittedRegion(for: allDays))
+            }
+            .onChange(of: fullScreenScope) { _, _ in
+                withAnimation(.easeInOut(duration: 0.35)) {
+                    fullScreenCamera = .region(fittedRegion(for: fullScreenDays))
+                }
+            }
         }
     }
 
-    /// 全屏地图底部图例：有坐标停靠点的天，按天色 + 短日期标注「色 → 天」。
-    /// 仅 ≥2 天有点时显示（单天无需图例）。
+    /// 全屏底部筛选条：有坐标停靠点的天 →「全部 + 各天」chip，点切筛选并重新 fit。
+    /// 仅 ≥2 天有点时显示（单天无需筛选）。选中态 = 实心高亮，未选 = 常态。
     @ViewBuilder
-    private func mapLegend(for days: [ItineraryDay]) -> some View {
-        let daysWithStops = days.filter { $0.sortedStops.contains { $0.hasCoordinate } }
+    private var mapFilterBar: some View {
+        let daysWithStops = allDays.filter { $0.sortedStops.contains { $0.hasCoordinate } }
         if daysWithStops.count >= 2 {
-            ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: 14) {
-                    ForEach(daysWithStops, id: \.id) { day in
-                        HStack(spacing: 5) {
-                            Circle()
-                                .fill(ItineraryDayPalette.color(forDayIndex: day.sortOrder))
-                                .frame(width: 8, height: 8)
-                            Text(dayShortLabel(day))
-                                .font(.system(.caption, design: .rounded).weight(.medium))
-                                .foregroundStyle(.primary)
-                        }
-                    }
+            // 宽度自适应：天少时胶囊贴合内容、靠 overlay(.bottom) 天然居中（不再拉满整宽留空）；
+            // 天多到一行放不下时，ViewThatFits 退回整宽可滚。
+            ViewThatFits(in: .horizontal) {
+                filterChipsRow(daysWithStops)
+                ScrollView(.horizontal, showsIndicators: false) {
+                    filterChipsRow(daysWithStops)
                 }
-                .padding(.horizontal, 14)
-                .padding(.vertical, 9)
             }
             .background(.regularMaterial, in: Capsule())
             .padding(.horizontal, 16)
             .padding(.bottom, 12)
         }
+    }
+
+    private func filterChipsRow(_ days: [ItineraryDay]) -> some View {
+        HStack(spacing: 6) {
+            filterChip(label: Text("itinerary.map.all_days"),
+                       dot: nil,
+                       isSelected: fullScreenScope == nil) { fullScreenScope = nil }
+            ForEach(days, id: \.id) { day in
+                filterChip(label: Text(dayShortLabel(day)),
+                           dot: ItineraryDayPalette.color(forDayIndex: day.sortOrder),
+                           isSelected: fullScreenScope == day.id) { fullScreenScope = day.id }
+            }
+        }
+        .padding(.horizontal, 8)
+        .padding(.vertical, 7)
+    }
+
+    /// 筛选条单个 chip：可选当天色点 + 标签；选中实心高亮 + semibold。
+    private func filterChip(label: Text, dot: Color?, isSelected: Bool, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            HStack(spacing: 5) {
+                if let dot {
+                    Circle().fill(dot).frame(width: 8, height: 8)
+                }
+                label
+                    .font(.system(.caption, design: .rounded).weight(isSelected ? .semibold : .medium))
+                    .foregroundStyle(isSelected ? Color.primary : Color.secondary)
+            }
+            .padding(.horizontal, 10)
+            .padding(.vertical, 6)
+            .background {
+                if isSelected {
+                    Capsule().fill(Color.primary.opacity(0.10))
+                }
+            }
+            .contentShape(Capsule())
+        }
+        .buttonStyle(.plain)
     }
 
     /// 图例里的短日期标签：有日期行程「月/日」，无日期行程「Day N」（复用既有 key，无新增文案）。
@@ -197,22 +248,27 @@ struct ItineraryMapView: View {
 
     // MARK: Shared map content
 
+    /// 预览态（静态相机）。全屏走 `Map(position:)` 单独装配（可动画切筛选）。
     @ViewBuilder
     private func mapContent(for days: [ItineraryDay]) -> some View {
         Map(initialPosition: .region(fittedRegion(for: days))) {
-            // 按天编号（当天内 1、2、3…）+ 按天着色，与列表一一对应。
-            // 自定义圆形针（当天色实心圆 + 白序号 + 白描边 + 阴影），与列表序号圆点同语言、
-            // 比原生气泡针更干净、更品牌化；序号是与列表交叉对照的锚点。
-            ForEach(dayMapData(for: days)) { day in
-                ForEach(day.stops, id: \.stop.id) { entry in
-                    Annotation(entry.stop.name, coordinate: entry.stop.coordinate!) {
-                        stopMarker(index: entry.localIndex + 1, color: day.color)
-                    }
+            mapAnnotations(for: days)
+        }
+    }
+
+    /// 地图针 + 路线（按天编号、按天着色），预览与全屏共用。
+    /// 自定义圆形针（当天色实心圆 + 白序号 + 白描边 + 阴影），与列表序号圆点同语言、比原生气泡针干净。
+    @MapContentBuilder
+    private func mapAnnotations(for days: [ItineraryDay]) -> some MapContent {
+        ForEach(dayMapData(for: days)) { day in
+            ForEach(day.stops, id: \.stop.id) { entry in
+                Annotation(entry.stop.name, coordinate: entry.stop.coordinate!) {
+                    stopMarker(index: entry.localIndex + 1, color: day.color)
                 }
-                if day.routeCoords.count >= 2 {
-                    MapPolyline(coordinates: day.routeCoords)
-                        .stroke(day.color, style: StrokeStyle(lineWidth: 3, lineCap: .round, lineJoin: .round))
-                }
+            }
+            if day.routeCoords.count >= 2 {
+                MapPolyline(coordinates: day.routeCoords)
+                    .stroke(day.color, style: StrokeStyle(lineWidth: 3, lineCap: .round, lineJoin: .round))
             }
         }
     }
