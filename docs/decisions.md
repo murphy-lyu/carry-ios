@@ -1,5 +1,22 @@
 # 决策日志
 
+## 2026-06-14 搜索框收成单一组件 CarrySearchField（单一形态·描边主导）
+
+> 起因：用户发现首页「搜索行程」圆角（24pt）与「添加地点 / 添加物品」（12pt）不一致，问是否该统一、以谁为准。
+
+- **决策**：圆角统一 **12pt**（首页 24pt 是脱离 design-system 的孤例，拉回规范，而非迁就特例）；并抽共享组件 `CarrySearchField`（`ViewModifiers.swift`）把"形状 + 行为 + 来源"收成单一真源——根因是三处各写一份才会漂移。
+- **表面方向（用户拍板）**：起初按上下文设了 `.plain/.grouped/.floating` 三表面枚举（怕分组背景上同色隐形）。浅色实拍后发现首页成了唯一"灰框"、三屏色调不齐。用户选**全部用描边主导 `.floating`**（systemBackground.opacity(0.84) + 细描边）——细描边让"白色半透明"在任何底色上都立得住（灰底=白底+描边、白底=描边定界），故无需分上下文。随即删掉 `Surface` 枚举（零调用死代码），收成真正单一形态。
+- **关键认知**：纯实心填充才有"衬在同灰分组背景上整框隐形"的坑；描边主导式不受影响——这是能统一成一种表面的前提。
+- **回写**：`design-system.md` §搜索框（组件 + 12pt/44pt 形状 + 描边主导唯一表面 + 通吃底色原理）。
+
+## 2026-06-14 UIScrollView 重配判定：比 bounds.size，绝不比整个 bounds（bounds.origin == contentOffset）
+
+> 起因：背景图构图界面选图后卡在填充态、无法缩放/拖动（用户报 bug）。回归来自重构 `a0d64b7` 把"配一次"的 `configured: Bool` 改成比较整个 `scrollView.bounds` 来决定是否重配。
+
+- **根因 / 教训（通用）**：**`UIScrollView.bounds.origin` 就是它的 `contentOffset`**，随每次滚动/缩放而变。任何"用整个 `bounds` 判断视图是否需要重新配置"的逻辑，都会被用户的滚动/缩放误判为"变了" → 反复重配。这里的后果是每个手势都把 `zoomScale`/偏移重置回 `fillScale`，画面动一下就弹回。
+- **修复**：判定与缓存都只用 `bounds.size`（`lastConfiguredBounds: CGRect` → `lastConfiguredSize: CGSize`）。需要"窗口真正改尺寸（sheet 转场落定 / 旋转）才重算"时，**永远比 size，不比 origin/整 rect**。
+- **诊断纪律印证**：纯读码两次没定位（zoom 数学新旧一致，看不出问题）→ 按 CLAUDE.md §2 改用可观测手段，`NSLog` 跑模拟器一眼看出 `configured` 随 origin 反复触发、size 恒定。结论：盲猜第三次不如一条日志。
+
 ## 2026-06-14 确立 Carry Modal Convention + 创建/快速添加改模态
 
 > 起因：UI 走查发现创建行程、快速添加物品用的是 push（层级导航），而它们语义上是"自包含任务"。借机把呈现方式（push / sheet / cover）按统一语义规范一遍。

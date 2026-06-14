@@ -3,9 +3,17 @@
 ## 最后更新
 2026-06-14
 
+## 上次改动摘要（修复背景图构图无法缩放/拖动 · 2026-06-14）
+
+> 用户报 bug：行程/打包页「上传背景图」选图后被放大到很大、且无法缩放（以前可调）。回归源于 6 天前重构 `a0d64b7`。已提交 `5fcdf20`，iOS 26.5 模拟器实测验证。
+
+- **根因**：重构把构图重配判定从 `configured: Bool`（配一次）改成比较整个 `scrollView.bounds`。但 `UIScrollView.bounds.origin` **就是 `contentOffset`**——捏合/拖动时必变 → `configureIfNeeded` 每个手势都重新触发、把 `zoomScale` 与偏移重置回 `fillScale`，导致画面卡在填充态、动一下就被打回。
+- **修复**（`BackgroundReposition.swift`）：只比较 `bounds.size`（窗口尺寸），不比较携带滚动偏移的 origin。`lastConfiguredBounds: CGRect` → `lastConfiguredSize: CGSize`。保留"窗口真正改尺寸（转场落定/旋转）时重算"的本意，交互时不再误重置用户构图。
+- **诊断方式**（守纪律）：纯读码推断两次未定位 → 改用可观测手段：加 `NSLog` 跑模拟器，日志直接显示 `configured` 随 `bounds.origin` 变化反复触发（size 恒定）。修复后实测 `configured` 仅 1 次、拖动平移后画面停住不弹回。调试日志已移除。
+
 ## 上次改动摘要（搜索框统一组件 CarrySearchField · 2026-06-14）
 
-> 三处搜索框（首页搜索行程 / 添加地点 / 添加物品）原各写一份、圆角不一致（首页 24pt、其余 12pt）。抽共享组件收成单一真源。编译绿（独立 DerivedData）；明暗双模真机/模拟器走查，三框已视觉一致。未提交。
+> 三处搜索框（首页搜索行程 / 添加地点 / 添加物品）原各写一份、圆角不一致（首页 24pt、其余 12pt）。抽共享组件收成单一真源。已提交 `395d52d`；明暗双模真机/模拟器走查，三框已视觉一致。
 
 - **新增 `CarrySearchField`**（`ViewModifiers.swift`，与其它共享 View 组件同处，无需改 pbxproj）：单一形态——12pt `.continuous` 圆角 / 44pt 高 / body 字号 / 放大镜 + 清除按钮（`common.clear` a11y）+ `.spring(0.2,0.1)` 清除动画。表面走 design-system「描边主导」唯一款：`systemBackground.opacity(0.84)` + 细描边（Dark 0.12 / Light 0.08）——描边让它通吃任何底色，故不分上下文（曾短暂引入 `.plain/.grouped/.floating` 三表面枚举，后按用户拍板「全描边主导」删枚举、收单一形态，避免死代码）。带可选 `trailing` slot。
 - **三处替换**：HomeView `searchSheet`（24→12，去掉内联实心框，旁留「取消」）；AddStopView `searchField`（`.grouped` slot 放类别菜单，外层 `systemGroupedBackground` 底条保留）；ItemPickerView `searchBar`（删随之失效的 `searchPlaceholderText` 死代码）。
