@@ -41,8 +41,10 @@
 
 - **决策**：底部 `safeAreaInset(.bottom)` 栏统一走 **`BottomBarScrim`** 修饰器（`ViewModifiers.swift`，单一真源）——顶部定高「透明→实心」渐变条 + 其下实心兜底（`ignoresSafeArea(.bottom)` 延到屏幕底边）。滚动内容在栏上沿柔和淡出，按钮坐实心、其下不透出内容。淡出色 = **该页背景色**（一级 `systemBackground` / 二级 chrome 同色系 / `CarrySubtleBackground` 上用 `baseColor`）故无缝。
 - **为何推翻「禁渐变」**：原规则是针对 `.regularMaterial` 在深背景上偏亮成**色带**——根因是「材质」不是「渐变」。淡出到页面色的渐变无色带、且让内容优雅消隐，更贴 Apple 浮动栏。**本决策 supersede**「优化页钉条改实心（`CarrySubtleBackground.baseColor`）」那条：优化页同改用 `BottomBarScrim(CarrySubtleBackground.baseColor)`。
-- **落地**：行程/打包页切换器、`SuggestionPreviewView`、`ScenePickerView`、`TripInfoView`、`OptimizeRouteView`、`TripDateRangePickerSheet`（月历滚动内容淡出，取代原硬分隔线）。**待评**：`ItemPickerView` 智能预览**圆角浮条**（非整宽底栏，形状不同）、`HomeView` 底部 glass 胶囊栏（glass + 地球 sheet 语境特殊）——单独设计。
-- 回写 `design-system.md` §底部主按钮容器。
+- **落地（整宽实心栏 → `BottomBarScrim`）**：行程/打包页切换器、`SuggestionPreviewView`、`ScenePickerView`、`TripInfoView`、`OptimizeRouteView`、`TripDateRangePickerSheet`（月历滚动内容淡出，取代原硬分隔线）、新建预览 Save（`PackingListView.saveTripButton`）。
+- **第二套：浮动元素 → `bottomContentFade`**：玻璃/圆角浮动控件**不该被实心遮挡**（垫实心杀玻璃通透），改用「内容向页面底色消隐、浮动元素仍浮起」的 overlay 渐变。**落地**：`HomeView` 底部 glass 胶囊栏（手搓 `safeAreaInset` 栏，iOS 26 `scrollEdgeEffectStyle` 不认它、不生效，故走此法）、`ItemPickerView` 智能预览圆角浮条。
+- **两者均为纯 `LinearGradient` overlay + `allowsHitTesting(false)`**：不用 `.mask`/`.blur`/材质 → 不触发离屏渲染、不挡点击、开销极低（关键选型，勿退回 mask/material）。
+- 回写 `design-system.md` §「底部栏 / 浮动元素下的内容过渡」（两套模式 + 选型 + 性能）。
 
 ## 2026-06-14 行程页 日历 ↔ 列表 双向联动（防回授）+ 末日吸顶补偿
 

@@ -435,6 +435,28 @@ extension View {
     }
 }
 
+// MARK: - BottomContentFade
+
+extension View {
+    /// **浮动元素**（glass 胶囊栏 / 圆角浮卡）下的内容消隐：在底部叠一段「透明 → 页面底色」渐变，
+    /// 让滚动内容向背景**柔和消隐**（浮动元素仍浮于其上、不在其后垫整块实心）。
+    /// 区别于 `BottomBarScrim`（那是**整宽实心底栏**的垫底）；这里用于不该被实心遮挡的浮动控件。
+    /// 纯渐变 overlay、`allowsHitTesting(false)`、无 mask/blur → 不触发离屏渲染、不挡点击、开销极低。
+    /// - color: 消隐到的底色 = 该页背景色（与背景无缝）。
+    /// - height: 消隐带高度。
+    func bottomContentFade(_ color: Color, height: CGFloat = 120) -> some View {
+        overlay(alignment: .bottom) {
+            LinearGradient(
+                colors: [color.opacity(0), color.opacity(0.92), color],
+                startPoint: .top,
+                endPoint: .bottom
+            )
+            .frame(height: height)
+            .allowsHitTesting(false)
+        }
+    }
+}
+
 // MARK: - CarryConfirmationDialog
 
 /// App-styled confirmation dialog — replaces system .alert where visual consistency matters.

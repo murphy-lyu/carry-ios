@@ -448,22 +448,8 @@ struct PackingListView: View {
         }
         .frame(maxWidth: .infinity)
         .padding(.bottom, 10)
-        // 在按钮上方留出淡入空间：渐变在「触达按钮上沿前」就淡到实心，按钮整体坐在不透明底上、
-        // 不与下方内容重叠；柔和淡出发生在按钮上方那段，保留渐变观感。
-        .padding(.top, 22)
-        .background(
-            LinearGradient(
-                stops: [
-                    .init(color: Color(UIColor.systemBackground).opacity(0.0), location: 0.0),
-                    .init(color: Color(UIColor.systemBackground).opacity(colorScheme == .dark ? 0.92 : 0.96), location: 0.18),
-                    // ~0.27 ≈ 按钮上沿（22pt 上留白 / 总高）→ 此后全实心，盖住按钮区。
-                    .init(color: Color(UIColor.systemBackground), location: 0.27),
-                    .init(color: Color(UIColor.systemBackground), location: 1.0)
-                ],
-                startPoint: .top,
-                endPoint: .bottom
-            )
-        )
+        // 内容在切换器上沿柔和淡出 + 实心兜底（全 App 统一，见 BottomBarScrim，单一真源）。
+        .bottomBarScrim(Color(UIColor.systemBackground))
     }
 
     private func faceSegment(_ face: DetailTab, title: LocalizedStringKey, icon: String) -> some View {
@@ -1323,10 +1309,11 @@ struct PackingListView: View {
             .buttonStyle(SolidPressButtonStyle())
             .allowsHitTesting(!isSaved)
             .padding(.horizontal, 16)
-            .padding(.top, 12)
             .padding(.bottom, 16)
         }
-        .background(Color(UIColor.systemBackground))
+        // 新建预览的分类 chips 在「Save list」上沿柔和淡出（全 App 统一，见 BottomBarScrim）；
+        // 淡出到 systemBackground（= 预览内容面 contentSurface 底色）故无缝。
+        .bottomBarScrim(Color(UIColor.systemBackground))
     }
 
     /// 新建预览顶部的常驻件数行——保留旧 toast 唯一的信息量（已整理的件数），

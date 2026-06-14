@@ -589,6 +589,9 @@ struct HomeView: View {
                     .allowsHitTesting(false)
                 }
             }
+            // 行程列表滚到底部浮动 glass 胶囊栏区域时，内容向页面底色柔和消隐——glass 仍浮于干净背景
+            // 之上、内容不在栏下硬切（区别于实心 BottomBarScrim）。见 bottomContentFade。
+            .bottomContentFade(Color(UIColor.systemBackground))
             .onAppear {
                 store.refresh()
                 store.correctMisgecodedTrips()

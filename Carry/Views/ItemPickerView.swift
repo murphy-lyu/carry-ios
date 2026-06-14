@@ -453,6 +453,8 @@ struct ItemPickerView: View {
                 Group {
                     if sourceMode == .smart {
                         smartRecommendationView
+                            // 场景网格滚到底部圆角预览浮条下时柔和消隐（浮条浮于其上，不在其后垫实心）。
+                            .bottomContentFade(Color(UIColor.systemBackground), height: 96)
                     } else if sourceMode == .myItems {
                         if searchText.isEmpty {
                             let myItems = store.myItems(in: selectedMyItemCollection).sorted(by: compareMyItems(_:_:))

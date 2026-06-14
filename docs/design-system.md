@@ -242,12 +242,17 @@ Apple 原生风格，极简、克制、优雅。
 - Dark：优先 `Color(.secondarySystemBackground)`。
 - Light：优先 `Color(.systemBackground)`。
 
-- 底部主按钮容器（`safeAreaInset(.bottom)`）：**上沿渐变淡出 + 实心兜底**（2026-06-14 更新，超越原「一律实心、禁渐变」）。
-  - 统一走 **`BottomBarScrim`** 修饰器（`ViewModifiers.swift`，全 App 单一真源）：底部栏背景 = 顶部一段定高「透明→实心」渐变条 + 其下实心填满。滚动内容在栏的**上沿柔和淡出**（而非硬切/材质色带），按钮坐在实心上、其下到屏幕底边仍**实心不透出内容**。
-  - **淡出到「该页背景色」**（渐变底端 = 页面色，故无缝）：一级页 `Color(.systemBackground)`；二级弹层用 chrome 同色系（Dark `Color(red: 0.08, green: 0.08, blue: 0.09)`；Light `Color(.systemBackground)`）；`CarrySubtleBackground` 背景上的栏用 **`CarrySubtleBackground.baseColor`**（背景渐变底端色，明暗自适应，避免散落 hex）。
-  - 为何改：原「禁渐变」是针对 `.regularMaterial` 在深背景上偏亮成**色带**的问题——根因是「材质」不是「渐变」。淡出到页面色的渐变既无色带、又让内容优雅消隐（north-star §3「内容优先、克制的过渡」），比硬切更接近 Apple 浮动栏观感。
-  - 仍**禁止**：材质/半透明雾化层、渐变透出**列表内容**到屏幕底边（按钮区及其下必须实心）。
-  - 已落地：行程/打包页底部切换器、`SuggestionPreviewView`；列表型底部 CTA 页应逐步统一到 `BottomBarScrim`。
+- **底部栏 / 浮动元素下的内容过渡**（2026-06-14 重写，超越原「一律实心、禁渐变」）：统一原则——**滚动内容在底部元素下永不硬切，而是柔和消隐**。按底部元素是「实心整宽栏」还是「浮动元素」分两套，**单一真源**在 `ViewModifiers.swift`：
+
+  - **① `BottomBarScrim`** —— 用于**整宽实心底栏**（`safeAreaInset(.bottom)` 里的 Save/继续/采用/行程·打包切换器等）。背景 = 顶部定高「透明→实心」渐变条 + 其下实心填满（`ignoresSafeArea(.bottom)` 延到屏幕底边）。内容在栏上沿淡出，**按钮坐实心、其下到屏幕底边不透出内容**。淡出到**该页背景色**（无缝）：一级 `systemBackground`；二级弹层 chrome 同色系（Dark `Color(red:0.08,green:0.08,blue:0.09)`/Light `systemBackground`）；`CarrySubtleBackground` 上用 `CarrySubtleBackground.baseColor`。**已落地**：行程/打包切换器、SuggestionPreview、ScenePicker、TripInfo、TripDateRange、OptimizeRoute、新建预览 Save。
+
+  - **② `bottomContentFade`** —— 用于**浮动元素**（玻璃胶囊栏 / 圆角浮卡，**不该被实心遮挡**）。在内容底部叠一段「透明→页面底色」渐变 overlay，内容向背景**消隐**、浮动元素**仍浮于其上、保通透**（**不**在其后垫整块实心）。**已落地**：首页底部 glass 胶囊栏、ItemPicker 智能预览圆角条。
+
+  - **选型**：底部元素是不透明整宽栏 → `BottomBarScrim`；是半透/玻璃/圆角浮动控件 → `bottomContentFade`（垫实心会杀掉玻璃通透）。
+
+  - **性能**：两者都是纯 `LinearGradient` overlay + `allowsHitTesting(false)`——**不用 `.mask`/`.blur`/材质**，故不触发离屏渲染、不挡点击、开销极低（这是关键选型，别退回 mask/material）。
+
+  - 为何改「禁渐变」：原规则针对 `.regularMaterial` 在深背景上成**色带**——根因是「材质」非「渐变」。淡出到页面色的渐变无色带、且让内容优雅消隐（north-star §3），更近 Apple 浮动栏。仍**禁止**：材质/雾化层；`BottomBarScrim` 的实心区透出列表内容。
 
 - 主按钮统一（Primary CTA）：
 - 背景必须实心不透明，禁用态同样实心（不可通过 opacity 降级）。
