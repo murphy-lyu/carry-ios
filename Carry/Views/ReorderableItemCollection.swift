@@ -264,17 +264,22 @@ struct ReorderableItemCollection: UIViewRepresentable {
             // PackingItem 是 SwiftData @Model（Observable），属性变化会自动刷新宿主 SwiftUI。
             // 唯一需要 reconfigure 的是“进/出编辑态”的行——它要在 PackingItemRow 与
             // InlineEditRow 间切换，而该选择是在 cell 注册闭包里按 editingItemId 求值的。
-            dataSource.apply(snapshot, animatingDifferences: animated) { [weak self] in
-                guard let self, let ds = self.dataSource else { return }
-                let current = ds.snapshot().itemIdentifiers
-                let toggled: [RowID] = [previousEditing, self.parent.editingItemId]
-                    .compactMap { $0 }
-                    .map { RowID.item($0) }
-                    .filter { current.contains($0) }
-                guard !toggled.isEmpty else { return }
-                var reconfig = ds.snapshot()
+            dataSource.apply(snapshot, animatingDifferences: animated)
+            // 只 reconfigure「编辑表现真正发生切换」的行（进/出编辑态）= previousEditing 与 editingItemId
+            // 的【对称差】。不能简单把两者并起来：二者相等时（编辑态未变、只是别的原因触发了 update，
+            // 如输入文字 / 返回刷新），[prev, cur] 会把同一 id 给出两次，传进 reconfigureItems 即
+            // 「supplied item identifiers are not unique」断言 → SIGABRT。对称差天然去重：未变→空集
+            // （不 reconfigure，也顺带避免每次按键都重建编辑行）；切换→两个不同 id。
+            // reconfigure 同步紧跟 apply（不放异步 completion），过滤基准用本次即将应用的这份 snapshot。
+            let before: Set<UUID> = previousEditing.map { [$0] } ?? []
+            let after: Set<UUID> = parent.editingItemId.map { [$0] } ?? []
+            let toggled: [RowID] = before.symmetricDifference(after)
+                .map { RowID.item($0) }
+                .filter { snapshot.itemIdentifiers.contains($0) }
+            if !toggled.isEmpty {
+                var reconfig = snapshot
                 reconfig.reconfigureItems(toggled)
-                ds.apply(reconfig, animatingDifferences: false)
+                dataSource.apply(reconfig, animatingDifferences: false)
             }
         }
 
