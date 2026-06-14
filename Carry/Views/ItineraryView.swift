@@ -151,7 +151,6 @@ struct ItineraryView: View {
                 optimizeContent: { AnyView(optimizeRow($0)) },
                 headerContent: { AnyView(dayHeaderRow($0)) },
                 onDelete: { deleteStop($0) },
-                onEdit: { editStop($0) },
                 onArrange: { store.applyItineraryArrangement(tripId: tripId, dayOrders: $0) },
                 onReorderBegan: { },
                 onFocusDay: { focusedDayId = $0 }
@@ -298,7 +297,11 @@ struct ItineraryView: View {
                 navApps: navApps
             )
             .padding(.horizontal, 16)
-            // 不再「点击整行=编辑」；编辑改由向左滑动出现的「编辑」按钮触发（见 onEdit）。
+            .contentShape(Rectangle())
+            // 点击整行 → 打开停靠点详情/编辑：把时间/备注/类别等被左滑隐藏的能力暴露出来（左滑可发现性低）。
+            // 打开的是可逆 sheet、不静默改数据，误触代价极低；长按仍拖拽重排、左滑仍删除，tap 与之手势类型不同、不冲突。
+            // 行内导航按钮（Menu/Button）在自己 44pt 区域内优先接管，不会被这层 tap 抢走。
+            .onTapGesture { activeSheet = .editStop(stop) }
         }
     }
 
@@ -434,12 +437,6 @@ struct ItineraryView: View {
     private func deleteStop(_ stopID: UUID) {
         guard let day = days.first(where: { ($0.stops ?? []).contains { $0.id == stopID } }) else { return }
         store.removeItineraryStop(tripId: tripId, dayId: day.id, stopId: stopID)
-    }
-
-    /// 滑动编辑（collection 的 swipe action）：找到停靠点并唤起编辑 sheet。
-    private func editStop(_ stopID: UUID) {
-        guard let stop = days.flatMap({ $0.stops ?? [] }).first(where: { $0.id == stopID }) else { return }
-        activeSheet = .editStop(stop)
     }
 }
 

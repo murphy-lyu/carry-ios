@@ -46,8 +46,6 @@ struct ItineraryReorderCollection: UIViewRepresentable {
     let optimizeContent: (UUID) -> AnyView
     let headerContent: (ItineraryDaySection) -> AnyView
     let onDelete: (UUID) -> Void
-    /// 滑动「编辑」：唤起停靠点编辑（替代原先的点击整行编辑）。
-    let onEdit: (UUID) -> Void
     /// 松手提交：落定后每天的完整 stopID 顺序（跨天则改归属）。
     let onArrange: ([(dayID: UUID, stopIDs: [UUID])]) -> Void
     /// 拖拽开始（触感准备 / 上层可借此收键盘等）。
@@ -420,14 +418,8 @@ struct ItineraryReorderCollection: UIViewRepresentable {
             }
             delete.image = UIImage(systemName: "trash")
             delete.backgroundColor = .systemRed
-            let edit = UIContextualAction(style: .normal, title: nil) { [weak self] _, _, completion in
-                self?.parent.onEdit(id)
-                completion(true)
-            }
-            edit.image = UIImage(systemName: "pencil")
-            edit.backgroundColor = CarryAccent.uiColor
-            // 顺序：删除在最外侧（边缘），编辑紧邻其内。整滑不直接触发（需点按）。
-            let config = UISwipeActionsConfiguration(actions: [delete, edit])
+            // 编辑改由「点击整行」承载（tap = 打开详情/编辑），左滑只留删除——对齐通用范式、消除冗余入口。
+            let config = UISwipeActionsConfiguration(actions: [delete])
             config.performsFirstActionWithFullSwipe = false
             return config
         }
