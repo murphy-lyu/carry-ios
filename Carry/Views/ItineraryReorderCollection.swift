@@ -62,42 +62,23 @@ struct ItineraryReorderCollection: UIViewRepresentable {
         layoutConfig.interSectionSpacing = 0
 
         let layout = UICollectionViewCompositionalLayout(
-            sectionProvider: { [weak coordinator] sectionIndex, _ in
-                let rowCount = max(1, coordinator?.rowCount(in: sectionIndex) ?? 1)
-
-                let itemSize = NSCollectionLayoutSize(
-                    widthDimension: .fractionalWidth(1.0),
-                    heightDimension: .estimated(56)
-                )
-                let item = NSCollectionLayoutItem(layoutSize: itemSize)
-                item.contentInsets = .zero
-
-                let groupSize = NSCollectionLayoutSize(
-                    widthDimension: .fractionalWidth(1.0),
-                    heightDimension: .estimated(CGFloat(rowCount) * 56)
-                )
-                let group = NSCollectionLayoutGroup.vertical(
-                    layoutSize: groupSize,
-                    repeatingSubitem: item,
-                    count: rowCount
-                )
-
-                let section = NSCollectionLayoutSection(group: group)
+            sectionProvider: { [weak coordinator] _, env in
+                // 复刻打包 ReorderableItemCollection 的 .list 配置——透明 cell + 吸顶 header +
+                // 原生左划（编辑/删除）。custom group 压缩布局不自带 swipe；42a72b6 改成 group 时误删了
+                // swipe provider 接线，致行程左划失效。改回 .list 修复，并与打包两套收敛。
+                // cell/header 自身已设 backgroundConfiguration=.clear()，故 .list 下照旧透明；
+                // 行高由 UIHostingConfiguration 自适应（与原 .estimated(56) 实际尺寸一致）。
+                var config = UICollectionLayoutListConfiguration(appearance: .plain)
+                config.showsSeparators = false
+                config.backgroundColor = .clear
+                config.headerMode = .supplementary            // 每天一个吸顶 header
+                config.headerTopPadding = 0                   // 清掉 plain list 表头上方系统间距
+                config.trailingSwipeActionsConfigurationProvider = { [weak coordinator] indexPath in
+                    coordinator?.trailingSwipe(at: indexPath)
+                }
+                let section = NSCollectionLayoutSection.list(using: config, layoutEnvironment: env)
                 section.contentInsets = .zero
-                section.interGroupSpacing = 0
-                section.supplementaryContentInsetsReference = .none
-
-                let headerSize = NSCollectionLayoutSize(
-                    widthDimension: .fractionalWidth(1.0),
-                    heightDimension: .estimated(56)
-                )
-                let header = NSCollectionLayoutBoundarySupplementaryItem(
-                    layoutSize: headerSize,
-                    elementKind: Self.headerKind,
-                    alignment: .top
-                )
-                header.pinToVisibleBounds = true
-                section.boundarySupplementaryItems = [header]
+                section.boundarySupplementaryItems.forEach { $0.pinToVisibleBounds = true }
                 return section
             },
             configuration: layoutConfig
@@ -228,12 +209,6 @@ struct ItineraryReorderCollection: UIViewRepresentable {
             // 首开不滚；若重建时选中的是非首天，紧随的 update() 会把它吸顶（保持与日历联动）。
             lastScrolledDayId = parent.sections.first?.id
             applySnapshot(animated: false)
-        }
-
-        func rowCount(in sectionIndex: Int) -> Int {
-            guard sectionIndex < parent.sections.count else { return 1 }
-            let section = parent.sections[sectionIndex]
-            return max(1, section.stopIDs.count + 1 + (section.showsOptimize ? 1 : 0))
         }
 
         // MARK: Update
