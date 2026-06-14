@@ -63,6 +63,9 @@ struct ItineraryView: View {
 
     @State private var activeSheet: ItinerarySheet?
     @State private var focusedDayId: UUID?
+    /// 已安装的导航 App，onAppear 时探测一次（避免每行重复 canOpenURL）。
+    /// 行内导航按钮据此：≥2 个弹锚定 `Menu`、仅 1 个（只有 Apple 地图）直接调起。
+    @State private var navApps: [MapNavigationApp] = []
 
     private var bundle: TripBundle? { store.bundle(for: tripId) }
     private var days: [ItineraryDay] { bundle?.safeItineraryDays ?? [] }
@@ -125,6 +128,7 @@ struct ItineraryView: View {
         .onAppear {
             store.syncItineraryDays(tripId: tripId)   // 兜底：天对齐到行程天数（存量行程/新建首开）
             syncFocusedDaySelectionIfNeeded()
+            navApps = MapNavigationService.availableApps()
         }
         .onChange(of: days.map(\.id)) { _, _ in
             syncFocusedDaySelectionIfNeeded()
@@ -290,7 +294,8 @@ struct ItineraryView: View {
                 index: index,
                 isLast: index == dayStops.count - 1,
                 legFromPrevious: legLabel(stops: dayStops, index: index),
-                dayColor: ItineraryDayPalette.color(forDayIndex: day.sortOrder)
+                dayColor: ItineraryDayPalette.color(forDayIndex: day.sortOrder),
+                navApps: navApps
             )
             .padding(.horizontal, 16)
             // 不再「点击整行=编辑」；编辑改由向左滑动出现的「编辑」按钮触发（见 onEdit）。
@@ -437,6 +442,8 @@ private struct TimelineStopRow: View {
     let legFromPrevious: String?
     /// 当天配色（与地图针 / 路线同色，便于图文互相对照）。
     let dayColor: Color
+    /// 已安装的导航 App（仅有坐标时显示导航按钮；≥2 个弹锚定 Menu、1 个直接调起）。
+    let navApps: [MapNavigationApp]
 
     private var railColor: Color { dayColor.opacity(0.25) }
     private let railWidth: CGFloat = 26
@@ -536,7 +543,9 @@ private struct TimelineStopRow: View {
                 }
                 .foregroundStyle(.secondary)
             }
-            if !stop.hasCoordinate {
+            if stop.hasCoordinate && !navApps.isEmpty {
+                navButton
+            } else if !stop.hasCoordinate {
                 Image(systemName: "mappin.slash")
                     .font(.caption)
                     .foregroundStyle(.tertiary)
@@ -544,6 +553,40 @@ private struct TimelineStopRow: View {
         }
         // 名称块与圆点（24pt 高）等高居中，使序号正对名称而非地址。
         .frame(minHeight: 24, alignment: .center)
+    }
+
+    /// 导航按钮：≥2 个 App 弹「锚定到本按钮」的 Menu（空间上即指明是哪一行，无需额外标注）；
+    /// 仅 1 个（只有 Apple 地图）则直接调起、不弹无意义的单项菜单。工具动作 → 中性灰（Tier 3）。
+    @ViewBuilder
+    private var navButton: some View {
+        if navApps.count > 1 {
+            Menu {
+                ForEach(navApps) { app in
+                    Button(LocalizedStringKey(app.nameKey)) { navigate(app) }
+                }
+            } label: {
+                navIcon
+            }
+            .accessibilityLabel(Text("itinerary.nav.button.a11y"))
+        } else {
+            Button { navigate(navApps[0]) } label: { navIcon }
+                .buttonStyle(.plain)
+                .accessibilityLabel(Text("itinerary.nav.button.a11y"))
+        }
+    }
+
+    private var navIcon: some View {
+        Image(systemName: "arrow.triangle.turn.up.right.circle")
+            .font(.system(size: 17))
+            .foregroundStyle(.secondary)
+            .frame(width: 44, height: 44)
+            .contentShape(Rectangle())
+    }
+
+    private func navigate(_ app: MapNavigationApp) {
+        guard let coord = stop.coordinate else { return }
+        MapNavigationService.open(app, coordinate: coord, name: stop.name)
+        CarryLogger.shared.log(.itineraryStopNavigated, context: app.rawValue)
     }
 }
 

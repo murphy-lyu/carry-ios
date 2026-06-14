@@ -1,0 +1,95 @@
+//
+//  MapNavigationService.swift
+//  Carry
+//
+//  调起第三方导航 App 做「当前位置 → 停靠点」驾车导航。
+//  iOS 无系统级导航选择器，故自建：探测已安装 App → 各家 deep link 调起。
+//  坐标来自 Apple MKLocalSearch（国内 GCJ-02 / 境外 WGS-84）：Apple/高德直传、百度需转 BD-09。
+//  spec: specs/itinerary-stop-navigation.md
+//
+
+import Foundation
+import UIKit
+import MapKit
+import CoreLocation
+
+/// 支持的导航 App。`allCases` 顺序即菜单顺序（百度按产品要求置末位）。
+enum MapNavigationApp: String, CaseIterable, Identifiable {
+    case apple
+    case amap
+    case google
+    case baidu
+
+    var id: String { rawValue }
+
+    /// 本地化显示名的 key（在视图层包成 `LocalizedStringKey`，本文件不依赖 SwiftUI）。
+    var nameKey: String {
+        switch self {
+        case .apple:  return "itinerary.nav.app.apple"
+        case .amap:   return "itinerary.nav.app.amap"
+        case .google: return "itinerary.nav.app.google"
+        case .baidu:  return "itinerary.nav.app.baidu"
+        }
+    }
+
+    /// 探测用 scheme；Apple 地图永远可用（`nil` = 无需探测）。
+    private var probeURL: URL? {
+        switch self {
+        case .apple:  return nil
+        case .amap:   return URL(string: "iosamap://")
+        case .google: return URL(string: "comgooglemaps://")
+        case .baidu:  return URL(string: "baidumap://")
+        }
+    }
+
+    @MainActor
+    var isInstalled: Bool {
+        guard let probeURL else { return true }   // Apple 地图
+        return UIApplication.shared.canOpenURL(probeURL)
+    }
+}
+
+@MainActor
+enum MapNavigationService {
+
+    /// 设备上已安装的导航 App（按 `MapNavigationApp.allCases` 顺序，Apple 永远在列）。
+    static func availableApps() -> [MapNavigationApp] {
+        MapNavigationApp.allCases.filter { $0.isInstalled }
+    }
+
+    /// 调起指定 App 导航至坐标（驾车，起点 = 各 App 自身当前定位）。
+    static func open(_ app: MapNavigationApp, coordinate: CLLocationCoordinate2D, name: String) {
+        let encodedName = name.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? ""
+        switch app {
+        case .apple:
+            let item = MKMapItem(placemark: MKPlacemark(coordinate: coordinate))
+            item.name = name
+            item.openInMaps(launchOptions: [MKLaunchOptionsDirectionsModeKey: MKLaunchOptionsDirectionsModeDriving])
+        case .amap:
+            // dev=0：坐标已是高德系（GCJ-02），不要二次纠偏；t=0：驾车。起点留空 = 当前位置。
+            open("iosamap://path?sourceApplication=Carry&dlat=\(coordinate.latitude)&dlon=\(coordinate.longitude)&dname=\(encodedName)&dev=0&t=0")
+        case .google:
+            open("comgooglemaps://?daddr=\(coordinate.latitude),\(coordinate.longitude)&directionsmode=driving")
+        case .baidu:
+            // 百度用 BD-09，需从 GCJ-02 转换；coord_type=bd09ll 告知百度坐标已是 BD-09。
+            let bd = gcj02ToBd09(coordinate)
+            open("baidumap://map/direction?destination=latlng:\(bd.latitude),\(bd.longitude)|name:\(encodedName)&mode=driving&coord_type=bd09ll&src=com.murphy.carry")
+        }
+    }
+
+    private static func open(_ string: String) {
+        guard let url = URL(string: string) else { return }
+        UIApplication.shared.open(url)
+    }
+
+    /// GCJ-02 → BD-09（百度坐标系）。公开标准算法。
+    nonisolated private static func gcj02ToBd09(_ c: CLLocationCoordinate2D) -> CLLocationCoordinate2D {
+        let xPi = Double.pi * 3000.0 / 180.0
+        let x = c.longitude
+        let y = c.latitude
+        let z = (x * x + y * y).squareRoot() + 0.00002 * sin(y * xPi)
+        let theta = atan2(y, x) + 0.000003 * cos(x * xPi)
+        return CLLocationCoordinate2D(latitude: z * sin(theta) + 0.006,
+                                      longitude: z * cos(theta) + 0.0065)
+    }
+}

@@ -134,6 +134,7 @@ final class CarryLogger {
         case itineraryStopRemoved   = "itinerary_stop_removed"
         case itineraryStopReordered = "itinerary_stop_reordered"
         case itineraryStopMovedDay  = "itinerary_stop_moved_day"
+        case itineraryStopNavigated = "itinerary_stop_navigated"
         case itineraryRouteCalcFailed = "itinerary_route_calc_failed"
         case itineraryOptimizeShown    = "itinerary_optimize_shown"
         case itineraryOptimizeApplied  = "itinerary_optimize_applied"
