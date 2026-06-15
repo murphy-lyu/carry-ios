@@ -1,5 +1,29 @@
 # 决策日志
 
+## 2026-06-16 行程地点详情：交通方式导航 + 收尾修复
+
+### 交通方式采用 Path C（选择器 + 联动调起，不在 App 内显时长、不接路由 API）
+原因：参考 Tripsy「旅行时间」与一款大陆 App 评估后，否决「App 内显示各方式时长」——Apple `MKDirections` 枚举只有 automobile/walking/transit、**无骑行**，算不了骑行时长；要补齐须接高德/百度路由 Web API（第三方依赖 + 坐标/限流/隐私），用户明确**不接 API**。
+实现：详情路程模块加交通方式选择器，选中即**联动** Get Directions 调起外部地图的方式（避免「选骑行却调起驾车」的割裂）。`MapNavigationApp.supports(_:)` 决定 List 过滤、`open(_:mode:)` 各家拼方式 URL；到下一站直线距离（离线瞬时）保留。过滤在视图层就地做（复用 onAppear 缓存的已装列表，不重跑 `canOpenURL`）。
+放弃：App 内显时长、接路由 API、App 内画线 / turn-by-turn。
+
+### 公交纳入（反转 spec「不做公交」）——因其支持面与骑行相反
+原因：骑行的短板是 Apple（唯一不支持，须在选骑行时隐藏）；公交相反——四家 deep-link 文档上**都支持**（含 Apple，Apple 有 transit 只是无 cycling）。Path C 不显时长，公交「调起外部地图、班次由地图自带」与其它方式一致，纳入成本低、更完善。
+实现：加 `.transit`；`supports` 公交暂全 true、**待真机实测各家是否正常调起**再定稿过滤；选择器 4 段、文字 `minimumScaleFactor(0.8)` 防长语言/窄屏破版。
+放弃：在 App 内显示公交时长 / 班次（同 Path C）。
+
+### 「内容贴合」的 detent 补偿常量必须随页面 chrome 变更同步重算
+原因：`StopDetailView` 的 `.height(contentHeight + 72)` 中 `+72` 当初含导航栏 ~44pt；后来移除 NavigationStack（关闭 X 内联进头部）却没同步减，导致 Edit 按钮下方凭空留白。
+教训：凡「内容实测高 + 固定补偿常量」驱动的 detent/布局，补偿常量的每一项都对应一块具体 chrome（导航栏、拖拽指示、安全区…）；移除/新增 chrome 时必须回头重算该常量，否则留白或裁切。本次重算为 `+28`（仅 home-indicator 气口）。
+
+### 不同字号文字「读成同一行」用 `.center` 垂直居中，不用 `.firstTextBaseline`
+原因：名称（body）+ 右侧时间（caption）共享基线时，小字号的视觉中心落在大字中心**之下**，看着「偏下」。
+教训：一对不同字号、需读成「同一行」的文字（名称—值、标题—时间），用 `HStack(alignment: .center)` 让视觉中心对齐；`.firstTextBaseline` 只适合同级排版的连续文字流。已同步进 design-system §Typography。
+
+### `open()` 多分支映射用穷举 switch、不留 `default`（编译期兜住「加方式漏改」）
+原因：`open()` 对四家地图各有一段 `switch mode` 映射 URL 参数。Apple 分支原用 `default` 退化驾车——将来加第 5 种方式时会**静默**走 default、产生错误交通模式且无编译报错。
+教训：这类「枚举 → 每分支映射」若漏一个 case 会静默出错，应穷举所有 case（不留 default），让编译器在加方式时强制在每处显式处理。高德/Google/百度本就穷举，本次把 Apple 也改穷举（骑行已被 supports 过滤，显式写退化驾车）。
+
 ## 2026-06-15 行程交通段 + 住宿：「节点 + 边 + 跨度」数据模型（借 Tripsy，呈现克制）
 
 > 起因：行程规划要做完整，并为「签证行程单导出」打底。原模型「万物皆 `ItineraryStop`（单坐标点）」语义错位——航班是两点间的移动、住宿是跨若干晚的跨度，塞进单坐标点会丢到达信息/跨度。spec：`itinerary-transport-lodging.md`。

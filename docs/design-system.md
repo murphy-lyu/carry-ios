@@ -112,6 +112,11 @@ Apple 原生风格，极简、克制、优雅。
 - .headline：列表项标题、卡片标题（semibold）｜ .body：正文（17pt regular）
 - .subheadline：辅助说明（15pt）｜ .footnote：时间戳、标注（13pt）｜ .caption / .caption2：最小标注
 
+### 不同字号文字「读成同一行」用 `.center` 垂直居中（2026-06-16）
+一对**字号不同、需读成同一行**的文字（如列表行「名称(body) ——— 时间(caption)」、「标题 — 值」），用 `HStack(alignment: .center)` 让两者**视觉中心**对齐。
+- **不要用 `.firstTextBaseline`**：共享基线时，小字号文字的视觉中心会落在大字号中心**之下**，看着「偏下／没居中」。基线对齐只适合**同级排版的连续文字流**（如正文里夹注），不适合大小悬殊的「标签—值」对。
+- 实例：`TimelineStopRow` 名称行（地点名 + 右对齐开始–结束时间）。
+
 ### 已对齐范围（2026-06-13）
 行程规划三屏（ItineraryView / ItineraryMapView / OptimizeRouteView）整屏按系统对齐；
 全 app 自定义界面按本系统走查对齐（详见 progress.md 当次记录）。系统 `Form` 设置页（Settings/About 等）保持 SF，无需改。

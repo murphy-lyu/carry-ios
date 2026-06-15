@@ -13,6 +13,20 @@
 - **本地化**：5 个结构化 key × 9 语言（含显式 en）——`settings.section.general`/`settings.units.distance`/`distance_unit.{automatic,kilometers,miles}`。混合格式 xcstrings 用定向文本插入（295 行纯新增、其余字节未动、格式匹配 Xcode），957→962 key。
 - **工程**：文件系统同步分组，新文件自动纳入 target 无需改 pbxproj；无 schema/迁移/备份改动（设备级偏好，同 Appearance 惯例）；编译绿（主 app + Widget）。
 
+## 上次改动摘要（行程地点详情：交通方式选择器 + 联动导航 + 修复打磨 · 2026-06-16）
+
+> 续上「停靠点只读详情」线（spec: `itinerary-stop-travel-modes.md`，Status: 已拍板 Path C）。在 main、未 push。与并行会话共享工作区，全程 hunk 隔离、只提自己改动。commit `151197c`/`1751765`/`e80202f`/`bee632d`/`3663726`。真机验收（地图调起）待用户。
+
+- **交通方式选择器 + 联动导航**：详情路程模块在 Get Directions 之上加 4 段选择器（驾车默认 / 公交 / 步行 / 骑行），选中即联动外部地图调起的方式。**否决「App 内显时长」**（Apple `MKDirections` 无骑行 + 用户明确不接路由 API）→ **Path C：只选方式 + 调起、不显时长**；到下一站直线距离保留。
+- **各家 × 方式过滤**：`MapNavigationApp.supports(_:)` —— 仅 **Apple 无骑行**，选骑行时 List 隐藏 Apple、其余照常；0 可用时置灰 + 提示。`open(_:mode:)` 各家拼方式 URL（Apple Driving/Walking/Transit、高德 t=0/1/2/3、Google driving/transit/walking/bicycling、百度 driving/transit/walking/riding）。过滤在视图层就地做（`navApps.filter`，复用 onAppear 缓存、不重跑 `canOpenURL`）。
+- **公交（决策反转纳入）**：原 spec「不做公交」——评估后纳入。与骑行相反：公交四家 deep-link 文档上**都支持**（含 Apple），故 `supports` 公交暂全 true、**待真机实测**再定稿过滤。选择器 4 段、文字 `lineLimit(1)+minimumScaleFactor(0.8)` 防窄屏/长语言挤压。
+- **底部留白修正**：`StopDetailView` 去 NavigationStack 后，`contentDetents` 的 `+72`（含已不存在的导航栏 ~44pt）成了 Edit 下方凭空留白 → 重算为 `+28`（仅留 home-indicator 气口）。
+- **🔴 修崩溃（code-review high 抓到）**：点某天**末站**（有坐标时）→ `distanceToNextStop` 算出 `index+1==count` 传入 `legLabel`，后者只挡 `index>0`、未挡上界 → `stops[index]` 越界 SIGABRT。根因解：末站返回 nil + `legLabel` 下标加 `index<count` 兜底（覆盖所有调用路径）。
+- **质量收口**：删死代码 `availableApps(for:)`；`open()` Apple 分支由 `default` 改穷举 switch（加方式即编译报错、不静默退化驾车，与高德/Google/百度一致）。
+- **地点名 ↔ 时间垂直居中**：名称行原 `.firstTextBaseline` 共享基线 → 小字号时间视觉中心落在名称中心之下、看着偏下；改 `.center` 居中（对标日历/Mail）。
+- **文案**：方式名 ×4 + `no_app_for_mode` × 9 语言，定向插入 xcstrings、无格式重排。**埋点** `itineraryStopNavigated` context 带所选 mode。
+- **遗留待办**：真机验四家地图 × 四方式调起（尤其**公交**各家是否正常），据此决定 `supports()` 是否过滤某家公交。
+
 ## 上次改动摘要（行程停靠点：只读详情 + 导航入模块 + 列表打磨 · 2026-06-15）
 
 > 在 `main` 上一串迭代（spec: `itinerary-stop-detail.md`）。与并行会话共享工作区，全程 hunk 隔离、只提自己改动、未卷入并行代码；所有视觉/交互在模拟器逐版自验（用户授权自跑）。未 push。
