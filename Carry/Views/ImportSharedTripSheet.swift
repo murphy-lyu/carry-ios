@@ -112,6 +112,9 @@ struct ImportSharedTripSheet: View {
         .onPreferenceChange(SheetContentHeightKey.self) { contentHeight = $0 }
         .presentationDetents([.height(contentHeight)])
         .presentationDragIndicator(.visible)
+        // 钉一致的不透明底：与 StopDetailView 统一为「Carry 浮窗 = 干净不透明卡」，不用 iOS 26 默认玻璃。
+        // 「收到分享行程」的确认卡（常冷启动）聚焦决策、不透出半加载的模糊背景，更郑重。
+        .presentationBackground(Color(UIColor.systemBackground))
     }
 
     private func chip(_ icon: String, _ text: String) -> some View {
