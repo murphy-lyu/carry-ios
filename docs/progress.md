@@ -3,6 +3,15 @@
 ## 最后更新
 2026-06-15
 
+## 上次改动摘要（修复：首页 Sheet 展开吸附过冲漏 MapKit · 2026-06-15）
+
+> 果冻回弹（§19/spec home-sheet-snap-spring）上线后用户报"展开到顶回弹时底部仍漏地图"。真机确认 + 代码层定位真因后一行根因解。commit `b58b478`，已 push。详见 playbook §20。
+
+- **真因**：FX 卡片三层 `outerView/innerView/hostingView` **本身全透明**，Sheet 底色仅由内容里的 `CarrySubtleBackground` 画；内容固定高 = expandedHeight、钉在 innerView 顶部。展开吸附 spring 过冲把 `innerView.bounds` 瞬间撑过 expandedHeight → 底部约 56pt 一条「无内容无背景」透明带 → 漏 MapKit。
+- **解**：给 `innerView` 自身一层不透明兜底背景 = `CarrySubtleBackground.baseColor`（渐变底端同色）；`ViewModifiers` 暴露 `baseUIColor` 作单一动态色源。卡片从此不透明、过冲带露出同色而非地图。不碰几何/吸附/手势/内容尺寸。
+- **走过的弯路（已回退）**：先误判为"卡片底缘被抬起"去改 outerView 锚点——逐帧推算证明底缘全程 ≥ 屏幕底、并未抬起，那是修错地方、已完全回退。教训：动画漏底先分清"位移"还是"覆盖不足"。
+- **通用教训**：固定高内容 + 透明卡片，遇"可视窗口瞬间撑过内容高度"的动画（过冲/橡皮筋）必漏底——卡片应自带不透明背景。
+
 ## 上次改动摘要（行程「地点排序」模式 · 2026-06-15）
 
 > 从行程页 "…" 菜单进入的专门排序态，解决「拖拽可发现性低」+「批量跨天重排累」。commit `518a121`；模拟器自测通过、待用户真机验收。spec：`itinerary-reorder-mode.md`。分支 `feature/itinerary-transport-lodging`、与并行会话共享工作区，全程只提自己的 4 个文件。
