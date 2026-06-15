@@ -862,10 +862,11 @@ struct StopDetailView: View {
     @State private var navMode: MapNavigationMode = .driving
 
     /// sheet 高度贴着内容：稀疏地点不留大片空白（看着「刚好」而非「空」），内容多则自然撑大、可拖到大屏。
-    /// 用有意留白消灭空旷感，而非塞空字段填充（north-star §1）。+72 ≈ 导航栏 + 拖拽指示 + 上下气口。
+    /// 用有意留白消灭空旷感，而非塞空字段填充（north-star §1）。
+    /// +28 ≈ 底部 home-indicator 气口（已去掉 NavigationStack，不再为那条空导航栏的 ~44pt 留高）。
     private var contentDetents: Set<PresentationDetent> {
         guard contentHeight > 0 else { return [.medium, .large] }
-        return [.height(contentHeight + 72), .large]
+        return [.height(contentHeight + 28), .large]
     }
 
     var body: some View {
