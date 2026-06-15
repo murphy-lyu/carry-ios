@@ -78,15 +78,41 @@ final class ItineraryDay {
         (segments ?? []).sorted { $0.sortOrder < $1.sortOrder }
     }
 
-    /// 时间轴单一数据源：stop（节点）与 transport（边）按共享 sortOrder 合并升序。
-    /// 相同 sortOrder 时 stop 排在 transport 前（节点先于离开它的边，符合「到达→离开」直觉）。
+    /// 时间轴单一数据源（spec: itinerary-transport-lodging.md）。
+    ///
+    /// **排序规则**（与「地点排序」手动重排不冲突——后者只管 stop）：
+    /// 1. 停靠点（节点）**始终保持手动 sortOrder 顺序**，绝不因时间被重排（尊重用户/重排模式的安排）。
+    /// 2. **设了出发时间的交通段**按时间「就位」插入到停靠点序列里（避免「带时间的航班却排在最后」）；
+    ///    比较基准用 carry-forward 时间（未设时间的停靠点继承上一处时间，充当时间墙）。
+    /// 3. **未设时间的交通段**保持其 sortOrder 位置（落在添加处）。
+    /// 交通段本就不可手动拖动（重排模式隐藏它），故按时间就位是它唯一合理的定位方式。
     var timeline: [TimelineItem] {
-        let items = (stops ?? []).map { TimelineItem.stop($0) }
-            + (segments ?? []).map { TimelineItem.transport($0) }
-        return items.sorted { lhs, rhs in
-            if lhs.sortOrder != rhs.sortOrder { return lhs.sortOrder < rhs.sortOrder }
-            return lhs.isStop && !rhs.isStop   // stop 先于同序的 transport
+        // 基线：停靠点（手动序）+ 未设时间的交通段，按 sortOrder 合并——这部分顺序不动。
+        let timedSegments = sortedSegments.filter { $0.departLocalMinutes >= 0 }
+        let timedSegmentIDs = Set(timedSegments.map(\.id))
+        var base: [TimelineItem] =
+            ((stops ?? []).map { TimelineItem.stop($0) }
+             + sortedSegments.filter { !timedSegmentIDs.contains($0.id) }.map { TimelineItem.transport($0) })
+            .sorted { lhs, rhs in
+                if lhs.sortOrder != rhs.sortOrder { return lhs.sortOrder < rhs.sortOrder }
+                return lhs.isStop && !rhs.isStop
+            }
+
+        // 把设了时间的交通段按时间插入 base（按时间升序逐个插，碰巧同段相对稳定）。
+        for seg in timedSegments.sorted(by: { $0.departLocalMinutes < $1.departLocalMinutes }) {
+            let t = seg.departLocalMinutes
+            // carry-forward：逐项求「有效时间」，未设时间者继承前一处时间。
+            var carry = -1
+            var insertAt = base.count
+            for (i, item) in base.enumerated() {
+                let own = item.effectiveMinutes
+                if own >= 0 { carry = own }
+                let eff = own >= 0 ? own : carry
+                if eff >= 0 && eff > t { insertAt = i; break }
+            }
+            base.insert(.transport(seg), at: insertAt)
         }
+        return base
     }
 }
 
@@ -108,6 +134,15 @@ enum TimelineItem: Identifiable {
         }
     }
     var isStop: Bool { if case .stop = self { return true }; return false }
+
+    /// 该项自身的「时间」（自午夜分钟数），未设为 -1。停靠点用计划起点、交通段用出发时间。
+    /// 仅用于 timeline 的时间就位排序（carry-forward 基准）。
+    var effectiveMinutes: Int {
+        switch self {
+        case .stop(let s): return s.plannedStartMinutes
+        case .transport(let t): return t.departLocalMinutes
+        }
+    }
 }
 
 // MARK: - ItineraryStop

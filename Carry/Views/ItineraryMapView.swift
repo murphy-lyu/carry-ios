@@ -354,12 +354,34 @@ struct ItineraryMapView: View {
         // 交通段（边）：起讫两端都有坐标才画**大圆弧虚线**（contourStyle: .geodesic），
         // 与市内步行/驾车的实线路程区分——一眼看出「这段是飞/跨城的」（spec: itinerary-transport-lodging.md）。
         ForEach(days, id: \.id) { day in
+            let color = ItineraryDayPalette.color(forDayIndex: day.sortOrder)
             ForEach(day.sortedSegments.filter { $0.hasRouteCoordinates }, id: \.id) { seg in
                 MapPolyline(coordinates: [seg.fromCoordinate!, seg.toCoordinate!], contourStyle: .geodesic)
-                    .stroke(ItineraryDayPalette.color(forDayIndex: day.sortOrder).opacity(dimmed ? 0.3 : 0.9),
+                    .stroke(color.opacity(dimmed ? 0.3 : 0.9),
                             style: StrokeStyle(lineWidth: 2.5, lineCap: .round, dash: [2, 7]))
+                // 起讫两端各放一个小端点标记（mode 图标），让弧线两头有落点、不悬空。
+                Annotation(seg.fromName, coordinate: seg.fromCoordinate!) {
+                    transportEndpointMarker(mode: seg.mode, color: color, dimmed: dimmed)
+                }
+                Annotation(seg.toName, coordinate: seg.toCoordinate!) {
+                    transportEndpointMarker(mode: seg.mode, color: color, dimmed: dimmed)
+                }
             }
         }
+    }
+
+    /// 交通段端点标记：白底圆 + 当天色描边 + mode 图标。比停靠点序号针更轻（端点是「过路」非「停留」）。
+    private func transportEndpointMarker(mode: TransportMode, color: Color, dimmed: Bool) -> some View {
+        ZStack {
+            Circle().fill(Color(UIColor.systemBackground))
+            Circle().strokeBorder(color, lineWidth: 1.5)
+            Image(systemName: mode.symbolName)
+                .font(.system(size: 9, weight: .semibold))
+                .foregroundStyle(color)
+        }
+        .frame(width: 18, height: 18)
+        .shadow(color: .black.opacity(0.18), radius: 2, x: 0, y: 1)
+        .opacity(dimmed ? 0.4 : 1)
     }
 
     /// 地图针标注内容（抽出以缓解 Map 闭包的类型检查负担）。
