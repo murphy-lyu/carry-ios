@@ -1049,16 +1049,29 @@ final class TripStore: ObservableObject {
             }
             changed = true
         } else if current.count > target {
-            // 保留前 target 天；多余尾部天的停靠点挪到最后保留的那天。
+            // 保留前 target 天；多余尾部天的停靠点**与交通段**挪到最后保留的那天，
+            // 否则 context.delete(day) 会级联删掉该天的 segments → 改日期静默丢交通数据。
             let keep = Array(current.prefix(target))
             let remove = Array(current.suffix(current.count - target))
             if let lastKept = keep.last {
-                var nextOrder = (lastKept.sortedStops.map(\.sortOrder).max() ?? -1) + 1
+                var nextOrder = max(
+                    lastKept.sortedStops.map(\.sortOrder).max() ?? -1,
+                    lastKept.sortedSegments.map(\.sortOrder).max() ?? -1
+                ) + 1
+                let keptOrder = lastKept.sortOrder
                 for day in remove {
                     for stop in day.sortedStops {     // sortedStops 是快照，移动时安全
                         stop.day = lastKept           // 关系反向自动从旧天移除、加入新天
                         stop.sortOrder = nextOrder
                         nextOrder += 1
+                    }
+                    for seg in day.sortedSegments {   // 交通段同样改归属、不随天删除丢失
+                        seg.day = lastKept
+                        seg.sortOrder = nextOrder
+                        nextOrder += 1
+                        // 起降天序回收到保留天范围内，保持 arrive >= depart。
+                        seg.departDayOrder = keptOrder
+                        seg.arriveDayOrder = max(keptOrder, min(seg.arriveDayOrder, target - 1))
                     }
                     trip.itineraryDays?.removeAll { $0.id == day.id }
                     context.delete(day)
@@ -1069,6 +1082,13 @@ final class TripStore: ObservableObject {
         // 规整 sortOrder 连续（仅在确有错位时才标记写库）。
         for (i, d) in trip.safeItineraryDays.enumerated() where d.sortOrder != i {
             d.sortOrder = i
+            changed = true
+        }
+        // 住宿挂在 TripBundle、用 checkInDayOrder 锚定，不随天删除丢失；但天数缩短后
+        // 可能落在范围外 → 夹回有效区间，避免常驻条/导出里「看不见」的孤立住宿。
+        let lastValidOrder = max(0, target - 1)
+        for stay in trip.safeLodgingStays where stay.checkInDayOrder > lastValidOrder {
+            stay.checkInDayOrder = lastValidOrder
             changed = true
         }
         if changed { save() }
