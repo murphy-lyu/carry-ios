@@ -3,6 +3,15 @@
 ## 最后更新
 2026-06-15
 
+## 上次改动摘要（行程「地点排序」模式 · 2026-06-15）
+
+> 从行程页 "…" 菜单进入的专门排序态，解决「拖拽可发现性低」+「批量跨天重排累」。commit `518a121`；模拟器自测通过、待用户真机验收。spec：`itinerary-reorder-mode.md`。分支 `feature/itinerary-transport-lodging`、与并行会话共享工作区，全程只提自己的 4 个文件。
+
+- **入口**：`PackingListView` 行程面 "…" 菜单加「地点排序」（`itinerary.reorder.menu`，≥2 地点才显示，与每日 Optimize 成手动/自动一对）；进入后工具栏 …→完成（复用 `common.done`）、隐藏底部「行程/打包」切换器。
+- **模式表现**：`ItineraryView` 模式内 stopRow 渲染**压缩行**（类别图标 + 名称 + ≡ 手柄）、不挂 tap（锁误触）；`ItineraryReorderCollection` 只渲染 day header + `.stop` 行（隐 leg/交通/住宿/Add/Optimize），长按 `minimumPressDuration` 0.4→0.15（即抓即拖、>0 防滚动误判）。
+- **机制**：collection `.id` 含 `isReordering` → 进出模式重建、cell 刷新；提交复用既有 `onArrange`（跨天改归属），无新数据路径/迁移。**保留常驻长按拖拽**（非独占）。新增 `itinerary.reorder.menu` 9 语言。
+- **自测**：天内/跨天拖拽 ✅、地图随拖实时更新 ✅、退出恢复完整行+chrome ✅、常驻长按未被破坏 ✅、无约束冲突/AttributeGraph 重入/崩溃。
+
 ## 上次改动摘要（行程时间轴视觉打磨 + 打包重命名闪退修复 + 首页空态蒙层 · 2026-06-15）
 
 > 分支 `feature/itinerary-transport-lodging`，与并行会话共享工作区；以下全程按 hunk 隔离、只提自己的改动，未卷入并行代码。所有视觉改动在模拟器 1:1 逐版验过。
