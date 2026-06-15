@@ -856,6 +856,10 @@ private struct TimelineStopRow: View {
                         .lineLimit(1)
                 }
             }
+            // 恒满宽左对齐：否则「无时间」的行内容块只有固有宽度，会被外层 VStack（默认居中）挤向右
+            // （仅「无时间 + 有备注」的行中招——备注行满宽把 VStack 撑开、主行被居中右移）。满宽后既不偏移，
+            // 名称行里的 Spacer 仍能把时间推到行尾。
+            .frame(maxWidth: .infinity, alignment: .leading)
             // 导航已收进停靠点详情的路程模块（点行 → 详情 → 导航）；行内只留「无坐标」轻提示
             // （数据完整性信号，看列表时即应知道）。行尾因此腾空，开始–结束时间得以贴到名称行真正行尾。
             if !stop.hasCoordinate {
