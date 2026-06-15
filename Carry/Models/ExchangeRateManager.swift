@@ -152,11 +152,15 @@ final class ExchangeRateManager: ObservableObject {
             guard
                 let json = try JSONSerialization.jsonObject(with: data) as? [String: Any],
                 let ratesDict = json[base] as? [String: Double]
-            else { return }
+            else {
+                CarryLogger.shared.log(.exchangeRateFetchFailed, context: "base=\(base) reason=parse")
+                return
+            }
             rates = ratesDict
             cacheRates(ratesDict)
         } catch {
-            // Fail silently — currency card degrades to showing code + symbol only
+            // 目的地汇率卡降级为只显 code+符号；费用折算退快照/标注未计入。埋点便于回收失败率。
+            CarryLogger.shared.log(.exchangeRateFetchFailed, context: "base=\(base) reason=network")
         }
     }
 

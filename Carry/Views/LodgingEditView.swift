@@ -190,7 +190,7 @@ struct LodgingEditView: View {
     }
 
     private var costAmountValue: Double {
-        Double(costAmountText.trimmingCharacters(in: .whitespaces)) ?? 0
+        CurrencyCatalog.parseAmount(costAmountText)
     }
 
     private var costCurrencyToSave: String {

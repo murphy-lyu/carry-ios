@@ -64,10 +64,21 @@ enum CurrencyCatalog {
     }
 
     /// 全部可选币种（ISO 4217 常用码），按当前 locale 的本地化名排序。
-    static var allCodes: [String] {
-        Locale.commonISOCurrencyCodes
-            .map { $0.uppercased() }
-            .sorted { localizedName(for: $0).localizedCaseInsensitiveCompare(localizedName(for: $1)) == .orderedAscending }
+    /// 缓存为 `static let`：~150 项排序只算一次，避免选择器搜索时每次按键重排（locale 单次启动内稳定）。
+    static let allCodes: [String] = Locale.commonISOCurrencyCodes
+        .map { $0.uppercased() }
+        .sorted { localizedName(for: $0).localizedCaseInsensitiveCompare(localizedName(for: $1)) == .orderedAscending }
+
+    /// locale 感知地解析金额输入框文本 → Double。`decimalPad` 在逗号小数 locale 下显示逗号，
+    /// `Double("12,5")` 会得 nil → 必须用 NumberFormatter；再兜底把逗号当小数点。空/非法 → 0。
+    static func parseAmount(_ text: String) -> Double {
+        let trimmed = text.trimmingCharacters(in: .whitespaces)
+        guard !trimmed.isEmpty else { return 0 }
+        let f = NumberFormatter()
+        f.numberStyle = .decimal
+        f.locale = Locale.current
+        if let n = f.number(from: trimmed) { return n.doubleValue }
+        return Double(trimmed.replacingOccurrences(of: ",", with: ".")) ?? 0
     }
 
     /// 币种本地化名（"日元" / "Japanese Yen"）；取不到回退 code。

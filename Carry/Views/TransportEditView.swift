@@ -305,7 +305,7 @@ struct TransportEditView: View {
 
     /// 解析录入的金额（空 → 0）。
     private var costAmountValue: Double {
-        Double(costAmountText.trimmingCharacters(in: .whitespaces)) ?? 0
+        CurrencyCatalog.parseAmount(costAmountText)
     }
 
     /// 要保存的币种：金额留空 → "" 清除费用；否则用选定币种，未选则跟随本位币。

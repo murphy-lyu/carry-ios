@@ -156,6 +156,7 @@ final class CarryLogger {
         case costAdded                 = "cost_added"
         case costRemoved               = "cost_removed"
         case preferredCurrencyChanged  = "preferred_currency_changed"
+        case exchangeRateFetchFailed   = "exchange_rate_fetch_failed"  // 汇率拉取失败 → 费用折算降级/未计入
     }
 
     private static let errorEvents: Set<Event> = [
@@ -170,6 +171,7 @@ final class CarryLogger {
         .calendarSaveFailed, .liveActivityStartFailed,
         .reminderScheduleFailed, .apiTimeout, .apiError,
         .itineraryRouteCalcFailed, .itineraryImportFailed, .itineraryExportFailed,
+        .exchangeRateFetchFailed,
     ]
 
     private let sessionActiveKey = "carry_session_active"

@@ -648,7 +648,13 @@ private struct TransportTimelineRow: View {
                         .foregroundStyle(.secondary)
                 }
             }
-            Spacer(minLength: 0)
+            Spacer(minLength: 8)
+            // 行内显真实付款币种（不折算）；让费用在时间轴可见，不必进编辑页才看到。spec: itinerary-cost-tracking.md
+            if segment.hasCost {
+                Text(CurrencyCatalog.format(segment.costAmount, code: segment.costCurrencyCode))
+                    .font(.system(.footnote, design: .rounded).weight(.medium))
+                    .foregroundStyle(.secondary)
+            }
         }
         .padding(.vertical, 8)
     }
@@ -737,10 +743,12 @@ private struct LodgingBannerRow: View {
         }
     }
 
-    /// 入住/退房日显对应时间（若设）；过夜天显晚数。
+    /// 入住日优先显费用（住宿是大额、是想沉淀的数据；精确入住时间留详情）；无费用则显入住时间。
+    /// 退房日显退房时间；过夜天显晚数。spec: itinerary-cost-tracking.md
     private var trailingText: String? {
         switch phase {
         case .checkIn:
+            if stay.hasCost { return CurrencyCatalog.format(stay.costAmount, code: stay.costCurrencyCode) }
             return stay.checkInMinutes >= 0 ? timeLabel(dayMinutes: stay.checkInMinutes) : nil
         case .checkOut:
             return stay.checkOutMinutes >= 0 ? timeLabel(dayMinutes: stay.checkOutMinutes) : nil
@@ -1268,7 +1276,7 @@ struct StopEditView: View {
     }
 
     private var costAmountValue: Double {
-        Double(costAmountText.trimmingCharacters(in: .whitespaces)) ?? 0
+        CurrencyCatalog.parseAmount(costAmountText)
     }
 
     private var costCurrencyToSave: String {
