@@ -755,44 +755,14 @@ private struct TimelineStopRow: View {
     private var halfLine: CGFloat { (rowHeight - circleSize) / 2 }
 
     var body: some View {
-        // cell 只含主行（+ 可选备注）；段间连接段由独立的 ItineraryLegConnector 行承载。
-        // 这样 cell 高度 = 主行高，左滑删除按钮按主行居中/定大小，不再因连接段被撑高而偏上偏大。
-        VStack(spacing: 0) {
-            // 停靠点主行：固定行高 + 居中对齐；rail 圆点与内容同在行中心，自然对齐。
-            HStack(alignment: .center, spacing: railSpacing) {
-                rail
-                content
-            }
-            .frame(height: rowHeight)
-            // 备注预览行：挂在主行下方，不动其固定几何；左侧补一条延续的连线列，使连接线不断开。
-            if !stop.note.isEmpty {
-                noteRow
-            }
+        // cell 只含主行（名称/时间/地址）。备注【不在列表展示】——两行备注会让行高参差、破坏列表工整；
+        // 列表只承载「这趟有哪些站、几点、在哪」，备注是详情级信息（点行 → 只读详情可看完整备注，含折叠长文）。
+        // 段间连接段由独立的 ItineraryLegConnector 行承载；rail 圆点与内容同在固定行高正中、自然对齐。
+        HStack(alignment: .center, spacing: railSpacing) {
+            rail
+            content
         }
-    }
-
-    /// 备注预览：让用户不进编辑也能看到备注。缩进到内容列、前缀 note 图标、截断 2 行；
-    /// 左侧连线列延续主行圆点→下一段的连接线（末点不画）。
-    private var noteRow: some View {
-        HStack(spacing: railSpacing) {
-            // 连线列【填满整行高，含文字下方留白】——首尾接住主行底部 stub 与下方 leg，备注处不再断线。
-            Rectangle()
-                .fill(isLast ? Color.clear : railColor)
-                .frame(width: 1.5)
-                .frame(width: railWidth)
-                .frame(maxHeight: .infinity)
-            // 不加前导图标：图标会把文字推到内容列右侧（x≈56），与名称/地址（x≈42）断成台阶，
-            // 两行时整块「向右倾斜」。纯文本左齐 → 名称/地址/备注共一条左缘（north-star §5 对齐成线）。
-            // 备注是会话化自然语言，内容已自证是备注，图标属冗余 chrome（§1 退后）。
-            // 颜色用 tertiary（比地址 secondary 再淡一档）：落成 primary/secondary/tertiary 三层标签层级，
-            // 与地址一眼分得开、不致读成同一坨；备注是预览（截断两行、完整内容在编辑页），退后正合适。
-            Text(stop.note)
-                .font(.system(.caption, design: .rounded))
-                .foregroundStyle(.tertiary)
-                .lineLimit(2)
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .padding(.bottom, 4)
-        }
+        .frame(height: rowHeight)
     }
 
     /// 时间标签：设了结束时间（stayMinutes>0）显示「开始–结束」，否则只显示开始。
