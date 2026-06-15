@@ -887,6 +887,14 @@ struct StopDetailView: View {
 
     @State private var editing = false
     @State private var addressCopied = false
+    @State private var contentHeight: CGFloat = 0
+
+    /// sheet 高度贴着内容：稀疏地点不留大片空白（看着「刚好」而非「空」），内容多则自然撑大、可拖到大屏。
+    /// 用有意留白消灭空旷感，而非塞空字段填充（north-star §1）。+72 ≈ 导航栏 + 拖拽指示 + 上下气口。
+    private var contentDetents: Set<PresentationDetent> {
+        guard contentHeight > 0 else { return [.medium, .large] }
+        return [.height(contentHeight + 72), .large]
+    }
 
     var body: some View {
         NavigationStack {
@@ -898,6 +906,11 @@ struct StopDetailView: View {
                 }
                 .padding(20)
                 .frame(maxWidth: .infinity, alignment: .leading)
+                .background(GeometryReader { g in
+                    Color.clear
+                        .onAppear { contentHeight = g.size.height }
+                        .onChange(of: g.size.height) { _, h in contentHeight = h }
+                })
             }
             .navigationTitle("")
             .navigationBarTitleDisplayMode(.inline)
@@ -907,7 +920,7 @@ struct StopDetailView: View {
                 }
             }
         }
-        .presentationDetents([.medium, .large])
+        .presentationDetents(contentDetents)
         .presentationDragIndicator(.visible)
         // 编辑钻入到详情之上：保存后回到详情（@Model 可观察、详情自动反映新值），再下滑关。
         .sheet(isPresented: $editing) {
