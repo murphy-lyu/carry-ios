@@ -51,7 +51,7 @@
 
 ## 技术 / 标准事项（ADA·不落项）
 
-- `MapNavigationService`：新增 `MapNavigationMode { driving, transit, walking, cycling }`（symbol + nameKey）；`MapNavigationApp.supports(_ mode:)`（Apple 不支持 cycling；公交四家暂全支持）；`open(_:coordinate:name:mode:)` 各家拼对应 URL 参数；`availableApps(for mode:)` = 已安装 ∩ 支持该方式。
+- `MapNavigationService`：新增 `MapNavigationMode { driving, transit, walking, cycling }`（symbol + nameKey）；`MapNavigationApp.supports(_ mode:)`（Apple 不支持 cycling；公交四家暂全支持）；`open(_:coordinate:name:mode:)` 各家拼对应 URL 参数（穷举 switch，加方式编译即报错）。按方式过滤在视图层就地做（`navApps.filter { $0.supports(mode) }`，复用 onAppear 缓存的已装列表、不重跑 `canOpenURL`）。
 - `StopDetailView`：`@State navMode = .driving` + 选择器 UI（4 段，选中烟蓝/未选灰，icon+短文案，文字 `lineLimit(1)+minimumScaleFactor(0.8)` 防窄屏挤压）；Get Directions 用 `navApps.filter{ $0.supports(navMode) }` + `open(...mode: navMode)`；0 可用时置灰 + 提示。
 - **坐标**：沿用现有（高德系 GCJ-02 直传高德/Apple，百度转 BD-09）——不因方式改变坐标处理。
 - **文案 × 9 语言**：方式名（驾车/公交/步行/骑行）、无地图提示，结构化 key 显式写 en；中文全角标点。
@@ -61,7 +61,7 @@
 
 ## 待办 / 分阶段
 
-1. `MapNavigationService` 加 mode 维度（enum + supports + open(mode:) + availableApps(for:)）。✅
+1. `MapNavigationService` 加 mode 维度（enum + supports + open(mode:)；过滤在视图层就地做）。✅
 2. `StopDetailView` 路程模块加选择器 + 联动 + List 过滤 + 0-可用置灰。✅
 3. 文案 × 9 语言 + 埋点带 mode。✅
 4. 真机验（模拟器无地图 App、无法验调起）：四家 App × 四方式调起正确、**公交各家是否正常调起（待用户实测反馈，定稿 `supports` 过滤）**、骑行时 Apple 地图隐藏、坐标准确、置灰边界。

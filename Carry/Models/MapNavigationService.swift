@@ -97,11 +97,6 @@ enum MapNavigationService {
         MapNavigationApp.allCases.filter { $0.isInstalled }
     }
 
-    /// 已安装且支持指定交通方式的导航 App（骑行时 Apple 地图被过滤）。
-    static func availableApps(for mode: MapNavigationMode) -> [MapNavigationApp] {
-        availableApps().filter { $0.supports(mode) }
-    }
-
     /// 调起指定 App、用指定交通方式导航至坐标（起点 = 各 App 自身当前定位）。
     /// 骑行不应传入 `.apple`（上层已按 `supports` 过滤）；若误传，Apple 退化为驾车。
     static func open(_ app: MapNavigationApp, coordinate: CLLocationCoordinate2D, name: String, mode: MapNavigationMode) {
@@ -110,12 +105,13 @@ enum MapNavigationService {
         case .apple:
             let item = MKMapItem(placemark: MKPlacemark(coordinate: coordinate))
             item.name = name
-            // Apple 有驾车/步行/公交，无骑行（骑行已被过滤，保险起见退化驾车）。
+            // Apple 有驾车/公交/步行，无骑行。穷举（不留 default）→ 将来加方式会编译报错、强制在此显式处理。
             let appleMode: String
             switch mode {
-            case .walking: appleMode = MKLaunchOptionsDirectionsModeWalking
+            case .driving: appleMode = MKLaunchOptionsDirectionsModeDriving
             case .transit: appleMode = MKLaunchOptionsDirectionsModeTransit
-            default:       appleMode = MKLaunchOptionsDirectionsModeDriving
+            case .walking: appleMode = MKLaunchOptionsDirectionsModeWalking
+            case .cycling: appleMode = MKLaunchOptionsDirectionsModeDriving   // 骑行已被 supports 过滤，保险退化驾车
             }
             item.openInMaps(launchOptions: [MKLaunchOptionsDirectionsModeKey: appleMode])
         case .amap:

@@ -530,7 +530,7 @@ struct ItineraryView: View {
 
     /// 与上一个停靠点的直线距离标签（即时本地，无网络）；任一端无坐标或首点返回 nil。
     private func legLabel(stops: [ItineraryStop], index: Int) -> String? {
-        guard index > 0,
+        guard index > 0, index < stops.count,
               let from = stops[index - 1].coordinate,
               let to = stops[index].coordinate else { return nil }
         let meters = RouteOptimizer.haversineMeters(from, to)
@@ -541,7 +541,8 @@ struct ItineraryView: View {
     private func distanceToNextStop(_ stop: ItineraryStop) -> String? {
         guard let day = days.first(where: { ($0.stops ?? []).contains { $0.id == stop.id } }) else { return nil }
         let stops = day.sortedStops
-        guard let index = stops.firstIndex(where: { $0.id == stop.id }) else { return nil }
+        guard let index = stops.firstIndex(where: { $0.id == stop.id }),
+              index + 1 < stops.count else { return nil }   // 末站无「下一站」→ nil（防 legLabel 下标越界）
         return legLabel(stops: stops, index: index + 1)   // 复用：本站→下一站 = 下一站的 leg
     }
 
@@ -1032,7 +1033,7 @@ struct StopDetailView: View {
     private var navModule: some View {
         if stop.hasCoordinate && !navApps.isEmpty {
             VStack(spacing: 0) {
-                modeSelector                       // 驾车 / 骑行 / 步行（默认驾车），联动 Get Directions
+                modeSelector                       // 驾车 / 公交 / 步行 / 骑行（默认驾车），联动 Get Directions
                 Divider()
                 navAction                          // 用所选方式调起；App List 按方式过滤（骑行隐藏 Apple 地图）
                 if let distanceToNext {
@@ -1057,8 +1058,8 @@ struct StopDetailView: View {
         }
     }
 
-    /// 交通方式选择器：3 段（驾车默认 / 骑行 / 步行）。选中即联动 Get Directions 调起的方式，避免「选了
-    /// 骑行却调起驾车」的割裂。选中=烟蓝淡填充+烟蓝字（Tier 2 可选中），未选=灰。
+    /// 交通方式选择器：4 段（驾车默认 / 公交 / 步行 / 骑行）。选中即联动 Get Directions 调起的方式，避免
+    /// 「选了骑行却调起驾车」的割裂。选中=烟蓝淡填充+烟蓝字（Tier 2 可选中），未选=灰。
     private var modeSelector: some View {
         HStack(spacing: 6) {
             ForEach(MapNavigationMode.allCases) { mode in
