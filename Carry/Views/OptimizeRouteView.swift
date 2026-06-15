@@ -17,6 +17,10 @@ struct OptimizeRouteView: View {
     @EnvironmentObject var store: TripStore
     @Environment(\.dismiss) private var dismiss
 
+    /// 距离单位偏好（自动 / 公里 / 英里），与行程页同源。
+    @AppStorage("distance_unit") private var distanceUnitRaw = DistanceUnit.automatic.rawValue
+    private var distanceUnit: DistanceUnit { DistanceUnit(rawValue: distanceUnitRaw) ?? .automatic }
+
     @State private var result: RouteOptimizer.Result?
     @State private var didCompute = false
 
@@ -422,9 +426,7 @@ struct OptimizeRouteView: View {
     // MARK: Helpers
 
     private func distanceString(_ meters: Double) -> String {
-        let fmt = MKDistanceFormatter()
-        fmt.unitStyle = .abbreviated
-        return fmt.string(fromDistance: meters)
+        CarryDistanceFormat.string(meters: meters, unit: distanceUnit)
     }
 
     private func region(for coords: [CLLocationCoordinate2D]) -> MKCoordinateRegion {

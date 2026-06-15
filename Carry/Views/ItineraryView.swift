@@ -9,14 +9,6 @@
 import SwiftUI
 import MapKit
 
-// MARK: - Distance helper
-
-private let legDistanceFormatter: MKDistanceFormatter = {
-    let f = MKDistanceFormatter()
-    f.unitStyle = .abbreviated
-    return f
-}()
-
 // MARK: - Time helpers
 
 /// 自午夜起的分钟数 → 当天的 Date（用于时间选择器）。
@@ -72,6 +64,10 @@ struct ItineraryView: View {
     var isReordering: Binding<Bool> = .constant(false)
 
     @EnvironmentObject var store: TripStore
+
+    /// 距离单位偏好（自动 / 公里 / 英里）；切换后段距/路程模块实时重渲染。
+    @AppStorage("distance_unit") private var distanceUnitRaw = DistanceUnit.automatic.rawValue
+    private var distanceUnit: DistanceUnit { DistanceUnit(rawValue: distanceUnitRaw) ?? .automatic }
 
     @State private var activeSheet: ItinerarySheet?
     @State private var focusedDayId: UUID?
@@ -538,7 +534,7 @@ struct ItineraryView: View {
               let from = stops[index - 1].coordinate,
               let to = stops[index].coordinate else { return nil }
         let meters = RouteOptimizer.haversineMeters(from, to)
-        return legDistanceFormatter.string(fromDistance: meters)
+        return CarryDistanceFormat.string(meters: meters, unit: distanceUnit)
     }
 
     /// 到「下一站」的直线距离标签（供详情页路程模块）；本站是当天末站或两端无坐标返回 nil。

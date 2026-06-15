@@ -3,6 +3,16 @@
 ## 最后更新
 2026-06-15
 
+## 上次改动摘要（距离单位设置：自动/公里/英里 · 2026-06-15）
+
+> 在 `main` 上，**未提交**。spec：`specs/distance-unit-setting.md`。模拟器验收通过（用户实机切换截图：英里 `20 mi/6.1 mi/3.8 mi` ↔ 公里 `33 km/9.9 km/6.1 km`，时间轴段距实时变更）。一级菜单分组/排序待后续统一调整。
+
+- **新增 `Carry/Models/DistanceUnit.swift`**：`DistanceUnit` 枚举（automatic/kilometers/miles），`.automatic → MKDistanceFormatter.units = .default`（交回 locale）→ 设备地区默认零回归；存 `@AppStorage("distance_unit")`。同文件 `CarryDistanceFormat.string(meters:unit:)` 为**全 App 距离展示单一入口**（每次 new 轻量 formatter，不复用全局可变 formatter 避竞态）。
+- **根因覆盖（消灭两套 formatter）**：原有 2 个 `MKDistanceFormatter`、3 个展示点——① `ItineraryView` 全局 `legDistanceFormatter`（驱动时间轴段距 `ItineraryLegConnector` + 地点详情「到下一站」路程模块，二者共用 `legLabel`）；② `OptimizeRouteView` 自建 formatter。两处删本地 formatter、统一改 helper + `@AppStorage("distance_unit")`，切换后**实时重渲染**（不退页面）。全仓确认无第四处距离展示（仅剩温度 `MeasurementFormatter`，不相关）。
+- **设置 UI**：`SettingsView` 在「个性化」后新增**「通用 / General」分组**，「距离单位」行完全对标「外观」行（Button + 右侧当前值 + chevron，点按弹 `confirmationDialog` 列三档）。
+- **本地化**：5 个结构化 key × 9 语言（含显式 en）——`settings.section.general`/`settings.units.distance`/`distance_unit.{automatic,kilometers,miles}`。混合格式 xcstrings 用定向文本插入（295 行纯新增、其余字节未动、格式匹配 Xcode），957→962 key。
+- **工程**：文件系统同步分组，新文件自动纳入 target 无需改 pbxproj；无 schema/迁移/备份改动（设备级偏好，同 Appearance 惯例）；编译绿（主 app + Widget）。
+
 ## 上次改动摘要（行程停靠点：只读详情 + 导航入模块 + 列表打磨 · 2026-06-15）
 
 > 在 `main` 上一串迭代（spec: `itinerary-stop-detail.md`）。与并行会话共享工作区，全程 hunk 隔离、只提自己改动、未卷入并行代码；所有视觉/交互在模拟器逐版自验（用户授权自跑）。未 push。

@@ -30,6 +30,7 @@ struct SettingsView: View {
 
     @State private var notificationStatus: UNAuthorizationStatus = .notDetermined
     @State private var showAppearancePicker = false
+    @State private var showDistanceUnitPicker = false
     @State private var showRoadmapSheet = false
     @State private var showCoffeeSheet = false
     @State private var didApplyLaunchSheetReset = false
@@ -59,9 +60,14 @@ struct SettingsView: View {
     @EnvironmentObject private var store: TripStore
     @AppStorage("appearance_mode") private var appearanceModeRaw = AppearanceMode.system.rawValue
     @AppStorage("liveActivityPackingEnabled") private var liveActivityPackingEnabled = false
+    @AppStorage("distance_unit") private var distanceUnitRaw = DistanceUnit.automatic.rawValue
 
     private var currentAppearance: AppearanceMode {
         AppearanceMode(rawValue: appearanceModeRaw) ?? .system
+    }
+
+    private var currentDistanceUnit: DistanceUnit {
+        DistanceUnit(rawValue: distanceUnitRaw) ?? .automatic
     }
 
     // 语言标识符在 App 生命周期内不会改变，用 let 缓存，避免每次 body 求值都调用系统 API
@@ -268,6 +274,43 @@ struct SettingsView: View {
                             .padding(.bottom, 18)
                         } header: {
                             sectionHeader("settings.section.personalization")
+                        }
+
+                        // 通用：行为 / 单位偏好（距离单位；未来温度/区域等）
+                        Section {
+                            settingsCard {
+                                Button {
+                                    showDistanceUnitPicker = true
+                                } label: {
+                                    HStack(spacing: 14) {
+                                        Text("settings.units.distance")
+                                            .font(.body)
+                                            .foregroundStyle(.primary)
+                                        Spacer()
+                                        Text(currentDistanceUnit.titleKey)
+                                            .font(.body)
+                                            .foregroundStyle(.secondary)
+                                        Image(systemName: "chevron.right")
+                                            .font(.caption.weight(.semibold))
+                                            .foregroundStyle(.tertiary)
+                                    }
+                                    .padding(.horizontal, 18)
+                                    .frame(height: 58)
+                                    .contentShape(Rectangle())
+                                }
+                                .buttonStyle(.plain)
+                                .confirmationDialog("settings.units.distance", isPresented: $showDistanceUnitPicker, titleVisibility: .visible) {
+                                    ForEach(DistanceUnit.allCases) { unit in
+                                        Button(unit.titleKey) {
+                                            distanceUnitRaw = unit.rawValue
+                                        }
+                                    }
+                                }
+                            }
+                            .padding(.horizontal, 16)
+                            .padding(.bottom, 18)
+                        } header: {
+                            sectionHeader("settings.section.general")
                         }
 
                         // 提醒与显示：Carry 在哪儿提醒我 / 出现（通知 · 日历 · 灵动岛 · 小部件 · 经期）
