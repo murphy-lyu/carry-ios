@@ -868,32 +868,22 @@ struct StopDetailView: View {
     }
 
     var body: some View {
-        NavigationStack {
-            ScrollView {
-                VStack(alignment: .leading, spacing: 22) {
-                    header
-                    infoRows
-                    navModule
-                    editButton
-                }
-                .padding(20)
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .background(GeometryReader { g in
-                    Color.clear
-                        .onAppear { contentHeight = g.size.height }
-                        .onChange(of: g.size.height) { _, h in contentHeight = h }
-                })
+        // 不套 NavigationStack：那会带来一条「无标题、只挂个 X」的空导航栏、白占顶部。改把关闭 X 内联进
+        // 头部行（见 header），顶部由「名称 + X」填满（对标 Apple 地图地点卡），不再空旷。编辑在底部。
+        ScrollView {
+            VStack(alignment: .leading, spacing: 22) {
+                header
+                infoRows
+                navModule
+                editButton
             }
-            .navigationTitle("")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                // 关闭放右上角 X：复用全 App 统一的 SheetCloseButton（iOS 26 原生 close 按钮，磨砂圆 X，
-                // 与设置齿轮 / 全屏地图关闭一致；Tier 3 中性灰，不染强调色）。补上显式关闭（除下拉外）。
-                // 编辑移到浮窗下方（editButton），单手可达；这屏看为主，顶栏只留 X 更干净。
-                ToolbarItem(placement: .topBarTrailing) {
-                    SheetCloseButton { dismiss() }
-                }
-            }
+            .padding(20)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(GeometryReader { g in
+                Color.clear
+                    .onAppear { contentHeight = g.size.height }
+                    .onChange(of: g.size.height) { _, h in contentHeight = h }
+            })
         }
         .presentationDetents(contentDetents)
         .presentationDragIndicator(.visible)
@@ -927,7 +917,7 @@ struct StopDetailView: View {
     }
 
     private var header: some View {
-        HStack(spacing: 12) {
+        HStack(alignment: .top, spacing: 12) {
             ZStack {
                 Circle().fill(dayColor.opacity(0.15))
                 Image(systemName: stop.category.symbolName)
@@ -940,6 +930,19 @@ struct StopDetailView: View {
                 .font(.system(.title3, design: .rounded).weight(.semibold))
                 .foregroundStyle(.primary)
                 .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.top, 6)        // 名称首行与右侧 X 视觉对齐（X 圆比名称行高）
+            // 关闭 X 内联进头部右上：去掉空导航栏后由它 + 名称填满顶部。圆形玻璃钮，与全屏地图/设置一致。
+            Button { dismiss() } label: {
+                Image(systemName: "xmark")
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundStyle(.secondary)
+                    .frame(width: 30, height: 30)
+                    .glassCircleButton()
+                    .frame(width: 44, height: 44)        // ≥44pt 触达，30 视觉圆居中
+                    .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel(Text("common.close"))
         }
     }
 
