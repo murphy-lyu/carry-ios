@@ -44,12 +44,20 @@ private enum ItinerarySheet: Identifiable {
     case addStop(dayId: UUID)
     case editStop(ItineraryStop)
     case optimize(dayId: UUID)
+    case addTransport(dayId: UUID, mode: TransportMode)
+    case editTransport(UUID)
+    case addLodging(checkInDayOrder: Int)
+    case editLodging(UUID)
 
     var id: String {
         switch self {
         case .addStop(let dayId): return "add-\(dayId)"
         case .editStop(let stop): return "edit-\(stop.id)"
         case .optimize(let dayId): return "opt-\(dayId)"
+        case .addTransport(let dayId, let mode): return "addtr-\(dayId)-\(mode.rawValue)"
+        case .editTransport(let id): return "edittr-\(id)"
+        case .addLodging(let order): return "addlg-\(order)"
+        case .editLodging(let id): return "editlg-\(id)"
         }
     }
 }
@@ -58,6 +66,8 @@ private enum ItinerarySheet: Identifiable {
 
 struct ItineraryView: View {
     let tripId: UUID
+    /// 「地点排序」模式（由容器 PackingListView 的菜单/工具栏驱动）：压缩行 + 拖拽手柄 + 锁 tap。
+    var isReordering: Binding<Bool> = .constant(false)
 
     @EnvironmentObject var store: TripStore
 
@@ -120,6 +130,14 @@ struct ItineraryView: View {
                 StopEditView(tripId: tripId, stop: stop)
             case .optimize(let dayId):
                 OptimizeRouteView(tripId: tripId, dayId: dayId)
+            case .addTransport(let dayId, let mode):
+                TransportEditView(tripId: tripId, dayId: dayId, initialMode: mode)
+            case .editTransport(let id):
+                TransportEditView(tripId: tripId, segmentId: id)
+            case .addLodging(let order):
+                LodgingEditView(tripId: tripId, initialCheckInDayOrder: order)
+            case .editLodging(let id):
+                LodgingEditView(tripId: tripId, stayId: id)
             }
         }
         .toolbarBackground(Color(UIColor.systemBackground), for: .navigationBar)
@@ -145,8 +163,11 @@ struct ItineraryView: View {
             ItineraryReorderCollection(
                 sections: daySections,
                 scrollTargetDayId: activeFocusedDayId,
+                isReordering: isReordering.wrappedValue,
                 stopContent: { AnyView(stopRow($0)) },
                 legContent: { AnyView(legRow($0)) },
+                transportContent: { AnyView(transportRow($0)) },
+                lodgingContent: { AnyView(lodgingRow($0, $1)) },
                 addStopContent: { AnyView(addStopRow($0)) },
                 optimizeContent: { AnyView(optimizeRow($0)) },
                 headerContent: { AnyView(dayHeaderRow($0)) },
@@ -159,7 +180,8 @@ struct ItineraryView: View {
             // collection 的 diffable 快照里 → section id 不变时旧 header 不会重配（转有/无日期后
             // 旧天仍显示「第 N 天」）。日期态变化时用 .id 强制重建 collection 一次刷新所有 header；
             // 日常加减地点不改此 key、不触发重建。
-            .id(itineraryDateStateKey)
+            // 含 isReordering：进出排序模式时重建 collection，让 .stop cell 刷新为压缩版/常规版。
+            .id("\(itineraryDateStateKey)-reorder:\(isReordering.wrappedValue)")
             // 延伸到底部「行程/打包」切换器下方，内容在其渐变里淡出（与打包面统一）。
             // 末行让出切换器净空由 collection 的 contentInset.bottom 负责（见 bottomBarClearance）。
             .ignoresSafeArea(.container, edges: .bottom)
@@ -269,12 +291,25 @@ struct ItineraryView: View {
         return ItineraryDayPalette.color(forDayIndex: day.sortOrder)
     }
 
-    /// 每天的结构快照（供 collection diffable）。
+    /// 每天的结构快照（供 collection diffable）。entries 顺序 = 覆盖本天的住宿条 → 时间轴（停靠点 +
+    /// 交通段，按 day.timeline 的共享 sortOrder）。leg / addStop / optimize 由 collection 自行插入/追加。
     private var daySections: [ItineraryDaySection] {
-        days.map { day in
-            ItineraryDaySection(
+        let stays = bundle?.safeLodgingStays ?? []
+        return days.map { day in
+            // 覆盖本天的住宿常驻条（含**退房日** = checkIn+nights，用于显「退房」事件）。
+            // 行 ID 带 day 维度，避免同一 stay 跨天在快照里重复（item 标识须全局唯一）。
+            let lodgingRows: [ItineraryRowID] = stays
+                .filter { $0.checkInDayOrder <= day.sortOrder && day.sortOrder <= $0.checkOutDayOrder }
+                .map { .lodging(stay: $0.id, day: day.sortOrder) }
+            let timelineRows: [ItineraryRowID] = day.timeline.map { item in
+                switch item {
+                case .stop(let s): return .stop(s.id)
+                case .transport(let t): return .transport(t.id)
+                }
+            }
+            return ItineraryDaySection(
                 id: day.id,
-                stopIDs: day.sortedStops.map(\.id),
+                entries: lodgingRows + timelineRows,
                 // 固定首尾后，需中间 ≥2 个点才有可优化空间，故坐标点 ≥4 才露入口。
                 showsOptimize: day.sortedStops.filter(\.hasCoordinate).count >= 4
             )
@@ -289,6 +324,9 @@ struct ItineraryView: View {
            let index = day.sortedStops.firstIndex(where: { $0.id == stopID }) {
             let dayStops = day.sortedStops
             let stop = dayStops[index]
+            if isReordering.wrappedValue {
+                reorderStopRow(stop, dayColor: ItineraryDayPalette.color(forDayIndex: day.sortOrder))
+            } else {
             TimelineStopRow(
                 stop: stop,
                 index: index,
@@ -302,7 +340,31 @@ struct ItineraryView: View {
             // 打开的是可逆 sheet、不静默改数据，误触代价极低；长按仍拖拽重排、左滑仍删除，tap 与之手势类型不同、不冲突。
             // 行内导航按钮（Menu/Button）在自己 44pt 区域内优先接管，不会被这层 tap 抢走。
             .onTapGesture { activeSheet = .editStop(stop) }
+            }
         }
+    }
+
+    /// 排序模式的压缩行：类别图标 + 名称 + 拖拽手柄（≡，纯视觉提示）；不挂 tap（锁误触进详情）。
+    /// 拖拽由 collection 的长按（即抓即拖）承载，整行可拖、手柄只是 affordance。
+    private func reorderStopRow(_ stop: ItineraryStop, dayColor: Color) -> some View {
+        HStack(spacing: 12) {
+            Image(systemName: stop.category.symbolName)
+                .font(.system(size: 15, weight: .semibold))
+                .foregroundStyle(dayColor)
+                .frame(width: 22)
+            Text(stop.name)
+                .font(.system(size: 16, weight: .medium))
+                .foregroundStyle(.primary)
+                .lineLimit(1)
+                .truncationMode(.tail)
+            Spacer(minLength: 8)
+            Image(systemName: "line.3.horizontal")
+                .font(.system(size: 16, weight: .semibold))
+                .foregroundStyle(.tertiary)
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 11)
+        .contentShape(Rectangle())
     }
 
     /// 连接段（连线 + 距离），独立成行夹在相邻停靠点之间。入参为下方停靠点 id。
@@ -318,10 +380,52 @@ struct ItineraryView: View {
         }
     }
 
+    /// 交通段连接行（边）：mode 图标落在 rail 列，详情列显示班次 + 起讫站/时间。点击编辑。
+    @ViewBuilder
+    private func transportRow(_ segmentID: UUID) -> some View {
+        if let day = days.first(where: { ($0.segments ?? []).contains { $0.id == segmentID } }),
+           let seg = day.sortedSegments.first(where: { $0.id == segmentID }) {
+            TransportTimelineRow(segment: seg, dayColor: ItineraryDayPalette.color(forDayIndex: day.sortOrder))
+                .padding(.horizontal, 16)
+                .contentShape(Rectangle())
+                .onTapGesture { activeSheet = .editTransport(segmentID) }
+        }
+    }
+
+    /// 住宿常驻条：覆盖本天的住宿，置于当天顶部。点击编辑。
+    /// `dayOrder` 决定显示入住 / 过夜 / 退房三态（spec: itinerary-transport-lodging.md）。
+    @ViewBuilder
+    private func lodgingRow(_ stayID: UUID, _ dayOrder: Int) -> some View {
+        if let stay = (bundle?.lodgingStays ?? []).first(where: { $0.id == stayID }) {
+            let phase: LodgingBannerRow.Phase =
+                dayOrder == stay.checkInDayOrder ? .checkIn :
+                dayOrder == stay.checkOutDayOrder ? .checkOut : .night
+            LodgingBannerRow(stay: stay, phase: phase)
+                .padding(.horizontal, 16)
+                .contentShape(Rectangle())
+                .onTapGesture { activeSheet = .editLodging(stayID) }
+        }
+    }
+
+    /// 统一「+ 添加」入口（spec: itinerary-transport-lodging.md）：菜单选类型 → 地点 / 航班 / 火车 / 住宿。
+    /// 次级内联动作用 secondary 灰，与打包「添加物品」一致（避免每组一行 accent 蓝、喧宾夺主）。
     private func addStopRow(_ dayID: UUID) -> some View {
-        // 次级内联动作用 secondary 灰，与打包「添加物品」一致（避免每组一行 accent 蓝、喧宾夺主）。
-        Button { activeSheet = .addStop(dayId: dayID) } label: {
-            inlineActionLabel(titleKey: "itinerary.add_stop", icon: "plus")
+        let order = days.first(where: { $0.id == dayID })?.sortOrder ?? 0
+        return Menu {
+            Button { activeSheet = .addStop(dayId: dayID) } label: {
+                Label("itinerary.kind.place", systemImage: "mappin")
+            }
+            Button { activeSheet = .addTransport(dayId: dayID, mode: .flight) } label: {
+                Label(TransportMode.flight.titleKey, systemImage: TransportMode.flight.symbolName)
+            }
+            Button { activeSheet = .addTransport(dayId: dayID, mode: .train) } label: {
+                Label(TransportMode.train.titleKey, systemImage: TransportMode.train.symbolName)
+            }
+            Button { activeSheet = .addLodging(checkInDayOrder: order) } label: {
+                Label("itinerary.category.lodging", systemImage: "bed.double")
+            }
+        } label: {
+            inlineActionLabel(titleKey: "itinerary.add", icon: "plus")
         }
         .buttonStyle(.plain)
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -342,12 +446,12 @@ struct ItineraryView: View {
     }
 
     /// 内联动作行（添加地点 / 优化顺序）：图标落在 rail 圆点列、文字落在停靠点内容列，
-    /// 与 `TimelineStopRow` 结构对齐（rail 宽 26 + spacing 12），整天「停靠点 + 动作」读成一列左对齐。
+    /// 与 `TimelineStopRow` 结构对齐（rail 宽 30 + spacing 12），整天「停靠点 + 动作」读成一列左对齐。
     private func inlineActionLabel(titleKey: LocalizedStringKey, icon: String) -> some View {
         HStack(spacing: 12) {                       // = TimelineStopRow.railSpacing
             Image(systemName: icon)
                 .font(.system(size: 14, weight: .medium))
-                .frame(width: 26)                   // = TimelineStopRow.railWidth，图标居中落在圆点列
+                .frame(width: 30)                   // = TimelineStopRow.railWidth，图标居中落在圆点列
             Text(titleKey)
                 .font(.system(.subheadline, design: .rounded))
             Spacer(minLength: 0)
@@ -371,7 +475,7 @@ struct ItineraryView: View {
             Circle()
                 .fill(ItineraryDayPalette.color(forDayIndex: day.sortOrder))
                 .frame(width: 8, height: 8)
-                .frame(width: 26)                                // = railWidth，圆点居中落在标记列、压在 spine 上
+                .frame(width: 30)                                // = railWidth，圆点居中落在标记列、压在 spine 上
             VStack(alignment: .leading, spacing: 2) {
                 Text(dayDateLabel(day) ?? dayDisplayTitle(day))
                     .font(.system(.headline, design: .rounded).weight(.semibold))
@@ -385,19 +489,17 @@ struct ItineraryView: View {
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(.horizontal, 16)
         .padding(.top, 16)
-        .padding(.bottom, 4)
-        .overlay(alignment: .bottom) {
-            Rectangle()
-                .fill(Color.primary.opacity(0.03))
-                .frame(height: 1)
-        }
+        // 首点上方原由「首点 cell 顶部占位」给的呼吸，已随连接段拆为独立 leg 而消失；
+        // 在此用 header 底部留白补回（放 header 层、不动 stop cell，故不破坏左滑居中）。
+        .padding(.bottom, 12)
+        // 日期头不画分隔线（含吸顶时）：粗体圆体标题 + 当天彩色圆点 + 留白本身层级已足，吸顶时不透明
+        // systemBackground 已干净切开浮动头与滚动内容，再加线是多余 chrome（north-star §1 退后 / §2 层级
+        // 不靠线框，对标 Tripsy/Flighty/原生）。打包分区头是 ALL-CAPS 小灰字、分量轻，才保留锚定用的基线。
         .background(
+            // header cell 已在 UIKit 层铺不透明 systemBackground；此处再铺一层，保证吸顶时无缝、不透出滚动内容。
             Rectangle()
                 .fill(Color(UIColor.systemBackground))
         )
-        // 与 Packing 的 sectionTitle 一样，把 header 变成稳定的 section surface，
-        // 避免吸顶时直接露出下面的渐变/透明层，造成“分块感”。
-        .offset(y: -1)
         .zIndex(3)
     }
 
@@ -447,23 +549,164 @@ struct ItineraryView: View {
 private struct ItineraryLegConnector: View {
     let distance: String?
     let railColor: Color
-    private let railWidth: CGFloat = 26       // = TimelineStopRow.railWidth
-    private let legGap: CGFloat = 24          // = 原 TimelineStopRow.legGap
+    private let railWidth: CGFloat = 30        // = TimelineStopRow.railWidth
+    private let railSpacing: CGFloat = 12       // = TimelineStopRow.railSpacing
+    private let legGap: CGFloat = 24            // = 原 TimelineStopRow.legGap
 
     var body: some View {
+        // 距离【夹在 Timeline 竖线里】：竖线在数字处被数字的背景切断、数字落在上下两段线中间、居中压在
+        // spine 上，明确是这段 leg 的路程（在连接两站的路径上）。上下两段线靠相邻停靠点的 rail（含已修好
+        // 的备注行连线）首尾接住，故数字不孤立、不飘。
         ZStack {
             Rectangle().fill(railColor).frame(width: 1.5)
             if let distance {
                 Text(distance)
                     .font(.system(size: 10.5, weight: .medium, design: .rounded))
                     .foregroundStyle(.secondary)
-                    .padding(.horizontal, 3)
+                    .padding(.horizontal, 5)        // 切口横向留白：数字两侧与线端留气口，不挤
+                    .padding(.vertical, 1.5)        // 上下气口：线端不贴数字、夹得透气
                     .background(Color(uiColor: .systemBackground))
                     .fixedSize()
             }
         }
         .frame(width: railWidth, height: legGap)
         .frame(maxWidth: .infinity, alignment: .leading)
+    }
+}
+
+// MARK: - TransportTimelineRow
+
+/// 交通段（边）行：rail 列放 mode 图标（当天色描边圆），详情列放班次 + 起讫站/时间。
+/// 与 TimelineStopRow 的两列网格（rail 宽 30 + spacing 12）对齐，读成同一条时间轴。
+private struct TransportTimelineRow: View {
+    let segment: TransportSegment
+    let dayColor: Color
+
+    private let railWidth: CGFloat = 30
+    private let railSpacing: CGFloat = 12
+
+    var body: some View {
+        HStack(spacing: railSpacing) {
+            ZStack {
+                Circle().strokeBorder(dayColor.opacity(0.5), lineWidth: 1.5)
+                Image(systemName: segment.mode.symbolName)
+                    .font(.system(size: 12, weight: .semibold))
+                    .foregroundStyle(dayColor)
+            }
+            .frame(width: 24, height: 24)
+            .frame(width: railWidth)
+
+            VStack(alignment: .leading, spacing: 2) {
+                // 主行：班次（航司 · 班次号）；都空则退化用 mode 名。
+                Text(titleText)
+                    .font(.system(.subheadline, design: .rounded).weight(.semibold))
+                    .foregroundStyle(.primary)
+                // 次行：起讫站（+ 时间）。
+                if let route = routeText {
+                    Text(route)
+                        .font(.system(.footnote, design: .rounded))
+                        .foregroundStyle(.secondary)
+                }
+            }
+            Spacer(minLength: 0)
+        }
+        .padding(.vertical, 8)
+    }
+
+    private var titleText: String {
+        let parts = [segment.carrier, segment.number].filter { !$0.isEmpty }
+        if parts.isEmpty {
+            return NSLocalizedString(segment.mode.localizationKey, comment: "")
+        }
+        return parts.joined(separator: " · ")
+    }
+
+    /// 「KMG 09:00 → PEK 12:30」，缺项自适应；跨天到达加「+N」。
+    private var routeText: String? {
+        let from = endpointLabel(name: segment.fromName, code: segment.fromCode, minutes: segment.departLocalMinutes, dayOffset: 0)
+        let to = endpointLabel(name: segment.toName, code: segment.toCode, minutes: segment.arriveLocalMinutes,
+                               dayOffset: segment.arriveDayOrder - segment.departDayOrder)
+        let f = from.trimmingCharacters(in: .whitespaces)
+        let t = to.trimmingCharacters(in: .whitespaces)
+        if f.isEmpty && t.isEmpty { return nil }
+        return "\(f) → \(t)"
+    }
+
+    private func endpointLabel(name: String, code: String, minutes: Int, dayOffset: Int) -> String {
+        let place = !code.isEmpty ? code : name
+        var s = place
+        if minutes >= 0 {
+            let time = timeLabel(dayMinutes: minutes)
+            s = place.isEmpty ? time : "\(place) \(time)"
+            if dayOffset > 0 { s += " +\(dayOffset)" }
+        }
+        return s
+    }
+}
+
+// MARK: - LodgingBannerRow
+
+/// 住宿常驻条：床图标 + 名称 + 状态。spec 倾向「入住/退房显事件、中间天极轻灰条」：
+/// - 入住日：实心床 + 「入住 · 名称」（+ 入住时间），最醒目；
+/// - 退房日：「退房 · 名称」（+ 退房时间）；
+/// - 过夜中间天：极轻灰条，仅床轮廓 + 名称 + 晚数，退到背景。
+private struct LodgingBannerRow: View {
+    enum Phase { case checkIn, night, checkOut }
+    let stay: LodgingStay
+    let phase: Phase
+
+    private let railWidth: CGFloat = 30
+    private let railSpacing: CGFloat = 12
+
+    private var displayName: String {
+        stay.name.isEmpty ? NSLocalizedString("itinerary.category.lodging", comment: "") : stay.name
+    }
+
+    var body: some View {
+        HStack(spacing: railSpacing) {
+            Image(systemName: phase == .night ? "bed.double" : "bed.double.fill")
+                .font(.system(size: 13))
+                .foregroundStyle(.secondary)
+                .frame(width: railWidth)
+            Text(titleText)
+                .font(.system(.footnote, design: .rounded).weight(phase == .night ? .regular : .medium))
+                .foregroundStyle(.secondary)
+                .lineLimit(1)
+            Spacer(minLength: 8)
+            if let trailing = trailingText {
+                Text(trailing)
+                    .font(.system(.caption, design: .rounded))
+                    .foregroundStyle(.tertiary)
+            }
+        }
+        .padding(.vertical, 7)
+        .padding(.horizontal, 12)
+        .background(
+            RoundedRectangle(cornerRadius: 10, style: .continuous)
+                // 过夜中间天更淡，退到背景；入住/退房日略实，作事件锚点。
+                .fill(Color(.secondarySystemBackground).opacity(phase == .night ? 0.4 : 0.7))
+        )
+    }
+
+    /// 入住/退房日带事件词前缀；过夜天仅名称。
+    private var titleText: String {
+        switch phase {
+        case .checkIn:  return NSLocalizedString("itinerary.lodging.event.checkin", comment: "") + " · " + displayName
+        case .checkOut: return NSLocalizedString("itinerary.lodging.event.checkout", comment: "") + " · " + displayName
+        case .night:    return displayName
+        }
+    }
+
+    /// 入住/退房日显对应时间（若设）；过夜天显晚数。
+    private var trailingText: String? {
+        switch phase {
+        case .checkIn:
+            return stay.checkInMinutes >= 0 ? timeLabel(dayMinutes: stay.checkInMinutes) : nil
+        case .checkOut:
+            return stay.checkOutMinutes >= 0 ? timeLabel(dayMinutes: stay.checkOutMinutes) : nil
+        case .night:
+            return String(format: NSLocalizedString("itinerary.lodging.nights_value", comment: ""), stay.nights)
+        }
     }
 }
 
@@ -481,8 +724,8 @@ private struct TimelineStopRow: View {
     let navApps: [MapNavigationApp]
 
     private var railColor: Color { dayColor.opacity(0.25) }
-    private let railWidth: CGFloat = 26
-    private let circleSize: CGFloat = 24
+    private let railWidth: CGFloat = 30
+    private let circleSize: CGFloat = 28
     private let railSpacing: CGFloat = 12
     /// 固定行高——rail 连线由此完全确定，全程无 `maxHeight: .infinity` 贪婪 frame，
     /// 故自适应 cell 不会被撑高、各行（含首/末行）几何严格一致。
@@ -511,22 +754,24 @@ private struct TimelineStopRow: View {
     /// 左侧连线列延续主行圆点→下一段的连接线（末点不画）。
     private var noteRow: some View {
         HStack(spacing: railSpacing) {
+            // 连线列【填满整行高，含文字下方留白】——首尾接住主行底部 stub 与下方 leg，备注处不再断线。
             Rectangle()
                 .fill(isLast ? Color.clear : railColor)
                 .frame(width: 1.5)
                 .frame(width: railWidth)
-            HStack(alignment: .top, spacing: 4) {
-                Image(systemName: "note.text")
-                    .font(.system(size: 10))
-                    .padding(.top, 1)
-                Text(stop.note)
-                    .font(.system(.caption, design: .rounded))
-                    .lineLimit(2)
-                Spacer(minLength: 0)
-            }
-            .foregroundStyle(.secondary)
+                .frame(maxHeight: .infinity)
+            // 不加前导图标：图标会把文字推到内容列右侧（x≈56），与名称/地址（x≈42）断成台阶，
+            // 两行时整块「向右倾斜」。纯文本左齐 → 名称/地址/备注共一条左缘（north-star §5 对齐成线）。
+            // 备注是会话化自然语言，内容已自证是备注，图标属冗余 chrome（§1 退后）。
+            // 颜色用 tertiary（比地址 secondary 再淡一档）：落成 primary/secondary/tertiary 三层标签层级，
+            // 与地址一眼分得开、不致读成同一坨；备注是预览（截断两行、完整内容在编辑页），退后正合适。
+            Text(stop.note)
+                .font(.system(.caption, design: .rounded))
+                .foregroundStyle(.tertiary)
+                .lineLimit(2)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.bottom, 4)
         }
-        .padding(.bottom, 4)
     }
 
     /// 时间标签：设了结束时间（stayMinutes>0）显示「开始–结束」，否则只显示开始。
@@ -549,7 +794,7 @@ private struct TimelineStopRow: View {
                 // 类别图标取代序号：时间轴顺序由位置天然表达，图标更利于扫读「这是什么」。
                 // 地图针仍用序号（地理散布、顺序不直观），分工见 decisions/progress。
                 Image(systemName: stop.category.symbolName)
-                    .font(.system(size: 11, weight: .semibold))
+                    .font(.system(size: 13, weight: .semibold))
                     .foregroundStyle(dayColor)
             }
             .frame(width: circleSize, height: circleSize)
@@ -562,7 +807,9 @@ private struct TimelineStopRow: View {
 
     private var content: some View {
         // 类别图标已移到 rail 圆点；此处只剩名称/地址 + 时间/无坐标标记。
-        HStack(alignment: .top, spacing: 10) {
+        // 居中对齐：导航按钮(44pt)比名称块高，若顶对齐会把名称地址顶到上沿、与 rail 圆点(行中线)错位；
+        // .center 让名称块与导航按钮都按行中线居中，名称块重新对齐圆点。
+        HStack(alignment: .center, spacing: 10) {
             VStack(alignment: .leading, spacing: 2) {
                 Text(stop.name)
                     .font(.system(.body, design: .rounded).weight(.semibold))   // 名称加粗 + 圆体，作为每行的视觉锚

@@ -55,6 +55,9 @@ final class TripBundle {
     /// 行程路线规划（spec: itinerary-route-planning.md）。打包清单的并列「第二张脸」，
     /// 默认空 → 所有存量行程零数据风险。新增 model 属轻量迁移（加表），无需 SchemaV2。
     @Relationship(deleteRule: .cascade, inverse: \ItineraryDay.bundle) var itineraryDays: [ItineraryDay]? = []
+    /// 住宿跨度（spec: itinerary-transport-lodging.md）。横跨若干晚、归 TripBundle（不绑单天）；
+    /// 默认空 → 存量行程零数据风险。新增 model 属轻量迁移（加表），无需 SchemaV2。
+    @Relationship(deleteRule: .cascade, inverse: \LodgingStay.bundle) var lodgingStays: [LodgingStay]? = []
 
     /// 行程跨越的「实际天数」= 含出发日与返程日两端的日历天数。用于**显示**（首页卡片、行程页）
     /// 与行程页「天」的生成。与 `days` 区分：`days` 是「晚数/时长」（= returnDate − departureDate，
@@ -155,6 +158,12 @@ final class TripBundle {
     var safeSections: [PackingSection] { (sections ?? []).sorted { $0.sortOrder < $1.sortOrder } }
     /// 行程规划：按 sortOrder 升序的天。
     var safeItineraryDays: [ItineraryDay] { (itineraryDays ?? []).sorted { $0.sortOrder < $1.sortOrder } }
+    /// 住宿跨度：按 sortOrder 升序（同序按入住日）。
+    var safeLodgingStays: [LodgingStay] {
+        (lodgingStays ?? []).sorted {
+            $0.sortOrder != $1.sortOrder ? $0.sortOrder < $1.sortOrder : $0.checkInDayOrder < $1.checkInDayOrder
+        }
+    }
     var packedCount: Int { safeSections.flatMap { $0.items ?? [] }.filter { $0.isPacked && !$0.name.isEmpty }.count }
     var totalCount:  Int { safeSections.flatMap { $0.items ?? [] }.filter { !$0.name.isEmpty }.count }
 
@@ -535,7 +544,36 @@ final class TripStore: ObservableObject {
                     sortOrder: stop.sortOrder
                 )
             }
-            return ItineraryDay(sortOrder: day.sortOrder, title: day.title, note: day.note, stops: copiedStops)
+            let copiedDay = ItineraryDay(sortOrder: day.sortOrder, title: day.title, note: day.note, stops: copiedStops)
+            // 交通段深拷贝（新 UUID）；坐标/时间全在 SwiftData 内，直接复制字段。
+            copiedDay.segments = day.sortedSegments.map { seg in
+                TransportSegment(
+                    mode: seg.mode,
+                    carrier: seg.carrier, number: seg.number,
+                    fromName: seg.fromName, fromCode: seg.fromCode,
+                    fromLatitude: seg.fromLatitude, fromLongitude: seg.fromLongitude,
+                    fromTimeZoneId: seg.fromTimeZoneId, fromTerminal: seg.fromTerminal,
+                    toName: seg.toName, toCode: seg.toCode,
+                    toLatitude: seg.toLatitude, toLongitude: seg.toLongitude,
+                    toTimeZoneId: seg.toTimeZoneId, toTerminal: seg.toTerminal,
+                    departDayOrder: seg.departDayOrder, departLocalMinutes: seg.departLocalMinutes,
+                    arriveDayOrder: seg.arriveDayOrder, arriveLocalMinutes: seg.arriveLocalMinutes,
+                    seat: seg.seat, confirmationCode: seg.confirmationCode,
+                    note: seg.note, sortOrder: seg.sortOrder
+                )
+            }
+            return copiedDay
+        }
+        // 住宿跨度深拷贝（新 UUID），归副本 bundle。
+        newBundle.lodgingStays = original.safeLodgingStays.map { stay in
+            LodgingStay(
+                name: stay.name, address: stay.address,
+                latitude: stay.latitude, longitude: stay.longitude,
+                checkInDayOrder: stay.checkInDayOrder, nights: stay.nights,
+                checkInMinutes: stay.checkInMinutes, checkOutMinutes: stay.checkOutMinutes,
+                confirmationCode: stay.confirmationCode, note: stay.note,
+                sortOrder: stay.sortOrder
+            )
         }
         context.insert(newBundle)
         // Insert in-memory first to avoid full-list refetch jumpiness in UI.
@@ -1011,16 +1049,29 @@ final class TripStore: ObservableObject {
             }
             changed = true
         } else if current.count > target {
-            // 保留前 target 天；多余尾部天的停靠点挪到最后保留的那天。
+            // 保留前 target 天；多余尾部天的停靠点**与交通段**挪到最后保留的那天，
+            // 否则 context.delete(day) 会级联删掉该天的 segments → 改日期静默丢交通数据。
             let keep = Array(current.prefix(target))
             let remove = Array(current.suffix(current.count - target))
             if let lastKept = keep.last {
-                var nextOrder = (lastKept.sortedStops.map(\.sortOrder).max() ?? -1) + 1
+                var nextOrder = max(
+                    lastKept.sortedStops.map(\.sortOrder).max() ?? -1,
+                    lastKept.sortedSegments.map(\.sortOrder).max() ?? -1
+                ) + 1
+                let keptOrder = lastKept.sortOrder
                 for day in remove {
                     for stop in day.sortedStops {     // sortedStops 是快照，移动时安全
                         stop.day = lastKept           // 关系反向自动从旧天移除、加入新天
                         stop.sortOrder = nextOrder
                         nextOrder += 1
+                    }
+                    for seg in day.sortedSegments {   // 交通段同样改归属、不随天删除丢失
+                        seg.day = lastKept
+                        seg.sortOrder = nextOrder
+                        nextOrder += 1
+                        // 起降天序回收到保留天范围内，保持 arrive >= depart。
+                        seg.departDayOrder = keptOrder
+                        seg.arriveDayOrder = max(keptOrder, min(seg.arriveDayOrder, target - 1))
                     }
                     trip.itineraryDays?.removeAll { $0.id == day.id }
                     context.delete(day)
@@ -1031,6 +1082,13 @@ final class TripStore: ObservableObject {
         // 规整 sortOrder 连续（仅在确有错位时才标记写库）。
         for (i, d) in trip.safeItineraryDays.enumerated() where d.sortOrder != i {
             d.sortOrder = i
+            changed = true
+        }
+        // 住宿挂在 TripBundle、用 checkInDayOrder 锚定，不随天删除丢失；但天数缩短后
+        // 可能落在范围外 → 夹回有效区间，避免常驻条/导出里「看不见」的孤立住宿。
+        let lastValidOrder = max(0, target - 1)
+        for stay in trip.safeLodgingStays where stay.checkInDayOrder > lastValidOrder {
+            stay.checkInDayOrder = lastValidOrder
             changed = true
         }
         if changed { save() }
@@ -1146,6 +1204,222 @@ final class TripStore: ObservableObject {
         }
         save()
         CarryLogger.shared.log(didCross ? .itineraryStopMovedDay : .itineraryStopReordered)
+    }
+
+    // MARK: - Itinerary Transport（交通段 CRUD · spec: itinerary-transport-lodging.md）
+    //
+    // 埋点（transportAdded/Edited/Removed）随 UI 接入时一起补（CLAUDE.md「定义即接线」：
+    // 调用点要可达，故等录入 UI 落地再加 CarryLogger.Event + 调用，避免死埋点。
+
+    /// 在某天末尾新增一段交通。归出发日（dayId），与该天 stop 共享 sortOrder 空间。返回新段 id。
+    @discardableResult
+    func addTransportSegment(
+        tripId: UUID,
+        dayId: UUID,
+        mode: TransportMode,
+        carrier: String = "",
+        number: String = "",
+        fromName: String = "",
+        fromCode: String = "",
+        fromLatitude: Double = 0,
+        fromLongitude: Double = 0,
+        fromTimeZoneId: String = "",
+        fromTerminal: String = "",
+        toName: String = "",
+        toCode: String = "",
+        toLatitude: Double = 0,
+        toLongitude: Double = 0,
+        toTimeZoneId: String = "",
+        toTerminal: String = "",
+        departDayOrder: Int? = nil,
+        departLocalMinutes: Int = -1,
+        arriveDayOrder: Int? = nil,
+        arriveLocalMinutes: Int = -1,
+        seat: String = "",
+        confirmationCode: String = "",
+        note: String = ""
+    ) -> UUID? {
+        guard let trip = trips.first(where: { $0.id == tripId }),
+              let day = trip.safeItineraryDays.first(where: { $0.id == dayId }) else { return nil }
+        // 时间轴排序：取该天 stop 与 segment 的最大 sortOrder + 1，接到末尾。
+        let maxOrder = max(
+            day.sortedStops.map(\.sortOrder).max() ?? -1,
+            day.sortedSegments.map(\.sortOrder).max() ?? -1
+        )
+        let segment = TransportSegment(
+            mode: mode,
+            carrier: carrier,
+            number: number,
+            fromName: fromName,
+            fromCode: fromCode,
+            fromLatitude: fromLatitude,
+            fromLongitude: fromLongitude,
+            fromTimeZoneId: fromTimeZoneId,
+            fromTerminal: fromTerminal,
+            toName: toName,
+            toCode: toCode,
+            toLatitude: toLatitude,
+            toLongitude: toLongitude,
+            toTimeZoneId: toTimeZoneId,
+            toTerminal: toTerminal,
+            departDayOrder: departDayOrder ?? day.sortOrder,
+            departLocalMinutes: departLocalMinutes,
+            arriveDayOrder: arriveDayOrder ?? day.sortOrder,
+            arriveLocalMinutes: arriveLocalMinutes,
+            seat: seat,
+            confirmationCode: confirmationCode,
+            note: note,
+            sortOrder: maxOrder + 1
+        )
+        context.insert(segment)
+        if day.segments == nil { day.segments = [] }
+        day.segments?.append(segment)
+        save()
+        CarryLogger.shared.log(.transportAdded, context: "mode=\(mode.rawValue)")
+        return segment.id
+    }
+
+    /// 更新交通段字段（nil 表示不改）。
+    func updateTransportSegment(
+        tripId: UUID,
+        segmentId: UUID,
+        mode: TransportMode? = nil,
+        carrier: String? = nil,
+        number: String? = nil,
+        fromName: String? = nil,
+        fromCode: String? = nil,
+        fromLatitude: Double? = nil,
+        fromLongitude: Double? = nil,
+        fromTimeZoneId: String? = nil,
+        fromTerminal: String? = nil,
+        toName: String? = nil,
+        toCode: String? = nil,
+        toLatitude: Double? = nil,
+        toLongitude: Double? = nil,
+        toTimeZoneId: String? = nil,
+        toTerminal: String? = nil,
+        departDayOrder: Int? = nil,
+        departLocalMinutes: Int? = nil,
+        arriveDayOrder: Int? = nil,
+        arriveLocalMinutes: Int? = nil,
+        seat: String? = nil,
+        confirmationCode: String? = nil,
+        note: String? = nil
+    ) {
+        guard let trip = trips.first(where: { $0.id == tripId }),
+              let seg = trip.safeItineraryDays.flatMap({ $0.segments ?? [] }).first(where: { $0.id == segmentId }) else { return }
+        if let mode { seg.mode = mode }
+        if let carrier { seg.carrier = carrier }
+        if let number { seg.number = number }
+        if let fromName { seg.fromName = fromName }
+        if let fromCode { seg.fromCode = fromCode }
+        if let fromLatitude { seg.fromLatitude = fromLatitude }
+        if let fromLongitude { seg.fromLongitude = fromLongitude }
+        if let fromTimeZoneId { seg.fromTimeZoneId = fromTimeZoneId }
+        if let fromTerminal { seg.fromTerminal = fromTerminal }
+        if let toName { seg.toName = toName }
+        if let toCode { seg.toCode = toCode }
+        if let toLatitude { seg.toLatitude = toLatitude }
+        if let toLongitude { seg.toLongitude = toLongitude }
+        if let toTimeZoneId { seg.toTimeZoneId = toTimeZoneId }
+        if let toTerminal { seg.toTerminal = toTerminal }
+        if let departDayOrder { seg.departDayOrder = departDayOrder }
+        if let departLocalMinutes { seg.departLocalMinutes = departLocalMinutes }
+        if let arriveDayOrder { seg.arriveDayOrder = arriveDayOrder }
+        if let arriveLocalMinutes { seg.arriveLocalMinutes = arriveLocalMinutes }
+        if let seat { seg.seat = seat }
+        if let confirmationCode { seg.confirmationCode = confirmationCode }
+        if let note { seg.note = note }
+        save()
+    }
+
+    func removeTransportSegment(tripId: UUID, dayId: UUID, segmentId: UUID) {
+        guard let trip = trips.first(where: { $0.id == tripId }),
+              let day = trip.safeItineraryDays.first(where: { $0.id == dayId }),
+              let seg = (day.segments ?? []).first(where: { $0.id == segmentId }) else { return }
+        context.delete(seg)
+        day.segments?.removeAll { $0.id == segmentId }
+        save()
+        CarryLogger.shared.log(.transportRemoved)
+    }
+
+    // MARK: - Lodging（住宿跨度 CRUD · spec: itinerary-transport-lodging.md）
+
+    /// 新增一段住宿（横跨 nights 晚，从 checkInDayOrder 起）。归 TripBundle。返回新 stay id。
+    @discardableResult
+    func addLodgingStay(
+        tripId: UUID,
+        name: String = "",
+        address: String = "",
+        latitude: Double = 0,
+        longitude: Double = 0,
+        checkInDayOrder: Int = 0,
+        nights: Int = 1,
+        checkInMinutes: Int = -1,
+        checkOutMinutes: Int = -1,
+        confirmationCode: String = "",
+        note: String = ""
+    ) -> UUID? {
+        guard let trip = trips.first(where: { $0.id == tripId }) else { return nil }
+        let nextOrder = (trip.safeLodgingStays.map(\.sortOrder).max() ?? -1) + 1
+        let stay = LodgingStay(
+            name: name,
+            address: address,
+            latitude: latitude,
+            longitude: longitude,
+            checkInDayOrder: checkInDayOrder,
+            nights: nights,
+            checkInMinutes: checkInMinutes,
+            checkOutMinutes: checkOutMinutes,
+            confirmationCode: confirmationCode,
+            note: note,
+            sortOrder: nextOrder
+        )
+        context.insert(stay)
+        if trip.lodgingStays == nil { trip.lodgingStays = [] }
+        trip.lodgingStays?.append(stay)
+        save()
+        CarryLogger.shared.log(.lodgingAdded)
+        return stay.id
+    }
+
+    /// 更新住宿字段（nil 表示不改）。
+    func updateLodgingStay(
+        tripId: UUID,
+        stayId: UUID,
+        name: String? = nil,
+        address: String? = nil,
+        latitude: Double? = nil,
+        longitude: Double? = nil,
+        checkInDayOrder: Int? = nil,
+        nights: Int? = nil,
+        checkInMinutes: Int? = nil,
+        checkOutMinutes: Int? = nil,
+        confirmationCode: String? = nil,
+        note: String? = nil
+    ) {
+        guard let trip = trips.first(where: { $0.id == tripId }),
+              let stay = (trip.lodgingStays ?? []).first(where: { $0.id == stayId }) else { return }
+        if let name { stay.name = name }
+        if let address { stay.address = address }
+        if let latitude { stay.latitude = latitude }
+        if let longitude { stay.longitude = longitude }
+        if let checkInDayOrder { stay.checkInDayOrder = checkInDayOrder }
+        if let nights { stay.nights = max(1, nights) }
+        if let checkInMinutes { stay.checkInMinutes = checkInMinutes }
+        if let checkOutMinutes { stay.checkOutMinutes = checkOutMinutes }
+        if let confirmationCode { stay.confirmationCode = confirmationCode }
+        if let note { stay.note = note }
+        save()
+    }
+
+    func removeLodgingStay(tripId: UUID, stayId: UUID) {
+        guard let trip = trips.first(where: { $0.id == tripId }),
+              let stay = (trip.lodgingStays ?? []).first(where: { $0.id == stayId }) else { return }
+        context.delete(stay)
+        trip.lodgingStays?.removeAll { $0.id == stayId }
+        save()
+        CarryLogger.shared.log(.lodgingRemoved)
     }
 
     /// Adds scene keys to a trip and merges the supplied sections.

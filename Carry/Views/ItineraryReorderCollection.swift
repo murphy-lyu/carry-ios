@@ -16,20 +16,27 @@
 import SwiftUI
 import UIKit
 
-/// 一天的结构快照（dayID + 该天 stopID 顺序 + 是否显示「优化」入口）。
+/// 一天的结构快照。`entries` = 该天时间轴上有序的行（住宿条 + 停靠点 + 交通段，按业务顺序），
+/// **不含** leg / addStop / optimize——后三者由 collection 在 applySnapshot 时按规则插入/追加。
+/// 仅 `.stop` 参与重排；交通/住宿为固定行（spec: itinerary-transport-lodging.md）。
 nonisolated struct ItineraryDaySection: Hashable, Sendable {
     let id: UUID
-    let stopIDs: [UUID]
+    let entries: [ItineraryRowID]
     let showsOptimize: Bool
 }
 
-/// 行标识。`.stop` 可拖；`.leg` / `.addStop` / `.optimize` 不可拖。
-/// `.leg(UUID)` = 该停靠点上方的连接段（与上一点的连线 + 距离），UUID 为「下方那个停靠点」的 id。
-/// 拆成独立行（而非塞进 stop cell 顶部）后，stop cell 仅含主行 → 左滑删除按钮按主行高度居中/定大小，
-/// 不再因连接段把 cell 撑高而偏上、偏大。
+/// 行标识。`.stop` 可拖；其余（`.leg` / `.transport` / `.lodging` / `.addStop` / `.optimize`）不可拖。
+/// `.leg(UUID)` = 该停靠点上方的连接段（与上一点的连线 + 距离），UUID 为「下方那个停靠点」的 id；
+/// 仅在**相邻两个停靠点之间且其间无交通段**时插入（有交通段时，交通段本身就是连接）。
+/// `.transport(UUID)` = 交通段（边）；`.lodging(stay:day:)` = 住宿常驻条。
+/// 住宿跨多天 → 同一 stay 在多个 section 出现，故行 ID 必须带「天序」维度，
+/// 否则 diffable 快照里 item 标识跨 section 重复会崩（item identifiers 须全局唯一）。
+/// `day` 还用于让 LodgingBannerRow 区分入住/过夜/退房三态。
 nonisolated enum ItineraryRowID: Hashable, Sendable {
     case stop(UUID)
     case leg(UUID)
+    case transport(UUID)
+    case lodging(stay: UUID, day: Int)
     case addStop(UUID)
     case optimize(UUID)
 }
@@ -39,9 +46,16 @@ struct ItineraryReorderCollection: UIViewRepresentable {
     let sections: [ItineraryDaySection]
     /// 选中的「天」——变化时把该天 section 吸顶（与上方日历条联动）。nil 不滚动。
     let scrollTargetDayId: UUID?
+    /// 「地点排序」模式：仅渲染 day header + `.stop` 行（隐去 leg/transport/lodging/addStop/optimize），
+    /// 长按延迟降到「即抓即拖」。上层用 `.id` 在进出模式时重建本组件，故 cell 内容随之刷新为压缩版。
+    let isReordering: Bool
     let stopContent: (UUID) -> AnyView
     /// 连接段内容（连线 + 距离），入参为下方停靠点 id。
     let legContent: (UUID) -> AnyView
+    /// 交通段内容（连接行：mode 图标 + 班次 + 起讫时间），入参为 segment id。
+    let transportContent: (UUID) -> AnyView
+    /// 住宿常驻条内容，入参为 (lodging stay id, 当前天序)。
+    let lodgingContent: (UUID, Int) -> AnyView
     let addStopContent: (UUID) -> AnyView
     let optimizeContent: (UUID) -> AnyView
     let headerContent: (ItineraryDaySection) -> AnyView
@@ -156,6 +170,10 @@ struct ItineraryReorderCollection: UIViewRepresentable {
                     cell.contentConfiguration = UIHostingConfiguration { self.parent.stopContent(id) }.margins(.all, 0)
                 case .leg(let toStopID):
                     cell.contentConfiguration = UIHostingConfiguration { self.parent.legContent(toStopID) }.margins(.all, 0)
+                case .transport(let id):
+                    cell.contentConfiguration = UIHostingConfiguration { self.parent.transportContent(id) }.margins(.all, 0)
+                case .lodging(let stay, let day):
+                    cell.contentConfiguration = UIHostingConfiguration { self.parent.lodgingContent(stay, day) }.margins(.all, 0)
                 case .addStop(let dayID):
                     cell.contentConfiguration = UIHostingConfiguration { self.parent.addStopContent(dayID) }.margins(.all, 0)
                 case .optimize(let dayID):
@@ -168,9 +186,11 @@ struct ItineraryReorderCollection: UIViewRepresentable {
             ) { [weak self] header, _, indexPath in
                 guard let self,
                       let sectionID = self.dataSource.sectionIdentifier(for: indexPath.section) else { return }
-                header.isOpaque = false
-                header.backgroundColor = .clear
-                header.backgroundConfiguration = .clear()
+                // 吸顶 header 必须不透明：cv 背景为透明（为底部淡出），不能再靠它兜底，故在 cell 级
+                // 给实心 systemBackground，pinned 时保证不透出滚动内容（与页面同色、无缝）。
+                var headerBG = UIBackgroundConfiguration.clear()
+                headerBG.backgroundColor = .systemBackground
+                header.backgroundConfiguration = headerBG
                 header.contentView.backgroundColor = .clear
                 guard let model = self.parent.sections.first(where: { $0.id == sectionID }) else { return }
                 header.contentConfiguration = UIHostingConfiguration { self.parent.headerContent(model) }
@@ -208,7 +228,9 @@ struct ItineraryReorderCollection: UIViewRepresentable {
             self.dataSource = ds
 
             let longPress = UILongPressGestureRecognizer(target: self, action: #selector(handleLongPress(_:)))
-            longPress.minimumPressDuration = 0.4
+            // 排序模式「即抓即拖」（0.15s）：仍 > 0 以免快速滑动滚动被误判为拖拽（移动 >10pt 即失败回退滚动）。
+            // 常态保持 0.4s，避免与点击/滚动冲突。
+            longPress.minimumPressDuration = parent.isReordering ? 0.15 : 0.4
             collectionView.addGestureRecognizer(longPress)
             longPressRecognizer = longPress
 
@@ -222,6 +244,7 @@ struct ItineraryReorderCollection: UIViewRepresentable {
 
         func update(with parent: ItineraryReorderCollection) {
             self.parent = parent
+            longPressRecognizer?.minimumPressDuration = parent.isReordering ? 0.15 : 0.4
             // 拖拽进行中不 apply（否则覆盖 UIKit 正在做的 interactive movement → 弹回）。
             guard !isDragging else { return }
             applySnapshot(animated: true)
@@ -265,13 +288,44 @@ struct ItineraryReorderCollection: UIViewRepresentable {
         private func applySnapshot(animated: Bool) {
             guard let dataSource else { return }
             var snapshot = NSDiffableDataSourceSnapshot<UUID, ItineraryRowID>()
+            // 「地点排序」模式：每天只放 day header + `.stop` 行（无 leg/交通/住宿/Add/Optimize），
+            // 让用户专注拖拽、一屏看更多天；提交仍由 didReorder 收集各 section 的 `.stop` 顺序。
+            if parent.isReordering {
+                for section in parent.sections {
+                    snapshot.appendSections([section.id])
+                    let stopRows = section.entries.filter { if case .stop = $0 { return true }; return false }
+                    snapshot.appendItems(stopRows, toSection: section.id)
+                }
+                dataSource.apply(snapshot, animatingDifferences: animated)
+                collectionView?.setNeedsLayout()
+                collectionView?.layoutIfNeeded()
+                DispatchQueue.main.async { [weak self] in
+                    self?.collectionView?.setNeedsLayout()
+                    self?.collectionView?.layoutIfNeeded()
+                    self?.updateBottomInsetForLastSectionPinning()
+                }
+                return
+            }
             for section in parent.sections {
                 snapshot.appendSections([section.id])
-                // 停靠点之间插入独立连接段（首点上方无连接段）：.leg(下个停靠点 id) → .stop。
+                // 据 entries 构建最终行：
+                // - 相邻两个停靠点之间、且其间无交通段 → 插入 .leg（连线 + 直线距离）；
+                // - 有交通段在两点之间 → 交通段本身即连接，不再插 leg；
+                // - 住宿条 / 交通段原样保留；最后追加 addStop（+ optimize）。
                 var rows: [ItineraryRowID] = []
-                for (i, sid) in section.stopIDs.enumerated() {
-                    if i > 0 { rows.append(.leg(sid)) }
-                    rows.append(.stop(sid))
+                var lastWasStop = false
+                for entry in section.entries {
+                    switch entry {
+                    case .stop(let sid):
+                        if lastWasStop { rows.append(.leg(sid)) }
+                        rows.append(.stop(sid))
+                        lastWasStop = true
+                    case .transport, .lodging:
+                        rows.append(entry)
+                        lastWasStop = false
+                    default:
+                        rows.append(entry)
+                    }
                 }
                 rows.append(.addStop(section.id))
                 if section.showsOptimize { rows.append(.optimize(section.id)) }

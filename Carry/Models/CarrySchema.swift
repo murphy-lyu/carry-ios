@@ -22,6 +22,8 @@ enum SchemaV1: VersionedSchema {
             MyItem.self,
             ItineraryDay.self,
             ItineraryStop.self,
+            TransportSegment.self,
+            LodgingStay.self,
         ]
     }
 }

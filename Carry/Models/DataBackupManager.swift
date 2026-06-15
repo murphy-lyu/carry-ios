@@ -37,12 +37,56 @@ struct BackupItineraryStop: Codable, Sendable {
     var sortOrder: Int
 }
 
+struct BackupTransportSegment: Codable, Sendable {
+    var id: UUID
+    var modeRaw: String
+    var carrier: String
+    var number: String
+    var fromName: String
+    var fromCode: String
+    var fromLatitude: Double
+    var fromLongitude: Double
+    var fromTimeZoneId: String
+    var fromTerminal: String
+    var toName: String
+    var toCode: String
+    var toLatitude: Double
+    var toLongitude: Double
+    var toTimeZoneId: String
+    var toTerminal: String
+    var departDayOrder: Int
+    var departLocalMinutes: Int
+    var arriveDayOrder: Int
+    var arriveLocalMinutes: Int
+    var seat: String
+    var confirmationCode: String
+    var note: String
+    var sortOrder: Int
+}
+
+struct BackupLodgingStay: Codable, Sendable {
+    var id: UUID
+    var name: String
+    var address: String
+    var latitude: Double
+    var longitude: Double
+    var checkInDayOrder: Int
+    var nights: Int
+    var checkInMinutes: Int
+    var checkOutMinutes: Int
+    var confirmationCode: String
+    var note: String
+    var sortOrder: Int
+}
+
 struct BackupItineraryDay: Codable, Sendable {
     var id: UUID
     var sortOrder: Int
     var title: String
     var note: String
     var stops: [BackupItineraryStop]
+    /// 交通段（spec: itinerary-transport-lodging.md）。可选以兼容旧备份（无此键 → 还原后该天无交通）。
+    var segments: [BackupTransportSegment]?
 }
 
 struct BackupTrip: Codable, Sendable {
@@ -73,6 +117,8 @@ struct BackupTrip: Codable, Sendable {
     /// 行程路线规划（spec: itinerary-route-planning.md）。可选以兼容旧备份
     /// （无此键时解码不报错，还原后该行程无规划数据）。
     var itineraryDays: [BackupItineraryDay]?
+    /// 住宿跨度（spec: itinerary-transport-lodging.md）。可选以兼容旧备份。
+    var lodgingStays: [BackupLodgingStay]?
 }
 
 struct BackupMyItem: Codable, Sendable {
@@ -138,6 +184,37 @@ final class DataBackupManager {
     /// bytes off disk and embeds them — for the portable EXPORT file. The per-save auto-backup
     /// passes false: the bytes already persist as sandbox files, so re-reading + base64-encoding
     /// them on every save (e.g. ticking a packing item) would be pure waste.
+    /// 把一天的交通段映射为备份镜像（spec: itinerary-transport-lodging.md）。整份备份与单行程导出共用。
+    private func backupSegments(_ day: ItineraryDay) -> [BackupTransportSegment] {
+        day.sortedSegments.map { s in
+            BackupTransportSegment(
+                id: s.id, modeRaw: s.modeRaw, carrier: s.carrier, number: s.number,
+                fromName: s.fromName, fromCode: s.fromCode,
+                fromLatitude: s.fromLatitude, fromLongitude: s.fromLongitude,
+                fromTimeZoneId: s.fromTimeZoneId, fromTerminal: s.fromTerminal,
+                toName: s.toName, toCode: s.toCode,
+                toLatitude: s.toLatitude, toLongitude: s.toLongitude,
+                toTimeZoneId: s.toTimeZoneId, toTerminal: s.toTerminal,
+                departDayOrder: s.departDayOrder, departLocalMinutes: s.departLocalMinutes,
+                arriveDayOrder: s.arriveDayOrder, arriveLocalMinutes: s.arriveLocalMinutes,
+                seat: s.seat, confirmationCode: s.confirmationCode, note: s.note, sortOrder: s.sortOrder
+            )
+        }
+    }
+
+    /// 把一个行程的住宿跨度映射为备份镜像。
+    private func backupLodging(_ trip: TripBundle) -> [BackupLodgingStay] {
+        trip.safeLodgingStays.map { l in
+            BackupLodgingStay(
+                id: l.id, name: l.name, address: l.address,
+                latitude: l.latitude, longitude: l.longitude,
+                checkInDayOrder: l.checkInDayOrder, nights: l.nights,
+                checkInMinutes: l.checkInMinutes, checkOutMinutes: l.checkOutMinutes,
+                confirmationCode: l.confirmationCode, note: l.note, sortOrder: l.sortOrder
+            )
+        }
+    }
+
     private func makeBackup(trips: [TripBundle], myItems: [MyItem], embedImages: Bool) -> CarryBackup {
         let backupTrips: [BackupTrip] = trips.map { trip in
             let sections: [BackupPackingSection] = (trip.sections ?? []).map { section in
@@ -173,14 +250,17 @@ final class DataBackupManager {
                         sortOrder: $0.sortOrder
                     )
                 }
+                let segments = backupSegments(day)
                 return BackupItineraryDay(
                     id: day.id,
                     sortOrder: day.sortOrder,
                     title: day.title,
                     note: day.note,
-                    stops: stops
+                    stops: stops,
+                    segments: segments.isEmpty ? nil : segments
                 )
             }
+            let lodgingStays = backupLodging(trip)
             return BackupTrip(
                 id: trip.id,
                 name: trip.name,
@@ -202,7 +282,8 @@ final class DataBackupManager {
                 additionalDestinationsData: trip.additionalDestinationsData.isEmpty ? nil : trip.additionalDestinationsData,
                 backgroundsData: trip.backgroundsData.isEmpty ? nil : trip.backgroundsData,
                 sections: sections,
-                itineraryDays: itineraryDays.isEmpty ? nil : itineraryDays
+                itineraryDays: itineraryDays.isEmpty ? nil : itineraryDays,
+                lodgingStays: lodgingStays.isEmpty ? nil : lodgingStays
             )
         }
 
@@ -431,6 +512,44 @@ final class DataBackupManager {
                 stop.day = day
                 context.insert(stop)
             }
+            // 交通段（spec: itinerary-transport-lodging.md）；旧备份无 segments（nil）→ 不建。
+            for bg in (bd.segments ?? []).sorted(by: { $0.sortOrder < $1.sortOrder }) {
+                let seg = TransportSegment(
+                    mode: TransportMode(rawValueOrOther: bg.modeRaw),
+                    carrier: bg.carrier, number: bg.number,
+                    fromName: bg.fromName, fromCode: bg.fromCode,
+                    fromLatitude: bg.fromLatitude, fromLongitude: bg.fromLongitude,
+                    fromTimeZoneId: bg.fromTimeZoneId, fromTerminal: bg.fromTerminal,
+                    toName: bg.toName, toCode: bg.toCode,
+                    toLatitude: bg.toLatitude, toLongitude: bg.toLongitude,
+                    toTimeZoneId: bg.toTimeZoneId, toTerminal: bg.toTerminal,
+                    departDayOrder: bg.departDayOrder, departLocalMinutes: bg.departLocalMinutes,
+                    arriveDayOrder: bg.arriveDayOrder, arriveLocalMinutes: bg.arriveLocalMinutes,
+                    seat: bg.seat, confirmationCode: bg.confirmationCode,
+                    note: bg.note, sortOrder: bg.sortOrder
+                )
+                seg.id = bg.id
+                seg.day = day
+                context.insert(seg)
+            }
+        }
+    }
+
+    /// 还原住宿跨度（spec: itinerary-transport-lodging.md）。旧备份无 lodgingStays（nil）→ 不建；id 沿用保真。
+    private func restoreLodgingStays(_ stays: [BackupLodgingStay]?, for trip: TripBundle, into context: ModelContext) {
+        guard let stays else { return }
+        for bl in stays.sorted(by: { $0.sortOrder < $1.sortOrder }) {
+            let stay = LodgingStay(
+                name: bl.name, address: bl.address,
+                latitude: bl.latitude, longitude: bl.longitude,
+                checkInDayOrder: bl.checkInDayOrder, nights: bl.nights,
+                checkInMinutes: bl.checkInMinutes, checkOutMinutes: bl.checkOutMinutes,
+                confirmationCode: bl.confirmationCode, note: bl.note,
+                sortOrder: bl.sortOrder
+            )
+            stay.id = bl.id
+            stay.bundle = trip
+            context.insert(stay)
         }
     }
 
@@ -490,6 +609,7 @@ final class DataBackupManager {
                 }
             }
             restoreItineraryDays(bt.itineraryDays, for: trip, into: context)
+            restoreLodgingStays(bt.lodgingStays, for: trip, into: context)
             newTripCount += 1
         }
 
@@ -540,8 +660,11 @@ final class DataBackupManager {
                     note: $0.note, sortOrder: $0.sortOrder
                 )
             }
-            return BackupItineraryDay(id: day.id, sortOrder: day.sortOrder, title: day.title, note: day.note, stops: stops)
+            let segments = backupSegments(day)
+            return BackupItineraryDay(id: day.id, sortOrder: day.sortOrder, title: day.title, note: day.note,
+                                      stops: stops, segments: segments.isEmpty ? nil : segments)
         }
+        let lodgingStays = backupLodging(trip)
         let bt = BackupTrip(
             id: trip.id, name: trip.name, destinationCity: trip.destinationCity,
             days: trip.days, dateRange: trip.dateRange, departureDate: trip.departureDate,
@@ -553,7 +676,8 @@ final class DataBackupManager {
             additionalDestinationsData: trip.additionalDestinationsData.isEmpty ? nil : trip.additionalDestinationsData,
             backgroundsData: nil,          // 不带背景图（私密 + 文件轻）
             sections: [],                  // 不带打包清单（隐私）
-            itineraryDays: days.isEmpty ? nil : days
+            itineraryDays: days.isEmpty ? nil : days,
+            lodgingStays: lodgingStays.isEmpty ? nil : lodgingStays
         )
         let backup = CarryBackup(
             version: Self.currentBackupVersion, createdAt: Date(),
@@ -606,12 +730,15 @@ final class DataBackupManager {
         let allTrips = try context.fetch(FetchDescriptor<TripBundle>())
 
         if let existing = allTrips.first(where: { $0.id == bt.id }) {
-            // 更新：清掉旧行程规划（天 + 地点），重建为最新；打包清单/背景图保留不动
+            // 更新：清掉旧行程规划（天 + 地点 + 交通段 + 住宿），重建为最新；打包清单/背景图保留不动
             for day in existing.safeItineraryDays {
                 for stop in day.sortedStops { context.delete(stop) }
+                for seg in day.sortedSegments { context.delete(seg) }
                 context.delete(day)
             }
             existing.itineraryDays = []
+            for stay in existing.safeLodgingStays { context.delete(stay) }
+            existing.lodgingStays = []
             existing.name = bt.name
             existing.destinationCity = bt.destinationCity
             existing.days = bt.days
@@ -623,6 +750,7 @@ final class DataBackupManager {
             existing.longitude = bt.longitude
             if let extra = bt.additionalDestinationsData { existing.additionalDestinationsData = extra }
             restoreItineraryDays(bt.itineraryDays, for: existing, into: context)
+            restoreLodgingStays(bt.lodgingStays, for: existing, into: context)
         } else {
             // 新建（沿用发送方 UUID，便于日后再次导入识别为「更新」）
             let trip = TripBundle(
@@ -639,6 +767,7 @@ final class DataBackupManager {
             if let extra = bt.additionalDestinationsData { trip.additionalDestinationsData = extra }
             context.insert(trip)
             restoreItineraryDays(bt.itineraryDays, for: trip, into: context)
+            restoreLodgingStays(bt.lodgingStays, for: trip, into: context)
         }
         try context.save()
         return bt.id
@@ -724,6 +853,7 @@ final class DataBackupManager {
                 }
             }
             restoreItineraryDays(bt.itineraryDays, for: trip, into: context)
+            restoreLodgingStays(bt.lodgingStays, for: trip, into: context)
         }
 
         // Restore MyItems

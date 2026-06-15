@@ -61,11 +61,24 @@ struct ItineraryMapView: View {
         days.flatMap { $0.sortedStops }.filter { $0.hasCoordinate }
     }
 
-    /// 预览态坐标点数（聚焦当天）——决定空态 / 单点提示。
-    private var coordinateCount: Int { coordinateStops(in: displayDays).count }
+    /// 指定天集合里所有「地理坐标」——停靠点 + 交通段起讫两端。
+    /// 取景与空态判定都用它，使「某天只有航班、没有地点」时地图也能框住航段、不误判为空（spec: transport-lodging）。
+    private func routeCoordinates(in days: [ItineraryDay]) -> [CLLocationCoordinate2D] {
+        var coords = coordinateStops(in: days).compactMap(\.coordinate)
+        for day in days {
+            for seg in day.sortedSegments {
+                if let f = seg.fromCoordinate { coords.append(f) }
+                if let t = seg.toCoordinate { coords.append(t) }
+            }
+        }
+        return coords
+    }
+
+    /// 预览态坐标点数（聚焦当天）——决定空态 / 单点提示。含交通段端点：只有航班的天也算「有内容」。
+    private var coordinateCount: Int { routeCoordinates(in: displayDays).count }
 
     /// 整趟（所有天）有坐标的停靠点——当天为空时用于「上下文态」。
-    private var tripCoordinateCount: Int { coordinateStops(in: allDays).count }
+    private var tripCoordinateCount: Int { routeCoordinates(in: allDays).count }
 
     /// 目的地 geocode 坐标（创建/编辑行程时解析，复用既有字段，无需新 geocode）。
     /// 0,0 = 未解析（无目的地 / geocode 失败 / 无日期占位），返回 nil。
@@ -338,6 +351,37 @@ struct ItineraryMapView: View {
                             style: StrokeStyle(lineWidth: 3, lineCap: .round, lineJoin: .round))
             }
         }
+        // 交通段（边）：起讫两端都有坐标才画**大圆弧虚线**（contourStyle: .geodesic），
+        // 与市内步行/驾车的实线路程区分——一眼看出「这段是飞/跨城的」（spec: itinerary-transport-lodging.md）。
+        ForEach(days, id: \.id) { day in
+            let color = ItineraryDayPalette.color(forDayIndex: day.sortOrder)
+            ForEach(day.sortedSegments.filter { $0.hasRouteCoordinates }, id: \.id) { seg in
+                MapPolyline(coordinates: [seg.fromCoordinate!, seg.toCoordinate!], contourStyle: .geodesic)
+                    .stroke(color.opacity(dimmed ? 0.3 : 0.9),
+                            style: StrokeStyle(lineWidth: 2.5, lineCap: .round, dash: [2, 7]))
+                // 起讫两端各放一个小端点标记（mode 图标），让弧线两头有落点、不悬空。
+                Annotation(seg.fromName, coordinate: seg.fromCoordinate!) {
+                    transportEndpointMarker(mode: seg.mode, color: color, dimmed: dimmed)
+                }
+                Annotation(seg.toName, coordinate: seg.toCoordinate!) {
+                    transportEndpointMarker(mode: seg.mode, color: color, dimmed: dimmed)
+                }
+            }
+        }
+    }
+
+    /// 交通段端点标记：白底圆 + 当天色描边 + mode 图标。比停靠点序号针更轻（端点是「过路」非「停留」）。
+    private func transportEndpointMarker(mode: TransportMode, color: Color, dimmed: Bool) -> some View {
+        ZStack {
+            Circle().fill(Color(UIColor.systemBackground))
+            Circle().strokeBorder(color, lineWidth: 1.5)
+            Image(systemName: mode.symbolName)
+                .font(.system(size: 9, weight: .semibold))
+                .foregroundStyle(color)
+        }
+        .frame(width: 18, height: 18)
+        .shadow(color: .black.opacity(0.18), radius: 2, x: 0, y: 1)
+        .opacity(dimmed ? 0.4 : 1)
     }
 
     /// 地图针标注内容（抽出以缓解 Map 闭包的类型检查负担）。
@@ -356,7 +400,7 @@ struct ItineraryMapView: View {
 
     /// 包住指定天集合所有坐标点的可视区域（带 padding）；单点时给固定小 span。
     private func fittedRegion(for days: [ItineraryDay]) -> MKCoordinateRegion {
-        let coords = coordinateStops(in: days).compactMap(\.coordinate)
+        let coords = routeCoordinates(in: days)
         guard let first = coords.first else {
             return MKCoordinateRegion(
                 center: CLLocationCoordinate2D(latitude: 0, longitude: 0),

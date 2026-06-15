@@ -584,7 +584,9 @@ struct HomeView: View {
             }
             // 行程列表滚到底部浮动 glass 胶囊栏区域时，内容向页面底色柔和消隐——glass 仍浮于干净背景
             // 之上、内容不在栏下硬切（区别于实心 BottomBarScrim）。见 bottomContentFade。
-            .bottomContentFade(Color(UIColor.systemBackground))
+            // 空态例外（height 0 → 不铺）：空态 sheet 按内容收缩、底下只有一张空态卡片、无可滚动列表，
+            // 这条 120pt fade 没内容可消隐，反而把空态卡片下半截蒙上一层渐变。故空态时不铺。
+            .bottomContentFade(Color(UIColor.systemBackground), height: isEffectivelyEmpty ? 0 : 120)
             .onAppear {
                 store.refresh()
                 store.correctMisgecodedTrips()

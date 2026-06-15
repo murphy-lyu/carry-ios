@@ -140,6 +140,15 @@ final class CarryLogger {
         case itineraryOptimizeApplied  = "itinerary_optimize_applied"
         case itineraryOptimizeDiscarded = "itinerary_optimize_discarded"
 
+        // 行程交通段 + 住宿（spec: itinerary-transport-lodging.md）
+        case transportAdded         = "transport_added"
+        case transportRemoved       = "transport_removed"
+        case lodgingAdded           = "lodging_added"
+        case lodgingRemoved         = "lodging_removed"
+        // 签证行程单导出（spec: itinerary-export-document.md）
+        case itineraryExported      = "itinerary_exported"
+        case itineraryExportFailed  = "itinerary_export_failed"
+
         // 行程详情两面切换（spec: app-navigation-framework.md）——衡量行程/打包频次
         case detailFaceSwitched        = "detail_face_switched"
     }
@@ -155,7 +164,7 @@ final class CarryLogger {
         .destinationDecodeFailed, .coffeePurchaseFailed, .coffeeProductsFetchFailed,
         .calendarSaveFailed, .liveActivityStartFailed,
         .reminderScheduleFailed, .apiTimeout, .apiError,
-        .itineraryRouteCalcFailed, .itineraryImportFailed,
+        .itineraryRouteCalcFailed, .itineraryImportFailed, .itineraryExportFailed,
     ]
 
     private let sessionActiveKey = "carry_session_active"
