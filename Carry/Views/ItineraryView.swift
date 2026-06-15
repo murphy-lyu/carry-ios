@@ -42,6 +42,7 @@ func timeLabel(dayMinutes minutes: Int) -> String {
 /// 故用一个枚举驱动唯一的 sheet。
 private enum ItinerarySheet: Identifiable {
     case addStop(dayId: UUID)
+    case stopDetail(ItineraryStop)
     case editStop(ItineraryStop)
     case optimize(dayId: UUID)
     case addTransport(dayId: UUID, mode: TransportMode)
@@ -52,6 +53,7 @@ private enum ItinerarySheet: Identifiable {
     var id: String {
         switch self {
         case .addStop(let dayId): return "add-\(dayId)"
+        case .stopDetail(let stop): return "detail-\(stop.id)"
         case .editStop(let stop): return "edit-\(stop.id)"
         case .optimize(let dayId): return "opt-\(dayId)"
         case .addTransport(let dayId, let mode): return "addtr-\(dayId)-\(mode.rawValue)"
@@ -125,6 +127,14 @@ struct ItineraryView: View {
                     dayId: dayId,
                     biasLatitude: bundle?.latitude ?? 0,
                     biasLongitude: bundle?.longitude ?? 0
+                )
+            case .stopDetail(let stop):
+                StopDetailView(
+                    tripId: tripId,
+                    stop: stop,
+                    distanceToNext: distanceToNextStop(stop),
+                    navApps: navApps,
+                    dayColor: dayColor(forStop: stop)
                 )
             case .editStop(let stop):
                 StopEditView(tripId: tripId, stop: stop)
@@ -331,15 +341,14 @@ struct ItineraryView: View {
                 stop: stop,
                 index: index,
                 isLast: index == dayStops.count - 1,
-                dayColor: ItineraryDayPalette.color(forDayIndex: day.sortOrder),
-                navApps: navApps
+                dayColor: ItineraryDayPalette.color(forDayIndex: day.sortOrder)
             )
             .padding(.horizontal, 16)
             .contentShape(Rectangle())
-            // 点击整行 → 打开停靠点详情/编辑：把时间/备注/类别等被左滑隐藏的能力暴露出来（左滑可发现性低）。
-            // 打开的是可逆 sheet、不静默改数据，误触代价极低；长按仍拖拽重排、左滑仍删除，tap 与之手势类型不同、不冲突。
-            // 行内导航按钮（Menu/Button）在自己 44pt 区域内优先接管，不会被这层 tap 抢走。
-            .onTapGesture { activeSheet = .editStop(stop) }
+            // 点击整行 → 打开停靠点【只读详情】（StopDetailView），看完即走；编辑在详情右上角入口。
+            // 默认只读避免误改敏感字段（时间/位置）、也契合「这屏多数是来看信息」的高频意图。
+            // 长按仍拖拽重排、左滑仍删除，tap 与之手势类型不同、不冲突。
+            .onTapGesture { activeSheet = .stopDetail(stop) }
             }
         }
     }
@@ -532,6 +541,20 @@ struct ItineraryView: View {
         return legDistanceFormatter.string(fromDistance: meters)
     }
 
+    /// 到「下一站」的直线距离标签（供详情页路程模块）；本站是当天末站或两端无坐标返回 nil。
+    private func distanceToNextStop(_ stop: ItineraryStop) -> String? {
+        guard let day = days.first(where: { ($0.stops ?? []).contains { $0.id == stop.id } }) else { return nil }
+        let stops = day.sortedStops
+        guard let index = stops.firstIndex(where: { $0.id == stop.id }) else { return nil }
+        return legLabel(stops: stops, index: index + 1)   // 复用：本站→下一站 = 下一站的 leg
+    }
+
+    /// 停靠点所属天的配色（与地图针 / 时间轴同色）。
+    private func dayColor(forStop stop: ItineraryStop) -> Color {
+        guard let day = days.first(where: { ($0.stops ?? []).contains { $0.id == stop.id } }) else { return .accentColor }
+        return ItineraryDayPalette.color(forDayIndex: day.sortOrder)
+    }
+
 
     // MARK: Mutations
 
@@ -720,8 +743,6 @@ private struct TimelineStopRow: View {
     let isLast: Bool
     /// 当天配色（与地图针 / 路线同色，便于图文互相对照）。
     let dayColor: Color
-    /// 已安装的导航 App（仅有坐标时显示导航按钮；≥2 个弹锚定 Menu、1 个直接调起）。
-    let navApps: [MapNavigationApp]
 
     private var railColor: Color { dayColor.opacity(0.25) }
     private let railWidth: CGFloat = 30
@@ -835,9 +856,9 @@ private struct TimelineStopRow: View {
                         .lineLimit(1)
                 }
             }
-            if stop.hasCoordinate && !navApps.isEmpty {
-                navButton
-            } else if !stop.hasCoordinate {
+            // 导航已收进停靠点详情的路程模块（点行 → 详情 → 导航）；行内只留「无坐标」轻提示
+            // （数据完整性信号，看列表时即应知道）。行尾因此腾空，开始–结束时间得以贴到名称行真正行尾。
+            if !stop.hasCoordinate {
                 Image(systemName: "mappin.slash")
                     .font(.caption)
                     .foregroundStyle(.tertiary)
@@ -846,39 +867,158 @@ private struct TimelineStopRow: View {
         // 名称块与圆点（24pt 高）等高居中，使序号正对名称而非地址。
         .frame(minHeight: 24, alignment: .center)
     }
+}
 
-    /// 导航按钮：≥2 个 App 弹「锚定到本按钮」的 Menu（空间上即指明是哪一行，无需额外标注）；
-    /// 仅 1 个（只有 Apple 地图）则直接调起、不弹无意义的单项菜单。工具动作 → 中性灰（Tier 3）。
+// MARK: - StopDetailView
+
+/// 停靠点【只读详情】：点行进来先看信息（半高 sheet、看完即走）。时间/地址/备注只读展示，
+/// 导航收在底部路程模块（行内 ↗ 迁入此处），编辑在右上角入口。默认只读避免误改敏感字段，
+/// 契合「这屏多数是来看信息」的高频意图（spec: itinerary-stop-detail.md）。
+struct StopDetailView: View {
+    let tripId: UUID
+    let stop: ItineraryStop
+    let distanceToNext: String?
+    let navApps: [MapNavigationApp]
+    let dayColor: Color
+
+    @State private var editing = false
+
+    var body: some View {
+        NavigationStack {
+            ScrollView {
+                VStack(alignment: .leading, spacing: 22) {
+                    header
+                    infoRows
+                    navModule
+                }
+                .padding(20)
+                .frame(maxWidth: .infinity, alignment: .leading)
+            }
+            .navigationTitle("")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button { editing = true } label: { Text("itinerary.stop.detail.edit") }
+                }
+            }
+        }
+        .presentationDetents([.medium, .large])
+        .presentationDragIndicator(.visible)
+        // 编辑钻入到详情之上：保存后回到详情（@Model 可观察、详情自动反映新值），再下滑关。
+        .sheet(isPresented: $editing) {
+            StopEditView(tripId: tripId, stop: stop)
+        }
+    }
+
+    private var header: some View {
+        HStack(spacing: 12) {
+            ZStack {
+                Circle().fill(dayColor.opacity(0.15))
+                Image(systemName: stop.category.symbolName)
+                    .font(.system(size: 16, weight: .semibold))
+                    .foregroundStyle(dayColor)
+            }
+            .frame(width: 40, height: 40)
+            Text(stop.name)
+                .font(.system(.title3, design: .rounded).weight(.semibold))
+                .foregroundStyle(.primary)
+                .frame(maxWidth: .infinity, alignment: .leading)
+        }
+    }
+
     @ViewBuilder
-    private var navButton: some View {
+    private var infoRows: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            if stop.plannedStartMinutes >= 0 {
+                detailRow(icon: "clock", text: timeRangeLabel)
+            }
+            if stop.hasCoordinate && !stop.address.isEmpty {
+                detailRow(icon: "mappin.and.ellipse", text: stop.address)
+            }
+            if !stop.note.isEmpty {
+                detailRow(icon: "note.text", text: stop.note)
+            }
+        }
+    }
+
+    private func detailRow(icon: String, text: String) -> some View {
+        HStack(alignment: .top, spacing: 12) {
+            Image(systemName: icon)
+                .font(.system(size: 15))
+                .foregroundStyle(.secondary)
+                .frame(width: 22)
+            Text(text)
+                .font(.system(.subheadline, design: .rounded))
+                .foregroundStyle(.primary)
+                .frame(maxWidth: .infinity, alignment: .leading)
+        }
+    }
+
+    /// 路程 / 导航模块：导航到本地点（行内 ↗ 迁入）+ 到下一站直线距离。无坐标/无导航 App 不显示。
+    @ViewBuilder
+    private var navModule: some View {
+        if stop.hasCoordinate && !navApps.isEmpty {
+            VStack(spacing: 0) {
+                navAction
+                if let distanceToNext {
+                    Divider().padding(.leading, 34)
+                    HStack(spacing: 12) {
+                        Image(systemName: "point.topleft.down.to.point.bottomright.curvepath")
+                            .font(.system(size: 15)).foregroundStyle(.secondary).frame(width: 22)
+                        Text(String(format: NSLocalizedString("itinerary.stop.detail.to_next", comment: ""), distanceToNext))
+                            .font(.system(.subheadline, design: .rounded))
+                            .foregroundStyle(.secondary)
+                        Spacer(minLength: 0)
+                    }
+                    .padding(.vertical, 10)
+                }
+            }
+            .padding(.horizontal, 14)
+            .background(
+                RoundedRectangle(cornerRadius: 14, style: .continuous)
+                    .fill(Color(.secondarySystemBackground))
+            )
+        }
+    }
+
+    @ViewBuilder
+    private var navAction: some View {
         if navApps.count > 1 {
             Menu {
                 ForEach(navApps) { app in
                     Button(LocalizedStringKey(app.nameKey)) { navigate(app) }
                 }
-            } label: {
-                navIcon
-            }
-            .accessibilityLabel(Text("itinerary.nav.button.a11y"))
+            } label: { navRowLabel }
         } else {
-            Button { navigate(navApps[0]) } label: { navIcon }
+            Button { navigate(navApps[0]) } label: { navRowLabel }
                 .buttonStyle(.plain)
-                .accessibilityLabel(Text("itinerary.nav.button.a11y"))
         }
     }
 
-    private var navIcon: some View {
-        Image(systemName: "arrow.triangle.turn.up.right.circle")
-            .font(.system(size: 17))
-            .foregroundStyle(.secondary)
-            .frame(width: 44, height: 44)
-            .contentShape(Rectangle())
+    private var navRowLabel: some View {
+        HStack(spacing: 12) {
+            Image(systemName: "arrow.triangle.turn.up.right.circle.fill")
+                .font(.system(size: 18)).foregroundStyle(dayColor).frame(width: 22)
+            Text("itinerary.stop.detail.navigate")
+                .font(.system(.subheadline, design: .rounded).weight(.medium))
+                .foregroundStyle(.primary)
+            Spacer(minLength: 0)
+            Image(systemName: "chevron.right").font(.caption).foregroundStyle(.tertiary)
+        }
+        .padding(.vertical, 12)
+        .contentShape(Rectangle())
     }
 
     private func navigate(_ app: MapNavigationApp) {
         guard let coord = stop.coordinate else { return }
         MapNavigationService.open(app, coordinate: coord, name: stop.name)
         CarryLogger.shared.log(.itineraryStopNavigated, context: app.rawValue)
+    }
+
+    private var timeRangeLabel: String {
+        let start = timeLabel(dayMinutes: stop.plannedStartMinutes)
+        guard stop.stayMinutes > 0 else { return start }
+        return "\(start)–\(timeLabel(dayMinutes: stop.plannedStartMinutes + stop.stayMinutes))"
     }
 }
 
