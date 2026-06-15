@@ -811,26 +811,29 @@ private struct TimelineStopRow: View {
         // .center 让名称块与导航按钮都按行中线居中，名称块重新对齐圆点。
         HStack(alignment: .center, spacing: 10) {
             VStack(alignment: .leading, spacing: 2) {
-                Text(stop.name)
-                    .font(.system(.body, design: .rounded).weight(.semibold))   // 名称加粗 + 圆体，作为每行的视觉锚
-                    .foregroundStyle(.primary)
-                    .lineLimit(1)
+                // 名称与时间【同一行、右对齐】：地点=「什么」、时间=「何时」，互为一对，读成「地点 ——— 时间」
+                // （对标日历/Flighty/Tripsy 的日程行）。时间落在名称基线上，不再悬在名称↔地址中缝里。
+                HStack(alignment: .firstTextBaseline, spacing: 6) {
+                    Text(stop.name)
+                        .font(.system(.body, design: .rounded).weight(.semibold))   // 名称加粗 + 圆体，作为每行的视觉锚
+                        .foregroundStyle(.primary)
+                        .lineLimit(1)
+                    if stop.plannedStartMinutes >= 0 {
+                        Spacer(minLength: 6)
+                        // 纯时间文字（去掉前导 pin 图标）：时间本身即表达「已排期」，图标冗余且其「优化时不会动」
+                        // 的语义不自明。锚定行为不变，只去视觉噪音。secondary，不抢名称锚点。
+                        Text(timeRangeLabel)
+                            .font(.system(.caption, design: .rounded).weight(.medium))
+                            .foregroundStyle(.secondary)
+                            .fixedSize()
+                    }
+                }
                 if !stop.address.isEmpty {
                     Text(stop.address)
                         .font(.system(.caption, design: .rounded))
                         .foregroundStyle(.secondary)
                         .lineLimit(1)
                 }
-            }
-            Spacer(minLength: 6)
-            if stop.plannedStartMinutes >= 0 {
-                // 已设时间：重排锚点。pin 图标 + 时间，传达「优化时不会动」。
-                HStack(spacing: 3) {
-                    Image(systemName: "pin.fill").font(.system(size: 9))
-                    Text(timeRangeLabel)
-                        .font(.system(.caption, design: .rounded).weight(.medium))
-                }
-                .foregroundStyle(.secondary)
             }
             if stop.hasCoordinate && !navApps.isEmpty {
                 navButton
