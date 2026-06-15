@@ -3,6 +3,17 @@
 ## 最后更新
 2026-06-15
 
+## 上次改动摘要（行程时间轴视觉打磨 + 打包重命名闪退修复 + 首页空态蒙层 · 2026-06-15）
+
+> 分支 `feature/itinerary-transport-lodging`，与并行会话共享工作区；以下全程按 hunk 隔离、只提自己的改动，未卷入并行代码。所有视觉改动在模拟器 1:1 逐版验过。
+
+- **🔴 修崩溃（打包重命名 → 返回闪退）**：左滑「编辑」进重命名态后点返回，`ReorderableItemCollection.applySnapshot` 给 diffable `reconfigureItems` 传了**重复 identifier**（`previousEditing == editingItemId` 时 `[prev, cur]` 给出同一 id 两次）→「item identifiers are not unique」断言 → SIGABRT。改为只 reconfigure「编辑表现真正切换」的行 = 两者的**对称差**（天然去重；未变→空集，顺带不再每次按键重建编辑行），并把 reconfigure 从异步 completion 移到同步紧跟 apply，消除拆除竞态。
+- **行程日期头去分隔线**：流式/吸顶**全程不画线**——粗体圆体标题 + 当天彩色圆点 + 留白本身层级已足，吸顶时不透明 systemBackground 已切开内容，再加线是多余 chrome（对标 Tripsy/Flighty/原生）。打包分区头是 ALL-CAPS 小灰字、分量轻，**保留**锚定基线（两屏差异有意、说得通）；曾尝试「仅吸顶显示」的 UIKit 检测机制，定稿为「永不画」后**整套删除、无死代码**。
+- **Timeline 类别图标放大**：圆点 24→28、字形 11→13，rail 列 26→30 四处（停靠点圆点/日期头圆点/段距/内联动作）同步对齐——更可扫读且仍明显轻于地点名。
+- **备注预览**：去前导 `note.text` 图标、纯文本左齐（名称/地址/备注共一条左缘），配色 secondary→tertiary，落成 primary/secondary/tertiary 三层标签层级，与地址一眼分得开。
+- **时间轴连线 + 段距**：① 修 `noteRow` 连线列填满整行高——带备注停靠点处竖线原本断一截，现全程连续；② 段距（29 km…）定稿为**夹在竖线里**（数字居中压在 spine、上下两段线接住），切口加横向 5pt + 上下 1.5pt 气口，不挤不飘。`#2` 带备注处距离不落在两圆点几何正中——经判断**保持现状**（距离在「含备注的内容块」下方居中，符合 Maps 等惯例；强行几何居中会让距离与备注并排、更乱）。
+- **首页空态去蒙层**：`bottomContentFade` 本给「列表滚到底部浮条下消隐」用，却无条件加在容器上；空态时 sheet 按内容收缩、只有一张空态卡片、无可滚动列表，这条 120pt 渐变反而把卡片下半截（含「Add First Trip」按钮）蒙白。改为 `height: isEffectivelyEmpty ? 0 : 120`（空态不铺）。模拟器 DEBUG 空态开关复现 before/after 验证闭环。全 app 扫查确认同类隐患仅此一处（ItemPicker 的 fade 是 smart-only + 顶部锚定内容，安全；bottomBarScrim 是实心底栏，非蒙层）。
+
 ## 上次改动摘要（行程交通段 + 住宿 + 签证 PDF 导出 · 2026-06-15）
 
 > 分支 `feature/itinerary-transport-lodging`，**未合并**，全程编译绿（主 app + Widget）、待真机统一验收。spec：`itinerary-transport-lodging.md`（规划层）+ `itinerary-export-document.md`（导出）。借 Tripsy 的「节点+边+跨度」数据模型，用 Carry 克制审美定呈现与范围。
