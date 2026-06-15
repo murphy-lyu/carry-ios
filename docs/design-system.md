@@ -227,6 +227,14 @@ Apple 原生风格，极简、克制、优雅。
 - **停靠点行交互**：**点击整行不触发编辑**（避免误触）；编辑改由**向左滑动**出现的「✏️ 编辑」按钮触发（与「🗑 删除」并列，删除在最外侧）。长按仍为拖拽重排。
 - **地图按天编号 + 按天分色**：地图针 label = **当天**序号（每天从 1 重置，与列表一致，非全程连号）+ 类别图标；针 tint 与路线 `MapPolyline` 按天取 `ItineraryDayPalette` 色。
 
+### 行程交通段 + 住宿 + 地图空态（2026-06-15，已上线 main · spec: itinerary-transport-lodging）
+
+- **统一「+」入口**：每天底部 `addStopRow` 由单一 Button 改 **Menu**：地点（mappin）/ 航班（airplane）/ 火车（train.side.front.car）/ 住宿（bed.double）。次级动作仍 secondary 灰（不抢色）。
+- **交通连接行（TransportTimelineRow）**：与 TimelineStopRow 同两列网格（rail 30 + spacing 12）。rail 列放 **mode 图标的当天色描边圆**（24pt，区别于停靠点的实心序号圆）；详情列主行 = 班次（圆体 semibold「承运方 · 班次号」，皆空退化 mode 名）、次行 = 起讫站/时间（圆体 footnote secondary，如 `KMG 09:00 → PEK 12:30`，跨天加 `+N`）。点击整行编辑。
+- **住宿常驻条（LodgingBannerRow）**：覆盖天顶部的轻量 `secondarySystemBackground` 圆角条。三态——**入住日**实心床 +「入住 · 名称」(+时间)；**退房日**「退房 · 名称」(+时间)；**过夜中间天**最淡（床轮廓 + 名称 + 晚数，`opacity 0.4` 退到背景）。点击编辑。
+- **航班地图弧线 + 端点**：交通段起讫两端都有坐标时画**大圆弧虚线**（`MapPolyline contourStyle: .geodesic`，dash `[2,7]`，当天色）区别市内步行/驾车实线路程；两端各放轻量端点标记（白底圆 + 当天色描边 + mode 图标，18pt，比序号针轻——端点是「过路」非「停留」）。
+- **🔴 地图预览「永不为空」（替代灰盒占位）**：四档——① 当天有地点→正常路线图；② 当天空、整趟别处有地点→整趟真地图、其它天针/线淡化（marker 0.4 / line 0.3）+「这天还没安排地点」material 胶囊；③ 整趟空、目的地已解析→居中目的地真地图（复用 `TripBundle` 坐标）+「添加第一个地点」邀请；④ 兜底（整趟空且目的地未知）→ 才用原灰渐变盒。仅 ①② 可点开全屏。理由见 north-star §1/§9（Apple Maps 地图永不是灰盒）。
+
 ### 创建流程视觉统一规范（2026-05）
 - 适用范围：
 - 一级页面：`New trip`（TripInfoView）、`Add item`（ItemPickerView）、`List preview / Packing list`（PackingListView）。

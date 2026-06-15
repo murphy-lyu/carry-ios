@@ -25,7 +25,7 @@
 
 ## 上次改动摘要（行程交通段 + 住宿 + 签证 PDF 导出 · 2026-06-15）
 
-> 分支 `feature/itinerary-transport-lodging`，**未合并**，全程编译绿（主 app + Widget）、待真机统一验收。spec：`itinerary-transport-lodging.md`（规划层）+ `itinerary-export-document.md`（导出）。借 Tripsy 的「节点+边+跨度」数据模型，用 Carry 克制审美定呈现与范围。
+> **已合并 `main` 并 push**（merge `4cacbc8`，功能分支已删、远端旧分支已清理）。全程编译绿（主 app + Widget）、**待真机验收存航班/住宿两条流程**。spec：`itinerary-transport-lodging.md`（规划层）+ `itinerary-export-document.md`（导出）。借 Tripsy 的「节点+边+跨度」数据模型，用 Carry 克制审美定呈现与范围。
 
 - **数据地基**（`Itinerary.swift`/`CarrySchema`/`TripStore`/`DataBackupManager`）：新增 `TransportSegment`（边：航司/班次、起讫站+代码+坐标+时区+航站楼、跨天起降、预留 `liveStatusData` 给未来航班动态）、`LodgingStay`（跨度：day sortOrder 锚定、`covers`）；`ItineraryDay.timeline` 把 stop+transport 按共享 sortOrder 合并（`TimelineItem`）。轻量迁移加表、单一 SchemaV1；CRUD + duplicate 深拷贝 + 备份/还原/导入全链路（可选字段，向后兼容）。
 - **录入 UI**：`TransportEditView`（航班/火车/通用，起降站可地理搜索）、`LodgingEditView`（名称/地址+入住日+晚数+时间）；抽共享 `ItineraryPlaceSearchSheet`。
@@ -38,7 +38,8 @@
 - **🔴 健壮性修复**：① 缩短行程天数原会随删天**级联丢交通段**（`syncItineraryDays` 现把交通段同停靠点一起挪到保留天、起降天序回收）；② 住宿 `checkInDayOrder` 越界夹回有效区间（不再孤立看不见）；③ PDF 文件名日期改手拼 `yyyyMMdd`（locale 会重排成 MMddyyyy）。
 - **自验（模拟器，2026-06-15）**：迁移安全（真实 14 行程启动无崩）、统一「+」菜单、航班表单、导出页、**PDF 端到端**（标题+路线图+逐日含地址+页脚、中文无乱码）均✓；新文件无未守卫强解包、住宿跨天 item 唯一。**未自验**（模拟器自动键盘输入乱码）：存航班/住宿后的时间轴行 + 跨天住宿三态崩溃，交真机验。
 - **范围定稿（已与用户确认）**：航班动态需外部 API、PDF 中英对照、Excel 导出——三项均**不做/留后续**，核心功能无半截。
-- **待办**：真机验收存航班/住宿两条流程；OK 后 push / 评估合并 `main`。
+- ✅ **已合并 `main` + push + 清理仓库**：merge `4cacbc8`（代码零冲突、仅 progress.md 摘要块冲突已解）；删本地功能分支 + 远端 3 个已并入旧分支（home-ui-redesign / globe-camera-race / zh-punctuation），本地远端现仅剩 `main`。
+- ⏳ **待办（交真机）**：① 存一条航班/火车 → 时间轴连接行 + 地图弧线 + 端点标记；② 加 ≥2 晚住宿、来回切天 → 入住/过夜/退房三态**不崩**（跨天行 ID 修复已编译+审计、未运行时验）；③ 备份还原 / 复制行程后交通+住宿保真；④ 缩短行程日期后交通段不丢、住宿夹回（健壮性修复，建议验）。
 
 ## 上次改动摘要（首页 Sheet 自动吸附：克制果冻回弹 · 2026-06-15）
 

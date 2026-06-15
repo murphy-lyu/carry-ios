@@ -200,6 +200,7 @@ Carry 在中国大陆 App Store 上架，涉及地理政治敏感内容时必须
 > - 同一视图挂多个 `.sheet(item:)` 会相互抑制 → 顺势**合并成单一枚举驱动的 sheet**，而非加 workaround 硬让两个并存。
 > - `List.onMove` 不支持跨 section 是框架边界 → 跨天拖拽**改用 `UICollectionView` 原生 interactive movement**（框架本就支持跨 section），而非在 List 上硬凑。
 > - 底部悬浮元素遮挡内容 → 用框架的 `safeAreaInset` / `contentInset` 让框架自己避让，而非手算偏移去顶内容。
+> - **`UICollectionViewDiffableDataSource` 的 item identifier 必须全局唯一（跨 section 也不能重复），否则运行时崩**（"item identifiers are not unique" 断言 → SIGABRT）。本项目已踩两次：打包重命名给 `reconfigureItems` 传重复 id；住宿跨 N 天时 `.lodging(stay.id)` 在多个 day section 重复。**同一实体在多 section 复用时，行 ID 必须带区分维度**（如 `.lodging(stay:day:)`）；`reconfigureItems` 传入前先去重（对称差/Set）。
 
 ## 经验教训：性能/动画类疑难问题的排查纪律
 
@@ -242,6 +243,9 @@ xcstrings 中有两类 key：
 
 - **语义性 key**（key 本身就是英文原文）：如 `"Add items"`、`"One last check before you close the door."`——key 即为英文值，无需 `"en"` 条目
 - **结构化 key**（如 `itempicker.hero.title`、`packing.scene_card.subtitle`）：**必须**在 localizations 中包含 `"en"` 显式条目，否则英文设备显示的是 key 名本身
+
+### 「按用户选定语言渲染」的固定文案：用代码字典，不进 xcstrings
+xcstrings 永远按**设备 locale** 取值。若某段固定文案要按**用户在界面里选定的语言**渲染（与设备 locale 无关），xcstrings 做不到——必须用**代码内语言字典**（如签证 PDF 导出的 `ItineraryDocumentText`，导出时选 EN/ZH 就渲染对应语言、日期也用对应 `Locale` 格式化）。判据：文案的语言由「设备设置」决定 → xcstrings；由「用户当前选择」决定 → 代码字典。用户输入的数据（地点名/酒店名等）始终原样、不翻译。
 
 ### 新增文案：同步补全所有语言
 每次新增或修改面向用户的文案，必须在同一次改动中完成全部 9 种语言，不允许"先占位后补"：

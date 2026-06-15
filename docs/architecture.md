@@ -35,6 +35,12 @@ ZStack（全窗口）
 - MyItem：用户自定义物品
 - PackingList：打包清单
 - **ItineraryDay / ItineraryStop**（`Models/Itinerary.swift`，行程路线规划）：行程=多个有序 Day，每 Day=有序 Stop（name/坐标/类别/计划时段/停留/note/sortOrder）。挂在 `TripBundle.itineraryDays`（级联）。新增 model 属 SwiftData 轻量迁移（加表，保持单一 SchemaV1）。备份经 `BackupItineraryDay/Stop`（可选字段，兼容旧备份）
+- **TransportSegment / LodgingStay**（`Models/Itinerary.swift`，交通段 + 住宿，spec: `itinerary-transport-lodging.md`）：行程的「边」与「跨度」，与 Stop 并列三类对象。
+  - `TransportSegment`（边）：连接两点的一段移动（mode=flight/train/bus/ferry/carRental/other；承运方·班次·起讫站+code+坐标+IANA 时区+航站楼·跨天起降 dayOrder/minutes·座位·确认号·**预留 `liveStatusData` 给未来航班动态**）。挂 `ItineraryDay.segments`（级联，归出发日）；与 Stop 共享时间轴 sortOrder。
+  - `LodgingStay`（跨度）：横跨 N 晚（`checkInDayOrder` + `nights`，`covers(dayOrder:)`），挂 `TripBundle.lodgingStays`（级联，不绑单天）。
+  - `ItineraryDay.timeline`（`TimelineItem` 枚举）：stop + transport 合并的单一数据源——**停靠点保持手动 sortOrder，设了时间的交通段按时间「就位」插入**（详见 decisions 2026-06-15）。
+  - 备份 `BackupTransportSegment/BackupLodgingStay`（可选字段，兼容旧备份）；`duplicateTrip` 深拷贝；`syncItineraryDays` 缩短天数时交通段同停靠点挪到保留天、住宿 dayOrder 夹回（防数据丢失）。
+  - **签证行程单导出**：`ItineraryPDFRenderer`（`UIGraphicsPDFRenderer` A4 分页）+ `ItineraryDocumentText`（文档固定文案 EN/ZH 代码字典，按所选语言渲染、不走设备 locale）+ `ExportItinerarySheet`（导出选项）；概览图复用 `TripShare.renderRouteMap`。spec: `itinerary-export-document.md`。
 - Scene / SceneItemMap：场景与物品映射（智能推荐基础）
 - ItemCatalog：物品目录（预置数据）
 - TripReminderConfig：行程提醒配置（含 `presets` 档位、`localizedLabel`）
