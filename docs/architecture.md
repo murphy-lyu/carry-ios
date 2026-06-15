@@ -41,6 +41,7 @@ ZStack（全窗口）
   - `ItineraryDay.timeline`（`TimelineItem` 枚举）：stop + transport 合并的单一数据源——**停靠点保持手动 sortOrder，设了时间的交通段按时间「就位」插入**（详见 decisions 2026-06-15）。
   - 备份 `BackupTransportSegment/BackupLodgingStay`（可选字段，兼容旧备份）；`duplicateTrip` 深拷贝；`syncItineraryDays` 缩短天数时交通段同停靠点挪到保留天、住宿 dayOrder 夹回（防数据丢失）。
   - **签证行程单导出**：`ItineraryPDFRenderer`（`UIGraphicsPDFRenderer` A4 分页）+ `ItineraryDocumentText`（文档固定文案 EN/ZH 代码字典，按所选语言渲染、不走设备 locale）+ `ExportItinerarySheet`（导出选项）；概览图复用 `TripShare.renderRouteMap`。spec: `itinerary-export-document.md`。
+- **费用记录（`CostBearing` 协议，spec: `itinerary-cost-tracking.md`）**：`ItineraryStop` / `TransportSegment` / `LodgingStay` 三实体 conform `CostBearing`，各加 `costAmount`（金额，原币种）+ `costCurrencyCode`（ISO 4217，空=未记录）+ `costHomeAmount`（录入时折算成本位币的快照，-1=未捕获→实时折算兜底）。**真相 = 金额 + 原币种**（永不丢），快照只为历史值稳定。加列属轻量迁移（无 SchemaV2）；备份 `Backup*` 三处加可选字段、`duplicateTrip` 深拷贝带上。写入统一经 `TripStore.setStopCost/setTransportCost/setLodgingCost`（单一漏斗 + 就地捕获快照）；改本位币 → `recomputeCostSnapshots()` 从原始金额重算（不变式：快照永远以当前本位币计）。
 - Scene / SceneItemMap：场景与物品映射（智能推荐基础）
 - ItemCatalog：物品目录（预置数据）
 - TripReminderConfig：行程提醒配置（含 `presets` 档位、`localizedLabel`）
@@ -52,6 +53,7 @@ ZStack（全窗口）
 - NavigationRouter（@StateObject，全局）：导航路径管理
 - AppearanceMode（@AppStorage）：外观模式（system/light/dark）
 - CarryAccent（`AppearanceMode.swift`）：App 唯一强调色「烟蓝」。SwiftUI 层 `.tint(CarryAccent.color)`（ContentView 注入）+ UIKit 层 `UIWindow.appearance().tintColor = CarryAccent.uiColor`（`CarryApp.init`，覆盖系统弹窗/菜单/导航栏）。无用户可见主题切换
+- ExchangeRateManager（`@MainActor` 共享单例 `.shared`）：汇率拉取/按天缓存 + 本位币口径。base 读 `preferred_currency_code`（`@AppStorage`，未设回退设备 locale）；`convertToHome` 折算、`refreshBaseCurrency`/`fetchNow` 改币种后切 base+重拉。目的地汇率屏与费用折算共用同一实例（`CarryApp` 启动预热）
 
 ## 持久化
 - SwiftData，versioned schema（CarrySchema.swift）
@@ -79,6 +81,9 @@ ZStack（全窗口）
   - `BackgroundReposition.swift`：`loadBackgroundImage`(loadObject→loadDataRepresentation 回退，iCloud 健壮加载) + `BackgroundRepositionView`(UIScrollView pan/zoom 选裁剪框) + `PositionedImage`(焦点居中、固定比例展示，设备无关 WYSIWYG)
   - `DestinationMapThumbnail.swift`：`TripBackgroundView`(有图→`PositionedImage`；无图→`.monogram` 墨色字母块 / `.map` 实时 MKMapView)；入口在 `PackingListView` 详情页「…」菜单
   - `HomeStyleFlag.swift`：`HomeCardStyle`（现仅 `.featured`=2·Map 默认正式样式 / `.glass`=4·Map 实验；1·Plain/3·Thumb 已删）。Dev Options 仍可切 2↔4；若最终只留 2·Map,再删此文件 + 切换器
+- CurrencyCatalog（`Models/CurrencyCatalog.swift`）：国家码→币种（code+符号）静态表 + 展示助手（`deviceDefaultCode`/`homeCurrencyCode`/`allCodes`/`localizedName`/`symbol`/`format`/`amountText`）；币种名/格式走 `Locale`，不进 xcstrings
+- TripSpendStats（`Models/TripSpendStats.swift`，纯函数）：Trip Book 花费聚合——按本位币把已发生行程的费用折算成交通/住宿/地点三类目 + 每趟明细；`CostResolver.homeValue` 快照优先/实时兜底/无汇率诚实标注（`hasUnconverted`/`approximate`）。注入 `convert` 闭包解耦汇率源（便于单测）
+- CurrencyPickerView / CostInputRow（`Views/`）：货币选择器（全屏可搜索 + 建议分区，本位币模式写设置/选择模式回传 code）；费用录入行（金额 + 币种 chip），三处编辑页共用
 - CoffeeStore：StoreKit 内购（打赏功能）
 - CarryShortcuts / AppIntents：Siri/Spotlight 快捷指令
   - create_trip：创建新行程

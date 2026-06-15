@@ -1,5 +1,33 @@
 # 决策日志
 
+## 2026-06-16 费用记录 + 本位币 + Trip Book 花费沉淀（spec: `itinerary-cost-tracking.md`）
+
+### 费用的真相 = 金额 + 原币种；本位币等值存「快照」而非实时折算（推翻 spec 初稿默认）
+原因：功能定位是「旅行资产沉淀」= 长期记忆。纯实时折算在高波动币种下会算错历史值（近年 JPY 对 CNY 波动 >30%）——「我 2024 年那趟日本花了多少」会被今天的汇率扭曲。
+决策：每笔永久存 `costAmount + costCurrencyCode`（用户实付、永不丢）；另存 `costHomeAmount` = 录入时按当时汇率折算的本位币快照。Trip Book 优先用快照、缺失退实时折算、再缺则诚实标注「未计入」。
+放弃：纯实时折算（模型最小但失真）；逐笔存汇率（用快照更直接）。
+
+### 每笔费用可单独带币种（多币种），不强制统一本位币
+原因（用户拍板）：出国时航班记 CNY、酒店记 JPY 是真实场景；强制统一要用户自己心算换算，违背「顺手记录」。
+决策：每笔 = 金额 + 币种（默认本位币、可改任意）；Trip Book 用汇率折算回本位币聚合。
+放弃：单币种（简单但出国记账不真实）。
+
+### 改本位币时重算所有快照（单一不变式）
+原因：本位币可改；若快照停在旧币种，Trip Book 会把不同币种快照混加 → 错。
+决策：改本位币 → `TripStore.recomputeCostSnapshots()` 从**原始** `costAmount + costCurrencyCode` 按当前汇率折算成新本位币、覆盖快照（绝不「折快照的快照」）；取不到汇率 → -1 退实时折算。不变式：`costHomeAmount` 永远以当前本位币计。改币种属低频操作，重算成本可接受。
+
+### 本位币单一真源 `preferred_currency_code`；ExchangeRateManager 升共享单例
+原因：原 `ExchangeRateManager` 是 `DestinationInfoView` 局部实例、base 写死设备 locale；费用折算要在录入 / Trip Book / 改币种三处复用。
+决策：`ExchangeRateManager.shared` 单例，base 读 `preferred_currency_code`（未设回退 locale）；目的地汇率屏与费用折算口径就此统一。币种名走 `Locale.localizedString(forCurrencyCode:)`、不进 xcstrings。
+
+### Trip Book 反转「坚决不做花费」→ 做
+原因：`trip-book.md` 原断言「Carry 零记账字段、坚决不做花费」——前提是「无数据」。现费用是用户主动录入的行程数据，前提不再成立；记账是「数据沉淀 → 黏性」核心。
+决策：Trip Book 加「总花费」卡。仍克制：只按实体类型（交通/住宿/地点）聚合，**不做** Tripsy 的消费分类标签 / 分摊 / 预算 / 账单导入。已在 `trip-book.md` 标注反转。
+
+### 花费卡视觉：比例带用单一烟蓝三档深浅、去分隔线（north-star ADA 自审后定稿）
+原因：第一版照搬 Tripsy 是「一列数字」，glance 读不出构成（north-star §2）；满宽分隔线是 chrome 堆叠（§1）。
+决策：总额下加 8pt capsule 比例带（交通/住宿/地点占比），用 `CarryAccent` 100%/55%/28% 三档透明度编码——守单一强调色纪律（§4），**不分配不同色相**；图例行去分隔线，靠圆点 + 间距 + 右对齐成行。多币种折算前缀「≈」、未折算诚实脚注。已回写 `design-system.md` §费用/货币。
+
 ## 2026-06-16 行程地点详情：交通方式导航 + 收尾修复
 
 ### 交通方式采用 Path C（选择器 + 联动调起，不在 App 内显时长、不接路由 API）

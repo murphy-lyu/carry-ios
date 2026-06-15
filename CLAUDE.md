@@ -182,6 +182,7 @@ Carry 在中国大陆 App Store 上架，涉及地理政治敏感内容时必须
 - **Widget Extension 文件约定**：`CarryWidget/` 下所有文件仅属于 CarryWidgetExtension target，不得与主 app target 混用；跨 target 共享的类型统一放 `SharedSources/`，通过 pbxproj `PBXSourcesBuildPhase` 显式加入两个 target
 - **Widget 本地化**：widget 使用 `CarryWidget/Localizable.xcstrings`，不共享主 app 的 xcstrings；新增 widget 文案必须同步补全 9 种语言
 - **埋点闭环**：在 `CarryLogger.Event` 新增 case 时，必须在同一次改动里补齐调用点，禁止"先定义后接线"——已定义却从未调用的 Event 是死代码，上线后无法回收数据。错误类 Event 新增后必须同步加入 `errorEvents` 集合。新增用户可触发的功能/交互（按钮、入口、分享等）应评估是否需要对应埋点
+- **费用记录闭环（`CostBearing`，spec: `itinerary-cost-tracking.md`）**：费用真相永远是 `costAmount + costCurrencyCode`（用户实付原币种、永不丢），`costHomeAmount` 仅是本位币快照（派生、可重算）。新增「可记费用」的行程实体时，除 conform `CostBearing`（三字段），必须**同一次改动**同步四处，漏任一处即费用丢失 / Trip Book 漏算 / 改币种快照不更新：① `DataBackupManager` 备份/还原带上（可选字段、向后兼容）；② `duplicateTrip` 深拷贝带上；③ `TripSpendStats.compute` 聚合纳入；④ 写入经 `TripStore.setXCost` 单一漏斗（就地捕获快照），禁止在 View 里直接写 `@Model` 的 cost 字段（会绕过快照捕获）。本位币改动必走 `recomputeCostSnapshots()` 维持「快照永远以当前本位币计」的不变式。
 
 ## 框架协作与诊断纪律（核心规范 · 每次必须遵守）
 
