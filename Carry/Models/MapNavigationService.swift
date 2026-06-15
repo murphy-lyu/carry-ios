@@ -47,6 +47,41 @@ enum MapNavigationApp: String, CaseIterable, Identifiable {
         guard let probeURL else { return true }   // Apple 地图
         return UIApplication.shared.canOpenURL(probeURL)
     }
+
+    /// 该 App 是否支持此交通方式。仅 **Apple 地图不支持骑行**（其 deep link / 启动选项无骑行项；
+    /// MKDirections 亦无 cycling）——选骑行时 Apple 地图从可用列表过滤掉，其余地图照常。
+    func supports(_ mode: MapNavigationMode) -> Bool {
+        switch (self, mode) {
+        case (.apple, .cycling): return false
+        default: return true
+        }
+    }
+}
+
+/// 导航交通方式（驾车 / 骑行 / 步行）。默认驾车。`allCases` 顺序即选择器顺序。
+enum MapNavigationMode: String, CaseIterable, Identifiable {
+    case driving
+    case cycling
+    case walking
+
+    var id: String { rawValue }
+
+    /// 本地化显示名 key（视图层包成 `LocalizedStringKey`；本文件不依赖 SwiftUI）。
+    var nameKey: String {
+        switch self {
+        case .driving: return "itinerary.nav.mode.driving"
+        case .cycling: return "itinerary.nav.mode.cycling"
+        case .walking: return "itinerary.nav.mode.walking"
+        }
+    }
+
+    var symbolName: String {
+        switch self {
+        case .driving: return "car.fill"
+        case .cycling: return "bicycle"
+        case .walking: return "figure.walk"
+        }
+    }
 }
 
 @MainActor
@@ -57,23 +92,34 @@ enum MapNavigationService {
         MapNavigationApp.allCases.filter { $0.isInstalled }
     }
 
-    /// 调起指定 App 导航至坐标（驾车，起点 = 各 App 自身当前定位）。
-    static func open(_ app: MapNavigationApp, coordinate: CLLocationCoordinate2D, name: String) {
+    /// 已安装且支持指定交通方式的导航 App（骑行时 Apple 地图被过滤）。
+    static func availableApps(for mode: MapNavigationMode) -> [MapNavigationApp] {
+        availableApps().filter { $0.supports(mode) }
+    }
+
+    /// 调起指定 App、用指定交通方式导航至坐标（起点 = 各 App 自身当前定位）。
+    /// 骑行不应传入 `.apple`（上层已按 `supports` 过滤）；若误传，Apple 退化为驾车。
+    static func open(_ app: MapNavigationApp, coordinate: CLLocationCoordinate2D, name: String, mode: MapNavigationMode) {
         let encodedName = name.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? ""
         switch app {
         case .apple:
             let item = MKMapItem(placemark: MKPlacemark(coordinate: coordinate))
             item.name = name
-            item.openInMaps(launchOptions: [MKLaunchOptionsDirectionsModeKey: MKLaunchOptionsDirectionsModeDriving])
+            // Apple 仅驾车/步行（无骑行）；骑行已被过滤，保险起见退化驾车。
+            let appleMode = (mode == .walking) ? MKLaunchOptionsDirectionsModeWalking : MKLaunchOptionsDirectionsModeDriving
+            item.openInMaps(launchOptions: [MKLaunchOptionsDirectionsModeKey: appleMode])
         case .amap:
-            // dev=0：坐标已是高德系（GCJ-02），不要二次纠偏；t=0：驾车。起点留空 = 当前位置。
-            open("iosamap://path?sourceApplication=Carry&dlat=\(coordinate.latitude)&dlon=\(coordinate.longitude)&dname=\(encodedName)&dev=0&t=0")
+            // dev=0：坐标已是高德系（GCJ-02），不二次纠偏。t：驾车 0 / 步行 2 / 骑行 3。起点留空 = 当前位置。
+            let t = (mode == .driving) ? 0 : (mode == .walking) ? 2 : 3
+            open("iosamap://path?sourceApplication=Carry&dlat=\(coordinate.latitude)&dlon=\(coordinate.longitude)&dname=\(encodedName)&dev=0&t=\(t)")
         case .google:
-            open("comgooglemaps://?daddr=\(coordinate.latitude),\(coordinate.longitude)&directionsmode=driving")
+            let gm = (mode == .driving) ? "driving" : (mode == .walking) ? "walking" : "bicycling"
+            open("comgooglemaps://?daddr=\(coordinate.latitude),\(coordinate.longitude)&directionsmode=\(gm)")
         case .baidu:
-            // 百度用 BD-09，需从 GCJ-02 转换；coord_type=bd09ll 告知百度坐标已是 BD-09。
+            // 百度用 BD-09，需从 GCJ-02 转换；coord_type=bd09ll 告知百度坐标已是 BD-09。mode：driving/walking/riding。
             let bd = gcj02ToBd09(coordinate)
-            open("baidumap://map/direction?destination=latlng:\(bd.latitude),\(bd.longitude)|name:\(encodedName)&mode=driving&coord_type=bd09ll&src=com.murphy.carry")
+            let bm = (mode == .driving) ? "driving" : (mode == .walking) ? "walking" : "riding"
+            open("baidumap://map/direction?destination=latlng:\(bd.latitude),\(bd.longitude)|name:\(encodedName)&mode=\(bm)&coord_type=bd09ll&src=com.murphy.carry")
         }
     }
 

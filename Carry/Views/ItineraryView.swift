@@ -859,6 +859,7 @@ struct StopDetailView: View {
     @State private var editing = false
     @State private var addressCopied = false
     @State private var contentHeight: CGFloat = 0
+    @State private var navMode: MapNavigationMode = .driving
 
     /// sheet 高度贴着内容：稀疏地点不留大片空白（看着「刚好」而非「空」），内容多则自然撑大、可拖到大屏。
     /// 用有意留白消灭空旷感，而非塞空字段填充（north-star §1）。+72 ≈ 导航栏 + 拖拽指示 + 上下气口。
@@ -1034,7 +1035,9 @@ struct StopDetailView: View {
     private var navModule: some View {
         if stop.hasCoordinate && !navApps.isEmpty {
             VStack(spacing: 0) {
-                navAction
+                modeSelector                       // 驾车 / 骑行 / 步行（默认驾车），联动 Get Directions
+                Divider()
+                navAction                          // 用所选方式调起；App List 按方式过滤（骑行隐藏 Apple 地图）
                 if let distanceToNext {
                     Divider().padding(.leading, 34)
                     HStack(spacing: 12) {
@@ -1057,17 +1060,60 @@ struct StopDetailView: View {
         }
     }
 
+    /// 交通方式选择器：3 段（驾车默认 / 骑行 / 步行）。选中即联动 Get Directions 调起的方式，避免「选了
+    /// 骑行却调起驾车」的割裂。选中=烟蓝淡填充+烟蓝字（Tier 2 可选中），未选=灰。
+    private var modeSelector: some View {
+        HStack(spacing: 6) {
+            ForEach(MapNavigationMode.allCases) { mode in
+                let selected = (mode == navMode)
+                Button {
+                    withAnimation(.spring(duration: 0.3, bounce: 0.2)) { navMode = mode }
+                } label: {
+                    HStack(spacing: 5) {
+                        Image(systemName: mode.symbolName).font(.system(size: 13, weight: .semibold))
+                        Text(LocalizedStringKey(mode.nameKey))
+                            .font(.system(.footnote, design: .rounded).weight(.medium))
+                    }
+                    .foregroundStyle(selected ? Color.accentColor : Color.secondary)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 7)
+                    .background(
+                        RoundedRectangle(cornerRadius: 9, style: .continuous)
+                            .fill(selected ? Color.accentColor.opacity(0.14) : Color.clear)
+                    )
+                    .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .accessibilityAddTraits(selected ? [.isButton, .isSelected] : .isButton)
+            }
+        }
+        .padding(.vertical, 10)
+    }
+
     @ViewBuilder
     private var navAction: some View {
-        if navApps.count > 1 {
+        let apps = navApps.filter { $0.supports(navMode) }
+        if apps.isEmpty {
+            // 选骑行且未装支持骑行的地图（只有 Apple 地图）→ 置灰 + 提示，不静默无反应。
+            HStack(spacing: 12) {
+                Image(systemName: "arrow.triangle.turn.up.right.circle")
+                    .font(.system(size: 18)).foregroundStyle(.tertiary).frame(width: 22)
+                    .accessibilityHidden(true)
+                Text("itinerary.nav.no_app_for_mode")
+                    .font(.system(.subheadline, design: .rounded))
+                    .foregroundStyle(.secondary)
+                Spacer(minLength: 0)
+            }
+            .padding(.vertical, 12)
+        } else if apps.count > 1 {
             Menu {
-                ForEach(navApps) { app in
+                ForEach(apps) { app in
                     Button(LocalizedStringKey(app.nameKey)) { navigate(app) }
                 }
             } label: { navRowLabel }
             .accessibilityLabel(Text("itinerary.nav.button.a11y"))
         } else {
-            Button { navigate(navApps[0]) } label: { navRowLabel }
+            Button { navigate(apps[0]) } label: { navRowLabel }
                 .buttonStyle(.plain)
                 .accessibilityLabel(Text("itinerary.nav.button.a11y"))
         }
@@ -1091,8 +1137,8 @@ struct StopDetailView: View {
 
     private func navigate(_ app: MapNavigationApp) {
         guard let coord = stop.coordinate else { return }
-        MapNavigationService.open(app, coordinate: coord, name: stop.name)
-        CarryLogger.shared.log(.itineraryStopNavigated, context: app.rawValue)
+        MapNavigationService.open(app, coordinate: coord, name: stop.name, mode: navMode)
+        CarryLogger.shared.log(.itineraryStopNavigated, context: "\(app.rawValue)_\(navMode.rawValue)")
     }
 
     private var timeRangeLabel: String {
