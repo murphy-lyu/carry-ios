@@ -86,13 +86,15 @@ struct CarryAtmosphereBackground: View {
 }
 
 struct CarrySubtleBackground: View {
-    /// 与背景渐变**底端**同色（明暗自适应）。供悬浮在背景上的底部条做"内容淡出到背景"的渐隐，
-    /// 避免底部出现色带接缝（如 OptimizeRouteView 钉底 CTA）。
-    static let baseColor = Color(UIColor { traits in
+    /// 与背景渐变**底端**同色（明暗自适应，动态 UIColor）。供悬浮在背景上的底部条做"内容淡出到背景"
+    /// 的渐隐、避免底部色带接缝（如 OptimizeRouteView 钉底 CTA）；也供 FX Sheet 卡片做不透明兜底背景
+    /// （`CarryBottomSheetFX` innerView，吸附过冲时卡片底部不漏出后面的 MapKit）。
+    static let baseUIColor = UIColor { traits in
         traits.userInterfaceStyle == .dark
             ? UIColor(red: 0.08, green: 0.08, blue: 0.09, alpha: 1)   // 暗：渐变底端
             : UIColor(red: 0.98, green: 0.98, blue: 0.97, alpha: 1)   // 浅：渐变底端
-    })
+    }
+    static let baseColor = Color(baseUIColor)
 
     @Environment(\.colorScheme) private var colorScheme
 

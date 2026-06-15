@@ -255,6 +255,13 @@ final class FXSheetViewController: UIViewController {
         innerView.clipsToBounds = true
         innerView.layer.cornerCurve = .continuous
         innerView.layer.maskedCorners = [.layerMinXMinYCorner, .layerMaxXMinYCorner]   // top-left, top-right
+        // 卡片不透明兜底背景 = Sheet 渐变底端色。根因修复「展开吸附过冲时底部漏 MapKit」：
+        // SwiftUI 内容（连同它的 CarrySubtleBackground）固定 = expandedHeight 且钉在 innerView 顶部；
+        // 吸附 spring 会把 innerView.bounds 瞬间撑过 expandedHeight，底部多出一条「无内容」的带。
+        // 过去这条带是透明的 → 露出后面的地图。给 innerView 自身一层 baseColor（= 内容底端同色），
+        // 这条带露出的就是与 Sheet 底端无缝同色，而非地图。正常态被内容完全盖住、不可见。
+        // 纯渲染兜底，不碰几何/吸附/手势/内容尺寸（内容固定尺寸的性能不变量保持）。
+        innerView.backgroundColor = CarrySubtleBackground.baseUIColor
         outerView.addSubview(innerView)
 
         // Pan gesture on the full view; shouldReceive limits it to sheet zone.
