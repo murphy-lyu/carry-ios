@@ -49,9 +49,9 @@ enum ItineraryPDFRenderer {
 
     /// 文件名：行程名_Itinerary_yyyyMMdd.pdf（去掉文件系统不安全字符）。
     static func fileName(for trip: TripBundle, date: Date) -> String {
-        let stamp = date.formatted(.dateTime.year().month(.twoDigits).day(.twoDigits).locale(Locale(identifier: "en_US_POSIX")))
-            .replacingOccurrences(of: "/", with: "")
-            .replacingOccurrences(of: " ", with: "")
+        // 手拼 yyyyMMdd，避免 .formatted 按 locale 重排成 MMddyyyy。
+        let c = Calendar.current.dateComponents([.year, .month, .day], from: date)
+        let stamp = String(format: "%04d%02d%02d", c.year ?? 0, c.month ?? 0, c.day ?? 0)
         let safeName = trip.name.isEmpty ? "Trip" : trip.name
         let cleaned = safeName.components(separatedBy: CharacterSet(charactersIn: "/\\:*?\"<>|")).joined()
         return "\(cleaned)_Itinerary_\(stamp).pdf"
