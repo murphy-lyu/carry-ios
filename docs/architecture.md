@@ -52,6 +52,7 @@ ZStack（全窗口）
 - TripStore（@StateObject，全局）：行程数据的读写、refresh
 - NavigationRouter（@StateObject，全局）：导航路径管理
 - AppearanceMode（@AppStorage）：外观模式（system/light/dark）
+- DistanceUnit（`Models/DistanceUnit.swift`，`@AppStorage("distance_unit")`）：距离单位偏好（automatic/kilometers/miles），`.automatic`=跟随设备 locale。`CarryDistanceFormat.string(meters:unit:)` 为全 App 距离展示**单一格式化入口**（每单位一个固定的全局 `MKDistanceFormatter`，缓存且无 `.units` mutation）；行程时间轴段距 / 地点详情路程模块 / 优化页距离统一走它
 - CarryAccent（`AppearanceMode.swift`）：App 唯一强调色「烟蓝」。SwiftUI 层 `.tint(CarryAccent.color)`（ContentView 注入）+ UIKit 层 `UIWindow.appearance().tintColor = CarryAccent.uiColor`（`CarryApp.init`，覆盖系统弹窗/菜单/导航栏）。无用户可见主题切换
 - ExchangeRateManager（`@MainActor` 共享单例 `.shared`）：汇率拉取/按天缓存 + 本位币口径。base 读 `preferred_currency_code`（`@AppStorage`，未设回退设备 locale）；`convertToHome` 折算、`refreshBaseCurrency`/`fetchNow` 改币种后切 base+重拉。目的地汇率屏与费用折算共用同一实例（`CarryApp` 启动预热）
 

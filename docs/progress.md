@@ -15,9 +15,23 @@
 - **埋点**：`costAdded`/`costRemoved`（带 category）/`preferredCurrencyChanged`。**本地化**：16 结构化 key × 9 语言（含显式 en、中文全角），脚本 additive 插入（944 + / 0 -，无格式重排）。
 - **遗留**：① 交通/住宿时间轴行的行内费用展示（仅地点详情已加）；② `TripSpendStats`/`CostResolver` 单测（无 test scheme）；③ 真机验收；④ Widget target 编译失败是**并行会话**改的 `ItineraryReorderCollection.swift`（`showsOptimize`）所致、非本功能。
 
-## 上次改动摘要（距离单位设置：自动/公里/英里 · 2026-06-15）
+## 上次改动摘要（行程：优化顺序入口移到 day header 尾部 · 2026-06-16）
 
-> 在 `main` 上，**未提交**。spec：`specs/distance-unit-setting.md`。模拟器验收通过（用户实机切换截图：英里 `20 mi/6.1 mi/3.8 mi` ↔ 公里 `33 km/9.9 km/6.1 km`，时间轴段距实时变更）。一级菜单分组/排序待后续统一调整。
+> UX 打磨（无 spec，会话内分析 + 用户拍板）。commit `78bb5a8`，**已 push**。真机验收通过（明暗两态、各天 header 等高、吸顶可达）。与并行会话共享 `ItineraryView.swift`——其费用 hunk 同文件并存，提交时用 patch 精确只暂存自己的 4 个 hunk（`git add -p` 不可交互）、未卷入 cost。
+>
+> **问题**：「Optimize order」原为每天列表**底部**的内联灰行——地点越多越该用、却被顶得越靠下（相关性与可达性反向），且与高频的 `Add` 等重抢戏、语义上像「路线里又一个节点」。
+>
+> **解（按 north-star §1 退后 / §2 层级 / §9 顺平台）**：移到当天 **day header 尾部**（对齐 Apple section-header accessory）。
+- **可达性**：header 是 `pinToVisibleBounds` 吸顶 → 不论这天多少地点，入口永远在屏幕顶部一伸手可及。
+- **层级**：`Add`（追加内容）留内容流；`Optimize`（作用于整天）落标题栏层级；中性 secondary 色 = 工具非主 CTA（不用烟蓝）。
+- **门槛**沿用坐标点 ≥4（固定首尾后中间需 ≥2 可重排）；**排序模式下隐藏**（此时在手动拖拽）。
+- **§5 节奏**：按钮垂直内边距压到最小（`.padding(.vertical, 4)`），使有/无优化的天 header 近似等高；点击区靠横向铺开补回（矮而宽，对齐「See All」式附属按钮）。图标 `accessibilityHidden`，VoiceOver 只读完整标签。
+- **清理**：删 `ItineraryReorderCollection` 的 `.optimize` 行类型 / `optimizeContent` 闭包 / `ItineraryDaySection.showsOptimize` 字段、`ItineraryView.optimizeRow`，无死代码；文案复用既有 `itinerary.optimize.button`、零新增。
+- **遗留（可选，当前不做）**：多天均满足 ≥4 时「Optimize order」会出现在每个合格天的 header（已是轻量灰字、契合「每天独立优化」语义）；若日后觉重复仍想更收敛再议。
+
+## 上次改动摘要（距离单位设置：自动/公里/英里 · 2026-06-16）
+
+> spec：`specs/distance-unit-setting.md`。commit `2c53c1c`，**已 push**。模拟器/真机验收通过（英里 `20 mi/6.1 mi/3.8 mi` ↔ 公里 `33 km/9.9 km/6.1 km`，时间轴段距实时切换）。**一级菜单分组/排序待后续统一调整**（用户明确留到后面统一调）。
 
 - **新增 `Carry/Models/DistanceUnit.swift`**：`DistanceUnit` 枚举（automatic/kilometers/miles），`.automatic → MKDistanceFormatter.units = .default`（交回 locale）→ 设备地区默认零回归；存 `@AppStorage("distance_unit")`。同文件 `CarryDistanceFormat.string(meters:unit:)` 为**全 App 距离展示单一入口**（每次 new 轻量 formatter，不复用全局可变 formatter 避竞态）。
 - **根因覆盖（消灭两套 formatter）**：原有 2 个 `MKDistanceFormatter`、3 个展示点——① `ItineraryView` 全局 `legDistanceFormatter`（驱动时间轴段距 `ItineraryLegConnector` + 地点详情「到下一站」路程模块，二者共用 `legLabel`）；② `OptimizeRouteView` 自建 formatter。两处删本地 formatter、统一改 helper + `@AppStorage("distance_unit")`，切换后**实时重渲染**（不退页面）。全仓确认无第四处距离展示（仅剩温度 `MeasurementFormatter`，不相关）。

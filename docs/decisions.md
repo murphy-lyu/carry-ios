@@ -1,5 +1,22 @@
 # 决策日志
 
+## 2026-06-16 距离单位设置 + 优化入口移到 day header
+
+### 距离单位：三档「自动 / 公里 / 英里」，默认「自动」跟随设备地区
+原因：距离原由 `MKDistanceFormatter` 按设备 locale 自动选公里/英里，用户**无法手动切换**（设备美区但习惯公制、或反之时无出口），全球化本地化体验不完整。
+决策：新增 `DistanceUnit`（automatic/kilometers/miles，镜像 `AppearanceMode`），`@AppStorage("distance_unit")` 默认 `automatic`。`.automatic → MKDistanceFormatter.units = .default`（交回 locale）→ **设备地区默认零回归**。设置「个性化」后新建「通用 / General」分组承载，交互对标「外观」行（confirmationDialog 三档）。
+放弃：两档（公里/英里）——会丢「自动跟随」语义，用户换区不会自动变。
+
+### 距离展示统一走单一格式化入口 `CarryDistanceFormat`（消灭两套 formatter）
+原因：改前有 2 个独立 `MKDistanceFormatter`（`ItineraryView` 全局 + `OptimizeRouteView` 自建）、3 个展示点，单位偏好若只接一处会口径分裂（根因门「覆盖所有触发路径」）。
+决策：抽 `CarryDistanceFormat.string(meters:unit:)` 为全 App 唯一入口，两处都改读同一 `@AppStorage`，切换实时重渲染。**每单位一个固定的全局 `let` formatter**（metric/imperial/default 各一）——既缓存（不每次 new、避滚动热路径分配）、又无 `.units` 跨调用 mutation/竞态。
+放弃：① 单个全局可变 formatter 每次改 `.units`（主线程虽安全但语义脏、有竞态隐患）；② 每次调用 new 一个（初版，per-leg 分配、是相对原缓存的性能回归，code-review 时改掉）。
+
+### 「Optimize order」从每天列表底部移到当天 day header 尾部
+原因（north-star §1/§2/§9）：原内联灰行在列表**底部**——地点越多越该用、却被顶得越靠下（相关性与可达性反向）；与高频 `Add` 等重抢戏；对齐进时间轴「地点列」后语义上像「路线里又一个节点」（归错类）。
+决策：移到 day header 尾部（对齐 Apple section-header accessory）。header 吸顶 → 始终可达；中性 secondary 色 = 工具非主 CTA；门槛沿用坐标点 ≥4、排序模式隐藏；垂直内边距压到最小使各天 header 等高、点击区横向铺开补回。
+放弃：① 保留原内联位置只调视觉——不解决「最该用时最难够到」的核心悖论；② 把它与 trip 级「地点排序」（手动、跨天、整趟）合进一个 day 级菜单——**作用域不同**（自动单天 vs 手动整趟），合并会混淆、且为单动作包菜单是多余 chrome。
+
 ## 2026-06-16 费用记录 + 本位币 + Trip Book 花费沉淀（spec: `itinerary-cost-tracking.md`）
 
 ### 费用的真相 = 金额 + 原币种；本位币等值存「快照」而非实时折算（推翻 spec 初稿默认）
