@@ -13,7 +13,7 @@ struct DestinationInfoView: View {
 
     let trip: TripBundle
     @ObservedObject var weatherManager: WeatherManager
-    @StateObject private var exchangeRateManager = ExchangeRateManager()
+    @ObservedObject private var exchangeRateManager = ExchangeRateManager.shared
     @AppStorage("debug_mock_weather_enabled") private var debugMockWeatherEnabled = false
 
     @Environment(\.colorScheme) private var colorScheme

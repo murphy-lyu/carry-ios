@@ -51,6 +51,8 @@ struct TransportEditView: View {
     @State private var seat = ""
     @State private var confirmationCode = ""
     @State private var note = ""
+    @State private var costAmountText = ""
+    @State private var costCurrencyCode = ""
 
     @State private var didLoad = false
     /// 起 / 落地点搜索 sheet（nil = 不显示；true = 搜出发，false = 搜到达）。
@@ -182,6 +184,7 @@ struct TransportEditView: View {
 
     private var moreSection: some View {
         Section {
+            CostInputRow(amountText: $costAmountText, currencyCode: $costCurrencyCode)
             TextField("itinerary.transport.field.seat", text: $seat)
             TextField("itinerary.transport.field.confirmation", text: $confirmationCode)
                 .autocorrectionDisabled()
@@ -247,6 +250,7 @@ struct TransportEditView: View {
             if seg.departLocalMinutes >= 0 { hasDepartTime = true; departTime = dateFromMinutes(seg.departLocalMinutes) }
             if seg.arriveLocalMinutes >= 0 { hasArriveTime = true; arriveTime = dateFromMinutes(seg.arriveLocalMinutes) }
             seat = seg.seat; confirmationCode = seg.confirmationCode; note = seg.note
+            if seg.hasCost { costAmountText = CurrencyCatalog.amountText(seg.costAmount); costCurrencyCode = seg.costCurrencyCode }
         } else {
             // 新增：默认模式 + 起降日落到目标天。
             mode = initialMode
@@ -276,8 +280,10 @@ struct TransportEditView: View {
                 arriveDayOrder: safeArriveDay, arriveLocalMinutes: arriveMinutes,
                 seat: seat, confirmationCode: confirmationCode, note: note
             )
+            store.setTransportCost(tripId: tripId, segmentId: segmentId,
+                                   amount: costAmountValue, currencyCode: costCurrencyToSave)
         } else if let dayId {
-            store.addTransportSegment(
+            if let newId = store.addTransportSegment(
                 tripId: tripId, dayId: dayId,
                 mode: mode, carrier: carrier, number: number,
                 fromName: fromName, fromCode: fromCode,
@@ -289,9 +295,24 @@ struct TransportEditView: View {
                 departDayOrder: departDayOrder, departLocalMinutes: departMinutes,
                 arriveDayOrder: safeArriveDay, arriveLocalMinutes: arriveMinutes,
                 seat: seat, confirmationCode: confirmationCode, note: note
-            )
+            ) {
+                store.setTransportCost(tripId: tripId, segmentId: newId,
+                                       amount: costAmountValue, currencyCode: costCurrencyToSave)
+            }
         }
         dismiss()
+    }
+
+    /// 解析录入的金额（空 → 0）。
+    private var costAmountValue: Double {
+        Double(costAmountText.trimmingCharacters(in: .whitespaces)) ?? 0
+    }
+
+    /// 要保存的币种：金额留空 → "" 清除费用；否则用选定币种，未选则跟随本位币。
+    private var costCurrencyToSave: String {
+        costAmountText.trimmingCharacters(in: .whitespaces).isEmpty
+            ? ""
+            : (costCurrencyCode.isEmpty ? CurrencyCatalog.homeCurrencyCode : costCurrencyCode.uppercased())
     }
 
     private func deleteAndDismiss() {

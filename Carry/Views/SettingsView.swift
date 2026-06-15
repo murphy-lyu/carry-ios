@@ -13,6 +13,7 @@ import EventKit
 /// 外层（settingsPath.isEmpty 驱动），与 Trips 链路同构，消除返回时 tab bar 延迟。
 enum SettingsRoute: Hashable {
     case appIcon
+    case currency
     case notifications
     case calendar
     case liveActivity
@@ -37,6 +38,12 @@ struct SettingsView: View {
     @State private var showImporter = false
     @State private var showImportConfirmation = false
     @State private var pendingImportData: Data?
+    // 本位币（费用记录用，spec: itinerary-cost-tracking.md）；空 = 用设备 locale 默认。
+    @AppStorage(ExchangeRateManager.preferredCurrencyDefaultsKey) private var preferredCurrencyRaw = ""
+
+    private var currentCurrencyCode: String {
+        preferredCurrencyRaw.isEmpty ? CurrencyCatalog.deviceDefaultCode : preferredCurrencyRaw.uppercased()
+    }
 
     private func mergeSuccessMessage(count: Int) -> String {
         if count == 0 {
@@ -306,6 +313,11 @@ struct SettingsView: View {
                                         }
                                     }
                                 }
+                                settingsNavigationRow(
+                                    title: "settings.currency.entry",
+                                    valueText: "\(currentCurrencyCode) \(CurrencyCatalog.symbol(for: currentCurrencyCode))",
+                                    route: .currency
+                                )
                             }
                             .padding(.horizontal, 16)
                             .padding(.bottom, 18)
@@ -699,6 +711,8 @@ struct SettingsView: View {
         switch route {
         case .appIcon:
             AppIconView()
+        case .currency:
+            CurrencyPickerView()
         case .notifications:
             NotificationSettingsView()
         case .calendar:

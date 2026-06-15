@@ -35,6 +35,10 @@ struct BackupItineraryStop: Codable, Sendable {
     var stayMinutes: Int
     var note: String
     var sortOrder: Int
+    // 费用记录（spec: itinerary-cost-tracking.md）；可选以兼容旧备份（无键 → nil → 还原为「未记录」）。
+    var costAmount: Double?
+    var costCurrencyCode: String?
+    var costHomeAmount: Double?
 }
 
 struct BackupTransportSegment: Codable, Sendable {
@@ -62,6 +66,9 @@ struct BackupTransportSegment: Codable, Sendable {
     var confirmationCode: String
     var note: String
     var sortOrder: Int
+    var costAmount: Double?
+    var costCurrencyCode: String?
+    var costHomeAmount: Double?
 }
 
 struct BackupLodgingStay: Codable, Sendable {
@@ -77,6 +84,9 @@ struct BackupLodgingStay: Codable, Sendable {
     var confirmationCode: String
     var note: String
     var sortOrder: Int
+    var costAmount: Double?
+    var costCurrencyCode: String?
+    var costHomeAmount: Double?
 }
 
 struct BackupItineraryDay: Codable, Sendable {
@@ -197,7 +207,8 @@ final class DataBackupManager {
                 toTimeZoneId: s.toTimeZoneId, toTerminal: s.toTerminal,
                 departDayOrder: s.departDayOrder, departLocalMinutes: s.departLocalMinutes,
                 arriveDayOrder: s.arriveDayOrder, arriveLocalMinutes: s.arriveLocalMinutes,
-                seat: s.seat, confirmationCode: s.confirmationCode, note: s.note, sortOrder: s.sortOrder
+                seat: s.seat, confirmationCode: s.confirmationCode, note: s.note, sortOrder: s.sortOrder,
+                costAmount: s.costAmount, costCurrencyCode: s.costCurrencyCode, costHomeAmount: s.costHomeAmount
             )
         }
     }
@@ -210,7 +221,8 @@ final class DataBackupManager {
                 latitude: l.latitude, longitude: l.longitude,
                 checkInDayOrder: l.checkInDayOrder, nights: l.nights,
                 checkInMinutes: l.checkInMinutes, checkOutMinutes: l.checkOutMinutes,
-                confirmationCode: l.confirmationCode, note: l.note, sortOrder: l.sortOrder
+                confirmationCode: l.confirmationCode, note: l.note, sortOrder: l.sortOrder,
+                costAmount: l.costAmount, costCurrencyCode: l.costCurrencyCode, costHomeAmount: l.costHomeAmount
             )
         }
     }
@@ -247,7 +259,10 @@ final class DataBackupManager {
                         plannedStartMinutes: $0.plannedStartMinutes,
                         stayMinutes: $0.stayMinutes,
                         note: $0.note,
-                        sortOrder: $0.sortOrder
+                        sortOrder: $0.sortOrder,
+                        costAmount: $0.costAmount,
+                        costCurrencyCode: $0.costCurrencyCode,
+                        costHomeAmount: $0.costHomeAmount
                     )
                 }
                 let segments = backupSegments(day)
@@ -506,7 +521,10 @@ final class DataBackupManager {
                     plannedStartMinutes: bs.plannedStartMinutes,
                     stayMinutes: bs.stayMinutes,
                     note: bs.note,
-                    sortOrder: bs.sortOrder
+                    sortOrder: bs.sortOrder,
+                    costAmount: bs.costAmount ?? 0,
+                    costCurrencyCode: bs.costCurrencyCode ?? "",
+                    costHomeAmount: bs.costHomeAmount ?? -1
                 )
                 stop.id = bs.id
                 stop.day = day
@@ -526,7 +544,10 @@ final class DataBackupManager {
                     departDayOrder: bg.departDayOrder, departLocalMinutes: bg.departLocalMinutes,
                     arriveDayOrder: bg.arriveDayOrder, arriveLocalMinutes: bg.arriveLocalMinutes,
                     seat: bg.seat, confirmationCode: bg.confirmationCode,
-                    note: bg.note, sortOrder: bg.sortOrder
+                    note: bg.note, sortOrder: bg.sortOrder,
+                    costAmount: bg.costAmount ?? 0,
+                    costCurrencyCode: bg.costCurrencyCode ?? "",
+                    costHomeAmount: bg.costHomeAmount ?? -1
                 )
                 seg.id = bg.id
                 seg.day = day
@@ -545,7 +566,10 @@ final class DataBackupManager {
                 checkInDayOrder: bl.checkInDayOrder, nights: bl.nights,
                 checkInMinutes: bl.checkInMinutes, checkOutMinutes: bl.checkOutMinutes,
                 confirmationCode: bl.confirmationCode, note: bl.note,
-                sortOrder: bl.sortOrder
+                sortOrder: bl.sortOrder,
+                costAmount: bl.costAmount ?? 0,
+                costCurrencyCode: bl.costCurrencyCode ?? "",
+                costHomeAmount: bl.costHomeAmount ?? -1
             )
             stay.id = bl.id
             stay.bundle = trip
@@ -657,7 +681,8 @@ final class DataBackupManager {
                     id: $0.id, name: $0.name, latitude: $0.latitude, longitude: $0.longitude,
                     address: $0.address, categoryRaw: $0.categoryRaw,
                     plannedStartMinutes: $0.plannedStartMinutes, stayMinutes: $0.stayMinutes,
-                    note: $0.note, sortOrder: $0.sortOrder
+                    note: $0.note, sortOrder: $0.sortOrder,
+                    costAmount: $0.costAmount, costCurrencyCode: $0.costCurrencyCode, costHomeAmount: $0.costHomeAmount
                 )
             }
             let segments = backupSegments(day)

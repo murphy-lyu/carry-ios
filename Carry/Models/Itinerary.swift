@@ -145,11 +145,27 @@ enum TimelineItem: Identifiable {
     }
 }
 
+// MARK: - CostBearing
+
+/// 可记录费用的行程实体（地点 / 交通 / 住宿）。spec: itinerary-cost-tracking.md。
+/// 真相 = 金额 + 原币种（用户实付，永不丢）；costHomeAmount = 录入时按当时汇率折算成
+/// 本位币的快照，-1 = 未捕获 → Trip Book 退回实时折算兜底。
+protocol CostBearing: AnyObject {
+    var costAmount: Double { get set }
+    var costCurrencyCode: String { get set }
+    var costHomeAmount: Double { get set }
+}
+
+extension CostBearing {
+    /// 是否记录了费用。以「币种非空」判定（而非金额 >0），允许记录「0 元 / 免费」这类真实条目。
+    var hasCost: Bool { !costCurrencyCode.isEmpty }
+}
+
 // MARK: - ItineraryStop
 
 /// 一个停靠点（POI）。坐标复用项目既有范式（同 DestinationEntry：lat/long）。
 @Model
-final class ItineraryStop {
+final class ItineraryStop: CostBearing {
     var id: UUID = UUID()
     var name: String = ""
     /// lat/long == 0/0 视为「无坐标停靠点」——地图/连线/重排都必须先过滤，绝不画到几内亚湾。
@@ -168,6 +184,11 @@ final class ItineraryStop {
     var sortOrder: Int = 0
     var day: ItineraryDay?
 
+    // 费用记录（spec: itinerary-cost-tracking.md，见 CostBearing）。
+    var costAmount: Double = 0
+    var costCurrencyCode: String = ""
+    var costHomeAmount: Double = -1
+
     init(
         name: String = "",
         latitude: Double = 0,
@@ -177,7 +198,10 @@ final class ItineraryStop {
         plannedStartMinutes: Int = -1,
         stayMinutes: Int = 0,
         note: String = "",
-        sortOrder: Int = 0
+        sortOrder: Int = 0,
+        costAmount: Double = 0,
+        costCurrencyCode: String = "",
+        costHomeAmount: Double = -1
     ) {
         self.id = UUID()
         self.name = name
@@ -189,6 +213,9 @@ final class ItineraryStop {
         self.stayMinutes = stayMinutes
         self.note = note
         self.sortOrder = sortOrder
+        self.costAmount = costAmount
+        self.costCurrencyCode = costCurrencyCode
+        self.costHomeAmount = costHomeAmount
     }
 
     /// 未知 rawValue 兜底为 .other；写入时回落 rawValue。
@@ -233,7 +260,7 @@ enum TransportMode: String, Codable, CaseIterable {
 /// 不硬绑两个具体 stop 对象——更鲁棒（能处理「到达后还没排地点」「跨天航班」）；
 /// 归出发日，与 stop 共享时间轴排序空间。spec: itinerary-transport-lodging.md。
 @Model
-final class TransportSegment {
+final class TransportSegment: CostBearing {
     var id: UUID = UUID()
     /// TransportMode.rawValue；读取统一走 `mode` 计算属性做未知值兜底。
     var modeRaw: String = TransportMode.flight.rawValue
@@ -273,6 +300,11 @@ final class TransportSegment {
     var sortOrder: Int = 0
     var day: ItineraryDay?
 
+    // 费用记录（spec: itinerary-cost-tracking.md，见 CostBearing）。
+    var costAmount: Double = 0
+    var costCurrencyCode: String = ""
+    var costHomeAmount: Double = -1
+
     /// 未来航班动态预留（本轮不接 API，留空）：JSON 编码的延误/登机口/转盘/实际起降。
     /// 可演进——接入时只填充本字段，不改表。
     var liveStatusData: Data = Data()
@@ -300,7 +332,10 @@ final class TransportSegment {
         seat: String = "",
         confirmationCode: String = "",
         note: String = "",
-        sortOrder: Int = 0
+        sortOrder: Int = 0,
+        costAmount: Double = 0,
+        costCurrencyCode: String = "",
+        costHomeAmount: Double = -1
     ) {
         self.id = UUID()
         self.modeRaw = mode.rawValue
@@ -326,6 +361,9 @@ final class TransportSegment {
         self.confirmationCode = confirmationCode
         self.note = note
         self.sortOrder = sortOrder
+        self.costAmount = costAmount
+        self.costCurrencyCode = costCurrencyCode
+        self.costHomeAmount = costHomeAmount
     }
 
     /// 未知 rawValue 兜底为 .other；写入回落 rawValue。
@@ -355,7 +393,7 @@ final class TransportSegment {
 /// 住宿（横跨若干晚的「跨度」）。归 TripBundle（不绑单天）；用 day sortOrder 锚定，
 /// 兼容有日期 / 无日期行程（呼应 dateless-planning-trips.md）。spec: itinerary-transport-lodging.md。
 @Model
-final class LodgingStay {
+final class LodgingStay: CostBearing {
     var id: UUID = UUID()
     var name: String = ""           // 酒店 / 民宿名
     var address: String = ""
@@ -373,6 +411,11 @@ final class LodgingStay {
     var sortOrder: Int = 0
     var bundle: TripBundle?
 
+    // 费用记录（spec: itinerary-cost-tracking.md，见 CostBearing）。
+    var costAmount: Double = 0
+    var costCurrencyCode: String = ""
+    var costHomeAmount: Double = -1
+
     init(
         name: String = "",
         address: String = "",
@@ -384,7 +427,10 @@ final class LodgingStay {
         checkOutMinutes: Int = -1,
         confirmationCode: String = "",
         note: String = "",
-        sortOrder: Int = 0
+        sortOrder: Int = 0,
+        costAmount: Double = 0,
+        costCurrencyCode: String = "",
+        costHomeAmount: Double = -1
     ) {
         self.id = UUID()
         self.name = name
@@ -398,6 +444,9 @@ final class LodgingStay {
         self.confirmationCode = confirmationCode
         self.note = note
         self.sortOrder = sortOrder
+        self.costAmount = costAmount
+        self.costCurrencyCode = costCurrencyCode
+        self.costHomeAmount = costHomeAmount
     }
 
     /// 退房落在第几天（= 入住日 + 住的晚数）。

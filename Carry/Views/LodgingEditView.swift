@@ -33,6 +33,8 @@ struct LodgingEditView: View {
     @State private var checkOutTime = Date()
     @State private var confirmationCode = ""
     @State private var note = ""
+    @State private var costAmountText = ""
+    @State private var costCurrencyCode = ""
 
     @State private var didLoad = false
     @State private var searching = false
@@ -100,6 +102,7 @@ struct LodgingEditView: View {
                 }
 
                 Section {
+                    CostInputRow(amountText: $costAmountText, currencyCode: $costCurrencyCode)
                     TextField("itinerary.transport.field.confirmation", text: $confirmationCode)
                         .autocorrectionDisabled()
                     TextField("itinerary.transport.field.note", text: $note, axis: .vertical)
@@ -180,9 +183,20 @@ struct LodgingEditView: View {
             if stay.checkInMinutes >= 0 { hasCheckInTime = true; checkInTime = dateFromMinutes(stay.checkInMinutes) }
             if stay.checkOutMinutes >= 0 { hasCheckOutTime = true; checkOutTime = dateFromMinutes(stay.checkOutMinutes) }
             confirmationCode = stay.confirmationCode; note = stay.note
+            if stay.hasCost { costAmountText = CurrencyCatalog.amountText(stay.costAmount); costCurrencyCode = stay.costCurrencyCode }
         } else {
             checkInDayOrder = initialCheckInDayOrder
         }
+    }
+
+    private var costAmountValue: Double {
+        Double(costAmountText.trimmingCharacters(in: .whitespaces)) ?? 0
+    }
+
+    private var costCurrencyToSave: String {
+        costAmountText.trimmingCharacters(in: .whitespaces).isEmpty
+            ? ""
+            : (costCurrencyCode.isEmpty ? CurrencyCatalog.homeCurrencyCode : costCurrencyCode.uppercased())
     }
 
     private func saveAndDismiss() {
@@ -197,15 +211,20 @@ struct LodgingEditView: View {
                 checkInMinutes: inMinutes, checkOutMinutes: outMinutes,
                 confirmationCode: confirmationCode, note: note
             )
+            store.setLodgingCost(tripId: tripId, stayId: stayId,
+                                 amount: costAmountValue, currencyCode: costCurrencyToSave)
         } else {
-            store.addLodgingStay(
+            if let newId = store.addLodgingStay(
                 tripId: tripId,
                 name: name, address: address,
                 latitude: latitude, longitude: longitude,
                 checkInDayOrder: checkInDayOrder, nights: nights,
                 checkInMinutes: inMinutes, checkOutMinutes: outMinutes,
                 confirmationCode: confirmationCode, note: note
-            )
+            ) {
+                store.setLodgingCost(tripId: tripId, stayId: newId,
+                                     amount: costAmountValue, currencyCode: costCurrencyToSave)
+            }
         }
         dismiss()
     }

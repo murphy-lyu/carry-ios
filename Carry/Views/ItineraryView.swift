@@ -972,6 +972,10 @@ struct StopDetailView: View {
             if stop.plannedStartMinutes >= 0 {
                 detailRow(icon: "clock", text: timeRangeLabel)
             }
+            if stop.hasCost {
+                // 行内显真实付款币种（不折算）；折算只在 Trip Book 汇总层。spec: itinerary-cost-tracking.md
+                detailRow(icon: "creditcard", text: CurrencyCatalog.format(stop.costAmount, code: stop.costCurrencyCode))
+            }
             if stop.hasCoordinate && !stop.address.isEmpty {
                 addressRow
             }
@@ -1245,6 +1249,8 @@ struct StopEditView: View {
     @State private var startTime: Date
     @State private var endTime: Date
     @State private var showRelocate = false
+    @State private var costAmountText: String
+    @State private var costCurrencyCode: String
 
     init(tripId: UUID, stop: ItineraryStop) {
         self.tripId = tripId
@@ -1257,6 +1263,18 @@ struct StopEditView: View {
         _startTime = State(initialValue: dateFromDayMinutes(startMin))
         // 结束时间：已存停留则 start+stay，否则默认 start+1h（可选，用户可改/拉平）。
         _endTime = State(initialValue: dateFromDayMinutes(stop.stayMinutes > 0 ? startMin + stop.stayMinutes : startMin + 60))
+        _costAmountText = State(initialValue: stop.hasCost ? CurrencyCatalog.amountText(stop.costAmount) : "")
+        _costCurrencyCode = State(initialValue: stop.costCurrencyCode)
+    }
+
+    private var costAmountValue: Double {
+        Double(costAmountText.trimmingCharacters(in: .whitespaces)) ?? 0
+    }
+
+    private var costCurrencyToSave: String {
+        costAmountText.trimmingCharacters(in: .whitespaces).isEmpty
+            ? ""
+            : (costCurrencyCode.isEmpty ? CurrencyCatalog.homeCurrencyCode : costCurrencyCode.uppercased())
     }
 
     var body: some View {
@@ -1324,6 +1342,7 @@ struct StopEditView: View {
                             Text("itinerary.stop.edit.end_time")
                         }
                     }
+                    CostInputRow(amountText: $costAmountText, currencyCode: $costCurrencyCode)
                 } header: {
                     Text("itinerary.stop.edit.details_header")
                 } footer: {
@@ -1369,6 +1388,8 @@ struct StopEditView: View {
                             stayMinutes: stay,
                             note: note
                         )
+                        store.setStopCost(tripId: tripId, stopId: stop.id,
+                                          amount: costAmountValue, currencyCode: costCurrencyToSave)
                         dismiss()
                     }
                 }

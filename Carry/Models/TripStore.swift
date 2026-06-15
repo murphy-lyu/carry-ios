@@ -541,7 +541,10 @@ final class TripStore: ObservableObject {
                     plannedStartMinutes: stop.plannedStartMinutes,
                     stayMinutes: stop.stayMinutes,
                     note: stop.note,
-                    sortOrder: stop.sortOrder
+                    sortOrder: stop.sortOrder,
+                    costAmount: stop.costAmount,
+                    costCurrencyCode: stop.costCurrencyCode,
+                    costHomeAmount: stop.costHomeAmount
                 )
             }
             let copiedDay = ItineraryDay(sortOrder: day.sortOrder, title: day.title, note: day.note, stops: copiedStops)
@@ -559,7 +562,9 @@ final class TripStore: ObservableObject {
                     departDayOrder: seg.departDayOrder, departLocalMinutes: seg.departLocalMinutes,
                     arriveDayOrder: seg.arriveDayOrder, arriveLocalMinutes: seg.arriveLocalMinutes,
                     seat: seg.seat, confirmationCode: seg.confirmationCode,
-                    note: seg.note, sortOrder: seg.sortOrder
+                    note: seg.note, sortOrder: seg.sortOrder,
+                    costAmount: seg.costAmount, costCurrencyCode: seg.costCurrencyCode,
+                    costHomeAmount: seg.costHomeAmount
                 )
             }
             return copiedDay
@@ -572,7 +577,9 @@ final class TripStore: ObservableObject {
                 checkInDayOrder: stay.checkInDayOrder, nights: stay.nights,
                 checkInMinutes: stay.checkInMinutes, checkOutMinutes: stay.checkOutMinutes,
                 confirmationCode: stay.confirmationCode, note: stay.note,
-                sortOrder: stay.sortOrder
+                sortOrder: stay.sortOrder,
+                costAmount: stay.costAmount, costCurrencyCode: stay.costCurrencyCode,
+                costHomeAmount: stay.costHomeAmount
             )
         }
         context.insert(newBundle)
@@ -1420,6 +1427,80 @@ final class TripStore: ObservableObject {
         trip.lodgingStays?.removeAll { $0.id == stayId }
         save()
         CarryLogger.shared.log(.lodgingRemoved)
+    }
+
+    // MARK: - 费用记录（spec: itinerary-cost-tracking.md）
+
+    /// 单一写入漏斗：写费用并就地捕获本位币快照。`currencyCode` 为空 = 清除费用。
+    /// 快照取不到（无汇率/离线）→ -1，Trip Book 退回实时折算兜底。@MainActor 因要读 ExchangeRateManager。
+    @MainActor
+    private func applyCost(to entity: CostBearing, amount: Double, currencyCode: String) {
+        let code = currencyCode.uppercased()
+        if code.isEmpty {
+            entity.costAmount = 0
+            entity.costCurrencyCode = ""
+            entity.costHomeAmount = -1
+        } else {
+            entity.costAmount = amount
+            entity.costCurrencyCode = code
+            entity.costHomeAmount = ExchangeRateManager.shared.convertToHome(amount, from: code) ?? -1
+        }
+    }
+
+    @MainActor
+    func setStopCost(tripId: UUID, stopId: UUID, amount: Double, currencyCode: String) {
+        guard let trip = trips.first(where: { $0.id == tripId }),
+              let stop = trip.safeItineraryDays.flatMap({ $0.stops ?? [] }).first(where: { $0.id == stopId }) else { return }
+        let had = stop.hasCost
+        applyCost(to: stop, amount: amount, currencyCode: currencyCode)
+        save()
+        logCostChange(had: had, has: stop.hasCost, category: "stop")
+    }
+
+    @MainActor
+    func setTransportCost(tripId: UUID, segmentId: UUID, amount: Double, currencyCode: String) {
+        guard let trip = trips.first(where: { $0.id == tripId }),
+              let seg = trip.safeItineraryDays.flatMap({ $0.segments ?? [] }).first(where: { $0.id == segmentId }) else { return }
+        let had = seg.hasCost
+        applyCost(to: seg, amount: amount, currencyCode: currencyCode)
+        save()
+        logCostChange(had: had, has: seg.hasCost, category: "transport")
+    }
+
+    @MainActor
+    func setLodgingCost(tripId: UUID, stayId: UUID, amount: Double, currencyCode: String) {
+        guard let trip = trips.first(where: { $0.id == tripId }),
+              let stay = (trip.lodgingStays ?? []).first(where: { $0.id == stayId }) else { return }
+        let had = stay.hasCost
+        applyCost(to: stay, amount: amount, currencyCode: currencyCode)
+        save()
+        logCostChange(had: had, has: stay.hasCost, category: "lodging")
+    }
+
+    private func logCostChange(had: Bool, has: Bool, category: String) {
+        if !had && has { CarryLogger.shared.log(.costAdded, context: "category=\(category)") }
+        else if had && !has { CarryLogger.shared.log(.costRemoved, context: "category=\(category)") }
+    }
+
+    /// 改本位币后重算所有费用快照（单一不变式：costHomeAmount 永远以当前本位币计）。
+    /// 始终从原始 `costAmount + costCurrencyCode` 折算，绝不「折快照的快照」；取不到汇率 → -1。
+    @MainActor
+    func recomputeCostSnapshots() {
+        let mgr = ExchangeRateManager.shared
+        for trip in trips {
+            for day in trip.safeItineraryDays {
+                for stop in (day.stops ?? []) where stop.hasCost {
+                    stop.costHomeAmount = mgr.convertToHome(stop.costAmount, from: stop.costCurrencyCode) ?? -1
+                }
+                for seg in (day.segments ?? []) where seg.hasCost {
+                    seg.costHomeAmount = mgr.convertToHome(seg.costAmount, from: seg.costCurrencyCode) ?? -1
+                }
+            }
+            for stay in trip.safeLodgingStays where stay.hasCost {
+                stay.costHomeAmount = mgr.convertToHome(stay.costAmount, from: stay.costCurrencyCode) ?? -1
+            }
+        }
+        save()
     }
 
     /// Adds scene keys to a trip and merges the supplied sections.

@@ -306,3 +306,18 @@ Apple 原生风格，极简、克制、优雅。
 ### List 内容区
 - `HomeView.macBody` 使用 `.listStyle(.plain)` + `.scrollContentBackground(.hidden)` 实现透明背景
 - List row 内容区背景用 `.listRowBackground(Color.clear)`，分隔线用 `.listRowSeparator(.hidden)`
+
+## 费用 / 货币（2026-06-16，spec: itinerary-cost-tracking.md）
+
+### Trip Book「总花费」卡（数据可视化的克制范式）
+对标 Tripsy「总花费」卡做了 Carry 化（north-star §1/§2/§4）：
+- **比例带 = 把「一列数字」变成「一眼看懂的构成」**：总额下方一条 8pt capsule，按交通/住宿/地点占比分段。这是内容（这屏要回答「钱花哪了」）、不是装饰；对标 Apple Health / Screen Time。
+- **单一色相三档深浅**：比例带与图例点用烟蓝 `CarryAccent` 的 100% / 55% / 28% 透明度编码三类目——守「彩色=意义、不堆色」的单一强调色纪律，深浅本身编码大小。**禁止**给类目分配不同色相。
+- **无分隔线**：图例行靠圆点 + 间距 + 右对齐金额成行，不画满宽线（Tripsy 的 chrome 堆叠 = 噪音）。
+- **诚实**：多币种折算总额前缀「≈」；汇率不可得的外币不静默漏算，脚注明确标注。
+- 金额数字一律圆体（typography：数字 → rounded）；金额为次级信息，配色 secondary，不抢主数字。
+
+### 货币选择器（长列表的认知负担收敛）
+- 百项币种 → **全屏可搜索 + 顶部「建议」分区**（本位币 + 行程目的地币种），高频选择一眼可达，而非裸堆全量列表。
+- 选中态打勾用烟蓝（对齐「选中=烟蓝」）。币种名走 `Locale.localizedString(forCurrencyCode:)`，不进 xcstrings。
+- 一个组件两用：本位币模式（写设置 + 重算快照）与每笔费用的选择模式（回传 code、无副作用）。

@@ -1,7 +1,19 @@
 # 项目进度
 
 ## 最后更新
-2026-06-15
+2026-06-16
+
+## 上次改动摘要（费用记录 + 本位币 + Trip Book 花费沉淀 · 2026-06-16）
+
+> 新功能（spec: `itinerary-cost-tracking.md`，Status: Implemented）。Carry app target **编译绿**、待真机验收。**未提交**。与并行会话共享工作区（其正改 `ItineraryReorderCollection.swift`/`ItineraryView.swift` header + progress.md）——我只动自己的 hunk。两个产品决策由用户拍板：**每笔可选币种** + **Trip Book 每趟总花费 + 分类目**；卡片视觉过了 north-star ADA 自审后定稿（比例带 + 单一烟蓝三档 + 去分隔线 + 空态）。
+
+- **🔁 决策反转**：Trip Book 此前「坚决不做花费」（trip-book.md）——前提已变（费用现为用户主动录入数据），反转并落地，已在 trip-book.md 标注。
+- **数据地基**：`ItineraryStop`/`TransportSegment`/`LodgingStay` 各加 `costAmount`+`costCurrencyCode`+`costHomeAmount`（抽 `CostBearing` 协议）。**真相=金额+原币种**（永不丢）；`costHomeAmount`=录入时按当时汇率折算的本位币**快照**（推翻初稿「不存快照」——长期记忆 + JPY 等高波动币种下实时折算会算错历史值）。加列=轻量迁移（无 SchemaV2）；`DataBackupManager` 序列化/还原/复制行程全链路带上（可选字段、向后兼容、additive）。
+- **本位币**：`ExchangeRateManager` 升共享单例 + base 读 `preferred_currency_code`（设备 locale 默认）；新增 `convertToHome`/`refreshBaseCurrency`/`fetchNow`。设置「通用」组加「货币」行 → `CurrencyPickerView`（全屏可搜索 + 建议分区）。改本位币 → `store.recomputeCostSnapshots()` 按原始金额重算快照（单一不变式：快照永远以当前本位币计）。`DestinationInfoView` 改用共享实例。
+- **录入**：抽 `CostInputRow`（金额 + 币种 chip→选择器）；接入 `StopEditView`/`TransportEditView`/`LodgingEditView`，经 `TripStore.setStopCost/setTransportCost/setLodgingCost` 单一漏斗写入 + 就地捕获快照。地点详情 `StopDetailView` 加只读费用行（显真实付款币种，不折算）。
+- **Trip Book**：`TripSpendStats`（纯函数 + `CostResolver` 快照优先/实时兜底/未折算诚实标注）；`tripBookSpendCard` 总额 + 比例带 + 三类目 +「查看全部花费」每趟明细。仅 `countsAsVisited` 行程计入；观察共享汇率，rates 到位自动刷新。
+- **埋点**：`costAdded`/`costRemoved`（带 category）/`preferredCurrencyChanged`。**本地化**：16 结构化 key × 9 语言（含显式 en、中文全角），脚本 additive 插入（944 + / 0 -，无格式重排）。
+- **遗留**：① 交通/住宿时间轴行的行内费用展示（仅地点详情已加）；② `TripSpendStats`/`CostResolver` 单测（无 test scheme）；③ 真机验收；④ Widget target 编译失败是**并行会话**改的 `ItineraryReorderCollection.swift`（`showsOptimize`）所致、非本功能。
 
 ## 上次改动摘要（距离单位设置：自动/公里/英里 · 2026-06-15）
 

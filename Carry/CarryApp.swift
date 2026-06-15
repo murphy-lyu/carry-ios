@@ -65,6 +65,8 @@ struct CarryApp: App {
                     CarryAppShortcuts.updateAppShortcutParameters()
                     Self.installQuickActions()
                     store.writeWidgetSnapshot()
+                    // 预热汇率：让费用录入时能就地捕获本位币快照（spec: itinerary-cost-tracking.md）
+                    ExchangeRateManager.shared.fetchIfNeeded()
                     // 注册通知委托，让打包提醒点击后直接跳到对应行程
                     notificationDelegate.router = router
                     UNUserNotificationCenter.current().delegate = notificationDelegate

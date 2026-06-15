@@ -75,6 +75,9 @@ struct HomeView: View {
     @AppStorage("appearance_mode") private var appearanceModeRaw = AppearanceMode.system.rawValue
     @State private var showSearch = false
     @State private var showTripBook = false
+    @State private var showSpendDetail = false
+    // Trip Book 花费卡：观察共享汇率管理器，rates 拉到后聚合自动刷新（spec: itinerary-cost-tracking.md）。
+    @ObservedObject private var exchangeRate = ExchangeRateManager.shared
     @State private var searchText = ""
     @FocusState private var searchFieldFocused: Bool
     /// 点搜索结果时暂存目标行程；在 sheet 真正 dismiss 完成后（onDismiss）再跳转，
@@ -951,10 +954,16 @@ struct HomeView: View {
 
     private var tripBookSheet: some View {
         let stats = TripBookStats.from(trips: store.trips)
+        let spend = TripSpendStats.compute(
+            trips: store.trips,
+            homeCode: exchangeRate.baseCurrencyCode,
+            convert: { exchangeRate.convertToHome($0, from: $1) }
+        )
         return NavigationStack {
             ScrollView {
                 VStack(spacing: 14) {
                     tripBookOverviewCard(stats)
+                    if spend.hasAnyCost { tripBookSpendCard(spend) }
                     tripBookCountriesCard(stats)
                     if stats.visitedContinentCount > 0 { tripBookContinentsCard(stats) }
                     if stats.domesticCount + stats.internationalCount > 0 { tripBookScopeCard(stats) }
@@ -973,6 +982,8 @@ struct HomeView: View {
                     SheetCloseButton { showTripBook = false }
                 }
             }
+            .onAppear { exchangeRate.fetchIfNeeded() }
+            .sheet(isPresented: $showSpendDetail) { spendDetailSheet(spend) }
         }
     }
 
@@ -990,6 +1001,117 @@ struct HomeView: View {
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(16)
         .carrySurfaceCardBackground(cornerRadius: 20)
+    }
+
+    // MARK: 花费卡（spec: itinerary-cost-tracking.md）
+
+    /// 「总花费」聚合卡：大号总额 + 比例带（单一烟蓝三档深浅）+ 交通/住宿/地点三类目 + 查看全部。
+    private func tripBookSpendCard(_ s: TripSpendStats) -> some View {
+        let total = s.overall.total
+        return tripBookCard("tripbook.spend.title", systemImage: "creditcard") {
+            VStack(alignment: .leading, spacing: 14) {
+                Text(spendTotalText(total, approximate: s.approximate, code: s.homeCode))
+                    .font(.system(size: 32, weight: .bold, design: .rounded))
+                    .foregroundStyle(.primary)
+                if total > 0 { spendBar(s.overall) }
+                VStack(spacing: 0) {
+                    spendLegendRow("tripbook.spend.transport", amount: s.overall.transport, opacity: 1.0, code: s.homeCode)
+                    spendLegendRow("tripbook.spend.lodging", amount: s.overall.lodging, opacity: 0.55, code: s.homeCode)
+                    spendLegendRow("tripbook.spend.places", amount: s.overall.places, opacity: 0.28, code: s.homeCode)
+                }
+                if !s.perTrip.isEmpty {
+                    Button { showSpendDetail = true } label: {
+                        HStack(spacing: 4) {
+                            Text("tripbook.spend.view_all")
+                            Image(systemName: "chevron.right").font(.caption2.weight(.semibold))
+                        }
+                        .font(.subheadline)
+                        .foregroundStyle(CarryAccent.color)
+                        .frame(maxWidth: .infinity)
+                    }
+                    .buttonStyle(.plain)
+                    .padding(.top, 2)
+                }
+                if s.hasUnconverted {
+                    Text("tripbook.spend.approx_note")
+                        .font(.caption2)
+                        .foregroundStyle(.tertiary)
+                }
+            }
+        }
+    }
+
+    private func spendTotalText(_ amount: Double, approximate: Bool, code: String) -> String {
+        (approximate ? "≈ " : "") + CurrencyCatalog.format(amount, code: code)
+    }
+
+    /// 比例带：单一烟蓝三档深浅（交通 100% / 住宿 55% / 地点 28%），跳过 0 段，整条 capsule 收边。
+    private func spendBar(_ b: TripSpendBreakdown) -> some View {
+        let total = max(b.total, 0.0001)
+        let parts: [(Double, Double)] = [(b.transport, 1.0), (b.lodging, 0.55), (b.places, 0.28)].filter { $0.0 > 0 }
+        return GeometryReader { geo in
+            HStack(spacing: 2) {
+                ForEach(Array(parts.enumerated()), id: \.offset) { _, part in
+                    CarryAccent.color.opacity(part.1)
+                        .frame(width: max(2, geo.size.width * part.0 / total))
+                }
+            }
+        }
+        .frame(height: 8)
+        .clipShape(Capsule())
+    }
+
+    private func spendLegendRow(_ labelKey: LocalizedStringKey, amount: Double, opacity: Double, code: String) -> some View {
+        HStack(spacing: 10) {
+            Circle().fill(CarryAccent.color.opacity(opacity)).frame(width: 8, height: 8)
+            Text(labelKey).font(.subheadline).foregroundStyle(.secondary)
+            Spacer()
+            Text(CurrencyCatalog.format(amount, code: code))
+                .font(.system(.subheadline, design: .rounded).weight(.medium))
+                .foregroundStyle(.primary)
+        }
+        .padding(.vertical, 5)
+    }
+
+    /// 「查看全部花费」：按每趟分组（承接 Q2「每趟总花费」），每趟列非零类目 + 该趟合计。
+    private func spendDetailSheet(_ s: TripSpendStats) -> some View {
+        NavigationStack {
+            List {
+                ForEach(s.perTrip) { row in
+                    Section(header: Text(row.name)) {
+                        if row.breakdown.transport > 0 { spendDetailLine("tripbook.spend.transport", row.breakdown.transport, s.homeCode) }
+                        if row.breakdown.lodging > 0 { spendDetailLine("tripbook.spend.lodging", row.breakdown.lodging, s.homeCode) }
+                        if row.breakdown.places > 0 { spendDetailLine("tripbook.spend.places", row.breakdown.places, s.homeCode) }
+                        HStack {
+                            Text("tripbook.spend.trip_total")
+                                .font(.subheadline.weight(.semibold))
+                                .foregroundStyle(.primary)
+                            Spacer()
+                            Text(CurrencyCatalog.format(row.breakdown.total, code: s.homeCode))
+                                .font(.system(.subheadline, design: .rounded).weight(.semibold))
+                                .foregroundStyle(.primary)
+                        }
+                    }
+                }
+            }
+            .navigationTitle("tripbook.spend.view_all")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .topBarTrailing) {
+                    SheetCloseButton { showSpendDetail = false }
+                }
+            }
+        }
+    }
+
+    private func spendDetailLine(_ key: LocalizedStringKey, _ amount: Double, _ code: String) -> some View {
+        HStack {
+            Text(key).font(.subheadline).foregroundStyle(.secondary)
+            Spacer()
+            Text(CurrencyCatalog.format(amount, code: code))
+                .font(.system(.subheadline, design: .rounded))
+                .foregroundStyle(.primary)
+        }
     }
 
     private func tripBookBigStat(_ value: Int, _ label: LocalizedStringKey) -> some View {

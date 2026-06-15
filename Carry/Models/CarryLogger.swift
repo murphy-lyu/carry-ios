@@ -151,6 +151,11 @@ final class CarryLogger {
 
         // 行程详情两面切换（spec: app-navigation-framework.md）——衡量行程/打包频次
         case detailFaceSwitched        = "detail_face_switched"
+
+        // 费用记录 + 本位币（spec: itinerary-cost-tracking.md）
+        case costAdded                 = "cost_added"
+        case costRemoved               = "cost_removed"
+        case preferredCurrencyChanged  = "preferred_currency_changed"
     }
 
     private static let errorEvents: Set<Event> = [

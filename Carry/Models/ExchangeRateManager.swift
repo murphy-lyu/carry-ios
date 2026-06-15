@@ -14,16 +14,20 @@ import Combine
 @MainActor
 final class ExchangeRateManager: ObservableObject {
 
+    /// 全 app 共享单例：费用录入快照、Trip Book 折算、目的地汇率屏共用同一份缓存与本位币口径。
+    static let shared = ExchangeRateManager()
+
+    /// 本位币 UserDefaults key（与设置页 `@AppStorage` 同名，单一真源）。
+    static let preferredCurrencyDefaultsKey = "preferred_currency_code"
+
     // MARK: Published
 
     /// Rates keyed by lowercase ISO 4217 code (e.g. "jpy": 149.8).
     /// Base currency is `baseCurrencyCode`. Empty until first successful fetch.
     @Published private(set) var rates: [String: Double] = [:]
 
-    // MARK: Properties
-
-    /// Uppercase code of the device's home currency, e.g. "USD", "CNY".
-    let baseCurrencyCode: String
+    /// 当前本位币（大写 ISO 4217）。改设置后经 `refreshBaseCurrency()` 同步。
+    @Published private(set) var baseCurrencyCode: String
 
     // MARK: Private
 
@@ -34,12 +38,48 @@ final class ExchangeRateManager: ObservableObject {
         return f
     }()
 
+    /// 读「用户选定本位币」；未设则回退设备 locale 默认。
+    private static func resolveBaseCurrency() -> String {
+        if let stored = UserDefaults.standard.string(forKey: preferredCurrencyDefaultsKey),
+           !stored.isEmpty {
+            return stored.uppercased()
+        }
+        return CurrencyCatalog.deviceDefaultCode
+    }
+
     // MARK: - Init
 
     init() {
-        // Derive home currency from device locale; fall back to USD
-        self.baseCurrencyCode = Locale.current.currency?.identifier.uppercased() ?? "USD"
+        self.baseCurrencyCode = Self.resolveBaseCurrency()
         loadCachedRates()
+    }
+
+    // MARK: - Base currency
+
+    /// 用户在设置里改了本位币后调用：若确有变化，切换 base、清空当前 rates 并重新按新 base 拉取。
+    /// 返回是否真的变了（供调用方决定要不要重算费用快照）。
+    @discardableResult
+    func refreshBaseCurrency() -> Bool {
+        let resolved = Self.resolveBaseCurrency()
+        guard resolved != baseCurrencyCode else { return false }
+        baseCurrencyCode = resolved
+        rates = [:]
+        loadCachedRates()          // 命中新 base 当日缓存则即时可用；否则由调用方 fetchNow()
+        return true
+    }
+
+    /// 强制按当前 base 拉一次汇率（无视缓存是否为空）。改本位币后用它确保新 base 的 rates 就绪再重算快照。
+    func fetchNow() async {
+        await fetchRates()
+    }
+
+    /// 把 `amount`（`code` 币种）折算成本位币。rate 不可得返回 nil（调用方决定兜底 / 排除）。
+    /// rates[dest] = 1 本位币可兑多少 dest → 1 dest = 1/rates[dest] 本位币。
+    func convertToHome(_ amount: Double, from code: String) -> Double? {
+        let upper = code.uppercased()
+        if upper == baseCurrencyCode { return amount }
+        guard let rate = rates[upper.lowercased()], rate > 0 else { return nil }
+        return amount / rate
     }
 
     // MARK: - Public API

@@ -33,6 +33,72 @@ enum CurrencyCatalog {
             .filter { seen.insert($0.code).inserted }
     }
 
+    // MARK: - Code → symbol (reverse map)
+
+    /// ISO 4217 code（大写）→ 符号，由 catalog 反查去重得到。catalog 未覆盖的币种
+    /// 回退到 NumberFormatter / code 本身（见 `symbol(for:)`）。
+    static let symbolByCode: [String: String] = {
+        var map: [String: String] = [:]
+        for info in catalog.values where map[info.code] == nil {
+            map[info.code] = info.symbol
+        }
+        return map
+    }()
+
+    // MARK: - 展示助手（spec: itinerary-cost-tracking.md）。币种名走 `Locale`，不进 xcstrings。
+
+    /// 设备 locale 推导的默认本位币；取不到回退 USD。
+    static var deviceDefaultCode: String {
+        Locale.current.currency?.identifier.uppercased() ?? "USD"
+    }
+
+    /// 当前本位币（用户选定 / 未选则设备默认）。读 UserDefaults，任意线程可用。
+    static var homeCurrencyCode: String {
+        let raw = UserDefaults.standard.string(forKey: ExchangeRateManager.preferredCurrencyDefaultsKey) ?? ""
+        return raw.isEmpty ? deviceDefaultCode : raw.uppercased()
+    }
+
+    /// 金额 → 录入框文本：整数不带小数（"1280"），否则原样（"12.5"）。
+    static func amountText(_ amount: Double) -> String {
+        amount == amount.rounded() ? String(Int(amount)) : String(amount)
+    }
+
+    /// 全部可选币种（ISO 4217 常用码），按当前 locale 的本地化名排序。
+    static var allCodes: [String] {
+        Locale.commonISOCurrencyCodes
+            .map { $0.uppercased() }
+            .sorted { localizedName(for: $0).localizedCaseInsensitiveCompare(localizedName(for: $1)) == .orderedAscending }
+    }
+
+    /// 币种本地化名（"日元" / "Japanese Yen"）；取不到回退 code。
+    static func localizedName(for code: String) -> String {
+        Locale.current.localizedString(forCurrencyCode: code.uppercased()) ?? code.uppercased()
+    }
+
+    /// 币种符号。先查 catalog 反查表，再退 NumberFormatter，最后退 code 本身。
+    static func symbol(for code: String) -> String {
+        let upper = code.uppercased()
+        if let s = CurrencyCatalog.symbolByCode[upper] { return s }
+        let f = NumberFormatter()
+        f.numberStyle = .currency
+        f.currencyCode = upper
+        if let s = f.currencySymbol, s != upper { return s }
+        return upper
+    }
+
+    /// 把金额按指定币种格式化（符号 + 分组），如 "¥1,280" / "JPY 50,000"。
+    /// 整数金额不显示小数位；非整数显示 2 位。
+    static func format(_ amount: Double, code: String) -> String {
+        let f = NumberFormatter()
+        f.numberStyle = .currency
+        f.currencyCode = code.uppercased()
+        f.locale = Locale.current
+        let isWhole = amount.rounded() == amount
+        f.maximumFractionDigits = isWhole ? 0 : 2
+        f.minimumFractionDigits = 0
+        return f.string(from: NSNumber(value: amount)) ?? "\(symbol(for: code))\(Int(amount))"
+    }
+
     // MARK: - Data
 
     private static let catalog: [String: CurrencyInfo] = [
