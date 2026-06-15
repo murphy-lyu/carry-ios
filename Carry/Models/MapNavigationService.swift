@@ -50,6 +50,8 @@ enum MapNavigationApp: String, CaseIterable, Identifiable {
 
     /// 该 App 是否支持此交通方式。仅 **Apple 地图不支持骑行**（其 deep link / 启动选项无骑行项；
     /// MKDirections 亦无 cycling）——选骑行时 Apple 地图从可用列表过滤掉，其余地图照常。
+    /// 公交（transit）四家 deep-link 文档上均支持（Apple `MKLaunchOptionsDirectionsModeTransit`、
+    /// 高德 t=1、Google transit、百度 transit），故暂不过滤；待真机实测后若某家不灵再在此精修。
     func supports(_ mode: MapNavigationMode) -> Bool {
         switch (self, mode) {
         case (.apple, .cycling): return false
@@ -58,11 +60,12 @@ enum MapNavigationApp: String, CaseIterable, Identifiable {
     }
 }
 
-/// 导航交通方式（驾车 / 骑行 / 步行）。默认驾车。`allCases` 顺序即选择器顺序。
+/// 导航交通方式（驾车 / 公交 / 步行 / 骑行）。默认驾车。`allCases` 顺序即选择器顺序。
 enum MapNavigationMode: String, CaseIterable, Identifiable {
     case driving
-    case cycling
+    case transit
     case walking
+    case cycling
 
     var id: String { rawValue }
 
@@ -70,6 +73,7 @@ enum MapNavigationMode: String, CaseIterable, Identifiable {
     var nameKey: String {
         switch self {
         case .driving: return "itinerary.nav.mode.driving"
+        case .transit: return "itinerary.nav.mode.transit"
         case .cycling: return "itinerary.nav.mode.cycling"
         case .walking: return "itinerary.nav.mode.walking"
         }
@@ -78,6 +82,7 @@ enum MapNavigationMode: String, CaseIterable, Identifiable {
     var symbolName: String {
         switch self {
         case .driving: return "car.fill"
+        case .transit: return "bus.fill"
         case .cycling: return "bicycle"
         case .walking: return "figure.walk"
         }
@@ -105,20 +110,43 @@ enum MapNavigationService {
         case .apple:
             let item = MKMapItem(placemark: MKPlacemark(coordinate: coordinate))
             item.name = name
-            // Apple 仅驾车/步行（无骑行）；骑行已被过滤，保险起见退化驾车。
-            let appleMode = (mode == .walking) ? MKLaunchOptionsDirectionsModeWalking : MKLaunchOptionsDirectionsModeDriving
+            // Apple 有驾车/步行/公交，无骑行（骑行已被过滤，保险起见退化驾车）。
+            let appleMode: String
+            switch mode {
+            case .walking: appleMode = MKLaunchOptionsDirectionsModeWalking
+            case .transit: appleMode = MKLaunchOptionsDirectionsModeTransit
+            default:       appleMode = MKLaunchOptionsDirectionsModeDriving
+            }
             item.openInMaps(launchOptions: [MKLaunchOptionsDirectionsModeKey: appleMode])
         case .amap:
-            // dev=0：坐标已是高德系（GCJ-02），不二次纠偏。t：驾车 0 / 步行 2 / 骑行 3。起点留空 = 当前位置。
-            let t = (mode == .driving) ? 0 : (mode == .walking) ? 2 : 3
+            // dev=0：坐标已是高德系（GCJ-02），不二次纠偏。t：驾车 0 / 公交 1 / 步行 2 / 骑行 3。起点留空 = 当前位置。
+            let t: Int
+            switch mode {
+            case .driving: t = 0
+            case .transit: t = 1
+            case .walking: t = 2
+            case .cycling: t = 3
+            }
             open("iosamap://path?sourceApplication=Carry&dlat=\(coordinate.latitude)&dlon=\(coordinate.longitude)&dname=\(encodedName)&dev=0&t=\(t)")
         case .google:
-            let gm = (mode == .driving) ? "driving" : (mode == .walking) ? "walking" : "bicycling"
+            let gm: String
+            switch mode {
+            case .driving: gm = "driving"
+            case .transit: gm = "transit"
+            case .walking: gm = "walking"
+            case .cycling: gm = "bicycling"
+            }
             open("comgooglemaps://?daddr=\(coordinate.latitude),\(coordinate.longitude)&directionsmode=\(gm)")
         case .baidu:
-            // 百度用 BD-09，需从 GCJ-02 转换；coord_type=bd09ll 告知百度坐标已是 BD-09。mode：driving/walking/riding。
+            // 百度用 BD-09，需从 GCJ-02 转换；coord_type=bd09ll 告知百度坐标已是 BD-09。mode：driving/transit/walking/riding。
             let bd = gcj02ToBd09(coordinate)
-            let bm = (mode == .driving) ? "driving" : (mode == .walking) ? "walking" : "riding"
+            let bm: String
+            switch mode {
+            case .driving: bm = "driving"
+            case .transit: bm = "transit"
+            case .walking: bm = "walking"
+            case .cycling: bm = "riding"
+            }
             open("baidumap://map/direction?destination=latlng:\(bd.latitude),\(bd.longitude)|name:\(encodedName)&mode=\(bm)&coord_type=bd09ll&src=com.murphy.carry")
         }
     }

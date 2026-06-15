@@ -1073,6 +1073,8 @@ struct StopDetailView: View {
                         Image(systemName: mode.symbolName).font(.system(size: 13, weight: .semibold))
                         Text(LocalizedStringKey(mode.nameKey))
                             .font(.system(.footnote, design: .rounded).weight(.medium))
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.8)   // 4 段 + 长语言（德/法/葡）窄屏防挤压
                     }
                     .foregroundStyle(selected ? Color.accentColor : Color.secondary)
                     .frame(maxWidth: .infinity)
