@@ -855,6 +855,7 @@ struct StopDetailView: View {
     let navApps: [MapNavigationApp]
     let dayColor: Color
 
+    @Environment(\.dismiss) private var dismiss
     @State private var editing = false
     @State private var addressCopied = false
     @State private var contentHeight: CGFloat = 0
@@ -873,6 +874,7 @@ struct StopDetailView: View {
                     header
                     infoRows
                     navModule
+                    editButton
                 }
                 .padding(20)
                 .frame(maxWidth: .infinity, alignment: .leading)
@@ -885,17 +887,43 @@ struct StopDetailView: View {
             .navigationTitle("")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
+                // 关闭放右上角 X：复用全 App 统一的 SheetCloseButton（iOS 26 原生 close 按钮，磨砂圆 X，
+                // 与设置齿轮 / 全屏地图关闭一致；Tier 3 中性灰，不染强调色）。补上显式关闭（除下拉外）。
+                // 编辑移到浮窗下方（editButton），单手可达；这屏看为主，顶栏只留 X 更干净。
                 ToolbarItem(placement: .topBarTrailing) {
-                    Button { editing = true } label: { Text("itinerary.stop.detail.edit") }
+                    SheetCloseButton { dismiss() }
                 }
             }
         }
         .presentationDetents(contentDetents)
         .presentationDragIndicator(.visible)
+        // 钉一致的不透明底：避免「部分高度玻璃 / 全屏白」的 iOS 26 默认变脸，读信息更静、两高度一致。
+        .presentationBackground(Color(UIColor.systemBackground))
         // 编辑钻入到详情之上：保存后回到详情（@Model 可观察、详情自动反映新值），再下滑关。
         .sheet(isPresented: $editing) {
             StopEditView(tripId: tripId, stop: stop)
         }
+    }
+
+    /// 底部「编辑」：这屏的「应用内主动作」、单手可达。按设计系统按钮三档走 Tier 2（烟蓝 = 可点）：
+    /// 淡烟蓝填充 + 烟蓝文字的整宽按钮，有存在感、明确可点，但不抢 Get Directions（灰·链出）的角色。
+    private var editButton: some View {
+        Button { editing = true } label: {
+            HStack(spacing: 6) {
+                Image(systemName: "pencil").font(.system(size: 14, weight: .semibold))
+                Text("itinerary.stop.detail.edit")
+                    .font(.system(.subheadline, design: .rounded).weight(.semibold))
+            }
+            .foregroundStyle(Color.accentColor)
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 14)
+            .background(
+                RoundedRectangle(cornerRadius: 14, style: .continuous)
+                    .fill(Color.accentColor.opacity(0.14))
+            )
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
     }
 
     private var header: some View {
