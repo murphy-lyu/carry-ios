@@ -886,6 +886,7 @@ struct StopDetailView: View {
     let dayColor: Color
 
     @State private var editing = false
+    @State private var addressCopied = false
 
     var body: some View {
         NavigationStack {
@@ -923,6 +924,7 @@ struct StopDetailView: View {
                     .foregroundStyle(dayColor)
             }
             .frame(width: 40, height: 40)
+            .accessibilityHidden(true)   // 装饰：身份由名称承载
             Text(stop.name)
                 .font(.system(.title3, design: .rounded).weight(.semibold))
                 .foregroundStyle(.primary)
@@ -937,7 +939,7 @@ struct StopDetailView: View {
                 detailRow(icon: "clock", text: timeRangeLabel)
             }
             if stop.hasCoordinate && !stop.address.isEmpty {
-                detailRow(icon: "mappin.and.ellipse", text: stop.address)
+                addressRow
             }
             if !stop.note.isEmpty {
                 // 备注可任意长 → 默认折叠 6 行 + 展开/收起，避免长备注撑满详情、把导航模块挤到底。
@@ -946,6 +948,7 @@ struct StopDetailView: View {
                         .font(.system(size: 15))
                         .foregroundStyle(.secondary)
                         .frame(width: 22)
+                        .accessibilityHidden(true)
                     ExpandableText(
                         text: stop.note,
                         font: .system(.subheadline, design: .rounded),
@@ -957,12 +960,54 @@ struct StopDetailView: View {
         }
     }
 
+    /// 地址行：点一下复制地址（发给同行 / 粘进打车 App 的真实高频需求）。带触感 + 短暂「已复制」反馈
+    /// + 常驻 copy 图标提示可点。VoiceOver：朗读地址 + 「复制地址」hint。
+    private var addressRow: some View {
+        Button {
+            UIPasteboard.general.string = stop.address
+            UIImpactFeedbackGenerator(style: .light).impactOccurred()
+            withAnimation(.easeInOut(duration: 0.2)) { addressCopied = true }
+            Task {
+                try? await Task.sleep(for: .seconds(1.6))
+                withAnimation(.easeInOut(duration: 0.2)) { addressCopied = false }
+            }
+        } label: {
+            HStack(alignment: .top, spacing: 12) {
+                Image(systemName: "mappin.and.ellipse")
+                    .font(.system(size: 15)).foregroundStyle(.secondary).frame(width: 22)
+                    .accessibilityHidden(true)
+                Text(stop.address)
+                    .font(.system(.subheadline, design: .rounded))
+                    .foregroundStyle(.primary)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                if addressCopied {
+                    HStack(spacing: 3) {
+                        Image(systemName: "checkmark")
+                        Text("itinerary.stop.detail.address_copied")
+                    }
+                    .font(.system(.caption, design: .rounded).weight(.medium))
+                    .foregroundStyle(.green)
+                    .transition(.opacity)
+                } else {
+                    Image(systemName: "doc.on.doc")
+                        .font(.system(size: 13)).foregroundStyle(.tertiary)
+                }
+            }
+            .frame(minHeight: 28)        // ≥44pt 触达：行有上下内边距、整体可点区充裕
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(Text(stop.address))
+        .accessibilityHint(Text("itinerary.stop.detail.copy_hint"))
+    }
+
     private func detailRow(icon: String, text: String) -> some View {
         HStack(alignment: .top, spacing: 12) {
             Image(systemName: icon)
                 .font(.system(size: 15))
                 .foregroundStyle(.secondary)
                 .frame(width: 22)
+                .accessibilityHidden(true)
             Text(text)
                 .font(.system(.subheadline, design: .rounded))
                 .foregroundStyle(.primary)
@@ -981,6 +1026,7 @@ struct StopDetailView: View {
                     HStack(spacing: 12) {
                         Image(systemName: "point.topleft.down.to.point.bottomright.curvepath")
                             .font(.system(size: 15)).foregroundStyle(.secondary).frame(width: 22)
+                            .accessibilityHidden(true)
                         Text(String(format: NSLocalizedString("itinerary.stop.detail.to_next", comment: ""), distanceToNext))
                             .font(.system(.subheadline, design: .rounded))
                             .foregroundStyle(.secondary)
@@ -1005,9 +1051,11 @@ struct StopDetailView: View {
                     Button(LocalizedStringKey(app.nameKey)) { navigate(app) }
                 }
             } label: { navRowLabel }
+            .accessibilityLabel(Text("itinerary.nav.button.a11y"))
         } else {
             Button { navigate(navApps[0]) } label: { navRowLabel }
                 .buttonStyle(.plain)
+                .accessibilityLabel(Text("itinerary.nav.button.a11y"))
         }
     }
 
@@ -1015,11 +1063,13 @@ struct StopDetailView: View {
         HStack(spacing: 12) {
             Image(systemName: "arrow.triangle.turn.up.right.circle.fill")
                 .font(.system(size: 18)).foregroundStyle(dayColor).frame(width: 22)
+                .accessibilityHidden(true)
             Text("itinerary.stop.detail.navigate")
                 .font(.system(.subheadline, design: .rounded).weight(.medium))
                 .foregroundStyle(.primary)
             Spacer(minLength: 0)
             Image(systemName: "chevron.right").font(.caption).foregroundStyle(.tertiary)
+                .accessibilityHidden(true)
         }
         .padding(.vertical, 12)
         .contentShape(Rectangle())
