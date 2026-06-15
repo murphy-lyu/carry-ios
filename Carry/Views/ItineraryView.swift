@@ -800,8 +800,9 @@ private struct TimelineStopRow: View {
         HStack(alignment: .center, spacing: 10) {
             VStack(alignment: .leading, spacing: 2) {
                 // 名称与时间【同一行、右对齐】：地点=「什么」、时间=「何时」，互为一对，读成「地点 ——— 时间」
-                // （对标日历/Flighty/Tripsy 的日程行）。时间落在名称基线上，不再悬在名称↔地址中缝里。
-                HStack(alignment: .firstTextBaseline, spacing: 6) {
+                // （对标日历/Flighty/Tripsy 的日程行）。用 .center 垂直居中：时间(caption)比名称(body)小，
+                // 若共享基线(.firstTextBaseline)，小字视觉中心会落在名称中心之下、看着偏下；居中才对齐。
+                HStack(alignment: .center, spacing: 6) {
                     Text(stop.name)
                         .font(.system(.body, design: .rounded).weight(.semibold))   // 名称加粗 + 圆体，作为每行的视觉锚
                         .foregroundStyle(.primary)
