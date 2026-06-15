@@ -940,7 +940,19 @@ struct StopDetailView: View {
                 detailRow(icon: "mappin.and.ellipse", text: stop.address)
             }
             if !stop.note.isEmpty {
-                detailRow(icon: "note.text", text: stop.note)
+                // 备注可任意长 → 默认折叠 6 行 + 展开/收起，避免长备注撑满详情、把导航模块挤到底。
+                HStack(alignment: .top, spacing: 12) {
+                    Image(systemName: "note.text")
+                        .font(.system(size: 15))
+                        .foregroundStyle(.secondary)
+                        .frame(width: 22)
+                    ExpandableText(
+                        text: stop.note,
+                        font: .system(.subheadline, design: .rounded),
+                        collapsedLineLimit: 6
+                    )
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                }
             }
         }
     }
@@ -1023,6 +1035,65 @@ struct StopDetailView: View {
         let start = timeLabel(dayMinutes: stop.plannedStartMinutes)
         guard stop.stayMinutes > 0 else { return start }
         return "\(start)–\(timeLabel(dayMinutes: stop.plannedStartMinutes + stop.stayMinutes))"
+    }
+}
+
+// MARK: - ExpandableText
+
+/// 可展开/收起的长文本：默认折叠到 `collapsedLineLimit` 行；**仅当文本确实被截断时**才显示「展开/收起」。
+/// 截断检测：用同字体同宽下「全文高度」对比「折叠高度」（两份隐藏探针测高），不靠字数启发式，准确。
+private struct ExpandableText: View {
+    let text: String
+    let font: Font
+    let collapsedLineLimit: Int
+
+    @State private var fullHeight: CGFloat = 0
+    @State private var collapsedHeight: CGFloat = 0
+    @State private var expanded = false
+
+    private var isTruncated: Bool { fullHeight > collapsedHeight + 1 }
+
+    private struct FullHeightKey: PreferenceKey {
+        static let defaultValue: CGFloat = 0
+        static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) { value = max(value, nextValue()) }
+    }
+    private struct CollapsedHeightKey: PreferenceKey {
+        static let defaultValue: CGFloat = 0
+        static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) { value = max(value, nextValue()) }
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text(text)
+                .font(font)
+                .foregroundStyle(.primary)
+                .lineLimit(expanded ? nil : collapsedLineLimit)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .background(measurementProbes)
+            if isTruncated {
+                Button {
+                    withAnimation(.easeInOut(duration: 0.2)) { expanded.toggle() }
+                } label: {
+                    Text(expanded ? "itinerary.stop.detail.note_less" : "itinerary.stop.detail.note_more")
+                        .font(.system(.caption, design: .rounded).weight(.medium))
+                        .foregroundStyle(Color.accentColor)
+                }
+                .buttonStyle(.plain)
+            }
+        }
+    }
+
+    /// 隐藏探针：同字体、随宿主同宽（maxWidth:.infinity → background 取宿主宽）下测「全文 / 折叠 6 行」高度。
+    private var measurementProbes: some View {
+        ZStack {
+            Text(text).font(font).fixedSize(horizontal: false, vertical: true)
+                .background(GeometryReader { g in Color.clear.preference(key: FullHeightKey.self, value: g.size.height) })
+            Text(text).font(font).lineLimit(collapsedLineLimit).fixedSize(horizontal: false, vertical: true)
+                .background(GeometryReader { g in Color.clear.preference(key: CollapsedHeightKey.self, value: g.size.height) })
+        }
+        .hidden()
+        .onPreferenceChange(FullHeightKey.self) { fullHeight = $0 }
+        .onPreferenceChange(CollapsedHeightKey.self) { collapsedHeight = $0 }
     }
 }
 
