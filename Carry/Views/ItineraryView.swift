@@ -175,7 +175,6 @@ struct ItineraryView: View {
                 transportContent: { AnyView(transportRow($0)) },
                 lodgingContent: { AnyView(lodgingRow($0, $1)) },
                 addStopContent: { AnyView(addStopRow($0)) },
-                optimizeContent: { AnyView(optimizeRow($0)) },
                 headerContent: { AnyView(dayHeaderRow($0)) },
                 onDelete: { deleteStop($0) },
                 onArrange: { store.applyItineraryArrangement(tripId: tripId, dayOrders: $0) },
@@ -315,9 +314,7 @@ struct ItineraryView: View {
             }
             return ItineraryDaySection(
                 id: day.id,
-                entries: lodgingRows + timelineRows,
-                // 固定首尾后，需中间 ≥2 个点才有可优化空间，故坐标点 ≥4 才露入口。
-                showsOptimize: day.sortedStops.filter(\.hasCoordinate).count >= 4
+                entries: lodgingRows + timelineRows
             )
         }
     }
@@ -440,17 +437,34 @@ struct ItineraryView: View {
         .padding(.bottom, 6)
     }
 
-    private func optimizeRow(_ dayID: UUID) -> some View {
-        Button { activeSheet = .optimize(dayId: dayID) } label: {
-            inlineActionLabel(titleKey: "itinerary.optimize.button", icon: "wand.and.stars")
-        }
-        .buttonStyle(.plain)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(.horizontal, 16)
-        .padding(.vertical, 6)
+    /// 当天是否显示「优化顺序」入口：固定首尾后需中间 ≥2 个点才有可优化空间，故坐标点 ≥4 才露。
+    private func showsOptimize(_ day: ItineraryDay) -> Bool {
+        day.sortedStops.filter(\.hasCoordinate).count >= 4
     }
 
-    /// 内联动作行（添加地点 / 优化顺序）：图标落在 rail 圆点列、文字落在停靠点内容列，
+    /// day header 尾部的「优化顺序」入口：作用于整天的工具操作，落在「这天的标题栏」层级
+    /// （对齐 Apple section-header accessory）；中性色 = 工具非主 CTA；header 吸顶 → 地点再多也一伸手可及。
+    private func optimizeHeaderButton(_ day: ItineraryDay) -> some View {
+        Button { activeSheet = .optimize(dayId: day.id) } label: {
+            HStack(spacing: 5) {
+                Image(systemName: "wand.and.stars")
+                    .font(.system(size: 13, weight: .medium))
+                    .accessibilityHidden(true)
+                Text("itinerary.optimize.button")
+                    .font(.system(.subheadline, design: .rounded))
+            }
+            .foregroundStyle(.secondary)
+            // 垂直内边距压到最小：header 高度几乎只由标题决定，有/无优化的天近似等高（§5 节奏）；
+            // 点击区主要靠横向铺开补回（对齐 Apple header 里「See All」式矮而宽的附属按钮）。
+            .padding(.vertical, 4)
+            .padding(.leading, 16)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(Text("itinerary.optimize.button"))
+    }
+
+    /// 内联动作行（添加地点）：图标落在 rail 圆点列、文字落在停靠点内容列，
     /// 与 `TimelineStopRow` 结构对齐（rail 宽 30 + spacing 12），整天「停靠点 + 动作」读成一列左对齐。
     private func inlineActionLabel(titleKey: LocalizedStringKey, icon: String) -> some View {
         HStack(spacing: 12) {                       // = TimelineStopRow.railSpacing
@@ -489,6 +503,12 @@ struct ItineraryView: View {
                         .font(.system(.caption2, design: .rounded))
                         .foregroundStyle(.secondary)
                 }
+            }
+            // 「优化顺序」入口收进 header 尾部：作用于整天的操作落在标题栏层级；排序模式下隐藏
+            // （此时在手动拖拽，不应再露自动优化）。仅 ≥4 个坐标点（中间 ≥2 可重排）才出现。
+            if !isReordering.wrappedValue && showsOptimize(day) {
+                Spacer(minLength: 8)
+                optimizeHeaderButton(day)
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)

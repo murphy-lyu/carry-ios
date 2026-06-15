@@ -8,7 +8,7 @@
 //  与打包清单的关键差异（spec: app-navigation-framework.md / itinerary-route-planning.md）：
 //  - 不夹断到起点 section：`.changed` 直接喂原始位置，UIKit 自然把被拖行带过 section 边界。
 //  - 松手提交**所有受影响的天**（而非只起点那一段）——跨天移动会改两天的归属。
-//  - 行类型：`.stop` 可重排；`.addStop` / `.optimize` 为行内非可重排按钮（同打包的 .add）。
+//  - 行类型：`.stop` 可重排；`.addStop` 为行内非可重排按钮（同打包的 .add）。优化入口已移至 day header。
 //  - 无内联编辑态（行程行不内联编辑），故省去打包里的 editing 复杂度。
 //  本组件只做 collection 管线 + 拖拽；所有行的 SwiftUI 内容由上层闭包传入、UIHostingConfiguration 承载。
 //
@@ -17,15 +17,14 @@ import SwiftUI
 import UIKit
 
 /// 一天的结构快照。`entries` = 该天时间轴上有序的行（住宿条 + 停靠点 + 交通段，按业务顺序），
-/// **不含** leg / addStop / optimize——后三者由 collection 在 applySnapshot 时按规则插入/追加。
+/// **不含** leg / addStop——后两者由 collection 在 applySnapshot 时按规则插入/追加。
 /// 仅 `.stop` 参与重排；交通/住宿为固定行（spec: itinerary-transport-lodging.md）。
 nonisolated struct ItineraryDaySection: Hashable, Sendable {
     let id: UUID
     let entries: [ItineraryRowID]
-    let showsOptimize: Bool
 }
 
-/// 行标识。`.stop` 可拖；其余（`.leg` / `.transport` / `.lodging` / `.addStop` / `.optimize`）不可拖。
+/// 行标识。`.stop` 可拖；其余（`.leg` / `.transport` / `.lodging` / `.addStop`）不可拖。
 /// `.leg(UUID)` = 该停靠点上方的连接段（与上一点的连线 + 距离），UUID 为「下方那个停靠点」的 id；
 /// 仅在**相邻两个停靠点之间且其间无交通段**时插入（有交通段时，交通段本身就是连接）。
 /// `.transport(UUID)` = 交通段（边）；`.lodging(stay:day:)` = 住宿常驻条。
@@ -38,7 +37,6 @@ nonisolated enum ItineraryRowID: Hashable, Sendable {
     case transport(UUID)
     case lodging(stay: UUID, day: Int)
     case addStop(UUID)
-    case optimize(UUID)
 }
 
 struct ItineraryReorderCollection: UIViewRepresentable {
@@ -46,7 +44,7 @@ struct ItineraryReorderCollection: UIViewRepresentable {
     let sections: [ItineraryDaySection]
     /// 选中的「天」——变化时把该天 section 吸顶（与上方日历条联动）。nil 不滚动。
     let scrollTargetDayId: UUID?
-    /// 「地点排序」模式：仅渲染 day header + `.stop` 行（隐去 leg/transport/lodging/addStop/optimize），
+    /// 「地点排序」模式：仅渲染 day header + `.stop` 行（隐去 leg/transport/lodging/addStop），
     /// 长按延迟降到「即抓即拖」。上层用 `.id` 在进出模式时重建本组件，故 cell 内容随之刷新为压缩版。
     let isReordering: Bool
     let stopContent: (UUID) -> AnyView
@@ -57,7 +55,6 @@ struct ItineraryReorderCollection: UIViewRepresentable {
     /// 住宿常驻条内容，入参为 (lodging stay id, 当前天序)。
     let lodgingContent: (UUID, Int) -> AnyView
     let addStopContent: (UUID) -> AnyView
-    let optimizeContent: (UUID) -> AnyView
     let headerContent: (ItineraryDaySection) -> AnyView
     let onDelete: (UUID) -> Void
     /// 松手提交：落定后每天的完整 stopID 顺序（跨天则改归属）。
@@ -176,8 +173,6 @@ struct ItineraryReorderCollection: UIViewRepresentable {
                     cell.contentConfiguration = UIHostingConfiguration { self.parent.lodgingContent(stay, day) }.margins(.all, 0)
                 case .addStop(let dayID):
                     cell.contentConfiguration = UIHostingConfiguration { self.parent.addStopContent(dayID) }.margins(.all, 0)
-                case .optimize(let dayID):
-                    cell.contentConfiguration = UIHostingConfiguration { self.parent.optimizeContent(dayID) }.margins(.all, 0)
                 }
             }
 
@@ -288,7 +283,7 @@ struct ItineraryReorderCollection: UIViewRepresentable {
         private func applySnapshot(animated: Bool) {
             guard let dataSource else { return }
             var snapshot = NSDiffableDataSourceSnapshot<UUID, ItineraryRowID>()
-            // 「地点排序」模式：每天只放 day header + `.stop` 行（无 leg/交通/住宿/Add/Optimize），
+            // 「地点排序」模式：每天只放 day header + `.stop` 行（无 leg/交通/住宿/Add），
             // 让用户专注拖拽、一屏看更多天；提交仍由 didReorder 收集各 section 的 `.stop` 顺序。
             if parent.isReordering {
                 for section in parent.sections {
@@ -311,7 +306,7 @@ struct ItineraryReorderCollection: UIViewRepresentable {
                 // 据 entries 构建最终行：
                 // - 相邻两个停靠点之间、且其间无交通段 → 插入 .leg（连线 + 直线距离）；
                 // - 有交通段在两点之间 → 交通段本身即连接，不再插 leg；
-                // - 住宿条 / 交通段原样保留；最后追加 addStop（+ optimize）。
+                // - 住宿条 / 交通段原样保留；最后追加 addStop（优化入口已移至 day header）。
                 var rows: [ItineraryRowID] = []
                 var lastWasStop = false
                 for entry in section.entries {
@@ -328,7 +323,6 @@ struct ItineraryReorderCollection: UIViewRepresentable {
                     }
                 }
                 rows.append(.addStop(section.id))
-                if section.showsOptimize { rows.append(.optimize(section.id)) }
                 snapshot.appendItems(rows, toSection: section.id)
             }
             dataSource.apply(snapshot, animatingDifferences: animated)
