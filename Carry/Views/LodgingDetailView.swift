@@ -98,7 +98,10 @@ struct LodgingDetailView: View {
             // 入住 / 退房各带「日期（+时间）」，绑定到具体哪天。
             AnyView(LabeledDetailRow(icon: "calendar", labelKey: "itinerary.lodging.event.checkin", value: checkInValue)),
             AnyView(LabeledDetailRow(icon: "calendar", labelKey: "itinerary.lodging.event.checkout", value: checkOutValue)),
-            AnyView(LabeledDetailRow(icon: "moon", labelKey: "itinerary.lodging.field.nights", value: "\(stay.nights)")),
+            // 标签单复数：1 晚用单数（Night/Nacht…），≥2 用复数；zh/ja/ko 无单复数、两者同形。
+            AnyView(LabeledDetailRow(icon: "moon",
+                                     labelKey: stay.nights == 1 ? "itinerary.lodging.field.nights.one" : "itinerary.lodging.field.nights",
+                                     value: "\(stay.nights)")),
         ]
         if stay.hasCost {
             rows.append(AnyView(LabeledDetailRow(icon: "creditcard", labelKey: "cost.field.label",
