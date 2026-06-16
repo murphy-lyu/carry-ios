@@ -57,6 +57,22 @@ private extension View {
     }
 }
 
+// MARK: - Exchange-rate observation scope
+
+/// 把对 `ExchangeRateManager` 的观察「收」在真正用到它的子视图层（如 Trip Book 花费卡），
+/// 避免在更高层观察。根 HomeView 是首页 UIKit FX sheet + 底栏的宿主：若在根层挂
+/// `@ObservedObject ExchangeRateManager`，汇率每次 publish 都会让根整体失效，透过 UIKit 宿主
+/// 破坏底栏按钮的命中测试（已复现：底栏三按钮永久点不动）。把观察下沉到此 scope，
+/// 汇率到达时仅 scope 内的内容重算刷新，根首页与底栏不受牵连。
+private struct ExchangeRateScope<Content: View>: View {
+    @ObservedObject private var rate = ExchangeRateManager.shared
+    @ViewBuilder let content: (ExchangeRateManager) -> Content
+    var body: some View {
+        content(rate)
+            .onAppear { rate.fetchIfNeeded() }
+    }
+}
+
 // MARK: - HomeView
 
 struct HomeView: View {
@@ -76,8 +92,6 @@ struct HomeView: View {
     @State private var showSearch = false
     @State private var showTripBook = false
     @State private var showSpendDetail = false
-    // Trip Book 花费卡：观察共享汇率管理器，rates 拉到后聚合自动刷新（spec: itinerary-cost-tracking.md）。
-    @ObservedObject private var exchangeRate = ExchangeRateManager.shared
     @State private var searchText = ""
     @FocusState private var searchFieldFocused: Bool
     /// 点搜索结果时暂存目标行程；在 sheet 真正 dismiss 完成后（onDismiss）再跳转，
@@ -589,7 +603,9 @@ struct HomeView: View {
             // 之上、内容不在栏下硬切（区别于实心 BottomBarScrim）。见 bottomContentFade。
             // 空态例外（height 0 → 不铺）：空态 sheet 按内容收缩、底下只有一张空态卡片、无可滚动列表，
             // 这条 120pt fade 没内容可消隐，反而把空态卡片下半截蒙上一层渐变。故空态时不铺。
-            .bottomContentFade(Color(UIColor.systemBackground), height: isEffectivelyEmpty ? 0 : 120)
+            // 更通透：消隐带最实处压到 0.9（默认 1.0 太实；0.9 在「盖住底栏下方那张卡」与
+            // 「保留一缕『下面还有』的滚动暗示」之间取平衡，比全实更轻、又无半张卡鬼影）。
+            .bottomContentFade(Color(UIColor.systemBackground), height: isEffectivelyEmpty ? 0 : 120, peakOpacity: 0.9)
             .onAppear {
                 store.refresh()
                 store.correctMisgecodedTrips()
@@ -954,11 +970,6 @@ struct HomeView: View {
 
     private var tripBookSheet: some View {
         let stats = TripBookStats.from(trips: store.trips)
-        let spend = TripSpendStats.compute(
-            trips: store.trips,
-            homeCode: exchangeRate.baseCurrencyCode,
-            convert: { exchangeRate.convertToHome($0, from: $1) }
-        )
         return NavigationStack {
             ScrollView {
                 VStack(spacing: 14) {
@@ -968,7 +979,21 @@ struct HomeView: View {
                     if stats.domesticCount + stats.internationalCount > 0 { tripBookScopeCard(stats) }
                     if stats.seasonCounts.values.reduce(0, +) > 0 { tripBookSeasonsCard(stats) }
                     // 费用压轴：前面都是出行习惯/统计，花费性质特殊（用户记账数据），单独置于最后。
-                    if spend.hasAnyCost { tripBookSpendCard(spend) }
+                    // 对汇率管理器的观察收在 ExchangeRateScope 这一层子视图（花费卡的真正消费者），
+                    // 不上抬到根 HomeView——根是首页 UIKit FX sheet（含底栏）的宿主，在根层观察会令其
+                    // 因汇率 publish 整体失效、透过 UIKit 宿主破坏底栏交互（已复现）。依赖放回正确作用域：
+                    // 汇率异步到达时仅此 scope 内重算刷新，根首页/底栏不受牵连。
+                    ExchangeRateScope { rate in
+                        let spend = TripSpendStats.compute(
+                            trips: store.trips,
+                            homeCode: rate.baseCurrencyCode,
+                            convert: { rate.convertToHome($0, from: $1) }
+                        )
+                        Group {
+                            if spend.hasAnyCost { tripBookSpendCard(spend) }
+                        }
+                        .sheet(isPresented: $showSpendDetail) { spendDetailSheet(spend) }
+                    }
                 }
                 .padding(.horizontal, 16)
                 .padding(.top, 8)
@@ -983,8 +1008,6 @@ struct HomeView: View {
                     SheetCloseButton { showTripBook = false }
                 }
             }
-            .onAppear { exchangeRate.fetchIfNeeded() }
-            .sheet(isPresented: $showSpendDetail) { spendDetailSheet(spend) }
         }
     }
 

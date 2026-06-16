@@ -446,10 +446,16 @@ extension View {
     /// 纯渐变 overlay、`allowsHitTesting(false)`、无 mask/blur → 不触发离屏渲染、不挡点击、开销极低。
     /// - color: 消隐到的底色 = 该页背景色（与背景无缝）。
     /// - height: 消隐带高度。
-    func bottomContentFade(_ color: Color, height: CGFloat = 120) -> some View {
+    /// - peakOpacity: 最底端（最实处）的不透明度上限。默认 1.0 = 原行为（底端全实）；
+    ///   调小让整条消隐带更通透（浮动栏后内容透出更多）。渐变形状不变，仅整体按此缩放。
+    func bottomContentFade(_ color: Color, height: CGFloat = 120, peakOpacity: Double = 1) -> some View {
         overlay(alignment: .bottom) {
             LinearGradient(
-                colors: [color.opacity(0), color.opacity(0.92), color],
+                stops: [
+                    .init(color: color.opacity(0),                  location: 0),
+                    .init(color: color.opacity(0.92 * peakOpacity), location: 0.5),
+                    .init(color: color.opacity(peakOpacity),        location: 1),
+                ],
                 startPoint: .top,
                 endPoint: .bottom
             )
