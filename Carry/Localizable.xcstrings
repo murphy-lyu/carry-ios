@@ -12569,31 +12569,31 @@
         }
       }
     },
-    "common.delete" : {
+    "common.remove" : {
       "extractionState" : "manual",
       "localizations" : {
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Löschen"
+            "value" : "Entfernen"
           }
         },
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Delete"
+            "value" : "Remove"
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Eliminar"
+            "value" : "Quitar"
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Supprimer"
+            "value" : "Retirer"
           }
         },
         "ja" : {
@@ -12605,84 +12605,84 @@
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "삭제"
+            "value" : "제거"
           }
         },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Excluir"
+            "value" : "Remover"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "删除"
+            "value" : "移除"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "刪除"
+            "value" : "移除"
           }
         }
       }
     },
-    "common.delete_confirm" : {
+    "itinerary.detail.remove_confirm" : {
       "extractionState" : "manual",
       "localizations" : {
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Dies kann nicht rückgängig gemacht werden."
+            "value" : "Dies aus der Reise entfernen?"
           }
         },
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "This can’t be undone."
+            "value" : "Remove this from your trip?"
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Esto no se puede deshacer."
+            "value" : "¿Quitar esto del viaje?"
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Cette action est irréversible."
+            "value" : "Retirer ceci du voyage ?"
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "この操作は取り消せません。"
+            "value" : "旅程からこの項目を削除しますか？"
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "이 작업은 취소할 수 없습니다."
+            "value" : "여행에서 이 항목을 제거할까요?"
           }
         },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Isso não pode ser desfeito."
+            "value" : "Remover isto da viagem?"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "此操作无法撤销。"
+            "value" : "确定要从行程中移除此项吗？"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "此操作無法復原。"
+            "value" : "確定要從行程中移除此項嗎？"
           }
         }
       }

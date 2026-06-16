@@ -1117,7 +1117,6 @@ struct StopDetailView: View {
             iconSystemName: stop.category.symbolName,
             iconTint: dayColor,
             title: stop.name,
-            deleteLabelKey: "itinerary.stop.edit.delete",
             onEdit: { editing = true },
             onDelete: deleteStop,
             onClose: { dismiss() }

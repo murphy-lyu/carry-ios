@@ -17,8 +17,6 @@ struct DetailSheetHeader: View {
     let iconSystemName: String
     let iconTint: Color
     let title: String
-    /// 删除项文案 key（各实体不同：地点 / 住宿 / 交通）。
-    let deleteLabelKey: String
     let onEdit: () -> Void
     let onDelete: () -> Void
     let onClose: () -> Void
@@ -43,7 +41,7 @@ struct DetailSheetHeader: View {
             Menu {
                 Button { onEdit() } label: { Label("itinerary.stop.detail.edit", systemImage: "pencil") }
                 Button(role: .destructive) { confirmingDelete = true } label: {
-                    Label(LocalizedStringKey(deleteLabelKey), systemImage: "trash")
+                    Label("common.remove", systemImage: "trash")
                 }
             } label: {
                 circleGlyph("ellipsis")
@@ -53,12 +51,10 @@ struct DetailSheetHeader: View {
                 .buttonStyle(.plain)
                 .accessibilityLabel(Text("common.close"))
         }
-        // 删除二次确认：用正式 alert（居中弹窗），保证「取消 + 删除」两个按钮都在、各设备一致。
-        .alert(LocalizedStringKey(deleteLabelKey), isPresented: $confirmingDelete) {
+        // 二次确认：正式 alert（居中弹窗），柔和通用文案；保证「取消 + 移除」两按钮各设备恒在。
+        .alert(Text("itinerary.detail.remove_confirm"), isPresented: $confirmingDelete) {
             Button("common.cancel", role: .cancel) {}
-            Button("common.delete", role: .destructive) { onDelete() }
-        } message: {
-            Text("common.delete_confirm")
+            Button("common.remove", role: .destructive) { onDelete() }
         }
     }
 

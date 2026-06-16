@@ -82,7 +82,6 @@ struct LodgingDetailView: View {
             iconSystemName: "bed.double.fill",
             iconTint: dayColor,
             title: displayName,
-            deleteLabelKey: "itinerary.lodging.delete",
             onEdit: { editing = true },
             onDelete: deleteStay,
             onClose: { dismiss() }

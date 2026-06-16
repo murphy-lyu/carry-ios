@@ -71,7 +71,6 @@ struct TransportDetailView: View {
             iconSystemName: segment.mode.symbolName,
             iconTint: dayColor,
             title: titleText,
-            deleteLabelKey: "itinerary.transport.delete",
             onEdit: { editing = true },
             onDelete: deleteSegment,
             onClose: { dismiss() }
