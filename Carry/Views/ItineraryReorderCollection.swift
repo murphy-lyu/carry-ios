@@ -40,6 +40,10 @@ nonisolated enum ItineraryRowID: Hashable, Sendable {
     /// 只读日历事件叠加行（spec: itinerary-calendar-overlay.md）。带「天序」维度保全局唯一
     /// （跨多天的全天事件会在多个 section 出现，同 `.lodging` 的教训）。不可拖、非行程数据。
     case calendarEvent(id: String, day: Int)
+    /// 「地点排序」模式下，**空天**的占位落点行（UUID = 该天 section id）。
+    /// diffable 原生重排无法把 item 拖进 0 item 的 section → 给空天补一行可接收落点的占位；
+    /// 不可拖（canReorderItem 仅 .stop），提交时 didReorder 只收 .stop、占位被天然过滤掉。
+    case emptyDayDrop(UUID)
 }
 
 struct ItineraryReorderCollection: UIViewRepresentable {
@@ -180,6 +184,8 @@ struct ItineraryReorderCollection: UIViewRepresentable {
                     cell.contentConfiguration = UIHostingConfiguration { self.parent.calendarEventContent(id, day) }.margins(.all, 0)
                 case .addStop(let dayID):
                     cell.contentConfiguration = UIHostingConfiguration { self.parent.addStopContent(dayID) }.margins(.all, 0)
+                case .emptyDayDrop:
+                    cell.contentConfiguration = UIHostingConfiguration { EmptyDayDropHint() }.margins(.all, 0)
                 }
             }
 
@@ -296,7 +302,12 @@ struct ItineraryReorderCollection: UIViewRepresentable {
                 for section in parent.sections {
                     snapshot.appendSections([section.id])
                     let stopRows = section.entries.filter { if case .stop = $0 { return true }; return false }
-                    snapshot.appendItems(stopRows, toSection: section.id)
+                    if stopRows.isEmpty {
+                        // 空天补一行占位落点，否则无法把地点拖进 0 item 的 section。
+                        snapshot.appendItems([.emptyDayDrop(section.id)], toSection: section.id)
+                    } else {
+                        snapshot.appendItems(stopRows, toSection: section.id)
+                    }
                 }
                 dataSource.apply(snapshot, animatingDifferences: animated)
                 collectionView?.setNeedsLayout()
@@ -478,5 +489,27 @@ struct ItineraryReorderCollection: UIViewRepresentable {
             config.performsFirstActionWithFullSwipe = false
             return config
         }
+    }
+}
+
+// MARK: - EmptyDayDropHint
+
+/// 「地点排序」模式下空天的占位落点提示：虚线圆角框 + 「拖到这里」，提示该天可接收地点。
+/// 不可拖、不入库（提交时被 didReorder 过滤）。spec: itinerary-reorder-mode.md。
+private struct EmptyDayDropHint: View {
+    var body: some View {
+        Text("itinerary.reorder.drop_here")
+            .font(.system(.footnote, design: .rounded))
+            .foregroundStyle(.tertiary)
+            .frame(maxWidth: .infinity)
+            .frame(height: 44)
+            .background(
+                RoundedRectangle(cornerRadius: 12, style: .continuous)
+                    .strokeBorder(Color.secondary.opacity(0.25),
+                                  style: StrokeStyle(lineWidth: 1, dash: [4, 4]))
+            )
+            .padding(.horizontal, 16)
+            .padding(.vertical, 4)
+            .accessibilityLabel(Text("itinerary.reorder.drop_here"))
     }
 }
