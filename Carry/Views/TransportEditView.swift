@@ -331,35 +331,44 @@ struct TransportEditView: View {
         // 到达日不得早于出发日（夹断）。
         let safeArriveDay = max(arriveDayOrder, departDayOrder)
 
+        // 当前模式隐藏的字段不入库——否则「填了航班号 → 改成租车」会把残留航班号存进租车段、
+        // 在时间轴里显示出来。保存时按最终模式清空隐藏字段，保证数据与类型一致。
+        let savedNumber = showsNumber ? number : ""
+        let savedFromCode = showsCode ? fromCode : ""
+        let savedToCode = showsCode ? toCode : ""
+        let savedFromTerminal = showsTerminal ? fromTerminal : ""
+        let savedToTerminal = showsTerminal ? toTerminal : ""
+        let savedSeat = showsSeat ? seat : ""
+
         if let segmentId {
             store.updateTransportSegment(
                 tripId: tripId, segmentId: segmentId,
-                mode: mode, carrier: carrier, number: number,
-                fromName: fromName, fromCode: fromCode,
+                mode: mode, carrier: carrier, number: savedNumber,
+                fromName: fromName, fromCode: savedFromCode,
                 fromLatitude: fromLatitude, fromLongitude: fromLongitude,
-                fromTerminal: fromTerminal,
-                toName: toName, toCode: toCode,
+                fromTerminal: savedFromTerminal,
+                toName: toName, toCode: savedToCode,
                 toLatitude: toLatitude, toLongitude: toLongitude,
-                toTerminal: toTerminal,
+                toTerminal: savedToTerminal,
                 departDayOrder: departDayOrder, departLocalMinutes: departMinutes,
                 arriveDayOrder: safeArriveDay, arriveLocalMinutes: arriveMinutes,
-                seat: seat, confirmationCode: confirmationCode, note: note
+                seat: savedSeat, confirmationCode: confirmationCode, note: note
             )
             store.setTransportCost(tripId: tripId, segmentId: segmentId,
                                    amount: costAmountValue, currencyCode: costCurrencyToSave)
         } else if let dayId {
             if let newId = store.addTransportSegment(
                 tripId: tripId, dayId: dayId,
-                mode: mode, carrier: carrier, number: number,
-                fromName: fromName, fromCode: fromCode,
+                mode: mode, carrier: carrier, number: savedNumber,
+                fromName: fromName, fromCode: savedFromCode,
                 fromLatitude: fromLatitude, fromLongitude: fromLongitude,
-                fromTerminal: fromTerminal,
-                toName: toName, toCode: toCode,
+                fromTerminal: savedFromTerminal,
+                toName: toName, toCode: savedToCode,
                 toLatitude: toLatitude, toLongitude: toLongitude,
-                toTerminal: toTerminal,
+                toTerminal: savedToTerminal,
                 departDayOrder: departDayOrder, departLocalMinutes: departMinutes,
                 arriveDayOrder: safeArriveDay, arriveLocalMinutes: arriveMinutes,
-                seat: seat, confirmationCode: confirmationCode, note: note
+                seat: savedSeat, confirmationCode: confirmationCode, note: note
             ) {
                 store.setTransportCost(tripId: tripId, segmentId: newId,
                                        amount: costAmountValue, currencyCode: costCurrencyToSave)
