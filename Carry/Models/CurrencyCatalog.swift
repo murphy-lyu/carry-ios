@@ -81,9 +81,10 @@ enum CurrencyCatalog {
         return Double(trimmed.replacingOccurrences(of: ",", with: ".")) ?? 0
     }
 
-    /// 金额输入净化（locale 感知）：只保留数字 + 单一小数分隔符 + 至多 2 位小数；
-    /// 其它字符（字母/符号/空格）一律丢弃。在数据层兜住——硬件键盘（模拟器）、粘贴、
-    /// 异常 locale 都进不来非法字符（而非只靠 `.decimalPad` 的软键盘约束）。幂等。
+    /// 金额输入净化（locale 感知）：只保留数字 + 单一**小数点**（当前 locale 的）+ 至多 2 位小数；
+    /// 其它字符（字母/符号/空格/分组符）一律丢弃。这是「编辑态」的规范形（无千分位分组）。
+    /// 在数据层兜住——硬件键盘（模拟器）、粘贴、异常 locale 都进不来非法字符（而非只靠
+    /// `.decimalPad` 的软键盘约束）。幂等。
     static func sanitizeAmountInput(_ text: String) -> String {
         let sep: Character = (Locale.current.decimalSeparator ?? ".").first ?? "."
         var out = ""
@@ -96,15 +97,33 @@ enum CurrencyCatalog {
                     fractionDigits += 1
                 }
                 out.append(ch)
-            } else if ch == sep || ch == "." || ch == "," {        // 任一分隔符归一到当前 locale
-                guard !hasSep else { continue }                    // 只允许一个
-                if out.isEmpty { out.append("0") }                 // 前导分隔符 → "0."
+            } else if ch == sep {               // 仅当前 locale 的小数点；分组符与其它一律丢
+                guard !hasSep else { continue } // 只允许一个
+                if out.isEmpty { out.append("0") }   // 前导小数点 → "0."
                 out.append(sep)
                 hasSep = true
             }
-            // 其余字符丢弃
         }
         return out
+    }
+
+    /// 「展示态」：给规范金额串加千分位分组（如 "1234.5" → "1,234.5"）。整数部分手动分组、
+    /// 原样保留用户输入的小数位（不强制补/截尾），失焦时用于展示；聚焦编辑时退回 `sanitizeAmountInput`。
+    static func groupForDisplay(_ raw: String) -> String {
+        let trimmed = raw.trimmingCharacters(in: .whitespaces)
+        guard !trimmed.isEmpty else { return "" }
+        let sep = String((Locale.current.decimalSeparator ?? ".").first ?? ".")
+        let groupSep = Locale.current.groupingSeparator ?? ","
+        let parts = trimmed.components(separatedBy: sep)
+        let intDigits = Array(parts[0].filter { $0.isASCII && $0.isNumber })
+        var grouped = ""
+        let n = intDigits.count
+        for (i, ch) in intDigits.enumerated() {
+            if i > 0 && (n - i) % 3 == 0 { grouped += groupSep }
+            grouped.append(ch)
+        }
+        if grouped.isEmpty { grouped = "0" }     // ".5" → "0.5"
+        return parts.count > 1 ? grouped + sep + parts[1] : grouped
     }
 
     /// 币种本地化名（"日元" / "Japanese Yen"）；取不到回退 code。
