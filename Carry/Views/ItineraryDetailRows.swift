@@ -78,6 +78,7 @@ struct DetailRowGroup: View {
             }
         }
         .padding(.horizontal, 14)
+        .padding(.vertical, 4)            // 卡顶/底气口，首末行不贴边
         .background(
             RoundedRectangle(cornerRadius: 14, style: .continuous)
                 .fill(Color(.secondarySystemBackground))
@@ -92,10 +93,10 @@ struct LabeledDetailRow: View {
     let value: String
 
     var body: some View {
-        HStack(alignment: .top, spacing: 12) {
+        // 图标与「标签+值」整体垂直居中（不贴标签顶）。
+        HStack(alignment: .center, spacing: 12) {
             Image(systemName: icon)
                 .font(.system(size: 15)).foregroundStyle(.secondary).frame(width: 22)
-                .padding(.top, 1)
                 .accessibilityHidden(true)
             VStack(alignment: .leading, spacing: 2) {
                 Text(LocalizedStringKey(labelKey))
@@ -128,10 +129,10 @@ struct CopyableDetailRow: View {
                 withAnimation(.easeInOut(duration: 0.2)) { copied = false }
             }
         } label: {
-            HStack(alignment: .top, spacing: 12) {
+            // 图标、复制按钮均与「标签+值」整体垂直居中（复制图标不再飘在标签行）。
+            HStack(alignment: .center, spacing: 12) {
                 Image(systemName: icon)
                     .font(.system(size: 15)).foregroundStyle(.secondary).frame(width: 22)
-                    .padding(.top, 1)
                     .accessibilityHidden(true)
                 VStack(alignment: .leading, spacing: 2) {
                     Text(LocalizedStringKey(labelKey))
@@ -151,7 +152,6 @@ struct CopyableDetailRow: View {
                 } else {
                     Image(systemName: "doc.on.doc")
                         .font(.system(size: 13)).foregroundStyle(.tertiary)
-                        .padding(.top, 1)
                 }
             }
             .padding(.vertical, 11)
