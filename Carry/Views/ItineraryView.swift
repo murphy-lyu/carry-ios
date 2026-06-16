@@ -41,6 +41,7 @@ private enum ItinerarySheet: Identifiable {
     case editTransport(UUID)
     case addLodging(checkInDayOrder: Int)
     case editLodging(UUID)
+    case calendarEvent(CalendarOverlayEvent)
 
     var id: String {
         switch self {
@@ -52,6 +53,7 @@ private enum ItinerarySheet: Identifiable {
         case .editTransport(let id): return "edittr-\(id)"
         case .addLodging(let order): return "addlg-\(order)"
         case .editLodging(let id): return "editlg-\(id)"
+        case .calendarEvent(let ev): return "calev-\(ev.id)"
         }
     }
 }
@@ -150,6 +152,8 @@ struct ItineraryView: View {
                 LodgingEditView(tripId: tripId, initialCheckInDayOrder: order)
             case .editLodging(let id):
                 LodgingEditView(tripId: tripId, stayId: id)
+            case .calendarEvent(let event):
+                CalendarEventDetailView(event: event)
             }
         }
         .toolbarBackground(Color(UIColor.systemBackground), for: .navigationBar)
@@ -427,14 +431,15 @@ struct ItineraryView: View {
         }
     }
 
-    /// 只读日历事件叠加行（spec: itinerary-calendar-overlay.md）。点击唤起系统日历查看（只读）。
+    /// 只读日历事件叠加行（spec: itinerary-calendar-overlay.md）。
+    /// 点击在 **Carry 内** 弹详情浮层（不跳系统日历——行程规划是核心页，避免误触跳出 App）。
     @ViewBuilder
     private func calendarEventRow(_ id: String, _ day: Int) -> some View {
         if let event = (overlayEventsByDay[day] ?? []).first(where: { $0.id == id }) {
             CalendarEventRow(event: event)
                 .padding(.horizontal, 16)
                 .contentShape(Rectangle())
-                .onTapGesture { CalendarManager.shared.openInSystemCalendar(event) }
+                .onTapGesture { activeSheet = .calendarEvent(event) }
         }
     }
 

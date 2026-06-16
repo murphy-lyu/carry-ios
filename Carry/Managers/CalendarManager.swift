@@ -19,6 +19,10 @@ struct CalendarOverlayEvent: Identifiable {
     let isAllDay: Bool
     let tint: Color         // 事件所属日历的颜色
     let startMinutes: Int   // 当天起始分钟（自午夜），全天事件 = -1
+    let calendarTitle: String   // 所属日历名（详情浮层头部，如「中国大陆节假日」）
+    let location: String        // 事件地点（可空）
+    let notes: String           // 事件备注（可空）
+    let timeZoneId: String      // 事件时区 IANA（可空，定时事件展示用）
 }
 
 @MainActor
@@ -298,18 +302,15 @@ final class CalendarManager {
                     endDate: ev.endDate,
                     isAllDay: ev.isAllDay,
                     tint: Color(cgColor: ev.calendar.cgColor),
-                    startMinutes: ev.isAllDay ? -1 : (c.hour ?? 0) * 60 + (c.minute ?? 0)
+                    startMinutes: ev.isAllDay ? -1 : (c.hour ?? 0) * 60 + (c.minute ?? 0),
+                    calendarTitle: ev.calendar.title,
+                    location: ev.location ?? "",
+                    notes: ev.notes ?? "",
+                    timeZoneId: ev.timeZone?.identifier ?? ""
                 )
             }
     }
 
-    /// 唤起系统日历到该事件所在日期（iOS 无公开的按事件 deep link，只能定位到日期）。
-    func openInSystemCalendar(_ event: CalendarOverlayEvent) {
-        let interval = Int(event.startDate.timeIntervalSinceReferenceDate)
-        if let url = URL(string: "calshow:\(interval)") {
-            UIApplication.shared.open(url)
-        }
-    }
 }
 
 private enum CalendarError: Error {
