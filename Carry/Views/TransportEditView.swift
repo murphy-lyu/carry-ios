@@ -171,11 +171,17 @@ struct TransportEditView: View {
                     Text("itinerary.transport.field.day")
                 }
             }
-            Toggle("itinerary.transport.field.time", isOn: hasTime.animation())
-            if hasTime.wrappedValue {
-                DatePicker("itinerary.transport.field.time", selection: time, displayedComponents: .hourAndMinute)
+            // 单行「标签 · 时间 chip · 开关」，避免 labelsHidden 选择器单独占行、左侧留空。
+            HStack(spacing: 12) {
+                Text("itinerary.transport.field.time")
+                    .accessibilityHidden(true)
+                Spacer()
+                if hasTime.wrappedValue {
+                    DatePicker("itinerary.transport.field.time", selection: time, displayedComponents: .hourAndMinute)
+                        .labelsHidden()
+                }
+                Toggle("itinerary.transport.field.time", isOn: hasTime.animation())
                     .labelsHidden()
-                    .frame(maxWidth: .infinity, alignment: .trailing)
             }
         } header: {
             Text(isFrom ? "itinerary.transport.section.depart" : "itinerary.transport.section.arrive")

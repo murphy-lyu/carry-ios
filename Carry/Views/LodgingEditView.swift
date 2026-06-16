@@ -85,18 +85,8 @@ struct LodgingEditView: View {
                                 .foregroundStyle(.secondary)
                         }
                     }
-                    Toggle("itinerary.lodging.field.checkin_time", isOn: $hasCheckInTime.animation())
-                    if hasCheckInTime {
-                        DatePicker("itinerary.lodging.field.checkin_time", selection: $checkInTime, displayedComponents: .hourAndMinute)
-                            .labelsHidden()
-                            .frame(maxWidth: .infinity, alignment: .trailing)
-                    }
-                    Toggle("itinerary.lodging.field.checkout_time", isOn: $hasCheckOutTime.animation())
-                    if hasCheckOutTime {
-                        DatePicker("itinerary.lodging.field.checkout_time", selection: $checkOutTime, displayedComponents: .hourAndMinute)
-                            .labelsHidden()
-                            .frame(maxWidth: .infinity, alignment: .trailing)
-                    }
+                    timeRow("itinerary.lodging.field.checkin_time", isOn: $hasCheckInTime, time: $checkInTime)
+                    timeRow("itinerary.lodging.field.checkout_time", isOn: $hasCheckOutTime, time: $checkOutTime)
                 } header: {
                     Text("itinerary.lodging.section.stay")
                 }
@@ -152,6 +142,23 @@ struct LodgingEditView: View {
     }
 
     // MARK: Helpers
+
+    /// 时间行：单行「标签 · 时间 chip · 开关」。开关开时在开关左侧内联显示紧凑时间，
+    /// 不再让 labelsHidden 的选择器单独占一行、左侧留大片空白（修布局散乱）。
+    @ViewBuilder
+    private func timeRow(_ titleKey: LocalizedStringKey, isOn: Binding<Bool>, time: Binding<Date>) -> some View {
+        HStack(spacing: 12) {
+            Text(titleKey)
+                .accessibilityHidden(true)   // 视觉标签；a11y 由下方 Toggle 承载，避免重复朗读
+            Spacer()
+            if isOn.wrappedValue {
+                DatePicker(titleKey, selection: time, displayedComponents: .hourAndMinute)
+                    .labelsHidden()
+            }
+            Toggle(titleKey, isOn: isOn.animation())
+                .labelsHidden()
+        }
+    }
 
     private func dayLabel(_ order: Int) -> String {
         if let bundle, !bundle.isDateless {
