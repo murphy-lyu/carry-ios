@@ -38,8 +38,10 @@ private enum ItinerarySheet: Identifiable {
     case editStop(ItineraryStop)
     case optimize(dayId: UUID)
     case addTransport(dayId: UUID, mode: TransportMode)
+    case transportDetail(TransportSegment)
     case editTransport(UUID)
     case addLodging(checkInDayOrder: Int)
+    case lodgingDetail(LodgingStay)
     case editLodging(UUID)
     case calendarEvent(CalendarOverlayEvent)
 
@@ -50,8 +52,10 @@ private enum ItinerarySheet: Identifiable {
         case .editStop(let stop): return "edit-\(stop.id)"
         case .optimize(let dayId): return "opt-\(dayId)"
         case .addTransport(let dayId, let mode): return "addtr-\(dayId)-\(mode.rawValue)"
+        case .transportDetail(let seg): return "trdetail-\(seg.id)"
         case .editTransport(let id): return "edittr-\(id)"
         case .addLodging(let order): return "addlg-\(order)"
+        case .lodgingDetail(let stay): return "lgdetail-\(stay.id)"
         case .editLodging(let id): return "editlg-\(id)"
         case .calendarEvent(let ev): return "calev-\(ev.id)"
         }
@@ -146,10 +150,23 @@ struct ItineraryView: View {
                 OptimizeRouteView(tripId: tripId, dayId: dayId)
             case .addTransport(let dayId, let mode):
                 TransportEditView(tripId: tripId, dayId: dayId, initialMode: mode)
+            case .transportDetail(let seg):
+                TransportDetailView(
+                    tripId: tripId,
+                    segment: seg,
+                    dayColor: ItineraryDayPalette.color(forDayIndex: seg.departDayOrder)
+                )
             case .editTransport(let id):
                 TransportEditView(tripId: tripId, segmentId: id)
             case .addLodging(let order):
                 LodgingEditView(tripId: tripId, initialCheckInDayOrder: order)
+            case .lodgingDetail(let stay):
+                LodgingDetailView(
+                    tripId: tripId,
+                    stay: stay,
+                    navApps: navApps,
+                    dayColor: ItineraryDayPalette.color(forDayIndex: stay.checkInDayOrder)
+                )
             case .editLodging(let id):
                 LodgingEditView(tripId: tripId, stayId: id)
             case .calendarEvent(let event):
@@ -458,7 +475,7 @@ struct ItineraryView: View {
             TransportTimelineRow(segment: seg, dayColor: ItineraryDayPalette.color(forDayIndex: day.sortOrder))
                 .padding(.horizontal, 16)
                 .contentShape(Rectangle())
-                .onTapGesture { activeSheet = .editTransport(segmentID) }
+                .onTapGesture { activeSheet = .transportDetail(seg) }
         }
     }
 
@@ -474,7 +491,7 @@ struct ItineraryView: View {
                              dayColor: ItineraryDayPalette.color(forDayIndex: dayOrder))
                 .padding(.horizontal, 16)
                 .contentShape(Rectangle())
-                .onTapGesture { activeSheet = .editLodging(stayID) }
+                .onTapGesture { activeSheet = .lodgingDetail(stay) }
         }
     }
 
@@ -1036,7 +1053,6 @@ struct StopDetailView: View {
     @State private var editing = false
     @State private var addressCopied = false
     @State private var contentHeight: CGFloat = 0
-    @State private var navMode: MapNavigationMode = .driving
 
     /// sheet 高度贴着内容：稀疏地点不留大片空白（看着「刚好」而非「空」），内容多则自然撑大、可拖到大屏。
     /// 用有意留白消灭空旷感，而非塞空字段填充（north-star §1）。
@@ -1212,117 +1228,14 @@ struct StopDetailView: View {
         }
     }
 
-    /// 路程 / 导航模块：导航到本地点（行内 ↗ 迁入）+ 到下一站直线距离。无坐标/无导航 App 不显示。
+    /// 路程 / 导航模块：导航到本地点 + 到下一站直线距离。无坐标 / 无导航 App 不显示。
+    /// 复用 `DirectionsModule`（地点与住宿共用同一处导航逻辑）。
     @ViewBuilder
     private var navModule: some View {
-        if stop.hasCoordinate && !navApps.isEmpty {
-            VStack(spacing: 0) {
-                modeSelector                       // 驾车 / 公交 / 步行 / 骑行（默认驾车），联动 Get Directions
-                Divider()
-                navAction                          // 用所选方式调起；App List 按方式过滤（骑行隐藏 Apple 地图）
-                if let distanceToNext {
-                    Divider().padding(.leading, 34)
-                    HStack(spacing: 12) {
-                        Image(systemName: "point.topleft.down.to.point.bottomright.curvepath")
-                            .font(.system(size: 15)).foregroundStyle(.secondary).frame(width: 22)
-                            .accessibilityHidden(true)
-                        Text(String(format: NSLocalizedString("itinerary.stop.detail.to_next", comment: ""), distanceToNext))
-                            .font(.system(.subheadline, design: .rounded))
-                            .foregroundStyle(.secondary)
-                        Spacer(minLength: 0)
-                    }
-                    .padding(.vertical, 10)
-                }
-            }
-            .padding(.horizontal, 14)
-            .background(
-                RoundedRectangle(cornerRadius: 14, style: .continuous)
-                    .fill(Color(.secondarySystemBackground))
-            )
+        if let coord = stop.coordinate, !navApps.isEmpty {
+            DirectionsModule(coordinate: coord, name: stop.name, navApps: navApps,
+                             distanceToNext: distanceToNext, tint: dayColor)
         }
-    }
-
-    /// 交通方式选择器：4 段（驾车默认 / 公交 / 步行 / 骑行）。选中即联动 Get Directions 调起的方式，避免
-    /// 「选了骑行却调起驾车」的割裂。选中=烟蓝淡填充+烟蓝字（Tier 2 可选中），未选=灰。
-    private var modeSelector: some View {
-        HStack(spacing: 6) {
-            ForEach(MapNavigationMode.allCases) { mode in
-                let selected = (mode == navMode)
-                Button {
-                    withAnimation(.spring(duration: 0.3, bounce: 0.2)) { navMode = mode }
-                } label: {
-                    HStack(spacing: 5) {
-                        Image(systemName: mode.symbolName).font(.system(size: 13, weight: .semibold))
-                        Text(LocalizedStringKey(mode.nameKey))
-                            .font(.system(.footnote, design: .rounded).weight(.medium))
-                            .lineLimit(1)
-                            .minimumScaleFactor(0.8)   // 4 段 + 长语言（德/法/葡）窄屏防挤压
-                    }
-                    .foregroundStyle(selected ? Color.accentColor : Color.secondary)
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 7)
-                    .background(
-                        RoundedRectangle(cornerRadius: 9, style: .continuous)
-                            .fill(selected ? Color.accentColor.opacity(0.14) : Color.clear)
-                    )
-                    .contentShape(Rectangle())
-                }
-                .buttonStyle(.plain)
-                .accessibilityAddTraits(selected ? [.isButton, .isSelected] : .isButton)
-            }
-        }
-        .padding(.vertical, 10)
-    }
-
-    @ViewBuilder
-    private var navAction: some View {
-        let apps = navApps.filter { $0.supports(navMode) }
-        if apps.isEmpty {
-            // 选骑行且未装支持骑行的地图（只有 Apple 地图）→ 置灰 + 提示，不静默无反应。
-            HStack(spacing: 12) {
-                Image(systemName: "arrow.triangle.turn.up.right.circle")
-                    .font(.system(size: 18)).foregroundStyle(.tertiary).frame(width: 22)
-                    .accessibilityHidden(true)
-                Text("itinerary.nav.no_app_for_mode")
-                    .font(.system(.subheadline, design: .rounded))
-                    .foregroundStyle(.secondary)
-                Spacer(minLength: 0)
-            }
-            .padding(.vertical, 12)
-        } else if apps.count > 1 {
-            Menu {
-                ForEach(apps) { app in
-                    Button(LocalizedStringKey(app.nameKey)) { navigate(app) }
-                }
-            } label: { navRowLabel }
-            .accessibilityLabel(Text("itinerary.nav.button.a11y"))
-        } else {
-            Button { navigate(apps[0]) } label: { navRowLabel }
-                .buttonStyle(.plain)
-                .accessibilityLabel(Text("itinerary.nav.button.a11y"))
-        }
-    }
-
-    private var navRowLabel: some View {
-        HStack(spacing: 12) {
-            Image(systemName: "arrow.triangle.turn.up.right.circle.fill")
-                .font(.system(size: 18)).foregroundStyle(dayColor).frame(width: 22)
-                .accessibilityHidden(true)
-            Text("itinerary.stop.detail.navigate")
-                .font(.system(.subheadline, design: .rounded).weight(.medium))
-                .foregroundStyle(.primary)
-            Spacer(minLength: 0)
-            Image(systemName: "chevron.right").font(.caption).foregroundStyle(.tertiary)
-                .accessibilityHidden(true)
-        }
-        .padding(.vertical, 12)
-        .contentShape(Rectangle())
-    }
-
-    private func navigate(_ app: MapNavigationApp) {
-        guard let coord = stop.coordinate else { return }
-        MapNavigationService.open(app, coordinate: coord, name: stop.name, mode: navMode)
-        CarryLogger.shared.log(.itineraryStopNavigated, context: "\(app.rawValue)_\(navMode.rawValue)")
     }
 
     private var timeRangeLabel: String {
@@ -1336,7 +1249,8 @@ struct StopDetailView: View {
 
 /// 可展开/收起的长文本：默认折叠到 `collapsedLineLimit` 行；**仅当文本确实被截断时**才显示「展开/收起」。
 /// 截断检测：用同字体同宽下「全文高度」对比「折叠高度」（两份隐藏探针测高），不靠字数启发式，准确。
-private struct ExpandableText: View {
+/// internal（非 private）：地点 / 住宿 / 交通详情页共用。
+struct ExpandableText: View {
     let text: String
     let font: Font
     let collapsedLineLimit: Int
