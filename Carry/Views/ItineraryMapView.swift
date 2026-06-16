@@ -16,6 +16,8 @@ import MapKit
 struct ItineraryMapView: View {
     let tripId: UUID
     let focusedDayId: UUID?
+    /// 下方已有完整空态（dateless 空行程）时，抑制地图自带的「添加第一个地点」邀请，避免双 CTA 重复。
+    var suppressEmptyInvite: Bool = false
 
     @EnvironmentObject var store: TripStore
     @State private var showFullScreen = false
@@ -150,7 +152,9 @@ struct ItineraryMapView: View {
                 destinationMap(region)
                     .allowsHitTesting(false)
                     .overlay(alignment: .bottomLeading) {
-                        mapHint("itinerary.empty.map.invite", systemImage: "mappin.and.ellipse")
+                        if !suppressEmptyInvite {
+                            mapHint("itinerary.empty.map.invite", systemImage: "mappin.and.ellipse")
+                        }
                     }
 
             case .placeholder:

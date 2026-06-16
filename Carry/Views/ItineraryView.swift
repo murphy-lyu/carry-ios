@@ -177,9 +177,55 @@ struct ItineraryView: View {
 
     // MARK: Day list
 
+    /// dateless 行程且整趟还没有任何地点/交通/住宿 → 用空态引导（而非地图下方孤零零的「Day 1 + 添加」）。
+    private var isDatelessEmpty: Bool {
+        guard let bundle, bundle.isDateless, !isReordering.wrappedValue else { return false }
+        let noStops = days.allSatisfy { ($0.stops ?? []).isEmpty }
+        let noSegments = days.allSatisfy { ($0.segments ?? []).isEmpty }
+        let noLodging = (bundle.lodgingStays ?? []).isEmpty
+        return noStops && noSegments && noLodging
+    }
+
+    /// dateless 空态：图标 + 「想去哪些地方?」+ 引导 + 「添加地点」CTA。复用 app 空态范式（north-star §8 叙事）。
+    private var datelessEmptyState: some View {
+        VStack(spacing: 14) {
+            Image(systemName: "map")
+                .font(.system(size: 46, weight: .regular))
+                .foregroundStyle(.tertiary)
+            Text("itinerary.dateless.empty.title")
+                .font(.system(.title2, design: .rounded).weight(.semibold))
+                .foregroundStyle(.primary)
+                .multilineTextAlignment(.center)
+            Text("itinerary.dateless.empty.subtitle")
+                .font(.subheadline)
+                .foregroundStyle(.secondary)
+                .multilineTextAlignment(.center)
+                .lineSpacing(2)
+                .padding(.horizontal, 8)
+            Button {
+                if let firstDay = days.first { activeSheet = .addStop(dayId: firstDay.id) }
+            } label: {
+                HStack(spacing: 8) {
+                    Image(systemName: "plus").font(.system(size: 14, weight: .semibold))
+                    Text("itinerary.dateless.empty.cta")
+                }
+            }
+            .buttonStyle(CarryEmptyStatePrimaryButtonStyle())
+            .padding(.top, 8)
+        }
+        .padding(.horizontal, 28)
+        .frame(maxWidth: .infinity)
+    }
+
     private var dayList: some View {
         VStack(spacing: 8) {
-            ItineraryMapView(tripId: tripId, focusedDayId: activeFocusedDayId)
+            ItineraryMapView(tripId: tripId, focusedDayId: activeFocusedDayId,
+                             suppressEmptyInvite: isDatelessEmpty)
+            if isDatelessEmpty {
+                Spacer(minLength: 0)
+                datelessEmptyState
+                Spacer(minLength: 0)
+            } else {
             itineraryCalendarStrip
             // 原生 collection：长按拖拽，停靠点可跨天移动（spec: 跨天拖拽）。
             ItineraryReorderCollection(
@@ -207,6 +253,7 @@ struct ItineraryView: View {
             // 延伸到底部「行程/打包」切换器下方，内容在其渐变里淡出（与打包面统一）。
             // 末行让出切换器净空由 collection 的 contentInset.bottom 负责（见 bottomBarClearance）。
             .ignoresSafeArea(.container, edges: .bottom)
+            }
         }
     }
 
@@ -599,9 +646,13 @@ struct ItineraryView: View {
         return trimmed.isEmpty ? nil : trimmed
     }
 
-    /// 有日期行程：优先显示真实日期；无日期行程退回 Day N。
+    /// 有日期行程：优先显示真实日期；无日期行程（永远只 1 天）显示「想去的地点」愿望清单标题——
+    /// 而非误导性的「Day 1」（dateless 还没排日程，只是先收集想去的地方）。
     private func dayDisplayTitle(_ day: ItineraryDay) -> String {
         if let date = dayDateLabel(day) { return date }
+        if bundle?.isDateless == true {
+            return NSLocalizedString("itinerary.dateless.section", comment: "")
+        }
         let format = NSLocalizedString("itinerary.day.title", comment: "")
         return String(format: format, day.sortOrder + 1)
     }
