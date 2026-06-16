@@ -85,9 +85,9 @@ enum CurrencyCatalog {
     /// 其它字符（字母/符号/空格/分组符）一律丢弃。这是「编辑态」的规范形（无千分位分组）。
     /// 在数据层兜住——硬件键盘（模拟器）、粘贴、异常 locale 都进不来非法字符（而非只靠
     /// `.decimalPad` 的软键盘约束）。幂等。
-    /// 整数部分位数上限：足够覆盖弱币种（越南盾/印尼盾等）的行程单项花费（约 99 亿），
+    /// 整数部分位数上限：足够覆盖弱币种（越南盾/印尼盾等）的行程单项花费（约 9999 亿/万亿级），
     /// 又挡住荒谬长串——否则数字会无限变长、把前置货币符号挤出可视区。
-    static let maxAmountIntegerDigits = 10
+    static let maxAmountIntegerDigits = 12
 
     static func sanitizeAmountInput(_ text: String) -> String {
         let sep: Character = (Locale.current.decimalSeparator ?? ".").first ?? "."
