@@ -1,11 +1,11 @@
 # 机场搜索：内置机场数据库（Airport Database Search）
 
 > Status: Implemented（待真机验收）
-> 决策修订：原定"英文原名、不维护翻译表"——但发现纯英文会让中国用户中文搜国内机场
-> 从能搜到变成搜不到（回归），且为防回归本就必须取中文名，故改为 **bundle 简繁中文名，
-> 搜索匹配 + 按设备语言显示**（中文设备显中文、其它显英文原名）。空态不提供"手动加无坐标
-> 机场"兜底入口（保持封闭集合，保证 IATA/时区完整）。
-> 数据来源/许可见 `scripts/airports/README.md`。**待办：App「关于/致谢」补 OpenFlights 署名（ODbL 要求）。**
+> 决策演进：① 原定"英文原名"→ 发现纯英文会让中文搜国内机场回归，改为带中文名；
+> ② 进一步补齐**全部 9 种界面语言**——`nm` 字段存各语言机场名（en 用原名，其余 8 语言取自
+> Wikidata），按设备语言显示；`cs` 字段存各语言城市别名（仅搜索，如 纽约/뉴욕/ニューヨーク→JFK）。
+> 缺失语言显示回落英文。空态不提供"手动加无坐标机场"兜底入口（保持封闭集合，保证 IATA/时区完整）。
+> 数据来源/许可见 `scripts/airports/README.md`；App 署名已落 `AboutView`「数据来源」卡。
 > 关联：`itinerary-transport-lodging.md`、`itinerary-route-planning.md`
 > 数据模型：`Carry/Models/Itinerary.swift` 的 `TransportSegment`
 

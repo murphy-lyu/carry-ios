@@ -24,34 +24,36 @@ struct Airport: Decodable, Identifiable, Hashable, Sendable {
     let lon: Double
     let tz: String
     let large: Bool
-    let hans: String?
-    let hant: String?
-    /// 城市中文别名（如 JFK→["纽约","紐約"]），仅供搜索匹配、不用于显示。
+    /// 本地化机场名，键为客户端语言：zh-Hans/zh-Hant/de/es/fr/ja/ko/pt-BR（en 用 `name`）。某语言缺失则省略。
+    let nm: [String: String]?
+    /// 城市别名（全语言，如 JFK→["纽约","뉴욕","ニューヨーク"…]），仅供搜索匹配、不用于显示。
     let cs: [String]?
 
     var id: String { iata }
 
-    /// 按设备语言选显示名：简体中文→hans、繁体中文→hant、其它或缺失→英文原名。
+    /// 按设备语言选显示名：命中 nm 对应语言则用之，否则回落英文原名。
     var displayName: String {
-        switch AirportLocale.chineseScript {
-        case .simplified:  return hans ?? name
-        case .traditional: return hant ?? name
-        case .none:        return name
-        }
+        guard let key = AirportLocale.languageKey else { return name }
+        return nm?[key] ?? name
     }
 }
 
-/// 设备中文变体判定（与 zh-Hant 地区习惯一致：Hant / TW / HK / MO 视为繁体）。
+/// 设备语言 → 数据集 nm 键的映射。返回 nil = 英文（直接用 name）。
+/// 中文按地区习惯区分简繁（Hant/TW/HK/MO 视为繁体）；pt 归 pt-BR。
 enum AirportLocale {
-    enum Script { case simplified, traditional, none }
-
-    static var chineseScript: Script {
+    static var languageKey: String? {
         let id = (Locale.preferredLanguages.first ?? "en").lowercased()
-        guard id.hasPrefix("zh") else { return .none }
-        if id.contains("hant") || id.contains("tw") || id.contains("hk") || id.contains("mo") {
-            return .traditional
+        if id.hasPrefix("zh") {
+            if id.contains("hant") || id.contains("tw") || id.contains("hk") || id.contains("mo") {
+                return "zh-Hant"
+            }
+            return "zh-Hans"
         }
-        return .simplified
+        if id.hasPrefix("pt") { return "pt-BR" }
+        for code in ["de", "es", "fr", "ja", "ko"] where id.hasPrefix(code) {
+            return code
+        }
+        return nil
     }
 }
 
@@ -103,19 +105,18 @@ actor AirportDatabase {
         return scored.prefix(limit).map(\.airport)
     }
 
-    /// 越小越相关；nil = 不匹配。
+    /// 越小越相关；nil = 不匹配。`lower` = q 的小写（CJK 等无大小写时与 q 相同）。
     private static func matchScore(_ a: Airport, query q: String, upper: String, lower: String) -> Int? {
         if a.iata == upper { return 0 }
         if a.iata.hasPrefix(upper) { return 1 }
         if !a.icao.isEmpty, a.icao.hasPrefix(upper) { return 2 }
         let cityLower = a.city.lowercased()
         if cityLower.hasPrefix(lower) { return 3 }
-        // 中文城市别名精确命中（如「纽约」→ JFK；机场英文名/中文名都不含中文城市时的关键补全）。
-        if let cs = a.cs, cs.contains(q) { return 3 }
-        // 中文名匹配（机场中文名含城市，如「昆明长水…」含「昆明」，城市搜索一并覆盖）。
-        if let hans = a.hans, hans.contains(q) { return 4 }
-        if let hant = a.hant, hant.contains(q) { return 4 }
-        if let cs = a.cs, cs.contains(where: { $0.contains(q) }) { return 4 }
+        // 城市别名精确命中（如「纽约」/「뉴욕」/「ニューヨーク」→ JFK：机场名不含本地城市名时的关键补全）。
+        if let cs = a.cs, cs.contains(where: { $0.lowercased() == lower }) { return 3 }
+        // 本地化机场名子串（机场中文名含城市，如「昆明长水…」含「昆明」，城市搜索一并覆盖）。
+        if let nm = a.nm, nm.values.contains(where: { $0.lowercased().contains(lower) }) { return 4 }
+        if let cs = a.cs, cs.contains(where: { $0.lowercased().contains(lower) }) { return 4 }
         if cityLower.contains(lower) { return 5 }
         if a.name.lowercased().contains(lower) { return 6 }
         return nil

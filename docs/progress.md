@@ -14,7 +14,9 @@
 - **数据署名**：`AboutView` 新增「数据来源」卡（OurAirports / OpenFlights / Wikidata + 许可），满足 OpenFlights ODbL 署名要求。新增 `about.data` key（9 语言）。
 - **本地化**：新增 `airport.search.*`（5 个）+ `about.data`，9 语言齐全、中文全角、日语常体、韩语해요体。surgical 文本插入。
 - **⚠️ 仓库提示**：`Carry/Localizable.xcstrings` 在仓库里是「压缩式」序列化（非 Xcode 规范式），每次 `xcodebuild` 后 Xcode 会把整文件重排成规范式 → 1.5 万行 diff 噪声。本轮已 `git checkout` 丢弃该重排、保持最小 diff。建议择机单独做一次「整文件规范化」提交，之后构建就不再 churn。
-- **遗留**：PKX/TFU 等新机场时区暂空（OpenFlights 旧数据 + 中国多时区不兜底，显示可降级，非阻塞）。
+- **多语言补齐到全部 9 种界面语言**：数据模型从 `hans/hant` 泛化为 `nm`（{langKey: 机场名}，en 用原名、其余 8 语言取自 Wikidata）；`cs` 城市别名扩到全语言。显示按设备语言（`AirportLocale.languageKey`），搜索跨全语言匹配（뉴욕/ニューヨーク/München/파리 都能命中）。覆盖：fr 91% / ja 82% / zh 75% / de 61% / es 54% / ko·pt-BR 24%，缺失回落英文。数据 ~1.6MB。抓取脚本统一为 `fetch_names.py` + `fetch_cities.py`（替代原 zh-only 两个）。
+- **代码审查加固**：解码失败不再永久失能（仅成功置 `loaded`）；`build_airports.py` 加 IATA 唯一/格式硬断言。
+- **遗留**：PKX/TFU 等新机场时区暂空（OpenFlights 旧数据 + 中国多时区不兜底，显示可降级，非阻塞）；口语别名如「羽田」搜不到（用 東京/HND/Haneda 可达），非阻塞。
 
 ## 上次改动摘要（日历事件叠加层 + 一连串交互/视觉打磨 · 2026-06-16 晚）
 

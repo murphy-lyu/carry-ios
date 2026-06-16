@@ -64,32 +64,32 @@ for a in airports:
         filled += 1
 print(f"tz backfilled from single-tz country: {filled}")
 
-# 并入中文名（zh-Hans / zh-Hant），由 fetch_cn.py 从 Wikidata 抓取；缺失则省略，显示回落英文。
-cn_with = 0
+# 并入本地化机场名 nm（zh-Hans/zh-Hant/de/es/fr/ja/ko/pt-BR），由 fetch_names.py 抓取。
+# en 用 OurAirports 原名（name 字段），不进 nm；某语言缺失则省略，显示回落英文。
+nm_with = 0
 try:
-    cn = json.load(open("/tmp/cn_names.json", encoding="utf-8"))
-    hans, hant = cn["hans"], cn["hant"]
+    names = json.load(open("/tmp/names.json", encoding="utf-8"))
     for a in airports:
-        h, t = hans.get(a["iata"]), hant.get(a["iata"])
-        if h: a["hans"] = h
-        if t: a["hant"] = t
-        if h or t: cn_with += 1
-    print(f"cn names merged: {cn_with}")
+        m = names.get(a["iata"])
+        if m:
+            a["nm"] = m
+            nm_with += 1
+    print(f"localized names merged: {nm_with}")
 except FileNotFoundError:
-    print("cn_names.json not found — skipping Chinese names")
+    print("names.json not found — skipping localized names")
 
-# 城市中文别名（搜索用，如 JFK→纽约），由 fetch_city_cn.py 取自 Wikidata P931；仅匹配、不显示。
+# 城市别名 cs（全语言，搜索用，如 纽约/뉴욕/ニューヨーク→JFK），由 fetch_cities.py 取自 P931；仅匹配、不显示。
 try:
-    city = json.load(open("/tmp/city_cn.json", encoding="utf-8"))
+    cities = json.load(open("/tmp/cities.json", encoding="utf-8"))
     cs_count = 0
     for a in airports:
-        aliases = city.get(a["iata"])
+        aliases = cities.get(a["iata"])
         if aliases:
             a["cs"] = aliases
             cs_count += 1
     print(f"city aliases merged: {cs_count}")
 except FileNotFoundError:
-    print("city_cn.json not found — skipping city aliases")
+    print("cities.json not found — skipping city aliases")
 
 airports.sort(key=lambda a: a["iata"])
 
