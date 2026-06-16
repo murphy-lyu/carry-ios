@@ -88,6 +88,15 @@ struct CurrencyPickerView: View {
         .searchable(text: $searchText, prompt: Text("settings.currency.search"))
         .navigationTitle(Text(navTitleKey))
         .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            // 选择模式（费用录入弹出的 sheet）才补「取消」——它没有返回箭头，原本只能下拉关闭、
+            // 与全 app sheet 约定不一致。本位币模式是 push（有系统返回箭头），不加以免双重冗余。
+            if onPick != nil {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("common.cancel") { dismiss() }
+                }
+            }
+        }
     }
 
     @ViewBuilder
