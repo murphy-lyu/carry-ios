@@ -183,6 +183,7 @@ Carry 在中国大陆 App Store 上架，涉及地理政治敏感内容时必须
 - **Widget 本地化**：widget 使用 `CarryWidget/Localizable.xcstrings`，不共享主 app 的 xcstrings；新增 widget 文案必须同步补全 9 种语言
 - **埋点闭环**：在 `CarryLogger.Event` 新增 case 时，必须在同一次改动里补齐调用点，禁止"先定义后接线"——已定义却从未调用的 Event 是死代码，上线后无法回收数据。错误类 Event 新增后必须同步加入 `errorEvents` 集合。新增用户可触发的功能/交互（按钮、入口、分享等）应评估是否需要对应埋点
 - **费用记录闭环（`CostBearing`，spec: `itinerary-cost-tracking.md`）**：费用真相永远是 `costAmount + costCurrencyCode`（用户实付原币种、永不丢），`costHomeAmount` 仅是本位币快照（派生、可重算）。新增「可记费用」的行程实体时，除 conform `CostBearing`（三字段），必须**同一次改动**同步四处，漏任一处即费用丢失 / Trip Book 漏算 / 改币种快照不更新：① `DataBackupManager` 备份/还原带上（可选字段、向后兼容）；② `duplicateTrip` 深拷贝带上；③ `TripSpendStats.compute` 聚合纳入；④ 写入经 `TripStore.setXCost` 单一漏斗（就地捕获快照），禁止在 View 里直接写 `@Model` 的 cost 字段（会绕过快照捕获）。本位币改动必走 `recomputeCostSnapshots()` 维持「快照永远以当前本位币计」的不变式。
+- **DEBUG 预览/模拟类开关绝不跨启动持久化**：一次性预览开关（如「模拟首页空态」）必须**每次启动无条件重置为关**（init 直接赋 false、不读存储值），可顺带清 UserDefaults key。原因：误开后值会存进 UserDefaults、每次启动都生效（如首页空屏），而 **Xcode 重装不清 UserDefaults** → 「重装也不好」、伪装成「app 坏了」，排查极耗时（已踩坑）。判据：调试用的「临时看一眼」开关 → session-only；真正的用户设置才持久化。
 
 ## 框架协作与诊断纪律（核心规范 · 每次必须遵守）
 
@@ -202,6 +203,7 @@ Carry 在中国大陆 App Store 上架，涉及地理政治敏感内容时必须
 > - `List.onMove` 不支持跨 section 是框架边界 → 跨天拖拽**改用 `UICollectionView` 原生 interactive movement**（框架本就支持跨 section），而非在 List 上硬凑。
 > - 底部悬浮元素遮挡内容 → 用框架的 `safeAreaInset` / `contentInset` 让框架自己避让，而非手算偏移去顶内容。
 > - **`UICollectionViewDiffableDataSource` 的 item identifier 必须全局唯一（跨 section 也不能重复），否则运行时崩**（"item identifiers are not unique" 断言 → SIGABRT）。本项目已踩两次：打包重命名给 `reconfigureItems` 传重复 id；住宿跨 N 天时 `.lodging(stay.id)` 在多个 day section 重复。**同一实体在多 section 复用时，行 ID 必须带区分维度**（如 `.lodging(stay:day:)`）；`reconfigureItems` 传入前先去重（对称差/Set）。
+> - **diffable 原生重排（`reorderingHandlers`）无法把 item 拖进 0-item 的 section**（空 section 落点解析不到）→ 给可能为空的目标 section 补一行**不可拖的占位落点行**（如「地点排序」空天的 `.emptyDayDrop`），使 section 非空可接收落点；`canReorderItem` 不放开它、提交时按真实行类型收集（占位被天然过滤）。
 
 ## 经验教训：性能/动画类疑难问题的排查纪律
 

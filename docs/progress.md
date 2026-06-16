@@ -3,6 +3,22 @@
 ## 最后更新
 2026-06-16
 
+## 上次改动摘要（日历事件叠加层 + 一连串交互/视觉打磨 · 2026-06-16 晚）
+
+> 接费用功能之后的一长串迭代，均已提交并 push 到 `origin/main`、编译绿、多数在模拟器自验过（用户授权自跑）。
+
+- **🟢 日历事件叠加层（新功能，spec: `itinerary-calendar-overlay.md`，Status: Implemented + 自验通过）**：把用户**勾选的**系统日历里、落在行程区间内的事件，作**只读叠加层**显示进行程时间轴（左侧日历色竖条 + 标题 + All-day，轻量、不挂 rail marker）。**隐私红线**：事件只活在视图层临时查询、**永不入 model / 分享 / 导出 / 备份**（由「不入 model」构造保证）。`CalendarManager` 加 `availableCalendars`/`overlayEvents`（排除 `carry://` 自写事件防回环）/`selectedOrDefaultOverlayIDs`（首次默认勾「只读公共日历」=节假日类，非生日/非可编辑）。设置「日历同步」加主开关 + 「选择要显示的日历」卡。点事件 → **Carry 内详情浮层**（`CalendarEventDetailView`，**不跳系统日历**，避免误触跳出 app）。`ItineraryReorderCollection` 加 `.calendarEvent(id:day:)` 行（带天序保唯一）。模拟器实测：端午节/夏至渲染、跨天全天事件每天显示、不崩。
+- **设置 UI 打磨**：日历多选从「一列开关」改回**轻量勾选样式 + 默认勾节假日**（用默认那个勾教用户「这些可勾选」，比堆开关又轻又聪明；节假日是公开信息、零隐私）。
+- **住宿条对齐根治**：去掉灰底 pill（pill 内边距把图标/文字顶离 rail 网格）→ 床图标落 rail 列、文字落内容列、与停靠点同列；并**接入按天分色**（床图标染当天色，进 Carry 日间色系，比纯灰更暖、不靠盒子）。
+- **dateless（PLANNING）行程**：① 整趟还没地点 → **空态引导**（「想去哪些地方?」+ 图标 + 「添加地点」CTA，抑制地图自带提示避免双 CTA）；② 单天标题「Day 1」→ **「想去的地点」**（dateless 永远 1 天、本质是愿望清单）。改日期后地点留在第一天（`syncItineraryDays` 既有行为，已核实）。
+- **「地点排序」提到行程面菜单第一位**：本屏规划主任务（先加一堆地点→统一划分到每天），且修复两面菜单不一致（打包面本就「本面专属操作置顶」，行程面现同构）。
+- **「地点排序」空天可拖入**：diffable 原生重排无法拖进 0-item section → 空天补 `.emptyDayDrop` 占位落点（「拖到这里」虚线框），可接收落点、提交时被过滤。模拟器实测拖入成功。
+- **交通录入表单按类型自适应**（决策详见 decisions）：Type 为单一权威，改它整屏切标签/字段、隐藏无关字段、保存清空隐藏字段。
+- **Trip Book 花费卡位置**：移到所有「出行习惯/统计」卡之后（最末，压轴）。**货币 sheet** 选择模式补「取消」。**住宿/航班时间行**布局收成单行（标签·时间·开关）。
+- **🔴 修调试开关卡死**：「模拟首页空态」误开后值存进 UserDefaults、每次启动模拟空态（像白屏），Xcode 重装不清 UserDefaults → 重装也不好。改为**每次启动无条件重置为关**（init `=false` + 清 key）；实测 plist 仍 true 时新构建首页仍正常。
+- **i18n/性能小修**：费用金额改 locale 感知解析（逗号小数 locale）；`CurrencyCatalog.allCodes` 缓存；新增汇率拉取失败埋点。
+- **本地化**：以上所有新文案 9 语言齐全；已核「无硬编码、无缺语言」（脚本扫描通过）。
+
 ## 上次改动摘要（费用记录 + 本位币 + Trip Book 花费沉淀 · 2026-06-16）
 
 > 新功能（spec: `itinerary-cost-tracking.md`，Status: Implemented）。Carry app target **编译绿**、待真机验收。**未提交**。与并行会话共享工作区（其正改 `ItineraryReorderCollection.swift`/`ItineraryView.swift` header + progress.md）——我只动自己的 hunk。两个产品决策由用户拍板：**每笔可选币种** + **Trip Book 每趟总花费 + 分类目**；卡片视觉过了 north-star ADA 自审后定稿（比例带 + 单一烟蓝三档 + 去分隔线 + 空态）。
