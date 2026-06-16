@@ -929,11 +929,15 @@ private struct CalendarSettingsView: View {
     @Environment(\.colorScheme) private var colorScheme
 
     @AppStorage("calendar_sync_enabled")         private var calendarSyncEnabled        = false
+    // 日历事件叠加层（spec: itinerary-calendar-overlay.md）：只读，永不分享/导出。
+    @AppStorage(CalendarManager.overlayEnabledKey) private var calendarOverlayEnabled = false
 
     @State private var showPermissionAlert = false
     @State private var showBulkAlert       = false
     @State private var pendingCount        = 0
     @State private var toastMessage: String?
+    @State private var overlayCalendars: [(id: String, title: String, tint: Color)] = []
+    @State private var selectedOverlayIDs: Set<String> = []
 
     private var groupFill: Color {
         colorScheme == .dark
@@ -966,6 +970,32 @@ private struct CalendarSettingsView: View {
             calendarSyncEnabled = false
             showPermissionAlert = true
         }
+    }
+
+    /// 开启叠加层：申请（完整）日历访问；通过则开 + 载入可选日历，拒绝则关 + 引导。
+    private func handleOverlayToggleOn() async {
+        let granted = await CalendarManager.shared.requestAccess()
+        if granted {
+            calendarOverlayEnabled = true
+            loadOverlayCalendars()
+            CarryLogger.shared.log(.calendarOverlayEnabled)
+        } else {
+            calendarOverlayEnabled = false
+            showPermissionAlert = true
+            CarryLogger.shared.log(.calendarOverlayAccessDenied)
+        }
+    }
+
+    private func loadOverlayCalendars() {
+        overlayCalendars = CalendarManager.shared.availableCalendars()
+        selectedOverlayIDs = CalendarManager.overlaySelectedCalendarIDs()
+    }
+
+    private func toggleOverlayCalendar(_ id: String) {
+        if selectedOverlayIDs.contains(id) { selectedOverlayIDs.remove(id) }
+        else { selectedOverlayIDs.insert(id) }
+        UserDefaults.standard.set(Array(selectedOverlayIDs), forKey: CalendarManager.overlayCalendarIDsKey)
+        CarryLogger.shared.log(.calendarOverlayCalendarsSelected, context: "count=\(selectedOverlayIDs.count)")
     }
 
     private func showToast(_ message: String) {
@@ -1024,12 +1054,88 @@ private struct CalendarSettingsView: View {
                     .padding(.horizontal, 20)
                     .padding(.top, 6)
 
+                // ── 日历事件叠加层（spec: itinerary-calendar-overlay.md）──
+                Text("settings.calendar.overlay.title")
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundStyle(colorScheme == .dark ? Color.secondary.opacity(0.9) : Color.secondary)
+                    .padding(.horizontal, 16)
+                    .padding(.top, 22)
+
+                VStack(spacing: 0) {
+                    HStack(spacing: 12) {
+                        Text("settings.calendar.overlay.show")
+                            .font(.body)
+                            .foregroundStyle(.primary)
+                        Spacer()
+                        Toggle("", isOn: Binding(
+                            get: { calendarOverlayEnabled },
+                            set: { newValue in
+                                if newValue { Task { await handleOverlayToggleOn() } }
+                                else {
+                                    calendarOverlayEnabled = false
+                                    CarryLogger.shared.log(.calendarOverlayDisabled)
+                                }
+                            }
+                        ))
+                        .labelsHidden()
+                        .tint(CarryAccent.color)
+                    }
+                    .padding(.horizontal, 18)
+                    .frame(height: 58)
+
+                    // 开启后：选择要显示哪些日历（默认不选，用户逐个开——隐私最稳）。
+                    if calendarOverlayEnabled {
+                        ForEach(overlayCalendars, id: \.id) { cal in
+                            Divider().padding(.leading, 18)
+                            Button {
+                                toggleOverlayCalendar(cal.id)
+                            } label: {
+                                HStack(spacing: 12) {
+                                    Circle().fill(cal.tint).frame(width: 10, height: 10)
+                                    Text(cal.title)
+                                        .font(.body)
+                                        .foregroundStyle(.primary)
+                                        .lineLimit(1)
+                                    Spacer()
+                                    if selectedOverlayIDs.contains(cal.id) {
+                                        Image(systemName: "checkmark")
+                                            .font(.body.weight(.semibold))
+                                            .foregroundStyle(CarryAccent.color)
+                                    }
+                                }
+                                .padding(.horizontal, 18)
+                                .frame(height: 52)
+                                .contentShape(Rectangle())
+                            }
+                            .buttonStyle(.plain)
+                        }
+                    }
+                }
+                .background(
+                    RoundedRectangle(cornerRadius: 28, style: .continuous)
+                        .fill(groupFill)
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 28, style: .continuous)
+                                .strokeBorder(groupStroke, lineWidth: 1)
+                        )
+                )
+                .shadow(color: groupShadow, radius: colorScheme == .dark ? 10 : 12, x: 0, y: colorScheme == .dark ? 3 : 4)
+                .padding(.horizontal, 16)
+
+                Text("settings.calendar.overlay.footer")
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+                    .lineSpacing(1.4)
+                    .padding(.horizontal, 20)
+                    .padding(.top, 6)
+
             }
             .padding(.bottom, 24)
         }
         .background(Color(.systemGroupedBackground).ignoresSafeArea())
         .navigationTitle(Text("settings.calendar.entry"))
         .navigationBarTitleDisplayMode(.inline)
+        .onAppear { if calendarOverlayEnabled { loadOverlayCalendars() } }
         .overlay(alignment: .bottom) {
             if let msg = toastMessage {
                 Text(msg)

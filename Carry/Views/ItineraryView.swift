@@ -75,6 +75,12 @@ struct ItineraryView: View {
     /// 行内导航按钮据此：≥2 个弹锚定 `Menu`、仅 1 个（只有 Apple 地图）直接调起。
     @State private var navApps: [MapNavigationApp] = []
 
+    // 日历事件叠加层（spec: itinerary-calendar-overlay.md）。只读、永不入 model/分享/导出。
+    @AppStorage(CalendarManager.overlayEnabledKey) private var calendarOverlayEnabled = false
+    @Environment(\.scenePhase) private var scenePhase
+    /// 按天序分桶的只读日历事件；视图层临时态，不持久化。
+    @State private var overlayEventsByDay: [Int: [CalendarOverlayEvent]] = [:]
+
     private var bundle: TripBundle? { store.bundle(for: tripId) }
     private var days: [ItineraryDay] { bundle?.safeItineraryDays ?? [] }
     private var activeFocusedDayId: UUID? {
@@ -153,9 +159,15 @@ struct ItineraryView: View {
             store.syncItineraryDays(tripId: tripId)   // 兜底：天对齐到行程天数（存量行程/新建首开）
             syncFocusedDaySelectionIfNeeded()
             navApps = MapNavigationService.availableApps()
+            loadCalendarOverlay()
         }
         .onChange(of: days.map(\.id)) { _, _ in
             syncFocusedDaySelectionIfNeeded()
+        }
+        .onChange(of: calendarOverlayEnabled) { _, _ in loadCalendarOverlay() }
+        // 从系统日历/设置返回（改了开关或选中日历）→ 刷新叠加层。
+        .onChange(of: scenePhase) { _, phase in
+            if phase == .active { loadCalendarOverlay() }
         }
     }
 
@@ -174,6 +186,7 @@ struct ItineraryView: View {
                 legContent: { AnyView(legRow($0)) },
                 transportContent: { AnyView(transportRow($0)) },
                 lodgingContent: { AnyView(lodgingRow($0, $1)) },
+                calendarEventContent: { AnyView(calendarEventRow($0, $1)) },
                 addStopContent: { AnyView(addStopRow($0)) },
                 headerContent: { AnyView(dayHeaderRow($0)) },
                 onDelete: { deleteStop($0) },
@@ -312,9 +325,13 @@ struct ItineraryView: View {
                 case .transport(let t): return .transport(t.id)
                 }
             }
+            // 日历事件叠加行：成簇置于当天顶部（住宿条之后、行程之前），全天在前、定时按时间。
+            // v1 不与定时停靠点逐条交错（避免重走 timeline 的 carry-forward 时间合并、保持简单）。
+            let overlayRows: [ItineraryRowID] = (overlayEventsByDay[day.sortOrder] ?? [])
+                .map { .calendarEvent(id: $0.id, day: day.sortOrder) }
             return ItineraryDaySection(
                 id: day.id,
-                entries: lodgingRows + timelineRows
+                entries: lodgingRows + overlayRows + timelineRows
             )
         }
     }
@@ -408,6 +425,49 @@ struct ItineraryView: View {
                 .contentShape(Rectangle())
                 .onTapGesture { activeSheet = .editLodging(stayID) }
         }
+    }
+
+    /// 只读日历事件叠加行（spec: itinerary-calendar-overlay.md）。点击唤起系统日历查看（只读）。
+    @ViewBuilder
+    private func calendarEventRow(_ id: String, _ day: Int) -> some View {
+        if let event = (overlayEventsByDay[day] ?? []).first(where: { $0.id == id }) {
+            CalendarEventRow(event: event)
+                .padding(.horizontal, 16)
+                .contentShape(Rectangle())
+                .onTapGesture { CalendarManager.shared.openInSystemCalendar(event) }
+        }
+    }
+
+    /// 加载行程区间内、所选日历的只读事件，按天序分桶。开关关 / 无权限 / 无日期行程 → 清空。
+    /// 纯视图层临时态，绝不写入 model / 分享 / 导出（spec 隐私红线，由「不入 model」构造保证）。
+    private func loadCalendarOverlay() {
+        guard calendarOverlayEnabled,
+              let bundle, !bundle.isDateless,
+              CalendarManager.shared.hasAccess else {
+            if !overlayEventsByDay.isEmpty { overlayEventsByDay = [:] }
+            return
+        }
+        let ids = CalendarManager.overlaySelectedCalendarIDs()
+        guard !ids.isEmpty else { if !overlayEventsByDay.isEmpty { overlayEventsByDay = [:] }; return }
+
+        let greg = Calendar.current
+        let tripStart = greg.startOfDay(for: bundle.departureDate)
+        guard let tripEnd = greg.date(byAdding: .day, value: max(bundle.days, 1), to: tripStart) else { return }
+        let events = CalendarManager.shared.overlayEvents(start: tripStart, end: tripEnd, calendarIDs: ids)
+
+        var buckets: [Int: [CalendarOverlayEvent]] = [:]
+        for day in days {
+            guard let dayStart = greg.date(byAdding: .day, value: day.sortOrder, to: tripStart),
+                  let dayEnd = greg.date(byAdding: .day, value: 1, to: dayStart) else { continue }
+            let inDay = events
+                .filter { $0.startDate < dayEnd && $0.endDate > dayStart }   // 与当天区间相交（含跨天全天事件）
+                .sorted { a, b in
+                    if a.isAllDay != b.isAllDay { return a.isAllDay }         // 全天在前
+                    return a.startMinutes < b.startMinutes
+                }
+            if !inDay.isEmpty { buckets[day.sortOrder] = inDay }
+        }
+        overlayEventsByDay = buckets
     }
 
     /// 统一「+ 添加」入口（spec: itinerary-transport-lodging.md）：菜单选类型 → 地点 / 航班 / 火车 / 住宿。
@@ -756,6 +816,40 @@ private struct LodgingBannerRow: View {
         case .night:
             return String(format: NSLocalizedString("itinerary.lodging.nights_value", comment: ""), stay.nights)
         }
+    }
+}
+
+// MARK: - CalendarEventRow
+
+/// 只读日历事件叠加行（spec: itinerary-calendar-overlay.md）。视觉上和行程数据明确区分：
+/// rail 列用事件所属日历颜色的细竖条（不挂 marker 圆）+ 浅灰文字 + 右侧时间——
+/// 一眼读出「来自你的日历、不是你规划的行程」。
+private struct CalendarEventRow: View {
+    let event: CalendarOverlayEvent
+
+    private let railWidth: CGFloat = 30
+    private let railSpacing: CGFloat = 12
+
+    var body: some View {
+        HStack(spacing: railSpacing) {
+            // 日历色细竖条（替代停靠点的 marker 圆）：标识来源、落在 rail 列、与上下图标同心对齐。
+            Capsule()
+                .fill(event.tint)
+                .frame(width: 3, height: 15)
+                .frame(width: railWidth)
+            Text(event.title.isEmpty ? NSLocalizedString("itinerary.calendar.untitled", comment: "") : event.title)
+                .font(.system(.footnote, design: .rounded))
+                .foregroundStyle(.secondary)
+                .lineLimit(1)
+            Spacer(minLength: 8)
+            Text(event.isAllDay
+                 ? NSLocalizedString("itinerary.calendar.all_day", comment: "")
+                 : timeLabel(dayMinutes: event.startMinutes))
+                .font(.system(.caption, design: .rounded))
+                .foregroundStyle(.tertiary)
+        }
+        .padding(.vertical, 7)
+        .accessibilityElement(children: .combine)
     }
 }
 

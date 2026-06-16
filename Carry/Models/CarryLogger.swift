@@ -157,6 +157,12 @@ final class CarryLogger {
         case costRemoved               = "cost_removed"
         case preferredCurrencyChanged  = "preferred_currency_changed"
         case exchangeRateFetchFailed   = "exchange_rate_fetch_failed"  // 汇率拉取失败 → 费用折算降级/未计入
+
+        // 日历事件叠加层（spec: itinerary-calendar-overlay.md）
+        case calendarOverlayEnabled            = "calendar_overlay_enabled"
+        case calendarOverlayDisabled           = "calendar_overlay_disabled"
+        case calendarOverlayCalendarsSelected  = "calendar_overlay_calendars_selected"
+        case calendarOverlayAccessDenied       = "calendar_overlay_access_denied"
     }
 
     private static let errorEvents: Set<Event> = [
@@ -171,7 +177,7 @@ final class CarryLogger {
         .calendarSaveFailed, .liveActivityStartFailed,
         .reminderScheduleFailed, .apiTimeout, .apiError,
         .itineraryRouteCalcFailed, .itineraryImportFailed, .itineraryExportFailed,
-        .exchangeRateFetchFailed,
+        .exchangeRateFetchFailed, .calendarOverlayAccessDenied,
     ]
 
     private let sessionActiveKey = "carry_session_active"

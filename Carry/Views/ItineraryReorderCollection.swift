@@ -37,6 +37,9 @@ nonisolated enum ItineraryRowID: Hashable, Sendable {
     case transport(UUID)
     case lodging(stay: UUID, day: Int)
     case addStop(UUID)
+    /// 只读日历事件叠加行（spec: itinerary-calendar-overlay.md）。带「天序」维度保全局唯一
+    /// （跨多天的全天事件会在多个 section 出现，同 `.lodging` 的教训）。不可拖、非行程数据。
+    case calendarEvent(id: String, day: Int)
 }
 
 struct ItineraryReorderCollection: UIViewRepresentable {
@@ -54,6 +57,8 @@ struct ItineraryReorderCollection: UIViewRepresentable {
     let transportContent: (UUID) -> AnyView
     /// 住宿常驻条内容，入参为 (lodging stay id, 当前天序)。
     let lodgingContent: (UUID, Int) -> AnyView
+    /// 只读日历事件叠加行内容，入参为 (event id, 当前天序)。spec: itinerary-calendar-overlay.md
+    let calendarEventContent: (String, Int) -> AnyView
     let addStopContent: (UUID) -> AnyView
     let headerContent: (ItineraryDaySection) -> AnyView
     let onDelete: (UUID) -> Void
@@ -171,6 +176,8 @@ struct ItineraryReorderCollection: UIViewRepresentable {
                     cell.contentConfiguration = UIHostingConfiguration { self.parent.transportContent(id) }.margins(.all, 0)
                 case .lodging(let stay, let day):
                     cell.contentConfiguration = UIHostingConfiguration { self.parent.lodgingContent(stay, day) }.margins(.all, 0)
+                case .calendarEvent(let id, let day):
+                    cell.contentConfiguration = UIHostingConfiguration { self.parent.calendarEventContent(id, day) }.margins(.all, 0)
                 case .addStop(let dayID):
                     cell.contentConfiguration = UIHostingConfiguration { self.parent.addStopContent(dayID) }.margins(.all, 0)
                 }
@@ -315,7 +322,7 @@ struct ItineraryReorderCollection: UIViewRepresentable {
                         if lastWasStop { rows.append(.leg(sid)) }
                         rows.append(.stop(sid))
                         lastWasStop = true
-                    case .transport, .lodging:
+                    case .transport, .lodging, .calendarEvent:
                         rows.append(entry)
                         lastWasStop = false
                     default:

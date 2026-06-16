@@ -5,6 +5,21 @@
 import EventKit
 import UIKit
 import Foundation
+import SwiftUI
+
+// MARK: - CalendarOverlayEvent（只读叠加事件值类型，spec: itinerary-calendar-overlay.md）
+
+/// 从系统日历读出、铺进行程时间轴的只读事件。**永不进 model / 分享 / 导出 / 备份**——
+/// 它只是视图层的临时值，由构造保证不外泄（详见 spec 隐私红线）。
+struct CalendarOverlayEvent: Identifiable {
+    let id: String          // EKEvent.eventIdentifier
+    let title: String
+    let startDate: Date
+    let endDate: Date
+    let isAllDay: Bool
+    let tint: Color         // 事件所属日历的颜色
+    let startMinutes: Int   // 当天起始分钟（自午夜），全天事件 = -1
+}
 
 @MainActor
 final class CalendarManager {
@@ -16,6 +31,14 @@ final class CalendarManager {
     private let defaults = UserDefaults.standard
     private static let addedIdsKey = "calendarAddedTripIds"
     private static let calendarTitle = "Carry"
+
+    // 日历叠加层（spec: itinerary-calendar-overlay.md）
+    static let overlayEnabledKey = "calendar_overlay_enabled"
+    static let overlayCalendarIDsKey = "calendar_overlay_calendar_ids"
+
+    static func overlaySelectedCalendarIDs() -> Set<String> {
+        Set(UserDefaults.standard.stringArray(forKey: overlayCalendarIDsKey) ?? [])
+    }
 
     // MARK: - Permission
 
@@ -226,6 +249,48 @@ final class CalendarManager {
 
     private func saveAddedIds(_ ids: Set<String>) {
         defaults.set(Array(ids), forKey: Self.addedIdsKey)
+    }
+
+    // MARK: - Overlay（只读日历事件，spec: itinerary-calendar-overlay.md）
+
+    /// 可选日历列表（供设置多选）。排除 Carry 自己写入的日历。
+    func availableCalendars() -> [(id: String, title: String, tint: Color)] {
+        store.calendars(for: .event)
+            .filter { $0.title != Self.calendarTitle }
+            .map { (id: $0.calendarIdentifier, title: $0.title, tint: Color(cgColor: $0.cgColor)) }
+            .sorted { $0.title.localizedCaseInsensitiveCompare($1.title) == .orderedAscending }
+    }
+
+    /// 行程区间 [start, end) 内、所选日历的只读事件。
+    /// **排除 Carry 自写事件**（`carry://` scheme）避免回环；无权限 / 未选日历 → 空。
+    func overlayEvents(start: Date, end: Date, calendarIDs: Set<String>) -> [CalendarOverlayEvent] {
+        guard hasAccess, !calendarIDs.isEmpty else { return [] }
+        let cals = store.calendars(for: .event).filter { calendarIDs.contains($0.calendarIdentifier) }
+        guard !cals.isEmpty else { return [] }
+        let predicate = store.predicateForEvents(withStart: start, end: end, calendars: cals)
+        let greg = Calendar.current
+        return store.events(matching: predicate)
+            .filter { $0.url?.scheme != "carry" }
+            .map { ev in
+                let c = greg.dateComponents([.hour, .minute], from: ev.startDate)
+                return CalendarOverlayEvent(
+                    id: ev.eventIdentifier ?? UUID().uuidString,
+                    title: ev.title ?? "",
+                    startDate: ev.startDate,
+                    endDate: ev.endDate,
+                    isAllDay: ev.isAllDay,
+                    tint: Color(cgColor: ev.calendar.cgColor),
+                    startMinutes: ev.isAllDay ? -1 : (c.hour ?? 0) * 60 + (c.minute ?? 0)
+                )
+            }
+    }
+
+    /// 唤起系统日历到该事件所在日期（iOS 无公开的按事件 deep link，只能定位到日期）。
+    func openInSystemCalendar(_ event: CalendarOverlayEvent) {
+        let interval = Int(event.startDate.timeIntervalSinceReferenceDate)
+        if let url = URL(string: "calshow:\(interval)") {
+            UIApplication.shared.open(url)
+        }
     }
 }
 
