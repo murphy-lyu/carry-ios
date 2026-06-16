@@ -206,7 +206,11 @@ final class TripStore: ObservableObject {
     init() {
         self.context = ModelContext(CarryApp.container)
         self.isSceneCardDismissedGlobally = defaults.bool(forKey: Self.sceneCardDismissedGlobalKey)
-        self.isHomeEmptyStateMockEnabled = defaults.bool(forKey: Self.homeEmptyStateMockKey)
+        // 「模拟首页空态」是 DEBUG 预览开关，**仅本次会话有效、不跨启动持久化**——每次启动重置为关。
+        // 否则误开后值会存进 UserDefaults，每次启动都模拟空态（看着像白屏），而 Xcode 重装不清
+        // UserDefaults → 重装也不好（已踩坑）。预览是一次性操作，本就不该跨启动留存。
+        self.isHomeEmptyStateMockEnabled = false
+        defaults.removeObject(forKey: Self.homeEmptyStateMockKey)
         Task { @MainActor in
             fetchTrips()
             reconcileBackgroundFiles()
