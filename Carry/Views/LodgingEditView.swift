@@ -28,9 +28,9 @@ struct LodgingEditView: View {
     @State private var checkInDayOrder = 0
     @State private var nights = 1
     @State private var hasCheckInTime = false
-    @State private var checkInTime = Date()
+    @State private var checkInTime = LodgingEditView.noonToday
     @State private var hasCheckOutTime = false
-    @State private var checkOutTime = Date()
+    @State private var checkOutTime = LodgingEditView.noonToday
     @State private var confirmationCode = ""
     @State private var note = ""
     @State private var costAmountText = ""
@@ -167,6 +167,13 @@ struct LodgingEditView: View {
             return date.formatted(.dateTime.weekday(.abbreviated).month(.abbreviated).day())
         }
         return String(format: NSLocalizedString("itinerary.day.title", comment: ""), order + 1)
+    }
+
+    /// 新建住宿时 check-in/out 时间的默认值 = 当天 12:00（多数酒店标准入住/退房在中午前后，
+    /// 比「取当前时刻」更贴合常见情况）。只用其时钟时间（minutes(from:) 取 时:分），日期部分无意义。
+    private static var noonToday: Date {
+        let cal = Calendar.current
+        return cal.date(byAdding: .hour, value: 12, to: cal.startOfDay(for: Date())) ?? Date()
     }
 
     private func minutes(from date: Date) -> Int {

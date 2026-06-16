@@ -81,6 +81,32 @@ enum CurrencyCatalog {
         return Double(trimmed.replacingOccurrences(of: ",", with: ".")) ?? 0
     }
 
+    /// 金额输入净化（locale 感知）：只保留数字 + 单一小数分隔符 + 至多 2 位小数；
+    /// 其它字符（字母/符号/空格）一律丢弃。在数据层兜住——硬件键盘（模拟器）、粘贴、
+    /// 异常 locale 都进不来非法字符（而非只靠 `.decimalPad` 的软键盘约束）。幂等。
+    static func sanitizeAmountInput(_ text: String) -> String {
+        let sep: Character = (Locale.current.decimalSeparator ?? ".").first ?? "."
+        var out = ""
+        var hasSep = false
+        var fractionDigits = 0
+        for ch in text {
+            if ch.isASCII && ch.isNumber {
+                if hasSep {
+                    guard fractionDigits < 2 else { continue }   // 限 2 位小数
+                    fractionDigits += 1
+                }
+                out.append(ch)
+            } else if ch == sep || ch == "." || ch == "," {        // 任一分隔符归一到当前 locale
+                guard !hasSep else { continue }                    // 只允许一个
+                if out.isEmpty { out.append("0") }                 // 前导分隔符 → "0."
+                out.append(sep)
+                hasSep = true
+            }
+            // 其余字符丢弃
+        }
+        return out
+    }
+
     /// 币种本地化名（"日元" / "Japanese Yen"）；取不到回退 code。
     static func localizedName(for code: String) -> String {
         Locale.current.localizedString(forCurrencyCode: code.uppercased()) ?? code.uppercased()

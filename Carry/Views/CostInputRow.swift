@@ -32,11 +32,23 @@ struct CostInputRow: View {
                 .font(.body)
                 .foregroundStyle(.primary)
             Spacer(minLength: 12)
-            TextField("cost.amount.placeholder", text: $amountText)
-                .keyboardType(.decimalPad)
-                .multilineTextAlignment(.trailing)
-                .font(.system(.body, design: .rounded))
-                .frame(maxWidth: 130)
+            // 货币符号紧贴金额（¥ 1000）：即时识别币种、更专业。符号取生效币种、secondary 不抢数字。
+            HStack(spacing: 3) {
+                Text(CurrencyCatalog.symbol(for: effectiveCode))
+                    .font(.system(.body, design: .rounded))
+                    .foregroundStyle(.secondary)
+                TextField("cost.amount.placeholder", text: $amountText)
+                    .keyboardType(.decimalPad)
+                    .multilineTextAlignment(.trailing)
+                    .font(.system(.body, design: .rounded))
+                    .fixedSize()                       // 贴着符号、按内容定宽，不留尾隙
+                    // 数据层净化：只收数字+单一小数点+≤2 位；挡住字母/粘贴/硬件键盘异常输入（根因解）。
+                    .onChange(of: amountText) { _, newValue in
+                        let clean = CurrencyCatalog.sanitizeAmountInput(newValue)
+                        if clean != newValue { amountText = clean }
+                    }
+            }
+            .frame(maxWidth: 160, alignment: .trailing)
             Button {
                 showCurrencyPicker = true
             } label: {
