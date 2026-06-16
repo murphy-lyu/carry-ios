@@ -26,6 +26,8 @@ struct Airport: Decodable, Identifiable, Hashable, Sendable {
     let large: Bool
     let hans: String?
     let hant: String?
+    /// 城市中文别名（如 JFK→["纽约","紐約"]），仅供搜索匹配、不用于显示。
+    let cs: [String]?
 
     var id: String { iata }
 
@@ -108,9 +110,12 @@ actor AirportDatabase {
         if !a.icao.isEmpty, a.icao.hasPrefix(upper) { return 2 }
         let cityLower = a.city.lowercased()
         if cityLower.hasPrefix(lower) { return 3 }
+        // 中文城市别名精确命中（如「纽约」→ JFK；机场英文名/中文名都不含中文城市时的关键补全）。
+        if let cs = a.cs, cs.contains(q) { return 3 }
         // 中文名匹配（机场中文名含城市，如「昆明长水…」含「昆明」，城市搜索一并覆盖）。
         if let hans = a.hans, hans.contains(q) { return 4 }
         if let hant = a.hant, hant.contains(q) { return 4 }
+        if let cs = a.cs, cs.contains(where: { $0.contains(q) }) { return 4 }
         if cityLower.contains(lower) { return 5 }
         if a.name.lowercased().contains(lower) { return 6 }
         return nil

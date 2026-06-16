@@ -10,8 +10,11 @@
 - **🟢 航班机场搜索根治（新功能，spec: `itinerary-airport-search.md`，Status: Implemented 待验收）**：原问题「添加航班搜不到国外机场」。**根因**：航班机场选点复用通用地图 POI 搜索（`MKLocalSearchCompleter`），大陆设备 MapKit POI 由 Apple 自动切高德、境外覆盖差且区域锁定、App 无法切供应商；叠加 150km 目的地偏置。**解**：航班机场改走**内置机场数据库**（`AirportDatabase` actor + `AirportSearchSheet`），全球可搜、离线、不受设备区域影响，并回填 IATA + 坐标 + IANA 时区（`TransportSegment` 早预留的 `fromCode`/`fromTimeZoneId` 首次真正被填）。非航班交通方式仍走原 `ItineraryPlaceSearchSheet`。
 - **数据集 `Carry/Resources/airports.json`**（约 4100+ 机场 / ~850KB）：OurAirports（列表，public domain）+ OpenFlights（IANA 时区，ODbL）+ Wikidata（简繁中文名，CC0）。构建脚本 + 来源/许可见 `scripts/airports/`。裁剪=有定期航班的机场+所有大型机场；时区覆盖 ~92%（单时区国家安全兜底，多时区国家留空不猜）；中文名覆盖 ~76%。
 - **中文搜索/显示**：为防「中文搜国内机场回归」，bundle 简繁中文名，**搜索匹配中文 + 按设备语言显示**（中文设备显中文、其它显英文原名）。修订了 spec 里原「英文原名」的决定（前提已变：本就必须取中文名）。
-- **本地化**：新增 5 个 `airport.search.*` key，9 语言齐全、中文全角、日语常体、韩语해요体（`Carry/Localizable.xcstrings`，surgical 文本插入、未触发全文件重排）。
-- **⚠️ 待办**：App「关于/致谢」需补 OpenFlights 数据署名（ODbL 要求）；PKX/TFU 等新机场时区暂空（OpenFlights 旧数据 + 中国多时区不兜底，显示可降级，非阻塞）。
+- **城市中文别名（搜索补全，如「纽约」→ JFK）**：境外机场中文名常不含中文城市（JFK=约翰·肯尼迪国际机场，不含「纽约」），纯靠机场名会漏。从 Wikidata `P931`（机场服务城市）取简繁城市名作 `cs` 别名字段（仅匹配、不显示，覆盖 ~2800 机场）。`AirportDatabase.matchScore` 纳入 `cs`。
+- **数据署名**：`AboutView` 新增「数据来源」卡（OurAirports / OpenFlights / Wikidata + 许可），满足 OpenFlights ODbL 署名要求。新增 `about.data` key（9 语言）。
+- **本地化**：新增 `airport.search.*`（5 个）+ `about.data`，9 语言齐全、中文全角、日语常体、韩语해요体。surgical 文本插入。
+- **⚠️ 仓库提示**：`Carry/Localizable.xcstrings` 在仓库里是「压缩式」序列化（非 Xcode 规范式），每次 `xcodebuild` 后 Xcode 会把整文件重排成规范式 → 1.5 万行 diff 噪声。本轮已 `git checkout` 丢弃该重排、保持最小 diff。建议择机单独做一次「整文件规范化」提交，之后构建就不再 churn。
+- **遗留**：PKX/TFU 等新机场时区暂空（OpenFlights 旧数据 + 中国多时区不兜底，显示可降级，非阻塞）。
 
 ## 上次改动摘要（日历事件叠加层 + 一连串交互/视觉打磨 · 2026-06-16 晚）
 

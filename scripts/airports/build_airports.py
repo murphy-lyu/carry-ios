@@ -78,6 +78,19 @@ try:
 except FileNotFoundError:
     print("cn_names.json not found — skipping Chinese names")
 
+# 城市中文别名（搜索用，如 JFK→纽约），由 fetch_city_cn.py 取自 Wikidata P931；仅匹配、不显示。
+try:
+    city = json.load(open("/tmp/city_cn.json", encoding="utf-8"))
+    cs_count = 0
+    for a in airports:
+        aliases = city.get(a["iata"])
+        if aliases:
+            a["cs"] = aliases
+            cs_count += 1
+    print(f"city aliases merged: {cs_count}")
+except FileNotFoundError:
+    print("city_cn.json not found — skipping city aliases")
+
 airports.sort(key=lambda a: a["iata"])
 out = "/Users/murphy/Documents/Projects/Carry/Carry/Resources/airports.json"
 import os

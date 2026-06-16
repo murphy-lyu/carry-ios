@@ -77,6 +77,15 @@ struct AboutView: View {
                     }
                 }
 
+                // 机场数据来源署名：OpenFlights 为 ODbL，要求标注来源。
+                moduleCard(title: "about.data") {
+                    VStack(spacing: 0) {
+                        socialRow(label: "OurAirports", handle: "Public Domain", url: "https://ourairports.com/data/")
+                        socialRow(label: "OpenFlights", handle: "ODbL", url: "https://openflights.org/data.html")
+                        socialRow(label: "Wikidata", handle: "CC0", url: "https://www.wikidata.org")
+                    }
+                }
+
                 VStack(spacing: 12) {
                     HStack(spacing: 6) {
                         Text("about.madeWith")
