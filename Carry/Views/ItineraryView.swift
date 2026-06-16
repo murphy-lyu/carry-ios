@@ -402,7 +402,8 @@ struct ItineraryView: View {
             let phase: LodgingBannerRow.Phase =
                 dayOrder == stay.checkInDayOrder ? .checkIn :
                 dayOrder == stay.checkOutDayOrder ? .checkOut : .night
-            LodgingBannerRow(stay: stay, phase: phase)
+            LodgingBannerRow(stay: stay, phase: phase,
+                             dayColor: ItineraryDayPalette.color(forDayIndex: dayOrder))
                 .padding(.horizontal, 16)
                 .contentShape(Rectangle())
                 .onTapGesture { activeSheet = .editLodging(stayID) }
@@ -700,6 +701,7 @@ private struct LodgingBannerRow: View {
     enum Phase { case checkIn, night, checkOut }
     let stay: LodgingStay
     let phase: Phase
+    let dayColor: Color   // 接入按天分色：床图标染当天色，让住宿进入 Carry 日间色系、不再孤立成灰
 
     private let railWidth: CGFloat = 30
     private let railSpacing: CGFloat = 12
@@ -715,7 +717,9 @@ private struct LodgingBannerRow: View {
         HStack(spacing: railSpacing) {
             Image(systemName: phase == .night ? "bed.double" : "bed.double.fill")
                 .font(.system(size: 13))
-                .foregroundStyle(phase == .night ? .tertiary : .secondary)
+                // 染当天色（入住/退房实一档、过夜淡一档），与停靠点实心彩圆/交通描边彩圆成同色三档；
+                // 仍比停靠点轻（裸图标 vs 实心圆），不抢戏。
+                .foregroundStyle(dayColor.opacity(phase == .night ? 0.5 : 1.0))
                 .frame(width: railWidth)
             Text(titleText)
                 .font(.system(.footnote, design: .rounded).weight(phase == .night ? .regular : .medium))
