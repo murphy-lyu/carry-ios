@@ -45,9 +45,9 @@ struct TransportDetailView: View {
 
     var body: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: 22) {
+            VStack(alignment: .leading, spacing: 16) {
                 header
-                infoRows
+                infoCard
                 editButton
             }
             .padding(20)
@@ -71,7 +71,6 @@ struct TransportDetailView: View {
             iconSystemName: segment.mode.symbolName,
             iconTint: dayColor,
             title: titleText,
-            onEdit: { editing = true },
             onDelete: deleteSegment,
             onClose: { dismiss() }
         )
@@ -84,39 +83,34 @@ struct TransportDetailView: View {
         dismiss()
     }
 
-    @ViewBuilder
-    private var infoRows: some View {
-        VStack(alignment: .leading, spacing: 14) {
-            if let dep = endpointText(name: segment.fromName, code: segment.fromCode,
-                                      minutes: segment.departLocalMinutes, dayOffset: 0,
-                                      terminal: segment.fromTerminal) {
-                LabeledDetailRow(icon: "arrow.up.forward", labelKey: "itinerary.transport.section.depart", value: dep)
-            }
-            if let arr = endpointText(name: segment.toName, code: segment.toCode,
-                                      minutes: segment.arriveLocalMinutes,
-                                      dayOffset: segment.arriveDayOrder - segment.departDayOrder,
-                                      terminal: segment.toTerminal) {
-                LabeledDetailRow(icon: "arrow.down.forward", labelKey: "itinerary.transport.section.arrive", value: arr)
-            }
-            if !segment.seat.isEmpty {
-                DetailInfoRow(icon: "chair", text: segment.seat)
-            }
-            if !segment.confirmationCode.isEmpty {
-                CopyableDetailRow(icon: "ticket", text: segment.confirmationCode)   // 只显内容、可点复制
-            }
-            if segment.hasCost {
-                DetailInfoRow(icon: "creditcard", text: CurrencyCatalog.format(segment.costAmount, code: segment.costCurrencyCode))
-            }
-            if !segment.note.isEmpty {
-                HStack(alignment: .top, spacing: 12) {
-                    Image(systemName: "note.text")
-                        .font(.system(size: 15)).foregroundStyle(.secondary).frame(width: 22)
-                        .accessibilityHidden(true)
-                    ExpandableText(text: segment.note, font: .system(.subheadline, design: .rounded), collapsedLineLimit: 6)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                }
-            }
+    /// 信息分组卡：每行带标签、行间细分隔、有值才显（学 Tripsy 的高可读）。
+    private var infoCard: some View {
+        var rows: [AnyView] = []
+        if let dep = endpointText(name: segment.fromName, code: segment.fromCode,
+                                  minutes: segment.departLocalMinutes, dayOffset: 0,
+                                  terminal: segment.fromTerminal) {
+            rows.append(AnyView(LabeledDetailRow(icon: "arrow.up.forward", labelKey: "itinerary.transport.section.depart", value: dep)))
         }
+        if let arr = endpointText(name: segment.toName, code: segment.toCode,
+                                  minutes: segment.arriveLocalMinutes,
+                                  dayOffset: segment.arriveDayOrder - segment.departDayOrder,
+                                  terminal: segment.toTerminal) {
+            rows.append(AnyView(LabeledDetailRow(icon: "arrow.down.forward", labelKey: "itinerary.transport.section.arrive", value: arr)))
+        }
+        if !segment.seat.isEmpty {
+            rows.append(AnyView(LabeledDetailRow(icon: "chair", labelKey: "itinerary.transport.field.seat", value: segment.seat)))
+        }
+        if !segment.confirmationCode.isEmpty {
+            rows.append(AnyView(CopyableDetailRow(icon: "ticket", labelKey: "itinerary.transport.field.confirmation", value: segment.confirmationCode)))
+        }
+        if segment.hasCost {
+            rows.append(AnyView(LabeledDetailRow(icon: "creditcard", labelKey: "cost.field.label",
+                                                 value: CurrencyCatalog.format(segment.costAmount, code: segment.costCurrencyCode))))
+        }
+        if !segment.note.isEmpty {
+            rows.append(AnyView(NoteDetailRow(text: segment.note)))
+        }
+        return Group { if !rows.isEmpty { DetailRowGroup(rows: rows) } }   // 裸交通段无附加信息 → 不显空卡
     }
 
     private var editButton: some View {

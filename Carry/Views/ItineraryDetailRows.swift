@@ -2,22 +2,19 @@
 //  ItineraryDetailRows.swift
 //  Carry
 //
-//  行程「只读详情」页共用的信息行组件（地点 / 住宿 / 交通详情共用，spec: itinerary-entity-detail-unify.md）。
-//  - DetailInfoRow：图标 + 内容（内容自明、不需标签）。
-//  - LabeledDetailRow：图标 + 小标签 + 值（仅用于需消歧的字段，如入住/退房两个日期、出发/到达）。
-//  - CopyableDetailRow：图标 + 内容 + 点按复制（地址、确认号等高频要复制的值）。
+//  行程「只读详情」页共用组件（地点 / 住宿 / 交通详情共用，spec: itinerary-entity-detail-unify.md）。
+//  可读性改造（学 Tripsy）：每行「图标 + 小标签 + 值」（不再纯图标）；信息裹进圆角分组卡、
+//  行间细分隔线、加大留白。`···` 菜单只留「移除」（编辑用底部主按钮，去冗余）。
 //
 
 import SwiftUI
 
-/// 详情页头部：图标圈 + 标题 + 「···」操作菜单（编辑 / 删除）+ 关闭 X。
-/// 地点 / 住宿 / 交通详情共用。删除提到 `···` 一步可达（不再藏在编辑页里），破坏性红色、
-/// 与底部 Edit 主按钮分工：常做的编辑在底部单手可达，破坏性删除收进菜单、好找又不易误触。
+/// 详情页头部：图标圈 + 标题 + 「···」菜单（仅「移除」，破坏性，带二次确认）+ 关闭 X。
+/// 编辑入口在底部主按钮（单手可达），不在此重复。
 struct DetailSheetHeader: View {
     let iconSystemName: String
     let iconTint: Color
     let title: String
-    let onEdit: () -> Void
     let onDelete: () -> Void
     let onClose: () -> Void
 
@@ -39,7 +36,6 @@ struct DetailSheetHeader: View {
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .padding(.top, 6)
             Menu {
-                Button { onEdit() } label: { Label("itinerary.stop.detail.edit", systemImage: "pencil") }
                 Button(role: .destructive) { confirmingDelete = true } label: {
                     Label("common.remove", systemImage: "trash")
                 }
@@ -51,14 +47,13 @@ struct DetailSheetHeader: View {
                 .buttonStyle(.plain)
                 .accessibilityLabel(Text("common.close"))
         }
-        // 二次确认：正式 alert（居中弹窗），柔和通用文案；保证「取消 + 移除」两按钮各设备恒在。
+        // 移除二次确认：柔和通用文案 + 取消/移除两按钮，各设备恒在。
         .alert(Text("itinerary.detail.remove_confirm"), isPresented: $confirmingDelete) {
             Button("common.cancel", role: .cancel) {}
             Button("common.remove", role: .destructive) { onDelete() }
         }
     }
 
-    /// 30pt 视觉玻璃圆 + 44pt 触达，与全屏地图 / 设置的圆形按钮一致。
     private func circleGlyph(_ name: String) -> some View {
         Image(systemName: name)
             .font(.system(size: 13, weight: .semibold))
@@ -70,25 +65,27 @@ struct DetailSheetHeader: View {
     }
 }
 
-/// 图标 + 内容。内容靠图标表意（费用/晚数等），不加标签——与全 app 详情页「只显内容」一致。
-struct DetailInfoRow: View {
-    let icon: String
-    let text: String
+/// 信息分组卡：把若干行裹进圆角卡，行间用细分隔线（左缩进对齐文字列），统一留白。
+/// 行本身自带上下内边距（成「单元格」），此处只负责容器 + 分隔线。
+struct DetailRowGroup: View {
+    let rows: [AnyView]
 
     var body: some View {
-        HStack(alignment: .top, spacing: 12) {
-            Image(systemName: icon)
-                .font(.system(size: 15)).foregroundStyle(.secondary).frame(width: 22)
-                .accessibilityHidden(true)
-            Text(text)
-                .font(.system(.subheadline, design: .rounded))
-                .foregroundStyle(.primary)
-                .frame(maxWidth: .infinity, alignment: .leading)
+        VStack(spacing: 0) {
+            ForEach(rows.indices, id: \.self) { i in
+                if i > 0 { Divider().padding(.leading, 34) }
+                rows[i]
+            }
         }
+        .padding(.horizontal, 14)
+        .background(
+            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                .fill(Color(.secondarySystemBackground))
+        )
     }
 }
 
-/// 图标 + 小标签 + 值。仅用于**需消歧**的字段：入住/退房（两个日期不标会混）、出发/到达。
+/// 带标签的信息行：图标 + 小标签（上）+ 值（下）。标签让每行自解释（学 Tripsy）。
 struct LabeledDetailRow: View {
     let icon: String
     let labelKey: String
@@ -98,8 +95,9 @@ struct LabeledDetailRow: View {
         HStack(alignment: .top, spacing: 12) {
             Image(systemName: icon)
                 .font(.system(size: 15)).foregroundStyle(.secondary).frame(width: 22)
+                .padding(.top, 1)
                 .accessibilityHidden(true)
-            VStack(alignment: .leading, spacing: 1) {
+            VStack(alignment: .leading, spacing: 2) {
                 Text(LocalizedStringKey(labelKey))
                     .font(.system(.caption, design: .rounded)).foregroundStyle(.secondary)
                 Text(value)
@@ -107,21 +105,22 @@ struct LabeledDetailRow: View {
             }
             .frame(maxWidth: .infinity, alignment: .leading)
         }
+        .padding(.vertical, 11)
         .accessibilityElement(children: .combine)
     }
 }
 
-/// 图标 + 内容 + 点按复制（带触感 + 「已复制」反馈）。用于地址、确认号等高频复制值——
-/// 如把确认号发给同行伙伴先办入住。复用既有 `address_copied` / `copy_hint` 文案。
+/// 带标签 + 点按复制的信息行（地址、确认号等高频复制值）。触感 + 「已复制」反馈。
 struct CopyableDetailRow: View {
     let icon: String
-    let text: String
+    let labelKey: String
+    let value: String
 
     @State private var copied = false
 
     var body: some View {
         Button {
-            UIPasteboard.general.string = text
+            UIPasteboard.general.string = value
             UIImpactFeedbackGenerator(style: .light).impactOccurred()
             withAnimation(.easeInOut(duration: 0.2)) { copied = true }
             Task {
@@ -132,11 +131,15 @@ struct CopyableDetailRow: View {
             HStack(alignment: .top, spacing: 12) {
                 Image(systemName: icon)
                     .font(.system(size: 15)).foregroundStyle(.secondary).frame(width: 22)
+                    .padding(.top, 1)
                     .accessibilityHidden(true)
-                Text(text)
-                    .font(.system(.subheadline, design: .rounded))
-                    .foregroundStyle(.primary)
-                    .frame(maxWidth: .infinity, alignment: .leading)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(LocalizedStringKey(labelKey))
+                        .font(.system(.caption, design: .rounded)).foregroundStyle(.secondary)
+                    Text(value)
+                        .font(.system(.subheadline, design: .rounded)).foregroundStyle(.primary)
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
                 if copied {
                     HStack(spacing: 3) {
                         Image(systemName: "checkmark")
@@ -148,13 +151,35 @@ struct CopyableDetailRow: View {
                 } else {
                     Image(systemName: "doc.on.doc")
                         .font(.system(size: 13)).foregroundStyle(.tertiary)
+                        .padding(.top, 1)
                 }
             }
-            .frame(minHeight: 28)
+            .padding(.vertical, 11)
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
-        .accessibilityLabel(Text(text))
+        .accessibilityLabel(Text(value))
         .accessibilityHint(Text("itinerary.stop.detail.copy_hint"))
+    }
+}
+
+/// 备注行：图标 + 「备注」标签 + 可展开/收起长文（`ExpandableText`，可长按选取复制）。
+struct NoteDetailRow: View {
+    let text: String
+
+    var body: some View {
+        HStack(alignment: .top, spacing: 12) {
+            Image(systemName: "note.text")
+                .font(.system(size: 15)).foregroundStyle(.secondary).frame(width: 22)
+                .padding(.top, 1)
+                .accessibilityHidden(true)
+            VStack(alignment: .leading, spacing: 2) {
+                Text("itinerary.transport.field.note")
+                    .font(.system(.caption, design: .rounded)).foregroundStyle(.secondary)
+                ExpandableText(text: text, font: .system(.subheadline, design: .rounded), collapsedLineLimit: 6)
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+        }
+        .padding(.vertical, 11)
     }
 }

@@ -1052,7 +1052,6 @@ struct StopDetailView: View {
     @EnvironmentObject var store: TripStore
     @Environment(\.dismiss) private var dismiss
     @State private var editing = false
-    @State private var addressCopied = false
     @State private var contentHeight: CGFloat = 0
 
     /// sheet 高度贴着内容：稀疏地点不留大片空白（看着「刚好」而非「空」），内容多则自然撑大、可拖到大屏。
@@ -1067,9 +1066,9 @@ struct StopDetailView: View {
         // 不套 NavigationStack：那会带来一条「无标题、只挂个 X」的空导航栏、白占顶部。改把关闭 X 内联进
         // 头部行（见 header），顶部由「名称 + X」填满（对标 Apple 地图地点卡），不再空旷。编辑在底部。
         ScrollView {
-            VStack(alignment: .leading, spacing: 22) {
+            VStack(alignment: .leading, spacing: 16) {
                 header
-                infoRows
+                infoCard
                 navModule
                 editButton
             }
@@ -1117,7 +1116,6 @@ struct StopDetailView: View {
             iconSystemName: stop.category.symbolName,
             iconTint: dayColor,
             title: stop.name,
-            onEdit: { editing = true },
             onDelete: deleteStop,
             onClose: { dismiss() }
         )
@@ -1130,91 +1128,30 @@ struct StopDetailView: View {
         dismiss()
     }
 
+    /// 信息分组卡：每行带标签、行间细分隔、有值才显（学 Tripsy 的高可读）。裸地点（无任何附加信息）→ 不显空卡。
     @ViewBuilder
-    private var infoRows: some View {
-        VStack(alignment: .leading, spacing: 14) {
-            if stop.plannedStartMinutes >= 0 {
-                detailRow(icon: "clock", text: timeRangeLabel)
-            }
-            if stop.hasCost {
-                // 行内显真实付款币种（不折算）；折算只在 Trip Book 汇总层。spec: itinerary-cost-tracking.md
-                detailRow(icon: "creditcard", text: CurrencyCatalog.format(stop.costAmount, code: stop.costCurrencyCode))
-            }
-            if stop.hasCoordinate && !stop.address.isEmpty {
-                addressRow
-            }
-            if !stop.note.isEmpty {
-                // 备注可任意长 → 默认折叠 6 行 + 展开/收起，避免长备注撑满详情、把导航模块挤到底。
-                HStack(alignment: .top, spacing: 12) {
-                    Image(systemName: "note.text")
-                        .font(.system(size: 15))
-                        .foregroundStyle(.secondary)
-                        .frame(width: 22)
-                        .accessibilityHidden(true)
-                    ExpandableText(
-                        text: stop.note,
-                        font: .system(.subheadline, design: .rounded),
-                        collapsedLineLimit: 6
-                    )
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                }
-            }
-        }
+    private var infoCard: some View {
+        let rows = infoRowViews
+        if !rows.isEmpty { DetailRowGroup(rows: rows) }
     }
 
-    /// 地址行：点一下复制地址（发给同行 / 粘进打车 App 的真实高频需求）。带触感 + 短暂「已复制」反馈
-    /// + 常驻 copy 图标提示可点。VoiceOver：朗读地址 + 「复制地址」hint。
-    private var addressRow: some View {
-        Button {
-            UIPasteboard.general.string = stop.address
-            UIImpactFeedbackGenerator(style: .light).impactOccurred()
-            withAnimation(.easeInOut(duration: 0.2)) { addressCopied = true }
-            Task {
-                try? await Task.sleep(for: .seconds(1.6))
-                withAnimation(.easeInOut(duration: 0.2)) { addressCopied = false }
-            }
-        } label: {
-            HStack(alignment: .top, spacing: 12) {
-                Image(systemName: "mappin.and.ellipse")
-                    .font(.system(size: 15)).foregroundStyle(.secondary).frame(width: 22)
-                    .accessibilityHidden(true)
-                Text(stop.address)
-                    .font(.system(.subheadline, design: .rounded))
-                    .foregroundStyle(.primary)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                if addressCopied {
-                    HStack(spacing: 3) {
-                        Image(systemName: "checkmark")
-                        Text("itinerary.stop.detail.address_copied")
-                    }
-                    .font(.system(.caption, design: .rounded).weight(.medium))
-                    .foregroundStyle(.green)
-                    .transition(.opacity)
-                } else {
-                    Image(systemName: "doc.on.doc")
-                        .font(.system(size: 13)).foregroundStyle(.tertiary)
-                }
-            }
-            .frame(minHeight: 28)        // ≥44pt 触达：行有上下内边距、整体可点区充裕
-            .contentShape(Rectangle())
+    private var infoRowViews: [AnyView] {
+        var rows: [AnyView] = []
+        if stop.plannedStartMinutes >= 0 {
+            rows.append(AnyView(LabeledDetailRow(icon: "clock", labelKey: "itinerary.transport.field.time", value: timeRangeLabel)))
         }
-        .buttonStyle(.plain)
-        .accessibilityLabel(Text(stop.address))
-        .accessibilityHint(Text("itinerary.stop.detail.copy_hint"))
-    }
-
-    private func detailRow(icon: String, text: String) -> some View {
-        HStack(alignment: .top, spacing: 12) {
-            Image(systemName: icon)
-                .font(.system(size: 15))
-                .foregroundStyle(.secondary)
-                .frame(width: 22)
-                .accessibilityHidden(true)
-            Text(text)
-                .font(.system(.subheadline, design: .rounded))
-                .foregroundStyle(.primary)
-                .frame(maxWidth: .infinity, alignment: .leading)
+        if stop.hasCost {
+            // 真实付款币种（不折算）；折算只在 Trip Book 汇总层。spec: itinerary-cost-tracking.md
+            rows.append(AnyView(LabeledDetailRow(icon: "creditcard", labelKey: "cost.field.label",
+                                                 value: CurrencyCatalog.format(stop.costAmount, code: stop.costCurrencyCode))))
         }
+        if stop.hasCoordinate && !stop.address.isEmpty {
+            rows.append(AnyView(CopyableDetailRow(icon: "mappin.and.ellipse", labelKey: "itinerary.lodging.field.address", value: stop.address)))
+        }
+        if !stop.note.isEmpty {
+            rows.append(AnyView(NoteDetailRow(text: stop.note)))
+        }
+        return rows
     }
 
     /// 路程 / 导航模块：导航到本地点 + 到下一站直线距离。无坐标 / 无导航 App 不显示。

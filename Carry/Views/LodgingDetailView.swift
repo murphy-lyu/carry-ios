@@ -53,9 +53,9 @@ struct LodgingDetailView: View {
 
     var body: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: 22) {
+            VStack(alignment: .leading, spacing: 16) {
                 header
-                infoRows
+                infoCard
                 if let coord = stay.coordinate, !navApps.isEmpty {
                     DirectionsModule(coordinate: coord, name: displayName, navApps: navApps, tint: .accentColor)
                 }
@@ -82,7 +82,6 @@ struct LodgingDetailView: View {
             iconSystemName: "bed.double.fill",
             iconTint: dayColor,
             title: displayName,
-            onEdit: { editing = true },
             onDelete: deleteStay,
             onClose: { dismiss() }
         )
@@ -93,32 +92,28 @@ struct LodgingDetailView: View {
         dismiss()
     }
 
-    @ViewBuilder
-    private var infoRows: some View {
-        VStack(alignment: .leading, spacing: 14) {
-            // 入住 / 退房各成一行、各带「日期（+时间）」——绑定到具体哪天，一眼看懂（对标 Tripsy）。
-            LabeledDetailRow(icon: "calendar", labelKey: "itinerary.lodging.event.checkin", value: checkInValue)
-            LabeledDetailRow(icon: "calendar", labelKey: "itinerary.lodging.event.checkout", value: checkOutValue)
-            DetailInfoRow(icon: "moon", text: String(format: NSLocalizedString("itinerary.lodging.nights_value", comment: ""), stay.nights))
-            if stay.hasCost {
-                DetailInfoRow(icon: "creditcard", text: CurrencyCatalog.format(stay.costAmount, code: stay.costCurrencyCode))
-            }
-            if !stay.confirmationCode.isEmpty {
-                CopyableDetailRow(icon: "ticket", text: stay.confirmationCode)   // 只显内容、可点复制
-            }
-            if stay.hasCoordinate && !stay.address.isEmpty {
-                CopyableDetailRow(icon: "mappin.and.ellipse", text: stay.address)
-            }
-            if !stay.note.isEmpty {
-                HStack(alignment: .top, spacing: 12) {
-                    Image(systemName: "note.text")
-                        .font(.system(size: 15)).foregroundStyle(.secondary).frame(width: 22)
-                        .accessibilityHidden(true)
-                    ExpandableText(text: stay.note, font: .system(.subheadline, design: .rounded), collapsedLineLimit: 6)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                }
-            }
+    /// 信息分组卡：每行带标签、行间细分隔、有值才显（学 Tripsy 的高可读）。
+    private var infoCard: some View {
+        var rows: [AnyView] = [
+            // 入住 / 退房各带「日期（+时间）」，绑定到具体哪天。
+            AnyView(LabeledDetailRow(icon: "calendar", labelKey: "itinerary.lodging.event.checkin", value: checkInValue)),
+            AnyView(LabeledDetailRow(icon: "calendar", labelKey: "itinerary.lodging.event.checkout", value: checkOutValue)),
+            AnyView(LabeledDetailRow(icon: "moon", labelKey: "itinerary.lodging.field.nights", value: "\(stay.nights)")),
+        ]
+        if stay.hasCost {
+            rows.append(AnyView(LabeledDetailRow(icon: "creditcard", labelKey: "cost.field.label",
+                                                 value: CurrencyCatalog.format(stay.costAmount, code: stay.costCurrencyCode))))
         }
+        if !stay.confirmationCode.isEmpty {
+            rows.append(AnyView(CopyableDetailRow(icon: "ticket", labelKey: "itinerary.transport.field.confirmation", value: stay.confirmationCode)))
+        }
+        if stay.hasCoordinate && !stay.address.isEmpty {
+            rows.append(AnyView(CopyableDetailRow(icon: "mappin.and.ellipse", labelKey: "itinerary.lodging.field.address", value: stay.address)))
+        }
+        if !stay.note.isEmpty {
+            rows.append(AnyView(NoteDetailRow(text: stay.note)))
+        }
+        return DetailRowGroup(rows: rows)
     }
 
     private var editButton: some View {
