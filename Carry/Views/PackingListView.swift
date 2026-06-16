@@ -205,6 +205,15 @@ struct PackingListView: View {
                                 Label("Edit sections", systemImage: "arrow.up.arrow.down")
                             }
                         }
+                        // 行程面专属操作置顶（与打包面「清单操作置顶」同构）：「地点排序」是本屏规划主任务——
+                        // 用户常先一口气加很多地点、再统一划分到每天，故置于菜单第一位。仅 ≥2 地点时出现。
+                        if detailTab == .itinerary && itineraryStopCount >= 2 {
+                            Button {
+                                withAnimation(.spring(duration: 0.3, bounce: 0.2)) { isReorderingItinerary = true }
+                            } label: {
+                                Label("itinerary.reorder.menu", systemImage: "arrow.up.arrow.down")
+                            }
+                        }
                         // 共享「行程级操作」（两个 tab 通用、顺序一致）：编辑行程 → 行程提醒 → 添加背景图。
                         Button {
                             showEditSheet = true
@@ -229,16 +238,8 @@ struct PackingListView: View {
                                 Label("trip.background.add", systemImage: "photo")
                             }
                         }
-                        // 行程专属操作（行程规划面）。「地点排序」置顶——与每日 Optimize（自动）成对：
-                        // 手动排（地点排序）｜自动排（Optimize）。仅 ≥2 地点时出现（有可排空间）。
+                        // 行程专属「分享/导出」（行程规划面）——「地点排序」已提到菜单顶部（本面主任务）。
                         if detailTab == .itinerary {
-                            if itineraryStopCount >= 2 {
-                                Button {
-                                    withAnimation(.spring(duration: 0.3, bounce: 0.2)) { isReorderingItinerary = true }
-                                } label: {
-                                    Label("itinerary.reorder.menu", systemImage: "arrow.up.arrow.down")
-                                }
-                            }
                             // 分享行程：弹预览页（大图 + 是否含地图开关 + Share）。
                             Button {
                                 guard bundle != nil else { return }
