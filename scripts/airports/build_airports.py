@@ -92,6 +92,13 @@ except FileNotFoundError:
     print("city_cn.json not found — skipping city aliases")
 
 airports.sort(key=lambda a: a["iata"])
+
+# 不变式硬断言：iata 必须 3 位字母且全局唯一——客户端 Airport.id = iata、ForEach 依赖之，
+# 空/重复 iata 会导致 SwiftUI 列表渲染异常。在数据生成处兜底，杜绝坏数据上车。
+_iatas = [a["iata"] for a in airports]
+assert all(len(i) == 3 and i.isalpha() for i in _iatas), "non-3-letter IATA present"
+assert len(_iatas) == len(set(_iatas)), "duplicate IATA codes present"
+
 out = "/Users/murphy/Documents/Projects/Carry/Carry/Resources/airports.json"
 import os
 os.makedirs(os.path.dirname(out), exist_ok=True)

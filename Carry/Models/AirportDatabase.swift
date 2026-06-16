@@ -67,14 +67,14 @@ actor AirportDatabase {
 
     private func ensureLoaded() {
         guard !loaded else { return }
-        loaded = true
         guard let url = Bundle.main.url(forResource: "airports", withExtension: "json") else {
             Self.logger.error("airports.json missing from bundle")
-            return
+            return  // 不置 loaded：理论上不该发生，但万一失败也不永久失能，下次 search 可重试。
         }
         do {
             let data = try Data(contentsOf: url)
             airports = try JSONDecoder().decode([Airport].self, from: data)
+            loaded = true  // 仅解码成功后置位：失败时下次 search 重试（快速失败），避免整生命周期静默返回空。
         } catch {
             Self.logger.error("airports.json decode failed: \(error.localizedDescription, privacy: .public)")
         }
