@@ -194,6 +194,14 @@ struct OptimizeRouteView: View {
                     .font(.system(.caption2, design: .rounded))
                     .foregroundStyle(.secondary)
                     .padding(.top, 2)
+
+                // 仅当当天确有「设了时间」的可优化地点时才提示——否则不涉及、不堆文案。
+                // 这些点同样是锚点（RouteOptimizer：首 ∪ 尾 ∪ 设了 plannedStart 的点），用户看到它没动不致困惑。
+                if stops.contains(where: { $0.hasCoordinate && $0.plannedStartMinutes >= 0 }) {
+                    Label("itinerary.optimize.timed_fixed", systemImage: "clock")
+                        .font(.system(.caption2, design: .rounded))
+                        .foregroundStyle(.secondary)
+                }
             }
             .padding(.horizontal, 16)
             .padding(.top, 12)

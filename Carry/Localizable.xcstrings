@@ -27578,6 +27578,65 @@
         }
       }
     },
+    "itinerary.optimize.timed_fixed" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Orte mit fester Uhrzeit bleiben ebenfalls fix und werden nicht umsortiert."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Stops with a set time also stay fixed and aren't reordered."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Los lugares con una hora fijada también quedan fijos y no se reordenan."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Les lieux avec une heure définie restent aussi fixes et ne sont pas réorganisés."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "時刻を設定した場所も固定され、並べ替えられません。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "시간을 정한 장소도 고정되어 재정렬되지 않아요."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Locais com horário definido também ficam fixos e não são reordenados."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "设了时间的地点同样固定，不参与重排。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "設了時間的地點同樣固定，不會參與重排。"
+          }
+        }
+      }
+    },
     "itinerary.optimize.endpoints_fixed" : {
       "extractionState" : "manual",
       "localizations" : {
