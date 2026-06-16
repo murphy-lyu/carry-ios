@@ -89,7 +89,7 @@ struct TransportEditView: View {
                 set: { searchingFrom = $0?.isFrom }
             )) { target in
                 ItineraryPlaceSearchSheet(
-                    titleKey: "itinerary.transport.field.place",
+                    titleKey: stationLabel(isFrom: target.isFrom),
                     placeholderKey: "itinerary.transport.search.placeholder",
                     biasLatitude: bundle?.latitude ?? 0,
                     biasLongitude: bundle?.longitude ?? 0
@@ -104,6 +104,57 @@ struct TransportEditView: View {
             .onAppear(perform: loadIfNeeded)
         }
     }
+
+    // MARK: 类型自适应（spec: itinerary-cost-tracking 之外的交互打磨 — Type 唯一权威，字段随之切换）
+
+    /// 承运方标签：航班=航空公司、火车/巴士/渡轮=运营商、租车=公司、其他=承运方。
+    private var carrierLabel: LocalizedStringKey {
+        switch mode {
+        case .flight:               return "itinerary.transport.field.airline"
+        case .train, .bus, .ferry:  return "itinerary.transport.field.operator"
+        case .carRental:            return "itinerary.transport.field.company"
+        case .other:                return "itinerary.transport.field.carrier"
+        }
+    }
+
+    /// 班次号：租车无班次号 → 隐藏。
+    private var showsNumber: Bool { mode != .carRental }
+    private var numberLabel: LocalizedStringKey {
+        switch mode {
+        case .flight: return "itinerary.transport.field.flight_number"
+        case .train:  return "itinerary.transport.field.train_number"
+        default:      return "itinerary.transport.field.number"
+        }
+    }
+
+    /// 站点标签：机场 / 车站 / 港口 / 取车·还车地点 / 地点。
+    private func stationLabel(isFrom: Bool) -> LocalizedStringKey {
+        switch mode {
+        case .flight:    return "itinerary.transport.field.airport"
+        case .train, .bus: return "itinerary.transport.field.station"
+        case .ferry:     return "itinerary.transport.field.port"
+        case .carRental: return isFrom ? "itinerary.transport.field.pickup_location" : "itinerary.transport.field.dropoff_location"
+        case .other:     return "itinerary.transport.field.place"
+        }
+    }
+
+    /// 代码（IATA / 车站代码）与航站楼/站台：仅航班、火车有意义。
+    private var showsCode: Bool { mode == .flight || mode == .train }
+    private var showsTerminal: Bool { mode == .flight || mode == .train }
+    private var terminalLabel: LocalizedStringKey {
+        mode == .train ? "itinerary.transport.field.platform" : "itinerary.transport.field.terminal_only"
+    }
+
+    /// 段头：租车=取车/还车，其余=出发/到达。
+    private func sectionHeaderLabel(isFrom: Bool) -> LocalizedStringKey {
+        if mode == .carRental {
+            return isFrom ? "itinerary.transport.section.pickup" : "itinerary.transport.section.dropoff"
+        }
+        return isFrom ? "itinerary.transport.section.depart" : "itinerary.transport.section.arrive"
+    }
+
+    /// 座位：租车无座位号 → 隐藏。
+    private var showsSeat: Bool { mode != .carRental }
 
     // MARK: Sections
 
@@ -121,10 +172,12 @@ struct TransportEditView: View {
 
     private var carrierSection: some View {
         Section {
-            TextField("itinerary.transport.field.carrier", text: $carrier)
-            TextField("itinerary.transport.field.number", text: $number)
-                .autocorrectionDisabled()
-                .textInputAutocapitalization(.characters)
+            TextField(carrierLabel, text: $carrier)
+            if showsNumber {
+                TextField(numberLabel, text: $number)
+                    .autocorrectionDisabled()
+                    .textInputAutocapitalization(.characters)
+            }
         }
     }
 
@@ -150,7 +203,7 @@ struct TransportEditView: View {
                 HStack {
                     Image(systemName: "mappin.and.ellipse")
                         .foregroundStyle(.secondary)
-                    (name.isEmpty ? Text("itinerary.transport.field.place") : Text(name))
+                    (name.isEmpty ? Text(stationLabel(isFrom: isFrom)) : Text(name))
                         .foregroundStyle(name.isEmpty ? .secondary : .primary)
                     Spacer()
                     Image(systemName: "magnifyingglass")
@@ -158,10 +211,14 @@ struct TransportEditView: View {
                         .foregroundStyle(.tertiary)
                 }
             }
-            TextField("itinerary.transport.field.code", text: code)
-                .autocorrectionDisabled()
-                .textInputAutocapitalization(.characters)
-            TextField("itinerary.transport.field.terminal", text: terminal)
+            if showsCode {
+                TextField("itinerary.transport.field.code", text: code)
+                    .autocorrectionDisabled()
+                    .textInputAutocapitalization(.characters)
+            }
+            if showsTerminal {
+                TextField(terminalLabel, text: terminal)
+            }
             if days.count > 1 {
                 Picker(selection: dayOrder) {
                     ForEach(days, id: \.sortOrder) { day in
@@ -184,14 +241,16 @@ struct TransportEditView: View {
                     .labelsHidden()
             }
         } header: {
-            Text(isFrom ? "itinerary.transport.section.depart" : "itinerary.transport.section.arrive")
+            Text(sectionHeaderLabel(isFrom: isFrom))
         }
     }
 
     private var moreSection: some View {
         Section {
             CostInputRow(amountText: $costAmountText, currencyCode: $costCurrencyCode)
-            TextField("itinerary.transport.field.seat", text: $seat)
+            if showsSeat {
+                TextField("itinerary.transport.field.seat", text: $seat)
+            }
             TextField("itinerary.transport.field.confirmation", text: $confirmationCode)
                 .autocorrectionDisabled()
             TextField("itinerary.transport.field.note", text: $note, axis: .vertical)
