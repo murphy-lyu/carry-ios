@@ -709,29 +709,33 @@ private struct LodgingBannerRow: View {
     }
 
     var body: some View {
+        // 床图标单独落在 rail 列（与停靠点/交通同一条竖线居中对齐）；软灰底 pill 只包文字，
+        // 不再把图标推离 rail。文字 pill 左缘也因此对齐停靠点名字的左缘（north-star §5 网格对齐）。
         HStack(spacing: railSpacing) {
             Image(systemName: phase == .night ? "bed.double" : "bed.double.fill")
                 .font(.system(size: 13))
                 .foregroundStyle(.secondary)
                 .frame(width: railWidth)
-            Text(titleText)
-                .font(.system(.footnote, design: .rounded).weight(phase == .night ? .regular : .medium))
-                .foregroundStyle(.secondary)
-                .lineLimit(1)
-            Spacer(minLength: 8)
-            if let trailing = trailingText {
-                Text(trailing)
-                    .font(.system(.caption, design: .rounded))
-                    .foregroundStyle(.tertiary)
+            HStack(spacing: 8) {
+                Text(titleText)
+                    .font(.system(.footnote, design: .rounded).weight(phase == .night ? .regular : .medium))
+                    .foregroundStyle(.secondary)
+                    .lineLimit(1)
+                Spacer(minLength: 8)
+                if let trailing = trailingText {
+                    Text(trailing)
+                        .font(.system(.caption, design: .rounded))
+                        .foregroundStyle(.tertiary)
+                }
             }
+            .padding(.vertical, 7)
+            .padding(.horizontal, 12)
+            .background(
+                RoundedRectangle(cornerRadius: 10, style: .continuous)
+                    // 过夜中间天更淡，退到背景；入住/退房日略实，作事件锚点。
+                    .fill(Color(.secondarySystemBackground).opacity(phase == .night ? 0.4 : 0.7))
+            )
         }
-        .padding(.vertical, 7)
-        .padding(.horizontal, 12)
-        .background(
-            RoundedRectangle(cornerRadius: 10, style: .continuous)
-                // 过夜中间天更淡，退到背景；入住/退房日略实，作事件锚点。
-                .fill(Color(.secondarySystemBackground).opacity(phase == .night ? 0.4 : 0.7))
-        )
     }
 
     /// 入住/退房日带事件词前缀；过夜天仅名称。
