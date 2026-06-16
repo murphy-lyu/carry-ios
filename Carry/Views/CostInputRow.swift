@@ -31,26 +31,28 @@ struct CostInputRow: View {
         currencyCode.isEmpty ? homeCode : currencyCode.uppercased()
     }
 
+    /// 非编辑态显示串：货币符号紧贴千分位金额（¥1,234.00）。符号并入文本本身（而非独立视图），
+    /// 这样不存在「会被压缩的独立符号视图」——符号必随内容一起、永不被挤出；空金额则不显孤零符号。
+    private func displayString(from canonical: String) -> String {
+        let grouped = CurrencyCatalog.groupForDisplay(canonical)
+        guard !grouped.isEmpty else { return "" }
+        return CurrencyCatalog.symbol(for: effectiveCode) + grouped
+    }
+
     var body: some View {
         HStack(spacing: 12) {
             Text("cost.field.label")
                 .font(.body)
                 .foregroundStyle(.primary)
             Spacer(minLength: 12)
-            // 货币符号紧贴金额（¥ 1,234.00）：即时识别币种、更专业。符号取生效币种、secondary 不抢数字。
-            HStack(spacing: 3) {
-                Text(CurrencyCatalog.symbol(for: effectiveCode))
-                    .font(.system(.body, design: .rounded))
-                    .foregroundStyle(.secondary)
-                TextField("cost.amount.placeholder", text: $displayText)
-                    .keyboardType(.decimalPad)
-                    .multilineTextAlignment(.trailing)
-                    .font(.system(.body, design: .rounded))
-                    .fixedSize()                       // 贴着符号、按内容定宽，不留尾隙
-                    .focused($amountFocused)
-            }
-            // 不再硬限宽：位数已在数据层 cap（整数 ≤10），内容天然有界，符号不会被挤出；
-            // fixedSize 保证整串完整显示、符号始终在最左。
+            // 金额输入框：非编辑态显示「符号 + 千分位」（见 displayString），编辑态显示纯数字。
+            // 符号并入文本、不再是独立视图 → 长数字时不会被挤掉；位数有上限、显示串宽度天然有界。
+            TextField("cost.amount.placeholder", text: $displayText)
+                .keyboardType(.decimalPad)
+                .multilineTextAlignment(.trailing)
+                .font(.system(.body, design: .rounded))
+                .fixedSize()                       // 按内容定宽、整串完整显示，不留尾隙
+                .focused($amountFocused)
             // 币种 = 带 chevron 的小菜单 chip，明确「可点换币种」（对标方案 A）。
             Button {
                 showCurrencyPicker = true
@@ -68,24 +70,28 @@ struct CostInputRow: View {
             .buttonStyle(.plain)
             .accessibilityLabel(Text("cost.currency.title"))
         }
-        // 编辑态：只收数字+单一小数点+≤2 位，挡住字母/粘贴/硬件键盘异常（根因解，写回规范值）。
+        // 编辑态：只收数字+单一小数点+≤2 位+整数位上限，挡住字母/粘贴/硬件键盘异常（根因解，写回规范值）。
         .onChange(of: displayText) { _, newValue in
-            guard amountFocused else { return }          // 失焦时的程序化分组改写不在此净化
+            guard amountFocused else { return }          // 失焦时的程序化改写（带符号/分组）不在此净化
             let clean = CurrencyCatalog.sanitizeAmountInput(newValue)
             if clean != newValue { displayText = clean }
-            amountText = clean                            // 绑定永远存规范无分组值
+            amountText = clean                            // 绑定永远存规范无符号无分组值
         }
-        // 进/出编辑：进＝去分组便于改，出＝加千分位展示。
+        // 进/出编辑：进＝纯数字便于改（去符号去分组），出＝符号+千分位展示。
         .onChange(of: amountFocused) { _, focused in
             displayText = focused
-                ? CurrencyCatalog.sanitizeAmountInput(displayText)
-                : CurrencyCatalog.groupForDisplay(displayText)
+                ? CurrencyCatalog.sanitizeAmountInput(amountText)
+                : displayString(from: amountText)
         }
-        // 外部（父层 load 既有费用 / 清空）改了绑定且非编辑态 → 同步成带千分位展示。
+        // 外部（父层 load 既有费用 / 清空）改了绑定且非编辑态 → 同步成符号+千分位展示。
         .onChange(of: amountText) { _, newValue in
-            if !amountFocused { displayText = CurrencyCatalog.groupForDisplay(newValue) }
+            if !amountFocused { displayText = displayString(from: newValue) }
         }
-        .onAppear { displayText = CurrencyCatalog.groupForDisplay(amountText) }
+        // 换币种 → 非编辑态刷新符号（符号现并入显示串，需主动重建）。
+        .onChange(of: currencyCode) { _, _ in
+            if !amountFocused { displayText = displayString(from: amountText) }
+        }
+        .onAppear { displayText = displayString(from: amountText) }
         .sheet(isPresented: $showCurrencyPicker) {
             NavigationStack {
                 CurrencyPickerView(
