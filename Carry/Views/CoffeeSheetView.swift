@@ -276,13 +276,9 @@ struct CoffeeSheetView: View {
 
     private func shareApp() {
         let url = URL(string: "https://apps.apple.com/app/carry")!
-        let activityVC = UIActivityViewController(
-            activityItems: ["Check out Carry – a minimal packing list app!", url],
-            applicationActivities: nil
+        UIApplication.shared.presentActivitySheet(
+            items: ["Check out Carry – a minimal packing list app!", url]
         )
-        if let presenter = topMostViewController() {
-            presenter.present(activityVC, animated: true)
-        }
     }
 
     private func requestReview() {
@@ -303,20 +299,6 @@ struct CoffeeSheetView: View {
             .first(where: { $0.activationState == .foregroundActive }) {
             SKStoreReviewController.requestReview(in: scene)
         }
-    }
-
-    private func topMostViewController() -> UIViewController? {
-        guard let scene = UIApplication.shared.connectedScenes
-            .compactMap({ $0 as? UIWindowScene })
-            .first(where: { $0.activationState == .foregroundActive }),
-              let root = scene.windows.first(where: \.isKeyWindow)?.rootViewController
-        else { return nil }
-
-        var top = root
-        while let presented = top.presentedViewController {
-            top = presented
-        }
-        return top
     }
 }
 

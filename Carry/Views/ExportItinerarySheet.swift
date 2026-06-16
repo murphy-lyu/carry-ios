@@ -107,17 +107,6 @@ struct ExportItinerarySheet: View {
     }
 
     private func present(_ url: URL) {
-        let vc = UIActivityViewController(activityItems: [url], applicationActivities: nil)
-        guard let scene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
-              let root = scene.windows.first(where: { $0.isKeyWindow })?.rootViewController else { return }
-        // 已呈现的 sheet 之上再 present：用最顶层 presented controller。
-        var top = root
-        while let presented = top.presentedViewController { top = presented }
-        if let pop = vc.popoverPresentationController {
-            pop.sourceView = top.view
-            pop.sourceRect = CGRect(x: top.view.bounds.midX, y: top.view.bounds.midY, width: 0, height: 0)
-            pop.permittedArrowDirections = []
-        }
-        top.present(vc, animated: true)
+        UIApplication.shared.presentActivitySheet(items: [url])
     }
 }

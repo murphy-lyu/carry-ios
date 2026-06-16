@@ -425,16 +425,8 @@ enum TripShare {
     /// 对方（也用 Carry）收到后点开即可确认导入。文件名 = 行程名（如 `云南.carrytrip`）。
     @MainActor
     static func presentItineraryFile(for trip: TripBundle) {
-        guard let url = DataBackupManager.shared.makeItineraryShareFile(trip: trip, baseName: fileBaseName(for: trip)),
-              let scene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
-              let root = scene.windows.first(where: { $0.isKeyWindow })?.rootViewController else { return }
-        let vc = UIActivityViewController(activityItems: [url], applicationActivities: nil)
-        if let pop = vc.popoverPresentationController {
-            pop.sourceView = root.view
-            pop.sourceRect = CGRect(x: root.view.bounds.midX, y: root.view.bounds.midY, width: 0, height: 0)
-            pop.permittedArrowDirections = []
-        }
-        (root.presentedViewController ?? root).present(vc, animated: true)
+        guard let url = DataBackupManager.shared.makeItineraryShareFile(trip: trip, baseName: fileBaseName(for: trip)) else { return }
+        UIApplication.shared.presentActivitySheet(items: [url])
     }
 
     /// 可导入文件的文件名主体：`行程名 (出发月份)`——月份做括号补充（同地不同月攻略不同）。

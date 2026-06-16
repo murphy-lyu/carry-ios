@@ -3,6 +3,15 @@
 ## 最后更新
 2026-06-17
 
+## 上次改动摘要（修复：Settings 导出/所有分享面板「点了没反应」· 2026-06-17）
+
+> 编译绿（Carry scheme / iOS Simulator），用户已真机验收正常。本次修复独立提交（不含机场搜索等在途改动）。
+
+- **🟢 修复「Settings → Export 点击无响应」**：**根因**——导航层把根级从 TabView 改成「Settings 以 `.sheet` 呈现」后，`rootViewController` 已持有 presented sheet（即 Settings 本身）；而分享面板仍用 `rootVC.present(activityVC)` 弹出，对一个「正在 present 别人」的 controller 再 present 会被 UIKit **静默吞掉**（不报错、无反应）。TabView 时代 Settings 是 tab 无此问题，故「最近才坏」。
+- **覆盖所有触发路径**：同一错误写法（直接 `rootVC.present`）在 3 处都坏——Settings 导出备份、关于页导出日志、打包面分享清单。另有 3 处分享各自手写「走到最顶层 presenter」的正确逻辑（行程文件 / 海报 / 推荐 App）——正是这种 copy-paste 写法分裂导致总有几处漏更新。
+- **根因解 + 消除该类 bug**：新增统一入口 `Carry/Views/UIApplication+ActivityPresenter.swift`（`presentActivitySheet`），沿 `presentedViewController` 链走到最顶层 presenter 再 present，并统一处理 iPad/Mac popover anchor。**全部 6 处分享调用点**改走此入口，删除各自手写的 presenter 查找。今后「在 sheet 之上弹模态」不会再因漏改某处而复发。
+- **约定**：凡弹 `UIActivityViewController` / 任何模态，统一走 `UIApplication.shared.presentActivitySheet(...)`，禁止再直接 `rootViewController.present`。
+
 ## 上次改动摘要（机场搜索改用内置机场数据库 · 2026-06-17）
 
 > 编译绿（Carry scheme / iPhone 17 Pro），`airports.json` 已确认打进 app bundle。**待用户真机验收**（CLAUDE.md：用户在场，UI 验收默认交给用户）。**未提交**。

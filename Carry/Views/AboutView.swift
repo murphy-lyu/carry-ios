@@ -267,12 +267,9 @@ struct AboutView: View {
         let filename = "carry-log-\(fmt.string(from: Date())).txt"
         let url = FileManager.default.temporaryDirectory.appendingPathComponent(filename)
         try? logText.write(to: url, atomically: true, encoding: .utf8)
-        let activityVC = UIActivityViewController(activityItems: [url], applicationActivities: nil)
-        if let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
-           let window = windowScene.windows.first,
-           let rootVC = window.rootViewController {
-            rootVC.present(activityVC, animated: true)
-        }
+        // About 处于 Settings sheet 的导航栈内，rootViewController 已有 presentation——
+        // 必须从最顶层 presenter 呈现，否则 present 被静默吞掉。
+        UIApplication.shared.presentActivitySheet(items: [url])
     }
 }
 

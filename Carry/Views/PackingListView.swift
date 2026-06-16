@@ -272,15 +272,8 @@ struct PackingListView: View {
                         if detailTab == .packing {
                             Button {
                                 CarryLogger.shared.log(.packingListShared)
-                                let activityVC = UIActivityViewController(
-                                    activityItems: [shareText],
-                                    applicationActivities: nil
-                                )
-                                if let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
-                                   let window = windowScene.windows.first,
-                                   let rootVC = window.rootViewController {
-                                    rootVC.present(activityVC, animated: true)
-                                }
+                                // 从最顶层 presenter 呈现，兼容详情以 sheet 呈现的上下文。
+                                UIApplication.shared.presentActivitySheet(items: [shareText])
                             } label: {
                                 Label("Share list", systemImage: "square.and.arrow.up")
                             }

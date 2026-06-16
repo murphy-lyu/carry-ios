@@ -193,12 +193,9 @@ struct SettingsView: View {
             showToast(NSLocalizedString("settings.data.restore.error.not_found", comment: ""))
             return
         }
-        let activityVC = UIActivityViewController(activityItems: [exportURL], applicationActivities: nil)
-        if let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
-           let rootVC = windowScene.windows.first?.rootViewController {
-            activityVC.popoverPresentationController?.sourceView = rootVC.view
-            rootVC.present(activityVC, animated: true)
-        }
+        // Settings 以 sheet 呈现，rootViewController 已有 presentation——必须从最顶层 presenter 呈现，
+        // 否则系统会静默吞掉这次 present（表现为「点了没反应」）。统一走 presentActivitySheet。
+        UIApplication.shared.presentActivitySheet(items: [exportURL])
         CarryLogger.shared.log(.backupExported)
     }
 
