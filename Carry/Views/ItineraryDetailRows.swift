@@ -53,10 +53,12 @@ struct DetailSheetHeader: View {
                 .buttonStyle(.plain)
                 .accessibilityLabel(Text("common.close"))
         }
-        // 删除二次确认：破坏性操作不可撤销，避免菜单误触直接删除。
-        .confirmationDialog(Text("common.delete_confirm"), isPresented: $confirmingDelete, titleVisibility: .visible) {
-            Button(LocalizedStringKey(deleteLabelKey), role: .destructive) { onDelete() }
+        // 删除二次确认：用正式 alert（居中弹窗），保证「取消 + 删除」两个按钮都在、各设备一致。
+        .alert(LocalizedStringKey(deleteLabelKey), isPresented: $confirmingDelete) {
             Button("common.cancel", role: .cancel) {}
+            Button("common.delete", role: .destructive) { onDelete() }
+        } message: {
+            Text("common.delete_confirm")
         }
     }
 
