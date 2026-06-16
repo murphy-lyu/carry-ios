@@ -966,8 +966,9 @@ struct HomeView: View {
                     tripBookCountriesCard(stats)
                     if stats.visitedContinentCount > 0 { tripBookContinentsCard(stats) }
                     if stats.domesticCount + stats.internationalCount > 0 { tripBookScopeCard(stats) }
-                    if spend.hasAnyCost { tripBookSpendCard(spend) }
                     if stats.seasonCounts.values.reduce(0, +) > 0 { tripBookSeasonsCard(stats) }
+                    // 费用压轴：前面都是出行习惯/统计，花费性质特殊（用户记账数据），单独置于最后。
+                    if spend.hasAnyCost { tripBookSpendCard(spend) }
                 }
                 .padding(.horizontal, 16)
                 .padding(.top, 8)
