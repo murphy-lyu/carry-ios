@@ -963,10 +963,10 @@ struct HomeView: View {
             ScrollView {
                 VStack(spacing: 14) {
                     tripBookOverviewCard(stats)
-                    if spend.hasAnyCost { tripBookSpendCard(spend) }
                     tripBookCountriesCard(stats)
                     if stats.visitedContinentCount > 0 { tripBookContinentsCard(stats) }
                     if stats.domesticCount + stats.internationalCount > 0 { tripBookScopeCard(stats) }
+                    if spend.hasAnyCost { tripBookSpendCard(spend) }
                     if stats.seasonCounts.values.reduce(0, +) > 0 { tripBookSeasonsCard(stats) }
                 }
                 .padding(.horizontal, 16)
