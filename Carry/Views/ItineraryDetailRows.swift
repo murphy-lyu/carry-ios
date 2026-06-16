@@ -23,6 +23,8 @@ struct DetailSheetHeader: View {
     let onDelete: () -> Void
     let onClose: () -> Void
 
+    @State private var confirmingDelete = false
+
     var body: some View {
         HStack(alignment: .top, spacing: 12) {
             ZStack {
@@ -40,7 +42,7 @@ struct DetailSheetHeader: View {
                 .padding(.top, 6)
             Menu {
                 Button { onEdit() } label: { Label("itinerary.stop.detail.edit", systemImage: "pencil") }
-                Button(role: .destructive) { onDelete() } label: {
+                Button(role: .destructive) { confirmingDelete = true } label: {
                     Label(LocalizedStringKey(deleteLabelKey), systemImage: "trash")
                 }
             } label: {
@@ -50,6 +52,11 @@ struct DetailSheetHeader: View {
             Button { onClose() } label: { circleGlyph("xmark") }
                 .buttonStyle(.plain)
                 .accessibilityLabel(Text("common.close"))
+        }
+        // 删除二次确认：破坏性操作不可撤销，避免菜单误触直接删除。
+        .confirmationDialog(Text("common.delete_confirm"), isPresented: $confirmingDelete, titleVisibility: .visible) {
+            Button(LocalizedStringKey(deleteLabelKey), role: .destructive) { onDelete() }
+            Button("common.cancel", role: .cancel) {}
         }
     }
 
