@@ -34,12 +34,14 @@ struct TransportEditView: View {
     @State private var fromTerminal = ""
     @State private var fromLatitude: Double = 0
     @State private var fromLongitude: Double = 0
+    @State private var fromTimeZoneId = ""
 
     @State private var toName = ""
     @State private var toCode = ""
     @State private var toTerminal = ""
     @State private var toLatitude: Double = 0
     @State private var toLongitude: Double = 0
+    @State private var toTimeZoneId = ""
 
     @State private var departDayOrder = 0
     @State private var hasDepartTime = false
@@ -88,16 +90,32 @@ struct TransportEditView: View {
                 get: { searchingFrom.map { SearchTarget(isFrom: $0) } },
                 set: { searchingFrom = $0?.isFrom }
             )) { target in
-                ItineraryPlaceSearchSheet(
-                    titleKey: stationLabel(isFrom: target.isFrom),
-                    placeholderKey: "itinerary.transport.search.placeholder",
-                    biasLatitude: bundle?.latitude ?? 0,
-                    biasLongitude: bundle?.longitude ?? 0
-                ) { name, lat, lon, _ in
-                    if target.isFrom {
-                        fromName = name; fromLatitude = lat; fromLongitude = lon
-                    } else {
-                        toName = name; toLatitude = lat; toLongitude = lon
+                // 航班：走内置机场数据库（全球可搜 + 回填 IATA / 时区）；
+                // 其它交通方式：走通用地图地点搜索（火车站 / 港口等）。spec: itinerary-airport-search.md。
+                if mode == .flight {
+                    AirportSearchSheet(titleKey: stationLabel(isFrom: target.isFrom)) { airport in
+                        if target.isFrom {
+                            fromName = airport.displayName; fromCode = airport.iata
+                            fromLatitude = airport.lat; fromLongitude = airport.lon
+                            fromTimeZoneId = airport.tz
+                        } else {
+                            toName = airport.displayName; toCode = airport.iata
+                            toLatitude = airport.lat; toLongitude = airport.lon
+                            toTimeZoneId = airport.tz
+                        }
+                    }
+                } else {
+                    ItineraryPlaceSearchSheet(
+                        titleKey: stationLabel(isFrom: target.isFrom),
+                        placeholderKey: "itinerary.transport.search.placeholder",
+                        biasLatitude: bundle?.latitude ?? 0,
+                        biasLongitude: bundle?.longitude ?? 0
+                    ) { name, lat, lon, _ in
+                        if target.isFrom {
+                            fromName = name; fromLatitude = lat; fromLongitude = lon
+                        } else {
+                            toName = name; toLatitude = lat; toLongitude = lon
+                        }
                     }
                 }
             }
@@ -309,8 +327,10 @@ struct TransportEditView: View {
             carrier = seg.carrier; number = seg.number
             fromName = seg.fromName; fromCode = seg.fromCode; fromTerminal = seg.fromTerminal
             fromLatitude = seg.fromLatitude; fromLongitude = seg.fromLongitude
+            fromTimeZoneId = seg.fromTimeZoneId
             toName = seg.toName; toCode = seg.toCode; toTerminal = seg.toTerminal
             toLatitude = seg.toLatitude; toLongitude = seg.toLongitude
+            toTimeZoneId = seg.toTimeZoneId
             departDayOrder = seg.departDayOrder; arriveDayOrder = seg.arriveDayOrder
             if seg.departLocalMinutes >= 0 { hasDepartTime = true; departTime = dateFromMinutes(seg.departLocalMinutes) }
             if seg.arriveLocalMinutes >= 0 { hasArriveTime = true; arriveTime = dateFromMinutes(seg.arriveLocalMinutes) }
@@ -339,6 +359,9 @@ struct TransportEditView: View {
         let savedFromTerminal = showsTerminal ? fromTerminal : ""
         let savedToTerminal = showsTerminal ? toTerminal : ""
         let savedSeat = showsSeat ? seat : ""
+        // 时区仅航班机场选点会填；切到非航班模式时一并清空，避免残留。
+        let savedFromTZ = mode == .flight ? fromTimeZoneId : ""
+        let savedToTZ = mode == .flight ? toTimeZoneId : ""
 
         if let segmentId {
             store.updateTransportSegment(
@@ -346,10 +369,10 @@ struct TransportEditView: View {
                 mode: mode, carrier: carrier, number: savedNumber,
                 fromName: fromName, fromCode: savedFromCode,
                 fromLatitude: fromLatitude, fromLongitude: fromLongitude,
-                fromTerminal: savedFromTerminal,
+                fromTimeZoneId: savedFromTZ, fromTerminal: savedFromTerminal,
                 toName: toName, toCode: savedToCode,
                 toLatitude: toLatitude, toLongitude: toLongitude,
-                toTerminal: savedToTerminal,
+                toTimeZoneId: savedToTZ, toTerminal: savedToTerminal,
                 departDayOrder: departDayOrder, departLocalMinutes: departMinutes,
                 arriveDayOrder: safeArriveDay, arriveLocalMinutes: arriveMinutes,
                 seat: savedSeat, confirmationCode: confirmationCode, note: note
@@ -362,10 +385,10 @@ struct TransportEditView: View {
                 mode: mode, carrier: carrier, number: savedNumber,
                 fromName: fromName, fromCode: savedFromCode,
                 fromLatitude: fromLatitude, fromLongitude: fromLongitude,
-                fromTerminal: savedFromTerminal,
+                fromTimeZoneId: savedFromTZ, fromTerminal: savedFromTerminal,
                 toName: toName, toCode: savedToCode,
                 toLatitude: toLatitude, toLongitude: toLongitude,
-                toTerminal: savedToTerminal,
+                toTimeZoneId: savedToTZ, toTerminal: savedToTerminal,
                 departDayOrder: departDayOrder, departLocalMinutes: departMinutes,
                 arriveDayOrder: safeArriveDay, arriveLocalMinutes: arriveMinutes,
                 seat: savedSeat, confirmationCode: confirmationCode, note: note
