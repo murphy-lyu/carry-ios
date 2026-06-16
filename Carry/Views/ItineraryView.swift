@@ -1277,6 +1277,7 @@ struct ExpandableText: View {
                 .foregroundStyle(.primary)
                 .lineLimit(expanded ? nil : collapsedLineLimit)
                 .frame(maxWidth: .infinity, alignment: .leading)
+                .textSelection(.enabled)   // 长按可选取/复制备注任意片段（不加按钮、不与展开/收起冲突）
                 .background(measurementProbes)
             if isTruncated {
                 Button {

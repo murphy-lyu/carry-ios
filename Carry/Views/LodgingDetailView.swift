@@ -16,7 +16,6 @@ struct LodgingDetailView: View {
 
     @Environment(\.dismiss) private var dismiss
     @State private var editing = false
-    @State private var addressCopied = false
     @State private var contentHeight: CGFloat = 0
 
     private var displayName: String {
@@ -28,19 +27,27 @@ struct LodgingDetailView: View {
         return [.height(contentHeight + 28), .large]
     }
 
-    /// 入住日期（有日期行程）/ 第 N 天（无日期行程）+ 晚数，读成「Sun, Jul 19 · 3 nights」。
-    private var stayText: String {
-        var parts: [String] = []
+    /// 某天序对应的日期文案（有日期行程 → 「Sun, Jul 19」；无日期 → 「第 N 天」）。
+    private func dayDateText(_ dayOrder: Int) -> String {
         if let bundle = stay.bundle, !bundle.isDateless {
             let base = Calendar.current.startOfDay(for: bundle.departureDate)
-            if let d = Calendar.current.date(byAdding: .day, value: stay.checkInDayOrder, to: base) {
-                parts.append(d.formatted(.dateTime.weekday(.abbreviated).month(.abbreviated).day()))
+            if let d = Calendar.current.date(byAdding: .day, value: dayOrder, to: base) {
+                return d.formatted(.dateTime.weekday(.abbreviated).month(.abbreviated).day())
             }
-        } else {
-            parts.append(String(format: NSLocalizedString("itinerary.day.title", comment: ""), stay.checkInDayOrder + 1))
         }
-        parts.append(String(format: NSLocalizedString("itinerary.lodging.nights_value", comment: ""), stay.nights))
-        return parts.joined(separator: " · ")
+        return String(format: NSLocalizedString("itinerary.day.title", comment: ""), dayOrder + 1)
+    }
+
+    /// 入住 / 退房各自的「日期（+ 时间）」值——每个都绑定到具体哪天（对标 Tripsy，避免两个时间分不清谁是谁）。
+    private var checkInValue: String {
+        var s = dayDateText(stay.checkInDayOrder)
+        if stay.checkInMinutes >= 0 { s += " · " + timeLabel(dayMinutes: stay.checkInMinutes) }
+        return s
+    }
+    private var checkOutValue: String {
+        var s = dayDateText(stay.checkOutDayOrder)
+        if stay.checkOutMinutes >= 0 { s += " · " + timeLabel(dayMinutes: stay.checkOutMinutes) }
+        return s
     }
 
     var body: some View {
@@ -101,24 +108,18 @@ struct LodgingDetailView: View {
     @ViewBuilder
     private var infoRows: some View {
         VStack(alignment: .leading, spacing: 14) {
-            detailRow(icon: "calendar", text: stayText)
-            if stay.checkInMinutes >= 0 {
-                detailRow(icon: "clock",
-                          text: NSLocalizedString("itinerary.lodging.event.checkin", comment: "") + " " + timeLabel(dayMinutes: stay.checkInMinutes))
-            }
-            if stay.checkOutMinutes >= 0 {
-                detailRow(icon: "clock",
-                          text: NSLocalizedString("itinerary.lodging.event.checkout", comment: "") + " " + timeLabel(dayMinutes: stay.checkOutMinutes))
-            }
+            // 入住 / 退房各成一行、各带「日期（+时间）」——绑定到具体哪天，一眼看懂（对标 Tripsy）。
+            LabeledDetailRow(icon: "calendar", labelKey: "itinerary.lodging.event.checkin", value: checkInValue)
+            LabeledDetailRow(icon: "calendar", labelKey: "itinerary.lodging.event.checkout", value: checkOutValue)
+            DetailInfoRow(icon: "moon", text: String(format: NSLocalizedString("itinerary.lodging.nights_value", comment: ""), stay.nights))
             if stay.hasCost {
-                detailRow(icon: "creditcard", text: CurrencyCatalog.format(stay.costAmount, code: stay.costCurrencyCode))
+                DetailInfoRow(icon: "creditcard", text: CurrencyCatalog.format(stay.costAmount, code: stay.costCurrencyCode))
             }
             if !stay.confirmationCode.isEmpty {
-                detailRow(icon: "ticket",
-                          text: NSLocalizedString("itinerary.transport.field.confirmation", comment: "") + " " + stay.confirmationCode)
+                CopyableDetailRow(icon: "ticket", text: stay.confirmationCode)   // 只显内容、可点复制
             }
             if stay.hasCoordinate && !stay.address.isEmpty {
-                addressRow
+                CopyableDetailRow(icon: "mappin.and.ellipse", text: stay.address)
             }
             if !stay.note.isEmpty {
                 HStack(alignment: .top, spacing: 12) {
@@ -129,57 +130,6 @@ struct LodgingDetailView: View {
                         .frame(maxWidth: .infinity, alignment: .leading)
                 }
             }
-        }
-    }
-
-    private var addressRow: some View {
-        Button {
-            UIPasteboard.general.string = stay.address
-            UIImpactFeedbackGenerator(style: .light).impactOccurred()
-            withAnimation(.easeInOut(duration: 0.2)) { addressCopied = true }
-            Task {
-                try? await Task.sleep(for: .seconds(1.6))
-                withAnimation(.easeInOut(duration: 0.2)) { addressCopied = false }
-            }
-        } label: {
-            HStack(alignment: .top, spacing: 12) {
-                Image(systemName: "mappin.and.ellipse")
-                    .font(.system(size: 15)).foregroundStyle(.secondary).frame(width: 22)
-                    .accessibilityHidden(true)
-                Text(stay.address)
-                    .font(.system(.subheadline, design: .rounded))
-                    .foregroundStyle(.primary)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                if addressCopied {
-                    HStack(spacing: 3) {
-                        Image(systemName: "checkmark")
-                        Text("itinerary.stop.detail.address_copied")
-                    }
-                    .font(.system(.caption, design: .rounded).weight(.medium))
-                    .foregroundStyle(.green)
-                    .transition(.opacity)
-                } else {
-                    Image(systemName: "doc.on.doc")
-                        .font(.system(size: 13)).foregroundStyle(.tertiary)
-                }
-            }
-            .frame(minHeight: 28)
-            .contentShape(Rectangle())
-        }
-        .buttonStyle(.plain)
-        .accessibilityLabel(Text(stay.address))
-        .accessibilityHint(Text("itinerary.stop.detail.copy_hint"))
-    }
-
-    private func detailRow(icon: String, text: String) -> some View {
-        HStack(alignment: .top, spacing: 12) {
-            Image(systemName: icon)
-                .font(.system(size: 15)).foregroundStyle(.secondary).frame(width: 22)
-                .accessibilityHidden(true)
-            Text(text)
-                .font(.system(.subheadline, design: .rounded))
-                .foregroundStyle(.primary)
-                .frame(maxWidth: .infinity, alignment: .leading)
         }
     }
 

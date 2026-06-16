@@ -100,23 +100,22 @@ struct TransportDetailView: View {
             if let dep = endpointText(name: segment.fromName, code: segment.fromCode,
                                       minutes: segment.departLocalMinutes, dayOffset: 0,
                                       terminal: segment.fromTerminal) {
-                endpointRow(icon: "arrow.up.forward", labelKey: "itinerary.transport.section.depart", value: dep)
+                LabeledDetailRow(icon: "arrow.up.forward", labelKey: "itinerary.transport.section.depart", value: dep)
             }
             if let arr = endpointText(name: segment.toName, code: segment.toCode,
                                       minutes: segment.arriveLocalMinutes,
                                       dayOffset: segment.arriveDayOrder - segment.departDayOrder,
                                       terminal: segment.toTerminal) {
-                endpointRow(icon: "arrow.down.forward", labelKey: "itinerary.transport.section.arrive", value: arr)
+                LabeledDetailRow(icon: "arrow.down.forward", labelKey: "itinerary.transport.section.arrive", value: arr)
             }
             if !segment.seat.isEmpty {
-                detailRow(icon: "chair", text: segment.seat)
+                DetailInfoRow(icon: "chair", text: segment.seat)
             }
             if !segment.confirmationCode.isEmpty {
-                detailRow(icon: "ticket",
-                          text: NSLocalizedString("itinerary.transport.field.confirmation", comment: "") + " " + segment.confirmationCode)
+                CopyableDetailRow(icon: "ticket", text: segment.confirmationCode)   // 只显内容、可点复制
             }
             if segment.hasCost {
-                detailRow(icon: "creditcard", text: CurrencyCatalog.format(segment.costAmount, code: segment.costCurrencyCode))
+                DetailInfoRow(icon: "creditcard", text: CurrencyCatalog.format(segment.costAmount, code: segment.costCurrencyCode))
             }
             if !segment.note.isEmpty {
                 HStack(alignment: .top, spacing: 12) {
@@ -127,34 +126,6 @@ struct TransportDetailView: View {
                         .frame(maxWidth: .infinity, alignment: .leading)
                 }
             }
-        }
-    }
-
-    /// 出发 / 到达：小标题 + 值（站名/代码/时间/航站楼）。
-    private func endpointRow(icon: String, labelKey: String, value: String) -> some View {
-        HStack(alignment: .top, spacing: 12) {
-            Image(systemName: icon)
-                .font(.system(size: 15)).foregroundStyle(.secondary).frame(width: 22)
-                .accessibilityHidden(true)
-            VStack(alignment: .leading, spacing: 1) {
-                Text(LocalizedStringKey(labelKey))
-                    .font(.system(.caption, design: .rounded)).foregroundStyle(.secondary)
-                Text(value)
-                    .font(.system(.subheadline, design: .rounded)).foregroundStyle(.primary)
-            }
-            .frame(maxWidth: .infinity, alignment: .leading)
-        }
-    }
-
-    private func detailRow(icon: String, text: String) -> some View {
-        HStack(alignment: .top, spacing: 12) {
-            Image(systemName: icon)
-                .font(.system(size: 15)).foregroundStyle(.secondary).frame(width: 22)
-                .accessibilityHidden(true)
-            Text(text)
-                .font(.system(.subheadline, design: .rounded))
-                .foregroundStyle(.primary)
-                .frame(maxWidth: .infinity, alignment: .leading)
         }
     }
 
