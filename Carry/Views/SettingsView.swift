@@ -988,7 +988,8 @@ private struct CalendarSettingsView: View {
 
     private func loadOverlayCalendars() {
         overlayCalendars = CalendarManager.shared.availableCalendars()
-        selectedOverlayIDs = CalendarManager.overlaySelectedCalendarIDs()
+        // 首次默认勾选节假日类只读公共日历——让用户一眼看出「这些可勾选」，且节假日是公开信息、零隐私。
+        selectedOverlayIDs = CalendarManager.shared.selectedOrDefaultOverlayIDs()
     }
 
     private func toggleOverlayCalendar(_ id: String) {
@@ -1061,6 +1062,7 @@ private struct CalendarSettingsView: View {
                     .padding(.horizontal, 16)
                     .padding(.top, 22)
 
+                // 主开关（功能总闸）独立成卡。
                 VStack(spacing: 0) {
                     HStack(spacing: 12) {
                         Text("settings.calendar.overlay.show")
@@ -1082,34 +1084,6 @@ private struct CalendarSettingsView: View {
                     }
                     .padding(.horizontal, 18)
                     .frame(height: 58)
-
-                    // 开启后：选择要显示哪些日历（默认不选，用户逐个开——隐私最稳）。
-                    if calendarOverlayEnabled {
-                        ForEach(overlayCalendars, id: \.id) { cal in
-                            Divider().padding(.leading, 18)
-                            Button {
-                                toggleOverlayCalendar(cal.id)
-                            } label: {
-                                HStack(spacing: 12) {
-                                    Circle().fill(cal.tint).frame(width: 10, height: 10)
-                                    Text(cal.title)
-                                        .font(.body)
-                                        .foregroundStyle(.primary)
-                                        .lineLimit(1)
-                                    Spacer()
-                                    if selectedOverlayIDs.contains(cal.id) {
-                                        Image(systemName: "checkmark")
-                                            .font(.body.weight(.semibold))
-                                            .foregroundStyle(CarryAccent.color)
-                                    }
-                                }
-                                .padding(.horizontal, 18)
-                                .frame(height: 52)
-                                .contentShape(Rectangle())
-                            }
-                            .buttonStyle(.plain)
-                        }
-                    }
                 }
                 .background(
                     RoundedRectangle(cornerRadius: 28, style: .continuous)
@@ -1121,6 +1095,52 @@ private struct CalendarSettingsView: View {
                 )
                 .shadow(color: groupShadow, radius: colorScheme == .dark ? 10 : 12, x: 0, y: colorScheme == .dark ? 3 : 4)
                 .padding(.horizontal, 16)
+
+                // 开启后：独立一张「选择要显示的日历」卡——每行一个开关（明确可供性：用户一眼看出要逐个开）。
+                if calendarOverlayEnabled {
+                    Text("settings.calendar.overlay.pick")
+                        .font(.system(size: 13, weight: .semibold))
+                        .foregroundStyle(colorScheme == .dark ? Color.secondary.opacity(0.9) : Color.secondary)
+                        .padding(.horizontal, 16)
+                        .padding(.top, 18)
+
+                    VStack(spacing: 0) {
+                        ForEach(Array(overlayCalendars.enumerated()), id: \.element.id) { index, cal in
+                            if index > 0 { Divider().padding(.leading, 44) }
+                            // 轻量勾选样式（非开关）：点行切换，选中显烟蓝勾。首次默认勾了节假日 → 始终有勾可参照。
+                            Button {
+                                toggleOverlayCalendar(cal.id)
+                            } label: {
+                                HStack(spacing: 12) {
+                                    Circle().fill(cal.tint).frame(width: 10, height: 10)
+                                    Text(cal.title)
+                                        .font(.body)
+                                        .foregroundStyle(.primary)
+                                        .lineLimit(1)
+                                    Spacer()
+                                    Image(systemName: "checkmark")
+                                        .font(.body.weight(.semibold))
+                                        .foregroundStyle(CarryAccent.color)
+                                        .opacity(selectedOverlayIDs.contains(cal.id) ? 1 : 0)
+                                }
+                                .padding(.horizontal, 18)
+                                .frame(height: 54)
+                                .contentShape(Rectangle())
+                            }
+                            .buttonStyle(.plain)
+                        }
+                    }
+                    .background(
+                        RoundedRectangle(cornerRadius: 28, style: .continuous)
+                            .fill(groupFill)
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 28, style: .continuous)
+                                    .strokeBorder(groupStroke, lineWidth: 1)
+                            )
+                    )
+                    .shadow(color: groupShadow, radius: colorScheme == .dark ? 10 : 12, x: 0, y: colorScheme == .dark ? 3 : 4)
+                    .padding(.horizontal, 16)
+                }
 
                 Text("settings.calendar.overlay.footer")
                     .font(.footnote)

@@ -35,9 +35,27 @@ final class CalendarManager {
     // 日历叠加层（spec: itinerary-calendar-overlay.md）
     static let overlayEnabledKey = "calendar_overlay_enabled"
     static let overlayCalendarIDsKey = "calendar_overlay_calendar_ids"
+    static let overlayInitializedKey = "calendar_overlay_initialized"
 
     static func overlaySelectedCalendarIDs() -> Set<String> {
         Set(UserDefaults.standard.stringArray(forKey: overlayCalendarIDsKey) ?? [])
+    }
+
+    /// 当前选中；**首次**（从未初始化）默认勾选「只读公共日历」——节假日这类不可编辑、非生日的订阅日历。
+    /// 理由：法定节假日是公开信息（零隐私），默认显示既安全又用「已有一个勾」教会用户这些可勾选；
+    /// 个人/可编辑日历、生日日历默认**不**勾（隐私最稳）。之后尊重用户选择（含清空）。
+    func selectedOrDefaultOverlayIDs() -> Set<String> {
+        if defaults.bool(forKey: Self.overlayInitializedKey) {
+            return Self.overlaySelectedCalendarIDs()
+        }
+        let defaultIDs = store.calendars(for: .event)
+            .filter { $0.title != Self.calendarTitle }
+            .filter { !$0.allowsContentModifications && $0.type != .birthday }
+            .map { $0.calendarIdentifier }
+        let set = Set(defaultIDs)
+        defaults.set(Array(set), forKey: Self.overlayCalendarIDsKey)
+        defaults.set(true, forKey: Self.overlayInitializedKey)
+        return set
     }
 
     // MARK: - Permission
