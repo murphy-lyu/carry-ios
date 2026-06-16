@@ -1374,21 +1374,28 @@ struct HomeView: View {
         }
     }
 
-    /// 打开行程册时从 0 数到目标值，给「翻开回忆」的仪式感；尊重「减弱动态效果」。
+    /// 统计大数字。**首帧即真实值、不从 0 滚**——消除 sheet 入场时「先 0 再刷新」的残影
+    /// （count-up 与 sheet 上滑同时跑会打架成闪烁；且数据是打开即定的快照、入场期间不变，
+    /// 无可靠的「入场结束后再数」时机）。仅当数值【真的变化】时才滚动；尊重「减弱动态效果」。
     private struct CountUpText: View {
         let value: Int
         let font: Font
         @Environment(\.accessibilityReduceMotion) private var reduceMotion
-        @State private var shown: Double = 0
+        @State private var shown: Double
+
+        init(value: Int, font: Font) {
+            self.value = value
+            self.font = font
+            _shown = State(initialValue: Double(value))   // 首帧 = 真实值，无 0 残影
+        }
 
         var body: some View {
             Text("\(Int(shown.rounded()))")
                 .font(font)
                 .monospacedDigit()
-                .onAppear {
-                    guard !reduceMotion else { shown = Double(value); return }
-                    shown = 0
-                    withAnimation(.easeOut(duration: 0.7)) { shown = Double(value) }
+                .onChange(of: value) { _, newValue in
+                    guard !reduceMotion else { shown = Double(newValue); return }
+                    withAnimation(.easeOut(duration: 0.7)) { shown = Double(newValue) }
                 }
         }
     }
