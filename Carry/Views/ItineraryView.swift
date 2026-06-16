@@ -1049,6 +1049,7 @@ struct StopDetailView: View {
     let navApps: [MapNavigationApp]
     let dayColor: Color
 
+    @EnvironmentObject var store: TripStore
     @Environment(\.dismiss) private var dismiss
     @State private var editing = false
     @State private var addressCopied = false
@@ -1112,33 +1113,22 @@ struct StopDetailView: View {
     }
 
     private var header: some View {
-        HStack(alignment: .top, spacing: 12) {
-            ZStack {
-                Circle().fill(dayColor.opacity(0.15))
-                Image(systemName: stop.category.symbolName)
-                    .font(.system(size: 16, weight: .semibold))
-                    .foregroundStyle(dayColor)
-            }
-            .frame(width: 40, height: 40)
-            .accessibilityHidden(true)   // 装饰：身份由名称承载
-            Text(stop.name)
-                .font(.system(.title3, design: .rounded).weight(.semibold))
-                .foregroundStyle(.primary)
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .padding(.top, 6)        // 名称首行与右侧 X 视觉对齐（X 圆比名称行高）
-            // 关闭 X 内联进头部右上：去掉空导航栏后由它 + 名称填满顶部。圆形玻璃钮，与全屏地图/设置一致。
-            Button { dismiss() } label: {
-                Image(systemName: "xmark")
-                    .font(.system(size: 13, weight: .semibold))
-                    .foregroundStyle(.secondary)
-                    .frame(width: 30, height: 30)
-                    .glassCircleButton()
-                    .frame(width: 44, height: 44)        // ≥44pt 触达，30 视觉圆居中
-                    .contentShape(Rectangle())
-            }
-            .buttonStyle(.plain)
-            .accessibilityLabel(Text("common.close"))
+        DetailSheetHeader(
+            iconSystemName: stop.category.symbolName,
+            iconTint: dayColor,
+            title: stop.name,
+            deleteLabelKey: "itinerary.stop.edit.delete",
+            onEdit: { editing = true },
+            onDelete: deleteStop,
+            onClose: { dismiss() }
+        )
+    }
+
+    private func deleteStop() {
+        if let dayId = stop.day?.id {
+            store.removeItineraryStop(tripId: tripId, dayId: dayId, stopId: stop.id)
         }
+        dismiss()
     }
 
     @ViewBuilder

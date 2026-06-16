@@ -10,6 +10,61 @@
 
 import SwiftUI
 
+/// 详情页头部：图标圈 + 标题 + 「···」操作菜单（编辑 / 删除）+ 关闭 X。
+/// 地点 / 住宿 / 交通详情共用。删除提到 `···` 一步可达（不再藏在编辑页里），破坏性红色、
+/// 与底部 Edit 主按钮分工：常做的编辑在底部单手可达，破坏性删除收进菜单、好找又不易误触。
+struct DetailSheetHeader: View {
+    let iconSystemName: String
+    let iconTint: Color
+    let title: String
+    /// 删除项文案 key（各实体不同：地点 / 住宿 / 交通）。
+    let deleteLabelKey: String
+    let onEdit: () -> Void
+    let onDelete: () -> Void
+    let onClose: () -> Void
+
+    var body: some View {
+        HStack(alignment: .top, spacing: 12) {
+            ZStack {
+                Circle().fill(iconTint.opacity(0.15))
+                Image(systemName: iconSystemName)
+                    .font(.system(size: 16, weight: .semibold))
+                    .foregroundStyle(iconTint)
+            }
+            .frame(width: 40, height: 40)
+            .accessibilityHidden(true)
+            Text(title)
+                .font(.system(.title3, design: .rounded).weight(.semibold))
+                .foregroundStyle(.primary)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.top, 6)
+            Menu {
+                Button { onEdit() } label: { Label("itinerary.stop.detail.edit", systemImage: "pencil") }
+                Button(role: .destructive) { onDelete() } label: {
+                    Label(LocalizedStringKey(deleteLabelKey), systemImage: "trash")
+                }
+            } label: {
+                circleGlyph("ellipsis")
+            }
+            .accessibilityLabel(Text("common.more"))
+            Button { onClose() } label: { circleGlyph("xmark") }
+                .buttonStyle(.plain)
+                .accessibilityLabel(Text("common.close"))
+        }
+    }
+
+    /// 30pt 视觉玻璃圆 + 44pt 触达，与全屏地图 / 设置的圆形按钮一致。
+    private func circleGlyph(_ name: String) -> some View {
+        Image(systemName: name)
+            .font(.system(size: 13, weight: .semibold))
+            .foregroundStyle(.secondary)
+            .frame(width: 30, height: 30)
+            .glassCircleButton()
+            .frame(width: 44, height: 44)
+            .contentShape(Rectangle())
+    }
+}
+
 /// 图标 + 内容。内容靠图标表意（费用/晚数等），不加标签——与全 app 详情页「只显内容」一致。
 struct DetailInfoRow: View {
     let icon: String

@@ -13,6 +13,7 @@ struct TransportDetailView: View {
     let segment: TransportSegment
     let dayColor: Color
 
+    @EnvironmentObject var store: TripStore
     @Environment(\.dismiss) private var dismiss
     @State private var editing = false
     @State private var contentHeight: CGFloat = 0
@@ -66,32 +67,22 @@ struct TransportDetailView: View {
     }
 
     private var header: some View {
-        HStack(alignment: .top, spacing: 12) {
-            ZStack {
-                Circle().fill(dayColor.opacity(0.15))
-                Image(systemName: segment.mode.symbolName)
-                    .font(.system(size: 16, weight: .semibold))
-                    .foregroundStyle(dayColor)
-            }
-            .frame(width: 40, height: 40)
-            .accessibilityHidden(true)
-            Text(titleText)
-                .font(.system(.title3, design: .rounded).weight(.semibold))
-                .foregroundStyle(.primary)
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .padding(.top, 6)
-            Button { dismiss() } label: {
-                Image(systemName: "xmark")
-                    .font(.system(size: 13, weight: .semibold))
-                    .foregroundStyle(.secondary)
-                    .frame(width: 30, height: 30)
-                    .glassCircleButton()
-                    .frame(width: 44, height: 44)
-                    .contentShape(Rectangle())
-            }
-            .buttonStyle(.plain)
-            .accessibilityLabel(Text("common.close"))
+        DetailSheetHeader(
+            iconSystemName: segment.mode.symbolName,
+            iconTint: dayColor,
+            title: titleText,
+            deleteLabelKey: "itinerary.transport.delete",
+            onEdit: { editing = true },
+            onDelete: deleteSegment,
+            onClose: { dismiss() }
+        )
+    }
+
+    private func deleteSegment() {
+        if let dayId = segment.day?.id {
+            store.removeTransportSegment(tripId: tripId, dayId: dayId, segmentId: segment.id)
         }
+        dismiss()
     }
 
     @ViewBuilder

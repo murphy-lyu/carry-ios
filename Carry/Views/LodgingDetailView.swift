@@ -14,6 +14,7 @@ struct LodgingDetailView: View {
     let navApps: [MapNavigationApp]
     let dayColor: Color
 
+    @EnvironmentObject var store: TripStore
     @Environment(\.dismiss) private var dismiss
     @State private var editing = false
     @State private var contentHeight: CGFloat = 0
@@ -77,32 +78,20 @@ struct LodgingDetailView: View {
     }
 
     private var header: some View {
-        HStack(alignment: .top, spacing: 12) {
-            ZStack {
-                Circle().fill(dayColor.opacity(0.15))
-                Image(systemName: "bed.double.fill")
-                    .font(.system(size: 16, weight: .semibold))
-                    .foregroundStyle(dayColor)
-            }
-            .frame(width: 40, height: 40)
-            .accessibilityHidden(true)
-            Text(displayName)
-                .font(.system(.title3, design: .rounded).weight(.semibold))
-                .foregroundStyle(.primary)
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .padding(.top, 6)
-            Button { dismiss() } label: {
-                Image(systemName: "xmark")
-                    .font(.system(size: 13, weight: .semibold))
-                    .foregroundStyle(.secondary)
-                    .frame(width: 30, height: 30)
-                    .glassCircleButton()
-                    .frame(width: 44, height: 44)
-                    .contentShape(Rectangle())
-            }
-            .buttonStyle(.plain)
-            .accessibilityLabel(Text("common.close"))
-        }
+        DetailSheetHeader(
+            iconSystemName: "bed.double.fill",
+            iconTint: dayColor,
+            title: displayName,
+            deleteLabelKey: "itinerary.lodging.delete",
+            onEdit: { editing = true },
+            onDelete: deleteStay,
+            onClose: { dismiss() }
+        )
+    }
+
+    private func deleteStay() {
+        store.removeLodgingStay(tripId: tripId, stayId: stay.id)
+        dismiss()
     }
 
     @ViewBuilder
