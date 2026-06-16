@@ -49,7 +49,8 @@ struct CostInputRow: View {
                     .fixedSize()                       // 贴着符号、按内容定宽，不留尾隙
                     .focused($amountFocused)
             }
-            .frame(maxWidth: 160, alignment: .trailing)
+            // 不再硬限宽：位数已在数据层 cap（整数 ≤10），内容天然有界，符号不会被挤出；
+            // fixedSize 保证整串完整显示、符号始终在最左。
             // 币种 = 带 chevron 的小菜单 chip，明确「可点换币种」（对标方案 A）。
             Button {
                 showCurrencyPicker = true
