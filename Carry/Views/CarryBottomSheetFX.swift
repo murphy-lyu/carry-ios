@@ -189,6 +189,11 @@ final class FXSheetViewController: UIViewController {
     /// (origin-only shift), so it is never resized during a drag and SwiftUI never
     /// re-lays-out the sheet content mid-gesture.
     private weak var hostingView: UIView?
+    /// 底部消隐渐变：盖在内容之上、钉在 `innerView`（卡片可视窗口）底边，随收起裁短自动跟到
+    /// 可视底边 → 展开/收起两态都在可视底部把内容向 Sheet 底色柔和消隐。取代原 SwiftUI
+    /// `bottomContentFade`（锚在内容底部、收起态被裁到屏外不可见）。不吃点击。
+    private let bottomFadeView = FXBottomFadeView()
+    private let bottomFadeHeight: CGFloat = 120
     /// 首页底栏的宿主 view（搜索/行程册/创建）。钉在 `view` 底部、z 序在卡片之上，**不**放进
     /// outerView（否则会随卡片一起滑走、改变定位）。缩放在 `placeSheet` 里与卡片**同一 animator**
     /// 施加 `transform`（底边锚定）→ 与卡片像素级同步。
@@ -323,6 +328,11 @@ final class FXSheetViewController: UIViewController {
         innerView.addSubview(hosting.view)
         hostingView = hosting.view
         hosting.didMove(toParent: self)
+
+        // 底部消隐渐变盖在内容之上（在 hostingView 之后加入 → z 序在前）；不吃点击，让列表照常滚动/点击。
+        bottomFadeView.isUserInteractionEnabled = false
+        bottomFadeView.configure(baseColor: CarrySubtleBackground.baseUIColor, peakOpacity: 0.9)
+        innerView.addSubview(bottomFadeView)
 
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) { [weak self] in
             self?.attachScrollView(in: hosting.view)
@@ -485,6 +495,11 @@ final class FXSheetViewController: UIViewController {
         outerView.transform = CGAffineTransform(scaleX: g.scale, y: g.scale)
         outerView.center = g.center
         innerView.frame = outerView.bounds      // fills the card (pre-scale); rounds top corners
+        // 消隐渐变钉在 innerView（= 卡片可视窗口）底边：收起裁短时自动跟到可视底边、两态都可见。
+        // 空态不铺（空态卡片是内容自适应的固定缩放浮卡，无需在底部消隐）。
+        let fadeH = isListEmpty ? 0 : bottomFadeHeight
+        bottomFadeView.frame = CGRect(x: 0, y: max(0, innerView.bounds.height - fadeH),
+                                      width: innerView.bounds.width, height: fadeH)
 
         // ROOT-CAUSE PERFORMANCE INVARIANT: the SwiftUI content is laid out exactly ONCE,
         // at full size, and is NEVER resized during a drag/snap (resizing forced SwiftUI to
@@ -1030,6 +1045,26 @@ extension FXSheetViewController: UIGestureRecognizerDelegate {
             if sv.bounds.contains(pointInSV) { return false }
         }
         return true
+    }
+}
+
+// MARK: - FXBottomFadeView
+
+/// 底部消隐渐变（透明 → Sheet 底色），盖在内容之上、钉卡片可视底边。layer 本身即 CAGradientLayer，
+/// frame 随 placeSheet 设定（无 SwiftUI relayout、GPU 廉价）。UIView 的 frame 变更在动画块外不带隐式
+/// 动画（跟手），在 snap animator 块内则被动画器插值（与卡片同步）。
+private final class FXBottomFadeView: UIView {
+    override class var layerClass: AnyClass { CAGradientLayer.self }
+    private var gradient: CAGradientLayer { layer as! CAGradientLayer }
+    func configure(baseColor: UIColor, peakOpacity: CGFloat) {
+        gradient.colors = [
+            baseColor.withAlphaComponent(0).cgColor,
+            baseColor.withAlphaComponent(0.92 * peakOpacity).cgColor,
+            baseColor.withAlphaComponent(peakOpacity).cgColor,
+        ]
+        gradient.locations = [0, 0.5, 1]
+        gradient.startPoint = CGPoint(x: 0.5, y: 0)
+        gradient.endPoint = CGPoint(x: 0.5, y: 1)
     }
 }
 
