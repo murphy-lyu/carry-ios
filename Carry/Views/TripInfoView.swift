@@ -16,6 +16,8 @@ struct TripInfoView: View {
     @State private var showDatePicker = false
     /// 是否设置了日期。预填默认 true；点「无需日期」清除则为 false（→ 规划中行程）。
     @State private var hasDates = true
+    /// 防快速双击重复建行程（一击即建、无中间步，必须自守）。
+    @State private var isCreating = false
     @FocusState private var focusedField: FocusField?
     @EnvironmentObject var router: NavigationRouter
     @EnvironmentObject var store: TripStore
@@ -144,7 +146,8 @@ struct TripInfoView: View {
         .safeAreaInset(edge: .bottom) {
             VStack(spacing: 0) {
                 Button(action: {
-                    guard canContinue else { return }
+                    guard canContinue, !isCreating else { return }   // 防双击重复创建
+                    isCreating = true
                     hideKeyboard()
                     // 新链路：填完行程信息直接建空行程并落到该行程（默认进「行程规划」面），
                     // 用户再按习惯做规划或加打包——不再强制走「添加物品」。物品/智能打包仍可在行程内添加。
