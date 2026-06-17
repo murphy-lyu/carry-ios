@@ -178,12 +178,29 @@ struct TransportEditView: View {
 
     private var typeSection: some View {
         Section {
-            Picker(selection: $mode) {
-                ForEach(TransportMode.allCases, id: \.self) { m in
-                    Label(m.titleKey, systemImage: m.symbolName).tag(m)
-                }
+            // 自定义 Menu 取代原生 Picker：原生折叠态把「✈ + Flight」渲染得紧贴、间距系统控制改不了。
+            // 这里自己排版，图标与文字间显式留 6pt 呼吸感；选项仍用内嵌 Picker 保留勾选态、整行可点。
+            Menu {
+                Picker(selection: $mode) {
+                    ForEach(TransportMode.allCases, id: \.self) { m in
+                        Label(m.titleKey, systemImage: m.symbolName).tag(m)
+                    }
+                } label: { EmptyView() }
             } label: {
-                Text("itinerary.transport.section.type")
+                HStack {
+                    Text("itinerary.transport.section.type")
+                        .foregroundStyle(.primary)
+                    Spacer()
+                    HStack(spacing: 6) {
+                        Image(systemName: mode.symbolName)
+                        Text(mode.titleKey)
+                    }
+                    .foregroundStyle(Color.accentColor)
+                    Image(systemName: "chevron.up.chevron.down")
+                        .font(.caption2)
+                        .foregroundStyle(.secondary)
+                }
+                .contentShape(Rectangle())
             }
         }
     }
