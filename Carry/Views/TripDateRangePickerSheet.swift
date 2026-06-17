@@ -147,6 +147,8 @@ struct TripDateRangePickerSheet: View {
                             Int64(nightsCount + 1), Int64(nightsCount)))
                     .font(.system(.caption, design: .rounded).weight(.semibold))
                     .foregroundStyle(.secondary.opacity(0.90))
+                    .lineLimit(1)                      // 强制单行：长语言/大字号下也不换行成两行（→ 高度恒为单行，不撑高头部、不跳动）
+                    .minimumScaleFactor(0.85)          // 空间紧时轻微缩小文字，不截断、不挤坏日期块
                     .padding(.horizontal, 10)
                     .padding(.vertical, 5)
                     .background(Color.primary.opacity(0.05))
