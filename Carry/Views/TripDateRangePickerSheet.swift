@@ -165,6 +165,9 @@ struct TripDateRangePickerSheet: View {
         }
         .font(.system(.subheadline, design: .rounded).weight(.medium))
         .monospacedDigit()
+        // 强制单行：否则空间紧时「隐藏参考」（比真实日期更宽）会悄悄换行 → 该列变两行高 → 把「出发/返回」
+        // 标题顶歪、与另一列不齐（真实日期仍单行，所以看着像标题莫名上移）。单行后两列恒等高、标题永远对齐。
+        .lineLimit(1)
         .foregroundStyle(.primary)
     }
 
