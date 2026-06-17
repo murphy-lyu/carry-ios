@@ -21,6 +21,7 @@ enum SettingsRoute: Hashable {
     case cycleReminder
     case dataRecovery
     case about
+    case roadmap
     case developer
 }
 
@@ -30,11 +31,7 @@ struct SettingsView: View {
     @Environment(\.dismiss) private var dismiss
 
     @State private var notificationStatus: UNAuthorizationStatus = .notDetermined
-    @State private var showAppearancePicker = false
-    @State private var showDistanceUnitPicker = false
-    @State private var showRoadmapSheet = false
     @State private var showCoffeeSheet = false
-    @State private var didApplyLaunchSheetReset = false
     @State private var showImporter = false
     @State private var showImportConfirmation = false
     @State private var pendingImportData: Data?
@@ -237,30 +234,10 @@ struct SettingsView: View {
                         // 个性化：App 长什么样（外观 · 语言 · 应用图标）
                         Section {
                             settingsCard {
-                                Button {
-                                    showAppearancePicker = true
-                                } label: {
-                                    HStack(spacing: 14) {
-                                        Text("Appearance")
-                                            .font(.body)
-                                            .foregroundStyle(.primary)
-                                        Spacer()
-                                        Text(currentAppearance.titleKey)
-                                            .font(.body)
-                                            .foregroundStyle(.secondary)
-                                        Image(systemName: "chevron.right")
-                                            .font(.caption.weight(.semibold))
-                                            .foregroundStyle(.tertiary)
-                                    }
-                                    .padding(.horizontal, 18)
-                                    .frame(height: 58)
-                                    .contentShape(Rectangle())
-                                }
-                                .buttonStyle(.plain)
-                                .confirmationDialog("Appearance", isPresented: $showAppearancePicker, titleVisibility: .visible) {
-                                    ForEach(AppearanceMode.allCases) { mode in
-                                        Button(mode.titleKey) {
-                                            appearanceModeRaw = mode.rawValue
+                                settingsMenuRow(title: "Appearance", value: currentAppearance.titleKey) {
+                                    Picker("Appearance", selection: $appearanceModeRaw) {
+                                        ForEach(AppearanceMode.allCases) { mode in
+                                            Text(mode.titleKey).tag(mode.rawValue)
                                         }
                                     }
                                 }
@@ -270,7 +247,7 @@ struct SettingsView: View {
                                     route: .appIcon
                                 )
                                 // 语言会跳转到 iOS 系统设置（离开 App），放该组最末
-                                settingsRow(title: "settings.about.language", valueText: currentLanguageDisplay) {
+                                settingsRow(title: "settings.about.language", valueText: currentLanguageDisplay, accessory: .external) {
                                     openSystemSettings()
                                 }
                             }
@@ -283,36 +260,16 @@ struct SettingsView: View {
                         // 通用：行为 / 单位偏好（距离单位；未来温度/区域等）
                         Section {
                             settingsCard {
-                                Button {
-                                    showDistanceUnitPicker = true
-                                } label: {
-                                    HStack(spacing: 14) {
-                                        Text("settings.units.distance")
-                                            .font(.body)
-                                            .foregroundStyle(.primary)
-                                        Spacer()
-                                        Text(currentDistanceUnit.titleKey)
-                                            .font(.body)
-                                            .foregroundStyle(.secondary)
-                                        Image(systemName: "chevron.right")
-                                            .font(.caption.weight(.semibold))
-                                            .foregroundStyle(.tertiary)
-                                    }
-                                    .padding(.horizontal, 18)
-                                    .frame(height: 58)
-                                    .contentShape(Rectangle())
-                                }
-                                .buttonStyle(.plain)
-                                .confirmationDialog("settings.units.distance", isPresented: $showDistanceUnitPicker, titleVisibility: .visible) {
-                                    ForEach(DistanceUnit.allCases) { unit in
-                                        Button(unit.titleKey) {
-                                            distanceUnitRaw = unit.rawValue
+                                settingsMenuRow(title: "settings.units.distance", value: currentDistanceUnit.titleKey) {
+                                    Picker("settings.units.distance", selection: $distanceUnitRaw) {
+                                        ForEach(DistanceUnit.allCases) { unit in
+                                            Text(unit.titleKey).tag(unit.rawValue)
                                         }
                                     }
                                 }
                                 settingsNavigationRow(
                                     title: "settings.currency.entry",
-                                    valueText: "\(currentCurrencyCode) \(CurrencyCatalog.symbol(for: currentCurrencyCode))",
+                                    valueText: currentCurrencyCode,
                                     route: .currency
                                 )
                             }
@@ -415,14 +372,15 @@ struct SettingsView: View {
 
                         Section {
                             settingsCard {
-                                settingsNavigationRow(title: "settings.about.entry", route: .about)
-                                settingsRow(title: "settings.section.support", valueText: "☕️") {
+                                // Support = 打赏（StoreKit），开 in-app sheet 的聚焦任务 → 不挂 push 箭头
+                                settingsRow(title: "settings.section.support", valueText: "☕️", accessory: .none) {
                                     showCoffeeSheet = true
                                 }
-                                settingsRow(titleText: roadmapTitle) {
-                                    showRoadmapSheet = true
-                                }
-                                settingsRow(title: "settings.feedback") {
+                                settingsNavigationRow(title: "settings.about.entry", route: .about)
+                                // Roadmap = 信息内容，归属设置层级 → push（与其它子页一致，且避免模态套模态）
+                                settingsNavigationRow(titleText: roadmapTitle, route: .roadmap)
+                                // Feedback = 跳转邮件（离开 App）→ 外链箭头
+                                settingsRow(title: "settings.feedback", accessory: .external) {
                                     openFeedbackMail()
                                 }
                             }
@@ -508,23 +466,12 @@ struct SettingsView: View {
             if phase == .active {
                 refreshBackupCache()
                 currentIconName = currentAppIconDisplayName()
-                if !didApplyLaunchSheetReset {
-                    showRoadmapSheet = false
-                    didApplyLaunchSheetReset = true
-                }
             }
         }
         .onReceive(
             NotificationCenter.default.publisher(for: UIApplication.willEnterForegroundNotification)
         ) { _ in
             Task { await refreshNotificationStatus() }
-        }
-        .sheet(isPresented: $showRoadmapSheet) {
-            NavigationStack {
-                RoadmapView {
-                    showRoadmapSheet = false
-                }
-            }
         }
         .sheet(isPresented: $showCoffeeSheet) {
             CoffeeSheetView()
@@ -588,8 +535,37 @@ struct SettingsView: View {
         }
     }
 
+    /// 行尾可供性：与「点击后发生什么」严格对应（Apple HIG）。
+    /// `›` 仅用于 push（进入下一层）；弹出菜单用上下箭头；离开 App 用外链箭头；开 in-app sheet 不挂箭头。
+    private enum SettingsRowAccessory {
+        case push       // chevron.right — 进入设置层级的下一页
+        case menu       // chevron.up.chevron.down — 就地弹出选择菜单
+        case external   // arrow.up.right — 离开 App（系统设置 / 邮件）
+        case none       // 无 — 打开一个 in-app sheet 的动作行
+    }
+
     @ViewBuilder
-    private func settingsRow(title: LocalizedStringKey, valueText: String? = nil, action: @escaping () -> Void) -> some View {
+    private func settingsAccessory(_ kind: SettingsRowAccessory) -> some View {
+        switch kind {
+        case .push:
+            Image(systemName: "chevron.right")
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(settingsChevronColor)
+        case .menu:
+            Image(systemName: "chevron.up.chevron.down")
+                .font(.caption2.weight(.semibold))
+                .foregroundStyle(settingsChevronColor)
+        case .external:
+            Image(systemName: "arrow.up.right")
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(settingsChevronColor)
+        case .none:
+            EmptyView()
+        }
+    }
+
+    @ViewBuilder
+    private func settingsRow(title: LocalizedStringKey, valueText: String? = nil, accessory: SettingsRowAccessory = .push, action: @escaping () -> Void) -> some View {
         Button(action: action) {
             HStack(spacing: 14) {
                 Text(title)
@@ -601,9 +577,7 @@ struct SettingsView: View {
                         .font(.body)
                         .foregroundStyle(settingsValueColor)
                 }
-                Image(systemName: "chevron.right")
-                    .font(.caption.weight(.semibold))
-                    .foregroundStyle(settingsChevronColor)
+                settingsAccessory(accessory)
             }
             .padding(.horizontal, 18)
             .frame(height: 58)
@@ -635,16 +609,14 @@ struct SettingsView: View {
     }
 
     @ViewBuilder
-    private func settingsRow(title: LocalizedStringKey, action: @escaping () -> Void) -> some View {
+    private func settingsRow(title: LocalizedStringKey, accessory: SettingsRowAccessory = .push, action: @escaping () -> Void) -> some View {
         Button(action: action) {
             HStack(spacing: 14) {
                 Text(title)
                     .font(.body)
                     .foregroundStyle(.primary)
                 Spacer()
-                Image(systemName: "chevron.right")
-                    .font(.caption.weight(.semibold))
-                    .foregroundStyle(settingsChevronColor)
+                settingsAccessory(accessory)
             }
             .padding(.horizontal, 18)
             .frame(height: 58)
@@ -654,16 +626,14 @@ struct SettingsView: View {
     }
 
     @ViewBuilder
-    private func settingsRow(titleText: String, action: @escaping () -> Void) -> some View {
+    private func settingsRow(titleText: String, accessory: SettingsRowAccessory = .push, action: @escaping () -> Void) -> some View {
         Button(action: action) {
             HStack(spacing: 14) {
                 Text(titleText)
                     .font(.body)
                     .foregroundStyle(.primary)
                 Spacer()
-                Image(systemName: "chevron.right")
-                    .font(.caption.weight(.semibold))
-                    .foregroundStyle(settingsChevronColor)
+                settingsAccessory(accessory)
             }
             .padding(.horizontal, 18)
             .frame(height: 58)
@@ -690,9 +660,54 @@ struct SettingsView: View {
                         .foregroundStyle(settingsValueColor)
                         .lineLimit(1)
                 }
-                Image(systemName: "chevron.right")
-                    .font(.caption.weight(.semibold))
-                    .foregroundStyle(settingsChevronColor)
+                settingsAccessory(.push)
+            }
+            .padding(.horizontal, 18)
+            .frame(height: 58)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+    }
+
+    /// 就地弹出菜单的行（少数选项内联选一个，如外观 / 距离单位）。尾部用上下箭头表「弹菜单」，
+    /// 配原生 `Menu` + `Picker`（选中项自带勾），符合 Apple 的 pull-down 选择规范。
+    @ViewBuilder
+    private func settingsMenuRow<Items: View>(
+        title: LocalizedStringKey,
+        value: LocalizedStringKey,
+        @ViewBuilder items: () -> Items
+    ) -> some View {
+        Menu {
+            items()
+        } label: {
+            HStack(spacing: 14) {
+                Text(title)
+                    .font(.body)
+                    .foregroundStyle(.primary)
+                Spacer()
+                Text(value)
+                    .font(.body)
+                    .foregroundStyle(settingsValueColor)
+                settingsAccessory(.menu)
+            }
+            .padding(.horizontal, 18)
+            .frame(height: 58)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .tint(.primary)
+    }
+
+    /// push 行的纯文本标题变体（标题非本地化 key、而是按语言动态拼的 String，如 Roadmap）。
+    @ViewBuilder
+    private func settingsNavigationRow(titleText: String, route: SettingsRoute) -> some View {
+        NavigationLink(value: route) {
+            HStack(spacing: 14) {
+                Text(titleText)
+                    .font(.body)
+                    .foregroundStyle(.primary)
+                Spacer()
+                settingsAccessory(.push)
             }
             .padding(.horizontal, 18)
             .frame(height: 58)
@@ -732,6 +747,9 @@ struct SettingsView: View {
             DataRecoveryView()
         case .about:
             AboutView()
+        case .roadmap:
+            // push 进入，无 onClose → 不显示关闭按钮，用系统返回（与其它设置子页一致）
+            RoadmapView()
         case .developer:
 #if DEBUG
             DeveloperModeView()

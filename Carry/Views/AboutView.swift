@@ -102,7 +102,7 @@ struct AboutView: View {
             .padding(.horizontal, 16)
             .padding(.bottom, 20)
         }
-        .background(CarrySubtleBackground())
+        .background(Color(.systemGroupedBackground).ignoresSafeArea())
         .navigationTitle("about.title")
         .navigationBarTitleDisplayMode(.inline)
     }

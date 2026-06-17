@@ -146,8 +146,23 @@ struct RoadmapView: View {
                 .padding(.bottom, 24)
             }
         }
-        .background(CarrySubtleBackground())
-        .navigationBarHidden(true)
+        .background(Color(.systemGroupedBackground).ignoresSafeArea())
+        // push 进入设置栈：显示系统导航栏（返回按钮），标题留空，让内容里的大标题继续做表达性页头。
+        .navigationTitle("")
+        .navigationBarTitleDisplayMode(.inline)
+#if DEBUG
+        // 调试入口（远程 JSON 源）放进导航栏 trailing，与返回按钮同排；release 不含。
+        .toolbar {
+            ToolbarItem(placement: .topBarTrailing) {
+                Button {
+                    draftURL = remoteURL
+                    showSourceSheet = true
+                } label: {
+                    Image(systemName: "link")
+                }
+            }
+        }
+#endif
         .sheet(isPresented: $showSourceSheet) {
             NavigationStack {
                 ScrollView {
@@ -257,20 +272,7 @@ struct RoadmapView: View {
             .frame(maxWidth: .infinity, alignment: .leading)
 
             HStack(spacing: 8) {
-#if DEBUG
-                Button {
-                    draftURL = remoteURL
-                    showSourceSheet = true
-                } label: {
-                    Image(systemName: "link")
-                        .font(.system(size: 12, weight: .semibold))
-                        .foregroundStyle(.primary)
-                        .frame(width: 32, height: 32)
-                        .glassCircleButton()
-                }
-                .buttonStyle(.plain)
-#endif
-
+                // DEBUG「远程 JSON 源」入口已移到系统导航栏 trailing（与返回按钮同排，见 body .toolbar）。
                 if let onClose {
                     Button {
                         onClose()

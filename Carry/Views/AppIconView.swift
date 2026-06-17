@@ -82,7 +82,7 @@ struct AppIconView: View {
             .padding(.horizontal, 16)
             .padding(.bottom, 32)
         }
-        .background(CarrySubtleBackground())
+        .background(Color(.systemGroupedBackground).ignoresSafeArea())
         .navigationTitle("icon.title")
         .navigationBarTitleDisplayMode(.inline)
     }
