@@ -52,32 +52,22 @@ private let smartSceneSymbols: [String: String] = [
 struct ItemPickerView: View {
 
     private enum Mode {
-        case create(TripInfo)
         case merge(tripId: UUID)
         case autoPackReview(TripInfo, sceneKeys: [String])
     }
 
     private let mode: Mode
-    private let startInMyItems: Bool
     private let cachedSceneRecommendedNames: Set<String>
     @State private var appliedSceneRecommendedNames: Set<String> = []
     @State private var lastAppliedSceneLabels: Set<String> = []
 
-    init(tripInfo: TripInfo, startInMyItems: Bool = false) {
-        self.mode = .create(tripInfo)
-        self.startInMyItems = startInMyItems
-        self.cachedSceneRecommendedNames = []
-    }
-
     init(tripId: UUID) {
         self.mode = .merge(tripId: tripId)
-        self.startInMyItems = false
         self.cachedSceneRecommendedNames = []
     }
 
     init(autoPackTripInfo: TripInfo, sceneKeys: [String], isInternational: Bool? = nil, destinationCodes: [String] = []) {
         self.mode = .autoPackReview(autoPackTripInfo, sceneKeys: sceneKeys)
-        self.startInMyItems = false
 
         // Pre-select items generated from scenes, matched back to catalog raw keys
         let generated = generatePackingSections(selectedScenes: sceneKeys, tripDays: autoPackTripInfo.durationDays, isInternational: isInternational, destinationCodes: destinationCodes)
@@ -155,7 +145,7 @@ struct ItemPickerView: View {
 
     private var isCreateMode: Bool {
         switch mode {
-        case .create, .autoPackReview: return true
+        case .autoPackReview: return true
         case .merge: return false
         }
     }
@@ -247,7 +237,7 @@ struct ItemPickerView: View {
     private var tripDateRange: (start: Date, end: Date)? {
         let cal = Calendar.current
         switch mode {
-        case .create(let info), .autoPackReview(let info, _):
+        case .autoPackReview(let info, _):
             guard !info.isDateless else { return nil }
             return (cal.startOfDay(for: info.departureDate), cal.startOfDay(for: info.returnDate))
         case .merge(let tripId):
@@ -260,8 +250,6 @@ struct ItemPickerView: View {
 
     private var tripDays: Int {
         switch mode {
-        case .create(let info):
-            return info.durationDays
         case .autoPackReview(let info, _):
             return info.durationDays
         case .merge(let tripId):
@@ -271,8 +259,6 @@ struct ItemPickerView: View {
 
     private var tripIsInternational: Bool? {
         switch mode {
-        case .create(let info):
-            return store.inferIsInternational(for: info.destinationCity)
         case .autoPackReview(let info, _):
             return store.inferIsInternational(for: info.destinationCity)
         case .merge(let tripId):
@@ -283,8 +269,6 @@ struct ItemPickerView: View {
 
     private var tripDestinationCodes: [String] {
         switch mode {
-        case .create(let info):
-            return store.inferCountryCodes(for: info.destinationCity)
         case .autoPackReview(let info, _):
             return store.inferCountryCodes(for: info.destinationCity)
         case .merge(let tripId):
@@ -627,9 +611,7 @@ struct ItemPickerView: View {
             _ = ItemPickerView.localizedSearchTermsByItem
             guard !didApplyInitialSource else { return }
             didApplyInitialSource = true
-            if startInMyItems {
-                sourceMode = .myItems
-            } else if let lastMode = SourceMode(rawValue: lastSourceModeRawValue) {
+            if let lastMode = SourceMode(rawValue: lastSourceModeRawValue) {
                 sourceMode = lastMode
             }
             if selectedSmartSceneLabels.isEmpty {
@@ -644,7 +626,6 @@ struct ItemPickerView: View {
             }
             let modeLabel: String
             switch mode {
-            case .create: modeLabel = "create"
             case .autoPackReview: modeLabel = "autopack"
             case .merge: modeLabel = "merge"
             }
@@ -1676,27 +1657,6 @@ struct ItemPickerView: View {
         let totalAdded = presetCount + myItemCount
 
         switch mode {
-        case .create(let info):
-            let pickedSceneKeys = selectedSmartSceneLabels.compactMap { sceneLabelToKey[$0] }
-            let bundle = TripBundle(
-                name: info.name,
-                destinationCity: info.destinationCity,
-                days: info.isDateless ? 1 : info.durationDays,
-                dateRange: info.isDateless ? "" : info.dateRangeDisplay,
-                departureDate: info.departureDate,
-                isDateless: info.isDateless,
-                selectedSceneKeys: pickedSceneKeys,
-                sections: sections
-            )
-            // 新建行程：把设置里的默认提醒档位快照进该行程（非实时联动）。
-            bundle.reminderConfigs = ReminderPreferences.defaultConfigs
-            store.setDraftTrip(bundle)
-            if sections.isEmpty {
-                finalizeEmptyTrip(bundle: bundle, city: info.destinationCity)
-            } else {
-                router.pushCreation(.packingList(bundle.id))
-            }
-
         case .autoPackReview(let info, let sceneKeys):
             let bundle = TripBundle(
                 name: info.name,
@@ -1925,7 +1885,7 @@ private struct ItemPickerMyItemEditorView: View {
 // MARK: - Preview
 
 #Preview {
-    ItemPickerView(tripInfo: TripInfo(name: "Tokyo", destinationCity: "Tokyo"))
+    ItemPickerView(tripId: UUID())
         .environmentObject(TripStore())
         .environmentObject(NavigationRouter())
 }
