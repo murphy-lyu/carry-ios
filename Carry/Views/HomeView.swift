@@ -860,6 +860,13 @@ struct HomeView: View {
             }
         }
         .padding(.horizontal, 4)
+        // 吸收底栏区域的 tap：防止三按钮间 ~14pt 空隙的点击穿透到背后行程卡（playbook §19 取舍翻转）。
+        // 背景层在按钮之后 → 按钮照常优先吃 tap，只有落在空隙的 tap 被这层吸掉、不再下传。
+        // 代价：底栏这条区域不再能「上滑滚列表」——tap/pan 在「底栏作 UIKit 兄弟视图」架构下无法两全，
+        // 按用户要求选「不穿透」；列表照常在其自身区域滑动。
+        .background(
+            Color.clear.contentShape(Rectangle()).onTapGesture { }
+        )
     }
 
     private var bottomBarStack: some View {
