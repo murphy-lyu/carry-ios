@@ -333,10 +333,6 @@ private struct DayCell: View {
                 Circle()
                     .fill(Color.accentColor)
                     .scaleEffect(endpointCircleScale)
-            } else if isToday {
-                Circle()
-                    .strokeBorder(Color.accentColor.opacity(0.92), lineWidth: 1.5)
-                    .padding(5)
             }
 
             Text("\(calendar.component(.day, from: date))")
@@ -348,6 +344,16 @@ private struct DayCell: View {
         }
         .padding(.vertical, 2)
         .frame(height: 44)
+        // 「今天」= 数字下方小实心圆点（区别于选中的实心大圆：点在下、大小悬殊，绝不混淆）。
+        // 被选中时圆点用选中前景色（落在实心圆下沿仍可见）。
+        .overlay(alignment: .bottom) {
+            if isToday {
+                Circle()
+                    .fill((isStart || isEnd) ? selectedDayForeground : Color.accentColor)
+                    .frame(width: 5, height: 5)
+                    .padding(.bottom, 5)
+            }
+        }
         .contentShape(Rectangle())
         .onTapGesture { onTap() }
     }
