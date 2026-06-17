@@ -1056,15 +1056,37 @@ extension FXSheetViewController: UIGestureRecognizerDelegate {
 private final class FXBottomFadeView: UIView {
     override class var layerClass: AnyClass { CAGradientLayer.self }
     private var gradient: CAGradientLayer { layer as! CAGradientLayer }
+
+    // 配置参数留存：CGColor 不随 light/dark trait 自适应（CAGradientLayer.colors 存的是解析死的 CGColor），
+    // 故须在 trait 变化时用当前 trait 重新解析、重设——否则切换深色后渐变仍停在配置时那套颜色（白底渐变）。
+    private var baseColor: UIColor = .clear
+    private var peakOpacity: CGFloat = 0
+
+    override init(frame: CGRect) {
+        super.init(frame: frame)
+        registerForTraitChanges([UITraitUserInterfaceStyle.self]) { (view: FXBottomFadeView, _) in
+            view.applyColors()
+        }
+    }
+    required init?(coder: NSCoder) { fatalError("init(coder:) has not been implemented") }
+
     func configure(baseColor: UIColor, peakOpacity: CGFloat) {
-        gradient.colors = [
-            baseColor.withAlphaComponent(0).cgColor,
-            baseColor.withAlphaComponent(0.92 * peakOpacity).cgColor,
-            baseColor.withAlphaComponent(peakOpacity).cgColor,
-        ]
+        self.baseColor = baseColor
+        self.peakOpacity = peakOpacity
         gradient.locations = [0, 0.5, 1]
         gradient.startPoint = CGPoint(x: 0.5, y: 0)
         gradient.endPoint = CGPoint(x: 0.5, y: 1)
+        applyColors()
+    }
+
+    /// 用当前 traitCollection 解析动态色后重设 CGColor。configure 时与每次 light/dark 切换时都调用。
+    private func applyColors() {
+        let resolved = baseColor.resolvedColor(with: traitCollection)
+        gradient.colors = [
+            resolved.withAlphaComponent(0).cgColor,
+            resolved.withAlphaComponent(0.92 * peakOpacity).cgColor,
+            resolved.withAlphaComponent(peakOpacity).cgColor,
+        ]
     }
 }
 
