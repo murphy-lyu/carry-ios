@@ -115,7 +115,8 @@ struct TripDateRangePickerSheet: View {
     // MARK: - Summary strip
 
     private var summaryStrip: some View {
-        HStack(spacing: 16) {
+        // 间距收到 12（原 16）：给「x天x晚」胶囊腾出横向空间，真机长语言/大字号下也能单行原大小放下。
+        HStack(spacing: 12) {
             VStack(alignment: .leading, spacing: 3) {
                 Text("Departure")
                     .font(.system(.caption, design: .rounded).weight(.semibold))
