@@ -214,11 +214,22 @@ struct PackingListView: View {
                                 Label("itinerary.reorder.menu", systemImage: "arrow.up.arrow.down")
                             }
                         }
-                        // 共享「行程级操作」（两个 tab 通用、顺序一致）：编辑行程 → 行程提醒 → 添加背景图。
+                        // 共享「行程级操作」（两个 tab 通用、顺序一致）：编辑行程 → 复制行程 → 行程提醒 → 添加背景图。
                         Button {
                             showEditSheet = true
                         } label: {
                             Label("Edit trip", systemImage: "pencil")
+                        }
+                        // 复制整个行程 → 记下副本 id 让首页扫光高亮 → 返回首页根看到新副本。
+                        // 放 ··· 菜单而非左滑：从行程内触发，首页不在左滑态，插入干净、无空白闪烁。
+                        Button {
+                            UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                            if let newId = store.duplicateTrip(withId: tripId) {
+                                store.pendingShimmerTripId = newId
+                            }
+                            router.path = NavigationPath()
+                        } label: {
+                            Label("trip.swipe.duplicate", systemImage: "doc.on.doc")
                         }
                         Button {
                             showReminderSheet = true

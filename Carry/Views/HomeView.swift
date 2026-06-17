@@ -97,7 +97,6 @@ struct HomeView: View {
     /// 点搜索结果时暂存目标行程；在 sheet 真正 dismiss 完成后（onDismiss）再跳转，
     /// 避免在 sheet 关闭动画期间向根 router 压栈（事件驱动，非定时延迟）。
     @State private var pendingSearchTrip: UUID?
-    @State private var listIdentity = UUID()
     @State private var didPlayInitialReveal = false
     @State private var initialRevealProgress: Double = 0
     @State private var revealCurtainOpacity: Double = 1
@@ -586,7 +585,6 @@ struct HomeView: View {
                             .listRowSeparator(.hidden)
                     }
                 }
-                .id(listIdentity)
                 .listStyle(.plain)
                 .scrollContentBackground(.hidden)
                 .scrollIndicators(.hidden)
@@ -654,6 +652,11 @@ struct HomeView: View {
                 rebuildTripLists()
                 if !hasShownFirstTripShimmer && oldTrips.isEmpty && newTrips.count == 1 {
                     firstTripCreatedAtInterval = Date().timeIntervalSince1970
+                }
+                // 复制行程后回首页：复用扫光高亮指向新副本，让用户感知到它的出现（与「首个行程」同一种高亮）。
+                if let pending = store.pendingShimmerTripId {
+                    shimmerTripId = pending
+                    store.pendingShimmerTripId = nil
                 }
             }
             // 模拟空态 flag 也是 rebuildTripLists 的输入（开启时把缓存列表置空），
@@ -1664,6 +1667,8 @@ struct HomeView: View {
         }
         .buttonStyle(PressableScaleButtonStyle(scale: 0.982, pressedBrightness: -0.02, pressedOpacity: 0.96))
         .id("\(bundle.id.uuidString)-\(bundle.packedCount)-\(bundle.totalCount)")
+        // 左滑只保留「删除」。复制行程已移到行程内的 ··· 菜单——避免「左滑展开态 + 插入新行」时
+        // SwiftUI 无法平滑收起该行而出现空白闪烁（详见复制流程：在行程内复制后回首页 + 扫光高亮副本）。
         .swipeActions(edge: .trailing, allowsFullSwipe: false) {
             Button(role: .none) {
                 tripToDelete = bundle
@@ -1672,20 +1677,6 @@ struct HomeView: View {
                 Label("Delete", systemImage: "trash")
             }
             .tint(.red)
-            Button {
-                UIImpactFeedbackGenerator(style: .light).impactOccurred()
-                // Force-close any active swipe row state before mutating data to avoid
-                // temporary blank placeholder gaps in List.
-                listIdentity = UUID()
-                DispatchQueue.main.async {
-                    withAnimation(.easeInOut(duration: 0.24)) {
-                        _ = store.duplicateTrip(withId: bundle.id)
-                    }
-                }
-            } label: {
-                Label("trip.swipe.duplicate", systemImage: "doc.on.doc")
-            }
-            .tint(CarryAccent.color)
         }
         .listRowInsets(EdgeInsets(top: 0, leading: 16, bottom: 12, trailing: 16))
         .listRowBackground(Color.clear)

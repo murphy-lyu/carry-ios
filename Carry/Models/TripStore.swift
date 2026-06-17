@@ -193,6 +193,8 @@ final class TripBundle {
 final class TripStore: ObservableObject {
     @Published var trips: [TripBundle] = []
     @Published var myItems: [MyItem] = []
+    /// 复制行程后要在首页扫光高亮的新副本 id（行程内复制 → 回首页时由 HomeView 消费一次）。瞬时信号，不持久化。
+    var pendingShimmerTripId: UUID?
     @Published var isSceneCardDismissedGlobally: Bool
     @Published var isHomeEmptyStateMockEnabled: Bool
     @Published private(set) var draftTrip: TripBundle?
