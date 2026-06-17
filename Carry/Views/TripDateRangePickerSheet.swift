@@ -121,9 +121,7 @@ struct TripDateRangePickerSheet: View {
                 Text("Departure")
                     .font(.system(.caption, design: .rounded).weight(.semibold))
                     .foregroundStyle(!isSelectingEnd ? AnyShapeStyle(Color.accentColor.opacity(0.92)) : AnyShapeStyle(.secondary))
-                Text(selectedStart.formatted(.dateTime.month(.abbreviated).day().year()))
-                    .font(.system(.subheadline, design: .rounded).weight(.medium))
-                    .foregroundStyle(.primary)
+                dateValueText(selectedStart)
             }
 
             Image(systemName: "arrow.right")
@@ -134,9 +132,7 @@ struct TripDateRangePickerSheet: View {
                 Text("Return")
                     .font(.system(.caption, design: .rounded).weight(.semibold))
                     .foregroundStyle(isSelectingEnd ? AnyShapeStyle(Color.accentColor.opacity(0.92)) : AnyShapeStyle(.secondary))
-                Text(selectedEnd.formatted(.dateTime.month(.abbreviated).day().year()))
-                    .font(.system(.subheadline, design: .rounded).weight(.medium))
-                    .foregroundStyle(.primary)
+                dateValueText(selectedEnd)
             }
 
             Spacer()
@@ -156,6 +152,28 @@ struct TripDateRangePickerSheet: View {
                     .clipShape(Capsule())
             }
         }
+    }
+
+    /// 日期值文本：固定列宽，杜绝箭头 / Return 随日期文案宽度抖动。
+    /// 用「本 locale 最长缩写月名 + 28 日」作隐藏参考撑出恒定宽度，真实日期左对齐叠上；
+    /// 数字 monospacedDigit 让 1/2 位日的数字等宽。无论日位数、月名宽窄，起点都不位移。
+    private func dateValueText(_ date: Date) -> some View {
+        let fmt: Date.FormatStyle = .dateTime.month(.abbreviated).day().year()
+        return ZStack(alignment: .leading) {
+            Text(widestDateReference.formatted(fmt)).hidden()   // 占位撑出最宽宽度
+            Text(date.formatted(fmt))
+        }
+        .font(.system(.subheadline, design: .rounded).weight(.medium))
+        .monospacedDigit()
+        .foregroundStyle(.primary)
+    }
+
+    /// 最宽参考日期：当前 locale 缩写月名最长的那个月 + 28 日（2 位日）。保证任何真实日期都不超过它。
+    private var widestDateReference: Date {
+        let symbols = calendar.shortMonthSymbols
+        let monthIdx = (symbols.indices.max { symbols[$0].count < symbols[$1].count } ?? 0) + 1
+        var c = DateComponents(); c.year = 2026; c.month = monthIdx; c.day = 28
+        return calendar.date(from: c) ?? selectedStart
     }
 
     // MARK: - Weekday header
@@ -304,7 +322,8 @@ private struct DayCell: View {
     private var isRowStart: Bool { columnIndex == 0 }
     private var isRowEnd: Bool { columnIndex == 6 }
     private var selectedDayForeground: Color {
-        colorScheme == .dark ? Color.black : Color.white
+        // 选中日数字恒为白色：与选中态的白色「今天」圆点统一；浅蓝实心圆上白字比黑字更协调、不突兀。
+        Color.white
     }
     private var rangeOpacity: Double {
         colorScheme == .dark ? 0.10 : 0.10
@@ -348,11 +367,11 @@ private struct DayCell: View {
         .padding(.vertical, 2)
         .frame(height: 44)
         // 「今天」= 数字下方小实心圆点（区别于选中的实心大圆：点在下、大小悬殊，绝不混淆）。
-        // 被选中时圆点用选中前景色（落在实心圆下沿仍可见）。
+        // 选中态用白色：浅蓝实心圆上深色小点会像污点，白点更像「指示器」、且与浅蓝对比清晰。未选中时用 accent。
         .overlay(alignment: .bottom) {
             if isToday {
                 Circle()
-                    .fill((isStart || isEnd) ? selectedDayForeground : Color.accentColor)
+                    .fill((isStart || isEnd) ? Color.white : Color.accentColor)
                     .frame(width: 5, height: 5)
                     .padding(.bottom, 5)
             }
