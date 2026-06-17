@@ -323,6 +323,30 @@ final class TripStore: ObservableObject {
         CarryLogger.shared.log(.tripCreated)
     }
 
+    /// 从行程信息直接建一个**空清单**行程并落库——新创建链路「填完行程信息 → 直接进该行程
+    /// （行程规划）」用，不再强制走添加物品。等价于 ItemPicker 的 finalizeEmptyTrip：建 bundle
+    /// （含默认提醒档位快照）→ 提交 → 写国家码。返回新行程 id 供落地。
+    @discardableResult
+    func createTrip(from info: TripInfo) -> UUID {
+        let bundle = TripBundle(
+            name: info.name,
+            destinationCity: info.destinationCity,
+            days: info.isDateless ? 1 : info.durationDays,
+            dateRange: info.isDateless ? "" : info.dateRangeDisplay,
+            departureDate: info.departureDate,
+            isDateless: info.isDateless,
+            selectedSceneKeys: [],
+            sections: []
+        )
+        bundle.reminderConfigs = ReminderPreferences.defaultConfigs
+        setDraftTrip(bundle)
+        commitDraftTrip()
+        if !info.destinationCity.isEmpty {
+            updateCountryCode(for: bundle.id, city: info.destinationCity)
+        }
+        return bundle.id
+    }
+
     private func fetchTrips() {
         let descriptor = FetchDescriptor<TripBundle>(
             sortBy: [SortDescriptor(\.createdAt, order: .reverse)]

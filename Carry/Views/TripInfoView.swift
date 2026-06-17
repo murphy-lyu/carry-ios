@@ -19,6 +19,7 @@ struct TripInfoView: View {
     @State private var hasDates = true
     @FocusState private var focusedField: FocusField?
     @EnvironmentObject var router: NavigationRouter
+    @EnvironmentObject var store: TripStore
     @Environment(\.colorScheme) private var colorScheme
 
     private enum FocusField: Hashable {
@@ -147,9 +148,13 @@ struct TripInfoView: View {
                 Button(action: {
                     guard canContinue else { return }
                     hideKeyboard()
-                    router.pushCreation(.itemPicker(info, startInMyItems: startInMyItems))
+                    // 新链路：填完行程信息直接建空行程并落到该行程（默认进「行程规划」面），
+                    // 用户再按习惯做规划或加打包——不再强制走「添加物品」。物品/智能打包仍可在行程内添加。
+                    let newId = store.createTrip(from: info)
+                    router.finishCreation(landingTripId: newId)
+                    Task { await NotificationManager.requestAuthorizationIfNeeded() }
                 }) {
-                    Text("Continue")
+                    Text("Create")          // 直接建行程的 CTA（不再是「下一步选物品」）
                         .font(.subheadline)
                         .fontWeight(.medium)
                         .foregroundColor(continueButtonForeground)
