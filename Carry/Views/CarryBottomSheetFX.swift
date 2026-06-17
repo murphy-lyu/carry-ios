@@ -296,7 +296,8 @@ final class FXSheetViewController: UIViewController {
         // Re-apply mask and transform with correct bounds.
         // setProgress() in viewDidLoad often skips (bounds are zero at that point),
         // so we always refresh here, wrapped in disableActions to avoid implicit animations.
-        let progress = clampedProgress(raw)
+        // 空态固定缩放浮卡 → 圆角用折叠值（progress=1），与 geometry 的空态分支一致。
+        let progress = isListEmpty ? 1 : clampedProgress(raw)
         CATransaction.begin()
         CATransaction.setDisableActions(true)
         applyCornerMask(top: topRadius(progress), bottom: bottomRadius(progress), progress: progress)
@@ -360,6 +361,10 @@ final class FXSheetViewController: UIViewController {
                        usingSpringWithDamping: 0.88, initialSpringVelocity: 0) {
             self.snappedOffset = wasCollapsed ? c : 0
             self.placeSheet(at: self.snappedOffset)
+            // 空↔有行程切换会改 expandedHeight 走到这里：同步把圆角动到对应态
+            // （空态=折叠圆角 progress 1；有行程=按位置）。cornerRadius 可随 UIView.animate 插值。
+            let progress = self.isListEmpty ? 1 : self.clampedProgress(self.snappedOffset)
+            self.applyCornerMask(top: self.topRadius(progress), bottom: self.bottomRadius(progress), progress: progress)
         }
     }
 
@@ -391,13 +396,34 @@ final class FXSheetViewController: UIViewController {
     private var currentScale: CGFloat = 1
 
     private func geometry(for rawOffset: CGFloat, shapeProgressOverride: CGFloat? = nil) -> SheetGeometry? {
+        let w = view.bounds.width
+        let h = view.bounds.height
+        guard w > 0, h > 0 else { return nil }
+
+        // 空态：固定「缩放浮卡」——满缩放效果（侧/缩放/底 lift = 折叠值）+ 不下滑（banded=0），
+        // 但可视高度 = 内容全高（不缩到折叠的 ~188pt）。即把折叠态的视觉效果定格在内容高度上：
+        // 左右各 collapsedSideMargin、底部 collapsedBottomMargin 间距、统一 scale、圆角折叠值。
+        // 空态无拖拽（见 shouldReceive），故这是它唯一的静止位姿。
+        if isListEmpty {
+            let sideMargin = collapsedSideMargin
+            let scale = max(0.01, (w - 2 * sideMargin) / w)
+            // 底部浮距复用折叠态同一常量（与有行程折叠卡逐项一致：侧距/缩放/底距/圆角同源）。
+            let lift = collapsedBottomMargin
+            let topY = h - expandedHeight
+            let visibleHeight = max(1, expandedHeight - lift)
+            return SheetGeometry(
+                scale: scale,
+                boundsSize: CGSize(width: w, height: visibleHeight / scale),
+                center: CGPoint(x: w / 2, y: topY + visibleHeight / 2),
+                positionProgress: 1,
+                shapeProgress: 1
+            )
+        }
+
         let banded = rubberBand(rawOffset)
         let positionProgress = clampedProgress(rawOffset)
         let shapeProgress = shapeProgressOverride ?? shapeProgressState
         let lift = bottomLift(positionProgress)
-        let w = view.bounds.width
-        let h = view.bounds.height
-        guard w > 0, h > 0 else { return nil }
 
         // All scaling quantities are continuous (no pixel snapping). They can be:
         // the SwiftUI content is laid out ONCE at full size and never resized during a
@@ -992,6 +1018,8 @@ extension FXSheetViewController: UIGestureRecognizerDelegate {
     func gestureRecognizer(_ gr: UIGestureRecognizer,
                            shouldReceive touch: UITouch) -> Bool {
         guard gr === sheetPan else { return true }
+        // 空态：Sheet 锁成固定缩放浮卡、禁止下拉 —— 不接收任何拖拽（capsule 把手在空态纯装饰）。
+        if isListEmpty { return false }
         // Must be inside the sheet panel
         guard outerView.frame.contains(touch.location(in: view)) else { return false }
         // When list is present, always let UIScrollView handle touches inside it.

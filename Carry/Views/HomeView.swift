@@ -272,10 +272,10 @@ struct HomeView: View {
         // left ~65pt of slack on large phones, ~15pt on small ones). The card is laid
         // out at its natural height (measured below) and we add a fixed breathing gap +
         // the home-indicator safe area so the CTA always clears the bottom edge.
-        let handle: CGFloat = 21          // capsule: padding(top10) + h5 + padding(bottom6)
+        let handle: CGFloat = 16          // 空态无把手，用 16pt 顶部呼吸替代（见 sheetContent）
         let topBar: CGFloat = 6 + 40 + 8  // homeTopBar padding(top6,bottom8) + 40pt avatar row
         let cardTopInset: CGFloat = 6     // emptyState .padding(.top, 6)
-        let bottomBreathing: CGFloat = 28 // gap between content bottom and the safe-area inset
+        let bottomBreathing: CGFloat = 28 // 原始空态比例（顶对齐；浮卡态 CTA→圆角底可视间距 ≈ 5+此值）
         let card = emptyCardHeight > 0 ? emptyCardHeight : 244  // 244 ≈ natural content height (fallback)
         return handle + topBar + cardTopInset + card + bottomBreathing + Self.bottomSafeAreaInset
     }
@@ -479,6 +479,13 @@ struct HomeView: View {
                 .presentationDragIndicator(.visible)
                 .background(PresenterRecedeEffect())
         }
+        // 空态：Sheet 是固定缩放浮卡（不折叠、无 snap 回调驱动 mapCityOpacity），
+        // 故把它视同折叠态 = 1，让地图样式/定位按钮显示可点、城市点行为一致。
+        // 退出空态恢复 0，之后由 sheet 的 snap 回调接管。
+        .onAppear { if isEffectivelyEmpty { mapCityOpacity = 1 } }
+        .onChange(of: isEffectivelyEmpty) { _, empty in
+            withAnimation(.easeOut(duration: 0.25)) { mapCityOpacity = empty ? 1 : 0 }
+        }
         #endif
     }
 
@@ -539,13 +546,19 @@ struct HomeView: View {
     @ViewBuilder
     private var sheetContent: some View {
         VStack(spacing: 0) {
-            // Drag handle — no gesture needed; SheetViewController.sheetPan handles it
-            Capsule()
-                .fill(Color.primary.opacity(0.18))
-                .frame(width: 36, height: 5)
-                .padding(.top, 10)
-                .padding(.bottom, 6)
-                .frame(maxWidth: .infinity)
+            // 空态 Sheet 是固定缩放浮卡、禁止拖拽 → 不显示把手（把手会误导可拖）；
+            // 用一小段顶部呼吸替代，避免「My Trips」标题贴到圆角。
+            if isEffectivelyEmpty {
+                Color.clear.frame(height: 16)
+            } else {
+                // Drag handle — no gesture needed; SheetViewController.sheetPan handles it
+                Capsule()
+                    .fill(Color.primary.opacity(0.18))
+                    .frame(width: 36, height: 5)
+                    .padding(.top, 10)
+                    .padding(.bottom, 6)
+                    .frame(maxWidth: .infinity)
+            }
 
             homeTopBar
                 .padding(.horizontal, 16)
