@@ -12,6 +12,15 @@
 - **根因解 + 消除该类 bug**：新增统一入口 `Carry/Views/UIApplication+ActivityPresenter.swift`（`presentActivitySheet`），沿 `presentedViewController` 链走到最顶层 presenter 再 present，并统一处理 iPad/Mac popover anchor。**全部 6 处分享调用点**改走此入口，删除各自手写的 presenter 查找。今后「在 sheet 之上弹模态」不会再因漏改某处而复发。
 - **约定**：凡弹 `UIActivityViewController` / 任何模态，统一走 `UIApplication.shared.presentActivitySheet(...)`，禁止再直接 `rootViewController.present`。
 
+## 上次改动摘要（首页：底栏失灵根因修复 + 空态固定缩放浮卡 · 2026-06-17）
+
+> 在 `main`、**已提交并 push**。与并行「照片重建行程」会话共享工作区，全程只提自己的文件、未卷入其 WIP。commit `c104c36`（底栏）、`25f9054`（空态，spec: `home-empty-fixed-scaled-sheet.md`）。
+
+- **🔴 修首页底栏三按钮失灵（根因解）**：费用功能把 `@ObservedObject ExchangeRateManager` 挂在**根 HomeView**——而根 HomeView 是首页 UIKit FX sheet（含底栏）的宿主，汇率每 publish 令根整体失效、透过 UIKit 宿主破坏底栏命中测试 → 三按钮永久点不动。解：把观察**下沉到真正的消费者**（新增 `ExchangeRateScope` 子视图承载花费卡），根 HomeView 不再观察汇率（底栏不受牵连），花费卡仍随汇率到达自动刷新、零回归。诊断用控制变量法（摘掉观察→底栏恢复）坐实，未凭推算。
+- **底部消隐带调透**：`bottomContentFade` 加 `peakOpacity`（默认 1.0 保原行为、物品选择页不受影响），首页传 0.9。
+- **🟢 空态固定缩放浮卡（spec: `home-empty-fixed-scaled-sheet.md`，Implemented）**：无行程时底部 Sheet 锁成固定、不可拖的缩放浮卡，**复用有行程折叠态同一组常量**（侧 8 / 缩放 (w-16)/w / 底 8 / 圆角 36·56，逐项几何一致、非另写近似值）。禁拖走 `shouldReceive` 直接 `return false`；隐藏把手；`mapCityOpacity=1` 让地图样式/定位按钮可用 + 地图可交互（卡外触摸经 `FXPassthroughView` 穿透）。仅动空态，有行程态全不碰。代码交叉验证：空态与折叠态四项几何同源、根因解、无性能问题、死代码已清。
+- **教训**：空态底部留白来回调多轮——根源是「卡片底缘锚定 + 内容顶对齐」让 `bottomBreathing` 同时控「底部留白」与「卡片总高」（耦合）。中途凭脑内几何反复算错 → 改用真机 `NSLog` 取真值（h/expandedHeight/lift/visibleHeight）才稳。提醒：浮卡几何问题先仪表化取数，别凭推算。
+
 ## 上次改动摘要（机场搜索改用内置机场数据库 · 2026-06-17）
 
 > 编译绿（Carry scheme / iPhone 17 Pro），`airports.json` 已确认打进 app bundle。**待用户真机验收**（CLAUDE.md：用户在场，UI 验收默认交给用户）。**未提交**。
