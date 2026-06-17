@@ -204,7 +204,7 @@ struct HomeView: View {
         UIImpactFeedbackGenerator(style: .light).impactOccurred()
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.06) {
             #if targetEnvironment(macCatalyst)
-            router.path.append(CreationRoute.tripInfo(UUID(), startInMyItems: false))
+            router.path.append(CreationRoute.tripInfo(UUID()))
             #else
             router.beginCreation()   // 创建走 fullScreenCover（自包含任务），不压根 path
             #endif

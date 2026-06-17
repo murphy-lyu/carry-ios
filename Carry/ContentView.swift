@@ -9,7 +9,7 @@ import Combine
 // MARK: - Creation Route
 
 enum CreationRoute: Hashable {
-    case tripInfo(UUID, startInMyItems: Bool)
+    case tripInfo(UUID)
     case packingList(UUID)
     case editScenes(UUID)
     case autoPackPicker(TripInfo, sceneKeys: [String])
@@ -33,11 +33,11 @@ final class NavigationRouter: ObservableObject {
     @Published var creationPath = NavigationPath()
     @Published var creationSeed: CreationSeed? = nil
 
-    struct CreationSeed: Equatable { let id: UUID; let startInMyItems: Bool }
+    struct CreationSeed: Equatable { let id: UUID }
 
     /// 打开创建 cover（iPhone）。每次重置 creationPath，从 TripInfoView 起步。
-    func beginCreation(startInMyItems: Bool = false) {
-        creationSeed = CreationSeed(id: UUID(), startInMyItems: startInMyItems)
+    func beginCreation() {
+        creationSeed = CreationSeed(id: UUID())
         creationPath = NavigationPath()
         showCreation = true
     }
@@ -165,7 +165,7 @@ struct ContentView: View {
         .fullScreenCover(isPresented: $router.showCreation) {
             if let seed = router.creationSeed {
                 NavigationStack(path: $router.creationPath) {
-                    TripInfoView(routeID: seed.id, startInMyItems: seed.startInMyItems)
+                    TripInfoView(routeID: seed.id)
                         .navigationDestination(for: CreationRoute.self) { route in
                             routeDestination(route)
                         }
@@ -196,8 +196,8 @@ struct ContentView: View {
     @ViewBuilder
     private func routeDestination(_ route: CreationRoute) -> some View {
         switch route {
-        case .tripInfo(let routeID, let startInMyItems):
-            TripInfoView(routeID: routeID, startInMyItems: startInMyItems)
+        case .tripInfo(let routeID):
+            TripInfoView(routeID: routeID)
         case .packingList(let id):
             PackingListView(tripId: id, isNewTrip: true)
         case .editScenes(let id):
@@ -267,7 +267,7 @@ struct ContentView: View {
             switch action {
             case "create_trip":
                 #if targetEnvironment(macCatalyst)
-                router.path.append(CreationRoute.tripInfo(UUID(), startInMyItems: false))
+                router.path.append(CreationRoute.tripInfo(UUID()))
                 #else
                 router.beginCreation()
                 #endif

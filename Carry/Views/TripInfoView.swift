@@ -9,7 +9,6 @@ import UIKit
 struct TripInfoView: View {
 
     let routeID: UUID?
-    let startInMyItems: Bool
     @State private var tripName: String
     @State private var destinationCity: String
     @State private var departureDate: Date
@@ -27,9 +26,8 @@ struct TripInfoView: View {
         case destinationCity
     }
 
-    init(routeID: UUID? = nil, startInMyItems: Bool = false) {
+    init(routeID: UUID? = nil) {
         self.routeID = routeID
-        self.startInMyItems = startInMyItems
         let initial = TripInfo()
         _tripName = State(initialValue: initial.name)
         _destinationCity = State(initialValue: initial.destinationCity)
