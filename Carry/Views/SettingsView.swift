@@ -246,10 +246,6 @@ struct SettingsView: View {
                                     valueText: currentIconName,
                                     route: .appIcon
                                 )
-                                // 语言会跳转到 iOS 系统设置（离开 App），放该组最末
-                                settingsRow(title: "settings.about.language", valueText: currentLanguageDisplay, accessory: .external) {
-                                    openSystemSettings()
-                                }
                             }
                             .padding(.horizontal, 16)
                             .padding(.bottom, 18)
@@ -257,9 +253,14 @@ struct SettingsView: View {
                             sectionHeader("settings.section.personalization")
                         }
 
-                        // 通用：行为 / 单位偏好（距离单位；未来温度/区域等）
+                        // 语言与地区：货币 · 距离单位 · 语言——均由所在地区/locale 驱动，对标 iOS「Language & Region」
                         Section {
                             settingsCard {
+                                settingsNavigationRow(
+                                    title: "settings.currency.entry",
+                                    valueText: currentCurrencyCode,
+                                    route: .currency
+                                )
                                 settingsMenuRow(title: "settings.units.distance", value: currentDistanceUnit.titleKey) {
                                     Picker("settings.units.distance", selection: $distanceUnitRaw) {
                                         ForEach(DistanceUnit.allCases) { unit in
@@ -267,16 +268,15 @@ struct SettingsView: View {
                                         }
                                     }
                                 }
-                                settingsNavigationRow(
-                                    title: "settings.currency.entry",
-                                    valueText: currentCurrencyCode,
-                                    route: .currency
-                                )
+                                // 语言跳转 iOS 系统设置（离开 App）→ 外链箭头
+                                settingsRow(title: "settings.about.language", valueText: currentLanguageDisplay, accessory: .external) {
+                                    openSystemSettings()
+                                }
                             }
                             .padding(.horizontal, 16)
                             .padding(.bottom, 18)
                         } header: {
-                            sectionHeader("settings.section.general")
+                            sectionHeader("settings.section.language_region")
                         }
 
                         // 提醒与显示：Carry 在哪儿提醒我 / 出现（通知 · 日历 · 灵动岛 · 小部件 · 经期）
