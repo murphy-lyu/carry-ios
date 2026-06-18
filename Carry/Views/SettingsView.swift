@@ -227,7 +227,10 @@ struct SettingsView: View {
                         // 个性化：App 长什么样（外观 · 语言 · 应用图标）
                         Section {
                             settingsCard {
-                                settingsMenuRow(title: "Appearance") {
+                                settingsMenuRow(
+                                    title: "Appearance",
+                                    value: (AppearanceMode(rawValue: appearanceModeRaw) ?? .system).titleKey
+                                ) {
                                     Picker("Appearance", selection: $appearanceModeRaw) {
                                         ForEach(AppearanceMode.allCases) { mode in
                                             Text(mode.titleKey).tag(mode.rawValue)
@@ -254,7 +257,10 @@ struct SettingsView: View {
                                     valueText: currentCurrencyCode,
                                     route: .currency
                                 )
-                                settingsMenuRow(title: "settings.units.distance") {
+                                settingsMenuRow(
+                                    title: "settings.units.distance",
+                                    value: (DistanceUnit(rawValue: distanceUnitRaw) ?? .automatic).titleKey
+                                ) {
                                     Picker("settings.units.distance", selection: $distanceUnitRaw) {
                                         ForEach(DistanceUnit.allCases) { unit in
                                             Text(unit.titleKey).tag(unit.rawValue)
@@ -505,8 +511,8 @@ struct SettingsView: View {
     private enum SettingsRowAccessory {
         case push       // chevron.right — 进入设置层级的下一页
         case external   // arrow.up.right — 离开 App（系统设置 / 邮件）
+        case menu       // chevron.up.chevron.down — 就地弹菜单选一个（外观 / 距离单位）
         case none       // 无 — 打开一个 in-app sheet 的动作行
-        // 注：就地弹菜单的行（外观 / 距离单位）用原生 `.menu` Picker 自带的上下箭头，不走这里。
     }
 
     @ViewBuilder
@@ -518,6 +524,10 @@ struct SettingsView: View {
                 .foregroundStyle(settingsChevronColor)
         case .external:
             Image(systemName: "arrow.up.right")
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(settingsChevronColor)
+        case .menu:
+            Image(systemName: "chevron.up.chevron.down")
                 .font(.caption.weight(.semibold))
                 .foregroundStyle(settingsChevronColor)
         case .none:
@@ -631,12 +641,15 @@ struct SettingsView: View {
     }
 
     /// 就地弹出菜单的行（少数选项内联选一个，如外观 / 距离单位）。
-    /// 关键：**标题放在 Menu 外面**（普通 Text），只把「值 + 上下箭头」交给原生 `.menu` Picker。
-    /// 根因——若把整行（含标题）包成自定义 `Menu` 的 label，菜单展开瞬间 iOS 对 label 做高亮快照会
-    /// 把里面文字渲染空（标题消失，已踩坑）；原生 Picker 的值显示由 UIKit 管、不会空，标题在菜单外更不会空。
+    ///
+    /// 根因解：与其它行**同构渲染**——`标题 — Spacer — 值 — settingsAccessory(.menu)`，箭头走
+    /// 同一段代码、落在同一条右对齐列上（无需任何补偿魔数）。交互用 `Menu` + 内联 `Picker`，
+    /// 自定义 label 只含「值 + 箭头」、**标题留在 Menu 外**——规避「整行(含标题)包进 label 时
+    /// 展开瞬间文字闪空」的已知坑（那次是把标题也包进了 label）。
     @ViewBuilder
     private func settingsMenuRow<P: View>(
         title: LocalizedStringKey,
+        value: LocalizedStringKey,
         @ViewBuilder picker: () -> P
     ) -> some View {
         HStack(spacing: 14) {
@@ -644,22 +657,24 @@ struct SettingsView: View {
                 .font(.body)
                 .foregroundStyle(.primary)
             Spacer()
-            picker()
-                .labelsHidden()
-                .pickerStyle(.menu)
-                .tint(settingsValueColor)
-                // 原生 `.menu` Picker 在 value 与上下箭头右侧自带一段固定内边距，使 `⇅` 落在
-                // 自定义行 `>`/`↗`（18pt 处）的左边、整列不齐。用量准的负 trailing 把 Picker 整体
-                // 右移这段距离，让 `⇅` 对到同一条列上——只动视觉、不碰交互。
-                .padding(.trailing, -Self.menuPickerTrailingInset)
+            Menu {
+                picker()
+                    .pickerStyle(.inline)
+                    .labelsHidden()
+            } label: {
+                HStack(spacing: 6) {
+                    Text(value)
+                        .font(.body)
+                        .foregroundStyle(settingsValueColor)
+                        .lineLimit(1)
+                    settingsAccessory(.menu)
+                }
+            }
         }
         .padding(.horizontal, 18)
         .frame(height: 58)
         .contentShape(Rectangle())
     }
-
-    /// 原生 `.menu` Picker 自带的尾部内边距补偿值（实测对齐自定义 `>` 列）。
-    private static let menuPickerTrailingInset: CGFloat = 12
 
     /// push 行的纯文本标题变体（标题非本地化 key、而是按语言动态拼的 String，如 Roadmap）。
     @ViewBuilder
