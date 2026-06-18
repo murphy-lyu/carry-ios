@@ -1,0 +1,5 @@
+# String Catalogs are rewritten in different key orders by Xcode vs. textual
+# edits, producing huge order-only diffs. The clean filter canonicalizes them
+# so git stores one stable order regardless of who wrote the file.
+# Requires (once per clone): git config filter.xcstrings.clean "python3 scripts/xcstrings-normalize.py"
+*.xcstrings filter=xcstrings
