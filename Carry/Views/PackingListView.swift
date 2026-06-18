@@ -306,9 +306,12 @@ struct PackingListView: View {
                             Label("Delete trip", systemImage: "trash")
                         }
                     } label: {
+                        // 与左上角返回键对称、等分量：iOS 26 系统给工具栏按钮自动套同款玻璃圆，
+                        // 故此处只需把图标提到 label 主色 + 标准尺寸（原 14pt 灰太弱、难发现），
+                        // 不再手加圆底（会与系统玻璃叠两层）。
                         Image(systemName: "ellipsis")
-                            .font(.system(size: 14, weight: .medium))
-                            .foregroundColor(.secondary)
+                            .font(.system(size: 17, weight: .semibold))
+                            .foregroundStyle(.primary)
                     }
                     }
                 }
