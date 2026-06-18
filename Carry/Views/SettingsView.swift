@@ -65,14 +65,6 @@ struct SettingsView: View {
     @AppStorage("appearance_mode") private var appearanceModeRaw = AppearanceMode.system.rawValue
     @AppStorage("distance_unit") private var distanceUnitRaw = DistanceUnit.automatic.rawValue
 
-    private var currentAppearance: AppearanceMode {
-        AppearanceMode(rawValue: appearanceModeRaw) ?? .system
-    }
-
-    private var currentDistanceUnit: DistanceUnit {
-        DistanceUnit(rawValue: distanceUnitRaw) ?? .automatic
-    }
-
     // 语言标识符在 App 生命周期内不会改变，用 let 缓存，避免每次 body 求值都调用系统 API
     private let currentLanguageDisplay: String = {
         let preferred = Locale.preferredLanguages.first ?? "en"
@@ -235,7 +227,7 @@ struct SettingsView: View {
                         // 个性化：App 长什么样（外观 · 语言 · 应用图标）
                         Section {
                             settingsCard {
-                                settingsMenuRow(title: "Appearance", value: currentAppearance.titleKey) {
+                                settingsMenuRow(title: "Appearance") {
                                     Picker("Appearance", selection: $appearanceModeRaw) {
                                         ForEach(AppearanceMode.allCases) { mode in
                                             Text(mode.titleKey).tag(mode.rawValue)
@@ -262,7 +254,7 @@ struct SettingsView: View {
                                     valueText: currentCurrencyCode,
                                     route: .currency
                                 )
-                                settingsMenuRow(title: "settings.units.distance", value: currentDistanceUnit.titleKey) {
+                                settingsMenuRow(title: "settings.units.distance") {
                                     Picker("settings.units.distance", selection: $distanceUnitRaw) {
                                         ForEach(DistanceUnit.allCases) { unit in
                                             Text(unit.titleKey).tag(unit.rawValue)
@@ -512,9 +504,9 @@ struct SettingsView: View {
     /// `›` 仅用于 push（进入下一层）；弹出菜单用上下箭头；离开 App 用外链箭头；开 in-app sheet 不挂箭头。
     private enum SettingsRowAccessory {
         case push       // chevron.right — 进入设置层级的下一页
-        case menu       // chevron.up.chevron.down — 就地弹出选择菜单
         case external   // arrow.up.right — 离开 App（系统设置 / 邮件）
         case none       // 无 — 打开一个 in-app sheet 的动作行
+        // 注：就地弹菜单的行（外观 / 距离单位）用原生 `.menu` Picker 自带的上下箭头，不走这里。
     }
 
     @ViewBuilder
@@ -523,10 +515,6 @@ struct SettingsView: View {
         case .push:
             Image(systemName: "chevron.right")
                 .font(.caption.weight(.semibold))
-                .foregroundStyle(settingsChevronColor)
-        case .menu:
-            Image(systemName: "chevron.up.chevron.down")
-                .font(.caption2.weight(.semibold))
                 .foregroundStyle(settingsChevronColor)
         case .external:
             Image(systemName: "arrow.up.right")
@@ -642,34 +630,28 @@ struct SettingsView: View {
         .buttonStyle(.plain)
     }
 
-    /// 就地弹出菜单的行（少数选项内联选一个，如外观 / 距离单位）。尾部用上下箭头表「弹菜单」，
-    /// 配原生 `Menu` + `Picker`（选中项自带勾），符合 Apple 的 pull-down 选择规范。
+    /// 就地弹出菜单的行（少数选项内联选一个，如外观 / 距离单位）。
+    /// 关键：**标题放在 Menu 外面**（普通 Text），只把「值 + 上下箭头」交给原生 `.menu` Picker。
+    /// 根因——若把整行（含标题）包成自定义 `Menu` 的 label，菜单展开瞬间 iOS 对 label 做高亮快照会
+    /// 把里面文字渲染空（标题消失，已踩坑）；原生 Picker 的值显示由 UIKit 管、不会空，标题在菜单外更不会空。
     @ViewBuilder
-    private func settingsMenuRow<Items: View>(
+    private func settingsMenuRow<P: View>(
         title: LocalizedStringKey,
-        value: LocalizedStringKey,
-        @ViewBuilder items: () -> Items
+        @ViewBuilder picker: () -> P
     ) -> some View {
-        Menu {
-            items()
-        } label: {
-            HStack(spacing: 14) {
-                Text(title)
-                    .font(.body)
-                    .foregroundStyle(.primary)
-                Spacer()
-                Text(value)
-                    .font(.body)
-                    .foregroundStyle(settingsValueColor)
-                settingsAccessory(.menu)
-            }
-            .padding(.horizontal, 18)
-            .frame(height: 58)
-            .contentShape(Rectangle())
+        HStack(spacing: 14) {
+            Text(title)
+                .font(.body)
+                .foregroundStyle(.primary)
+            Spacer()
+            picker()
+                .labelsHidden()
+                .pickerStyle(.menu)
+                .tint(settingsValueColor)
         }
-        // 不要给 Menu 套 .buttonStyle(.plain)：已知 SwiftUI bug——菜单展开瞬间 label 文字会消失。
-        // label 内每个 Text 已显式 foregroundStyle，故去掉 plain 样式不影响配色；.tint 收敛强调色。
-        .tint(.primary)
+        .padding(.horizontal, 18)
+        .frame(height: 58)
+        .contentShape(Rectangle())
     }
 
     /// push 行的纯文本标题变体（标题非本地化 key、而是按语言动态拼的 String，如 Roadmap）。
