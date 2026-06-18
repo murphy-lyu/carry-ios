@@ -63,6 +63,7 @@ struct NotificationSettingsView: View {
                             Spacer()
                             DatePicker("", selection: timeBinding, displayedComponents: .hourAndMinute)
                                 .labelsHidden()
+                                .accessibilityLabel(Text("settings.notifications.time"))
                         }
                         .padding(.horizontal, 18)
                         .frame(height: 58)
@@ -81,6 +82,7 @@ struct NotificationSettingsView: View {
                                 ))
                                 .labelsHidden()
                                 .tint(CarryAccent.color)
+                                .accessibilityLabel(Text(preset.localizedLabel))
                             }
                             .padding(.horizontal, 18)
                             .frame(height: 58)

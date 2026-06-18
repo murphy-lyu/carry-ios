@@ -63,7 +63,6 @@ struct SettingsView: View {
     @Environment(\.colorScheme) private var colorScheme
     @EnvironmentObject private var store: TripStore
     @AppStorage("appearance_mode") private var appearanceModeRaw = AppearanceMode.system.rawValue
-    @AppStorage("liveActivityPackingEnabled") private var liveActivityPackingEnabled = false
     @AppStorage("distance_unit") private var distanceUnitRaw = DistanceUnit.automatic.rawValue
 
     private var currentAppearance: AppearanceMode {
@@ -88,16 +87,18 @@ struct SettingsView: View {
         return "Roadmap"
     }()
 
-    private var notificationStatusText: LocalizedStringKey {
+    /// 通知授权态文案，显示在 Notifications 行尾（On / Off / 未设置）。`.task` 与前台回流刷新
+    /// `notificationStatus` 后，该行值随之更新——让用户在设置层一眼看到系统通知是否被拒。
+    private var notificationStatusText: String {
         switch notificationStatus {
         case .authorized, .provisional, .ephemeral:
-            return "settings.notifications.on"
+            return String(localized: "settings.notifications.on")
         case .denied:
-            return "settings.notifications.off"
+            return String(localized: "settings.notifications.off")
         case .notDetermined:
-            return "settings.notifications.notSet"
+            return String(localized: "settings.notifications.notSet")
         @unknown default:
-            return "settings.notifications.notSet"
+            return String(localized: "settings.notifications.notSet")
         }
     }
 
@@ -165,7 +166,7 @@ struct SettingsView: View {
         Task {
             try? await Task.sleep(for: .milliseconds(2000))
             await MainActor.run {
-                withAnimation(.easeIn(duration: 0.2)) {
+                withAnimation(.easeOut(duration: 0.2)) {
                     restoreToastMessage = nil
                 }
             }
@@ -284,6 +285,7 @@ struct SettingsView: View {
                             settingsCard {
                                 settingsNavigationRow(
                                     title: "settings.notifications.entry",
+                                    valueText: notificationStatusText,
                                     route: .notifications
                                 )
                                 settingsNavigationRow(
@@ -330,6 +332,7 @@ struct SettingsView: View {
                                     guard let data = pendingImportData else { return }
                                     do {
                                         let result = try store.mergeFromData(data)
+                                        refreshBackupCache()   // 导入会重写磁盘备份 → 同步刷新「上次备份」日期
                                         showToast(mergeSuccessMessage(count: result.trips))
                                         CarryLogger.shared.log(.backupMerged,
                                             context: "trips=\(result.trips) myItems=\(result.myItems)")
@@ -346,6 +349,7 @@ struct SettingsView: View {
                                     guard let data = pendingImportData else { return }
                                     do {
                                         let result = try store.restoreFromData(data)
+                                        refreshBackupCache()   // 导入会重写磁盘备份 → 同步刷新「上次备份」日期
                                         showToast(restoreSuccessMessage(count: result.trips))
                                         CarryLogger.shared.log(.backupRestored,
                                             context: "trips=\(result.trips) myItems=\(result.myItems)")
@@ -502,37 +506,6 @@ struct SettingsView: View {
                 )
         )
         .shadow(color: settingsGroupShadow, radius: colorScheme == .dark ? 10 : 12, x: 0, y: colorScheme == .dark ? 3 : 4)
-    }
-
-    private func settingsGroup<Content: View>(title: LocalizedStringKey, subtitle: LocalizedStringKey? = nil, @ViewBuilder content: () -> Content) -> some View {
-        VStack(alignment: .leading, spacing: 12) {
-            VStack(alignment: .leading, spacing: 3) {
-                Text(title)
-                    .font(.system(size: 13, weight: .semibold))
-                    .foregroundStyle(settingsTitleColor)
-                if let subtitle {
-                    Text(subtitle)
-                        .font(.system(size: 12))
-                        .foregroundStyle(settingsTitleColor.opacity(0.72))
-                        .fixedSize(horizontal: false, vertical: true)
-                }
-            }
-            .padding(.horizontal, 16)
-
-            VStack(spacing: 0) {
-                content()
-            }
-            .background(
-                RoundedRectangle(cornerRadius: 28, style: .continuous)
-                    .fill(settingsGroupFill)
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 28, style: .continuous)
-                            .strokeBorder(settingsGroupStroke, lineWidth: 1)
-                    )
-            )
-            .shadow(color: settingsGroupShadow, radius: colorScheme == .dark ? 10 : 12, x: 0, y: colorScheme == .dark ? 3 : 4)
-            .padding(.horizontal, 16)
-        }
     }
 
     /// 行尾可供性：与「点击后发生什么」严格对应（Apple HIG）。
@@ -931,7 +904,7 @@ private struct DataRecoveryView: View {
         Task {
             try? await Task.sleep(for: .milliseconds(2000))
             await MainActor.run {
-                withAnimation(.easeIn(duration: 0.2)) { toastMessage = nil }
+                withAnimation(.easeOut(duration: 0.2)) { toastMessage = nil }
             }
         }
     }
@@ -1019,7 +992,7 @@ private struct CalendarSettingsView: View {
         Task {
             try? await Task.sleep(for: .milliseconds(2000))
             await MainActor.run {
-                withAnimation(.easeIn(duration: 0.2)) { toastMessage = nil }
+                withAnimation(.easeOut(duration: 0.2)) { toastMessage = nil }
             }
         }
     }
@@ -1048,6 +1021,7 @@ private struct CalendarSettingsView: View {
                         ))
                         .labelsHidden()
                         .tint(CarryAccent.color)
+                        .accessibilityLabel(Text("settings.calendar.add_trips"))
                     }
                     .padding(.horizontal, 18)
                     .frame(height: 58)
@@ -1096,6 +1070,7 @@ private struct CalendarSettingsView: View {
                         ))
                         .labelsHidden()
                         .tint(CarryAccent.color)
+                        .accessibilityLabel(Text("settings.calendar.overlay.show"))
                     }
                     .padding(.horizontal, 18)
                     .frame(height: 58)
@@ -1137,12 +1112,14 @@ private struct CalendarSettingsView: View {
                                         .font(.body.weight(.semibold))
                                         .foregroundStyle(CarryAccent.color)
                                         .opacity(selectedOverlayIDs.contains(cal.id) ? 1 : 0)
+                                        .accessibilityHidden(true)   // 选中态由下面 .isSelected 传达
                                 }
                                 .padding(.horizontal, 18)
                                 .frame(height: 54)
                                 .contentShape(Rectangle())
                             }
                             .buttonStyle(.plain)
+                            .accessibilityAddTraits(selectedOverlayIDs.contains(cal.id) ? .isSelected : [])
                         }
                     }
                     .background(
@@ -1463,7 +1440,7 @@ private struct DeveloperModeView: View {
         Task {
             try? await Task.sleep(for: .milliseconds(1300))
             await MainActor.run {
-                withAnimation(.easeIn(duration: 0.2)) {
+                withAnimation(.easeOut(duration: 0.2)) {
                     toastMessage = nil
                 }
             }

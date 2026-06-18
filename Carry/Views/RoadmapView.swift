@@ -114,8 +114,7 @@ private struct RoadmapPayload: Codable {
 }
 
 struct RoadmapView: View {
-    var onClose: (() -> Void)? = nil
-
+    // 现在只以 push 进入设置栈，用系统返回；不再需要 onClose（原 sheet 关闭回调，已退役）。
     @Environment(\.colorScheme) private var colorScheme
     @AppStorage("roadmap_remote_url") private var remoteURL = ""
     @State private var showSourceSheet = false
@@ -270,22 +269,7 @@ struct RoadmapView: View {
                 }
             }
             .frame(maxWidth: .infinity, alignment: .leading)
-
-            HStack(spacing: 8) {
-                // DEBUG「远程 JSON 源」入口已移到系统导航栏 trailing（与返回按钮同排，见 body .toolbar）。
-                if let onClose {
-                    Button {
-                        onClose()
-                    } label: {
-                        Image(systemName: "xmark")
-                            .font(.system(size: 12, weight: .semibold))
-                            .foregroundStyle(.secondary)
-                            .frame(width: 32, height: 32)
-                            .glassCircleButton()
-                    }
-                    .buttonStyle(.plain)
-                }
-            }
+            // DEBUG「远程 JSON 源」入口在系统导航栏 trailing（见 body .toolbar）；此处不再有关闭按钮。
         }
     }
 
@@ -365,6 +349,17 @@ struct RoadmapView: View {
             }
             .padding(.bottom, isLast ? 0 : 6)
         }
+        .accessibilityElement(children: .combine)
+        .accessibilityValue(Text(statusAccessibilityText(item.status)))
+    }
+
+    /// VoiceOver 用的状态描述（已上线 / 开发中 / 计划中）；与路线图内容一致，只覆盖 en/zh。
+    private func statusAccessibilityText(_ status: RoadmapStatus) -> String {
+        switch status {
+        case .done: return RoadmapL10n.text(en: "Shipped", zhHans: "已上线", zhHant: "已上線")
+        case .inProgress: return RoadmapL10n.text(en: "In progress", zhHans: "开发中", zhHant: "開發中")
+        case .planned: return RoadmapL10n.text(en: "Planned", zhHans: "计划中", zhHant: "計劃中")
+        }
     }
 
     @ViewBuilder
@@ -426,10 +421,23 @@ struct RoadmapView: View {
     }
 
     private func fetch(remote: URL) async -> RoadmapPayload? {
+        // 安全加固：① 仅允许 https；② 15s 超时；③ 256KB 上限——服务器声明超限即拒、流式下载超限即中断，
+        // 防异常/恶意超大响应撑爆内存（DEBUG 下远程 URL 用户可改，且默认源走第三方 CDN）。
+        guard remote.scheme?.lowercased() == "https" else { return nil }
+        let maxBytes = 256 * 1024
+        var request = URLRequest(url: remote)
+        request.timeoutInterval = 15
         do {
-            let (data, response) = try await URLSession.shared.data(from: remote)
-            guard let http = response as? HTTPURLResponse, (200...299).contains(http.statusCode) else {
+            let (bytes, response) = try await URLSession.shared.bytes(for: request)
+            guard let http = response as? HTTPURLResponse,
+                  (200...299).contains(http.statusCode),
+                  http.expectedContentLength <= maxBytes else {   // -1（未知）放行，靠流式上限兜底
                 return nil
+            }
+            var data = Data()
+            for try await byte in bytes {
+                data.append(byte)
+                if data.count > maxBytes { return nil }
             }
             return try JSONDecoder().decode(RoadmapPayload.self, from: data)
         } catch {

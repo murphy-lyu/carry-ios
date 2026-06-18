@@ -152,6 +152,7 @@ struct AppIconView: View {
                         .font(.system(size: 22))
                         .foregroundStyle(Color.accentColor)
                         .transition(.scale.combined(with: .opacity))
+                        .accessibilityHidden(true)   // 选中态由 .isSelected 传达
                 }
             }
             .padding(.horizontal, 16)
@@ -160,6 +161,7 @@ struct AppIconView: View {
         }
         .buttonStyle(.plain)
         .animation(.spring(response: 0.3, dampingFraction: 0.8), value: isSelected)
+        .accessibilityAddTraits(isSelected ? .isSelected : [])
 
         if !isLast {
             Divider()
@@ -192,7 +194,7 @@ struct AppIconView: View {
         } else {
             // Placeholder shown until icon files are added
             RoundedRectangle(cornerRadius: 12, style: .continuous)
-                .fill(placeholderFill(for: option))
+                .fill(placeholderFill)
                 .frame(width: size, height: size)
                 .overlay(
                     Image(systemName: "suitcase.fill")
@@ -207,7 +209,7 @@ struct AppIconView: View {
     }
 
     /// Neutral gradient shown only if a preview image can't be resolved.
-    private func placeholderFill(for option: AppIconOption) -> LinearGradient {
+    private var placeholderFill: LinearGradient {
         LinearGradient(
             colors: [Color(red: 0.80, green: 0.80, blue: 0.82),
                      Color(red: 0.68, green: 0.68, blue: 0.70)],

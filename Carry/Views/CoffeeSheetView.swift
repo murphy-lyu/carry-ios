@@ -15,6 +15,16 @@ struct CoffeeSheetView: View {
     @State private var pendingMockProductID: String?
     @Environment(\.dismiss) private var dismiss
 
+    /// 商品加载失败弹窗的标题：DEBUG 保留可识别的诊断标题，release 用面向用户的本地化提示
+    /// （配合下方 message 仅在 DEBUG 显示详细转储）。
+    private var storeKitAlertTitle: LocalizedStringKey {
+#if DEBUG
+        "StoreKit not ready"
+#else
+        "coffee.unavailable"
+#endif
+    }
+
     private var supportToneTitleKey: LocalizedStringKey {
         switch coffeeStore.supportCount {
         case ..<1:
@@ -131,20 +141,22 @@ struct CoffeeSheetView: View {
                     CoffeeParticleOverlay(isVisible: $showCelebration) { }
                 }
             }
-            .alert("StoreKit not ready", isPresented: $showStoreKitNotReadyAlert) {
+            .alert(storeKitAlertTitle, isPresented: $showStoreKitNotReadyAlert) {
+#if DEBUG
                 if let productID = pendingMockProductID {
                     Button("Mock") {
-#if DEBUG
                         coffeeStore.debugMockPurchase(productID: productID)
-#endif
                         pendingMockProductID = nil
                     }
                 }
+#endif
                 Button("OK", role: .cancel) {
                     pendingMockProductID = nil
                 }
             } message: {
-                Text(storeKitDebugMessage)
+#if DEBUG
+                Text(storeKitDebugMessage)   // 详细诊断仅 DEBUG；release 由标题承载用户提示
+#endif
             }
             .onChange(of: coffeeStore.lastPurchasedID) { _, id in
                 guard id != nil else { return }
@@ -277,7 +289,7 @@ struct CoffeeSheetView: View {
     private func shareApp() {
         let url = URL(string: "https://apps.apple.com/app/carry")!
         UIApplication.shared.presentActivitySheet(
-            items: ["Check out Carry – a minimal packing list app!", url]
+            items: [String(localized: "coffee.share.text"), url]
         )
     }
 

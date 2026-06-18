@@ -2,7 +2,7 @@ import SwiftUI
 
 #if !targetEnvironment(macCatalyst)
 struct LiveActivitySettingsView: View {
-    @AppStorage("liveActivityPackingEnabled") private var isEnabled = false
+    @AppStorage(LiveActivityManager.enabledKey) private var isEnabled = false
     @Environment(\.colorScheme) private var colorScheme
 
     private var cardFill: Color {
@@ -42,6 +42,7 @@ struct LiveActivitySettingsView: View {
                     Toggle("", isOn: $isEnabled)
                         .labelsHidden()
                         .tint(CarryAccent.color)
+                        .accessibilityLabel(Text("settings.liveactivity.packing"))
                 }
                 .padding(.horizontal, 18)
                 .frame(height: 58)

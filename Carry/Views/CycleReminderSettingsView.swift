@@ -52,6 +52,7 @@ struct CycleReminderSettingsView: View {
                             Toggle("", isOn: $isEnabled)
                                 .labelsHidden()
                                 .tint(CarryAccent.color)
+                                .accessibilityLabel(Text("settings.cycle.toggle"))
                         }
                         .padding(.horizontal, 18)
                         .frame(height: 58)
