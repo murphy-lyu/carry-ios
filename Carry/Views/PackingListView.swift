@@ -493,11 +493,17 @@ struct PackingListView: View {
             }
             .padding(6)
             .background(
+                // 磨砂玻璃材质：半透的同时对背后内容做模糊，胶囊正后方的滚动内容被糊成柔光、
+                // 不再透出清晰文字（区别于平涂半透色——那只调暗、不模糊，文字会清晰穿透显脏）。
+                // 这是 iOS 原生悬浮栏「通透却不脏」的根（Tab Bar / 地图底部栏同理）。
                 RoundedRectangle(cornerRadius: 18, style: .continuous)
-                    .fill(
-                        colorScheme == .dark
-                            ? Color.white.opacity(0.04)
-                            : Color.black.opacity(0.03)
+                    .fill(.regularMaterial)
+                    // 叠一层极淡同色调，保留原有的明暗层次、避免纯材质在亮底图上发灰。
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 18, style: .continuous)
+                            .fill(colorScheme == .dark
+                                  ? Color.white.opacity(0.04)
+                                  : Color.black.opacity(0.02))
                     )
             )
             .overlay(
@@ -509,8 +515,9 @@ struct PackingListView: View {
         }
         .frame(maxWidth: .infinity)
         .padding(.bottom, 10)
-        // 内容在切换器上沿柔和淡出 + 实心兜底（全 App 统一，见 BottomBarScrim，单一真源）。
-        .bottomBarScrim(Color(UIColor.systemBackground))
+        // 浮动 glass 切换器：通透垫底（上沿透明→底端半透），内容在栏后柔和消隐却仍透出，
+        // 不用整块实心遮死（实心会把较高的栏区视觉上压短）。见 BottomBarFade。
+        .bottomBarFade(CarrySubtleBackground.baseColor)
     }
 
     private func faceSegment(_ face: DetailTab, title: LocalizedStringKey, icon: String) -> some View {

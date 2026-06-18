@@ -465,6 +465,55 @@ extension View {
     }
 }
 
+// MARK: - BottomBarFade
+
+/// 浮动栏（glass 胶囊切换器 / 圆角浮卡）的**通透**垫底——与 `bottomContentFade` 同源思路，
+/// 但作为底部 `safeAreaInset` 内容的**背景**：上沿透明 → 底端半透（`peakOpacity < 1`），
+/// 让滚动内容在栏后柔和消隐却**仍透出背景/卡片**，而非被整块实心遮死。
+///
+/// 与 `BottomBarScrim` 的取舍（同一底栏槽位、两种垫底）：
+/// - `bottomBarScrim`（实心兜底）：用于**主操作 CTA**（保存 / 采用 / Continue），按钮需要实底背书、对比度与点击区清晰。
+/// - `bottomBarFade`（通透消隐）：用于**浮动切换/导航胶囊**——栏本身是半透 glass，下方不应再垫整块实心，
+///   否则在较高的栏区里实心会把「可视内容区」视觉上压短。
+///
+/// 结构与 `BottomBarScrim` 完全一致（`.padding(.top, fadeHeight)` + 背景 `.ignoresSafeArea(.bottom)`），
+/// 故布局/安全区行为不变；唯一差别是填充由「实心」改为「透明→半透」渐变。
+///
+/// - color: 消隐到的底色 = 页面背景**底端**色（用 `CarrySubtleBackground.baseColor` 与背景无缝）。
+/// - fadeHeight: 顶部渐变淡入带高度（亦即栏上方留白）。
+/// - peakOpacity: 底端最实处不透明度上限（< 1 即整体通透；默认 0.92——胶囊周围内容柔和消隐却仍轻透，
+///   保持可视区不被压短。胶囊**正后方**的清晰文字由磨砂玻璃材质模糊掉，不靠这条蒙层去盖）。
+struct BottomBarFade: ViewModifier {
+    let color: Color
+    var fadeHeight: CGFloat = 28
+    var peakOpacity: Double = 0.92
+
+    func body(content: Content) -> some View {
+        content
+            .padding(.top, fadeHeight)
+            .background(
+                LinearGradient(
+                    stops: [
+                        .init(color: color.opacity(0),                  location: 0),
+                        .init(color: color.opacity(0.92 * peakOpacity), location: 0.5),
+                        .init(color: color.opacity(peakOpacity),        location: 1),
+                    ],
+                    startPoint: .top,
+                    endPoint: .bottom
+                )
+                // 与 BottomBarScrim 同：延伸到屏幕底边盖住 home indicator 条，避免底缘接缝。
+                .ignoresSafeArea(edges: .bottom)
+            )
+    }
+}
+
+extension View {
+    /// 见 `BottomBarFade`。浮动栏的通透垫底（替代 `bottomBarScrim` 的实心兜底）。
+    func bottomBarFade(_ color: Color, fadeHeight: CGFloat = 28, peakOpacity: Double = 0.92) -> some View {
+        modifier(BottomBarFade(color: color, fadeHeight: fadeHeight, peakOpacity: peakOpacity))
+    }
+}
+
 // MARK: - CarryConfirmationDialog
 
 /// App-styled confirmation dialog — replaces system .alert where visual consistency matters.
