@@ -772,13 +772,16 @@ private struct TransportTimelineRow: View {
 
     var body: some View {
         HStack(spacing: railSpacing) {
+            // marker 与停靠点**完全同款**实心彩圆（systemBackground 垫底压住 rail 竖线 + dayColor 轻染 + 图标，
+            // 28pt + 13pt 图标，与 TimelineStopRow 一致）。类型靠图标(plane vs pin)+内容区分，尺寸统一更整齐。
             ZStack {
-                Circle().strokeBorder(dayColor.opacity(0.5), lineWidth: 1.5)
+                Circle().fill(Color(uiColor: .systemBackground))
+                Circle().fill(dayColor.opacity(0.15))
                 Image(systemName: segment.mode.symbolName)
-                    .font(.system(size: 12, weight: .semibold))
+                    .font(.system(size: 13, weight: .semibold))
                     .foregroundStyle(dayColor)
             }
-            .frame(width: 24, height: 24)
+            .frame(width: 28, height: 28)
             .frame(width: railWidth)
 
             VStack(alignment: .leading, spacing: 2) {
