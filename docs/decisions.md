@@ -1,5 +1,45 @@
 # 决策日志
 
+## 2026-06-18 设置信息架构与一致性 / 自定义分类 / SwiftUI 呈现坑
+
+### Settings 一级 IA：用「Language & Region」替代无主题的「General」
+原因：「General」是无主题兜底名；其下 Distance Unit/Currency 实为语言/区域/格式偏好，不是「通用」。
+决策：语言 + 货币 + 距离单位归「**Language & Region**」（对标 iOS 系统设置），Personalization 收回为纯外观（Appearance/App Icon）；Language 从外观组下移到此组。`settings.section.general` key 改名 `settings.section.language_region`。
+
+### 行尾可供性与「点击后发生什么」严格对应（Apple HIG）
+决策：`chevron.right` 仅 push（进设置下一层）；离开 App（系统设置/邮件）用 `arrow.up.right`；开 in-app sheet 的动作行不挂箭头；就地弹菜单用**原生 `.menu` Picker** 自带的上下箭头。设置**子页背景统一 `systemGroupedBackground`**，与父页一致（App Icon/About/Roadmap 原误用首页氛围渐变 `CarrySubtleBackground`，push 进去会跳色）。Roadmap 由 sheet 改 push（信息内容归层级、避免模态套模态）。
+
+### 我的物品「自定义分类」：派生自物品、无独立实体；管理全程无 modal
+原因：`MyItem.category` 是自由字符串、无独立分类实体。删除一个分类必然牵涉其下物品。
+决策：复用 = 列出当前 collection 去重的非目录 category（最近用在前）；重命名/删除批量作用于该 collection 内 category 匹配的物品；**删除只清空物品的 category（→暂不分类）、保留物品**（PM 选定，非删物品）。管理 UI **不用任何 modal**（行内 TextField 重命名 + 即时 swipe 删除），原因见下条。spec: `my-item-custom-categories.md`。
+
+### ⚠️ SwiftUI 嵌套呈现坑（两个，UI 改动优先排查）— 详见 memory `swiftui-nested-presentation-and-menu-label-gotchas`
+① 在「sheet 内再 push 的页」上呈现 alert/confirmationDialog 会坏：挂在 push 页→一弹就把该页弹回上层；挂在被它盖住的父视图→modal 根本不显示。解：用**行内 UI**，或把该页改成 **sheet**（独立呈现上下文）。
+② 自定义 `Menu` 的 `label` 里包文字 → 菜单展开瞬间那段文字渲染空（设置「外观/距离单位」标题消失）。解：**标题放菜单外**、值用**原生 `.menu` Picker**。`.buttonStyle(.plain)` 不是病根（去掉无效，是错误机制的瞎猜）。
+教训：两处都先「猜机制 + 微调」失败 → 结构性根因解才稳，且**验证后再下「修好了」结论**。
+
+### 深色首页空态 Sheet：要分离用真实磨砂玻璃，别加假光（详见 memory dark-card-no-fake-light-use-material）
+原因：深色下卡片贴近黑色背景、缺浮起感。试过「抬灰填充」（变灰盒子贴在宇宙上）、「发光顶沿」（脏 3D 斜面）均显廉价、被 PM 否。
+决策：用 `UIVisualEffectView` 磨砂（**仅空态 + 深色**，空态是固定浮卡、无拖拽/吸附 → 零性能风险、无过冲漏图），让 MapKit 地球从卡后透上来 = 真实景深。⚠️ 状态：实现过、用户验过好看；模拟器疑似命中「按钮下方点不动」伪影（真机正常）**待真机最终确认**；尚未由我单独提交（与在途 HomeView/FX 纠缠）。
+
+## 2026-06-18 备用图标渲染 / xcstrings 噪声 / 真机启动崩溃定位
+
+### 备用图标必须带「实体尺寸渲染」，不能只给单张 1024
+原因：`setAlternateIconName` 在桌面渲染要求 bundle 里**真实存在**桌面尺寸（120/180）的图标渲染。单张 1024「新格式」只对**主图标**有效（系统运行时降采样），备用图标拿不到 → 切换静默回退主图标。
+决策：`IconCat`/`IconDog` 用 `sips` 从 1024 生成全尺寸（20–1024，iPhone+iPad），改经典多尺寸 `Contents.json`。`assetutil` 验证渲染含 120/180、模拟器实测桌面图标切换成功。**新增备用图标时必须给全尺寸渲染，不能只丢一张 1024。**
+
+### xcstrings 重排噪声用 git clean filter 根治（而非每次手工还原）
+原因：6 万行 `Localizable.xcstrings` 有两个写入者（Xcode 规范排序 vs 脚本/文本插入顺序），基线一偏离、下次 Xcode 一碰整篇重排出巨 diff，反复发生。
+决策：装 git **clean filter**（`scripts/xcstrings-normalize.py` + `.gitattributes`），在 git 边界把 catalog 规范化成单一确定顺序——任何写入顺序经 clean 后字节一致，重排 diff **结构性消失**，真实文案改动照常显示。⚠️ filter 命令在 `.git/config`、不随仓库提交，**换机/重新 clone 须重设** `git config filter.xcstrings.clean "python3 scripts/xcstrings-normalize.py"`。优于之前 CLAUDE.md 记的「脚本须匹配 Xcode 序列化格式」——那靠纪律，这靠结构，更稳。
+
+### 真机启动崩溃（`_xpc_init_pid_domain`）判定为环境/工具链问题、非 app 代码
+原因：另一台电脑 Xcode Run 到真机启动即崩，`OS_dispatch_mach_msg _setContext:` unrecognized selector。真机 `bt` 显示崩溃全程在 `dyld → _libxpc_initializer → _xpc_init_pid_domain → objc_defaultForwardHandler → _objc_fatal`，**在 `main()` 之前、栈里无一帧 app 代码**；且重启手机能恢复（代码 bug 不可能被重启修好）。
+决策：不改 app 代码。判为「那台 Mac 的 Xcode 版本 < 手机 iOS 版本（缺 Device Support）」或设备脏状态。对策＝升级该 Xcode / 改用本机（Xcode 26.5）装机 + 手机删 app 重启重装。**方法论留痕**：遇到诡异 selector 崩溃，先看 `bt` 判断「崩在系统库 init 阶段、app 代码还没上场」=环境问题，别往业务代码上猜（本会话一度误锚到已修的 diffable 崩溃）。
+
+### 切图标系统弹窗的标题/间距不可控、不修
+原因：该弹窗由 iOS 在 `setAlternateIconName` 成功后自动呈现，app 仅调 API、不创建弹窗，弹窗布局全由系统排版。
+决策：不修。仅靠私有 API 才能抑制系统弹窗，违反「禁止私有 API」铁律。我们能修且已修的是图标渲染本身（桌面 + 弹窗内图标都已正常）。
+
 ## 2026-06-18 时间轴 marker：三档 → 两档
 
 原因：原「停靠点实心彩圆 / 交通描边空心圆 / 住宿裸图标」三档里，**交通的描边空心圆显悬空、像按钮、与停靠点不成一家**（用户反馈丑）。

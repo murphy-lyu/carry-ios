@@ -3,6 +3,34 @@
 ## 最后更新
 2026-06-18
 
+## 上次改动摘要（Settings 信息架构与一致性大修 + 我的物品自定义分类 + 多处交互根治 · 2026-06-18）
+
+> 一整轮 Settings 打磨 + 一个新功能（自定义分类）+ 若干交互 bug 根治。均已提交并 push（最新 `656fb5f`）。
+
+- **Settings 全面收口**（多 commit `c0bf997`/`27e0fa3`/`7b53ac9`/`95f00d8`/`656fb5f`）：
+  - **IA**：无主题的「General」→「**Language & Region**」（语言/货币/距离单位归一组，对标 iOS）；Personalization 收回为纯外观（Appearance/App Icon），Language 下移到 Language & Region。
+  - **可供性对齐 HIG**：`›` 仅 push；离开 App 用 `↗`；开 in-app sheet 不挂箭头；就地弹菜单用原生 `.menu` Picker 的上下箭头。子页背景统一 `systemGroupedBackground`（App Icon/About/Roadmap 原误用首页氛围渐变）。
+  - **杂项**：Roadmap 由 sheet 改 push；Currency 一级行去币种符号；一级「通知」→「行程提醒」；Support Carry 移到 About 上方。
+  - **全栈审查修复**：通知授权态接回 Notifications 行（原死代码）；打赏失败弹窗 release 不再露调试转储；分享文案本地化；导入后刷新备份日期；RoadmapView 远程拉取加固（https+超时+256KB 上限）；清多处死代码 + 补 VoiceOver 标签。
+  - **外观/距离单位下拉时标题变空白根治**：标题原本包在自定义 `Menu` 的 label 里（展开被快照渲染空）→ 标题移出菜单、值用原生 `.menu` Picker。
+- **🟢 我的物品「自定义分类」复用/重命名/删除**（新功能，spec: `my-item-custom-categories.md`，`8a4be62`）：分类派生自 `MyItem.category`（无独立实体）。加物品时列已建分类可直接选；左滑行内重命名 / 即时删除（删除只清分类、**物品保留→暂不分类**）。**全程无 modal**（见 decisions 的 SwiftUI 坑）。store 加 `customCategoryNames / renameMyItemCategory / deleteMyItemCategory`。
+- **日历叠加层默认勾选修复**（`95f00d8`）：首次默认原是「所有只读非生日日历」→ 误勾 TickTick/Tripsy；加标题节假日识别（9 语言）只勾法定节假日。⚠️ 仅首次初始化生效，验证需重装。
+- **微信输入法中文丢字修复**（`7334833`）：行程名/目的地框原用「if isEmpty 显隐占位符叠层」+ 空占位符 TextField；marked text（预编辑态）下占位符不消失且选词提交丢字。改用**原生 TextField 占位符**。
+- **分享/弹窗呈现统一**（`ad67d98`）：所有 `UIActivityViewController` 改走新增 `UIApplication.presentActivitySheet`（走到最顶层 presenter），修 Settings 导出等「点了没反应」（Settings 改 sheet 后 rootVC 已有 presented）。
+- 行程详情「⋯」菜单调序（`3e9ea1d`）。
+- **未做/待办**：深色首页空态 Sheet **磨砂玻璃**（HomeView/FX）实现过、用户验过好看，但模拟器有「按钮下方点不动」疑似伪影（真机正常），**未单独由我提交**（与用户在途 HomeView/FX 纠缠）；需真机最终确认后再决定提交。
+
+## 上次改动摘要（备用图标根因修 + xcstrings 重排噪声根治 + 真机启动崩溃定位 · 2026-06-18 续）
+
+> 三件事：①修好「换桌面图标不生效」；②根治 `.xcstrings` 反复出现的整文件重排噪声；③定位真机启动崩溃（结论：非 app 代码）。**两项代码改动已提交并 push**（`79e08a8`、`e53f23c`）。
+
+- **🟢 备用图标桌面不生效（已修 + 模拟器实测过，已 push `79e08a8`）**：根因——`IconCat`/`IconDog` 只声明单张 `1024×1024`。这对**主图标**有效（系统运行时降采样出 120/180 桌面尺寸），但对 **alternate icon 无效**：`setAlternateIconName` 要求 bundle 里**实际存在**桌面尺寸渲染，否则切换静默回退主图标。**修复**：用 `sips` 从 1024 生成全尺寸（20–1024，iPhone+iPad），两个 appiconset 改经典多尺寸 `Contents.json`。`assetutil` 验证渲染从 `[1024]` → 全套含 120/180；模拟器 Dock 图标实测确实切换成功。⚠️ 仅模拟器验过，**真机待验**（但真机当前被启动崩溃挡住，见下）。
+- **🟢 xcstrings 重排噪声（根治，已 push `e53f23c`）**：根因——`Localizable.xcstrings`（6 万行）有两个写入者各用各的 key 顺序（Xcode 规范排序 vs 脚本插入顺序），谁动一次基线就偏离、下次 Xcode 一碰整篇重排出巨 diff。**根治**：装 git **clean filter**（`scripts/xcstrings-normalize.py` + `.gitattributes`），在 git 边界把 catalog 规范化成单一确定顺序——谁用什么顺序写,git 都存同样字节,重排 diff **结构性消失**,真实文案改动照常显示。已证：倒序/改缩进等"敌对写入"后 `git diff` 仍为空。⚠️ **filter 命令在 `.git/config`、不随仓库提交**——换机/重新 clone 要跑一次 `git config filter.xcstrings.clean "python3 scripts/xcstrings-normalize.py"`，否则噪声回来（已存记忆）。
+- **🔵 真机启动崩溃（已定位 = 环境/工具链问题，非 app 代码，待用户回另一台电脑确认版本号）**：症状——另一台电脑 Xcode Run 到真机，启动即崩 + 反复恢复上次页面、只能重启手机；控制台 `objc[...] -[OS_dispatch_mach_msg _setContext:]: unrecognized selector`。**真机 `bt` 决定性**：崩溃在 `dyld → libSystem_initializer → _libxpc_initializer → _xpc_init_pid_domain → _xpc_serializer_pack → objc_defaultForwardHandler → _objc_fatal`，**全在系统库、发生在 `CarryApp.main()` 之前、栈里无一帧 Carry 代码**。故**排除**：图标改动、diffable、近期所有改动。旁证：重启手机能恢复（app 代码 bug 不可能被重启修好）。**最可能诱因**：那台 Mac 的 Xcode 版本 < 手机 iOS 版本（缺 Device Support）。**本机对照**：Xcode 26.5、有到 iOS 27 的 DeviceSupport、部署目标 26.5，本机构建正常。**下一步**：用户回那台电脑给「Xcode 版本 + 手机 iOS 版本」；对策＝升级那台 Xcode 或直接用本机装机 + 手机删 app 重启重装清脏状态。
+  - 顺带澄清：之前那份本地 6/14 模拟器崩溃（diffable `reconfigureItems` 传重复 id）是**修复前**的旧日志，已在 `18721e7`（6/15）修掉，与本次真机崩溃无关——我一度误判为同一处，已纠正。
+- **🔵 切图标系统弹窗标题间距（不修，非可控）**：那个「你已更改"启程"的图标。」弹窗由 **iOS 系统**在 `setAlternateIconName` 成功后自动弹出，标题位置/间距全由系统排版，app 零控制权（代码仅调 API、不创建弹窗）。**纠正**我之前「补尺寸会顺带修好间距」的错误预期——图标已能正常渲染，但间距是系统弹窗固有样子，不是 bug、也不该用私有 API 去抑制。
+- **未在本会话提交的在途文件**：用户自己的自定义分类工作（`Localizable.xcstrings` 内容、`PackingListView.swift`，其中菜单重排是用户提交的 `3e9ea1d` 已 push）——我**未触碰**。
+
 ## 上次改动摘要（航班号 → 自动填航班信息 · spec: `itinerary-flight-lookup.md` · 2026-06-18）
 
 > 新功能：航班模式下输航班号+日期 → 一键自动填全段（航司/机场/起降时刻/航站楼/机型）。起步只做**静态基础信息**，实时动态留 Pro 阶段。**编译绿 + 启动不崩 + Worker 真实联调通过**（curl 验证 AA100 国际、MU5433 国内均完整）。**待真机走完整验收**。**未提交**。
