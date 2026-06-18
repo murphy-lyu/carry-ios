@@ -97,6 +97,9 @@ struct TransportDetailView: View {
                                   terminal: segment.toTerminal) {
             rows.append(AnyView(LabeledDetailRow(icon: "arrow.down.forward", labelKey: "itinerary.transport.section.arrive", value: arr)))
         }
+        if !segment.aircraftType.isEmpty {
+            rows.append(AnyView(LabeledDetailRow(icon: "airplane", labelKey: "itinerary.flight.field.aircraft", value: segment.aircraftType)))
+        }
         if !segment.seat.isEmpty {
             rows.append(AnyView(LabeledDetailRow(icon: "chair", labelKey: "itinerary.transport.field.seat", value: segment.seat)))
         }

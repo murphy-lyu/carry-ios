@@ -24,6 +24,19 @@ struct BackupPackingSection: Codable, Sendable {
     var items: [BackupPackingItem]
 }
 
+/// 照片回溯生成的停靠点照片（spec: photo-trip-reconstruction.md）。
+/// 缩略图字节随备份走（CLAUDE.md 备份约定：沙盒外/不在关系图直存的字节必须显式带上）；
+/// assetLocalIdentifier 也带上，换机后原图可能取不到、UI 退化为「仅缩略图」，可接受。
+struct BackupStopPhoto: Codable, Sendable {
+    var id: UUID
+    var assetLocalIdentifier: String
+    var thumbnailData: Data
+    var timestamp: Date
+    var latitude: Double
+    var longitude: Double
+    var sortOrder: Int
+}
+
 struct BackupItineraryStop: Codable, Sendable {
     var id: UUID
     var name: String
@@ -39,6 +52,9 @@ struct BackupItineraryStop: Codable, Sendable {
     var costAmount: Double?
     var costCurrencyCode: String?
     var costHomeAmount: Double?
+    // 照片回溯（spec: photo-trip-reconstruction.md）；可选 + 默认 nil：兼容旧备份，且分享/导出路径不带照片。
+    var fromPhotos: Bool? = nil
+    var photos: [BackupStopPhoto]? = nil
 }
 
 struct BackupTransportSegment: Codable, Sendable {
@@ -69,6 +85,8 @@ struct BackupTransportSegment: Codable, Sendable {
     var costAmount: Double?
     var costCurrencyCode: String?
     var costHomeAmount: Double?
+    // 机型（spec: itinerary-flight-lookup.md）；可选 + 默认 nil：兼容旧备份。
+    var aircraftType: String? = nil
 }
 
 struct BackupLodgingStay: Codable, Sendable {
@@ -208,7 +226,8 @@ final class DataBackupManager {
                 departDayOrder: s.departDayOrder, departLocalMinutes: s.departLocalMinutes,
                 arriveDayOrder: s.arriveDayOrder, arriveLocalMinutes: s.arriveLocalMinutes,
                 seat: s.seat, confirmationCode: s.confirmationCode, note: s.note, sortOrder: s.sortOrder,
-                costAmount: s.costAmount, costCurrencyCode: s.costCurrencyCode, costHomeAmount: s.costHomeAmount
+                costAmount: s.costAmount, costCurrencyCode: s.costCurrencyCode, costHomeAmount: s.costHomeAmount,
+                aircraftType: s.aircraftType
             )
         }
     }
@@ -249,7 +268,18 @@ final class DataBackupManager {
             }
             let itineraryDays: [BackupItineraryDay] = trip.safeItineraryDays.map { day in
                 let stops: [BackupItineraryStop] = day.sortedStops.map {
-                    BackupItineraryStop(
+                    let photos = $0.sortedPhotos.map { p in
+                        BackupStopPhoto(
+                            id: p.id,
+                            assetLocalIdentifier: p.assetLocalIdentifier,
+                            thumbnailData: p.thumbnailData,
+                            timestamp: p.timestamp,
+                            latitude: p.latitude,
+                            longitude: p.longitude,
+                            sortOrder: p.sortOrder
+                        )
+                    }
+                    return BackupItineraryStop(
                         id: $0.id,
                         name: $0.name,
                         latitude: $0.latitude,
@@ -262,7 +292,9 @@ final class DataBackupManager {
                         sortOrder: $0.sortOrder,
                         costAmount: $0.costAmount,
                         costCurrencyCode: $0.costCurrencyCode,
-                        costHomeAmount: $0.costHomeAmount
+                        costHomeAmount: $0.costHomeAmount,
+                        fromPhotos: $0.fromPhotos,
+                        photos: photos.isEmpty ? nil : photos
                     )
                 }
                 let segments = backupSegments(day)
@@ -524,11 +556,26 @@ final class DataBackupManager {
                     sortOrder: bs.sortOrder,
                     costAmount: bs.costAmount ?? 0,
                     costCurrencyCode: bs.costCurrencyCode ?? "",
-                    costHomeAmount: bs.costHomeAmount ?? -1
+                    costHomeAmount: bs.costHomeAmount ?? -1,
+                    fromPhotos: bs.fromPhotos ?? false
                 )
                 stop.id = bs.id
                 stop.day = day
                 context.insert(stop)
+                // 照片回溯（spec: photo-trip-reconstruction.md）；旧备份无 photos（nil）→ 不建。
+                for bp in (bs.photos ?? []).sorted(by: { $0.sortOrder < $1.sortOrder }) {
+                    let photo = StopPhoto(
+                        assetLocalIdentifier: bp.assetLocalIdentifier,
+                        thumbnailData: bp.thumbnailData,
+                        timestamp: bp.timestamp,
+                        latitude: bp.latitude,
+                        longitude: bp.longitude,
+                        sortOrder: bp.sortOrder
+                    )
+                    photo.id = bp.id
+                    photo.stop = stop
+                    context.insert(photo)
+                }
             }
             // 交通段（spec: itinerary-transport-lodging.md）；旧备份无 segments（nil）→ 不建。
             for bg in (bd.segments ?? []).sorted(by: { $0.sortOrder < $1.sortOrder }) {
@@ -544,7 +591,7 @@ final class DataBackupManager {
                     departDayOrder: bg.departDayOrder, departLocalMinutes: bg.departLocalMinutes,
                     arriveDayOrder: bg.arriveDayOrder, arriveLocalMinutes: bg.arriveLocalMinutes,
                     seat: bg.seat, confirmationCode: bg.confirmationCode,
-                    note: bg.note, sortOrder: bg.sortOrder,
+                    note: bg.note, aircraftType: bg.aircraftType ?? "", sortOrder: bg.sortOrder,
                     costAmount: bg.costAmount ?? 0,
                     costCurrencyCode: bg.costCurrencyCode ?? "",
                     costHomeAmount: bg.costHomeAmount ?? -1

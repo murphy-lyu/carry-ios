@@ -53,8 +53,14 @@ struct TransportEditView: View {
     @State private var seat = ""
     @State private var confirmationCode = ""
     @State private var note = ""
+    @State private var aircraftType = ""
     @State private var costAmountText = ""
     @State private var costCurrencyCode = ""
+
+    // 用航班号自动填（spec: itinerary-flight-lookup.md）
+    @State private var lookupDate = Date()
+    @State private var lookupStatus: LookupStatus = .idle
+    private enum LookupStatus: Equatable { case idle, loading, filled, notFound, failed, notConfigured }
 
     @State private var didLoad = false
     /// 起 / 落地点搜索 sheet（nil = 不显示；true = 搜出发，false = 搜到达）。
@@ -213,6 +219,44 @@ struct TransportEditView: View {
                     .autocorrectionDisabled()
                     .textInputAutocapitalization(.characters)
             }
+            // 航班：输航班号 + 日期 → 一键自动填全段（spec: itinerary-flight-lookup.md）。是加速器，失败可手填。
+            if mode == .flight && FlightLookupConfig.isConfigured {
+                DatePicker("itinerary.flight.lookup.date", selection: $lookupDate, displayedComponents: .date)
+                Button { lookupFlight() } label: {
+                    HStack(spacing: 8) {
+                        if lookupStatus == .loading {
+                            ProgressView().controlSize(.small)
+                        } else {
+                            Image(systemName: "sparkles")
+                        }
+                        Text("itinerary.flight.lookup.button")
+                        Spacer()
+                    }
+                }
+                .disabled(number.trimmingCharacters(in: .whitespaces).isEmpty || lookupStatus == .loading)
+                if let msg = lookupStatusMessage {
+                    Text(msg)
+                        .font(.caption)
+                        .foregroundStyle(lookupStatus == .filled ? Color.secondary : Color(.systemOrange))
+                }
+                if !aircraftType.isEmpty {
+                    LabeledContent {
+                        Text(aircraftType)
+                    } label: {
+                        Text("itinerary.flight.field.aircraft")
+                    }
+                }
+            }
+        }
+    }
+
+    private var lookupStatusMessage: LocalizedStringKey? {
+        switch lookupStatus {
+        case .idle, .loading:   return nil
+        case .filled:           return "itinerary.flight.lookup.filled"
+        case .notFound:         return "itinerary.flight.lookup.notfound"
+        case .failed:           return "itinerary.flight.lookup.failed"
+        case .notConfigured:    return "itinerary.flight.lookup.failed"
         }
     }
 
@@ -352,6 +396,7 @@ struct TransportEditView: View {
             if seg.departLocalMinutes >= 0 { hasDepartTime = true; departTime = dateFromMinutes(seg.departLocalMinutes) }
             if seg.arriveLocalMinutes >= 0 { hasArriveTime = true; arriveTime = dateFromMinutes(seg.arriveLocalMinutes) }
             seat = seg.seat; confirmationCode = seg.confirmationCode; note = seg.note
+            aircraftType = seg.aircraftType
             if seg.hasCost { costAmountText = CurrencyCatalog.amountText(seg.costAmount); costCurrencyCode = seg.costCurrencyCode }
         } else {
             // 新增：默认模式 + 起降日落到目标天。
@@ -359,6 +404,11 @@ struct TransportEditView: View {
             let order = days.first(where: { $0.id == dayId })?.sortOrder ?? 0
             departDayOrder = order
             arriveDayOrder = order
+        }
+        // 航班查询的默认日期 = 出发日对应的真实日期（有日期行程）；无日期行程用今天。
+        if let bundle, !bundle.isDateless {
+            let base = Calendar.current.startOfDay(for: bundle.departureDate)
+            lookupDate = Calendar.current.date(byAdding: .day, value: departDayOrder, to: base) ?? base
         }
     }
 
@@ -379,6 +429,8 @@ struct TransportEditView: View {
         // 时区仅航班机场选点会填；切到非航班模式时一并清空，避免残留。
         let savedFromTZ = mode == .flight ? fromTimeZoneId : ""
         let savedToTZ = mode == .flight ? toTimeZoneId : ""
+        // 机型仅航班有意义。
+        let savedAircraft = mode == .flight ? aircraftType : ""
 
         if let segmentId {
             store.updateTransportSegment(
@@ -392,7 +444,8 @@ struct TransportEditView: View {
                 toTimeZoneId: savedToTZ, toTerminal: savedToTerminal,
                 departDayOrder: departDayOrder, departLocalMinutes: departMinutes,
                 arriveDayOrder: safeArriveDay, arriveLocalMinutes: arriveMinutes,
-                seat: savedSeat, confirmationCode: confirmationCode, note: note
+                seat: savedSeat, confirmationCode: confirmationCode, note: note,
+                aircraftType: savedAircraft
             )
             store.setTransportCost(tripId: tripId, segmentId: segmentId,
                                    amount: costAmountValue, currencyCode: costCurrencyToSave)
@@ -408,7 +461,8 @@ struct TransportEditView: View {
                 toTimeZoneId: savedToTZ, toTerminal: savedToTerminal,
                 departDayOrder: departDayOrder, departLocalMinutes: departMinutes,
                 arriveDayOrder: safeArriveDay, arriveLocalMinutes: arriveMinutes,
-                seat: savedSeat, confirmationCode: confirmationCode, note: note
+                seat: savedSeat, confirmationCode: confirmationCode, note: note,
+                aircraftType: savedAircraft
             ) {
                 store.setTransportCost(tripId: tripId, segmentId: newId,
                                        amount: costAmountValue, currencyCode: costCurrencyToSave)
@@ -435,6 +489,109 @@ struct TransportEditView: View {
         store.removeTransportSegment(tripId: tripId, dayId: day.id, segmentId: segmentId)
         dismiss()
     }
+
+    // MARK: 用航班号自动填（spec: itinerary-flight-lookup.md）
+
+    private func lookupFlight() {
+        let num = number.trimmingCharacters(in: .whitespaces)
+        guard !num.isEmpty else { return }
+        let f = DateFormatter()
+        f.locale = Locale(identifier: "en_US_POSIX")
+        f.dateFormat = "yyyy-MM-dd"
+        f.timeZone = .current
+        let dateStr = f.string(from: lookupDate)
+        lookupStatus = .loading
+        CarryLogger.shared.log(.flightLookupStarted)
+        Task {
+            do {
+                let result = try await FlightLookupService.lookup(number: num, dateString: dateStr)
+                await MainActor.run {
+                    applyFlightResult(result)
+                    lookupStatus = .filled
+                    CarryLogger.shared.log(.flightLookupResolved,
+                                           context: "from=\(result.from.hasAirport) to=\(result.to.hasAirport)")
+                }
+            } catch FlightLookupError.notFound {
+                await MainActor.run { lookupStatus = .notFound; CarryLogger.shared.log(.flightLookupNotFound) }
+            } catch FlightLookupError.notConfigured {
+                await MainActor.run { lookupStatus = .notConfigured }
+            } catch {
+                await MainActor.run { lookupStatus = .failed; CarryLogger.shared.log(.flightLookupFailed) }
+            }
+        }
+    }
+
+    /// 把查询结果映射进表单（尽力填，缺的留手填）。
+    private func applyFlightResult(_ r: FlightLookupResult) {
+        if !r.airlineName.isEmpty { carrier = r.airlineName }
+        if !r.flightNumber.isEmpty { number = r.flightNumber }
+        aircraftType = r.aircraftType
+        if r.from.hasAirport {
+            fromName = r.from.name; fromCode = r.from.iata
+            if r.from.latitude != 0 || r.from.longitude != 0 { fromLatitude = r.from.latitude; fromLongitude = r.from.longitude }
+            if !r.from.timeZoneId.isEmpty { fromTimeZoneId = r.from.timeZoneId }
+            fromTerminal = r.from.terminal
+        }
+        if r.to.hasAirport {
+            toName = r.to.name; toCode = r.to.iata
+            if r.to.latitude != 0 || r.to.longitude != 0 { toLatitude = r.to.latitude; toLongitude = r.to.longitude }
+            if !r.to.timeZoneId.isEmpty { toTimeZoneId = r.to.timeZoneId }
+            toTerminal = r.to.terminal
+        }
+        applyFlightTimes(r)
+    }
+
+    /// 起降时刻 + 跨天。时刻按「机场当地时区的时:分」存（与现有 minutes(from:) 范式一致）；
+    /// dayOrder 用航班的当地日期相对行程首日推算，跨午夜 → arriveDayOrder > departDayOrder。
+    private func applyFlightTimes(_ r: FlightLookupResult) {
+        if let dep = r.from.scheduledLocal {
+            let c = localComponents(dep, tzId: r.from.timeZoneId)
+            departTime = dateFromMinutes((c.hour ?? 0) * 60 + (c.minute ?? 0)); hasDepartTime = true
+        }
+        if let arr = r.to.scheduledLocal {
+            let c = localComponents(arr, tzId: r.to.timeZoneId)
+            arriveTime = dateFromMinutes((c.hour ?? 0) * 60 + (c.minute ?? 0)); hasArriveTime = true
+        }
+        let depYMD = ymdDate(r.from.scheduledLocal, tzId: r.from.timeZoneId) ?? ymdDate(lookupDate, tzId: TimeZone.current.identifier)
+        let arrYMD = ymdDate(r.to.scheduledLocal, tzId: r.to.timeZoneId) ?? depYMD
+        let cross = max(0, daysBetween(depYMD, arrYMD))
+        if let bundle, !bundle.isDateless {
+            let tripStart = ymdDate(bundle.departureDate, tzId: TimeZone.current.identifier)
+            let span = bundle.spanDays
+            let dOrder = clampOrder(daysBetween(tripStart, depYMD), span: span)
+            departDayOrder = dOrder
+            arriveDayOrder = clampOrder(dOrder + cross, span: span)
+        } else {
+            arriveDayOrder = departDayOrder + cross
+        }
+    }
+
+    // MARK: 时区/日期换算
+
+    private func calendar(tzId: String) -> Calendar {
+        var c = Calendar(identifier: .gregorian)
+        c.timeZone = TimeZone(identifier: tzId) ?? .current
+        return c
+    }
+    private func localComponents(_ date: Date, tzId: String) -> DateComponents {
+        calendar(tzId: tzId).dateComponents([.hour, .minute], from: date)
+    }
+    private static let utcCal: Calendar = {
+        var c = Calendar(identifier: .gregorian)
+        c.timeZone = TimeZone(identifier: "UTC") ?? .current
+        return c
+    }()
+    /// 取某绝对时刻在 tz 下的「当地日历日」，归一成 UTC 午夜，供按天数差比较。
+    private func ymdDate(_ date: Date?, tzId: String) -> Date {
+        guard let date else { return Self.utcCal.startOfDay(for: Date()) }
+        let c = calendar(tzId: tzId).dateComponents([.year, .month, .day], from: date)
+        var d = DateComponents(); d.year = c.year; d.month = c.month; d.day = c.day
+        return Self.utcCal.date(from: d) ?? Self.utcCal.startOfDay(for: date)
+    }
+    private func daysBetween(_ a: Date, _ b: Date) -> Int {
+        Self.utcCal.dateComponents([.day], from: a, to: b).day ?? 0
+    }
+    private func clampOrder(_ o: Int, span: Int) -> Int { min(max(0, o), max(0, span - 1)) }
 }
 
 /// 让 Bool 能驱动 .sheet(item:)。

@@ -80,6 +80,7 @@ struct PackingListView: View {
     @State private var showReminderSheet = false
     @State private var showSuggestSheet = false
     @State private var showBackgroundPicker = false
+    @State private var showPhotoImport = false
     @State private var pendingPickedProvider: NSItemProvider?
     @State private var repositionProvider: PickedBackgroundProvider?
 
@@ -212,6 +213,15 @@ struct PackingListView: View {
                                 withAnimation(.spring(duration: 0.3, bounce: 0.2)) { isReorderingItinerary = true }
                             } label: {
                                 Label("itinerary.reorder.menu", systemImage: "arrow.up.arrow.down")
+                            }
+                        }
+                        // 照片回溯生成行程（spec: photo-trip-reconstruction.md）：收进本「…」菜单的行程面段，
+                        // 不再单独占一个工具栏图标。仅有日期行程可用（需日期区间过滤照片）。
+                        if detailTab == .itinerary, !(bundle?.isDateless ?? true) {
+                            Button {
+                                showPhotoImport = true
+                            } label: {
+                                Label("phototrip.entry.label", systemImage: "photo.badge.plus")
                             }
                         }
                         // 共享「行程级操作」（两个 tab 通用、顺序一致）：编辑行程 → 复制行程 → 行程提醒 → 添加背景图。
@@ -451,6 +461,10 @@ struct PackingListView: View {
                 TripReminderSheet(bundle: bundle)
                     .environmentObject(store)
             }
+        }
+        .sheet(isPresented: $showPhotoImport) {
+            PhotoTripImportView(tripId: tripId)
+                .environmentObject(store)
         }
         .alert(
             String(format: NSLocalizedString("Delete %@?", comment: ""), bundle?.name ?? ""),
@@ -992,10 +1006,10 @@ struct PackingListView: View {
 
     private var tripDateRangeLine: String? {
         guard let bundle else { return nil }
-        // 无日期「规划中」行程：头部不显示占位日期，改显示规划标签——清单页是独立上下文
-        //（没有首页「规划中」分区标题兜底），需自己传达"这是计划、日期待定"。
+        // 无日期「规划中」行程：与首页行程卡保持一致，统一显示「未来某天」（单一来源 tripdates.unset）。
+        // 两面（打包/行程）共享此头部，故一处即一致。
         if bundle.isDateless {
-            return NSLocalizedString("packing.header.planning", comment: "Planning trip header, no dates set")
+            return NSLocalizedString("tripdates.unset", comment: "Dateless trip header label")
         }
         let date = bundle.localizedDateRange
         guard !date.isEmpty else { return nil }

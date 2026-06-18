@@ -112,10 +112,14 @@ struct ItineraryView: View {
         let tripDays = bundle.spanDays   // 实际天数（含两端），与行程页/首页一致
         let visibleDays = max(7, tripDays)
 
+        // 性能：sortOrder → day 建一次字典再 O(1) 查（原来每天都 days.first(where:) = O(N²)，
+        // 且每次还重排 days；长行程下每次 body 求值都算几十万次，是空 180 天行程卡顿的主因）。
+        let dayByOrder = Dictionary(bundle.safeItineraryDays.map { ($0.sortOrder, $0) },
+                                    uniquingKeysWith: { first, _ in first })
+        let cal = Calendar.current
         return (0..<visibleDays).map { offset in
-            let date = Calendar.current.date(byAdding: .day, value: offset, to: startDate) ?? startDate
-            let day = days.first(where: { $0.sortOrder == offset })
-            return CalendarEntry(offset: offset, date: date, day: day)
+            let date = cal.date(byAdding: .day, value: offset, to: startDate) ?? startDate
+            return CalendarEntry(offset: offset, date: date, day: dayByOrder[offset])
         }
     }
 
@@ -173,6 +177,7 @@ struct ItineraryView: View {
                 CalendarEventDetailView(event: event)
             }
         }
+        // 照片回溯生成的入口已收进行程详情页共享「…」菜单（PackingListView），不在此另起工具栏图标。
         .toolbarBackground(Color(UIColor.systemBackground), for: .navigationBar)
         .toolbarBackground(.visible, for: .navigationBar)
         .toolbarBackground(.visible, for: .tabBar)
@@ -281,12 +286,15 @@ struct ItineraryView: View {
     }
 
     private var itineraryCalendarStrip: some View {
-        VStack(alignment: .leading, spacing: 2) {
-            if !calendarEntries.isEmpty {
+        // 计算一次复用（原先 `.isEmpty` + ForEach 各算一遍）。
+        let entries = calendarEntries
+        return VStack(alignment: .leading, spacing: 2) {
+            if !entries.isEmpty {
                 ScrollViewReader { proxy in
                     ScrollView(.horizontal, showsIndicators: false) {
-                        HStack(alignment: .top, spacing: 11) {
-                            ForEach(calendarEntries) { entry in
+                        // LazyHStack：长行程只构造可见的日期格，不再一次性建 181 个 cell。
+                        LazyHStack(alignment: .top, spacing: 11) {
+                            ForEach(entries) { entry in
                                 dayCalendarCell(
                                     entry: entry,
                                     isSelected: activeFocusedDayId == entry.day?.id
@@ -1053,6 +1061,7 @@ struct StopDetailView: View {
     @Environment(\.dismiss) private var dismiss
     @State private var editing = false
     @State private var contentHeight: CGFloat = 0
+    @State private var zoomedPhoto: ZoomedPhoto?
 
     /// sheet 高度贴着内容：稀疏地点不留大片空白（看着「刚好」而非「空」），内容多则自然撑大、可拖到大屏。
     /// 用有意留白消灭空旷感，而非塞空字段填充（north-star §1）。
@@ -1068,6 +1077,7 @@ struct StopDetailView: View {
         ScrollView {
             VStack(alignment: .leading, spacing: 16) {
                 header
+                if !stop.sortedPhotos.isEmpty { photoStrip }
                 infoCard
                 navModule
                 editButton
@@ -1087,6 +1097,43 @@ struct StopDetailView: View {
         // 编辑钻入到详情之上：保存后回到详情（@Model 可观察、详情自动反映新值），再下滑关。
         .sheet(isPresented: $editing) {
             StopEditView(tripId: tripId, stop: stop)
+        }
+        // 点缩略图放大看（存的是约 640px 缩略图；零授权不取系统原图）。
+        .fullScreenCover(item: $zoomedPhoto) { z in
+            ZStack {
+                Color.black.ignoresSafeArea()
+                if let image = UIImage(data: z.data) {
+                    Image(uiImage: image).resizable().scaledToFit()
+                }
+            }
+            .contentShape(Rectangle())
+            .onTapGesture { zoomedPhoto = nil }
+        }
+    }
+
+    private struct ZoomedPhoto: Identifiable { let id = UUID(); let data: Data }
+
+    /// 该停靠点导入的照片（横向缩略图条，点击放大）。照片回溯生成的地点才有。
+    private var photoStrip: some View {
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: 8) {
+                ForEach(stop.sortedPhotos, id: \.id) { photo in
+                    Button { zoomedPhoto = ZoomedPhoto(data: photo.thumbnailData) } label: {
+                        Group {
+                            if let image = UIImage(data: photo.thumbnailData) {
+                                Image(uiImage: image).resizable().scaledToFill()
+                            } else {
+                                Image(systemName: "photo").foregroundStyle(.tertiary)
+                                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                                    .background(Color(.tertiarySystemFill))
+                            }
+                        }
+                        .frame(width: 76, height: 76)
+                        .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
         }
     }
 

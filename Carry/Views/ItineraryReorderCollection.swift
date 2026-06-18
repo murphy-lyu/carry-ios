@@ -437,14 +437,27 @@ struct ItineraryReorderCollection: UIViewRepresentable {
                 collectionView.updateInteractiveMovementTargetPosition(recognizer.location(in: collectionView))
                 return
             }
-            // 正向程序滚动途中不回写（否则穿过的中间天会逐一误触选中 → 与动画打架）。
-            guard !isProgrammaticScroll else { return }
-            reportTopVisibleDayIfChanged()
+            // 性能：**滚动途中不回写 focused 天**。回写会改上层 @State → 触发 ItineraryView.body
+            // 整体重算（daySections 逐天重建 timeline + 地图重建全部标注），长行程下快速滚动会
+            // 连续触发几十轮整页重建 → 卡顿。改为「滚动停下时回写一次」（见下方两个 end 回调），
+            // 滚动过程零 body 重算、纯 UIKit 列表滚动，丝滑且与行程长度无关。
         }
 
         /// 用户中途抓住列表 → 视为手动滚动，立即解除程序滚动屏蔽，让反向联动接管。
         func scrollViewWillBeginDragging(_ scrollView: UIScrollView) {
             isProgrammaticScroll = false
+        }
+
+        /// 拖拽结束且不会惯性滑动 → 回写一次顶部天。
+        func scrollViewDidEndDragging(_ scrollView: UIScrollView, willDecelerate decelerate: Bool) {
+            guard !decelerate, !isProgrammaticScroll else { return }
+            reportTopVisibleDayIfChanged()
+        }
+
+        /// 惯性滑动结束 → 回写一次顶部天。
+        func scrollViewDidEndDecelerating(_ scrollView: UIScrollView) {
+            guard !isProgrammaticScroll else { return }
+            reportTopVisibleDayIfChanged()
         }
 
         /// 正向程序滚动动画结束 → 解除屏蔽。

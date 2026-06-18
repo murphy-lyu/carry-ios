@@ -686,7 +686,13 @@ struct HomeView: View {
             }
         }
         .frame(maxWidth: .infinity)
-        .background(CarrySubtleBackground())
+        // 空态 + 深色：背景留透明，让卡片表面由 FX 的磨砂玻璃层提供（地球从卡后透/糊上来，有真实景深）。
+        // 其余（有行程态、或浅色）：沿用不透明的 CarrySubtleBackground（可读性 / 白卡本就立体）。
+        .background {
+            if !(isEffectivelyEmpty && colorScheme == .dark) {
+                CarrySubtleBackground()
+            }
+        }
     }
 
     // MARK: - Map style button
@@ -1726,9 +1732,10 @@ struct TripCard: View {
     }
     
     private var dateAndDurationText: String {
-        // 无日期「规划中」行程不显示日期区间，改显示轻标签。
+        // 无日期「规划中」行程不显示日期区间，改显示轻标签「未来某天」（单一来源 tripdates.unset，
+        // 与行程详情页头部共用，避免重复维护）。
         if bundle.isDateless {
-            return NSLocalizedString("trip.card.no_dates", comment: "Planning trip with no dates set")
+            return NSLocalizedString("tripdates.unset", comment: "Dateless trip label")
         }
         let format = NSLocalizedString("%@ · %lld days", comment: "Trip date range and duration")
         // 显示「实际天数」（含两端），与行程页一致；bundle.days 是晚数、仅打包数量用。

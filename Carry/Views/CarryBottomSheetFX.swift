@@ -111,7 +111,14 @@ final class FXSheetViewController: UIViewController {
 
     private(set) var expandedHeight: CGFloat
     private(set) var collapsedOffset: CGFloat
-    var isListEmpty: Bool = false
+    var isListEmpty: Bool = false {
+        didSet {
+            // 空↔有行程切换时切换卡片背板（空+深=磨砂玻璃 / 否则=不透明）。init 期 view 未载入，
+            // 跳过；viewDidLoad 里会做首次设置。
+            guard isViewLoaded, oldValue != isListEmpty else { return }
+            updateEmptyStateSurface()
+        }
+    }
 
     // MARK: Visual metrics (1:1 from Tripsy measurement, iPhone 17 Pro @3x)
 
@@ -185,6 +192,12 @@ final class FXSheetViewController: UIViewController {
     /// Inner layer: fills outerView and rounds the TOP two corners. Nesting two
     /// single-radius corner layers gives independent top/bottom radii with no path mask.
     private let innerView = UIView()
+    /// 卡片磨砂玻璃背板（仅「空态 + 深色」启用）：让身后的 MapKit 地球从卡片透/糊上来，
+    /// 使卡片成为场景的一部分、有真实景深——而非给近黑卡片加假光（试过：灰盒子/脏斜面，皆廉价）。
+    /// 加在 `innerView` 最底层（hostingView 之下），随卡片同 transform 缩放、被顶角裁切。
+    /// 只在空态用：空态是固定缩放浮卡、无拖拽/吸附 → 零性能风险、无过冲漏图；有行程的展开态仍走
+    /// 不透明背板（保可读性 + 拖拽性能）。浅色不动（白卡本就立体）。
+    private let backdropBlurView = UIVisualEffectView(effect: nil)
     /// SwiftUI hosting view — kept at a FIXED full size and only re-centred per frame
     /// (origin-only shift), so it is never resized during a drag and SwiftUI never
     /// re-lays-out the sheet content mid-gesture.
@@ -269,6 +282,18 @@ final class FXSheetViewController: UIViewController {
         innerView.backgroundColor = CarrySubtleBackground.baseUIColor
         outerView.addSubview(innerView)
 
+        // 磨砂玻璃背板必须在 innerView 最底层（内容/消隐渐变都盖在它上面）。
+        // 注意 z 序：`installContent`（加 hostingView）在 `makeUIViewController` 里先于本 `viewDidLoad`
+        // 执行，故此处用 insert(at: 0) 把磨砂压到最底，而非 addSubview（会盖住已存在的内容）。
+        // 是否启用由 updateEmptyStateSurface() 按「空态 + 深色」决定。
+        backdropBlurView.isUserInteractionEnabled = false
+        innerView.insertSubview(backdropBlurView, at: 0)
+        updateEmptyStateSurface()
+        // 明暗切换时刷新空态磨砂表面（registerForTraitChanges 替代 iOS 17 已弃用的 traitCollectionDidChange）。
+        registerForTraitChanges([UITraitUserInterfaceStyle.self]) { (vc: FXSheetViewController, _) in
+            vc.updateEmptyStateSurface()
+        }
+
         // Pan gesture on the full view; shouldReceive limits it to sheet zone.
         sheetPan = UIPanGestureRecognizer(target: self, action: #selector(handleSheetPan(_:)))
         sheetPan.delegate = self
@@ -314,6 +339,20 @@ final class FXSheetViewController: UIViewController {
     // view is full-screen; touches outside outerView should fall through.
     // We handle this in gestureRecognizer shouldReceive rather than hitTest
     // so that subviews (e.g. SwiftUI buttons) still receive taps normally.
+
+    /// 卡片背板：仅「空态 + 深色」用磨砂玻璃（地球透/糊上来），否则用不透明兜底色。
+    /// - 空态固定浮卡、无拖拽/吸附 → 磨砂零性能风险，且无过冲 → 可安全把 innerView 透明化让地图透出；
+    /// - 有行程的展开态 / 浅色：保持不透明（可读性、拖拽性能、白卡本就立体）。
+    private func updateEmptyStateSurface() {
+        let isDark = traitCollection.userInterfaceStyle == .dark
+        if isListEmpty && isDark {
+            backdropBlurView.effect = UIBlurEffect(style: .systemThinMaterial)
+            innerView.backgroundColor = .clear   // 让地球透过磨砂显出，而非被不透明兜底盖掉
+        } else {
+            backdropBlurView.effect = nil
+            innerView.backgroundColor = CarrySubtleBackground.baseUIColor   // 过冲漏图兜底（见 viewDidLoad）
+        }
+    }
 
     // MARK: External API
 
@@ -495,6 +534,7 @@ final class FXSheetViewController: UIViewController {
         outerView.transform = CGAffineTransform(scaleX: g.scale, y: g.scale)
         outerView.center = g.center
         innerView.frame = outerView.bounds      // fills the card (pre-scale); rounds top corners
+        backdropBlurView.frame = innerView.bounds   // 磨砂背板填满卡片可视窗口，随顶角裁切
         // 消隐渐变钉在 innerView（= 卡片可视窗口）底边：收起裁短时自动跟到可视底边、两态都可见。
         // 空态不铺（空态卡片是内容自适应的固定缩放浮卡，无需在底部消隐）。
         let fadeH = isListEmpty ? 0 : bottomFadeHeight

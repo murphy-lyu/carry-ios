@@ -561,8 +561,8 @@ final class TripStore: ObservableObject {
         // 行程规划深拷贝：每天及其停靠点都建新实例（新 UUID），否则副本会与原行程
         // 共享/丢失规划数据。坐标全在 SwiftData 内，无沙盒外关联文件，直接复制字段即可。
         newBundle.itineraryDays = original.safeItineraryDays.map { day in
-            let copiedStops = day.sortedStops.map { stop in
-                ItineraryStop(
+            let copiedStops = day.sortedStops.map { stop -> ItineraryStop in
+                let copied = ItineraryStop(
                     name: stop.name,
                     latitude: stop.latitude,
                     longitude: stop.longitude,
@@ -574,8 +574,21 @@ final class TripStore: ObservableObject {
                     sortOrder: stop.sortOrder,
                     costAmount: stop.costAmount,
                     costCurrencyCode: stop.costCurrencyCode,
-                    costHomeAmount: stop.costHomeAmount
+                    costHomeAmount: stop.costHomeAmount,
+                    fromPhotos: stop.fromPhotos
                 )
+                // 照片回溯生成的停靠点：深拷贝挂着的照片（新 UUID，含缩略图字节）。
+                copied.photos = stop.sortedPhotos.map { p in
+                    StopPhoto(
+                        assetLocalIdentifier: p.assetLocalIdentifier,
+                        thumbnailData: p.thumbnailData,
+                        timestamp: p.timestamp,
+                        latitude: p.latitude,
+                        longitude: p.longitude,
+                        sortOrder: p.sortOrder
+                    )
+                }
+                return copied
             }
             let copiedDay = ItineraryDay(sortOrder: day.sortOrder, title: day.title, note: day.note, stops: copiedStops)
             // 交通段深拷贝（新 UUID）；坐标/时间全在 SwiftData 内，直接复制字段。
@@ -592,7 +605,7 @@ final class TripStore: ObservableObject {
                     departDayOrder: seg.departDayOrder, departLocalMinutes: seg.departLocalMinutes,
                     arriveDayOrder: seg.arriveDayOrder, arriveLocalMinutes: seg.arriveLocalMinutes,
                     seat: seg.seat, confirmationCode: seg.confirmationCode,
-                    note: seg.note, sortOrder: seg.sortOrder,
+                    note: seg.note, aircraftType: seg.aircraftType, sortOrder: seg.sortOrder,
                     costAmount: seg.costAmount, costCurrencyCode: seg.costCurrencyCode,
                     costHomeAmount: seg.costHomeAmount
                 )
@@ -1161,6 +1174,90 @@ final class TripStore: ObservableObject {
         return stop.id
     }
 
+    /// 照片回溯行程：把预览页确认后的草稿一次性落库（spec: photo-trip-reconstruction.md）。
+    ///
+    /// 单一批量漏斗——一次建齐 ItineraryStop + StopPhoto、**只 save 一次**（避免 N 次
+    /// addItineraryStop 各存库一次、各触发 day-sync）。所有 stop 标 `fromPhotos = true`。
+    /// 草稿 dayOrder 映射到 trip 已有的 ItineraryDay.sortOrder（落库前确保天已 sync）。
+    @discardableResult
+    func importItineraryFromPhotos(tripId: UUID, draft: PhotoItineraryDraft, calendar: Calendar = .current) -> Bool {
+        guard let trip = trips.first(where: { $0.id == tripId }) else { return false }
+        // 落库前确保天数已对齐到行程区间（草稿 dayOrder 据此映射）。
+        syncItineraryDays(tripId: tripId)
+        let daysByOrder = Dictionary(uniqueKeysWithValues: trip.safeItineraryDays.map { ($0.sortOrder, $0) })
+
+        // 重复导入去重：以「拍摄时间(秒) + 经纬度(~1m)」为指纹，跟该行程已有照片比对，命中即跳过。
+        // 两张不同照片同一秒同一坐标≈不可能，安全。零授权下没有 assetLocalIdentifier，故用此锚点。
+        func signature(timestamp: Date, lat: Double, lon: Double) -> String {
+            "\(Int(timestamp.timeIntervalSince1970))_\(Int((lat * 1e5).rounded()))_\(Int((lon * 1e5).rounded()))"
+        }
+        var seenSignatures = Set(
+            trip.safeItineraryDays
+                .flatMap { $0.stops ?? [] }
+                .flatMap { $0.sortedPhotos }
+                .map { signature(timestamp: $0.timestamp, lat: $0.latitude, lon: $0.longitude) }
+        )
+
+        var insertedStops = 0
+        var insertedPhotos = 0
+        var skippedDuplicates = 0
+        for dayDraft in draft.days {
+            guard let day = daysByOrder[dayDraft.dayOrder] else { continue }   // 越界天兜底跳过
+            if day.stops == nil { day.stops = [] }
+            var nextOrder = (day.sortedStops.map(\.sortOrder).max() ?? -1) + 1
+            for place in dayDraft.places {
+                // 先筛掉重复照片；若整地点全是重复 → 跳过、不建该 stop。
+                let freshPhotos = place.photos.filter { p in
+                    let sig = signature(timestamp: p.timestamp,
+                                        lat: p.coordinate?.latitude ?? 0,
+                                        lon: p.coordinate?.longitude ?? 0)
+                    if seenSignatures.contains(sig) { skippedDuplicates += 1; return false }
+                    seenSignatures.insert(sig)
+                    return true
+                }
+                guard !freshPhotos.isEmpty else { continue }
+
+                let stop = ItineraryStop(
+                    name: place.name,
+                    latitude: place.coordinate.latitude,
+                    longitude: place.coordinate.longitude,
+                    address: place.address,
+                    category: place.category,
+                    plannedStartMinutes: place.plannedStartMinutes(calendar: calendar),
+                    stayMinutes: place.stayMinutes,
+                    sortOrder: nextOrder,
+                    fromPhotos: true
+                )
+                context.insert(stop)
+                day.stops?.append(stop)
+                nextOrder += 1
+                insertedStops += 1
+
+                // 地点内照片按时间升序挂上（仅非重复的）。
+                if stop.photos == nil { stop.photos = [] }
+                for (photoOrder, p) in freshPhotos.enumerated() {
+                    let photo = StopPhoto(
+                        assetLocalIdentifier: p.assetLocalIdentifier,
+                        thumbnailData: p.thumbnailData ?? Data(),
+                        timestamp: p.timestamp,
+                        latitude: p.coordinate?.latitude ?? 0,
+                        longitude: p.coordinate?.longitude ?? 0,
+                        sortOrder: photoOrder
+                    )
+                    context.insert(photo)
+                    stop.photos?.append(photo)
+                    insertedPhotos += 1
+                }
+            }
+        }
+
+        guard insertedStops > 0 else { return false }
+        save()
+        CarryLogger.shared.log(.photoImportSaved,
+                               context: "days=\(draft.days.count) stops=\(insertedStops) photos=\(insertedPhotos) dupSkipped=\(skippedDuplicates)")
+        return true
+    }
+
     /// 更新停靠点字段（nil 表示该字段不改）。
     func updateItineraryStop(
         tripId: UUID,
@@ -1274,7 +1371,8 @@ final class TripStore: ObservableObject {
         arriveLocalMinutes: Int = -1,
         seat: String = "",
         confirmationCode: String = "",
-        note: String = ""
+        note: String = "",
+        aircraftType: String = ""
     ) -> UUID? {
         guard let trip = trips.first(where: { $0.id == tripId }),
               let day = trip.safeItineraryDays.first(where: { $0.id == dayId }) else { return nil }
@@ -1306,6 +1404,7 @@ final class TripStore: ObservableObject {
             seat: seat,
             confirmationCode: confirmationCode,
             note: note,
+            aircraftType: aircraftType,
             sortOrder: maxOrder + 1
         )
         context.insert(segment)
@@ -1341,7 +1440,8 @@ final class TripStore: ObservableObject {
         arriveLocalMinutes: Int? = nil,
         seat: String? = nil,
         confirmationCode: String? = nil,
-        note: String? = nil
+        note: String? = nil,
+        aircraftType: String? = nil
     ) {
         guard let trip = trips.first(where: { $0.id == tripId }),
               let seg = trip.safeItineraryDays.flatMap({ $0.segments ?? [] }).first(where: { $0.id == segmentId }) else { return }
@@ -1367,6 +1467,7 @@ final class TripStore: ObservableObject {
         if let seat { seg.seat = seat }
         if let confirmationCode { seg.confirmationCode = confirmationCode }
         if let note { seg.note = note }
+        if let aircraftType { seg.aircraftType = aircraftType }
         save()
     }
 

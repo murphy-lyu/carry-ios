@@ -1,5 +1,49 @@
 # 决策日志
 
+## 2026-06-18 照片回溯行程 · 性能/隐私/入口迭代
+
+### 长行程滚动卡顿：根因是 focused 天回写触发整页重建，改「滚动停下才回写」
+原因：collection 滚动中持续回写 `focusedDayId` @State → `ItineraryView.body` 整体重算（daySections 逐天 timeline + 地图全标注 + 快照）。长行程×多 stop 下连续触发几十轮 → 卡死。
+决策：focused 天回写移到滚动结束（`scrollViewDidEndDragging/Decelerating`），滚动过程零 body 重算。代价=日历条高亮滚动停下才更新（可接受）。更深的地图标注/daySections memoization **留真机 profile 再动**，不盲改即将上线的核心视图（遵 CLAUDE.md「两次没解决就停手、用可观测手段」）。
+
+### 单次导入上限 40 张 + 可多次导入
+原因：一次生成上百 stop 会压垮长行程列表，也拉长处理耗时/内存。
+决策：`maxSelectionCount = 40`；落库「追加」语义，想补更多就多次导入。用产品策略兜住性能，而非放任单次灌入。
+
+### 入口弱化进「更多」菜单
+原因：旅行后补行程的人偏小众，且功能涉相册权限——隐私敏感用户占多数，不宜把入口放显眼处。
+决策：从行程页直出按钮 → 右上角 `ellipsis.circle` 菜单项「用照片还原行程」。仅有日期行程显示（无日期行程没日期窗口可过滤）。
+
+### 隐私姿态：端上处理、零上传、只存缩略图 → App Store 隐私可填「未收集」
+原因：照片/位置全程不离开设备，只派生本地缩略图。Apple「收集」定义=数据离开设备。
+决策：隐私问卷填「未收集」；`PrivacyInfo.xcprivacy` 不加 Required-Reason API；首屏加隐私安心文案。**前提**：一旦做云同步/上传含照片，结论失效、必须回改。详见 `docs/photo-trip-launch-checklist.md`。
+
+### 零相册授权：仅用 PHPicker、直读所选图 EXIF（用户当场拍板，已落地）
+原因：请求全库 `.readWrite` 才能读 `PHAsset.location` → 触发「访问所有照片」弹窗，是隐私敏感用户（本功能主力人群）的最大顾虑。
+决策：**不请求授权、不碰 PHAsset、picker 不传 `photoLibrary`**——`PhotosPickerItem.loadTransferable(Data)` + `CGImageSource` 直读 EXIF（GPS/时间）+ 缩略图。彻底无弹窗，且与系统相册同源（消除「有位置却读不到」）。删 `PhotoLibraryAccess.swift`、移除 `NSPhotoLibraryUsageDescription`。取舍：逐张载入原图数据略重（40 张上限兜住）；放弃 assetLocalIdentifier（不绑库）→ 本版不做「回相册看原图」，符合零授权取向。这是 Apple 推荐的隐私最佳实践。
+
+## 2026-06-17 照片回溯行程（spec: `photo-trip-reconstruction.md`）
+
+### 复用既有行程结构，不为「回溯」另起数据模型
+原因：回溯生成的产物本质就是「天 + 有序地点」，与正向手排同质。
+决策：生成物 = 普通 `ItineraryDay`/`ItineraryStop`，落库后与手排行程完全一致（同页查看/编辑/导出）；照片是 `ItineraryStop` 新挂的一层 `StopPhoto`。来源标记放 **stop 粒度**（`fromPhotos`）而非整趟——一趟可手排+回溯混合，stop 粒度更准；「该趟含照片地点」由 `stops.contains{$0.fromPhotos}` 派生。
+
+### 坐标系：境内必转 WGS-84 → GCJ-02，按 storefront 门控（非按坐标几何）
+原因：EXIF GPS 是 WGS-84；项目库内坐标在大陆 storefront 下存 GCJ-02（Apple/高德直传）。直接写 EXIF 坐标 → 境内照片地图整体偏移几百米、反向编码编错街区。
+决策：仅 `isChinaStorefront` 时转（`CoordinateTransform`，纯几何 nonisolated，境外自动 no-op）；门控用 storefront 不用坐标包络框——非大陆设备 MapKit 全程 WGS-84、不应转。天安门偏移 556m 验证正确。
+
+### 照片存储：缩略图字节入库 + 原图引用相册（不囤原图）
+原因：囤原图体积爆炸；纯引用则换机/删图后挂空。
+决策：`StopPhoto` 存 `assetLocalIdentifier`（回相册取原图）+ `thumbnailData`（小图随库/备份走）。备份**带缩略图字节**（CLAUDE.md：关系图外的字节必须显式带上），但**分享/导出行程不带照片**（隐私+体积，`Backup*` 新字段默认 nil、分享路径不填）。对标 Apple 自家做法。
+
+### 生成结果是「草稿」不是「结果」——预览页必经，绝不自动落库
+原因：聚类永不可能 100% 准；体验命门是「90% 自动 + 那 10% 改得顺手」，而非追求算法满分。
+决策：聚类产物先以内存草稿（`PhotoItineraryDraft` 值类型）渲染预览页，点「保存」才经 `TripStore.importItineraryFromPhotos` 批量落库；顶部文案「保存」非「完成」，暗示初稿可改。
+
+### 编辑用菜单动作，不用拖拽手势（本版）
+原因：自定义跨卡片拖拽合并/拆分易与 List/ScrollView 手势冲突、脆。顺着框架、不对抗（CLAUDE.md）。
+决策：合并/拆分/挪照片走选中后的菜单动作，稳、零学习成本；拖拽手势留作后续打磨。离群单点**不自动丢待整理**（避免误删真地点）——宁可多生成让用户删。
+
 ## 2026-06-16（晚）日历叠加层 + 一连串交互/视觉决策
 
 ### 日历事件叠加层：只读叠加、隐私红线由「不入 model」构造保证（spec: `itinerary-calendar-overlay.md`）

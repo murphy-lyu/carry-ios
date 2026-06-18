@@ -189,6 +189,13 @@ final class ItineraryStop: CostBearing {
     var costCurrencyCode: String = ""
     var costHomeAmount: Double = -1
 
+    /// 是否由照片回溯生成（spec: photo-trip-reconstruction.md）。用户手动编辑后仍保留该出身标记。
+    var fromPhotos: Bool = false
+
+    /// 挂在该停靠点上的照片（照片回溯生成时填充；手动停靠点为空）。
+    @Relationship(deleteRule: .cascade, inverse: \StopPhoto.stop)
+    var photos: [StopPhoto]? = []
+
     init(
         name: String = "",
         latitude: Double = 0,
@@ -201,7 +208,8 @@ final class ItineraryStop: CostBearing {
         sortOrder: Int = 0,
         costAmount: Double = 0,
         costCurrencyCode: String = "",
-        costHomeAmount: Double = -1
+        costHomeAmount: Double = -1,
+        fromPhotos: Bool = false
     ) {
         self.id = UUID()
         self.name = name
@@ -216,6 +224,12 @@ final class ItineraryStop: CostBearing {
         self.costAmount = costAmount
         self.costCurrencyCode = costCurrencyCode
         self.costHomeAmount = costHomeAmount
+        self.fromPhotos = fromPhotos
+    }
+
+    /// 该停靠点照片按时间升序。
+    var sortedPhotos: [StopPhoto] {
+        (photos ?? []).sorted { $0.sortOrder < $1.sortOrder }
     }
 
     /// 未知 rawValue 兜底为 .other；写入时回落 rawValue。
@@ -233,6 +247,45 @@ final class ItineraryStop: CostBearing {
     var coordinate: CLLocationCoordinate2D? {
         guard hasCoordinate else { return nil }
         return CLLocationCoordinate2D(latitude: latitude, longitude: longitude)
+    }
+}
+
+// MARK: - StopPhoto
+
+/// 挂在停靠点上的一张照片（spec: photo-trip-reconstruction.md）。
+/// 真相 = 相册引用 + EXIF 元数据；缩略图字节随库/备份走，原图永远回相册按
+/// `assetLocalIdentifier` 取（App 不囤原图）。换机/原图被删时退化为「仅缩略图」。
+@Model
+final class StopPhoto {
+    var id: UUID = UUID()
+    /// PHAsset.localIdentifier，回相册取原图。
+    var assetLocalIdentifier: String = ""
+    /// 小缩略图 JPEG 字节（约 320pt，列表展示 + 随备份持久化）。
+    var thumbnailData: Data = Data()
+    /// EXIF 拍摄时间（PHAsset.creationDate）。
+    var timestamp: Date = Date()
+    /// 已归一坐标系（境内 GCJ-02 / 境外 WGS-84），与项目库内坐标一致。
+    var latitude: Double = 0
+    var longitude: Double = 0
+    /// 地点内按时间排序。
+    var sortOrder: Int = 0
+    var stop: ItineraryStop?
+
+    init(
+        assetLocalIdentifier: String = "",
+        thumbnailData: Data = Data(),
+        timestamp: Date = Date(),
+        latitude: Double = 0,
+        longitude: Double = 0,
+        sortOrder: Int = 0
+    ) {
+        self.id = UUID()
+        self.assetLocalIdentifier = assetLocalIdentifier
+        self.thumbnailData = thumbnailData
+        self.timestamp = timestamp
+        self.latitude = latitude
+        self.longitude = longitude
+        self.sortOrder = sortOrder
     }
 }
 
@@ -295,6 +348,8 @@ final class TransportSegment: CostBearing {
     var seat: String = ""
     var confirmationCode: String = ""
     var note: String = ""
+    /// 机型（如 "A320" / "Boeing 787 Dreamliner"）；航班号查询可自动回填，可空（spec: itinerary-flight-lookup.md）。
+    var aircraftType: String = ""
 
     /// 时间轴排序（与同日 stop 共享整数空间）。
     var sortOrder: Int = 0
@@ -332,6 +387,7 @@ final class TransportSegment: CostBearing {
         seat: String = "",
         confirmationCode: String = "",
         note: String = "",
+        aircraftType: String = "",
         sortOrder: Int = 0,
         costAmount: Double = 0,
         costCurrencyCode: String = "",
@@ -360,6 +416,7 @@ final class TransportSegment: CostBearing {
         self.seat = seat
         self.confirmationCode = confirmationCode
         self.note = note
+        self.aircraftType = aircraftType
         self.sortOrder = sortOrder
         self.costAmount = costAmount
         self.costCurrencyCode = costCurrencyCode

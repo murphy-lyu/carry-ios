@@ -163,6 +163,19 @@ final class CarryLogger {
         case calendarOverlayDisabled           = "calendar_overlay_disabled"
         case calendarOverlayCalendarsSelected  = "calendar_overlay_calendars_selected"
         case calendarOverlayAccessDenied       = "calendar_overlay_access_denied"
+
+        // 航班号查询（spec: itinerary-flight-lookup.md）
+        case flightLookupStarted    = "flight_lookup_started"
+        case flightLookupResolved   = "flight_lookup_resolved"
+        case flightLookupNotFound   = "flight_lookup_not_found"
+        case flightLookupFailed     = "flight_lookup_failed"
+
+        // 照片回溯行程（spec: photo-trip-reconstruction.md）
+        case photoImportStarted     = "photo_import_started"      // 进入选图
+        case photoImportGenerated   = "photo_import_generated"    // 聚类完成、进预览页
+        case photoImportSaved       = "photo_import_saved"        // 确认落库
+        case photoImportCancelled   = "photo_import_cancelled"    // 预览页放弃
+        case photoImportFailed      = "photo_import_failed"       // 授权失败 / 无可用照片
     }
 
     private static let errorEvents: Set<Event> = [
@@ -178,6 +191,7 @@ final class CarryLogger {
         .reminderScheduleFailed, .apiTimeout, .apiError,
         .itineraryRouteCalcFailed, .itineraryImportFailed, .itineraryExportFailed,
         .exchangeRateFetchFailed, .calendarOverlayAccessDenied,
+        .photoImportFailed, .flightLookupFailed,
     ]
 
     private let sessionActiveKey = "carry_session_active"

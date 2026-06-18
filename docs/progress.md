@@ -1,7 +1,59 @@
 # 项目进度
 
 ## 最后更新
-2026-06-17
+2026-06-18
+
+## 上次改动摘要（航班号 → 自动填航班信息 · spec: `itinerary-flight-lookup.md` · 2026-06-18）
+
+> 新功能：航班模式下输航班号+日期 → 一键自动填全段（航司/机场/起降时刻/航站楼/机型）。起步只做**静态基础信息**，实时动态留 Pro 阶段。**编译绿 + 启动不崩 + Worker 真实联调通过**（curl 验证 AA100 国际、MU5433 国内均完整）。**待真机走完整验收**。**未提交**。
+
+- **架构**：App → 自家 **Cloudflare Worker 代理**（藏 API key + 服务端缓存 + 防盗刷）→ AeroDataBox。一次性「富化」、之后纯静态、永不再调。失败回退现有手动录入。
+- **选型/成本**：AeroDataBox。**RapidAPI 太贵（$49.99/月）→ 走 API.market（Pro ~$5/月、6000 次、含商用）**。测试期用 RapidAPI 免费档，上架前切 API.market（只改 Worker 变量、App 不动）。Worker 上游地址/鉴权做成可配，两个市场通用。
+- **数据覆盖实测**：AeroDataBox **国际 + 大陆国内都覆盖良好**（之前从 MU5101 单坏样本误判「国内弱」，已被 MU5433 完整数据纠正）。个别航班可能残缺 → App「尽力填、缺的手填」。
+- **落点**：`FlightLookupService`（解析 全/残/多实例/跨午夜）、`TransportSegment.aircraftType`（新字段，四处同步：模型/备份/duplicate/schema）、`TransportEditView` 自动填块、`TransportDetailView` 展示机型、`scripts/flight-proxy/`（Worker + 部署文档，已部署 `carry-flight.murphy-latte.workers.dev`）、`CarryLogger` 4 事件、6 个 `itinerary.flight.*` 文案 9 语言。
+- **时间映射要点**：起降时刻按**机场当地时区的时:分**存（与现有 `minutes(from:)` 范式一致）；dayOrder 按航班当地日期相对行程首日算，跨午夜 → `arriveDayOrder > departDayOrder`（PVG 20:50 起飞、CKG 次日 00:05 到达已验）。
+- **待办**：① 真机验收自动填；② 上架前切 API.market $5 + 给 Worker 加 `APP_TOKEN`（同步填 `FlightLookupConfig.appToken`）；③ 隐私政策补「航班号发第三方查询」一句（spec 已列）；④ Pro 阶段实时动态（飞常准/FlightAware，填 `liveStatusData`）。
+
+## 上次改动摘要（行程页性能根因2 + 去重 + 照片可见 + 隐私政策上线 · 2026-06-18 续）
+
+> 用户反馈：**空的 180 天行程**也卡——切「行程规划」Tab、进入行程、返回首页都卡（不导入照片、不建地点）。证据明确，定位根因并修复。另落地去重、照片可见、隐私政策。**编译绿 + 启动不崩**；**滚动/切换体感需真机验**。**Carry 未提交；carry-legal 已 push main**。
+
+- **🔴 性能根因2（O(N²)，已修）**：`ItineraryView.calendarEntries` 给每天做 `days.first(where: sortOrder==offset)`（O(N) 查找）× 181 天 = O(N²)，且每次 `days` 还重排 181 元素 → 每次 body 求值约 25 万次比较；叠加日历条用普通 `HStack` 一次性构造 181 个 chip。这是**空 180 天行程**切 Tab/进入/返回都卡的主因（与 stop/照片无关）。**修复**：① `calendarEntries` 建一次 `sortOrder→day` 字典，O(N²)→O(N)；② 日历条 `HStack`→`LazyHStack`，只构造可见 chip。进入/返回/切 Tab 都受益（都触发 body 求值）。地图对 181 天是 O(N)、可接受。
+- **🟢 重复导入去重（已做）**：`importItineraryFromPhotos` 以「拍摄时间(秒)+经纬度(~1m)」为指纹，跟该行程已有照片比对，命中跳过；地点照片全重复则跳过该地点。零授权下没有 assetLocalIdentifier，故用此锚点。埋点带 `dupSkipped`。
+- **🟢 照片可见（补的真实缺口）**：之前导入的照片存了 `StopPhoto` 却**没在行程里显示**（只在导入预览见过）。在 `StopDetailView` 头部加横向照片条 + 点击全屏放大（看的是约 640px 缩略图；零授权不取系统原图）。看法：点由照片生成的地点 → 详情头部即照片条。
+- **单次上限 40→50**（系统选择器自带强制+计数提示，无需自定义文案）。
+- **加载态「印相纸」**：处理时所选照片逐张缩略图浮现（`extract` 回调增量传缩略图）+ 确定式 `X/总数` + 可取消（Task 取消 + onDisappear 兜底）。
+- **🟢 隐私政策（carry-legal 已 push main）**：`privacy/zh.html` + `index.html` §5 加「照片访问」段（端上读 EXIF、零授权、不上传不存原图、仅本地缩略图）、§6 调和「相册」表述、日期更新。GitHub Pages 部署（raw CDN ~5min 缓存，按 CLAUDE.md 用 GitHub API 确认）。
+
+## 上次改动摘要（照片回溯行程 · 性能根因 + 隐私/入口/文案迭代 · 2026-06-18）
+
+> 承接 `photo-trip-reconstruction.md`。用户反馈：180 天行程+约百张照片导入后，**行程页滚动卡到无法使用**（未崩）。本轮定位根因并机制级修复，外加一串产品/隐私/文案打磨。**编译绿 + 模拟器启动不崩**；**滚动性能需真机+真照片验证**（模拟器无带 GPS 照片，无法复现 100-stop 滚动）。**未提交**。
+
+- **🔴 性能根因（机制级，非止血）**：collection 滚动中每过一个「天界」就回写 `focusedDayId` @State → 触发 `ItineraryView.body` 整体重算（`daySections` 逐天重建 `timeline` + 地图重建全部 `Annotation` + 快照重建）。长行程下快速滚动连触发几十轮整页重建 → 卡死。180 天空行程不卡（无 stop），照片灌入上百 stop 后引爆。**修复**：把 focused 天回写从「滚动途中持续」改为「滚动停下时一次」（`ItineraryReorderCollection` 新增 `scrollViewDidEndDragging/Decelerating`，移出 `scrollViewDidScroll`）→ 滚动过程零 body 重算、纯 UIKit 列表滚动。代价：日历条高亮改为滚动停下时更新（可接受）。
+- **未做的更深优化（留真机 profile 再动，不盲改核心视图）**：地图 100+ 标注重建、`daySections` memoization、`safeItineraryDays` 每访问重排、`stopRow` 的 O(天×点) 查找。已在报告/本节记录，建议配合 Instruments 做。
+- **单次导入上限 40 张**（防 stop 爆炸 + 控耗时/内存）；落库是「追加」、可多次导入。
+- **入口弱化**：从行程页直出的照片按钮 → 收进右上角 `ellipsis.circle`「更多」菜单（偏小众 + 涉相册权限，不宜显眼）。仅有日期行程显示。
+- **隐私安心文案**：导入首屏加一行（盾图标）「照片只留在本机、只读时间地点、绝不上传、只存一张缩略图」——打消「上传/挪用/撑爆存储」顾虑。
+- **文案去程序味**：`Build from photos` → 标题「从照片还原行程」/ 菜单「用照片还原行程」（避免 "Build" 的工程感）。
+- **EXIF 直读兜底**（承上轮）：`PHAsset.location` 为 nil 时用 `CGImageSource` 直读文件 EXIF GPS，与系统相册同源——解决「相册有位置、Carry 说没有」。
+- **待整理拆两诚实区块**：`没有位置信息`（文件真无 GPS）/ `不在行程日期内`（有位置但越界，显示拍摄日）——让用户秒懂原因、不疑为 bug。
+- **资源释放**：原图永不拷贝；导入内存（draft+缩略图）随导入页 dismiss 释放；落库仅存小缩略图（约 40 张 × ~40KB ≈ 1.6MB）。
+- **合规**：`docs/photo-trip-launch-checklist.md` 沉淀——App Store 隐私问卷填「未收集」（端上处理、零传输）；`PrivacyInfo.xcprivacy` 无需新增 Required-Reason API；隐私政策（独立仓库 `carry-legal`）待补「照片」段。
+- **🟢 零相册授权（用户当场拍板，已实现）**：彻底改用「仅 PHPicker、不绑库、不索权」——`PhotosPickerItem.loadTransferable(Data)` → `CGImageSource` 直读 EXIF（GPS+时间）+ 缩略图。**连「访问所有照片」弹窗都没有**（隐私敏感用户最大顾虑，从源头消除），顺带消除「相册有位置 Carry 说没有」。删 `PhotoLibraryAccess.swift`、移除 `NSPhotoLibraryUsageDescription`（不再需要）。取舍：逐张载入原图数据略重（40 张上限兜住）；不存 assetLocalIdentifier，本版不做「回相册看原图」。**需真机验**：真照片 EXIF 读取/聚类/分桶、大批量导入观感。
+
+## 上次改动摘要（照片回溯行程：从相册自动生成行程 · spec: `photo-trip-reconstruction.md` · 2026-06-17）
+
+> 新功能（需求：玩完之后把相册照片回溯成行程，与正向规划互为镜像）。**编译绿**（Carry / iPhone 17 Pro，零 warning）+ **聚类内核 7 断言 PASS**（swiftc 离线跑，项目无测试 target）+ **模拟器启动不崩**（新 `StopPhoto` schema 迁移已验）。**待真机验收**（需带 GPS 真照片走完生成→编辑→保存；模拟器自带图无 GPS 只到空态）。**未提交**。Status: Implemented (Phases 1–4)。
+
+- **🟢 链路**：建行程定日期 → `PHPicker` 选图 → 读 `PHAsset` 时间/位置 → 坐标按 storefront 归一 → 时空聚类成「天→地点」→ `CLGeocoder` 反向命名 → 预览微调（草稿态）→「保存」批量落库。
+- **三个暗礁的正解**：① **坐标系**——EXIF 是 WGS-84、项目库内境内存 GCJ-02，写库前按 `isChinaStorefront` 转换（`CoordinateTransform`，天安门偏移 556m 验证正确）；② **`PHPicker` 拿不到位置**——用 `assetIdentifier` 回查 `PHAsset.location`，需 `NSPhotoLibraryUsageDescription`；③ **SwiftData**——新增 `StopPhoto` 表属轻量迁移，注册进 `SchemaV1`、未升 SchemaV2。
+- **聚类内核**（`ItineraryPhotoClustering`，纯函数可单测）：分天用凌晨 4 点 cutoff（夜生活/凌晨看日出不被劈两天）；地点用「时空一起判」——近则并、短暂走远又折返算地点内走动、持续远离才切新地点；松/中/紧三档阈值，预览页可切换重算（仅重跑 `assemble`、免重读相册）。
+- **铁律四处同步**：`StopPhoto` 进 `DataBackupManager`（**带 thumbnailData 字节**、分享/导出路径不带照片——隐私+体积）+ `duplicateTrip` 深拷；`CarryLogger` 5 个 `photoImport*` 事件即定义即接线，`photoImportFailed` 入 `errorEvents`。
+- **照片存储策略（产品决策）**：缩略图字节入库 + 原图引用相册（`assetLocalIdentifier`）。App 不囤原图，备份/换机能看缩略图，点开回相册取原图。对标 Apple 自家做法。
+- **预览/微调页**（`PhotoTripReviewView`）：结果是「草稿」不是「结果」（顶部「保存」非「完成」）；改名铅笔露在标题边（反向编码偶给怪名）；合并/拆分/挪照片用菜单动作（不用脆弱拖拽）；待整理抽屉收无位置/越界照片，不报错不丢。
+- **本地化**：`Localizable.xcstrings` 加 36 个 `phototrip.*`、`InfoPlist.xcstrings` 加权限文案，9 语言齐全、中文全角、日语常体、韩语해요体。surgical 文本插入（避开 Xcode 序列化格式坑），JSON 校验零重复键、现有键无损。
+- **⚠️ 提示**：`Localizable.xcstrings` 本轮 diff（~2100 行）即这 36 个键本体、非 Xcode 重排噪声；**勿 blanket `git checkout` 该文件**（会连新键一起丢）。
+- **遗留（后续打磨，非阻塞）**：合并/拆分改拖拽手势；两层「景区→地点」折叠（字段已留）；待整理照片拖回某地点；离群「路上随手拍」识别。
 
 ## 上次改动摘要（修复：Settings 导出/所有分享面板「点了没反应」· 2026-06-17）
 
