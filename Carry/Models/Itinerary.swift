@@ -101,9 +101,16 @@ final class ItineraryDay {
         // 把设了时间的交通段按时间插入 base（按时间升序逐个插，碰巧同段相对稳定）。
         for seg in timedSegments.sorted(by: { $0.departLocalMinutes < $1.departLocalMinutes }) {
             let t = seg.departLocalMinutes
-            // carry-forward：逐项求「有效时间」，未设时间者继承前一处时间。
+            // 默认落点：
+            // - base 里有可比的「定时项」→ 末尾（晚于全部已知时间，沿用原行为）；
+            // - base 全是无时间地点（Carry 常见：地点只是带距离的路线、不填钟点）→ 不再无脑置底，
+            //   按航段出发时间相对正午定位：上午（< 12:00）领起这一天、置顶；午后/傍晚 → 收束、置底。
+            //   修「早班机被一堆无时间地点压到最底」——航班是硬时间锚点，8:00 就该是当天第一件事。
+            let noon = 12 * 60
+            let baseHasTimedAnchor = base.contains { $0.effectiveMinutes >= 0 }
             var carry = -1
-            var insertAt = base.count
+            var insertAt = baseHasTimedAnchor ? base.count : (t < noon ? 0 : base.count)
+            // carry-forward：逐项求「有效时间」，未设时间者继承前一处时间；遇到第一个晚于本段的项即插其前。
             for (i, item) in base.enumerated() {
                 let own = item.effectiveMinutes
                 if own >= 0 { carry = own }
