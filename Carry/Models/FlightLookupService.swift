@@ -32,6 +32,8 @@ nonisolated struct FlightLookupResult: Equatable {
     var airlineName: String = ""
     var flightNumber: String = ""     // 规整后（去空格大写），如 "MU5101"
     var aircraftType: String = ""     // 机型，如 "Boeing 787-9"
+    var distanceMeters: Double = 0    // 航程，取自接口 greatCircleDistance
+    var durationMinutes: Int = 0      // 飞行时长，取自接口起降时刻差（绝对时刻，跨时区准确）
     var from = Endpoint()
     var to = Endpoint()
 
@@ -123,8 +125,14 @@ nonisolated enum FlightLookupService {
         r.airlineName = f.airline?.name ?? ""
         r.flightNumber = (f.number ?? "").uppercased().replacingOccurrences(of: " ", with: "")
         r.aircraftType = f.aircraft?.model ?? ""
+        r.distanceMeters = f.greatCircleDistance?.meter ?? 0   // 航程，接口直接给
         r.from = endpoint(f.departure)
         r.to = endpoint(f.arrival)
+        // 飞行时长：接口给的起降「local 含偏移」即绝对时刻，两者相减跨时区也准确（不必自己拼时区）。
+        if let dep = r.from.scheduledLocal, let arr = r.to.scheduledLocal {
+            let mins = Int(arr.timeIntervalSince(dep) / 60)
+            if mins > 0 { r.durationMinutes = mins }
+        }
         return r
     }
 
@@ -186,7 +194,9 @@ private struct FlightDTO: Decodable {
     let airline: AirlineDTO?
     let departure: EndDTO?
     let arrival: EndDTO?
+    let greatCircleDistance: DistanceDTO?
 }
+private struct DistanceDTO: Decodable { let meter: Double? }
 private struct AircraftDTO: Decodable { let model: String? }
 private struct AirlineDTO: Decodable { let name: String?; let iata: String?; let icao: String? }
 private struct EndDTO: Decodable { let airport: AirportDTO?; let scheduledTime: TimeDTO?; let terminal: String? }

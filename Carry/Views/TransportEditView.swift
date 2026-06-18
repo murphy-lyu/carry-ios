@@ -54,6 +54,8 @@ struct TransportEditView: View {
     @State private var confirmationCode = ""
     @State private var note = ""
     @State private var aircraftType = ""
+    @State private var distanceMeters: Double = 0
+    @State private var durationMinutes: Int = 0
     @State private var costAmountText = ""
     @State private var costCurrencyCode = ""
 
@@ -397,6 +399,7 @@ struct TransportEditView: View {
             if seg.arriveLocalMinutes >= 0 { hasArriveTime = true; arriveTime = dateFromMinutes(seg.arriveLocalMinutes) }
             seat = seg.seat; confirmationCode = seg.confirmationCode; note = seg.note
             aircraftType = seg.aircraftType
+            distanceMeters = seg.distanceMeters; durationMinutes = seg.durationMinutes
             if seg.hasCost { costAmountText = CurrencyCatalog.amountText(seg.costAmount); costCurrencyCode = seg.costCurrencyCode }
         } else {
             // 新增：默认模式 + 起降日落到目标天。
@@ -429,8 +432,10 @@ struct TransportEditView: View {
         // 时区仅航班机场选点会填；切到非航班模式时一并清空，避免残留。
         let savedFromTZ = mode == .flight ? fromTimeZoneId : ""
         let savedToTZ = mode == .flight ? toTimeZoneId : ""
-        // 机型仅航班有意义。
+        // 机型 / 航程 / 时长仅航班有意义。
         let savedAircraft = mode == .flight ? aircraftType : ""
+        let savedDistance = mode == .flight ? distanceMeters : 0
+        let savedDuration = mode == .flight ? durationMinutes : 0
 
         if let segmentId {
             store.updateTransportSegment(
@@ -445,7 +450,7 @@ struct TransportEditView: View {
                 departDayOrder: departDayOrder, departLocalMinutes: departMinutes,
                 arriveDayOrder: safeArriveDay, arriveLocalMinutes: arriveMinutes,
                 seat: savedSeat, confirmationCode: confirmationCode, note: note,
-                aircraftType: savedAircraft
+                aircraftType: savedAircraft, distanceMeters: savedDistance, durationMinutes: savedDuration
             )
             store.setTransportCost(tripId: tripId, segmentId: segmentId,
                                    amount: costAmountValue, currencyCode: costCurrencyToSave)
@@ -462,7 +467,7 @@ struct TransportEditView: View {
                 departDayOrder: departDayOrder, departLocalMinutes: departMinutes,
                 arriveDayOrder: safeArriveDay, arriveLocalMinutes: arriveMinutes,
                 seat: savedSeat, confirmationCode: confirmationCode, note: note,
-                aircraftType: savedAircraft
+                aircraftType: savedAircraft, distanceMeters: savedDistance, durationMinutes: savedDuration
             ) {
                 store.setTransportCost(tripId: tripId, segmentId: newId,
                                        amount: costAmountValue, currencyCode: costCurrencyToSave)
@@ -526,6 +531,8 @@ struct TransportEditView: View {
         if !r.airlineName.isEmpty { carrier = r.airlineName }
         if !r.flightNumber.isEmpty { number = r.flightNumber }
         aircraftType = r.aircraftType
+        distanceMeters = r.distanceMeters
+        durationMinutes = r.durationMinutes
         if r.from.hasAirport {
             fromName = r.from.name; fromCode = r.from.iata
             if r.from.latitude != 0 || r.from.longitude != 0 { fromLatitude = r.from.latitude; fromLongitude = r.from.longitude }

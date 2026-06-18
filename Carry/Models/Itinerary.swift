@@ -350,6 +350,9 @@ final class TransportSegment: CostBearing {
     var note: String = ""
     /// 机型（如 "A320" / "Boeing 787 Dreamliner"）；航班号查询可自动回填，可空（spec: itinerary-flight-lookup.md）。
     var aircraftType: String = ""
+    /// 航程（米）+ 飞行时长（分钟）——航班号查询时取自接口（greatCircleDistance / 起降时刻差），0 = 未知。
+    var distanceMeters: Double = 0
+    var durationMinutes: Int = 0
 
     /// 时间轴排序（与同日 stop 共享整数空间）。
     var sortOrder: Int = 0
@@ -388,6 +391,8 @@ final class TransportSegment: CostBearing {
         confirmationCode: String = "",
         note: String = "",
         aircraftType: String = "",
+        distanceMeters: Double = 0,
+        durationMinutes: Int = 0,
         sortOrder: Int = 0,
         costAmount: Double = 0,
         costCurrencyCode: String = "",
@@ -417,6 +422,8 @@ final class TransportSegment: CostBearing {
         self.confirmationCode = confirmationCode
         self.note = note
         self.aircraftType = aircraftType
+        self.distanceMeters = distanceMeters
+        self.durationMinutes = durationMinutes
         self.sortOrder = sortOrder
         self.costAmount = costAmount
         self.costCurrencyCode = costCurrencyCode

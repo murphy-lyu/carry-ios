@@ -85,8 +85,10 @@ struct BackupTransportSegment: Codable, Sendable {
     var costAmount: Double?
     var costCurrencyCode: String?
     var costHomeAmount: Double?
-    // 机型（spec: itinerary-flight-lookup.md）；可选 + 默认 nil：兼容旧备份。
+    // 机型 + 航程(米) + 时长(分)（spec: itinerary-flight-lookup.md）；可选 + 默认 nil：兼容旧备份。
     var aircraftType: String? = nil
+    var distanceMeters: Double? = nil
+    var durationMinutes: Int? = nil
 }
 
 struct BackupLodgingStay: Codable, Sendable {
@@ -227,7 +229,7 @@ final class DataBackupManager {
                 arriveDayOrder: s.arriveDayOrder, arriveLocalMinutes: s.arriveLocalMinutes,
                 seat: s.seat, confirmationCode: s.confirmationCode, note: s.note, sortOrder: s.sortOrder,
                 costAmount: s.costAmount, costCurrencyCode: s.costCurrencyCode, costHomeAmount: s.costHomeAmount,
-                aircraftType: s.aircraftType
+                aircraftType: s.aircraftType, distanceMeters: s.distanceMeters, durationMinutes: s.durationMinutes
             )
         }
     }
@@ -591,7 +593,9 @@ final class DataBackupManager {
                     departDayOrder: bg.departDayOrder, departLocalMinutes: bg.departLocalMinutes,
                     arriveDayOrder: bg.arriveDayOrder, arriveLocalMinutes: bg.arriveLocalMinutes,
                     seat: bg.seat, confirmationCode: bg.confirmationCode,
-                    note: bg.note, aircraftType: bg.aircraftType ?? "", sortOrder: bg.sortOrder,
+                    note: bg.note, aircraftType: bg.aircraftType ?? "",
+                    distanceMeters: bg.distanceMeters ?? 0, durationMinutes: bg.durationMinutes ?? 0,
+                    sortOrder: bg.sortOrder,
                     costAmount: bg.costAmount ?? 0,
                     costCurrencyCode: bg.costCurrencyCode ?? "",
                     costHomeAmount: bg.costHomeAmount ?? -1

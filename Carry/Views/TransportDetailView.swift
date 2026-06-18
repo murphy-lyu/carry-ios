@@ -17,6 +17,8 @@ struct TransportDetailView: View {
     @Environment(\.dismiss) private var dismiss
     @State private var editing = false
     @State private var contentHeight: CGFloat = 0
+    @AppStorage("distance_unit") private var distanceUnitRaw = DistanceUnit.automatic.rawValue
+    private var distanceUnit: DistanceUnit { DistanceUnit(rawValue: distanceUnitRaw) ?? .automatic }
 
     private var contentDetents: Set<PresentationDetent> {
         guard contentHeight > 0 else { return [.medium, .large] }
@@ -41,6 +43,12 @@ struct TransportDetailView: View {
         }
         if !terminal.isEmpty { parts.append(terminal) }
         return parts.isEmpty ? nil : parts.joined(separator: " · ")
+    }
+
+    /// 飞行时长「3h 15m」（h/m 通用、无需逐语言）。
+    private func durationText(_ minutes: Int) -> String {
+        let h = minutes / 60, m = minutes % 60
+        return h > 0 ? "\(h)h \(m)m" : "\(m)m"
     }
 
     var body: some View {
@@ -99,6 +107,13 @@ struct TransportDetailView: View {
         }
         if !segment.aircraftType.isEmpty {
             rows.append(AnyView(LabeledDetailRow(icon: "airplane", labelKey: "itinerary.flight.field.aircraft", value: segment.aircraftType)))
+        }
+        if segment.durationMinutes > 0 {
+            rows.append(AnyView(LabeledDetailRow(icon: "clock", labelKey: "itinerary.flight.field.duration", value: durationText(segment.durationMinutes))))
+        }
+        if segment.distanceMeters > 0 {
+            rows.append(AnyView(LabeledDetailRow(icon: "ruler", labelKey: "itinerary.flight.field.distance",
+                                                 value: CarryDistanceFormat.string(meters: segment.distanceMeters, unit: distanceUnit))))
         }
         if !segment.seat.isEmpty {
             rows.append(AnyView(LabeledDetailRow(icon: "chair", labelKey: "itinerary.transport.field.seat", value: segment.seat)))

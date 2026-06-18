@@ -605,7 +605,9 @@ final class TripStore: ObservableObject {
                     departDayOrder: seg.departDayOrder, departLocalMinutes: seg.departLocalMinutes,
                     arriveDayOrder: seg.arriveDayOrder, arriveLocalMinutes: seg.arriveLocalMinutes,
                     seat: seg.seat, confirmationCode: seg.confirmationCode,
-                    note: seg.note, aircraftType: seg.aircraftType, sortOrder: seg.sortOrder,
+                    note: seg.note, aircraftType: seg.aircraftType,
+                    distanceMeters: seg.distanceMeters, durationMinutes: seg.durationMinutes,
+                    sortOrder: seg.sortOrder,
                     costAmount: seg.costAmount, costCurrencyCode: seg.costCurrencyCode,
                     costHomeAmount: seg.costHomeAmount
                 )
@@ -1372,7 +1374,9 @@ final class TripStore: ObservableObject {
         seat: String = "",
         confirmationCode: String = "",
         note: String = "",
-        aircraftType: String = ""
+        aircraftType: String = "",
+        distanceMeters: Double = 0,
+        durationMinutes: Int = 0
     ) -> UUID? {
         guard let trip = trips.first(where: { $0.id == tripId }),
               let day = trip.safeItineraryDays.first(where: { $0.id == dayId }) else { return nil }
@@ -1405,6 +1409,8 @@ final class TripStore: ObservableObject {
             confirmationCode: confirmationCode,
             note: note,
             aircraftType: aircraftType,
+            distanceMeters: distanceMeters,
+            durationMinutes: durationMinutes,
             sortOrder: maxOrder + 1
         )
         context.insert(segment)
@@ -1441,7 +1447,9 @@ final class TripStore: ObservableObject {
         seat: String? = nil,
         confirmationCode: String? = nil,
         note: String? = nil,
-        aircraftType: String? = nil
+        aircraftType: String? = nil,
+        distanceMeters: Double? = nil,
+        durationMinutes: Int? = nil
     ) {
         guard let trip = trips.first(where: { $0.id == tripId }),
               let seg = trip.safeItineraryDays.flatMap({ $0.segments ?? [] }).first(where: { $0.id == segmentId }) else { return }
@@ -1468,6 +1476,8 @@ final class TripStore: ObservableObject {
         if let confirmationCode { seg.confirmationCode = confirmationCode }
         if let note { seg.note = note }
         if let aircraftType { seg.aircraftType = aircraftType }
+        if let distanceMeters { seg.distanceMeters = distanceMeters }
+        if let durationMinutes { seg.durationMinutes = durationMinutes }
         save()
     }
 
