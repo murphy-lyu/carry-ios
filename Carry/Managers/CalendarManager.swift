@@ -52,14 +52,27 @@ final class CalendarManager {
         if defaults.bool(forKey: Self.overlayInitializedKey) {
             return Self.overlaySelectedCalendarIDs()
         }
+        // 只读 + 非生日 + **标题确为节假日** 才默认勾选。EventKit 无「isHoliday」API，
+        // 仅靠 `!allowsContentModifications` 会把 TickTick / Tripsy 等只读订阅日历一并勾上
+        // （已踩坑），故再按系统节假日日历名（覆盖 9 语言）收窄，其余留给用户自己勾。
         let defaultIDs = store.calendars(for: .event)
             .filter { $0.title != Self.calendarTitle }
             .filter { !$0.allowsContentModifications && $0.type != .birthday }
+            .filter { Self.looksLikeHolidayCalendar($0.title) }
             .map { $0.calendarIdentifier }
         let set = Set(defaultIDs)
         defaults.set(Array(set), forKey: Self.overlayCalendarIDsKey)
         defaults.set(true, forKey: Self.overlayInitializedKey)
         return set
+    }
+
+    /// 是否为系统「节假日」日历。EventKit 无节假日标志，按标题关键词识别（覆盖 app 支持的
+    /// 9 语言系统节假日日历名 + 常见写法），把法定节假日从其它只读订阅日历（TickTick / Tripsy 等）中分出。
+    private static func looksLikeHolidayCalendar(_ title: String) -> Bool {
+        let lower = title.lowercased()
+        let keywords = ["holiday", "假日", "假期", "节日", "節日", "祝日", "공휴일",
+                        "feiertag", "férié", "festivo", "feriado"]
+        return keywords.contains { lower.contains($0) }
     }
 
     // MARK: - Permission

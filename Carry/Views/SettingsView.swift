@@ -667,7 +667,8 @@ struct SettingsView: View {
             .frame(height: 58)
             .contentShape(Rectangle())
         }
-        .buttonStyle(.plain)
+        // 不要给 Menu 套 .buttonStyle(.plain)：已知 SwiftUI bug——菜单展开瞬间 label 文字会消失。
+        // label 内每个 Text 已显式 foregroundStyle，故去掉 plain 样式不影响配色；.tint 收敛强调色。
         .tint(.primary)
     }
 
