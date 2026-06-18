@@ -1864,6 +1864,50 @@ final class TripStore: ObservableObject {
         CarryLogger.shared.log(.myItemDeleted)
     }
 
+    // MARK: - 自定义分类（spec: my-item-custom-categories.md）
+    // 分类派生自物品的 category 文本、无独立实体；以下都作用于「当前 collection 内 category 匹配的物品」。
+
+    /// 当前 collection 内用户已建的自定义分类（去重、非空、且不属于内置目录分类），最近使用在前。
+    func customCategoryNames(in collection: String) -> [String] {
+        let target = normalizedCollectionName(collection)
+        let catalog = Set(itemPickerCatalog.map { $0.name })
+        var latest: [String: Date] = [:]
+        for item in myItems where normalizedCollectionName(item.collectionName) == target {
+            let cat = item.category.trimmingCharacters(in: .whitespacesAndNewlines)
+            guard !cat.isEmpty, !catalog.contains(cat) else { continue }
+            latest[cat] = max(latest[cat] ?? .distantPast, item.updatedAt)
+        }
+        return latest.sorted { $0.value > $1.value }.map(\.key)
+    }
+
+    /// 重命名自定义分类：把该 collection 内所有 category == old 的物品改名为 new。
+    func renameMyItemCategory(from old: String, to new: String, in collection: String) {
+        let target = normalizedCollectionName(collection)
+        let trimmedNew = new.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmedNew.isEmpty, trimmedNew != old else { return }
+        var changed = false
+        for item in myItems
+        where normalizedCollectionName(item.collectionName) == target && item.category == old {
+            item.category = trimmedNew
+            item.updatedAt = Date()
+            changed = true
+        }
+        if changed { save() }
+    }
+
+    /// 删除自定义分类：把该 collection 内所有 category == name 的物品 category 清空（物品保留 → 未分类）。
+    func deleteMyItemCategory(_ name: String, in collection: String) {
+        let target = normalizedCollectionName(collection)
+        var changed = false
+        for item in myItems
+        where normalizedCollectionName(item.collectionName) == target && item.category == name {
+            item.category = ""
+            item.updatedAt = Date()
+            changed = true
+        }
+        if changed { save() }
+    }
+
     func reorderMyItems(newOrder: [UUID]) {
         let orderedItems = newOrder.compactMap { id in myItems.first(where: { $0.id == id }) }
         let remainingItems = myItems

@@ -555,12 +555,16 @@ struct ItemPickerView: View {
                 }
                 .sheet(isPresented: $showMyItemAddSheet) {
                     NavigationStack {
-                        ItemPickerMyItemEditorView(titleKey: "myitems.add.title") { name, category in
+                        ItemPickerMyItemEditorView(
+                            titleKey: "myitems.add.title",
+                            collection: selectedMyItemCollection
+                        ) { name, category in
                             let normalizedCategory = category.trimmingCharacters(in: CharacterSet.whitespacesAndNewlines).isEmpty ? "Custom" : category
                             let item = store.addMyItem(name: name, category: normalizedCategory, collectionName: selectedMyItemCollection)
                             selectedMyItemIDs.insert(item.id)
                             showToast(NSLocalizedString("myitems.toast.saved", comment: ""))
                         }
+                        .environmentObject(store)
                     }
                 }
             }
@@ -1796,8 +1800,10 @@ private struct ItemPickerMyItemEditorView: View {
     let titleKey: LocalizedStringKey
     var initialName: String = ""
     var initialCategory: String = ""
+    var collection: String = "Default"
     var onSave: (String, String) -> Void
 
+    @EnvironmentObject private var store: TripStore
     @Environment(\.dismiss) private var dismiss
     @State private var name: String
     @State private var selectedCategoryKey: String
@@ -1808,6 +1814,22 @@ private struct ItemPickerMyItemEditorView: View {
 
     private var effectiveCategory: String {
         selectedCategoryKey == Self.customSentinel ? customCategoryText : selectedCategoryKey
+    }
+
+    /// 分类行右侧当前选择的展示：None / 内置分类（本地化）/ 自定义名（原样）/ 新建中。
+    @ViewBuilder private var categorySelectionLabel: some View {
+        switch selectedCategoryKey {
+        case "":
+            Text(LocalizedStringKey("myitems.category.none"))
+        case Self.customSentinel:
+            Text(LocalizedStringKey("myitems.category.custom"))
+        default:
+            if Self.catalogCategoryKeys.contains(selectedCategoryKey) {
+                Text(LocalizedStringKey(selectedCategoryKey))
+            } else {
+                Text(selectedCategoryKey)
+            }
+        }
     }
 
     private var canSave: Bool {
@@ -1822,24 +1844,19 @@ private struct ItemPickerMyItemEditorView: View {
         titleKey: LocalizedStringKey,
         initialName: String = "",
         initialCategory: String = "",
+        collection: String = "Default",
         onSave: @escaping (String, String) -> Void
     ) {
         self.titleKey = titleKey
         self.initialName = initialName
         self.initialCategory = initialCategory
+        self.collection = collection
         self.onSave = onSave
         _name = State(initialValue: initialName)
-
-        if itemPickerCatalog.contains(where: { $0.name == initialCategory }) {
-            _selectedCategoryKey = State(initialValue: initialCategory)
-            _customCategoryText = State(initialValue: "")
-        } else if !initialCategory.isEmpty {
-            _selectedCategoryKey = State(initialValue: Self.customSentinel)
-            _customCategoryText = State(initialValue: initialCategory)
-        } else {
-            _selectedCategoryKey = State(initialValue: "")
-            _customCategoryText = State(initialValue: "")
-        }
+        // 自定义分类现在可直接作 selectedCategoryKey（catalog key 与自定义名都成立）；
+        // sentinel 仅用于「新建分类」入口。
+        _selectedCategoryKey = State(initialValue: initialCategory)
+        _customCategoryText = State(initialValue: "")
     }
 
     var body: some View {
@@ -1847,18 +1864,16 @@ private struct ItemPickerMyItemEditorView: View {
             Section {
                 TextField(LocalizedStringKey("myitems.name"), text: $name)
 
-                Picker(selection: $selectedCategoryKey) {
-                    Text(LocalizedStringKey("myitems.category.none"))
-                        .foregroundStyle(.secondary)
-                        .tag("")
-                    ForEach(Self.catalogCategoryKeys, id: \.self) { key in
-                        Text(LocalizedStringKey(key)).tag(key)
-                    }
-                    Text(LocalizedStringKey("myitems.category.custom")).tag(Self.customSentinel)
+                NavigationLink {
+                    MyItemCategoryPickerView(selectedKey: $selectedCategoryKey, collection: collection)
                 } label: {
-                    Text(LocalizedStringKey("myitems.category"))
+                    HStack {
+                        Text(LocalizedStringKey("myitems.category"))
+                        Spacer()
+                        categorySelectionLabel
+                            .foregroundStyle(.secondary)
+                    }
                 }
-                .pickerStyle(.navigationLink)
 
                 if selectedCategoryKey == Self.customSentinel {
                     TextField(LocalizedStringKey("myitems.category.custom.placeholder"), text: $customCategoryText)
@@ -1879,6 +1894,110 @@ private struct ItemPickerMyItemEditorView: View {
                 .disabled(!canSave)
             }
         }
+    }
+}
+
+// MARK: - 自定义分类选择/管理（spec: my-item-custom-categories.md）
+
+/// 选择分类的 pushed 页：复用已建自定义分类 + 就地重命名（内联输入框）/ 删除（swipe 即时，只清分类、保留物品）。
+/// 全程无 modal——这是根因修复：在「sheet 内再 push 的 List」上弹 alert/dialog 会弹掉该页或不显示（SwiftUI 死结）。
+/// 内联重命名沿用 PackingListView.InlineEditRow 模式；即时 swipe 删除沿用 myItemRow 的 swipe 删除，均已验证可靠。
+private struct MyItemCategoryPickerView: View {
+    @EnvironmentObject private var store: TripStore
+    @Environment(\.dismiss) private var dismiss
+    @Binding var selectedKey: String
+    let collection: String
+
+    private static let catalogKeys = itemPickerCatalog.map { $0.name }
+    private static let customSentinel = "__custom__"
+
+    @State private var renamingCategory: String?
+    @State private var renameText = ""
+    @FocusState private var renameFocused: Bool
+
+    private var customCategories: [String] { store.customCategoryNames(in: collection) }
+
+    var body: some View {
+        List {
+            Section {
+                Button {
+                    selectedKey = Self.customSentinel
+                    dismiss()
+                } label: {
+                    Label(LocalizedStringKey("myitems.category.custom"), systemImage: "plus")
+                }
+            }
+
+            if !customCategories.isEmpty {
+                Section(LocalizedStringKey("myitems.category.section.yours")) {
+                    ForEach(customCategories, id: \.self) { name in
+                        if renamingCategory == name {
+                            // 就地重命名（无 modal）：回车或失焦提交。
+                            TextField("", text: $renameText)
+                                .focused($renameFocused)
+                                .submitLabel(.done)
+                                .onSubmit { commitRename(old: name) }
+                                .onAppear { renameFocused = true }
+                        } else {
+                            selectableRow(key: name, title: Text(name))
+                                .swipeActions(edge: .trailing, allowsFullSwipe: false) {
+                                    Button(role: .destructive) {
+                                        store.deleteMyItemCategory(name, in: collection)
+                                        if selectedKey == name { selectedKey = "" }
+                                    } label: {
+                                        Label(LocalizedStringKey("Delete"), systemImage: "trash")
+                                    }
+                                    Button {
+                                        renameText = name
+                                        renamingCategory = name
+                                    } label: {
+                                        Label(LocalizedStringKey("myitems.category.rename"), systemImage: "pencil")
+                                    }
+                                    .tint(.blue)
+                                }
+                        }
+                    }
+                }
+            }
+
+            Section {
+                selectableRow(key: "", title: Text(LocalizedStringKey("myitems.category.none")))
+                ForEach(Self.catalogKeys, id: \.self) { key in
+                    selectableRow(key: key, title: Text(LocalizedStringKey(key)))
+                }
+            }
+        }
+        .navigationTitle(LocalizedStringKey("myitems.category"))
+        .navigationBarTitleDisplayMode(.inline)
+        .onChange(of: renameFocused) { _, focused in
+            // 点别处失焦（没按 Done）也提交，避免行卡在编辑态。
+            if !focused, let old = renamingCategory { commitRename(old: old) }
+        }
+    }
+
+    private func commitRename(old: String) {
+        let new = renameText.trimmingCharacters(in: .whitespacesAndNewlines)
+        store.renameMyItemCategory(from: old, to: new, in: collection)
+        if selectedKey == old, !new.isEmpty, new != old { selectedKey = new }
+        renamingCategory = nil
+    }
+
+    // 行选择沿用 myItemRow 同款 Button + .plain。
+    @ViewBuilder private func selectableRow(key: String, title: Text) -> some View {
+        Button {
+            selectedKey = key
+            dismiss()
+        } label: {
+            HStack {
+                title.foregroundStyle(.primary)
+                Spacer()
+                if selectedKey == key {
+                    Image(systemName: "checkmark").foregroundStyle(CarryAccent.color)
+                }
+            }
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
     }
 }
 
