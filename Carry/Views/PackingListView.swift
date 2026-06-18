@@ -215,31 +215,12 @@ struct PackingListView: View {
                                 Label("itinerary.reorder.menu", systemImage: "arrow.up.arrow.down")
                             }
                         }
-                        // 照片回溯生成行程（spec: photo-trip-reconstruction.md）：收进本「…」菜单的行程面段，
-                        // 不再单独占一个工具栏图标。仅有日期行程可用（需日期区间过滤照片）。
-                        if detailTab == .itinerary, !(bundle?.isDateless ?? true) {
-                            Button {
-                                showPhotoImport = true
-                            } label: {
-                                Label("phototrip.entry.label", systemImage: "photo.badge.plus")
-                            }
-                        }
-                        // 共享「行程级操作」（两个 tab 通用、顺序一致）：编辑行程 → 复制行程 → 行程提醒 → 添加背景图。
+                        // 共享「行程级操作」（两个 tab 通用、顺序一致）：编辑行程 → 行程提醒 → 添加背景图。
+                        // （复制行程已下移到「分享行程」上方。）
                         Button {
                             showEditSheet = true
                         } label: {
                             Label("Edit trip", systemImage: "pencil")
-                        }
-                        // 复制整个行程 → 记下副本 id 让首页扫光高亮 → 返回首页根看到新副本。
-                        // 放 ··· 菜单而非左滑：从行程内触发，首页不在左滑态，插入干净、无空白闪烁。
-                        Button {
-                            UIImpactFeedbackGenerator(style: .light).impactOccurred()
-                            if let newId = store.duplicateTrip(withId: tripId) {
-                                store.pendingShimmerTripId = newId
-                            }
-                            router.path = NavigationPath()
-                        } label: {
-                            Label("trip.swipe.duplicate", systemImage: "doc.on.doc")
                         }
                         Button {
                             showReminderSheet = true
@@ -258,6 +239,26 @@ struct PackingListView: View {
                             } label: {
                                 Label("trip.background.add", systemImage: "photo")
                             }
+                        }
+                        // 照片回溯生成行程（spec: photo-trip-reconstruction.md）：放在「上传背景图」下方。
+                        // 仅有日期行程可用（需日期区间过滤照片）。
+                        if detailTab == .itinerary, !(bundle?.isDateless ?? true) {
+                            Button {
+                                showPhotoImport = true
+                            } label: {
+                                Label("phototrip.entry.label", systemImage: "photo.badge.plus")
+                            }
+                        }
+                        // 复制整个行程 → 记下副本 id 让首页扫光高亮 → 返回首页根看到新副本（放「分享行程」上方）。
+                        // 放 ··· 菜单而非左滑：从行程内触发，首页不在左滑态，插入干净、无空白闪烁。
+                        Button {
+                            UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                            if let newId = store.duplicateTrip(withId: tripId) {
+                                store.pendingShimmerTripId = newId
+                            }
+                            router.path = NavigationPath()
+                        } label: {
+                            Label("trip.swipe.duplicate", systemImage: "doc.on.doc")
                         }
                         // 行程专属「分享/导出」（行程规划面）——「地点排序」已提到菜单顶部（本面主任务）。
                         if detailTab == .itinerary {
