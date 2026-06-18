@@ -648,11 +648,18 @@ struct SettingsView: View {
                 .labelsHidden()
                 .pickerStyle(.menu)
                 .tint(settingsValueColor)
+                // 原生 `.menu` Picker 在 value 与上下箭头右侧自带一段固定内边距，使 `⇅` 落在
+                // 自定义行 `>`/`↗`（18pt 处）的左边、整列不齐。用量准的负 trailing 把 Picker 整体
+                // 右移这段距离，让 `⇅` 对到同一条列上——只动视觉、不碰交互。
+                .padding(.trailing, -Self.menuPickerTrailingInset)
         }
         .padding(.horizontal, 18)
         .frame(height: 58)
         .contentShape(Rectangle())
     }
+
+    /// 原生 `.menu` Picker 自带的尾部内边距补偿值（实测对齐自定义 `>` 列）。
+    private static let menuPickerTrailingInset: CGFloat = 12
 
     /// push 行的纯文本标题变体（标题非本地化 key、而是按语言动态拼的 String，如 Roadmap）。
     @ViewBuilder
