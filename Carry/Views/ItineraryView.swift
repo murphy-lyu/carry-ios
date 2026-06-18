@@ -313,6 +313,9 @@ struct ItineraryView: View {
                             proxy.scrollTo(day.sortOrder, anchor: .center)
                         }
                     }
+                    // 横向 ScrollView 默认撑满竖直空间（不按内容收缩）→ 日期格被摆在高框顶部、下方留一大片空，
+                    // 把逐日列表顶到屏幕下半。fixedSize 竖直按内容（日历格高）收缩，空白消除。
+                    .fixedSize(horizontal: false, vertical: true)
                 }
             }
         }
