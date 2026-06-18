@@ -76,6 +76,15 @@ struct ItineraryMapView: View {
         return coords
     }
 
+    /// 取景专用坐标：优先「停靠点」，**交通段端点不参与缩放**——避免洲际航段（机场相距数千公里）
+    /// 把整张图撑到跨国尺度、当天市内地点缩成针尖。当天无任何停靠点（纯航班日）才回退到含端点的
+    /// routeCoordinates（那天本无市内地点会被缩小，框住航段反而是该有的「旅行日」视图）。
+    /// 仅用于预览取景；空态判定与全屏取景仍用 routeCoordinates。
+    private func framingCoordinates(in days: [ItineraryDay]) -> [CLLocationCoordinate2D] {
+        let stops = coordinateStops(in: days).compactMap(\.coordinate)
+        return stops.isEmpty ? routeCoordinates(in: days) : stops
+    }
+
     /// 预览态坐标点数（聚焦当天）——决定空态 / 单点提示。含交通段端点：只有航班的天也算「有内容」。
     private var coordinateCount: Int { routeCoordinates(in: displayDays).count }
 
@@ -333,7 +342,7 @@ struct ItineraryMapView: View {
     /// 预览态（静态相机）。全屏走 `Map(position:)` 单独装配（可动画切筛选）。
     @ViewBuilder
     private func mapContent(for days: [ItineraryDay], dimmed: Bool = false) -> some View {
-        Map(initialPosition: .region(fittedRegion(for: days))) {
+        Map(initialPosition: .region(fittedRegion(for: days, placesFirst: true))) {
             mapAnnotations(for: days, dimmed: dimmed)
         }
     }
@@ -403,8 +412,9 @@ struct ItineraryMapView: View {
     }
 
     /// 包住指定天集合所有坐标点的可视区域（带 padding）；单点时给固定小 span。
-    private func fittedRegion(for days: [ItineraryDay]) -> MKCoordinateRegion {
-        let coords = routeCoordinates(in: days)
+    /// placesFirst=true（预览）：取景由停靠点驱动、排除交通端点；false（全屏）：框住全部含航段。
+    private func fittedRegion(for days: [ItineraryDay], placesFirst: Bool = false) -> MKCoordinateRegion {
+        let coords = placesFirst ? framingCoordinates(in: days) : routeCoordinates(in: days)
         guard let first = coords.first else {
             return MKCoordinateRegion(
                 center: CLLocationCoordinate2D(latitude: 0, longitude: 0),
