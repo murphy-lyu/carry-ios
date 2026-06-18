@@ -514,7 +514,9 @@ struct PackingListView: View {
         .padding(.bottom, 10)
         // 浮动 glass 切换器：通透垫底（上沿透明→底端半透），内容在栏后柔和消隐却仍透出，
         // 不用整块实心遮死（实心会把较高的栏区视觉上压短）。见 BottomBarFade。
-        .bottomBarFade(CarrySubtleBackground.baseColor)
+        // 淡出色须跟随当前 tab 的实际背景：行程面用 systemBackground（Dark 下纯黑），打包面用
+        // CarrySubtleBackground 渐变底端色（baseColor）。否则行程面（纯黑）淡出到 0.08 灰会显一片灰雾。
+        .bottomBarFade(detailTab == .itinerary ? Color(UIColor.systemBackground) : CarrySubtleBackground.baseColor)
     }
 
     private func faceSegment(_ face: DetailTab, title: LocalizedStringKey, icon: String) -> some View {
