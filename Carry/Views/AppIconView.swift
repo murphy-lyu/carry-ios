@@ -138,22 +138,27 @@ struct AppIconView: View {
                     Text(option.name)
                         .font(.system(.subheadline, design: .rounded).weight(.semibold))
                         .foregroundColor(.primary)
+                        .lineLimit(1)
                     Text(option.description)
                         .font(.caption)
                         .foregroundStyle(colorScheme == .dark
                             ? Color.secondary.opacity(0.78)
                             : .secondary)
+                        // 恒单行：窄机型/大字号下极轻微缩字以容纳，不换行、不截断。
+                        // （根因——选中时多出的对勾会挤窄文案宽度，单行文案才不会「选中即换行」。）
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.85)
                 }
 
-                Spacer()
+                Spacer(minLength: 8)
 
-                if isSelected {
-                    Image(systemName: "checkmark.circle.fill")
-                        .font(.system(size: 22))
-                        .foregroundStyle(Color.accentColor)
-                        .transition(.scale.combined(with: .opacity))
-                        .accessibilityHidden(true)   // 选中态由 .isSelected 传达
-                }
+                // 对勾位置**恒定预留**（选中可见、未选中透明占位），故选中/未选中布局完全一致、
+                // 不再因选中而重排把副标题挤换行。淡入淡出由下方 .animation(value: isSelected) 驱动。
+                Image(systemName: "checkmark.circle.fill")
+                    .font(.system(size: 22))
+                    .foregroundStyle(Color.accentColor)
+                    .opacity(isSelected ? 1 : 0)
+                    .accessibilityHidden(true)   // 选中态由 .isSelected 传达
             }
             .padding(.horizontal, 16)
             .padding(.vertical, 12)
