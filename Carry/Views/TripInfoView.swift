@@ -14,6 +14,8 @@ struct TripInfoView: View {
     @State private var departureDate: Date
     @State private var returnDate: Date
     @State private var showDatePicker = false
+    /// 下滑/取消时若已有草稿，弹「放弃更改?」确认（对齐 Apple 新建表单范式）。
+    @State private var showDiscardConfirm = false
     /// 是否设置了日期。预填默认 true；点「无需日期」清除则为 false（→ 规划中行程）。
     @State private var hasDates = true
     /// 防快速双击重复建行程（一击即建、无中间步，必须自守）。
@@ -39,6 +41,13 @@ struct TripInfoView: View {
 
     private var canContinue: Bool {
         !tripName.trimmingCharacters(in: .whitespaces).isEmpty &&
+        !destinationCity.trimmingCharacters(in: .whitespaces).isEmpty
+    }
+
+    /// 是否已填了内容（名字或城市）。日期是预填默认值，不算草稿。
+    /// 有草稿时下滑被拦、取消需确认，避免误删；空表单则可直接关闭。
+    private var hasDraft: Bool {
+        !tripName.trimmingCharacters(in: .whitespaces).isEmpty ||
         !destinationCity.trimmingCharacters(in: .whitespaces).isEmpty
     }
 
@@ -184,9 +193,23 @@ struct TripInfoView: View {
             // 沿用系统返回。语义：离开模态 = 放弃草稿，而非「返回上一级」。
             if router.showCreation {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button(LocalizedStringKey("common.cancel")) { router.cancelCreation() }
+                    Button(LocalizedStringKey("common.cancel")) {
+                        if hasDraft { showDiscardConfirm = true } else { router.cancelCreation() }
+                    }
                 }
             }
+        }
+        // 有草稿时拦截下滑关闭，逼用户走「取消」→ 确认，避免手滑误删（空表单不拦，可直接下滑关）。
+        .interactiveDismissDisabled(hasDraft)
+        .confirmationDialog(
+            LocalizedStringKey("tripinfo.discard.title"),
+            isPresented: $showDiscardConfirm,
+            titleVisibility: .visible
+        ) {
+            Button(LocalizedStringKey("tripinfo.discard.confirm"), role: .destructive) {
+                router.cancelCreation()
+            }
+            Button(LocalizedStringKey("tripinfo.discard.keep"), role: .cancel) { }
         }
         .sheet(isPresented: $showDatePicker) {
             TripDateRangePickerSheet(

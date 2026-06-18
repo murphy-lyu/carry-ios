@@ -2119,7 +2119,9 @@ struct PressableScaleButtonStyle: ButtonStyle {
 /// content; on present/dismiss it transforms the **presenting** view alongside the
 /// system transition via `transitionCoordinator`, so the recede tracks the interactive
 /// drag-to-dismiss — something a `@State`-bool-driven SwiftUI animation cannot do.
-private struct PresenterRecedeEffect: UIViewControllerRepresentable {
+/// 复用于首页的 sheet（设置 / 搜索 / Trip Book）与创建行程 sheet（ContentView）：
+/// 弹出时把背后的首页 host 往后缩成卡片、跟手拖拽，营造 Apple 原生「卡片叠层」观感。
+struct PresenterRecedeEffect: UIViewControllerRepresentable {
     var scale: CGFloat = 0.92
     var cornerRadius: CGFloat = 16
 

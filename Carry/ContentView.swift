@@ -25,9 +25,11 @@ final class NavigationRouter: ObservableObject {
     // ContentView 观察它弹出「导入行程」确认。
     @Published var pendingSharedTrip: DataBackupManager.SharedTripSummary? = nil
 
-    // 创建行程是「自包含任务」而非根层级——在独立的 fullScreenCover + 自有 NavigationStack
-    // 里跑（iPhone）。三步链（TripInfo → ItemPicker → PackingList 新建）压在 creationPath 上，
-    // 不污染根 path；完成后关 cover、把根 path 落到新行程。（spec: app-navigation-framework.md）
+    // 创建行程是「自包含任务」而非根层级——iPhone 用独立的 sheet（自有 NavigationStack）承载，
+    // 不污染根 path；完成后关 sheet、把根 path 落到新行程。现已是单屏：TripInfoView 填完「Create」
+    // 直接建行程并落到该行程（早期 TripInfo → ItemPicker → PackingList 多步流已简化掉）。
+    // creationPath / pushCreation 仍保留，供 Mac 端（无 sheet、退回根 path 推进）复用同一套创建代码。
+    // （spec: app-navigation-framework.md）
     @Published var showCreation = false
     @Published var creationPath = NavigationPath()
     @Published var creationSeed: CreationSeed? = nil
@@ -160,8 +162,11 @@ struct ContentView: View {
                     routeDestination(route)
                 }
         }
-        // 创建行程：模态全屏盖层（自包含任务），内含独立 NavigationStack 跑三步链。
-        .fullScreenCover(isPresented: $router.showCreation) {
+        // 创建行程：以 sheet（page sheet）模态呈现——单屏轻任务，卡片圆角与系统协调、露出背后的
+        // 行程列表，符合 Apple「快速创建表单」范式（新建事件/提醒/联系人同款）。旧 fullScreenCover 是
+        // 为早期多步流程准备的，流程简化为单屏后既不符合 HIG、其方角内容又会撞上屏幕物理圆角、显得不协调。
+        // 内含 NavigationStack 承载标题与「取消」。
+        .sheet(isPresented: $router.showCreation) {
             if let seed = router.creationSeed {
                 NavigationStack(path: $router.creationPath) {
                     TripInfoView(routeID: seed.id)
@@ -171,6 +176,10 @@ struct ContentView: View {
                 }
                 .tint(CarryAccent.color)
                 .preferredColorScheme((AppearanceMode(rawValue: appearanceModeRaw) ?? .system).colorScheme)
+                // 与设置 / 搜索 / Trip Book 三个 sheet 一致：弹出时首页后退缩放、跟手拖拽。
+                #if !targetEnvironment(macCatalyst)
+                .background(PresenterRecedeEffect())
+                #endif
             }
         }
         // 同行者发来的 .carrytrip 文件：弹「导入行程」确认卡片。
