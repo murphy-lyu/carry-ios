@@ -249,30 +249,25 @@ struct TripInfoView: View {
         text: Binding<String>,
         focus: FocusField
     ) -> some View {
-        ZStack(alignment: .leading) {
-            if text.wrappedValue.isEmpty {
-                Text(placeholder)
-                    .font(.subheadline)
-                    .foregroundColor(Color(UIColor.placeholderText))
-                    .allowsHitTesting(false)
-            }
-            TextField("", text: text)
-                .font(.subheadline)
-                .tint(.primary)
-                .focused($focusedField, equals: focus)
-                .textFieldStyle(.plain)
-        }
-        .frame(height: 44)
-        .padding(.horizontal, 12)
-        .background(Color(UIColor.systemBackground).opacity(0.66))
-        .overlay(
-            RoundedRectangle(cornerRadius: 12, style: .continuous)
-                .strokeBorder(
-                    Color.primary.opacity(colorScheme == .dark ? 0.11 : 0.07),
-                    lineWidth: 1
-                )
-        )
-        .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+        // 原生占位符（UITextField 自渲染）：有 marked text（输入法预编辑态）即隐藏，且不像
+        // 「if isEmpty 显隐 Text 叠层」那样在选词提交时增删视图树——后者会打断输入法提交，
+        // 导致中文（如微信输入法）选词后内容丢失、预编辑态与占位符叠加。样式与原叠层一致。
+        TextField(placeholder, text: text)
+            .font(.subheadline)
+            .tint(.primary)
+            .focused($focusedField, equals: focus)
+            .textFieldStyle(.plain)
+            .frame(height: 44)
+            .padding(.horizontal, 12)
+            .background(Color(UIColor.systemBackground).opacity(0.66))
+            .overlay(
+                RoundedRectangle(cornerRadius: 12, style: .continuous)
+                    .strokeBorder(
+                        Color.primary.opacity(colorScheme == .dark ? 0.11 : 0.07),
+                        lineWidth: 1
+                    )
+            )
+            .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
     }
 
     private func fieldGroup<Content: View>(
