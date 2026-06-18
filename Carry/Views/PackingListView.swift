@@ -61,7 +61,6 @@ struct PackingListView: View {
     @State private var editingText: String = ""
 
     @State private var showEditSheet = false
-    @State private var showEditScenesSheet = false
     @State private var showReorderSheet = false
     @State private var showDeleteConfirmation = false
     @State private var showAddSectionAlert = false
@@ -378,12 +377,6 @@ struct PackingListView: View {
             if let bundle {
                 EditTripView(trip: bundle)
             }
-        }
-        .sheet(isPresented: $showEditScenesSheet, onDismiss: {
-            store.refresh()
-        }) {
-            ScenePickerView(editingTripId: tripId)
-                .presentationDragIndicator(.visible)
         }
         .sheet(isPresented: $showSuggestSheet) {
             ScenePickerView(suggestForTripId: tripId)

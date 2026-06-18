@@ -11,7 +11,6 @@ import Combine
 enum CreationRoute: Hashable {
     case tripInfo(UUID)
     case packingList(UUID)
-    case editScenes(UUID)
     case autoPackPicker(TripInfo, sceneKeys: [String])
 }
 
@@ -200,8 +199,6 @@ struct ContentView: View {
             TripInfoView(routeID: routeID)
         case .packingList(let id):
             PackingListView(tripId: id, isNewTrip: true)
-        case .editScenes(let id):
-            ScenePickerView(editingTripId: id)
         case .autoPackPicker(let info, let sceneKeys):
             ItemPickerView(
                 autoPackTripInfo: info,

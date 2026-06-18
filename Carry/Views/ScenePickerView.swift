@@ -11,18 +11,12 @@ import UIKit
 struct ScenePickerView: View {
 
     enum Mode {
-        case edit(tripId: UUID)
         case autoPack(tripInfo: TripInfo, seedSections: [PackingSection])
         case suggest(tripId: UUID)
     }
 
     private let mode: Mode
     private let preselectedSceneKeys: [String]
-
-    init(editingTripId: UUID) {
-        self.mode = .edit(tripId: editingTripId)
-        self.preselectedSceneKeys = []
-    }
 
     init(autoPackTripInfo: TripInfo, seedSections: [PackingSection], initialSceneKeys: [String] = []) {
         self.mode = .autoPack(tripInfo: autoPackTripInfo, seedSections: seedSections)
@@ -40,7 +34,6 @@ struct ScenePickerView: View {
     @Environment(\.colorScheme) private var colorScheme
     @State private var selectedItems: Set<String> = []
     @State private var didLoadInitialSelection = false
-    @State private var isSaved = false
     @State private var confirmedSuggestKeys: [String]? = nil
     @State private var didFinishSuggest = false
     /// HealthKit 预测：本次行程区间是否赶上经期。读不到/不重叠时保持 false（静默降级）。
@@ -51,11 +44,6 @@ struct ScenePickerView: View {
 
     private var hasSelection: Bool { !selectedItems.isEmpty }
     private var selectionCount: Int { selectedItems.count }
-
-    private var isEditing: Bool {
-        if case .edit = mode { return true }
-        return false
-    }
 
     private var isAutoPack: Bool {
         if case .autoPack = mode { return true }
@@ -68,10 +56,7 @@ struct ScenePickerView: View {
     }
 
     private var primaryButtonLabelKey: LocalizedStringKey {
-        if isSaved { return "scenes.updated" }
-        if isEditing {
-            return hasSelection ? "scenes.update_list" : "scenes.select_one"
-        } else if isAutoPack {
+        if isAutoPack {
             return hasSelection ? "scenes.update" : "scenes.select_one"
         } else if isSuggest {
             return hasSelection ? "See suggestions" : "scenes.skip"
@@ -81,13 +66,11 @@ struct ScenePickerView: View {
     }
 
     private var isPrimaryButtonEnabled: Bool {
-        if isSaved { return false }
         if isSuggest { return true }
         return hasSelection
     }
 
     private var isPrimaryButtonHighlighted: Bool {
-        if isSaved { return false }
         if isSuggest { return true }
         return hasSelection
     }
@@ -138,11 +121,6 @@ struct ScenePickerView: View {
             VStack(spacing: 0) {
                 Button(action: { primaryAction() }) {
                     HStack(spacing: 8) {
-                        if isSaved {
-                            Image(systemName: "checkmark")
-                                .fontWeight(.medium)
-                                .transition(.scale.combined(with: .opacity))
-                        }
                         Text(primaryButtonLabelKey)
                             .transition(.opacity)
                     }
@@ -157,7 +135,6 @@ struct ScenePickerView: View {
                         RoundedRectangle(cornerRadius: 14, style: .continuous)
                             .strokeBorder(Color(.separator).opacity(isPrimaryButtonHighlighted ? 0.08 : 0.14), lineWidth: 1)
                     )
-                    .animation(.easeInOut(duration: 0.2), value: isSaved)
                 }
                 .buttonStyle(SolidPressButtonStyle())
                 .allowsHitTesting(isPrimaryButtonEnabled)
@@ -188,7 +165,7 @@ struct ScenePickerView: View {
 
     private var tripBundle: TripBundle? {
         switch mode {
-        case .edit(let id), .suggest(let id): return store.bundle(for: id)
+        case .suggest(let id): return store.bundle(for: id)
         default: return nil
         }
     }
@@ -271,7 +248,7 @@ struct ScenePickerView: View {
                         .foregroundStyle(.secondary)
                 }
                 Spacer()
-                if isAutoPack || isEditing || isSuggest {
+                if isAutoPack || isSuggest {
                     Button { dismiss() } label: {
                         Image(systemName: "xmark")
                             .font(.system(size: 13, weight: .semibold))
@@ -323,7 +300,7 @@ struct ScenePickerView: View {
             guard !info.isDateless else { return nil }
             return (calendar.startOfDay(for: info.departureDate),
                     calendar.startOfDay(for: info.returnDate))
-        case .edit(let id), .suggest(let id):
+        case .suggest(let id):
             guard let bundle = store.bundle(for: id), !bundle.isDateless else { return nil }
             let start = calendar.startOfDay(for: bundle.departureDate)
             guard let end = calendar.date(byAdding: .day, value: max(0, bundle.days), to: start) else { return nil }
@@ -342,7 +319,7 @@ struct ScenePickerView: View {
                 keysSet.contains(key) ? label : nil
             }
             selectedItems = Set(labels)
-        case .edit(let id), .suggest(let id):
+        case .suggest(let id):
             guard let trip = store.bundle(for: id) else { return }
             let savedKeys = Set(trip.selectedSceneKeys)
             let labels = sceneLabelToKey.compactMap { (label, key) -> String? in
@@ -356,21 +333,11 @@ struct ScenePickerView: View {
         let keys = selectedItems.compactMap { sceneLabelToKey[$0] }
         let modeLabel: String
         switch mode {
-        case .edit:     modeLabel = "edit"
         case .autoPack: modeLabel = "auto_pack"
         case .suggest:  modeLabel = "suggest"
         }
         CarryLogger.shared.log(.sceneSelected, context: "mode=\(modeLabel) count=\(keys.count)")
         switch mode {
-        case .edit(let tripId):
-            guard !isSaved else { return }
-            store.regenerateScenes(tripId: tripId, keys: keys)
-            UINotificationFeedbackGenerator().notificationOccurred(.success)
-            withAnimation(.easeInOut(duration: 0.2)) { isSaved = true }
-            Task {
-                try? await Task.sleep(for: .milliseconds(600))
-                dismiss()
-            }
         case .autoPack(let info, _):
             UINotificationFeedbackGenerator().notificationOccurred(.success)
             router.path = NavigationPath()
