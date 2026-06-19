@@ -5,28 +5,22 @@
 //   Worker 持 key（secret，不进 App/git）→ 转发到 AeroDataBox
 //   → 服务端缓存同一「航班号+日期」→ 降本 + 防 key 泄露。
 //
-// ✅ 默认对接 API.market（AeroDataBox 在此约 $5/月、6000 次，比 RapidAPI 便宜近 10 倍）。
-//    上游地址/鉴权做成「环境变量可配」——你从 API.market 的接口示例里复制确切 base 填进去即可，
-//    将来想换 RapidAPI 也只改变量、不改代码。
+// 上游地址/鉴权做成「环境变量可配」——RapidAPI / API.market 都能用，换市场只改变量。
 //
 // 请求：GET https://<your-worker>/flight?number=MU5101&date=2026-07-01
 //   - number: 航班号（去空格大写由 Worker 处理）   - date: YYYY-MM-DD
 //   - 可选 header  X-App-Token: <APP_TOKEN>（防陌生人盗刷额度）
 //
 // 需在 Worker 配置：
-//   - MARKET_KEY        （必填 secret）你的 API.market key（x-magicapi-key 的值）
-//   - UPSTREAM_BASE      （变量，默认 API.market 的 AeroDataBox 根地址，见下）
-//                         例：https://prod.api.market/api/v1/aedbx/aerodatabox
-//                         （以你 API.market 接口页显示的为准，复制粘贴最稳）
-//   - KEY_HEADER         （变量，默认 x-magicapi-key；用 RapidAPI 时改 x-rapidapi-key）
-//   - UPSTREAM_HOST      （可选变量）设了就额外发 x-rapidapi-host 头——RapidAPI 需要它，
-//                         值 = aerodatabox.p.rapidapi.com；API.market 不用，留空即可。
-//   - APP_TOKEN          （可选 secret）App 内嵌共享口令；设了就强校验
-//   - CACHE_TTL_SECONDS  （可选变量，默认 21600 = 6h）
-//   - RATE_LIMITER       （可选 Rate Limiting 绑定）按 IP 限流，挡脚本盗刷；
-//                         在 dashboard Settings → Bindings 加「Rate limiting」绑定，
-//                         变量名 RATE_LIMITER，设 limit/period（如 20 次 / 60s）。
-//                         不配则不限流（代码优雅跳过），真口令仍只在 Worker。
+//   - MARKET_KEY     （必填 secret）你的航空 API key
+//   - UPSTREAM_BASE  （变量）上游根地址
+//   - KEY_HEADER     （变量）鉴权头名：RapidAPI 用 x-rapidapi-key；API.market 用 x-magicapi-key
+//   - UPSTREAM_HOST  （可选变量）设了就额外发 x-rapidapi-host 头（RapidAPI 需要；API.market 留空）
+//   - APP_TOKEN      （可选 secret）App 内嵌共享口令；设了就强校验
+//   - CACHE_TTL_SECONDS（可选变量，默认 21600 = 6h）
+//   - RATE_LIMITER   （可选 Rate Limiting 绑定）按 IP 限流挡脚本盗刷；dashboard
+//                     Settings → Bindings 加「Rate limiting」绑定，名 RATE_LIMITER，
+//                     设 limit/period（如 20 次 / 60s）。不配则不限流（优雅跳过）。
 
 const DEFAULT_BASE = "https://prod.api.market/api/v1/aedbx/aerodatabox";
 const DEFAULT_KEY_HEADER = "x-magicapi-key";
@@ -45,7 +39,6 @@ export default {
       if (!success) return json({ error: "rate_limited" }, 429);
     }
 
-    // 可选：App 口令校验
     if (env.APP_TOKEN && request.headers.get("X-App-Token") !== env.APP_TOKEN) {
       return json({ error: "unauthorized" }, 401);
     }
@@ -57,7 +50,6 @@ export default {
     }
     if (!env.MARKET_KEY) return json({ error: "server_misconfigured" }, 500);
 
-    // 服务端缓存：同一「航班号+日期」复用，省额度。
     const cache = caches.default;
     const cacheKey = new Request(`https://carry-flight-cache/${number}/${date}`, request);
     const cached = await cache.match(cacheKey);
@@ -68,7 +60,7 @@ export default {
     const upstream = `${base}/flights/number/${encodeURIComponent(number)}/${date}`;
 
     const headers = { [keyHeader]: env.MARKET_KEY, accept: "application/json" };
-    if (env.UPSTREAM_HOST) headers["x-rapidapi-host"] = env.UPSTREAM_HOST; // RapidAPI 需要；API.market 不用
+    if (env.UPSTREAM_HOST) headers["x-rapidapi-host"] = env.UPSTREAM_HOST;
 
     let resp;
     try {
@@ -78,7 +70,6 @@ export default {
     }
 
     if (resp.status === 204 || resp.status === 404) {
-      // 没查到这趟 → 统一空，App 据此回退手动。
       return json({ flights: [] }, 200, ttl(env), cacheKey, cache);
     }
     if (!resp.ok) return json({ error: "upstream_error", status: resp.status }, 502);
@@ -86,7 +77,6 @@ export default {
     const data = await resp.json().catch(() => null);
     if (data == null) return json({ error: "bad_upstream_body" }, 502);
 
-    // 上游返回航班数组（或单对象）；统一包成 { flights: [...] } 透传，由 App 侧解析映射。
     const flights = Array.isArray(data) ? data : [data];
     return json({ flights }, 200, ttl(env), cacheKey, cache);
   },
