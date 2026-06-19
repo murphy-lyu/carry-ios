@@ -85,7 +85,11 @@ struct FlightSearchSheet: View {
         VStack(alignment: .leading, spacing: 0) {
             // 字体：表单输入 + placeholder 走 SF（design-system §Typography「表单与输入=SF」），
             // 不用圆体——圆体留给展示型标题/数字短标签；输入框文字属功能声音。title3 给 hero 输入适度醒目。
-            TextField("flight.search.placeholder", text: $number)
+            // 强制大写：航班号习惯全大写；自动大写键盘可能被绕过（如小写输入法），故 binding 兜底转大写。
+            TextField("flight.search.placeholder", text: Binding(
+                get: { number },
+                set: { number = $0.uppercased() }
+            ))
                 .font(.title3)
                 .autocorrectionDisabled()
                 .textInputAutocapitalization(.characters)
@@ -118,26 +122,36 @@ struct FlightSearchSheet: View {
 
     @State private var showCalendar = false
 
-    private struct DateOption: Identifiable { let label: String; let date: Date; var id: TimeInterval { date.timeIntervalSince1970 } }
+    private struct DateOption: Identifiable { let label: String; let date: Date; let isAddDay: Bool; var id: TimeInterval { date.timeIntervalSince1970 } }
+
+    /// 加航班所在的那天（点「+」的天）= 建议当天，色卡点亮强调色。无日期行程则 nil。
+    private var addDayDate: Date? {
+        guard let bundle, !bundle.isDateless else { return nil }
+        let order = bundle.safeItineraryDays.first(where: { $0.id == dayId })?.sortOrder ?? 0
+        let base = Calendar.current.startOfDay(for: bundle.departureDate)
+        return Calendar.current.date(byAdding: .day, value: order, to: base)
+    }
 
     /// 日期选项：有日期行程 = 本行程的天（比通用今天/明天更贴）；无日期行程 = 今天/明天。
-    /// 超长行程（>31 天）不铺几十行，只留「选择其他日期」日历。
+    /// 超长行程（>31 天）不铺几十行，只留「选择其他日期」日历。label = 星期全称（月/日由色卡承载）。
     private var dateOptions: [DateOption] {
         let cal = Calendar.current
         if let bundle, !bundle.isDateless {
             let span = max(1, bundle.spanDays)
             guard span <= 31 else { return [] }
             let base = cal.startOfDay(for: bundle.departureDate)
+            let add = addDayDate
             return (0..<span).compactMap { i in
                 guard let d = cal.date(byAdding: .day, value: i, to: base) else { return nil }
-                return DateOption(label: d.formatted(.dateTime.month(.abbreviated).day().weekday(.wide)), date: d)
+                let isAdd = add.map { cal.isDate(d, inSameDayAs: $0) } ?? false
+                return DateOption(label: d.formatted(.dateTime.weekday(.wide)), date: d, isAddDay: isAdd)
             }
         }
         let today = cal.startOfDay(for: Date())
         let tomorrow = cal.date(byAdding: .day, value: 1, to: today) ?? today
         return [
-            DateOption(label: NSLocalizedString("flight.search.today", comment: ""), date: today),
-            DateOption(label: NSLocalizedString("flight.search.tomorrow", comment: ""), date: tomorrow),
+            DateOption(label: NSLocalizedString("flight.search.today", comment: ""), date: today, isAddDay: false),
+            DateOption(label: NSLocalizedString("flight.search.tomorrow", comment: ""), date: tomorrow, isAddDay: false),
         ]
     }
 
@@ -149,10 +163,10 @@ struct FlightSearchSheet: View {
                 .padding(.leading, 4)
             VStack(spacing: 0) {
                 ForEach(Array(dateOptions.enumerated()), id: \.element.id) { idx, opt in
-                    if idx > 0 { Divider().padding(.leading, 16) }
-                    dateRow(label: opt.label, date: opt.date)
+                    if idx > 0 { Divider().padding(.leading, 68) }
+                    dateRow(opt)
                 }
-                if !dateOptions.isEmpty { Divider().padding(.leading, 16) }
+                if !dateOptions.isEmpty { Divider().padding(.leading, 68) }
                 otherDateRow
             }
             .background(Color(.secondarySystemGroupedBackground))
@@ -161,46 +175,72 @@ struct FlightSearchSheet: View {
         .sheet(isPresented: $showCalendar) { calendarSheet }
     }
 
-    private func dateRow(label: String, date optDate: Date) -> some View {
+    /// 行 = 日期色卡（视觉锚点）+ 星期；点即查询，无 chevron（点选是「提交」、非「导航」）。
+    private func dateRow(_ opt: DateOption) -> some View {
         Button {
-            date = optDate
+            date = opt.date
             runQuery()
         } label: {
-            HStack {
-                Text(label).foregroundStyle(.primary)
+            HStack(spacing: 12) {
+                dateBadge(opt.date, suggested: opt.isAddDay)
+                Text(opt.label).foregroundStyle(.primary)
                 Spacer()
-                Image(systemName: "chevron.right").font(.footnote).foregroundStyle(.tertiary)
             }
-            .padding(.horizontal, 16)
-            .padding(.vertical, 13)
+            .padding(.horizontal, 14)
+            .padding(.vertical, 8)
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
+    }
+
+    /// 日期小色卡：月缩写 + 日号（圆体数字）。纯黑白灰——建议当天（加航班那天）只用「更亮一档的灰底」
+    /// 做极轻提示，不引入强调色（避免整块颜色杂）。
+    private func dateBadge(_ d: Date, suggested: Bool) -> some View {
+        VStack(spacing: 0) {
+            Text(d.formatted(.dateTime.month(.abbreviated)))
+                .font(.system(.caption2, design: .rounded).weight(.semibold))
+                .foregroundStyle(.secondary)
+            Text(d.formatted(.dateTime.day()))
+                .font(.system(.title3, design: .rounded).weight(.semibold))
+                .foregroundStyle(.primary)
+        }
+        .frame(width: 42, height: 42)
+        .background(suggested ? Color(.systemFill) : Color(.tertiarySystemFill))
+        .clipShape(RoundedRectangle(cornerRadius: 9, style: .continuous))
     }
 
     private var otherDateRow: some View {
         Button { showCalendar = true } label: {
-            HStack {
-                Label("flight.search.other_date", systemImage: "calendar")
-                    .foregroundStyle(CarryAccent.color)
+            HStack(spacing: 12) {
+                // 与日期色卡同款 42×42 色卡（放日历图标）→ 和上面三行同一视觉语言，不再是孤立细图标。
+                ZStack {
+                    RoundedRectangle(cornerRadius: 9, style: .continuous)
+                        .fill(Color(.tertiarySystemFill))
+                    Image(systemName: "calendar")
+                        .font(.system(size: 18))
+                        .foregroundStyle(.secondary)
+                }
+                .frame(width: 42, height: 42)
+                Text("flight.search.other_date")
+                    .foregroundStyle(.primary)
                 Spacer()
             }
-            .padding(.horizontal, 16)
-            .padding(.vertical, 13)
+            .padding(.horizontal, 14)
+            .padding(.vertical, 8)
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
     }
 
+    // 系统 graphical 日历（用户取舍：接受首次出现的 ~3px 微落定，换取系统原生观感）。
+    // 点某天即提交（设日期→关历→查询），与「行程天」行一致。固定高度把落定压到最小。
     private var calendarSheet: some View {
         NavigationStack {
             VStack(spacing: 0) {
-                // 点某天即提交：设日期→关历→查询（与「行程天」行的点选即触发一致，不要 Done）。
-                // `.fixedSize(vertical)` 钉本征高度 + 单档 detent → 选日期/翻月都不重排跳动。
                 DatePicker("flight.search.date", selection: $date, displayedComponents: .date)
                     .datePickerStyle(.graphical)
                     .tint(CarryAccent.color)
-                    .fixedSize(horizontal: false, vertical: true)
+                    .frame(height: 360)
                     .padding(.horizontal)
                     .onChange(of: date) { showCalendar = false; runQuery() }
                 Spacer(minLength: 0)

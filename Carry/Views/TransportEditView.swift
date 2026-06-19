@@ -280,13 +280,24 @@ struct TransportEditView: View {
                     }
                 }
             }
+            // 常驻标签（标签左·值右，同「机型」行）——避免填了值后 placeholder 标签消失、剩裸值「HGH」「3」看不懂。
             if showsCode {
-                TextField("itinerary.transport.field.code", text: code)
-                    .autocorrectionDisabled()
-                    .textInputAutocapitalization(.characters)
+                LabeledContent {
+                    TextField("", text: code)
+                        .multilineTextAlignment(.trailing)
+                        .autocorrectionDisabled()
+                        .textInputAutocapitalization(.characters)
+                } label: {
+                    Text("itinerary.transport.field.code")
+                }
             }
             if showsTerminal {
-                TextField(terminalLabel, text: terminal)
+                LabeledContent {
+                    TextField("", text: terminal)
+                        .multilineTextAlignment(.trailing)
+                } label: {
+                    Text(terminalLabel)
+                }
             }
             // 日期 / 时间融合 chip（参考 Tripsy）：日期 chip 带行程天（点选换天）；
             // 时间 chip 可选——点开在弹出选择器里设 / 清除，未设则显示占位「时间」。
@@ -392,11 +403,22 @@ struct TransportEditView: View {
     private var moreSection: some View {
         Section {
             CostInputRow(amountText: $costAmountText, currencyCode: $costCurrencyCode)
+            // 座位 / 确认号：常驻标签（填了值如「3B」「ABC123」也看得懂；空态标签即提示）。
             if showsSeat {
-                TextField("itinerary.transport.field.seat", text: $seat)
+                LabeledContent {
+                    TextField("", text: $seat).multilineTextAlignment(.trailing)
+                } label: {
+                    Text("itinerary.transport.field.seat")
+                }
             }
-            TextField("itinerary.transport.field.confirmation", text: $confirmationCode)
-                .autocorrectionDisabled()
+            LabeledContent {
+                TextField("", text: $confirmationCode)
+                    .multilineTextAlignment(.trailing)
+                    .autocorrectionDisabled()
+            } label: {
+                Text("itinerary.transport.field.confirmation")
+            }
+            // 备注：自由文本、自解释，保留 placeholder 式（多行）。
             TextField("itinerary.transport.field.note", text: $note, axis: .vertical)
                 .lineLimit(1...4)
         } header: {

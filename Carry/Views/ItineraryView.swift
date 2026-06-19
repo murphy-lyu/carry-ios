@@ -823,12 +823,7 @@ private struct TransportTimelineRow: View {
                 }
             }
             Spacer(minLength: 8)
-            // 行内显真实付款币种（不折算）；让费用在时间轴可见，不必进编辑页才看到。spec: itinerary-cost-tracking.md
-            if segment.hasCost {
-                Text(CurrencyCatalog.format(segment.costAmount, code: segment.costCurrencyCode))
-                    .font(.system(.footnote, design: .rounded).weight(.medium))
-                    .foregroundStyle(.secondary)
-            }
+            // 时间轴只显「何时/何地」——时间已在副行（起讫站+时刻），不在此显价格（价格留详情页 + Trip Book）。
         }
         .padding(.vertical, 8)
     }
@@ -917,12 +912,11 @@ private struct LodgingBannerRow: View {
         }
     }
 
-    /// 入住日优先显费用（住宿是大额、是想沉淀的数据；精确入住时间留详情）；无费用则显入住时间。
-    /// 退房日显退房时间；过夜天显晚数。spec: itinerary-cost-tracking.md
+    /// 时间轴只显「何时」：入住日显入住时间、退房日显退房时间、过夜天显晚数。
+    /// 费用不在时间轴显示（留详情页 + Trip Book），与交通行、地点行一致。
     private var trailingText: String? {
         switch phase {
         case .checkIn:
-            if stay.hasCost { return CurrencyCatalog.format(stay.costAmount, code: stay.costCurrencyCode) }
             return stay.checkInMinutes >= 0 ? timeLabel(dayMinutes: stay.checkInMinutes) : nil
         case .checkOut:
             return stay.checkOutMinutes >= 0 ? timeLabel(dayMinutes: stay.checkOutMinutes) : nil
