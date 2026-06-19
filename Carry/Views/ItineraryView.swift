@@ -976,17 +976,17 @@ private struct LodgingBannerRow: View {
     var body: some View {
         // 去掉灰底 pill：床图标落 rail 列、文字落内容列，与停靠点同列对齐（north-star §5 网格对齐）。
         // 住宿靠「裸图标 + 浅灰文字 + 无 marker 圆」退到背景，不靠盒子——盒子的内边距会破坏对齐网格。
-        // 入住/退房日略实（secondary）、过夜中间天更淡（tertiary + regular）。
+        // 三天酒店名**统一 secondary**（保持「同一家酒店」连贯、深色下不暗到像渲染坏了）；
+        // 过夜中间天的「退后」改交给更轻的线索承担：无「入住/退房」前缀 + regular 字重 + 淡一档的床图标。
         HStack(spacing: railSpacing) {
             Image(systemName: phase == .night ? "bed.double" : "bed.double.fill")
                 .font(.system(size: 13))
-                // 染当天色（入住/退房实一档、过夜淡一档），与停靠点实心彩圆/交通描边彩圆成同色三档；
-                // 仍比停靠点轻（裸图标 vs 实心圆），不抢戏。
+                // 染当天色；过夜天图标淡一档（opacity 0.5）退后，入住/退房日满色。
                 .foregroundStyle(dayColor.opacity(phase == .night ? 0.5 : 1.0))
                 .frame(width: railWidth)
             Text(titleText)
                 .font(.system(.footnote, design: .rounded).weight(phase == .night ? .regular : .medium))
-                .foregroundStyle(phase == .night ? .tertiary : .secondary)
+                .foregroundStyle(.secondary)
                 .lineLimit(1)
             Spacer(minLength: 8)
             if let trailing = trailingText {
