@@ -241,6 +241,14 @@ Apple 原生风格，极简、克制、优雅。
 - **航班地图弧线 + 端点**：交通段起讫两端都有坐标时画**大圆弧虚线**（`MapPolyline contourStyle: .geodesic`，dash `[2,7]`，当天色）区别市内步行/驾车实线路程；两端各放轻量端点标记（白底圆 + 当天色描边 + mode 图标，18pt，比序号针轻——端点是「过路」非「停留」）。
 - **🔴 地图预览「永不为空」（替代灰盒占位）**：四档——① 当天有地点→正常路线图；② 当天空、整趟别处有地点→整趟真地图、其它天针/线淡化（marker 0.4 / line 0.3）+「这天还没安排地点」material 胶囊；③ 整趟空、目的地已解析→居中目的地真地图（复用 `TripBundle` 坐标）+「添加第一个地点」邀请；④ 兜底（整趟空且目的地未知）→ 才用原灰渐变盒。仅 ①② 可点开全屏。理由见 north-star §1/§9（Apple Maps 地图永不是灰盒）。
 
+### 交通段日期/时间「融合 chip」（2026-06-19 · spec: itinerary-flight-search-first）
+
+- **范式**：交通段编辑表单（`TransportEditView`）每个起降段的日期/时间合成**一行两个 chip**——`📅 [日期 chip] [时间 chip]`（取代旧「day Picker 行 + 时间开关行」）。chip = 圆体短标签（subheadline rounded medium）+ `tertiarySystemFill` 胶囊底；**未设值显示占位文字（secondary 色）、已设显示值（primary）**。
+- **日期 chip**：显示该段所在**行程天**（如「周一 7/20」/「Day 1」）；多天行程点它弹 `Menu` 换天，单天仅作信息展示（日期当前**锚定在天上**，「真正可选」是单独立项）。
+- **时间 chip**：可选——点开**弹出滚轮选择器 sheet**（Done 设定、编辑既有时间时出现「清除时间」回未设）。
+- **为什么不用「Toggle + 内联 DatePicker」**：iOS compact `.hourAndMinute` DatePicker 比 Toggle 高，条件性塞进开关行会**撑高行、开关一切就跳变**。融合 chip 无开关、选择器移弹出层、chip 普通行高 → 行高恒定、信息量也压缩。**通则**：表单里「可选的日期/时间」一律用 chip + 弹出选择器，不要 toggle + 内联高控件。
+- **搜索优先交互（`FlightSearchSheet`）**：渐进式单框——输航班号→识别航司→竖排日期列表（本行程的天，**点日期即触发查询**，对齐 Flighty「选择动作即触发」、不预填、不加查询按钮）→结果确认卡→点卡进预填表单；底部常驻低权重「手动输入」兜底。**通则**：搜索/查询类交互优先「选择动作本身即触发」，别预填默认值再找触发点。
+
 ### 创建流程视觉统一规范（2026-05）
 - 适用范围：
 - 一级页面：`New trip`（TripInfoView）、`Add item`（ItemPickerView）、`List preview / Packing list`（PackingListView）。

@@ -10,6 +10,23 @@
 原因：原 `notificationStatusText` 只读系统授权态 → 用户把所有档位关掉、一级行仍显 On，误导（以为还有提醒）。
 决策：授权正常 → 值**跟随档位**（≥1 档开=On、全关=Off）；denied=Off、notDetermined=未设置（权限异常仍在顶层可见）。一级与子页**共用同一 `ReminderPreferences.storageKey` 的 `@AppStorage`**，改档位即时同步。语义切分：**权限问题归页内横幅，「我的提醒开没开」归一级行值**，不再把两件事挤进一个 On/Off 里打架（横幅落地后这个切分才成立）。
 
+## 2026-06-19 添加航班：搜索优先 + 日期/时间融合 chip + Worker 安全收尾（spec: itinerary-flight-search-first.md）
+
+### 添加航班翻转为「检索优先 + 手动兜底」；「选日期 = 触发查询」（学 Flighty 之神，不抄其形）
+原因：原添加航班是一张手动表单全摊开，自动填只是埋在中间的可选加速器（主次颠倒）。Flighty/Tripsy 都是渐进式单框：输号→识别→挑日期→出结果。
+决策：新建 `FlightSearchSheet` 作第 1 段——输航班号→即时识别航司（新 `AirlineDatabase`）→展开日期→查询→结果确认卡→点卡 push 进**预填**的 `TransportEditView`（第 2 段=既有表单，不另写）；底部常驻低权重「手动输入」兜底（春秋 9C 等查不到的航班）。**触发模型对齐 Flighty：选日期这个动作本身即触发查询**——不预填一个「待触发」的默认值、不加查询按钮（预填会把天然触发点吃掉、逼出多余按钮）。Carry 反超点：日期选项用**本行程的天**（比通用今天/明天更贴场景）。**不照搬** Flighty 的航司/机场浏览（那是 flight-tracker 基因，Carry 是 trip-planner，只需「航班号→自动填」一条主路径）。
+> 走过的弯路（勿重蹈）：① 横排日期 chip——宽 chip 丑、长行程要横滚；② 单行原生 DatePicker 预填默认值——把「选日期=触发」吃掉，只能靠回车/按钮，别扭。
+
+### 交通段日期/时间用「融合 chip」（取代 toggle+内联控件）；日期暂锚定行程天
+原因：原「day Picker 行 + 时间开关行」，开关一开把比开关高的 compact `.hourAndMinute` DatePicker 塞进同一行 → 行高被撑高跳变；信息量也大（用户反馈「从上到下太满、有压力」）。
+决策：参考 Tripsy，日期/时间合成一行两个 chip（`📅 [日期 chip][时间 chip]`）：日期 chip 显示行程天（点选换天）、时间 chip 可选（未设占位、点开滚轮 sheet、可清除）。**根因解了行高跳变**（无开关、选择器移弹出层、chip 普通行高），信息量也压缩。曾用「隐形占位」是 workaround（关态虚高），已废弃。地点搜索+时间选择合并单一 `.sheet` 枚举（防多 sheet 互抑）。
+> **「日期真正可选」（不启用日期）拆为单独立项**：Carry 时间轴是**按天分组**、交通段锚定某天；Tripsy 是**扁平按时间排**。无日期交通段与按天分组正面冲突，需「未排期」区 + `day` 可空/哨兵 + schema 迁移 + 备份/复制/删天/PDF 全链路，且重叠并行租车工作 → 单独 spec + 协调后再做；本轮先交付融合 chip（日期锚定天）。
+
+### 客户端口令不进源码（gitignore Secrets.plist）+ 轮换；Worker 限流 best-effort，成本靠额度兜底
+原因：`appToken` 原硬编码在 `FlightLookupService.swift`，而 `carry-ios` 是公开仓库 → GitHub 密钥扫描器会秒扫到、易被拿去刷 Worker 烧上游额度（低-中危的「花钱被刷」，非私钥泄露——真 key 只在 Worker）。
+决策：① token 改从 **gitignore 的 `Carry/Resources/Secrets.plist`** 读（随 bundle 打包、缺失降级空），并**轮换**（Worker `APP_TOKEN` 同步换新、旧值作废）；**不改写 git 历史**（轮换后旧 token 已死、曝光无意义；改写共享 main 风险大于收益）。② Worker 加 Rate Limiting 绑定（`RATE_LIMITER` 20/60s）——但实测 Cloudflare 该限流 **best-effort/近似**（按数据中心、最终一致），50/50 短爆发全过、抓不住快爆发。结论：**成本真正兜底＝ APP_TOKEN 门槛（需反编译才得） + 上游月额度硬上限 + Worker 服务端缓存**；限流当额外一层（对持续盗刷仍有效）。要硬 enforcement 留 Durable Object 计数器后续。
+> 通则：公开仓库**绝不**硬编码任何口令/key（哪怕是低安全级客户端门槛）——用 gitignore 的本地配置注入；半公开 token 的防线应是「额度上限 + 限流」而非「保密」。
+
 ## 2026-06-19 底部交互/导航视觉：新建 sheet 化 · 动作菜单归位 · 浮动栏通透 · 对齐根因
 
 ### 新建行程：单屏流 → page sheet（不再全屏 cover）；加草稿放弃确认

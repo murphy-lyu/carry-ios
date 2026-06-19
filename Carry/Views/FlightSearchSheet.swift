@@ -83,8 +83,10 @@ struct FlightSearchSheet: View {
 
     private var numberCard: some View {
         VStack(alignment: .leading, spacing: 0) {
+            // 字体：表单输入 + placeholder 走 SF（design-system §Typography「表单与输入=SF」），
+            // 不用圆体——圆体留给展示型标题/数字短标签；输入框文字属功能声音。title3 给 hero 输入适度醒目。
             TextField("flight.search.placeholder", text: $number)
-                .font(.system(.title2, design: .rounded).weight(.semibold))
+                .font(.title3)
                 .autocorrectionDisabled()
                 .textInputAutocapitalization(.characters)
                 .focused($numberFocused)
@@ -92,7 +94,7 @@ struct FlightSearchSheet: View {
                 // 触发 = 选日期（Flighty 模型），不在回车里偷偷用默认日期查；回车只收键盘、让日期列表完整露出。
                 .onSubmit { numberFocused = false }
                 .padding(.horizontal, 16)
-                .padding(.vertical, 14)
+                .padding(.vertical, 12)
             if let recognized {
                 Divider().padding(.leading, 16)
                 Label {
@@ -192,23 +194,26 @@ struct FlightSearchSheet: View {
 
     private var calendarSheet: some View {
         NavigationStack {
-            VStack {
+            VStack(spacing: 0) {
+                // 点某天即提交：设日期→关历→查询（与「行程天」行的点选即触发一致，不要 Done）。
+                // `.fixedSize(vertical)` 钉本征高度 + 单档 detent → 选日期/翻月都不重排跳动。
                 DatePicker("flight.search.date", selection: $date, displayedComponents: .date)
                     .datePickerStyle(.graphical)
                     .tint(CarryAccent.color)
+                    .fixedSize(horizontal: false, vertical: true)
                     .padding(.horizontal)
-                Spacer()
+                    .onChange(of: date) { showCalendar = false; runQuery() }
+                Spacer(minLength: 0)
             }
             .navigationTitle("flight.search.pick_date")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .confirmationAction) {
-                    Button("common.done") { showCalendar = false; runQuery() }
-                        .fontWeight(.semibold)
-                    }
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("common.cancel") { showCalendar = false }
+                }
             }
         }
-        .presentationDetents([.medium, .large])
+        .presentationDetents([.medium])
     }
 
     // MARK: 状态区（加载 / 结果卡 / 提示）
@@ -302,6 +307,8 @@ struct FlightSearchSheet: View {
     // MARK: 底部常驻·低权重手动兜底（春秋 9C 等查不到的航班）
 
     private var manualFooter: some View {
+        // 克制版：细分隔线 + 同底色（不铺 .bar 磨砂板，对一个轻链接过重）；
+        // 两段式文案居中成一句（弱化提示 secondary + 强调动作 accent）——安静的逃生口，非工具栏。
         VStack(spacing: 0) {
             Divider()
             Button {
@@ -310,20 +317,19 @@ struct FlightSearchSheet: View {
                 numberFocused = false
                 route = .manual
             } label: {
-                HStack {
+                HStack(spacing: 5) {
                     Text("flight.search.manual_hint")
                         .foregroundStyle(.secondary)
-                    Spacer()
                     Text("flight.search.manual")
                         .foregroundStyle(CarryAccent.color)
                 }
                 .font(.footnote)
-                .padding(.horizontal, 20)
+                .frame(maxWidth: .infinity)
                 .padding(.vertical, 14)
             }
             .buttonStyle(.plain)
         }
-        .background(.bar)
+        .background(Color(.systemGroupedBackground))
     }
 
     // MARK: Logic

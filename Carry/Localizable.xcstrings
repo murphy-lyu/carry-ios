@@ -29196,55 +29196,55 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Flugnummer, z. B. MU5431"
+            "value" : "Flugnummer, z. B. MU5127"
           }
         },
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Flight number, e.g. MU5431"
+            "value" : "Flight number, e.g. MU5127"
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Número de vuelo, p. ej. MU5431"
+            "value" : "Número de vuelo, p. ej. MU5127"
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Numéro de vol, p. ex. MU5431"
+            "value" : "Numéro de vol, p. ex. MU5127"
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "便名（例：MU5431）"
+            "value" : "便名（例：MU5127）"
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "항공편 번호, 예: MU5431"
+            "value" : "항공편 번호, 예: MU5127"
           }
         },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Número do voo, ex.: MU5431"
+            "value" : "Número do voo, ex.: MU5127"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "航班号，例如 MU5431"
+            "value" : "航班号，例如 MU5127"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "航班編號，例如 MU5431"
+            "value" : "航班編號，例如 MU5127"
           }
         }
       }
