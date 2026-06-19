@@ -3,6 +3,15 @@
 ## 最后更新
 2026-06-19
 
+## 上次改动摘要（设置：通知权限可达性 + 行程提醒一级行语义校正 · 2026-06-19）
+
+> 修一个上架前的体验缺口：用户若忽略/拒绝首次通知授权，App 内再无处唤起授权或跳系统设置。**已提交 `9ec9921`、未 push**（编译绿）。`SettingsView.swift` 与「视觉打磨」会话共享，只动 `notificationStatusText` 一处自己的 hunk。
+
+- **🟢 通知权限横幅（`NotificationSettingsView`）**：根因——「行程提醒」子页只有档位开关，授权被拒时它们形同虚设、且无任何出路（对照：日历早有「denied→去设置」，通知缺、是一致性缺口）。解：顶部加**状态感知横幅**——`.denied`→深链 `openNotificationSettingsURLString`（iOS 16+ 直达本 App 通知页）+ 下方档位**置灰禁用**；`.notDetermined`→应用内直接 `requestAuthorization`（补回首次漏掉）；`.authorized`→不显示。`scenePhase` 回前台自动刷新，从系统设置改完回来横幅即消。**不做误导性「权限假开关」**（系统权限无法在 App 内真正切换）。
+- **🟢 一级行 On/Off 语义校正（`SettingsView`）**：原 `notificationStatusText` 只读系统授权态 → 用户把所有档位关掉、一级「行程提醒」仍显 On（误导）。解：授权正常时值改为**跟随档位**（≥1 档开=On、全关=Off）；denied=Off、notDetermined=未设置（权限问题仍在顶层可见）。与子页**共用** `ReminderPreferences.storageKey` 的 `@AppStorage`，改档位即时反映。
+- **文案**：新增 `settings.notifications.permission.{denied,undetermined}.{title,subtitle,button}` 6 key × 9 语言；一级行复用现有 on/off/notSet。
+- **待办**：真机验收——三态横幅（拒绝/未授权/已授权）+ 去系统设置往返横幅刷新 + 一级行随档位变化。
+
 ## 上次改动摘要（底部交互/导航视觉打磨：底栏通透·新建 sheet 化·设置对齐·App Icon 行 · 2026-06-19）
 
 > 本会话独立于并行的航班/租车会话，**只动自己的文件、逐 hunk 隔离**（避开 ItineraryView/PackingListView 等共享文件里并行的在途代码）。下面均**已提交、未 push**（commit 见括号）。
@@ -44,15 +53,17 @@
 
 ## 上次改动摘要（添加航班「搜索优先」+ 航司表 + 交通段日期/时间融合 chip · spec: itinerary-flight-search-first.md · 2026-06-19）
 
-> 把「添加航班」从手动优先翻转为**检索优先 + 手动兜底**，并把交通段编辑表单的日期/时间重做成 Tripsy 式融合 chip。**编译绿（主 app + Widget）+ 模拟器 iOS 26.5 实测通过**。**全部未提交**。与并行租车会话共享 `TransportEditView.swift`，只动了我的 hunk（航班预填接入 + 日期时间 chip + sheet 合并），未碰其租车逻辑。
+> 把「添加航班」从手动优先翻转为**检索优先 + 手动兜底**，把交通段编辑表单的日期/时间重做成 Tripsy 式融合 chip，外加一轮**安全收尾**（token 移出源码+轮换、Worker 限流）。**编译绿（主 app + Widget）+ 模拟器 iOS 26.5 实测通过 + Worker 线上验证通过**。**已提交、未 push**（`1dc5cca` 航班+chip+租车合并 / `ac84c54` token 移出源码 / `b2fa04b`·`fbdf71c` Worker 限流）。与并行租车会话共享 `TransportEditView.swift`，只动了我的 hunk，未碰其租车逻辑。
 
 - **🟢 第1段 `FlightSearchSheet`（新）**：渐进式单框——输航班号 → 即时识别航司（新 `AirlineDatabase`，实测 MU→中国东方航空）→ 竖排日期列表（本行程的天 + 「选择其他日期」日历）→ **点日期即触发查询**（对齐 Flighty，不预填、不加按钮）→ 结果确认卡 → 点卡 push 进**预填**的 `TransportEditView`。底部常驻低权重「手动输入」兜底（春秋 9C 等查不到的航班）。
 - **🟢 航司表**：`scripts/airlines/`（OpenFlights `airlines.dat` + Wikidata 多语言名，英文名也优先 Wikidata——9C 旧名 "China SSS" 已修为 "Spring Airlines/春秋航空"）→ `Carry/Resources/airlines.json`（986 航司，~225KB，已确认进 bundle）+ `AirlineDatabase`（actor）+ `FlightNumberParser`。
 - **🟢 `TransportEditView` 改造**：① 加 `prefill`/`embedInOwnNavigationStack`/`onFinish`，被 `FlightSearchSheet` push 时不自带 NavigationStack、保存经 `onFinish` 关整张 sheet；② 移除原内嵌「✨自动填」块（前移到第1段）；③ **日期/时间融合 chip**（`📅 [日期 chip][时间 chip]`）取代「day Picker 行 + 时间开关行」——日期 chip 显示行程天（点选换天）、时间 chip 可选（点开滚轮 sheet、可清除）。
 - **🔴 根因解·行高跳变**：原「时间开关一开，把比开关高的 compact DatePicker 塞进同一行 → 行被撑高」。根因＝控件硬塞进开关行；融合 chip 后无开关、选择器移弹出层、chip 普通行高 → 行高恒定（曾用的「隐形占位」是 workaround，已废弃）。地点搜索 + 时间选择合并为单一 `.sheet` 枚举（防多 sheet 互抑）。
 - **🟢 工程**：`FlightLookupService` 上游 DTO 补 `nonisolated`，根治 Swift 6「main-actor 隔离 Decodable 不能在 nonisolated 解码」报错。「+」菜单航班入口改走 `FlightSearchSheet`。埋点 `flightSearchManualFallback`（即定义即接线）。文案 `flight.search.*` + `clear_time`（9 语言齐全），删死键 `itinerary.flight.lookup.*` / `itinerary.transport.field.day`。
+- **🔐 安全收尾（token + 限流，线上已验）**：`appToken` 原硬编码在 `FlightLookupService.swift`（`carry-ios` 公开仓库会被密钥扫描）→ 改从 **gitignore 的 `Carry/Resources/Secrets.plist`** 读取（随 bundle 打包、缺失降级空、不进 git），并**轮换**（Worker `APP_TOKEN` secret 同步换新值，旧 token 作废；curl 实测新 token→200、旧 token→401）。Worker 加 **Rate Limiting 绑定**（`RATE_LIMITER`，按 IP 20/60s）。实测 Cloudflare 该限流 best-effort/近似、抓不住短爆发（50/50 全过）——成本真正兜底＝**APP_TOKEN 门槛 + 上游月额度上限 + 服务端缓存**；要硬 enforcement 留 Durable Object 后续。**未改写 git 历史**（旧 token 已作废，曝光无意义；改写共享 main 风险大）。
 - **留作单独立项**：日期「真正可选」（脱离按天分组、需「未排期」区 + schema 迁移），与按天分组架构冲突且重叠并行租车工作，单独 spec 后再做。
-- **待办**：① 真机走完整验收（搜索→预填→保存、春秋手填、融合 chip）；② 提交（按用户指示）；③ 上架前切 API.market + 给 Worker 加 `APP_TOKEN`；④ 隐私政策补「航班号发第三方查询」一句。
+- **待办**：① 真机走完整验收（搜索→预填→保存、春秋手填、融合 chip）；② **push**（本地 main 领先 origin 多个提交，含并行会话提交）；③ 上架前切 API.market 商用档（**仅改 Worker 变量、App 不动、不用重新过审**；RapidAPI 免费档非商用）。
+- **✅ 已完成（原待办收口）**：提交；APP_TOKEN（Worker secret + App 两端齐）；隐私政策「航班号发第三方查询」（carry-legal `fc6451a`，中英齐）；token 移出源码+轮换；Worker 限流绑定。
 
 ## 上次改动摘要（Settings 信息架构与一致性大修 + 我的物品自定义分类 + 多处交互根治 · 2026-06-18）
 

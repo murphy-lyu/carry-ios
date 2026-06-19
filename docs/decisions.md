@@ -1,5 +1,15 @@
 # 决策日志
 
+## 2026-06-19 设置：通知权限可达性 + 行程提醒一级行语义
+
+### 通知授权被拒/未设 → 给一条出路，但不做「权限假开关」
+原因：首次创建行程引导的授权若被忽略/拒绝，iOS 不再二次弹窗、App 内又无处唤起 → 死胡同（「行程提醒」子页档位形同虚设、却既不提示也无法跳系统设置）。对照：日历早有「denied→去设置」，通知偏偏缺，是一致性缺口。
+决策：在 `NotificationSettingsView` 顶部加**状态感知横幅**，而非加一个通知权限开关——系统权限**无法在 App 内被真正切换**，做成开关是误导。三态：`.denied`→深链 `UIApplication.openNotificationSettingsURLString`（iOS 16+，直达本 App 通知页，比通用设置页准）+ 下方档位置灰禁用；`.notDetermined`→应用内 `requestAuthorization`（补回首次漏掉）；`.authorized`→隐藏整块。`scenePhase` 回前台刷新，让横幅随真实授权态出现/消失。对齐已有日历 denied→Open Settings 模式，全 App 一致。
+
+### 一级「行程提醒」行的值 = 「实际还会不会发提醒」，不是「系统授权态」
+原因：原 `notificationStatusText` 只读系统授权态 → 用户把所有档位关掉、一级行仍显 On，误导（以为还有提醒）。
+决策：授权正常 → 值**跟随档位**（≥1 档开=On、全关=Off）；denied=Off、notDetermined=未设置（权限异常仍在顶层可见）。一级与子页**共用同一 `ReminderPreferences.storageKey` 的 `@AppStorage`**，改档位即时同步。语义切分：**权限问题归页内横幅，「我的提醒开没开」归一级行值**，不再把两件事挤进一个 On/Off 里打架（横幅落地后这个切分才成立）。
+
 ## 2026-06-19 底部交互/导航视觉：新建 sheet 化 · 动作菜单归位 · 浮动栏通透 · 对齐根因
 
 ### 新建行程：单屏流 → page sheet（不再全屏 cover）；加草稿放弃确认
