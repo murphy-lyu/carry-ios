@@ -393,6 +393,8 @@ final class FXSheetViewController: UIViewController {
         view.addSubview(hosting.view)
         hosting.didMove(toParent: self)
         barView = hosting.view
+        // 把底栏交给根视图做「不放行区」防穿透（结构性，见 FXPassthroughView.hitTest）。
+        (view as? FXPassthroughView)?.barView = hosting.view
         NSLayoutConstraint.activate([
             hosting.view.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: barSideInset),
             hosting.view.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -barSideInset),
@@ -1135,7 +1137,22 @@ private final class FXBottomFadeView: UIView {
 /// A UIView that returns nil from hitTest when no subview claims the touch,
 /// allowing gestures (e.g. MapKit pinch/pan) on views behind it to pass through.
 private final class FXPassthroughView: UIView {
+    /// 底栏（搜索/Trip Book/+）的 hosting view。它的 frame 是一个**「不放行区」**：见下 hitTest。
+    weak var barView: UIView?
+
     override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
+        // 🔒 底栏「不放行区」（**结构性防穿透，别在 SwiftUI 层补**，见 home-sheet-debug-playbook §33）：
+        // 底栏是与行程卡片同级、叠在其上的 UIKit 兄弟视图。底栏内的 SwiftUI 命中测试只认领有内容/
+        // contentShape 的区域 → 按钮间空隙/padding/玻璃边角等**透明区会放行** → 根视图继续下探撞到
+        // 背后卡片 Button → 误开行程。**根治**：凡落在底栏 frame 内的点，一律由底栏认领（命中按钮→按钮；
+        // 落空隙→底栏自身吸掉），**永不下传卡片**——与底栏 SwiftUI 内容是否透明无关，故底栏 UI 怎么改都不复发。
+        // convert 用 UIView API（自动处理底栏的缩放 transform，见 placeSheet 对 barView 施加的 transform）。
+        if let bar = barView, bar.window != nil, !bar.isHidden, bar.alpha > 0.01 {
+            let pInBar = bar.convert(point, from: self)
+            if bar.bounds.contains(pInBar) {
+                return bar.hitTest(pInBar, with: event) ?? bar
+            }
+        }
         let hit = super.hitTest(point, with: event)
         return hit === self ? nil : hit
     }

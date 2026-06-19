@@ -864,13 +864,11 @@ struct HomeView: View {
             }
         }
         .padding(.horizontal, 4)
-        // 吸收底栏区域的 tap：防止三按钮间 ~14pt 空隙的点击穿透到背后行程卡（playbook §19 取舍翻转）。
-        // 背景层在按钮之后 → 按钮照常优先吃 tap，只有落在空隙的 tap 被这层吸掉、不再下传。
-        // 代价：底栏这条区域不再能「上滑滚列表」——tap/pan 在「底栏作 UIKit 兄弟视图」架构下无法两全，
-        // 按用户要求选「不穿透」；列表照常在其自身区域滑动。
-        .background(
-            Color.clear.contentShape(Rectangle()).onTapGesture { }
-        )
+        // ⚠️ 防底栏点击穿透到背后卡片的防护**不在这里**——它是结构性地放在 UIKit 根层
+        // `CarryBottomSheetFX` 的 `FXPassthroughView.hitTest`（底栏 frame = 不放行区）。
+        // 这里**不要**再加 SwiftUI 层的 `.background(...).onTapGesture{}` 吸收补丁：那种补丁依赖
+        // 底栏内部布局恰好盖住点击区，每次改底栏 UI（间距/玻璃/背景）就被绕过 → 穿透反复复发
+        // （已踩坑 5+ 次，见 home-sheet-debug-playbook §33）。改底栏布局放心改，根层防护盖全程。
     }
 
     private var bottomBarStack: some View {
