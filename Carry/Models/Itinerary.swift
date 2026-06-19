@@ -344,6 +344,7 @@ final class TransportSegment: CostBearing {
     var fromLongitude: Double = 0
     var fromTimeZoneId: String = "" // IANA tz（"Asia/Shanghai"），跨时区正确显示用；可空
     var fromTerminal: String = ""
+    var fromAddress: String = ""    // 详细地址（地点搜索 placemark.title 回填）；机场搜索无、留空
 
     // 到达端
     var toName: String = ""
@@ -352,6 +353,7 @@ final class TransportSegment: CostBearing {
     var toLongitude: Double = 0
     var toTimeZoneId: String = ""
     var toTerminal: String = ""
+    var toAddress: String = ""
 
     // 时间（按各自当地时间存；跨天用 dayOrder 偏移，呼应 ItineraryStop.plannedStartMinutes 范式）
     var departDayOrder: Int = 0     // 出发落在第几天（0-based，对齐 ItineraryDay.sortOrder）
@@ -368,6 +370,10 @@ final class TransportSegment: CostBearing {
     /// 航程（米）+ 飞行时长（分钟）——航班号查询时取自接口（greatCircleDistance / 起降时刻差），0 = 未知。
     var distanceMeters: Double = 0
     var durationMinutes: Int = 0
+
+    /// 租车专属选填：车型（"Toyota Corolla" / "经济型 SUV"）+ 车牌；其它交通不展示，空 = 未填。
+    var vehicleModel: String = ""
+    var licensePlate: String = ""
 
     /// 时间轴排序（与同日 stop 共享整数空间）。
     var sortOrder: Int = 0
@@ -392,12 +398,14 @@ final class TransportSegment: CostBearing {
         fromLongitude: Double = 0,
         fromTimeZoneId: String = "",
         fromTerminal: String = "",
+        fromAddress: String = "",
         toName: String = "",
         toCode: String = "",
         toLatitude: Double = 0,
         toLongitude: Double = 0,
         toTimeZoneId: String = "",
         toTerminal: String = "",
+        toAddress: String = "",
         departDayOrder: Int = 0,
         departLocalMinutes: Int = -1,
         arriveDayOrder: Int = 0,
@@ -408,6 +416,8 @@ final class TransportSegment: CostBearing {
         aircraftType: String = "",
         distanceMeters: Double = 0,
         durationMinutes: Int = 0,
+        vehicleModel: String = "",
+        licensePlate: String = "",
         sortOrder: Int = 0,
         costAmount: Double = 0,
         costCurrencyCode: String = "",
@@ -423,12 +433,14 @@ final class TransportSegment: CostBearing {
         self.fromLongitude = fromLongitude
         self.fromTimeZoneId = fromTimeZoneId
         self.fromTerminal = fromTerminal
+        self.fromAddress = fromAddress
         self.toName = toName
         self.toCode = toCode
         self.toLatitude = toLatitude
         self.toLongitude = toLongitude
         self.toTimeZoneId = toTimeZoneId
         self.toTerminal = toTerminal
+        self.toAddress = toAddress
         self.departDayOrder = departDayOrder
         self.departLocalMinutes = departLocalMinutes
         self.arriveDayOrder = arriveDayOrder
@@ -439,6 +451,8 @@ final class TransportSegment: CostBearing {
         self.aircraftType = aircraftType
         self.distanceMeters = distanceMeters
         self.durationMinutes = durationMinutes
+        self.vehicleModel = vehicleModel
+        self.licensePlate = licensePlate
         self.sortOrder = sortOrder
         self.costAmount = costAmount
         self.costCurrencyCode = costCurrencyCode

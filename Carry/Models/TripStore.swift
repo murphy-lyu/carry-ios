@@ -599,14 +599,17 @@ final class TripStore: ObservableObject {
                     fromName: seg.fromName, fromCode: seg.fromCode,
                     fromLatitude: seg.fromLatitude, fromLongitude: seg.fromLongitude,
                     fromTimeZoneId: seg.fromTimeZoneId, fromTerminal: seg.fromTerminal,
+                    fromAddress: seg.fromAddress,
                     toName: seg.toName, toCode: seg.toCode,
                     toLatitude: seg.toLatitude, toLongitude: seg.toLongitude,
                     toTimeZoneId: seg.toTimeZoneId, toTerminal: seg.toTerminal,
+                    toAddress: seg.toAddress,
                     departDayOrder: seg.departDayOrder, departLocalMinutes: seg.departLocalMinutes,
                     arriveDayOrder: seg.arriveDayOrder, arriveLocalMinutes: seg.arriveLocalMinutes,
                     seat: seg.seat, confirmationCode: seg.confirmationCode,
                     note: seg.note, aircraftType: seg.aircraftType,
                     distanceMeters: seg.distanceMeters, durationMinutes: seg.durationMinutes,
+                    vehicleModel: seg.vehicleModel, licensePlate: seg.licensePlate,
                     sortOrder: seg.sortOrder,
                     costAmount: seg.costAmount, costCurrencyCode: seg.costCurrencyCode,
                     costHomeAmount: seg.costHomeAmount
@@ -1252,12 +1255,14 @@ final class TripStore: ObservableObject {
         fromLongitude: Double = 0,
         fromTimeZoneId: String = "",
         fromTerminal: String = "",
+        fromAddress: String = "",
         toName: String = "",
         toCode: String = "",
         toLatitude: Double = 0,
         toLongitude: Double = 0,
         toTimeZoneId: String = "",
         toTerminal: String = "",
+        toAddress: String = "",
         departDayOrder: Int? = nil,
         departLocalMinutes: Int = -1,
         arriveDayOrder: Int? = nil,
@@ -1267,7 +1272,9 @@ final class TripStore: ObservableObject {
         note: String = "",
         aircraftType: String = "",
         distanceMeters: Double = 0,
-        durationMinutes: Int = 0
+        durationMinutes: Int = 0,
+        vehicleModel: String = "",
+        licensePlate: String = ""
     ) -> UUID? {
         guard let trip = trips.first(where: { $0.id == tripId }),
               let day = trip.safeItineraryDays.first(where: { $0.id == dayId }) else { return nil }
@@ -1286,12 +1293,14 @@ final class TripStore: ObservableObject {
             fromLongitude: fromLongitude,
             fromTimeZoneId: fromTimeZoneId,
             fromTerminal: fromTerminal,
+            fromAddress: fromAddress,
             toName: toName,
             toCode: toCode,
             toLatitude: toLatitude,
             toLongitude: toLongitude,
             toTimeZoneId: toTimeZoneId,
             toTerminal: toTerminal,
+            toAddress: toAddress,
             departDayOrder: departDayOrder ?? day.sortOrder,
             departLocalMinutes: departLocalMinutes,
             arriveDayOrder: arriveDayOrder ?? day.sortOrder,
@@ -1302,6 +1311,8 @@ final class TripStore: ObservableObject {
             aircraftType: aircraftType,
             distanceMeters: distanceMeters,
             durationMinutes: durationMinutes,
+            vehicleModel: vehicleModel,
+            licensePlate: licensePlate,
             sortOrder: maxOrder + 1
         )
         context.insert(segment)
@@ -1325,12 +1336,14 @@ final class TripStore: ObservableObject {
         fromLongitude: Double? = nil,
         fromTimeZoneId: String? = nil,
         fromTerminal: String? = nil,
+        fromAddress: String? = nil,
         toName: String? = nil,
         toCode: String? = nil,
         toLatitude: Double? = nil,
         toLongitude: Double? = nil,
         toTimeZoneId: String? = nil,
         toTerminal: String? = nil,
+        toAddress: String? = nil,
         departDayOrder: Int? = nil,
         departLocalMinutes: Int? = nil,
         arriveDayOrder: Int? = nil,
@@ -1340,7 +1353,9 @@ final class TripStore: ObservableObject {
         note: String? = nil,
         aircraftType: String? = nil,
         distanceMeters: Double? = nil,
-        durationMinutes: Int? = nil
+        durationMinutes: Int? = nil,
+        vehicleModel: String? = nil,
+        licensePlate: String? = nil
     ) {
         guard let trip = trips.first(where: { $0.id == tripId }),
               let seg = trip.safeItineraryDays.flatMap({ $0.segments ?? [] }).first(where: { $0.id == segmentId }) else { return }
@@ -1353,12 +1368,14 @@ final class TripStore: ObservableObject {
         if let fromLongitude { seg.fromLongitude = fromLongitude }
         if let fromTimeZoneId { seg.fromTimeZoneId = fromTimeZoneId }
         if let fromTerminal { seg.fromTerminal = fromTerminal }
+        if let fromAddress { seg.fromAddress = fromAddress }
         if let toName { seg.toName = toName }
         if let toCode { seg.toCode = toCode }
         if let toLatitude { seg.toLatitude = toLatitude }
         if let toLongitude { seg.toLongitude = toLongitude }
         if let toTimeZoneId { seg.toTimeZoneId = toTimeZoneId }
         if let toTerminal { seg.toTerminal = toTerminal }
+        if let toAddress { seg.toAddress = toAddress }
         if let departDayOrder { seg.departDayOrder = departDayOrder }
         if let departLocalMinutes { seg.departLocalMinutes = departLocalMinutes }
         if let arriveDayOrder { seg.arriveDayOrder = arriveDayOrder }
@@ -1369,6 +1386,8 @@ final class TripStore: ObservableObject {
         if let aircraftType { seg.aircraftType = aircraftType }
         if let distanceMeters { seg.distanceMeters = distanceMeters }
         if let durationMinutes { seg.durationMinutes = durationMinutes }
+        if let vehicleModel { seg.vehicleModel = vehicleModel }
+        if let licensePlate { seg.licensePlate = licensePlate }
         save()
     }
 

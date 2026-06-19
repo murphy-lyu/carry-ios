@@ -103,15 +103,16 @@ struct LodgingDetailView: View {
                                      labelKey: stay.nights == 1 ? "itinerary.lodging.field.nights.one" : "itinerary.lodging.field.nights",
                                      value: "\(stay.nights)")),
         ]
-        if stay.hasCost {
-            rows.append(AnyView(LabeledDetailRow(icon: "creditcard", labelKey: "cost.field.label",
-                                                 value: CurrencyCatalog.format(stay.costAmount, code: stay.costCurrencyCode))))
+        // 先地址（找到酒店要用的定位）→ 再确认号（前台入住要出示的凭据）→ 最后才是费用。费用属财务、置于体验性信息之后。
+        if stay.hasCoordinate && !stay.address.isEmpty {
+            rows.append(AnyView(CopyableDetailRow(icon: "mappin.and.ellipse", labelKey: "itinerary.lodging.field.address", value: stay.address)))
         }
         if !stay.confirmationCode.isEmpty {
             rows.append(AnyView(CopyableDetailRow(icon: "ticket", labelKey: "itinerary.transport.field.confirmation", value: stay.confirmationCode)))
         }
-        if stay.hasCoordinate && !stay.address.isEmpty {
-            rows.append(AnyView(CopyableDetailRow(icon: "mappin.and.ellipse", labelKey: "itinerary.lodging.field.address", value: stay.address)))
+        if stay.hasCost {
+            rows.append(AnyView(LabeledDetailRow(icon: "creditcard", labelKey: "cost.field.label",
+                                                 value: CurrencyCatalog.format(stay.costAmount, code: stay.costCurrencyCode))))
         }
         if !stay.note.isEmpty {
             rows.append(AnyView(NoteDetailRow(text: stay.note)))

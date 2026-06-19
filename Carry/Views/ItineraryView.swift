@@ -39,7 +39,7 @@ private enum ItinerarySheet: Identifiable {
     case optimize(dayId: UUID)
     case searchFlight(dayId: UUID)
     case addTransport(dayId: UUID, mode: TransportMode)
-    case transportDetail(TransportSegment)
+    case transportDetail(TransportSegment, focus: TransportDetailFocus)
     case editTransport(UUID)
     case addLodging(checkInDayOrder: Int)
     case lodgingDetail(LodgingStay)
@@ -54,7 +54,7 @@ private enum ItinerarySheet: Identifiable {
         case .optimize(let dayId): return "opt-\(dayId)"
         case .searchFlight(let dayId): return "searchfl-\(dayId)"
         case .addTransport(let dayId, let mode): return "addtr-\(dayId)-\(mode.rawValue)"
-        case .transportDetail(let seg): return "trdetail-\(seg.id)"
+        case .transportDetail(let seg, let focus): return "trdetail-\(seg.id)-\(focus.idToken)"
         case .editTransport(let id): return "edittr-\(id)"
         case .addLodging(let order): return "addlg-\(order)"
         case .lodgingDetail(let stay): return "lgdetail-\(stay.id)"
@@ -158,11 +158,13 @@ struct ItineraryView: View {
                 FlightSearchSheet(tripId: tripId, dayId: dayId)
             case .addTransport(let dayId, let mode):
                 TransportEditView(tripId: tripId, dayId: dayId, initialMode: mode)
-            case .transportDetail(let seg):
+            case .transportDetail(let seg, let focus):
                 TransportDetailView(
                     tripId: tripId,
                     segment: seg,
-                    dayColor: ItineraryDayPalette.color(forDayIndex: seg.departDayOrder)
+                    focus: focus,
+                    navApps: navApps,
+                    dayColor: ItineraryDayPalette.color(forDayIndex: focus == .dropoff ? seg.arriveDayOrder : seg.departDayOrder)
                 )
             case .editTransport(let id):
                 TransportEditView(tripId: tripId, segmentId: id)
@@ -397,47 +399,57 @@ struct ItineraryView: View {
     /// 交通段，按 day.timeline 的共享 sortOrder）。leg / addStop / optimize 由 collection 自行插入/追加。
     private var daySections: [ItineraryDaySection] {
         let stays = bundle?.safeLodgingStays ?? []
-        // 全行程的租车段（边）：用于把「还车」事件注入到还车日（可能不是出发日）。spec: itinerary-car-rental.md。
-        let carRentals = days.flatMap { $0.sortedSegments }.filter { $0.mode == .carRental }
         return days.map { day in
             // 覆盖本天的住宿常驻条（含**退房日** = checkIn+nights，用于显「退房」事件）。
             // 行 ID 带 day 维度，避免同一 stay 跨天在快照里重复（item 标识须全局唯一）。
             let lodgingRows: [ItineraryRowID] = stays
                 .filter { $0.checkInDayOrder <= day.sortOrder && day.sortOrder <= $0.checkOutDayOrder }
                 .map { .lodging(stay: $0.id, day: day.sortOrder) }
-            // 时间轴行：停靠点照旧；**租车段解释成「取车」事件**（仍落在 timeline 给它定的取车时间位）。
-            // 同时算出每行的「有效时间」（carry-forward：未设时间继承前一处），供下面把「还车」按时间插入。
-            var timed: [(row: ItineraryRowID, minutes: Int)] = []
-            var carry = -1
-            for item in day.timeline {
-                let own = item.effectiveMinutes
-                if own >= 0 { carry = own }
-                let eff = own >= 0 ? own : carry
-                switch item {
-                case .stop(let s): timed.append((.stop(s.id), eff))
-                case .transport(let t):
-                    timed.append(t.mode == .carRental
-                        ? (.carRental(segment: t.id, day: day.sortOrder, pickup: true), eff)
-                        : (.transport(t.id), eff))
-                }
-            }
-            // 注入「还车」事件：本天 == 某租车段的还车日。按还车时间插到第一个更晚的项之前（无时间→末尾）。
-            for seg in carRentals where seg.arriveDayOrder == day.sortOrder {
-                let m = seg.arriveLocalMinutes
-                var idx = timed.count
-                if m >= 0, let found = timed.firstIndex(where: { $0.minutes >= 0 && $0.minutes > m }) { idx = found }
-                timed.insert((.carRental(segment: seg.id, day: day.sortOrder, pickup: false), m), at: idx)
-            }
-            let timelineRows: [ItineraryRowID] = timed.map(\.row)
             // 日历事件叠加行：成簇置于当天顶部（住宿条之后、行程之前），全天在前、定时按时间。
             // v1 不与定时停靠点逐条交错（避免重走 timeline 的 carry-forward 时间合并、保持简单）。
             let overlayRows: [ItineraryRowID] = (overlayEventsByDay[day.sortOrder] ?? [])
                 .map { .calendarEvent(id: $0.id, day: day.sortOrder) }
             return ItineraryDaySection(
                 id: day.id,
-                entries: lodgingRows + overlayRows + timelineRows
+                entries: lodgingRows + overlayRows + timelineRowIDs(for: day)
             )
         }
+    }
+
+    /// 当天「在主脊上」的行序列（停靠点 + 交通段，按 day.timeline 共享 sortOrder/时间）。
+    /// **租车段拆成两条事件**：取车落在 timeline 给的取车时间位；还车按还车时间注入本天（其还车日可能 ≠ 出发日）。
+    /// 是 daySections 的时间轴部分，也供首/末端点判定（连续脊的两端清线）。spec: itinerary-car-rental.md。
+    private func timelineRowIDs(for day: ItineraryDay) -> [ItineraryRowID] {
+        let carRentals = days.flatMap { $0.sortedSegments }.filter { $0.mode == .carRental }
+        var timed: [(row: ItineraryRowID, minutes: Int)] = []
+        var carry = -1
+        for item in day.timeline {
+            let own = item.effectiveMinutes
+            if own >= 0 { carry = own }
+            let eff = own >= 0 ? own : carry
+            switch item {
+            case .stop(let s): timed.append((.stop(s.id), eff))
+            case .transport(let t):
+                timed.append(t.mode == .carRental
+                    ? (.carRental(segment: t.id, day: day.sortOrder, pickup: true), eff)
+                    : (.transport(t.id), eff))
+            }
+        }
+        for seg in carRentals where seg.arriveDayOrder == day.sortOrder {
+            let m = seg.arriveLocalMinutes
+            var idx = timed.count
+            if m >= 0, let found = timed.firstIndex(where: { $0.minutes >= 0 && $0.minutes > m }) { idx = found }
+            timed.insert((.carRental(segment: seg.id, day: day.sortOrder, pickup: false), m), at: idx)
+        }
+        return timed.map(\.row)
+    }
+
+    /// 主脊连续性：脊上首项不画上半线、末项不画下半线（中间各项两端皆画 → 与相邻行无缝相接）。
+    private func isFirstOnRail(_ rowID: ItineraryRowID, in day: ItineraryDay) -> Bool {
+        timelineRowIDs(for: day).first == rowID
+    }
+    private func isLastOnRail(_ rowID: ItineraryRowID, in day: ItineraryDay) -> Bool {
+        timelineRowIDs(for: day).last == rowID
     }
 
     // MARK: 行内容（由 collection 闭包承载）
@@ -453,8 +465,8 @@ struct ItineraryView: View {
             } else {
             TimelineStopRow(
                 stop: stop,
-                index: index,
-                isLast: index == dayStops.count - 1,
+                showTopLine: !isFirstOnRail(.stop(stopID), in: day),
+                showBottomLine: !isLastOnRail(.stop(stopID), in: day),
                 dayColor: ItineraryDayPalette.color(forDayIndex: day.sortOrder)
             )
             .padding(.horizontal, 16)
@@ -508,10 +520,15 @@ struct ItineraryView: View {
     private func transportRow(_ segmentID: UUID) -> some View {
         if let day = days.first(where: { ($0.segments ?? []).contains { $0.id == segmentID } }),
            let seg = day.sortedSegments.first(where: { $0.id == segmentID }) {
-            TransportTimelineRow(segment: seg, dayColor: ItineraryDayPalette.color(forDayIndex: day.sortOrder))
+            TransportTimelineRow(
+                segment: seg,
+                dayColor: ItineraryDayPalette.color(forDayIndex: day.sortOrder),
+                showTopLine: !isFirstOnRail(.transport(segmentID), in: day),
+                showBottomLine: !isLastOnRail(.transport(segmentID), in: day)
+            )
                 .padding(.horizontal, 16)
                 .contentShape(Rectangle())
-                .onTapGesture { activeSheet = .transportDetail(seg) }
+                .onTapGesture { activeSheet = .transportDetail(seg, focus: .full) }
         }
     }
 
@@ -519,12 +536,19 @@ struct ItineraryView: View {
     /// spec: itinerary-car-rental.md（增补：租车两事件）。
     @ViewBuilder
     private func carRentalRow(_ segID: UUID, _ dayOrder: Int, _ pickup: Bool) -> some View {
-        if let seg = days.flatMap({ $0.sortedSegments }).first(where: { $0.id == segID }) {
-            CarRentalEventRow(segment: seg, pickup: pickup,
-                              dayColor: ItineraryDayPalette.color(forDayIndex: dayOrder))
+        if let seg = days.flatMap({ $0.sortedSegments }).first(where: { $0.id == segID }),
+           let day = days.first(where: { $0.sortOrder == dayOrder }) {
+            let rowID = ItineraryRowID.carRental(segment: segID, day: dayOrder, pickup: pickup)
+            CarRentalEventRow(
+                segment: seg, pickup: pickup,
+                dayColor: ItineraryDayPalette.color(forDayIndex: dayOrder),
+                showTopLine: !isFirstOnRail(rowID, in: day),
+                showBottomLine: !isLastOnRail(rowID, in: day)
+            )
                 .padding(.horizontal, 16)
                 .contentShape(Rectangle())
-                .onTapGesture { activeSheet = .transportDetail(seg) }
+                // 取车 / 还车点开各自聚焦那一端（地址 + 导航），不再两端都铺。
+                .onTapGesture { activeSheet = .transportDetail(seg, focus: pickup ? .pickup : .dropoff) }
         }
     }
 
@@ -819,61 +843,95 @@ private struct ItineraryLegConnector: View {
     }
 }
 
-// MARK: - TransportTimelineRow
+// MARK: - TimelineRail
 
-/// 交通段（边）行：rail 列放 mode 图标（当天色描边圆），详情列放班次 + 起讫站/时间。
-/// 与 TimelineStopRow 的两列网格（rail 宽 30 + spacing 12）对齐，读成同一条时间轴。
-private struct TransportTimelineRow: View {
-    let segment: TransportSegment
+/// 时间轴主脊的 rail 列：地点 / 交通 / 租车行共用，保证连线几何完全一致、无缝相接成一条连续竖脊。
+/// 固定行高 46、圆点 28、上下半线各 9pt；首项清上半线、末项清下半线，使整条脊连续而两端干净。
+/// 与相邻 `ItineraryLegConnector`（地点间距离段）的竖线首尾相接。
+private struct TimelineRail: View {
+    let icon: String
     let dayColor: Color
+    let showTopLine: Bool
+    let showBottomLine: Bool
 
-    private let railWidth: CGFloat = 30
-    private let railSpacing: CGFloat = 12
+    static let width: CGFloat = 30
+    static let spacing: CGFloat = 12
+    static let rowHeight: CGFloat = 46
+    private let circleSize: CGFloat = 28
+    private var halfLine: CGFloat { (Self.rowHeight - circleSize) / 2 }
+    private var railColor: Color { dayColor.opacity(0.25) }
 
     var body: some View {
-        HStack(spacing: railSpacing) {
-            // marker 与停靠点**完全同款**实心彩圆（systemBackground 垫底压住 rail 竖线 + dayColor 轻染 + 图标，
-            // 28pt + 13pt 图标，与 TimelineStopRow 一致）。类型靠图标(plane vs pin)+内容区分，尺寸统一更整齐。
+        VStack(spacing: 0) {
+            Rectangle().fill(showTopLine ? railColor : Color.clear).frame(width: 1.5, height: halfLine)
             ZStack {
-                Circle().fill(Color(uiColor: .systemBackground))
+                Circle().fill(Color(uiColor: .systemBackground))   // 垫底压住穿过的竖线
                 Circle().fill(dayColor.opacity(0.15))
-                Image(systemName: segment.mode.symbolName)
+                Image(systemName: icon)
                     .font(.system(size: 13, weight: .semibold))
                     .foregroundStyle(dayColor)
             }
-            .frame(width: 28, height: 28)
-            .frame(width: railWidth)
+            .frame(width: circleSize, height: circleSize)
+            Rectangle().fill(showBottomLine ? railColor : Color.clear).frame(width: 1.5, height: halfLine)
+        }
+        .frame(width: Self.width)
+    }
+}
 
+// MARK: - TransportTimelineRow
+
+/// 交通段（边）行：rail 列放 mode 图标，详情列放班次 + 起讫站/时间。航班/火车是「边」（一段移动、两端两时刻），
+/// 用内联 `A 8:00 → B 10:15` route 表达——不右对齐单一时间。与地点行共用 TimelineRail，主脊连续穿过；
+/// 交通段本身即连接，不显距离 leg。spec: itinerary-car-rental.md（增补：时间轴统一）。
+private struct TransportTimelineRow: View {
+    let segment: TransportSegment
+    let dayColor: Color
+    var showTopLine: Bool = true
+    var showBottomLine: Bool = true
+
+    var body: some View {
+        HStack(alignment: .center, spacing: TimelineRail.spacing) {
+            TimelineRail(icon: segment.mode.symbolName, dayColor: dayColor,
+                         showTopLine: showTopLine, showBottomLine: showBottomLine)
             VStack(alignment: .leading, spacing: 2) {
-                // 主行：班次（航司 · 班次号）；都空则退化用 mode 名。
-                Text(titleText)
-                    .font(.system(.subheadline, design: .rounded).weight(.semibold))
-                    .foregroundStyle(.primary)
-                // 次行：起讫站（+ 时间）。
+                // 主行：航班号/车次领衔（旅客主要认它），承运方降浅色次要；都空退化 mode 名。
+                // 字体/字重逐段在 titleView 内设定（航班号 semibold、承运方 regular），故此处不再统一 .font。
+                titleView
+                    .lineLimit(1)
+                // 次行：起讫站 + 航站楼 + 时间，内联 route。
                 if let route = routeText {
                     Text(route)
                         .font(.system(.footnote, design: .rounded))
                         .foregroundStyle(.secondary)
+                        .lineLimit(1)
                 }
             }
-            Spacer(minLength: 8)
-            // 时间轴只显「何时/何地」——时间已在副行（起讫站+时刻），不在此显价格（价格留详情页 + Trip Book）。
+            .frame(maxWidth: .infinity, alignment: .leading)
         }
-        .padding(.vertical, 8)
+        .frame(height: TimelineRail.rowHeight)
     }
 
-    private var titleText: String {
-        let parts = [segment.carrier, segment.number].filter { !$0.isEmpty }
-        if parts.isEmpty {
-            return NSLocalizedString(segment.mode.localizationKey, comment: "")
+    /// 主行：航班号/车次领衔（旅客主要认它），承运方降浅色次要；无班次号（租车）只显公司，都空退化 mode 名。
+    private var titleView: Text {
+        let baseFont = Font.system(.subheadline, design: .rounded)
+        let number = segment.number.trimmingCharacters(in: .whitespaces)
+        let carrier = segment.carrier.trimmingCharacters(in: .whitespaces)
+        if number.isEmpty {
+            let main = carrier.isEmpty ? NSLocalizedString(segment.mode.localizationKey, comment: "") : carrier
+            return Text(main).font(baseFont.weight(.semibold)).foregroundStyle(.primary)
         }
-        return parts.joined(separator: " · ")
+        // 航班号 semibold/primary 作锚；承运方 regular/secondary 退后 → 一行两级清晰层次。
+        let lead = Text(number).font(baseFont.weight(.semibold)).foregroundStyle(.primary)
+        return carrier.isEmpty ? lead
+            : lead + Text(" · \(carrier)").font(baseFont.weight(.regular)).foregroundStyle(.secondary)
     }
 
-    /// 「KMG 09:00 → PEK 12:30」，缺项自适应；跨天到达加「+N」。
+    /// 「SHA T2 8:00 → PEK T3 10:15」，缺项自适应；航站楼紧跟代码（同属「在哪」），跨天到达加「+N」。
     private var routeText: String? {
-        let from = endpointLabel(name: segment.fromName, code: segment.fromCode, minutes: segment.departLocalMinutes, dayOffset: 0)
-        let to = endpointLabel(name: segment.toName, code: segment.toCode, minutes: segment.arriveLocalMinutes,
+        let from = endpointLabel(name: segment.fromName, code: segment.fromCode, terminal: segment.fromTerminal,
+                                 minutes: segment.departLocalMinutes, dayOffset: 0)
+        let to = endpointLabel(name: segment.toName, code: segment.toCode, terminal: segment.toTerminal,
+                               minutes: segment.arriveLocalMinutes,
                                dayOffset: segment.arriveDayOrder - segment.departDayOrder)
         let f = from.trimmingCharacters(in: .whitespaces)
         let t = to.trimmingCharacters(in: .whitespaces)
@@ -881,55 +939,72 @@ private struct TransportTimelineRow: View {
         return "\(f) → \(t)"
     }
 
-    private func endpointLabel(name: String, code: String, minutes: Int, dayOffset: Int) -> String {
+    /// 端点文字：机场代码/站名 + 航站楼（紧跟、同属「在哪」）+ 时间（+N 跨天）。
+    private func endpointLabel(name: String, code: String, terminal: String, minutes: Int, dayOffset: Int) -> String {
         let place = !code.isEmpty ? code : name
-        var s = place
+        var parts: [String] = []
+        if !place.isEmpty { parts.append(place) }
+        let term = terminalDisplay(terminal)
+        if !term.isEmpty { parts.append(term) }
         if minutes >= 0 {
-            let time = timeLabel(dayMinutes: minutes)
-            s = place.isEmpty ? time : "\(place) \(time)"
-            if dayOffset > 0 { s += " +\(dayOffset)" }
+            var t = timeLabel(dayMinutes: minutes)
+            if dayOffset > 0 { t += " +\(dayOffset)" }
+            parts.append(t)
         }
-        return s
+        return parts.joined(separator: " ")
+    }
+
+    /// 航站楼显示：仅航班、数字开头加「T」（2→T2）；火车站台等字母开头原样。与详情卡 terminalDisplay 同款。
+    private func terminalDisplay(_ raw: String) -> String {
+        let t = raw.trimmingCharacters(in: .whitespaces)
+        guard segment.mode == .flight, let first = t.first, first.isNumber else { return t }
+        return NSLocalizedString("itinerary.transport.field.terminal_prefix", comment: "") + t
     }
 }
 
 // MARK: - CarRentalEventRow
 
-/// 租车事件行（取车 / 还车）：与住宿「入住/退房」同构——主行「取车/还车 · 公司」、次行「地点 · 时间」。
-/// 同一租车段在取车日、还车日各渲染一条，各显自己那端的地点与时间（不再用「+N」角标跨天表示）。
+/// 租车事件行（取车 / 还车）：租车是「点」（某地某时刻的动作，单一时间）→ 与地点行同构：
+/// 主行「取车/还车 · 公司」+ **时间右对齐**；次行只放地点（不再把时间塞进副行）。
+/// 同一租车段在取车日、还车日各渲染一条，各显本端地点与时间；与地点行共用 TimelineRail，主脊连续穿过。
+/// spec: itinerary-car-rental.md（增补：时间轴统一）。
 private struct CarRentalEventRow: View {
     let segment: TransportSegment
     let pickup: Bool
     let dayColor: Color
-
-    private let railWidth: CGFloat = 30
-    private let railSpacing: CGFloat = 12
+    var showTopLine: Bool = true
+    var showBottomLine: Bool = true
 
     var body: some View {
-        HStack(spacing: railSpacing) {
-            ZStack {
-                Circle().fill(Color(uiColor: .systemBackground))
-                Circle().fill(dayColor.opacity(0.15))
-                Image(systemName: segment.mode.symbolName)   // car.fill
-                    .font(.system(size: 13, weight: .semibold))
-                    .foregroundStyle(dayColor)
-            }
-            .frame(width: 28, height: 28)
-            .frame(width: railWidth)
-
+        HStack(alignment: .center, spacing: TimelineRail.spacing) {
+            TimelineRail(icon: segment.mode.symbolName, dayColor: dayColor,
+                         showTopLine: showTopLine, showBottomLine: showBottomLine)
             VStack(alignment: .leading, spacing: 2) {
-                Text(titleText)
-                    .font(.system(.subheadline, design: .rounded).weight(.semibold))
-                    .foregroundStyle(.primary)
-                if let sub = subtitleText {
-                    Text(sub)
-                        .font(.system(.footnote, design: .rounded))
+                // 主行：动作 + 公司（左）——— 时间（右对齐），与地点行「名称 ——— 时间」一致。
+                HStack(alignment: .center, spacing: 6) {
+                    Text(titleText)
+                        .font(.system(.subheadline, design: .rounded).weight(.semibold))
+                        .foregroundStyle(.primary)
+                        .lineLimit(1)
+                    if let t = timeText {
+                        Spacer(minLength: 6)
+                        Text(t)
+                            .font(.system(.caption, design: .rounded).weight(.medium))
+                            .foregroundStyle(.secondary)
+                            .fixedSize()
+                    }
+                }
+                // 次行：地点（取/还车本端）。
+                if let loc = locationText {
+                    Text(loc)
+                        .font(.system(.caption, design: .rounded))
                         .foregroundStyle(.secondary)
+                        .lineLimit(1)
                 }
             }
-            Spacer(minLength: 8)
+            .frame(maxWidth: .infinity, alignment: .leading)
         }
-        .padding(.vertical, 8)
+        .frame(height: TimelineRail.rowHeight)
     }
 
     /// 「取车」/「还车」——复用编辑表单同款 key（取车 / 还车）。
@@ -943,14 +1018,16 @@ private struct CarRentalEventRow: View {
         return company.isEmpty ? actionLabel : "\(actionLabel) · \(company)"
     }
 
-    /// 次行：「地点 · 时间」（各取本端）。两者皆空则不显。
-    private var subtitleText: String? {
-        let name = (pickup ? segment.fromName : segment.toName).trimmingCharacters(in: .whitespaces)
+    /// 右对齐时间（本端：取车=出发时刻 / 还车=到达时刻）。未设则不显。
+    private var timeText: String? {
         let minutes = pickup ? segment.departLocalMinutes : segment.arriveLocalMinutes
-        var parts: [String] = []
-        if !name.isEmpty { parts.append(name) }
-        if minutes >= 0 { parts.append(timeLabel(dayMinutes: minutes)) }
-        return parts.isEmpty ? nil : parts.joined(separator: " · ")
+        return minutes >= 0 ? timeLabel(dayMinutes: minutes) : nil
+    }
+
+    /// 次行地点（本端）。空则不显。
+    private var locationText: String? {
+        let name = (pickup ? segment.fromName : segment.toName).trimmingCharacters(in: .whitespaces)
+        return name.isEmpty ? nil : name
     }
 }
 
@@ -990,9 +1067,11 @@ private struct LodgingBannerRow: View {
                 .lineLimit(1)
             Spacer(minLength: 8)
             if let trailing = trailingText {
+                // 入住/退房日的「时间」与地点/交通的时间字段统一用 secondary（同为「何时」、一列同色）；
+                // 过夜中间天显示的是「N 晚」（计数、非时间），随中间条退作背景，保持 tertiary。
                 Text(trailing)
                     .font(.system(.caption, design: .rounded))
-                    .foregroundStyle(.tertiary)
+                    .foregroundStyle(phase == .night ? .tertiary : .secondary)
             }
         }
         .padding(.vertical, 7)
@@ -1061,30 +1140,22 @@ private struct CalendarEventRow: View {
 /// 独立的 `ItineraryLegConnector` 行夹在相邻停靠点之间（本行只含主行 + 可选备注）。
 private struct TimelineStopRow: View {
     let stop: ItineraryStop
-    let index: Int
-    let isLast: Bool
+    /// 是否画上/下半连线（脊上首项清上半、末项清下半，使整条脊连续而两端干净）。
+    var showTopLine: Bool = true
+    var showBottomLine: Bool = true
     /// 当天配色（与地图针 / 路线同色，便于图文互相对照）。
     let dayColor: Color
-
-    private var railColor: Color { dayColor.opacity(0.25) }
-    private let railWidth: CGFloat = 30
-    private let circleSize: CGFloat = 28
-    private let railSpacing: CGFloat = 12
-    /// 固定行高——rail 连线由此完全确定，全程无 `maxHeight: .infinity` 贪婪 frame，
-    /// 故自适应 cell 不会被撑高、各行（含首/末行）几何严格一致。
-    private let rowHeight: CGFloat = 46
-    /// 圆点上/下连线的固定半段长度（圆点在固定行高里垂直居中），与相邻 `ItineraryLegConnector` 首尾相接。
-    private var halfLine: CGFloat { (rowHeight - circleSize) / 2 }
 
     var body: some View {
         // cell 只含主行（名称/时间/地址）。备注【不在列表展示】——两行备注会让行高参差、破坏列表工整；
         // 列表只承载「这趟有哪些站、几点、在哪」，备注是详情级信息（点行 → 只读详情可看完整备注，含折叠长文）。
         // 段间连接段由独立的 ItineraryLegConnector 行承载；rail 圆点与内容同在固定行高正中、自然对齐。
-        HStack(alignment: .center, spacing: railSpacing) {
-            rail
+        HStack(alignment: .center, spacing: TimelineRail.spacing) {
+            TimelineRail(icon: stop.category.symbolName, dayColor: dayColor,
+                         showTopLine: showTopLine, showBottomLine: showBottomLine)
             content
         }
-        .frame(height: rowHeight)
+        .frame(height: TimelineRail.rowHeight)
     }
 
     /// 时间标签：设了结束时间（stayMinutes>0）显示「开始–结束」，否则只显示开始。
@@ -1092,30 +1163,6 @@ private struct TimelineStopRow: View {
         let start = timeLabel(dayMinutes: stop.plannedStartMinutes)
         guard stop.stayMinutes > 0 else { return start }
         return "\(start)–\(timeLabel(dayMinutes: stop.plannedStartMinutes + stop.stayMinutes))"
-    }
-
-    /// 固定高度的 rail：上半连线（首点透明）+ 序号圆点 + 下半连线（末点透明）。
-    /// 全部固定尺寸、无贪婪 frame——圆点恒在行高正中，相邻两圆点间连线对称、距离标签自然居中。
-    private var rail: some View {
-        VStack(spacing: 0) {
-            Rectangle()
-                .fill(index == 0 ? Color.clear : railColor)
-                .frame(width: 1.5, height: halfLine)
-            ZStack {
-                Circle().fill(Color(uiColor: .systemBackground))
-                Circle().fill(dayColor.opacity(0.15))
-                // 类别图标取代序号：时间轴顺序由位置天然表达，图标更利于扫读「这是什么」。
-                // 地图针仍用序号（地理散布、顺序不直观），分工见 decisions/progress。
-                Image(systemName: stop.category.symbolName)
-                    .font(.system(size: 13, weight: .semibold))
-                    .foregroundStyle(dayColor)
-            }
-            .frame(width: circleSize, height: circleSize)
-            Rectangle()
-                .fill(isLast ? Color.clear : railColor)
-                .frame(width: 1.5, height: halfLine)
-        }
-        .frame(width: railWidth)
     }
 
     private var content: some View {

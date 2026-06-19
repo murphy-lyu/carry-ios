@@ -15,10 +15,15 @@ struct DetailSheetHeader: View {
     let iconSystemName: String
     let iconTint: Color
     let title: String
+    /// 可选副标题：承载"这张卡是哪个事件"的语境（如租车「取车 / 还车」），与时间轴行一致；
+    /// 移到标题层后，卡片内容只留实质信息（地址/时间），更易读。
+    var subtitle: String? = nil
     let onDelete: () -> Void
     let onClose: () -> Void
 
     @State private var confirmingDelete = false
+
+    private var hasSubtitle: Bool { !(subtitle?.isEmpty ?? true) }
 
     var body: some View {
         HStack(alignment: .top, spacing: 12) {
@@ -30,11 +35,18 @@ struct DetailSheetHeader: View {
             }
             .frame(width: 40, height: 40)
             .accessibilityHidden(true)
-            Text(title)
-                .font(.system(.title3, design: .rounded).weight(.semibold))
-                .foregroundStyle(.primary)
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .padding(.top, 6)
+            VStack(alignment: .leading, spacing: 2) {
+                Text(title)
+                    .font(.system(.title3, design: .rounded).weight(.semibold))
+                    .foregroundStyle(.primary)
+                if let subtitle, hasSubtitle {
+                    Text(subtitle)
+                        .font(.system(.subheadline, design: .rounded))
+                        .foregroundStyle(.secondary)
+                }
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.top, hasSubtitle ? 2 : 6)
             Menu {
                 Button(role: .destructive) { confirmingDelete = true } label: {
                     Label("common.remove", systemImage: "trash")

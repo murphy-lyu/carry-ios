@@ -40,6 +40,7 @@ struct TransportEditView: View {
     @State private var fromName = ""
     @State private var fromCode = ""
     @State private var fromTerminal = ""
+    @State private var fromAddress = ""
     @State private var fromLatitude: Double = 0
     @State private var fromLongitude: Double = 0
     @State private var fromTimeZoneId = ""
@@ -47,6 +48,7 @@ struct TransportEditView: View {
     @State private var toName = ""
     @State private var toCode = ""
     @State private var toTerminal = ""
+    @State private var toAddress = ""
     @State private var toLatitude: Double = 0
     @State private var toLongitude: Double = 0
     @State private var toTimeZoneId = ""
@@ -68,6 +70,8 @@ struct TransportEditView: View {
     @State private var aircraftType = ""
     @State private var distanceMeters: Double = 0
     @State private var durationMinutes: Int = 0
+    @State private var vehicleModel = ""    // 租车专属
+    @State private var licensePlate = ""    // 租车专属
     @State private var costAmountText = ""
     @State private var costCurrencyCode = ""
 
@@ -143,11 +147,11 @@ struct TransportEditView: View {
                             placeholderKey: "itinerary.transport.search.placeholder",
                             biasLatitude: bundle?.latitude ?? 0,
                             biasLongitude: bundle?.longitude ?? 0
-                        ) { name, lat, lon, _ in
+                        ) { name, lat, lon, address in
                             if isFrom {
-                                fromName = name; fromLatitude = lat; fromLongitude = lon
+                                fromName = name; fromLatitude = lat; fromLongitude = lon; fromAddress = address
                             } else {
-                                toName = name; toLatitude = lat; toLongitude = lon
+                                toName = name; toLatitude = lat; toLongitude = lon; toAddress = address
                             }
                         }
                     }
@@ -316,6 +320,9 @@ struct TransportEditView: View {
             Image(systemName: "calendar")
                 .font(.footnote)
                 .foregroundStyle(.secondary)
+            // 文案标签让此行与上方「机型 / 确认号」等「标签左·值右」行对齐，不再是孤零零一个图标。
+            // 用「日期」而非「时间」：日期是必填主控件、且避开时间 chip 未设时的「时间」占位重名。
+            Text("itinerary.transport.field.date")
             Spacer()
             // 日期 chip：多天行程可点选换天；单天行程仅作信息展示。
             if days.count > 1 {
@@ -418,6 +425,22 @@ struct TransportEditView: View {
             } label: {
                 Text("itinerary.transport.field.confirmation")
             }
+            // 车型 / 车牌：仅租车显示（你拿到的那台具体的车），都非必填、空态标签即提示。
+            if mode == .carRental {
+                LabeledContent {
+                    TextField("", text: $vehicleModel).multilineTextAlignment(.trailing)
+                } label: {
+                    Text("itinerary.transport.field.vehicle_model")
+                }
+                LabeledContent {
+                    TextField("", text: $licensePlate)
+                        .multilineTextAlignment(.trailing)
+                        .autocorrectionDisabled()
+                        .textInputAutocapitalization(.characters)
+                } label: {
+                    Text("itinerary.transport.field.plate")
+                }
+            }
             // 备注：自由文本、自解释，保留 placeholder 式（多行）。
             TextField("itinerary.transport.field.note", text: $note, axis: .vertical)
                 .lineLimit(1...4)
@@ -426,12 +449,19 @@ struct TransportEditView: View {
         }
     }
 
+    /// 删除按钮文案随类型走，与标题「编辑租车」呼应：「删除租车」「删除航班」…（"删除交通" 里"交通"是分类名、当宾语别扭）。
+    private var deleteTitle: String {
+        let typeName = NSLocalizedString(mode.localizationKey, comment: "")
+        let fmt = NSLocalizedString("itinerary.transport.delete.typed", comment: "")
+        return String(format: fmt, typeName)
+    }
+
     private var deleteSection: some View {
         Section {
             Button(role: .destructive) {
                 deleteAndDismiss()
             } label: {
-                Text("itinerary.transport.delete")
+                Text(deleteTitle)
                     .frame(maxWidth: .infinity, alignment: .center)
             }
         }
@@ -488,9 +518,11 @@ struct TransportEditView: View {
             mode = seg.mode
             carrier = seg.carrier; number = seg.number
             fromName = seg.fromName; fromCode = seg.fromCode; fromTerminal = seg.fromTerminal
+            fromAddress = seg.fromAddress
             fromLatitude = seg.fromLatitude; fromLongitude = seg.fromLongitude
             fromTimeZoneId = seg.fromTimeZoneId
             toName = seg.toName; toCode = seg.toCode; toTerminal = seg.toTerminal
+            toAddress = seg.toAddress
             toLatitude = seg.toLatitude; toLongitude = seg.toLongitude
             toTimeZoneId = seg.toTimeZoneId
             departDayOrder = seg.departDayOrder; arriveDayOrder = seg.arriveDayOrder
@@ -506,6 +538,7 @@ struct TransportEditView: View {
                         && seg.toLongitude == seg.fromLongitude)
             }
             distanceMeters = seg.distanceMeters; durationMinutes = seg.durationMinutes
+            vehicleModel = seg.vehicleModel; licensePlate = seg.licensePlate
             if seg.hasCost { costAmountText = CurrencyCatalog.amountText(seg.costAmount); costCurrencyCode = seg.costCurrencyCode }
         } else {
             // 新增：默认模式 + 起降日落到目标天。
@@ -544,12 +577,19 @@ struct TransportEditView: View {
         let savedAircraft = mode == .flight ? aircraftType : ""
         let savedDistance = mode == .flight ? distanceMeters : 0
         let savedDuration = mode == .flight ? durationMinutes : 0
+        // 车型 / 车牌仅租车有意义；切到其它模式一并清空，避免残留。
+        let savedVehicleModel = mode == .carRental ? vehicleModel : ""
+        let savedLicensePlate = mode == .carRental ? licensePlate : ""
 
         // 租车「还车地点同取车」：把取车地点拷给还车端，保证详情/地图/导出两端数据完整。
         let returnSameAsPickup = mode == .carRental && sameReturnLocation
         let savedToName = returnSameAsPickup ? fromName : toName
         let savedToLat = returnSameAsPickup ? fromLatitude : toLatitude
         let savedToLon = returnSameAsPickup ? fromLongitude : toLongitude
+        let savedToAddress = returnSameAsPickup ? fromAddress : toAddress
+        // 机场搜索不回填地址；切到航班一并清空，避免残留旧地址。
+        let savedFromAddress = mode == .flight ? "" : fromAddress
+        let savedToAddressFinal = mode == .flight ? "" : savedToAddress
 
         if let segmentId {
             store.updateTransportSegment(
@@ -558,13 +598,16 @@ struct TransportEditView: View {
                 fromName: fromName, fromCode: savedFromCode,
                 fromLatitude: fromLatitude, fromLongitude: fromLongitude,
                 fromTimeZoneId: savedFromTZ, fromTerminal: savedFromTerminal,
+                fromAddress: savedFromAddress,
                 toName: savedToName, toCode: savedToCode,
                 toLatitude: savedToLat, toLongitude: savedToLon,
                 toTimeZoneId: savedToTZ, toTerminal: savedToTerminal,
+                toAddress: savedToAddressFinal,
                 departDayOrder: departDayOrder, departLocalMinutes: departMinutes,
                 arriveDayOrder: safeArriveDay, arriveLocalMinutes: arriveMinutes,
                 seat: savedSeat, confirmationCode: confirmationCode, note: note,
-                aircraftType: savedAircraft, distanceMeters: savedDistance, durationMinutes: savedDuration
+                aircraftType: savedAircraft, distanceMeters: savedDistance, durationMinutes: savedDuration,
+                vehicleModel: savedVehicleModel, licensePlate: savedLicensePlate
             )
             store.setTransportCost(tripId: tripId, segmentId: segmentId,
                                    amount: costAmountValue, currencyCode: costCurrencyToSave)
@@ -575,13 +618,16 @@ struct TransportEditView: View {
                 fromName: fromName, fromCode: savedFromCode,
                 fromLatitude: fromLatitude, fromLongitude: fromLongitude,
                 fromTimeZoneId: savedFromTZ, fromTerminal: savedFromTerminal,
+                fromAddress: savedFromAddress,
                 toName: savedToName, toCode: savedToCode,
                 toLatitude: savedToLat, toLongitude: savedToLon,
                 toTimeZoneId: savedToTZ, toTerminal: savedToTerminal,
+                toAddress: savedToAddressFinal,
                 departDayOrder: departDayOrder, departLocalMinutes: departMinutes,
                 arriveDayOrder: safeArriveDay, arriveLocalMinutes: arriveMinutes,
                 seat: savedSeat, confirmationCode: confirmationCode, note: note,
-                aircraftType: savedAircraft, distanceMeters: savedDistance, durationMinutes: savedDuration
+                aircraftType: savedAircraft, distanceMeters: savedDistance, durationMinutes: savedDuration,
+                vehicleModel: savedVehicleModel, licensePlate: savedLicensePlate
             ) {
                 store.setTransportCost(tripId: tripId, segmentId: newId,
                                        amount: costAmountValue, currencyCode: costCurrencyToSave)

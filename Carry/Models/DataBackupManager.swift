@@ -89,6 +89,12 @@ struct BackupTransportSegment: Codable, Sendable {
     var aircraftType: String? = nil
     var distanceMeters: Double? = nil
     var durationMinutes: Int? = nil
+    // 租车专属：车型 + 车牌（spec: itinerary-car-rental.md）；可选 + 默认 nil：兼容旧备份。
+    var vehicleModel: String? = nil
+    var licensePlate: String? = nil
+    // 端点详细地址（地点搜索回填）；可选 + 默认 nil：兼容旧备份。
+    var fromAddress: String? = nil
+    var toAddress: String? = nil
 }
 
 struct BackupLodgingStay: Codable, Sendable {
@@ -229,7 +235,9 @@ final class DataBackupManager {
                 arriveDayOrder: s.arriveDayOrder, arriveLocalMinutes: s.arriveLocalMinutes,
                 seat: s.seat, confirmationCode: s.confirmationCode, note: s.note, sortOrder: s.sortOrder,
                 costAmount: s.costAmount, costCurrencyCode: s.costCurrencyCode, costHomeAmount: s.costHomeAmount,
-                aircraftType: s.aircraftType, distanceMeters: s.distanceMeters, durationMinutes: s.durationMinutes
+                aircraftType: s.aircraftType, distanceMeters: s.distanceMeters, durationMinutes: s.durationMinutes,
+                vehicleModel: s.vehicleModel, licensePlate: s.licensePlate,
+                fromAddress: s.fromAddress, toAddress: s.toAddress
             )
         }
     }
@@ -587,14 +595,17 @@ final class DataBackupManager {
                     fromName: bg.fromName, fromCode: bg.fromCode,
                     fromLatitude: bg.fromLatitude, fromLongitude: bg.fromLongitude,
                     fromTimeZoneId: bg.fromTimeZoneId, fromTerminal: bg.fromTerminal,
+                    fromAddress: bg.fromAddress ?? "",
                     toName: bg.toName, toCode: bg.toCode,
                     toLatitude: bg.toLatitude, toLongitude: bg.toLongitude,
                     toTimeZoneId: bg.toTimeZoneId, toTerminal: bg.toTerminal,
+                    toAddress: bg.toAddress ?? "",
                     departDayOrder: bg.departDayOrder, departLocalMinutes: bg.departLocalMinutes,
                     arriveDayOrder: bg.arriveDayOrder, arriveLocalMinutes: bg.arriveLocalMinutes,
                     seat: bg.seat, confirmationCode: bg.confirmationCode,
                     note: bg.note, aircraftType: bg.aircraftType ?? "",
                     distanceMeters: bg.distanceMeters ?? 0, durationMinutes: bg.durationMinutes ?? 0,
+                    vehicleModel: bg.vehicleModel ?? "", licensePlate: bg.licensePlate ?? "",
                     sortOrder: bg.sortOrder,
                     costAmount: bg.costAmount ?? 0,
                     costCurrencyCode: bg.costCurrencyCode ?? "",
