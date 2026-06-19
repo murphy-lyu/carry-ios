@@ -3,6 +3,18 @@
 ## 最后更新
 2026-06-19
 
+## 上次改动摘要（底部交互/导航视觉打磨：底栏通透·新建 sheet 化·设置对齐·App Icon 行 · 2026-06-19）
+
+> 本会话独立于并行的航班/租车会话，**只动自己的文件、逐 hunk 隔离**（避开 ItineraryView/PackingListView 等共享文件里并行的在途代码）。下面均**已提交、未 push**（commit 见括号）。
+
+- **🟢 行程/打包底部切换器「通透磨砂化」**（`e7365e7`）：浮动 glass 胶囊原垫 `bottomBarScrim`（实心兜底 + 22pt 顶部渐变）——较高的实心区把可视内容区视觉压短，且胶囊背景用 `Color.opacity` 平涂半透（只调暗不模糊）→ 胶囊后清晰文字直接穿透显脏。改：① 新增 `bottomBarFade`（透明→底端半透 0.92 的**通透**垫底）取代实心；② 胶囊背景平涂 → `.regularMaterial` **磨砂玻璃**（模糊背后内容、通透却不脏，对齐 iOS 原生悬浮栏）。其余 6 处 `bottomBarScrim` 是整宽 CTA 实底，保持不动。
+- **🟢 死代码清理：「编辑场景」ScenePicker `.edit` 模式**（`b38f81c`，净删 275 行）：`CreationRoute.editScenes` 全仓从不 push、`showEditScenesSheet` 从不置 true → 整条 `.edit` 模式 + 两入口 + 只它在用的 `regenerateScenes`/`presetItemNames` + 两个孤立文案全删，只留活的 `.suggest`/`.autoPack`。
+- **🟢 新建行程 `fullScreenCover → .sheet`**（`dc1cf56`，仅 iPhone）：创建流早简化为单屏（TripInfo 填完直接建、不再 push），全屏 cover 是旧多步流遗留、且方角内容撞屏幕物理圆角不协调。改 page sheet（对齐 Apple 新建事件/提醒）+「草稿放弃确认」（有草稿时拦下滑、取消问「放弃这个新行程?」，`tripinfo.discard.*` 3 key×9 语言）+ 复用 `PresenterRecedeEffect`（首页后退缩放，与设置/搜索/Trip Book 四个 sheet 统一）。
+- **🟢 行程页「…」菜单：探索移底部 → 全回退 → 强化右上角**（`7dd6e40`）：曾试「底部三件套（···/切换器/➕）」，但 ➕ 跨 tab 变义有心智负担、··· 放左下是最难够的角、把低频动作塞进拇指黄金区本末倒置 → **整套回退**。结论：低频溢出动作就该在右上角（iOS 惯例、靠惯例可发现）；原「不好发现」真因是图标太弱（14pt 灰）→ 提到 17pt 主色、与返回键等分量（iOS 26 系统自动套同款玻璃圆）。
+- **🟢 设置 Picker 箭头结构性对齐**（`47d2e00`，取代 `f05f884` 的 -12 补偿）：外观/距离单位用原生 `.menu` Picker、自带尾部内边距 → `⇅` 比其它行 `>`/`↗` 偏左。先用 -12pt 负 trailing 补偿（治标、OS 版本敏感），后改根因解：菜单行与其它行**同构渲染**（`Menu`+内联 Picker，自定义 label 只含值+`settingsAccessory(.menu)`、标题留 Menu 外避开闪空坑）→ 箭头走同一段代码、必然同列、无魔数。
+- **🟢 App Icon 行副标题「选中即换行」**（`0aefe71`）：对勾原 `if isSelected` 才插入 → 选中挤窄文案换行。改：对勾位置**恒定预留**（`opacity` 切显隐）+ 副标题 `lineLimit(1)+minimumScaleFactor(0.85)` → 选不选中布局一致、恒单行。
+- **待办**：① 我这几条（`e7365e7`/`b38f81c`/`dc1cf56`/`7dd6e40`/`f05f884`/`47d2e00`/`0aefe71`）+ 并行提交一起 push（用户定，push 会一并推上并行会话提交）；② App Icon 行 + 草稿放弃确认 + 底栏通透**真机验收**（模拟器宽屏看不出 App Icon 原换行现象，需真机）。
+
 ## 上次改动摘要（行程交通：租车入口收口 + 类型菜单/表单打磨 · spec: itinerary-car-rental.md · 2026-06-19）
 
 > 与「航班搜索优先」并行会话**共享** `ItineraryView.swift` / `TransportEditView.swift` / `Localizable.xcstrings`，逐 hunk 交织、不可分割提交 → 由用户合入**同一 commit `1dc5cca`**（含航班搜索）。**编译绿、未 push**。⚠️ 该 commit 仍含硬编码 `appToken`（`FlightLookupService.swift:22`），push 前须处理（用户在航班会话另行处理）。**真机验收待办。**
@@ -28,6 +40,7 @@
 - **航班时间轴定位：早班机不再被无时间地点压到底**（`2e83805`，`Itinerary.swift` `timeline`）：根因——原逻辑只把定时航班相对「其它定时项」插入，Carry 地点常不填钟点 → 航班无锚点落末尾。解：base 全无时间地点时，按航段出发时间相对正午定位（上午<12:00 置顶领起当天、午后/傍晚置底）。
 - **底部消隐渐变 Dark 灰雾**（`88c467e` 首页 sheet + `2dae40d`→`243a2b4` 行程详情）：① `CarryBottomSheetFX` 的 `FXBottomFadeView` 用 CAGradientLayer+CGColor 不跟 trait → 深色停白，改 `registerForTraitChanges` 重设。② 行程详情两个 tab 内容层都铺 `systemBackground`+`ignoresSafeArea(.bottom)` 盖住容器 `CarrySubtleBackground` → 底部真实纯黑，但 `bottomBarFade` 淡出到 0.08 baseColor 起灰雾；改为两面都淡出 `systemBackground`。**已全项目排查 8 处 fade/scrim：目标色须 == 该页「底部最上层不透明层」色（不是页面根！），其余 7 处均已匹配。**
 - **开发流程铁律新增**（`CLAUDE.md`）：驱动模拟器的许可是「按当次请求」的，**绝不跨任务/跨轮沿用**；没有当轮明确「跑/调模拟器」就只编译、不自跑（computer-use 抢屏会突然打断用户）。
+- **待办**：① 全部未 push（本地 main 领先 origin 一堆，发布前用户拍板）；② `CarryBottomSheetFX` 的 `traitCollectionDidChange→registerForTraitChanges` 现代化改在工作区**未单独提交**（依赖并行会话的 `updateEmptyStateSurface`，留着随空态 feature 一起提）；③ 遗留非阻塞：`PKX`/`TFU` 等新机场时区暂空（OpenFlights 旧数据 + 中国多时区不兜底，显示降级）。④ 未来想法（先记不做）：多城市的一天**按航班切两段**（上午·A 城 → ✈ → 下午·B 城，各自小地图）；航班行可选「抵达/飞往 + 时间」到达/出发口吻文案。
 
 ## 上次改动摘要（添加航班「搜索优先」+ 航司表 + 交通段日期/时间融合 chip · spec: itinerary-flight-search-first.md · 2026-06-19）
 

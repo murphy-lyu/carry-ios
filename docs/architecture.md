@@ -95,6 +95,7 @@ ZStack（全窗口）
 - 首页底部 Sheet：`CarryBottomSheetFX`——`UIViewControllerRepresentable` 桥接的 UIKit 自定义 sheet。两侧/底部缩放视觉，纯 Core Animation 驱动（吸附用 `UIViewPropertyAnimator`，无 CADisplayLink）；内容固定尺寸 + transform 缩放 + 运动期 `shouldRasterize`，嵌套 cornerRadius 层做上下异半径圆角。HomeView 直接调用,无变体开关（无缩放 fallback 与 `SheetFeatureFlag` 已于 2026-06-07 退役删除）。**首页底栏（搜索/行程册/创建 FAB）自 2026-06-14 经 `bottomBar:` 闭包托管进本控制器**（`installBottomBar`，钉 `view` 底），与卡片由同一 animator 同步缩放（见 playbook §19）。触碰此模块**必读** `docs/home-sheet-debug-playbook.md`（手势/吸附/滚动锁的踩坑史与纪律）。
 - RoadmapView：产品路线图（支持远程 JSON 更新）
 - LiveActivityManager：`@MainActor` 单例，管理打包进度 Live Activity 生命周期（start / update / end / endIfDeparted）
+- **机场数据库（`Models/AirportDatabase.swift`，actor；spec: `itinerary-airport-search.md`）**：航班机场选点专用的**内置离线机场库**。`Bundle` 内 `Carry/Resources/airports.json`（~4100 个有定期航班的机场，OurAirports 列表 + OpenFlights IANA 时区 + Wikidata 9 语言机场名/城市别名；IATA 未命中用 ICAO 兜底抓取）。actor 首次检索时懒加载解码、不阻塞主线程；`search()` 按 IATA/ICAO/英文名·城市/各语言名匹配，全球无区域过滤。`Airport.id = iata`（数据生成脚本硬断言唯一非空）。UI 走 `Views/AirportSearchSheet.swift`，仅 `TransportEditView` 航班模式接入（回填 IATA/坐标/IANA 时区）；其它交通方式仍走通用地图 POI（`ItineraryPlaceSearchSheet`）。数据重建脚本 `scripts/airports/`；数据许可 OpenFlights ODbL 已在 `AboutView`「数据来源」卡署名。
 
 ## 政策合规（中国大陆上架）
 > 完整约定见 CLAUDE.md「政策合规约定」章节，此处仅记模块归属。

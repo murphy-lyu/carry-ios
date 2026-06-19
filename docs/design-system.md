@@ -262,6 +262,8 @@ Apple 原生风格，极简、克制、优雅。
 
   - **② `bottomContentFade`** —— 用于**浮动元素**（玻璃胶囊栏 / 圆角浮卡，**不该被实心遮挡**）。在内容底部叠一段「透明→页面底色」渐变 overlay，内容向背景**消隐**、浮动元素**仍浮于其上、保通透**（**不**在其后垫整块实心）。**已落地**：首页底部 glass 胶囊栏、ItemPicker 智能预览圆角条。
 
+  - **⚠️ 目标色判据（2026-06-19 踩坑）：淡出/垫底色必须 == 该页底部「最上层不透明层」实际渲染色，不是页面根色。** 容易判反：行程详情根是 `CarrySubtleBackground`(暗底端 0.08)，但两个 tab 的内容层（ItineraryView / packingContent）都铺 `systemBackground`(纯黑) + `.ignoresSafeArea(.bottom)` **盖住了根** → 底部真实是纯黑；按"根"判而用 0.08 baseColor，就在纯黑上显**比背景亮的灰雾**（仅 Dark 可见，浅色 0.98 vs 1.0 近乎无差）。现已两面统一淡出 `systemBackground`。排查同类问题用**实测/截图看真实底色**，别静态读"根背景"。另：UIKit `CAGradientLayer.colors` 的 CGColor 不随 light/dark trait 自适应（`FXBottomFadeView` 深色停白），须 `registerForTraitChanges` 重设；SwiftUI `Color(动态UIColor)` 则自适应。
+
   - **选型**：底部元素是不透明整宽栏 → `BottomBarScrim`；是半透/玻璃/圆角浮动控件 → `bottomContentFade`（垫实心会杀掉玻璃通透）。
 
   - **性能**：两者都是纯 `LinearGradient` overlay + `allowsHitTesting(false)`——**不用 `.mask`/`.blur`/材质**，故不触发离屏渲染、不挡点击、开销极低（这是关键选型，别退回 mask/material）。
