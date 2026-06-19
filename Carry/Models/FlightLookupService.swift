@@ -187,9 +187,11 @@ nonisolated enum FlightLookupService {
 
 // MARK: - 上游 DTO（Worker 透传的 AeroDataBox 结构，只取我们要的字段）
 
-private struct ProxyResponse: Decodable { let flights: [FlightDTO] }
+// 全部标 nonisolated：项目默认 main-actor 隔离下，合成的 Decodable 也会被隔离，
+// 而 lookup 是 nonisolated async，在其中解码会触发 Swift 6 隔离错误。与 FlightLookupResult 一致。
+private nonisolated struct ProxyResponse: Decodable { let flights: [FlightDTO] }
 
-private struct FlightDTO: Decodable {
+private nonisolated struct FlightDTO: Decodable {
     let number: String?
     let aircraft: AircraftDTO?
     let airline: AirlineDTO?
@@ -197,13 +199,13 @@ private struct FlightDTO: Decodable {
     let arrival: EndDTO?
     let greatCircleDistance: DistanceDTO?
 }
-private struct DistanceDTO: Decodable { let meter: Double? }
-private struct AircraftDTO: Decodable { let model: String? }
-private struct AirlineDTO: Decodable { let name: String?; let iata: String?; let icao: String? }
-private struct EndDTO: Decodable { let airport: AirportDTO?; let scheduledTime: TimeDTO?; let terminal: String? }
-private struct AirportDTO: Decodable {
+private nonisolated struct DistanceDTO: Decodable { let meter: Double? }
+private nonisolated struct AircraftDTO: Decodable { let model: String? }
+private nonisolated struct AirlineDTO: Decodable { let name: String?; let iata: String?; let icao: String? }
+private nonisolated struct EndDTO: Decodable { let airport: AirportDTO?; let scheduledTime: TimeDTO?; let terminal: String? }
+private nonisolated struct AirportDTO: Decodable {
     let iata: String?; let icao: String?; let name: String?; let shortName: String?
     let municipalityName: String?; let location: LocDTO?; let countryCode: String?; let timeZone: String?
 }
-private struct LocDTO: Decodable { let lat: Double?; let lon: Double? }
-private struct TimeDTO: Decodable { let utc: String?; let local: String? }
+private nonisolated struct LocDTO: Decodable { let lat: Double?; let lon: Double? }
+private nonisolated struct TimeDTO: Decodable { let utc: String?; let local: String? }

@@ -37,6 +37,7 @@ private enum ItinerarySheet: Identifiable {
     case stopDetail(ItineraryStop)
     case editStop(ItineraryStop)
     case optimize(dayId: UUID)
+    case searchFlight(dayId: UUID)
     case addTransport(dayId: UUID, mode: TransportMode)
     case transportDetail(TransportSegment)
     case editTransport(UUID)
@@ -51,6 +52,7 @@ private enum ItinerarySheet: Identifiable {
         case .stopDetail(let stop): return "detail-\(stop.id)"
         case .editStop(let stop): return "edit-\(stop.id)"
         case .optimize(let dayId): return "opt-\(dayId)"
+        case .searchFlight(let dayId): return "searchfl-\(dayId)"
         case .addTransport(let dayId, let mode): return "addtr-\(dayId)-\(mode.rawValue)"
         case .transportDetail(let seg): return "trdetail-\(seg.id)"
         case .editTransport(let id): return "edittr-\(id)"
@@ -152,6 +154,8 @@ struct ItineraryView: View {
                 StopEditView(tripId: tripId, stop: stop)
             case .optimize(let dayId):
                 OptimizeRouteView(tripId: tripId, dayId: dayId)
+            case .searchFlight(let dayId):
+                FlightSearchSheet(tripId: tripId, dayId: dayId)
             case .addTransport(let dayId, let mode):
                 TransportEditView(tripId: tripId, dayId: dayId, initialMode: mode)
             case .transportDetail(let seg):
@@ -558,11 +562,23 @@ struct ItineraryView: View {
             Button { activeSheet = .addStop(dayId: dayID) } label: {
                 Label("itinerary.kind.place", systemImage: "mappin")
             }
-            Button { activeSheet = .addTransport(dayId: dayID, mode: .flight) } label: {
-                Label(TransportMode.flight.titleKey, systemImage: TransportMode.flight.symbolName)
-            }
-            Button { activeSheet = .addTransport(dayId: dayID, mode: .train) } label: {
-                Label(TransportMode.train.titleKey, systemImage: TransportMode.train.symbolName)
+            // 交通组（边）：常用类型直列、低频收进「更多交通」子菜单——外层保持轻、低频也能一步直接落位，
+            // 不在外层重复列出常用项。spec: itinerary-car-rental.md。
+            Section("itinerary.add.section.transport") {
+                ForEach(TransportMode.commonModes, id: \.self) { mode in
+                    Button { addTransport(mode, dayID) } label: {
+                        Label(mode.titleKey, systemImage: mode.symbolName)
+                    }
+                }
+                Menu {
+                    ForEach(TransportMode.moreModes, id: \.self) { mode in
+                        Button { addTransport(mode, dayID) } label: {
+                            Label(mode.titleKey, systemImage: mode.symbolName)
+                        }
+                    }
+                } label: {
+                    Label("itinerary.add.more_transport", systemImage: "ellipsis")
+                }
             }
             Button { activeSheet = .addLodging(checkInDayOrder: order) } label: {
                 Label("itinerary.category.lodging", systemImage: "bed.double")
@@ -576,6 +592,16 @@ struct ItineraryView: View {
         // 末个停靠点的连线在其自身行内终止（无底部留白），动作行用顶部留白与之分隔。
         .padding(.top, 12)
         .padding(.bottom, 6)
+    }
+
+    /// 交通入口路由：航班走「搜索优先」（航班号→自动填），其余走通用交通表单。
+    /// spec: itinerary-flight-search-first.md。
+    private func addTransport(_ mode: TransportMode, _ dayID: UUID) {
+        if mode == .flight {
+            activeSheet = .searchFlight(dayId: dayID)
+        } else {
+            activeSheet = .addTransport(dayId: dayID, mode: mode)
+        }
     }
 
     /// 当天是否显示「优化顺序」入口：固定首尾后需中间 ≥2 个点才有可优化空间，故坐标点 ≥4 才露。

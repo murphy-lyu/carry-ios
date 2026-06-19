@@ -38,6 +38,14 @@ enum StopCategory: String, Codable, CaseIterable {
 
     /// 结构化本地化 key（须在 xcstrings 显式写 en）。
     var localizationKey: String { "itinerary.category.\(rawValue)" }
+
+    /// 「添加地点」类别选择器可选项：在地体验 + 住宿 + 兜底。
+    /// **剔除 flight / train / carRental / cruise** —— 它们是「边」（交通段），应走统一「+」的交通入口
+    /// （`TransportSegment` / `TransportEditView`），不在「搜一个坐标点」的地点流程里建。
+    /// 枚举本身保留全部 case，仅此选择器收窄，旧数据（已加成普通 stop 的航班/租车/邮轮）仍正常解析渲染。
+    /// spec: itinerary-car-rental.md。
+    static let placeSelectableCases: [StopCategory] =
+        [.sightseeing, .food, .activity, .shopping, .lodging, .other]
 }
 
 // MARK: - ItineraryDay

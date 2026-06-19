@@ -169,6 +169,7 @@ final class CarryLogger {
         case flightLookupResolved   = "flight_lookup_resolved"
         case flightLookupNotFound   = "flight_lookup_not_found"
         case flightLookupFailed     = "flight_lookup_failed"
+        case flightSearchManualFallback = "flight_search_manual_fallback"
 
         // 照片回溯行程（spec: photo-trip-reconstruction.md）
         case photoImportStarted     = "photo_import_started"      // 进入选图

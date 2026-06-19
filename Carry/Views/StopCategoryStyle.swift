@@ -29,6 +29,12 @@ extension StopCategory {
 }
 
 extension TransportMode {
+    /// 类型选择的**单一有序数据源**（= 常用 + 更多）。表单内类型选择器用整份（编辑时可改成任意类型）；
+    /// 「+」菜单把它拆成「常用直列 + 更多收进子菜单」，外层保持轻、低频也能直接落位。spec: itinerary-car-rental.md。
+    static let commonModes: [TransportMode] = [.flight, .train, .carRental]
+    static let moreModes: [TransportMode] = [.bus, .ferry, .other]
+    static let ordered: [TransportMode] = commonModes + moreModes
+
     /// SF Symbol 名（技术常量，非用户文案）。
     var symbolName: String {
         switch self {

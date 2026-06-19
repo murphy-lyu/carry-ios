@@ -158,7 +158,9 @@ struct AddStopView: View {
     private var categoryMenu: some View {
         Menu {
             Picker(selection: $category) {
-                ForEach(StopCategory.allCases, id: \.self) { cat in
+                // 仅在地体验 + 住宿 + 兜底；交通类（航班/火车/租车/邮轮）走统一「+」交通入口。
+                // spec: itinerary-car-rental.md。
+                ForEach(StopCategory.placeSelectableCases, id: \.self) { cat in
                     Label(cat.titleKey, systemImage: cat.symbolName).tag(cat)
                 }
             } label: {

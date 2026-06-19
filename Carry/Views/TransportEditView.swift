@@ -20,6 +20,14 @@ struct TransportEditView: View {
     var dayId: UUID? = nil
     /// 新增时的默认模式（统一「+」入口按所选类型传入）。
     var initialMode: TransportMode = .flight
+    /// 航班搜索的预填结果（仅新增航班时由 FlightSearchSheet 注入）；nil = 手动/空表单。
+    var prefill: FlightLookupResult? = nil
+    /// 是否自带 NavigationStack。独立呈现（编辑/非航班「+」）为 true；
+    /// 被 FlightSearchSheet push 时为 false，复用其导航栈，避免嵌套栈。
+    var embedInOwnNavigationStack: Bool = true
+    /// 保存/删除完成回调。被 push 时由 FlightSearchSheet 传入以关闭整张 sheet；
+    /// nil（独立呈现）则退回 dismiss()。
+    var onFinish: (() -> Void)? = nil
 
     @EnvironmentObject var store: TripStore
     @Environment(\.dismiss) private var dismiss
@@ -43,6 +51,10 @@ struct TransportEditView: View {
     @State private var toLongitude: Double = 0
     @State private var toTimeZoneId = ""
 
+    /// 租车专用：还车地点同取车（默认开，大多数租车原地还）。开 → 折叠还车「地点」，
+    /// 仅保留还车日期/时间；保存时把取车地点拷给还车端。spec: itinerary-car-rental.md。
+    @State private var sameReturnLocation = true
+
     @State private var departDayOrder = 0
     @State private var hasDepartTime = false
     @State private var departTime = Date()
@@ -59,34 +71,48 @@ struct TransportEditView: View {
     @State private var costAmountText = ""
     @State private var costCurrencyCode = ""
 
-    // 用航班号自动填（spec: itinerary-flight-lookup.md）
-    @State private var lookupDate = Date()
-    @State private var lookupStatus: LookupStatus = .idle
-    private enum LookupStatus: Equatable { case idle, loading, filled, notFound, failed, notConfigured }
-
     @State private var didLoad = false
-    /// 起 / 落地点搜索 sheet（nil = 不显示；true = 搜出发，false = 搜到达）。
-    @State private var searchingFrom: Bool? = nil
+    /// 单一 sheet 驱动（地点搜索 / 时间选择）。同一视图挂多个 .sheet(item:) 会相互抑制，故合并为单枚举。
+    @State private var activeSheet: TransportSheet? = nil
+    private enum TransportSheet: Identifiable {
+        case search(isFrom: Bool)   // 起 / 落地点搜索
+        case time(isFrom: Bool)     // 起 / 落时间选择
+        var id: String {
+            switch self {
+            case .search(let f): return "search-\(f)"
+            case .time(let f):   return "time-\(f)"
+            }
+        }
+    }
 
     private var isEditing: Bool { segmentId != nil }
     private var bundle: TripBundle? { store.bundle(for: tripId) }
     private var days: [ItineraryDay] { bundle?.safeItineraryDays ?? [] }
 
     var body: some View {
-        NavigationStack {
+        if embedInOwnNavigationStack {
+            NavigationStack { formContent }
+        } else {
+            formContent
+        }
+    }
+
+    private var formContent: some View {
             Form {
-                typeSection
                 carrierSection
                 placeSection(isFrom: true)
                 placeSection(isFrom: false)
                 moreSection
                 if isEditing { deleteSection }
             }
-            .navigationTitle(Text(isEditing ? "itinerary.transport.edit.title" : "itinerary.transport.add.title"))
+            .navigationTitle(navTitle)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    Button("common.cancel") { dismiss() }
+                // 被 push 时（embed=false）系统返回按钮已提供「返回搜索」，不再叠加 Cancel。
+                if embedInOwnNavigationStack {
+                    ToolbarItem(placement: .cancellationAction) {
+                        Button("common.cancel") { dismiss() }
+                    }
                 }
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Save") { saveAndDismiss() }
@@ -94,41 +120,42 @@ struct TransportEditView: View {
                         .disabled(!canSave)
                 }
             }
-            .sheet(item: Binding(
-                get: { searchingFrom.map { SearchTarget(isFrom: $0) } },
-                set: { searchingFrom = $0?.isFrom }
-            )) { target in
-                // 航班：走内置机场数据库（全球可搜 + 回填 IATA / 时区）；
-                // 其它交通方式：走通用地图地点搜索（火车站 / 港口等）。spec: itinerary-airport-search.md。
-                if mode == .flight {
-                    AirportSearchSheet(titleKey: stationLabel(isFrom: target.isFrom)) { airport in
-                        if target.isFrom {
-                            fromName = airport.displayName; fromCode = airport.iata
-                            fromLatitude = airport.lat; fromLongitude = airport.lon
-                            fromTimeZoneId = airport.tz
-                        } else {
-                            toName = airport.displayName; toCode = airport.iata
-                            toLatitude = airport.lat; toLongitude = airport.lon
-                            toTimeZoneId = airport.tz
+            .sheet(item: $activeSheet) { sheet in
+                switch sheet {
+                case .search(let isFrom):
+                    // 航班：走内置机场数据库（全球可搜 + 回填 IATA / 时区）；
+                    // 其它交通方式：走通用地图地点搜索（火车站 / 港口等）。spec: itinerary-airport-search.md。
+                    if mode == .flight {
+                        AirportSearchSheet(titleKey: stationLabel(isFrom: isFrom)) { airport in
+                            if isFrom {
+                                fromName = airport.displayName; fromCode = airport.iata
+                                fromLatitude = airport.lat; fromLongitude = airport.lon
+                                fromTimeZoneId = airport.tz
+                            } else {
+                                toName = airport.displayName; toCode = airport.iata
+                                toLatitude = airport.lat; toLongitude = airport.lon
+                                toTimeZoneId = airport.tz
+                            }
+                        }
+                    } else {
+                        ItineraryPlaceSearchSheet(
+                            titleKey: stationLabel(isFrom: isFrom),
+                            placeholderKey: "itinerary.transport.search.placeholder",
+                            biasLatitude: bundle?.latitude ?? 0,
+                            biasLongitude: bundle?.longitude ?? 0
+                        ) { name, lat, lon, _ in
+                            if isFrom {
+                                fromName = name; fromLatitude = lat; fromLongitude = lon
+                            } else {
+                                toName = name; toLatitude = lat; toLongitude = lon
+                            }
                         }
                     }
-                } else {
-                    ItineraryPlaceSearchSheet(
-                        titleKey: stationLabel(isFrom: target.isFrom),
-                        placeholderKey: "itinerary.transport.search.placeholder",
-                        biasLatitude: bundle?.latitude ?? 0,
-                        biasLongitude: bundle?.longitude ?? 0
-                    ) { name, lat, lon, _ in
-                        if target.isFrom {
-                            fromName = name; fromLatitude = lat; fromLongitude = lon
-                        } else {
-                            toName = name; toLatitude = lat; toLongitude = lon
-                        }
-                    }
+                case .time(let isFrom):
+                    timePickerSheet(isFrom: isFrom)
                 }
             }
             .onAppear(perform: loadIfNeeded)
-        }
     }
 
     // MARK: 类型自适应（spec: itinerary-cost-tracking 之外的交互打磨 — Type 唯一权威，字段随之切换）
@@ -184,33 +211,14 @@ struct TransportEditView: View {
 
     // MARK: Sections
 
-    private var typeSection: some View {
-        Section {
-            // 自定义 Menu 取代原生 Picker：原生折叠态把「✈ + Flight」渲染得紧贴、间距系统控制改不了。
-            // 这里自己排版，图标与文字间显式留 6pt 呼吸感；选项仍用内嵌 Picker 保留勾选态、整行可点。
-            Menu {
-                Picker(selection: $mode) {
-                    ForEach(TransportMode.allCases, id: \.self) { m in
-                        Label(m.titleKey, systemImage: m.symbolName).tag(m)
-                    }
-                } label: { EmptyView() }
-            } label: {
-                HStack {
-                    Text("itinerary.transport.section.type")
-                        .foregroundStyle(.primary)
-                    Spacer()
-                    HStack(spacing: 6) {
-                        Image(systemName: mode.symbolName)
-                        Text(mode.titleKey)
-                    }
-                    .foregroundStyle(Color.accentColor)
-                    Image(systemName: "chevron.up.chevron.down")
-                        .font(.caption2)
-                        .foregroundStyle(.secondary)
-                }
-                .contentShape(Rectangle())
-            }
-        }
+    /// 标题承载类型（类型已在「+」菜单选定，页内不再用一行重复展示/可改）：「添加航班」/「编辑租车」…
+    /// 类型固定在创建时；改类型 → 删除重加（极少见，且各类型字段本就不同）。spec: itinerary-car-rental.md。
+    private var navTitle: String {
+        let typeName = NSLocalizedString(mode.localizationKey, comment: "")
+        let fmt = NSLocalizedString(
+            isEditing ? "itinerary.transport.edit.title.typed" : "itinerary.transport.add.title.typed",
+            comment: "")
+        return String(format: fmt, typeName)
     }
 
     private var carrierSection: some View {
@@ -221,44 +229,14 @@ struct TransportEditView: View {
                     .autocorrectionDisabled()
                     .textInputAutocapitalization(.characters)
             }
-            // 航班：输航班号 + 日期 → 一键自动填全段（spec: itinerary-flight-lookup.md）。是加速器，失败可手填。
-            if mode == .flight && FlightLookupConfig.isConfigured {
-                DatePicker("itinerary.flight.lookup.date", selection: $lookupDate, displayedComponents: .date)
-                Button { lookupFlight() } label: {
-                    HStack(spacing: 8) {
-                        if lookupStatus == .loading {
-                            ProgressView().controlSize(.small)
-                        } else {
-                            Image(systemName: "sparkles")
-                        }
-                        Text("itinerary.flight.lookup.button")
-                        Spacer()
-                    }
-                }
-                .disabled(number.trimmingCharacters(in: .whitespaces).isEmpty || lookupStatus == .loading)
-                if let msg = lookupStatusMessage {
-                    Text(msg)
-                        .font(.caption)
-                        .foregroundStyle(lookupStatus == .filled ? Color.secondary : Color(.systemOrange))
-                }
-                if !aircraftType.isEmpty {
-                    LabeledContent {
-                        Text(aircraftType)
-                    } label: {
-                        Text("itinerary.flight.field.aircraft")
-                    }
+            // 机型（航班搜索预填后只读展示；手动录入暂不提供编辑入口，接口数据为主）。
+            if mode == .flight && !aircraftType.isEmpty {
+                LabeledContent {
+                    Text(aircraftType)
+                } label: {
+                    Text("itinerary.flight.field.aircraft")
                 }
             }
-        }
-    }
-
-    private var lookupStatusMessage: LocalizedStringKey? {
-        switch lookupStatus {
-        case .idle, .loading:   return nil
-        case .filled:           return "itinerary.flight.lookup.filled"
-        case .notFound:         return "itinerary.flight.lookup.notfound"
-        case .failed:           return "itinerary.flight.lookup.failed"
-        case .notConfigured:    return "itinerary.flight.lookup.failed"
         }
     }
 
@@ -276,20 +254,30 @@ struct TransportEditView: View {
         let time = Binding(get: { isFrom ? departTime : arriveTime },
                            set: { if isFrom { departTime = $0 } else { arriveTime = $0 } })
 
+        // 租车还车段：「还车地点同取车」开关（默认开 → 折叠地点行，仅留日期/时间）。
+        let isCarReturn = (mode == .carRental && !isFrom)
+        let showsLocationRow = !(isCarReturn && sameReturnLocation)
+
         Section {
+            if isCarReturn {
+                Toggle("itinerary.transport.field.same_return_location",
+                       isOn: $sameReturnLocation.animation())
+            }
             // 地点行：点开搜索取坐标；有名字显示名字，否则提示。
-            Button {
-                searchingFrom = isFrom
-            } label: {
-                HStack {
-                    Image(systemName: "mappin.and.ellipse")
-                        .foregroundStyle(.secondary)
-                    (name.isEmpty ? Text(stationLabel(isFrom: isFrom)) : Text(name))
-                        .foregroundStyle(name.isEmpty ? .secondary : .primary)
-                    Spacer()
-                    Image(systemName: "magnifyingglass")
-                        .font(.footnote)
-                        .foregroundStyle(.tertiary)
+            if showsLocationRow {
+                Button {
+                    activeSheet = .search(isFrom: isFrom)
+                } label: {
+                    HStack {
+                        Image(systemName: "mappin.and.ellipse")
+                            .foregroundStyle(.secondary)
+                        (name.isEmpty ? Text(stationLabel(isFrom: isFrom)) : Text(name))
+                            .foregroundStyle(name.isEmpty ? .secondary : .primary)
+                        Spacer()
+                        Image(systemName: "magnifyingglass")
+                            .font(.footnote)
+                            .foregroundStyle(.tertiary)
+                    }
                 }
             }
             if showsCode {
@@ -300,30 +288,105 @@ struct TransportEditView: View {
             if showsTerminal {
                 TextField(terminalLabel, text: terminal)
             }
-            if days.count > 1 {
-                Picker(selection: dayOrder) {
-                    ForEach(days, id: \.sortOrder) { day in
-                        Text(dayLabel(day.sortOrder)).tag(day.sortOrder)
-                    }
-                } label: {
-                    Text("itinerary.transport.field.day")
-                }
-            }
-            // 单行「标签 · 时间 chip · 开关」，避免 labelsHidden 选择器单独占行、左侧留空。
-            HStack(spacing: 12) {
-                Text("itinerary.transport.field.time")
-                    .accessibilityHidden(true)
-                Spacer()
-                if hasTime.wrappedValue {
-                    DatePicker("itinerary.transport.field.time", selection: time, displayedComponents: .hourAndMinute)
-                        .labelsHidden()
-                }
-                Toggle("itinerary.transport.field.time", isOn: hasTime.animation())
-                    .labelsHidden()
-            }
+            // 日期 / 时间融合 chip（参考 Tripsy）：日期 chip 带行程天（点选换天）；
+            // 时间 chip 可选——点开在弹出选择器里设 / 清除，未设则显示占位「时间」。
+            // 选择器都在弹出层、chip 是普通行高 → 不撑高、不跳变、信息量小（取代原 day Picker 行 + 时间开关行）。
+            dateTimeChipsRow(isFrom: isFrom, dayOrder: dayOrder, hasTime: hasTime, time: time)
         } header: {
             Text(sectionHeaderLabel(isFrom: isFrom))
         }
+    }
+
+    // MARK: 日期 / 时间融合 chip（参考 Tripsy）
+
+    @ViewBuilder
+    private func dateTimeChipsRow(isFrom: Bool, dayOrder: Binding<Int>, hasTime: Binding<Bool>, time: Binding<Date>) -> some View {
+        HStack(spacing: 8) {
+            Image(systemName: "calendar")
+                .font(.footnote)
+                .foregroundStyle(.secondary)
+            Spacer()
+            // 日期 chip：多天行程可点选换天；单天行程仅作信息展示。
+            if days.count > 1 {
+                Menu {
+                    Picker(selection: dayOrder) {
+                        ForEach(days, id: \.sortOrder) { d in
+                            Text(dayLabel(d.sortOrder)).tag(d.sortOrder)
+                        }
+                    } label: { EmptyView() }
+                } label: {
+                    chipLabel(dayLabel(dayOrder.wrappedValue), filled: true)
+                }
+            } else {
+                chipLabel(dayLabel(dayOrder.wrappedValue), filled: true)
+            }
+            // 时间 chip：点开弹出时间选择器；未设显示占位「时间」。
+            Button { activeSheet = .time(isFrom: isFrom) } label: {
+                chipLabel(hasTime.wrappedValue ? timeString(time.wrappedValue)
+                                               : NSLocalizedString("itinerary.transport.field.time", comment: ""),
+                          filled: hasTime.wrappedValue)
+            }
+            .buttonStyle(.plain)
+        }
+    }
+
+    /// chip 外观：圆体短标签 + 胶囊底。filled=false（占位）用次要色。
+    private func chipLabel(_ text: String, filled: Bool) -> some View {
+        Text(text)
+            .font(.system(.subheadline, design: .rounded).weight(.medium))
+            .foregroundStyle(filled ? Color.primary : Color.secondary)
+            .padding(.horizontal, 12)
+            .padding(.vertical, 7)
+            .background(Color(.tertiarySystemFill))
+            .clipShape(Capsule())
+    }
+
+    private func timeString(_ date: Date) -> String {
+        let f = DateFormatter()
+        f.locale = .current
+        f.dateFormat = "HH:mm"
+        return f.string(from: date)
+    }
+
+    /// 时间选择器 sheet：滚轮选时分；Done 设定时间，编辑既有时间时可「清除时间」回到未设。
+    @ViewBuilder
+    private func timePickerSheet(isFrom: Bool) -> some View {
+        let hasTime = Binding(get: { isFrom ? hasDepartTime : hasArriveTime },
+                              set: { if isFrom { hasDepartTime = $0 } else { hasArriveTime = $0 } })
+        let time = Binding(get: { isFrom ? departTime : arriveTime },
+                           set: { if isFrom { departTime = $0 } else { arriveTime = $0 } })
+        let wasSet = hasTime.wrappedValue
+        NavigationStack {
+            VStack(spacing: 0) {
+                DatePicker("itinerary.transport.field.time", selection: time, displayedComponents: .hourAndMinute)
+                    .datePickerStyle(.wheel)
+                    .labelsHidden()
+                    .padding(.top, 8)
+                if wasSet {
+                    Button(role: .destructive) {
+                        hasTime.wrappedValue = false
+                        activeSheet = nil
+                    } label: {
+                        Text("itinerary.transport.field.clear_time")
+                            .frame(maxWidth: .infinity)
+                    }
+                    .padding(.vertical, 8)
+                }
+                Spacer()
+            }
+            .navigationTitle("itinerary.transport.field.time")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("common.done") {
+                        hasTime.wrappedValue = true
+                        activeSheet = nil
+                    }
+                    .fontWeight(.semibold)
+                }
+            }
+        }
+        .presentationDetents([.height(360)])
     }
 
     private var moreSection: some View {
@@ -355,8 +418,13 @@ struct TransportEditView: View {
     // MARK: Helpers
 
     /// 至少要有「班次号」或「出发地名」才允许保存——避免落一条空段。
+    /// 租车无班次号、地点又可选，故以「公司名」或「取车地点」为准（否则只填公司无法保存）。
     private var canSave: Bool {
-        !number.trimmingCharacters(in: .whitespaces).isEmpty
+        if mode == .carRental {
+            return !carrier.trimmingCharacters(in: .whitespaces).isEmpty
+                || !fromName.trimmingCharacters(in: .whitespaces).isEmpty
+        }
+        return !number.trimmingCharacters(in: .whitespaces).isEmpty
             || !fromName.trimmingCharacters(in: .whitespaces).isEmpty
     }
 
@@ -380,6 +448,15 @@ struct TransportEditView: View {
         return Calendar.current.date(byAdding: .minute, value: max(0, m), to: start) ?? start
     }
 
+    /// 出发天对应的真实日期（有日期行程）；无日期行程退回今天。供跨天推算的兜底。
+    private func departDayDate() -> Date {
+        if let bundle, !bundle.isDateless {
+            let base = Calendar.current.startOfDay(for: bundle.departureDate)
+            return Calendar.current.date(byAdding: .day, value: departDayOrder, to: base) ?? base
+        }
+        return Date()
+    }
+
     private func loadIfNeeded() {
         guard !didLoad else { return }
         didLoad = true
@@ -399,6 +476,13 @@ struct TransportEditView: View {
             if seg.arriveLocalMinutes >= 0 { hasArriveTime = true; arriveTime = dateFromMinutes(seg.arriveLocalMinutes) }
             seat = seg.seat; confirmationCode = seg.confirmationCode; note = seg.note
             aircraftType = seg.aircraftType
+            // 租车还车开关：无显式存储位，从数据派生——还车端空、或与取车端同名同坐标即「同取车」。
+            if seg.mode == .carRental {
+                sameReturnLocation = seg.toName.isEmpty
+                    || (seg.toName == seg.fromName
+                        && seg.toLatitude == seg.fromLatitude
+                        && seg.toLongitude == seg.fromLongitude)
+            }
             distanceMeters = seg.distanceMeters; durationMinutes = seg.durationMinutes
             if seg.hasCost { costAmountText = CurrencyCatalog.amountText(seg.costAmount); costCurrencyCode = seg.costCurrencyCode }
         } else {
@@ -407,12 +491,14 @@ struct TransportEditView: View {
             let order = days.first(where: { $0.id == dayId })?.sortOrder ?? 0
             departDayOrder = order
             arriveDayOrder = order
+            // 航班搜索预填：把结果映射进表单（航司/机场/起降时刻/航站楼/机型）；空字段留用户补。
+            if let prefill { applyFlightResult(prefill) }
         }
-        // 航班查询的默认日期 = 出发日对应的真实日期（有日期行程）；无日期行程用今天。
-        if let bundle, !bundle.isDateless {
-            let base = Calendar.current.startOfDay(for: bundle.departureDate)
-            lookupDate = Calendar.current.date(byAdding: .day, value: departDayOrder, to: base) ?? base
-        }
+    }
+
+    /// 完成（保存/删除后）：被 push 时走 onFinish 关闭整张搜索 sheet；独立呈现退回 dismiss。
+    private func finish() {
+        if let onFinish { onFinish() } else { dismiss() }
     }
 
     private func saveAndDismiss() {
@@ -437,6 +523,12 @@ struct TransportEditView: View {
         let savedDistance = mode == .flight ? distanceMeters : 0
         let savedDuration = mode == .flight ? durationMinutes : 0
 
+        // 租车「还车地点同取车」：把取车地点拷给还车端，保证详情/地图/导出两端数据完整。
+        let returnSameAsPickup = mode == .carRental && sameReturnLocation
+        let savedToName = returnSameAsPickup ? fromName : toName
+        let savedToLat = returnSameAsPickup ? fromLatitude : toLatitude
+        let savedToLon = returnSameAsPickup ? fromLongitude : toLongitude
+
         if let segmentId {
             store.updateTransportSegment(
                 tripId: tripId, segmentId: segmentId,
@@ -444,8 +536,8 @@ struct TransportEditView: View {
                 fromName: fromName, fromCode: savedFromCode,
                 fromLatitude: fromLatitude, fromLongitude: fromLongitude,
                 fromTimeZoneId: savedFromTZ, fromTerminal: savedFromTerminal,
-                toName: toName, toCode: savedToCode,
-                toLatitude: toLatitude, toLongitude: toLongitude,
+                toName: savedToName, toCode: savedToCode,
+                toLatitude: savedToLat, toLongitude: savedToLon,
                 toTimeZoneId: savedToTZ, toTerminal: savedToTerminal,
                 departDayOrder: departDayOrder, departLocalMinutes: departMinutes,
                 arriveDayOrder: safeArriveDay, arriveLocalMinutes: arriveMinutes,
@@ -461,8 +553,8 @@ struct TransportEditView: View {
                 fromName: fromName, fromCode: savedFromCode,
                 fromLatitude: fromLatitude, fromLongitude: fromLongitude,
                 fromTimeZoneId: savedFromTZ, fromTerminal: savedFromTerminal,
-                toName: toName, toCode: savedToCode,
-                toLatitude: toLatitude, toLongitude: toLongitude,
+                toName: savedToName, toCode: savedToCode,
+                toLatitude: savedToLat, toLongitude: savedToLon,
                 toTimeZoneId: savedToTZ, toTerminal: savedToTerminal,
                 departDayOrder: departDayOrder, departLocalMinutes: departMinutes,
                 arriveDayOrder: safeArriveDay, arriveLocalMinutes: arriveMinutes,
@@ -473,7 +565,7 @@ struct TransportEditView: View {
                                        amount: costAmountValue, currencyCode: costCurrencyToSave)
             }
         }
-        dismiss()
+        finish()
     }
 
     /// 解析录入的金额（空 → 0）。
@@ -492,39 +584,11 @@ struct TransportEditView: View {
         guard let segmentId,
               let day = days.first(where: { d in (d.segments ?? []).contains { $0.id == segmentId } }) else { return }
         store.removeTransportSegment(tripId: tripId, dayId: day.id, segmentId: segmentId)
-        dismiss()
+        finish()
     }
 
-    // MARK: 用航班号自动填（spec: itinerary-flight-lookup.md）
-
-    private func lookupFlight() {
-        let num = number.trimmingCharacters(in: .whitespaces)
-        guard !num.isEmpty else { return }
-        let f = DateFormatter()
-        f.locale = Locale(identifier: "en_US_POSIX")
-        f.dateFormat = "yyyy-MM-dd"
-        f.timeZone = .current
-        let dateStr = f.string(from: lookupDate)
-        lookupStatus = .loading
-        CarryLogger.shared.log(.flightLookupStarted)
-        Task {
-            do {
-                let result = try await FlightLookupService.lookup(number: num, dateString: dateStr)
-                await MainActor.run {
-                    applyFlightResult(result)
-                    lookupStatus = .filled
-                    CarryLogger.shared.log(.flightLookupResolved,
-                                           context: "from=\(result.from.hasAirport) to=\(result.to.hasAirport)")
-                }
-            } catch FlightLookupError.notFound {
-                await MainActor.run { lookupStatus = .notFound; CarryLogger.shared.log(.flightLookupNotFound) }
-            } catch FlightLookupError.notConfigured {
-                await MainActor.run { lookupStatus = .notConfigured }
-            } catch {
-                await MainActor.run { lookupStatus = .failed; CarryLogger.shared.log(.flightLookupFailed) }
-            }
-        }
-    }
+    // MARK: 航班搜索结果 → 表单映射（spec: itinerary-flight-search-first.md）
+    // 查询/搜索 UI 已前移到 FlightSearchSheet；此处只负责把传入的结果映射进表单。
 
     /// 把查询结果映射进表单（尽力填，缺的留手填）。
     private func applyFlightResult(_ r: FlightLookupResult) {
@@ -559,8 +623,13 @@ struct TransportEditView: View {
             let c = localComponents(arr, tzId: r.to.timeZoneId)
             arriveTime = dateFromMinutes((c.hour ?? 0) * 60 + (c.minute ?? 0)); hasArriveTime = true
         }
-        let depYMD = ymdDate(r.from.scheduledLocal, tzId: r.from.timeZoneId) ?? ymdDate(lookupDate, tzId: TimeZone.current.identifier)
-        let arrYMD = ymdDate(r.to.scheduledLocal, tzId: r.to.timeZoneId) ?? depYMD
+        // ymdDate 内部把 nil 兜底成「今天」，故 nil 回退必须在调用前显式判断（否则丢掉「无起飞时刻→落到出发日」的本意）。
+        let depYMD: Date = r.from.scheduledLocal != nil
+            ? ymdDate(r.from.scheduledLocal, tzId: r.from.timeZoneId)
+            : ymdDate(departDayDate(), tzId: TimeZone.current.identifier)
+        let arrYMD: Date = r.to.scheduledLocal != nil
+            ? ymdDate(r.to.scheduledLocal, tzId: r.to.timeZoneId)
+            : depYMD
         let cross = max(0, daysBetween(depYMD, arrYMD))
         if let bundle, !bundle.isDateless {
             let tripStart = ymdDate(bundle.departureDate, tzId: TimeZone.current.identifier)
@@ -599,10 +668,4 @@ struct TransportEditView: View {
         Self.utcCal.dateComponents([.day], from: a, to: b).day ?? 0
     }
     private func clampOrder(_ o: Int, span: Int) -> Int { min(max(0, o), max(0, span - 1)) }
-}
-
-/// 让 Bool 能驱动 .sheet(item:)。
-private struct SearchTarget: Identifiable {
-    let isFrom: Bool
-    var id: Bool { isFrom }
 }
