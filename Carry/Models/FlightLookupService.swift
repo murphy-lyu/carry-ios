@@ -18,8 +18,15 @@ nonisolated enum FlightLookupConfig {
     /// 航班查询代理地址（你的 Cloudflare Worker）。公开、无敏感；换数据市场只改 Worker、不改这里。
     static let proxyURLString = "https://carry-flight.murphy-latte.workers.dev/flight"
     /// 与 Worker 的 APP_TOKEN secret 对应；非空则随请求发 X-App-Token 头，挡住盗用 Worker。
-    /// 注：这是低安全级的「门槛」、客户端可提取（非真密钥，真 key 只在 Worker）；要轮换时两边同步改。
-    static let appToken = "3d54d002389110a3f05c8c18eec71eb6fefd199ee09ec012"
+    /// 注：低安全级「门槛」、客户端可提取（非真密钥，真 key 只在 Worker）；要轮换时两边同步改。
+    /// 值不写死在源码（公开仓库会被密钥扫描），从 gitignore 的 `Secrets.plist`（随 bundle 打包）读取；
+    /// 缺失则为空（请求不带 token）。新机/CI 需按 `scripts/flight-proxy` 文档建该文件。
+    static let appToken: String = {
+        guard let url = Bundle.main.url(forResource: "Secrets", withExtension: "plist"),
+              let dict = NSDictionary(contentsOf: url),
+              let token = dict["FlightProxyAppToken"] as? String else { return "" }
+        return token
+    }()
 
     /// 是否已配置（避免占位 URL 时白发请求）。
     static var isConfigured: Bool {

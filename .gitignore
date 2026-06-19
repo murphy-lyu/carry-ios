@@ -10,3 +10,6 @@ Carry.xcodeproj/xcuserdata/**/xcdebugger/
 # Claude Code 本地工具配置（非 App 代码，不进版本库）
 .claude/
 
+
+# App secrets（仅本地，含 Worker APP_TOKEN；绝不进公开仓库）
+Carry/Resources/Secrets.plist
