@@ -36,6 +36,10 @@ nonisolated enum ItineraryRowID: Hashable, Sendable {
     case leg(UUID)
     case transport(UUID)
     case lodging(stay: UUID, day: Int)
+    /// 租车事件行：同一租车段在**取车日**（pickup=true）与**还车日**（pickup=false）各出一条。
+    /// 带「天序」维度保全局唯一（同 `.lodging` 的教训——跨多天复用不能重复 id）。不可拖、非可重排数据。
+    /// spec: itinerary-car-rental.md（增补：租车两事件）。
+    case carRental(segment: UUID, day: Int, pickup: Bool)
     case addStop(UUID)
     /// 只读日历事件叠加行（spec: itinerary-calendar-overlay.md）。带「天序」维度保全局唯一
     /// （跨多天的全天事件会在多个 section 出现，同 `.lodging` 的教训）。不可拖、非行程数据。
@@ -61,6 +65,8 @@ struct ItineraryReorderCollection: UIViewRepresentable {
     let transportContent: (UUID) -> AnyView
     /// 住宿常驻条内容，入参为 (lodging stay id, 当前天序)。
     let lodgingContent: (UUID, Int) -> AnyView
+    /// 租车事件行内容（segmentID, dayOrder, pickup）。
+    let carRentalContent: (UUID, Int, Bool) -> AnyView
     /// 只读日历事件叠加行内容，入参为 (event id, 当前天序)。spec: itinerary-calendar-overlay.md
     let calendarEventContent: (String, Int) -> AnyView
     let addStopContent: (UUID) -> AnyView
@@ -180,6 +186,8 @@ struct ItineraryReorderCollection: UIViewRepresentable {
                     cell.contentConfiguration = UIHostingConfiguration { self.parent.transportContent(id) }.margins(.all, 0)
                 case .lodging(let stay, let day):
                     cell.contentConfiguration = UIHostingConfiguration { self.parent.lodgingContent(stay, day) }.margins(.all, 0)
+                case .carRental(let seg, let day, let pickup):
+                    cell.contentConfiguration = UIHostingConfiguration { self.parent.carRentalContent(seg, day, pickup) }.margins(.all, 0)
                 case .calendarEvent(let id, let day):
                     cell.contentConfiguration = UIHostingConfiguration { self.parent.calendarEventContent(id, day) }.margins(.all, 0)
                 case .addStop(let dayID):
@@ -333,7 +341,7 @@ struct ItineraryReorderCollection: UIViewRepresentable {
                         if lastWasStop { rows.append(.leg(sid)) }
                         rows.append(.stop(sid))
                         lastWasStop = true
-                    case .transport, .lodging, .calendarEvent:
+                    case .transport, .lodging, .carRental, .calendarEvent:
                         rows.append(entry)
                         lastWasStop = false
                     default:

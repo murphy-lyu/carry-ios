@@ -262,6 +262,7 @@ struct ItineraryView: View {
                 legContent: { AnyView(legRow($0)) },
                 transportContent: { AnyView(transportRow($0)) },
                 lodgingContent: { AnyView(lodgingRow($0, $1)) },
+                carRentalContent: { AnyView(carRentalRow($0, $1, $2)) },
                 calendarEventContent: { AnyView(calendarEventRow($0, $1)) },
                 addStopContent: { AnyView(addStopRow($0)) },
                 headerContent: { AnyView(dayHeaderRow($0)) },
@@ -396,18 +397,38 @@ struct ItineraryView: View {
     /// 交通段，按 day.timeline 的共享 sortOrder）。leg / addStop / optimize 由 collection 自行插入/追加。
     private var daySections: [ItineraryDaySection] {
         let stays = bundle?.safeLodgingStays ?? []
+        // 全行程的租车段（边）：用于把「还车」事件注入到还车日（可能不是出发日）。spec: itinerary-car-rental.md。
+        let carRentals = days.flatMap { $0.sortedSegments }.filter { $0.mode == .carRental }
         return days.map { day in
             // 覆盖本天的住宿常驻条（含**退房日** = checkIn+nights，用于显「退房」事件）。
             // 行 ID 带 day 维度，避免同一 stay 跨天在快照里重复（item 标识须全局唯一）。
             let lodgingRows: [ItineraryRowID] = stays
                 .filter { $0.checkInDayOrder <= day.sortOrder && day.sortOrder <= $0.checkOutDayOrder }
                 .map { .lodging(stay: $0.id, day: day.sortOrder) }
-            let timelineRows: [ItineraryRowID] = day.timeline.map { item in
+            // 时间轴行：停靠点照旧；**租车段解释成「取车」事件**（仍落在 timeline 给它定的取车时间位）。
+            // 同时算出每行的「有效时间」（carry-forward：未设时间继承前一处），供下面把「还车」按时间插入。
+            var timed: [(row: ItineraryRowID, minutes: Int)] = []
+            var carry = -1
+            for item in day.timeline {
+                let own = item.effectiveMinutes
+                if own >= 0 { carry = own }
+                let eff = own >= 0 ? own : carry
                 switch item {
-                case .stop(let s): return .stop(s.id)
-                case .transport(let t): return .transport(t.id)
+                case .stop(let s): timed.append((.stop(s.id), eff))
+                case .transport(let t):
+                    timed.append(t.mode == .carRental
+                        ? (.carRental(segment: t.id, day: day.sortOrder, pickup: true), eff)
+                        : (.transport(t.id), eff))
                 }
             }
+            // 注入「还车」事件：本天 == 某租车段的还车日。按还车时间插到第一个更晚的项之前（无时间→末尾）。
+            for seg in carRentals where seg.arriveDayOrder == day.sortOrder {
+                let m = seg.arriveLocalMinutes
+                var idx = timed.count
+                if m >= 0, let found = timed.firstIndex(where: { $0.minutes >= 0 && $0.minutes > m }) { idx = found }
+                timed.insert((.carRental(segment: seg.id, day: day.sortOrder, pickup: false), m), at: idx)
+            }
+            let timelineRows: [ItineraryRowID] = timed.map(\.row)
             // 日历事件叠加行：成簇置于当天顶部（住宿条之后、行程之前），全天在前、定时按时间。
             // v1 不与定时停靠点逐条交错（避免重走 timeline 的 carry-forward 时间合并、保持简单）。
             let overlayRows: [ItineraryRowID] = (overlayEventsByDay[day.sortOrder] ?? [])
@@ -488,6 +509,19 @@ struct ItineraryView: View {
         if let day = days.first(where: { ($0.segments ?? []).contains { $0.id == segmentID } }),
            let seg = day.sortedSegments.first(where: { $0.id == segmentID }) {
             TransportTimelineRow(segment: seg, dayColor: ItineraryDayPalette.color(forDayIndex: day.sortOrder))
+                .padding(.horizontal, 16)
+                .contentShape(Rectangle())
+                .onTapGesture { activeSheet = .transportDetail(seg) }
+        }
+    }
+
+    /// 租车事件行（取车 / 还车）：同一租车段拆成两天两条事件，点击进同一段的详情。
+    /// spec: itinerary-car-rental.md（增补：租车两事件）。
+    @ViewBuilder
+    private func carRentalRow(_ segID: UUID, _ dayOrder: Int, _ pickup: Bool) -> some View {
+        if let seg = days.flatMap({ $0.sortedSegments }).first(where: { $0.id == segID }) {
+            CarRentalEventRow(segment: seg, pickup: pickup,
+                              dayColor: ItineraryDayPalette.color(forDayIndex: dayOrder))
                 .padding(.horizontal, 16)
                 .contentShape(Rectangle())
                 .onTapGesture { activeSheet = .transportDetail(seg) }
@@ -859,6 +893,67 @@ private struct TransportTimelineRow: View {
     }
 }
 
+// MARK: - CarRentalEventRow
+
+/// 租车事件行（取车 / 还车）：与住宿「入住/退房」同构——主行「取车/还车 · 公司」、次行「地点 · 时间」。
+/// 同一租车段在取车日、还车日各渲染一条，各显自己那端的地点与时间（不再用「+N」角标跨天表示）。
+private struct CarRentalEventRow: View {
+    let segment: TransportSegment
+    let pickup: Bool
+    let dayColor: Color
+
+    private let railWidth: CGFloat = 30
+    private let railSpacing: CGFloat = 12
+
+    var body: some View {
+        HStack(spacing: railSpacing) {
+            ZStack {
+                Circle().fill(Color(uiColor: .systemBackground))
+                Circle().fill(dayColor.opacity(0.15))
+                Image(systemName: segment.mode.symbolName)   // car.fill
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundStyle(dayColor)
+            }
+            .frame(width: 28, height: 28)
+            .frame(width: railWidth)
+
+            VStack(alignment: .leading, spacing: 2) {
+                Text(titleText)
+                    .font(.system(.subheadline, design: .rounded).weight(.semibold))
+                    .foregroundStyle(.primary)
+                if let sub = subtitleText {
+                    Text(sub)
+                        .font(.system(.footnote, design: .rounded))
+                        .foregroundStyle(.secondary)
+                }
+            }
+            Spacer(minLength: 8)
+        }
+        .padding(.vertical, 8)
+    }
+
+    /// 「取车」/「还车」——复用编辑表单同款 key（取车 / 还车）。
+    private var actionLabel: String {
+        NSLocalizedString(pickup ? "itinerary.transport.section.pickup" : "itinerary.transport.section.dropoff", comment: "")
+    }
+
+    /// 主行：「取车 · 携程租车」；无公司名则只显动作。
+    private var titleText: String {
+        let company = segment.carrier.trimmingCharacters(in: .whitespaces)
+        return company.isEmpty ? actionLabel : "\(actionLabel) · \(company)"
+    }
+
+    /// 次行：「地点 · 时间」（各取本端）。两者皆空则不显。
+    private var subtitleText: String? {
+        let name = (pickup ? segment.fromName : segment.toName).trimmingCharacters(in: .whitespaces)
+        let minutes = pickup ? segment.departLocalMinutes : segment.arriveLocalMinutes
+        var parts: [String] = []
+        if !name.isEmpty { parts.append(name) }
+        if minutes >= 0 { parts.append(timeLabel(dayMinutes: minutes)) }
+        return parts.isEmpty ? nil : parts.joined(separator: " · ")
+    }
+}
+
 // MARK: - LodgingBannerRow
 
 /// 住宿常驻条：床图标 + 名称 + 状态。spec 倾向「入住/退房显事件、中间天极轻灰条」：
@@ -1213,13 +1308,14 @@ struct StopDetailView: View {
         if stop.plannedStartMinutes >= 0 {
             rows.append(AnyView(LabeledDetailRow(icon: "clock", labelKey: "itinerary.transport.field.time", value: timeRangeLabel)))
         }
+        // 地址（去到这里要用的定位）排在费用之前——费用属财务、现场执行时不是首要信息。
+        if stop.hasCoordinate && !stop.address.isEmpty {
+            rows.append(AnyView(CopyableDetailRow(icon: "mappin.and.ellipse", labelKey: "itinerary.lodging.field.address", value: stop.address)))
+        }
         if stop.hasCost {
             // 真实付款币种（不折算）；折算只在 Trip Book 汇总层。spec: itinerary-cost-tracking.md
             rows.append(AnyView(LabeledDetailRow(icon: "creditcard", labelKey: "cost.field.label",
                                                  value: CurrencyCatalog.format(stop.costAmount, code: stop.costCurrencyCode))))
-        }
-        if stop.hasCoordinate && !stop.address.isEmpty {
-            rows.append(AnyView(CopyableDetailRow(icon: "mappin.and.ellipse", labelKey: "itinerary.lodging.field.address", value: stop.address)))
         }
         if !stop.note.isEmpty {
             rows.append(AnyView(NoteDetailRow(text: stop.note)))
