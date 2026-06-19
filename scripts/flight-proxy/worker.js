@@ -18,9 +18,9 @@
 //   - UPSTREAM_HOST  （可选变量）设了就额外发 x-rapidapi-host 头（RapidAPI 需要；API.market 留空）
 //   - APP_TOKEN      （可选 secret）App 内嵌共享口令；设了就强校验
 //   - CACHE_TTL_SECONDS（可选变量，默认 21600 = 6h）
-//   - RATE_LIMITER   （可选 Rate Limiting 绑定）按 IP 限流挡脚本盗刷；dashboard
-//                     Settings → Bindings 加「Rate limiting」绑定，名 RATE_LIMITER，
-//                     设 limit/period（如 20 次 / 60s）。不配则不限流（优雅跳过）。
+//   - RATE_LIMITER   （可选 Rate Limiting 绑定）按 IP 限流挡持续盗刷；不配则自动跳过。
+//                     注：Cloudflare 该限流为 best-effort/近似（按数据中心、最终一致），
+//                     压制持续盗刷有效、但不保证拦短爆发。成本主要靠上游月额度上限 + 缓存兜底。
 
 const DEFAULT_BASE = "https://prod.api.market/api/v1/aedbx/aerodatabox";
 const DEFAULT_KEY_HEADER = "x-magicapi-key";
@@ -31,8 +31,7 @@ export default {
     const url = new URL(request.url);
     if (url.pathname !== "/flight") return json({ error: "not_found" }, 404);
 
-    // 可选：按 IP 限流（挡脚本盗刷上游额度）。limit/period 在 RATE_LIMITER 绑定里配；
-    // 放在口令校验前 → 连带挡住「拿错口令狂试」。未配绑定则跳过。
+    // 按 IP 限流（挡持续盗刷上游额度）。limit/period 在 RATE_LIMITER 绑定里配；未配则跳过。
     if (env.RATE_LIMITER) {
       const ip = request.headers.get("CF-Connecting-IP") || "unknown";
       const { success } = await env.RATE_LIMITER.limit({ key: ip });
