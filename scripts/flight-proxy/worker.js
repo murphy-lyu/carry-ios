@@ -23,6 +23,10 @@
 //                         值 = aerodatabox.p.rapidapi.com；API.market 不用，留空即可。
 //   - APP_TOKEN          （可选 secret）App 内嵌共享口令；设了就强校验
 //   - CACHE_TTL_SECONDS  （可选变量，默认 21600 = 6h）
+//   - RATE_LIMITER       （可选 Rate Limiting 绑定）按 IP 限流，挡脚本盗刷；
+//                         在 dashboard Settings → Bindings 加「Rate limiting」绑定，
+//                         变量名 RATE_LIMITER，设 limit/period（如 20 次 / 60s）。
+//                         不配则不限流（代码优雅跳过），真口令仍只在 Worker。
 
 const DEFAULT_BASE = "https://prod.api.market/api/v1/aedbx/aerodatabox";
 const DEFAULT_KEY_HEADER = "x-magicapi-key";
@@ -32,6 +36,14 @@ export default {
     if (request.method !== "GET") return json({ error: "method_not_allowed" }, 405);
     const url = new URL(request.url);
     if (url.pathname !== "/flight") return json({ error: "not_found" }, 404);
+
+    // 可选：按 IP 限流（挡脚本盗刷上游额度）。limit/period 在 RATE_LIMITER 绑定里配；
+    // 放在口令校验前 → 连带挡住「拿错口令狂试」。未配绑定则跳过。
+    if (env.RATE_LIMITER) {
+      const ip = request.headers.get("CF-Connecting-IP") || "unknown";
+      const { success } = await env.RATE_LIMITER.limit({ key: ip });
+      if (!success) return json({ error: "rate_limited" }, 429);
+    }
 
     // 可选：App 口令校验
     if (env.APP_TOKEN && request.headers.get("X-App-Token") !== env.APP_TOKEN) {

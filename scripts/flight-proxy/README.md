@@ -23,6 +23,9 @@
    - 加 **Variable** `UPSTREAM_BASE` = 第一部分记下的 base（例 `https://prod.api.market/api/v1/aedbx/aerodatabox`，**以你接口页为准**）。
    - （推荐）加 **Secret** `APP_TOKEN` = 自己随机生成一串（如 `openssl rand -hex 16`）——App 会带这个头，挡住陌生人盗刷。
    - （可选）加 **Variable** `CACHE_TTL_SECONDS`（默认 21600 = 6 小时）。
+   - （推荐）**限流绑定**：**Settings → Bindings → Add → Rate limiting**，变量名填 `RATE_LIMITER`，
+     设 limit/period（如 **20 次 / 60 秒**，period 仅支持 10 或 60）。按 IP 限流挡脚本盗刷；
+     不加则不限流（代码会优雅跳过）。这是比 APP_TOKEN 更实在的防刷防线。
 5. 记下你的 Worker URL，如 `https://carry-flight.<你的子域>.workers.dev`。
 
 ### 方式 B：wrangler（命令行）
