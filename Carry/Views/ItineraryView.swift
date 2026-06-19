@@ -913,7 +913,8 @@ private struct TransportTimelineRow: View {
 
     /// 主行：航班号/车次领衔（旅客主要认它），承运方降浅色次要；无班次号（租车）只显公司，都空退化 mode 名。
     private var titleView: Text {
-        let baseFont = Font.system(.subheadline, design: .rounded)
+        // 交通标题与地点标题同级、同字号（.body）——航班/火车是和地点平级的时间轴事件，不该更小。
+        let baseFont = Font.system(.body, design: .rounded)
         let number = segment.number.trimmingCharacters(in: .whitespaces)
         let carrier = segment.carrier.trimmingCharacters(in: .whitespaces)
         if number.isEmpty {
@@ -983,7 +984,7 @@ private struct CarRentalEventRow: View {
                 // 主行：动作 + 公司（左）——— 时间（右对齐），与地点行「名称 ——— 时间」一致。
                 HStack(alignment: .center, spacing: 6) {
                     Text(titleText)
-                        .font(.system(.subheadline, design: .rounded).weight(.semibold))
+                        .font(.system(.body, design: .rounded).weight(.semibold))   // 与地点标题同字号（同级事件）
                         .foregroundStyle(.primary)
                         .lineLimit(1)
                     if let t = timeText {
