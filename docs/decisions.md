@@ -1,5 +1,23 @@
 # 决策日志
 
+## 2026-06-19 机场库 / 行程地图取景 / 航班时间轴定位 / 底部渐变配色坑
+
+### 航班机场搜索 = 内置机场数据库，不挂通用地图 POI（spec: itinerary-airport-search.md）
+原因：大陆设备 MapKit POI 走高德、境外机场覆盖差，且 App 无法切供应商；通用 POI 也给不出 IATA/时区。
+决策：打包 `Carry/Resources/airports.json`（OurAirports 机场列表 + OpenFlights 时区 + Wikidata 9 语言名/城市别名，IATA 未命中用 ICAO 兜底抓取），`AirportDatabase`(actor) 全球离线检索、回填 IATA/坐标/IANA 时区。**仅航班机场选点走它**，其它交通方式仍走地图 POI。数据许可：OpenFlights ODbL **要求署名**（已落 AboutView「数据来源」卡）。重建脚本 `scripts/airports/`。
+
+### 行程地图：预览取景由「地点」驱动，交通端点不参与缩放
+原因：航班 from/to 端点（机场可相距数千公里）一并算进总包围盒 → 加航班后地图缩成跨国尺度、市内地点变针尖。
+决策：**预览**取景只用停靠点（`framingCoordinates`，纯航班日才回退含端点）；**全屏**维持框住全程含航班弧线。分工：预览看当天本地、全屏看全程。不引入离群统计/阈值（不可预测、不克制）。
+
+### 航班在当天时间轴的定位：硬时间锚点，按「相对正午」就位
+原因：原 timeline 只把定时航班相对「其它定时项」插入；Carry 地点常不填钟点 → 航班无锚点落末尾，早班机被无时间地点压到底、丢了「清晨」信息。
+决策：base 全是无时间地点时，按航段**出发时间相对正午**定位——上午(<12:00)领起当天置顶、午后/傍晚收束置底；有定时项时沿用原「按时间逐个插入」。航班行外观不变（航司·航班号/起讫+时间，信息量足、有订票价值，比缩成「抵达 X」更有用）。
+
+### ⚠️ 底部「消隐渐变/实心垫底」配色坑：目标色 == 该页「底部最上层不透明层」色，不是页面根！
+原因（踩坑）：行程详情根是 `CarrySubtleBackground`(暗底端 0.08)，但内容层（ItineraryView/packingContent）铺 `systemBackground`(纯黑) + `.ignoresSafeArea(.bottom)` **盖住了根** → 底部真实是纯黑；`bottomBarFade` 淡出到 0.08 baseColor 就在纯黑上显**比背景亮的灰雾**（Dark 才可见，浅色 0.98 vs 1.0 几乎无差）。
+决策/判据：`bottomBarFade`/`bottomBarScrim`/`bottomContentFade` 的目标色**必须等于该页底部「最上层不透明层」实际渲染色**——别按页面根判（内容层常覆盖根）。改为两面都淡出 `systemBackground`。另：UIKit `CAGradientLayer.colors` 存的 CGColor **不随 light/dark trait 自适应**（`FXBottomFadeView` 深色停白），须 `registerForTraitChanges` 重设；SwiftUI `Color(动态UIColor)` 则会自适应。排查同类问题用「可观测/实测」：截图看真实底色 > 静态读「根背景」（agent 静态读把行程详情判反了）。
+
 ## 2026-06-18 设置信息架构与一致性 / 自定义分类 / SwiftUI 呈现坑
 
 ### Settings 一级 IA：用「Language & Region」替代无主题的「General」

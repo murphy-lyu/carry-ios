@@ -1,7 +1,32 @@
 # 项目进度
 
 ## 最后更新
-2026-06-18
+2026-06-19
+
+## 上次改动摘要（机场搜索内置库 + 行程地图/时间轴/视觉一串根因修复 · 2026-06-19）
+
+> 本会话与「航班搜索优先」「照片回溯行程」两个并行会话**共用多个文件**（`Itinerary.swift` / `PackingListView.swift` / `TransportEditView.swift` / `CarryBottomSheetFX.swift` 等）。提交时**一律只 surgical 暂存自己的 hunk**（以 HEAD 为基补我那段、再还原工作区），**绝不卷入并行会话的在途代码**（如 `placeSelectableCases`、`FlightSearchSheet`/`prefill`、Photo* 系列）。全部**编译绿、未 push**。下面均已提交（commit 见括号）。
+
+- **🟢 机场搜索改用内置机场数据库**（多 commit：`0c58f3c`/`68e8ca1`/`40cb12f`/`a80afe0`/`a0e6f13`，spec: `itinerary-airport-search.md`）：根因——航班机场选点原复用 MapKit 通用 POI 搜索，大陆设备走高德、境外覆盖差且 App 无法切供应商。解：`Carry/Resources/airports.json`（~4100 机场 / OurAirports+OpenFlights 时区+Wikidata 多语言名，含 ICAO 兜底抓取）+ `AirportDatabase`(actor) + `AirportSearchSheet`，全球可搜、离线、回填 IATA/坐标/IANA 时区。9 语言机场名 + 城市别名（搜索匹配）。`AboutView` 加数据来源署名（OpenFlights ODbL 要求）。构建脚本见 `scripts/airports/`。
+- **复制行程移出左滑 → 行程内 ··· 菜单 + 回首页扫光高亮**（`3469a79`）：根因——左滑展开态下插入新行 SwiftUI 无法平滑收起该行（对照实验：contextMenu 无左滑插入完全干净）。解：复制从行程内 ··· 菜单触发（首页不在左滑态），复制后 `router.path=空` 回首页 + 复用既有 `shimmerTripId` 扫光高亮副本。新增 `TripStore.pendingShimmerTripId`。左滑只留删除。
+- **日期选择器三处打磨**（`7a3895b`/`5110bf4`）：头部 Departure/箭头/Return 固定列宽不抖动（隐藏「最宽参考」+ monospacedDigit + lineLimit(1) 防隐藏参考换行顶歪标题）；「今天」圆点选中态白色；选中日数字 Dark 下也白色。
+- **行程规划页底部空一片**（`c59e453`）：根因——日历横条用 `ScrollView(.horizontal)` 没约束高度、撑满竖直空间、日期格被摆在高框顶部、下方空 ~160pt 把列表顶到屏幕下半。解：`.fixedSize(horizontal:false, vertical:true)`。（实测定位：collection 内容在自己顶部 originY=549、空白在其上方。）
+- **行程地图取景由地点驱动**（`ed7f6db`，`ItineraryMapView.swift`）：根因——`fittedRegion` 把交通段 from/to 端点（机场可相距数千公里）算进总包围盒 → 加航班后地图缩成跨国尺度、市内地点变针尖。解：新增 `framingCoordinates`，预览取景只用停靠点、排除交通端点（纯航班日才回退含端点）；全屏维持框住全程。
+- **航班时间轴定位：早班机不再被无时间地点压到底**（`2e83805`，`Itinerary.swift` `timeline`）：根因——原逻辑只把定时航班相对「其它定时项」插入，Carry 地点常不填钟点 → 航班无锚点落末尾。解：base 全无时间地点时，按航段出发时间相对正午定位（上午<12:00 置顶领起当天、午后/傍晚置底）。
+- **底部消隐渐变 Dark 灰雾**（`88c467e` 首页 sheet + `2dae40d`→`243a2b4` 行程详情）：① `CarryBottomSheetFX` 的 `FXBottomFadeView` 用 CAGradientLayer+CGColor 不跟 trait → 深色停白，改 `registerForTraitChanges` 重设。② 行程详情两个 tab 内容层都铺 `systemBackground`+`ignoresSafeArea(.bottom)` 盖住容器 `CarrySubtleBackground` → 底部真实纯黑，但 `bottomBarFade` 淡出到 0.08 baseColor 起灰雾；改为两面都淡出 `systemBackground`。**已全项目排查 8 处 fade/scrim：目标色须 == 该页「底部最上层不透明层」色（不是页面根！），其余 7 处均已匹配。**
+- **开发流程铁律新增**（`CLAUDE.md`）：驱动模拟器的许可是「按当次请求」的，**绝不跨任务/跨轮沿用**；没有当轮明确「跑/调模拟器」就只编译、不自跑（computer-use 抢屏会突然打断用户）。
+
+## 上次改动摘要（添加航班「搜索优先」+ 航司表 + 交通段日期/时间融合 chip · spec: itinerary-flight-search-first.md · 2026-06-19）
+
+> 把「添加航班」从手动优先翻转为**检索优先 + 手动兜底**，并把交通段编辑表单的日期/时间重做成 Tripsy 式融合 chip。**编译绿（主 app + Widget）+ 模拟器 iOS 26.5 实测通过**。**全部未提交**。与并行租车会话共享 `TransportEditView.swift`，只动了我的 hunk（航班预填接入 + 日期时间 chip + sheet 合并），未碰其租车逻辑。
+
+- **🟢 第1段 `FlightSearchSheet`（新）**：渐进式单框——输航班号 → 即时识别航司（新 `AirlineDatabase`，实测 MU→中国东方航空）→ 竖排日期列表（本行程的天 + 「选择其他日期」日历）→ **点日期即触发查询**（对齐 Flighty，不预填、不加按钮）→ 结果确认卡 → 点卡 push 进**预填**的 `TransportEditView`。底部常驻低权重「手动输入」兜底（春秋 9C 等查不到的航班）。
+- **🟢 航司表**：`scripts/airlines/`（OpenFlights `airlines.dat` + Wikidata 多语言名，英文名也优先 Wikidata——9C 旧名 "China SSS" 已修为 "Spring Airlines/春秋航空"）→ `Carry/Resources/airlines.json`（986 航司，~225KB，已确认进 bundle）+ `AirlineDatabase`（actor）+ `FlightNumberParser`。
+- **🟢 `TransportEditView` 改造**：① 加 `prefill`/`embedInOwnNavigationStack`/`onFinish`，被 `FlightSearchSheet` push 时不自带 NavigationStack、保存经 `onFinish` 关整张 sheet；② 移除原内嵌「✨自动填」块（前移到第1段）；③ **日期/时间融合 chip**（`📅 [日期 chip][时间 chip]`）取代「day Picker 行 + 时间开关行」——日期 chip 显示行程天（点选换天）、时间 chip 可选（点开滚轮 sheet、可清除）。
+- **🔴 根因解·行高跳变**：原「时间开关一开，把比开关高的 compact DatePicker 塞进同一行 → 行被撑高」。根因＝控件硬塞进开关行；融合 chip 后无开关、选择器移弹出层、chip 普通行高 → 行高恒定（曾用的「隐形占位」是 workaround，已废弃）。地点搜索 + 时间选择合并为单一 `.sheet` 枚举（防多 sheet 互抑）。
+- **🟢 工程**：`FlightLookupService` 上游 DTO 补 `nonisolated`，根治 Swift 6「main-actor 隔离 Decodable 不能在 nonisolated 解码」报错。「+」菜单航班入口改走 `FlightSearchSheet`。埋点 `flightSearchManualFallback`（即定义即接线）。文案 `flight.search.*` + `clear_time`（9 语言齐全），删死键 `itinerary.flight.lookup.*` / `itinerary.transport.field.day`。
+- **留作单独立项**：日期「真正可选」（脱离按天分组、需「未排期」区 + schema 迁移），与按天分组架构冲突且重叠并行租车工作，单独 spec 后再做。
+- **待办**：① 真机走完整验收（搜索→预填→保存、春秋手填、融合 chip）；② 提交（按用户指示）；③ 上架前切 API.market + 给 Worker 加 `APP_TOKEN`；④ 隐私政策补「航班号发第三方查询」一句。
 
 ## 上次改动摘要（Settings 信息架构与一致性大修 + 我的物品自定义分类 + 多处交互根治 · 2026-06-18）
 
