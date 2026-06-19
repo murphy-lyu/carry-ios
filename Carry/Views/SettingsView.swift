@@ -64,6 +64,9 @@ struct SettingsView: View {
     @EnvironmentObject private var store: TripStore
     @AppStorage("appearance_mode") private var appearanceModeRaw = AppearanceMode.system.rawValue
     @AppStorage("distance_unit") private var distanceUnitRaw = DistanceUnit.automatic.rawValue
+    // 行程提醒默认档位（与 NotificationSettingsView 同一 key）：用于让一级行的 On/Off 跟随用户开关，
+    // 而非只看系统授权态——授权开着但档位全关时，提醒实际不会发，一级行应显 Off。
+    @AppStorage(ReminderPreferences.storageKey) private var reminderOffsetsRaw = "0,1"
 
     // 语言标识符在 App 生命周期内不会改变，用 let 缓存，避免每次 body 求值都调用系统 API
     private let currentLanguageDisplay: String = {
@@ -81,10 +84,16 @@ struct SettingsView: View {
 
     /// 通知授权态文案，显示在 Notifications 行尾（On / Off / 未设置）。`.task` 与前台回流刷新
     /// `notificationStatus` 后，该行值随之更新——让用户在设置层一眼看到系统通知是否被拒。
+    /// 一级行是否还有「实际会发的提醒」：至少一个默认档位开着。
+    private var anyReminderPreset: Bool {
+        !reminderOffsetsRaw.split(separator: ",").compactMap { Int($0) }.isEmpty
+    }
+
     private var notificationStatusText: String {
         switch notificationStatus {
         case .authorized, .provisional, .ephemeral:
-            return String(localized: "settings.notifications.on")
+            // 授权正常 → 值跟随用户的档位开关：全关 = 提醒实际不会发 = Off（修「关掉所有档位仍显 On」的误解）。
+            return String(localized: anyReminderPreset ? "settings.notifications.on" : "settings.notifications.off")
         case .denied:
             return String(localized: "settings.notifications.off")
         case .notDetermined:
