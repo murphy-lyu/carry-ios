@@ -5,10 +5,10 @@
 ### iOS（2026-06-12 起：根级不再是 TabView，见 `specs/app-navigation-framework.md`，feature 分支未合并）
 SplashView（启动过渡）
 └─► ContentView → **单个 NavigationStack → HomeView**（根=行程首页，足迹地球 + UIKit Sheet）
-    ├─► HomeView hero 右上 gear → **SettingsView（sheet 呈现，非 tab）**；右下 FAB → 创建
+    ├─► HomeView hero 右上 gear → **SettingsView（sheet 呈现，非 tab）**；右下 FAB → 创建（iPhone 为 `.sheet`，单屏 TripInfo 表单，2026-06-19 由 `fullScreenCover` 改）
     └─► navigationDestination
         ├─► UUID → PackingListView（行程详情，**两张脸**）
-        └─► CreationRoute → 创建流程（tripInfo / itemPicker / scenePicker / packingList(isNewTrip) / editScenes）
+        └─► CreationRoute → 创建流程（tripInfo / itemPicker / packingList(isNewTrip)；`editScenes` 路由 2026-06-19 作为死代码删除）
 
 **行程详情（PackingListView）两张脸**——底部悬浮胶囊切换「行程 ｜ 打包」：
 - **打包**：`packingContent`（正常态走 `ReorderableItemCollection` 拖拽重排）。

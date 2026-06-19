@@ -258,15 +258,17 @@ Apple 原生风格，极简、克制、优雅。
 
 - **底部栏 / 浮动元素下的内容过渡**（2026-06-14 重写，超越原「一律实心、禁渐变」）：统一原则——**滚动内容在底部元素下永不硬切，而是柔和消隐**。按底部元素是「实心整宽栏」还是「浮动元素」分两套，**单一真源**在 `ViewModifiers.swift`：
 
-  - **① `BottomBarScrim`** —— 用于**整宽实心底栏**（`safeAreaInset(.bottom)` 里的 Save/继续/采用/行程·打包切换器等）。背景 = 顶部定高「透明→实心」渐变条 + 其下实心填满（`ignoresSafeArea(.bottom)` 延到屏幕底边）。内容在栏上沿淡出，**按钮坐实心、其下到屏幕底边不透出内容**。淡出到**该页背景色**（无缝）：一级 `systemBackground`；二级弹层 chrome 同色系（Dark `Color(red:0.08,green:0.08,blue:0.09)`/Light `systemBackground`）；`CarrySubtleBackground` 上用 `CarrySubtleBackground.baseColor`。**已落地**：行程/打包切换器、SuggestionPreview、ScenePicker、TripInfo、TripDateRange、OptimizeRoute、新建预览 Save。
+  - **① `BottomBarScrim`** —— 用于**整宽实心底栏**（`safeAreaInset(.bottom)` 里的 Save/继续/采用等 CTA）。背景 = 顶部定高「透明→实心」渐变条 + 其下实心填满（`ignoresSafeArea(.bottom)` 延到屏幕底边）。内容在栏上沿淡出，**按钮坐实心、其下到屏幕底边不透出内容**。淡出到**该页背景色**（无缝）：一级 `systemBackground`；二级弹层 chrome 同色系（Dark `Color(red:0.08,green:0.08,blue:0.09)`/Light `systemBackground`）；`CarrySubtleBackground` 上用 `CarrySubtleBackground.baseColor`。**已落地**：SuggestionPreview、ScenePicker、TripInfo、TripDateRange、OptimizeRoute、新建预览 Save。
 
-  - **② `bottomContentFade`** —— 用于**浮动元素**（玻璃胶囊栏 / 圆角浮卡，**不该被实心遮挡**）。在内容底部叠一段「透明→页面底色」渐变 overlay，内容向背景**消隐**、浮动元素**仍浮于其上、保通透**（**不**在其后垫整块实心）。**已落地**：首页底部 glass 胶囊栏、ItemPicker 智能预览圆角条。
+  - **② `bottomContentFade`** —— 用于**浮动元素**（玻璃胶囊栏 / 圆角浮卡，**不该被实心遮挡**），**叠在滚动内容上**（overlay）。在内容底部叠一段「透明→页面底色」渐变，内容向背景**消隐**、浮动元素**仍浮于其上、保通透**（**不**在其后垫整块实心）。**已落地**：首页底部 glass 胶囊栏、ItemPicker 智能预览圆角条。
+
+  - **③ `bottomBarFade`（2026-06-19 新增）** —— ②的「背景版」，用于浮动栏**坐在 `safeAreaInset(.bottom)` 里**的场景（如行程/打包切换器）。结构同 `BottomBarScrim`（`.padding(.top, fadeHeight)` + 背景 `ignoresSafeArea(.bottom)`），但填充由「实心」换成「透明→底端半透（`peakOpacity` 0.92）」的**通透**渐变——内容在栏后柔和消隐却**仍透出**，不被整块实心压短可视区。**配合磨砂胶囊**：浮动胶囊背景用 `.regularMaterial`（半透同时**模糊**背后内容，糊成柔光、不透出清晰字 → 「通透却不脏」，对齐 iOS 原生悬浮栏），单靠 `Color.opacity` 平涂只调暗不模糊、会让清晰文字穿透显脏。**已落地**：行程/打包切换器。
 
   - **⚠️ 目标色判据（2026-06-19 踩坑）：淡出/垫底色必须 == 该页底部「最上层不透明层」实际渲染色，不是页面根色。** 容易判反：行程详情根是 `CarrySubtleBackground`(暗底端 0.08)，但两个 tab 的内容层（ItineraryView / packingContent）都铺 `systemBackground`(纯黑) + `.ignoresSafeArea(.bottom)` **盖住了根** → 底部真实是纯黑；按"根"判而用 0.08 baseColor，就在纯黑上显**比背景亮的灰雾**（仅 Dark 可见，浅色 0.98 vs 1.0 近乎无差）。现已两面统一淡出 `systemBackground`。排查同类问题用**实测/截图看真实底色**，别静态读"根背景"。另：UIKit `CAGradientLayer.colors` 的 CGColor 不随 light/dark trait 自适应（`FXBottomFadeView` 深色停白），须 `registerForTraitChanges` 重设；SwiftUI `Color(动态UIColor)` 则自适应。
 
-  - **选型**：底部元素是不透明整宽栏 → `BottomBarScrim`；是半透/玻璃/圆角浮动控件 → `bottomContentFade`（垫实心会杀掉玻璃通透）。
+  - **选型**：① 不透明整宽 CTA 底栏 → `BottomBarScrim`（实底背书主操作）；② 浮动控件**叠在滚动内容上** → `bottomContentFade`（overlay 版）；③ 浮动控件**坐在 `safeAreaInset` 里** → `bottomBarFade`（背景版，通透）。垫实心会杀掉玻璃通透 → 浮动控件一律走 ②/③。
 
-  - **性能**：两者都是纯 `LinearGradient` overlay + `allowsHitTesting(false)`——**不用 `.mask`/`.blur`/材质**，故不触发离屏渲染、不挡点击、开销极低（这是关键选型，别退回 mask/material）。
+  - **性能**：①②③ 的渐变都是纯 `LinearGradient` + `allowsHitTesting(false)`——**不用 `.mask`/`.blur`**，故不触发离屏渲染、不挡点击、开销极低。**例外**：浮动胶囊**本体**的 `.regularMaterial` 磨砂是有意为之（模糊背后内容、防穿透显脏），仅用在小面积的胶囊上、不铺整条底栏（别把整条 fade 退回 material）。
 
   - 为何改「禁渐变」：原规则针对 `.regularMaterial` 在深背景上成**色带**——根因是「材质」非「渐变」。淡出到页面色的渐变无色带、且让内容优雅消隐（north-star §3），更近 Apple 浮动栏。仍**禁止**：材质/雾化层；`BottomBarScrim` 的实心区透出列表内容。
 
