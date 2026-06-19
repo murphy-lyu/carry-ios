@@ -3,6 +3,19 @@
 ## 最后更新
 2026-06-19
 
+## 上次改动摘要（行程交通：租车入口收口 + 类型菜单/表单打磨 · spec: itinerary-car-rental.md · 2026-06-19）
+
+> 与「航班搜索优先」并行会话**共享** `ItineraryView.swift` / `TransportEditView.swift` / `Localizable.xcstrings`，逐 hunk 交织、不可分割提交 → 由用户合入**同一 commit `1dc5cca`**（含航班搜索）。**编译绿、未 push**。⚠️ 该 commit 仍含硬编码 `appToken`（`FlightLookupService.swift:22`），push 前须处理（用户在航班会话另行处理）。**真机验收待办。**
+
+- **🟢 租车入口收口（根因）**：原本「加租车」走的是**地点类别选择器**（`StopCategory.carRental`）→ 搜一个坐标点（搜不到小公司/公司不在机场）。根因＝把「边」（交通段）当成「点」（地点）。解：① `StopCategory.placeSelectableCases`（在地体验+住宿+兜底）从地点类别**撤掉** carRental/cruise/flight/train（枚举 case 保留，旧数据仍渲染）；② 租车升为「+」**交通组顶层入口**，走现成 `TransportSegment` / `TransportEditView`（公司=自由文本、取/还车地点可选、取/还车日期时间）。
+- **🟢 类型菜单单一数据源 + 嵌套子菜单**：`TransportMode.ordered = commonModes[航班/火车/租车] + moreModes[巴士/渡轮/其他]`，「+」菜单与表单内类型选择器**共用同一份**（内外一致、不再分叉）。菜单交通组＝常用直列 + **「更多交通」嵌套子菜单**（巴士/渡轮/其他，各直接落位）——外层轻、低频也一步可达，否决「全屏 hub」与「其他交通→进表单再选」。
+- **🟢 还车地点同取车开关**（默认开，仅 carRental）：只折叠还车「地点」，还车日期/时间独立；保存时把取车地点拷给还车端。无存储位，编辑时从数据派生回填。
+- **🔴 canSave 修复**：租车隐藏班次号、地点又可选，原「班次号 || 出发地名」导致**只填公司存不了**；改为租车以「公司名 || 取车地点」为准。
+- **🟢 表单顶部「类型」行移除 → 标题承载类型**：外层已选定类型，页内不再重复展示/可改；标题改「添加{类型}」/「编辑{类型}」。**类型固定在创建时**，改类型 → 删除重加（极少见、各类型字段本就不同）。
+- **🔴 两个 `??` 死代码警告（根因修非消音）**：`ymdDate` 返回非可选，`??` 是死代码，且暴露 bug——作者本意「无起飞时刻→落到出发日」因 `ymdDate` 把 nil 吞成「今天」从未生效；改为调用前显式判 nil，恢复回退本意。
+- **文案**：`itinerary.transport.mode.carRental`「自驾/Car」→「**租车/Car rental**」；新增 `add.section.transport`（交通）/`add.more_transport`（更多交通）/`transport.field.same_return_location`（还车地点同取车）/`transport.{add,edit}.title.typed`（带 %@，各语言占位符位置按习惯）；删旧 `transport.{add,edit}.title` / `transport.section.type` / `kind.other_transport`。均 9 语言齐。
+- **待办**：① 真机验收（菜单交通组 + 更多交通子菜单 + 还车开关 + 类型标题各语言）；② `appToken` 移出源码后再 push（航班会话处理）。
+
 ## 上次改动摘要（机场搜索内置库 + 行程地图/时间轴/视觉一串根因修复 · 2026-06-19）
 
 > 本会话与「航班搜索优先」「照片回溯行程」两个并行会话**共用多个文件**（`Itinerary.swift` / `PackingListView.swift` / `TransportEditView.swift` / `CarryBottomSheetFX.swift` 等）。提交时**一律只 surgical 暂存自己的 hunk**（以 HEAD 为基补我那段、再还原工作区），**绝不卷入并行会话的在途代码**（如 `placeSelectableCases`、`FlightSearchSheet`/`prefill`、Photo* 系列）。全部**编译绿、未 push**。下面均已提交（commit 见括号）。
