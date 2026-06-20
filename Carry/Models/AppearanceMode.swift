@@ -33,12 +33,12 @@ enum CarryAccent {
 /// may introduce non-accent colours.
 ///
 /// 7 colours, cycled by `sortOrder % 7` (see decisions.md 2026-06-20). The hues are spread right
-/// around the wheel — green / orange / blue / violet / raspberry / teal / terracotta — so every day
+/// around the wheel — blue / orange / green / violet / raspberry / teal / terracotta — so every day
 /// reads as a clearly different colour name (an earlier warm-only set had three look-alike pinks).
+/// Day 1 leads with the brand smoky blue (CarryAccent); green sits at Day 3.
 /// The order is solved (CIEDE2000 over both light & dark): all 7 are mutually distinct (min ΔE ≈
-/// 14.7) and the order maximises adjacent-day separation (worst neighbour ΔE ≈ 16, the blue↔violet
-/// pair Day 3↔4). With N=7 the 5-day window can't hide any pair, so the floor IS the global min —
-/// keep all 7 well apart. Day order is product-pinned (green→orange→blue→violet by request).
+/// 14.7) and the order maximises adjacent-day separation (worst neighbour ΔE ≈ 20). With N=7 the
+/// 5-day window can't hide any pair, so the floor IS the global min — keep all 7 well apart.
 ///
 /// NOTE on legibility: some hues are light enough to fall below WCAG 3:1 on white. Foreground marks
 /// must therefore NOT assume the colour is dark — e.g. map-pin numbers use `Color.legibleInk`
@@ -47,9 +47,9 @@ enum CarryAccent {
 /// Re-run `scripts/itinerary-day-palette-solve.py` to re-verify before any change.
 enum ItineraryDayPalette {
     private static let palette: [UIColor] = [
-        adaptive(light: (0.455, 0.675, 0.333), dark: (0.573, 0.757, 0.475)),  // 0 · Day 1 — 棕榈绿 palm green
+        CarryAccent.uiColor,                                                   // 0 · Day 1 — 烟蓝 smoky blue (brand)
         adaptive(light: (0.863, 0.549, 0.235), dark: (0.910, 0.659, 0.404)),  // 1 · Day 2 — 万寿菊 marigold
-        CarryAccent.uiColor,                                                   // 2 · Day 3 — 烟蓝 smoky blue (brand)
+        adaptive(light: (0.455, 0.675, 0.333), dark: (0.573, 0.757, 0.475)),  // 2 · Day 3 — 棕榈绿 palm green
         adaptive(light: (0.561, 0.420, 0.733), dark: (0.675, 0.561, 0.812)),  // 3 · Day 4 — 雪青 amethyst
         adaptive(light: (0.780, 0.314, 0.431), dark: (0.859, 0.471, 0.569)),  // 4 · Day 5 — 覆盆子 raspberry
         adaptive(light: (0.176, 0.659, 0.620), dark: (0.357, 0.745, 0.706)),  // 5 · Day 6 — 青绿 teal

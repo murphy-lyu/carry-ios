@@ -15,8 +15,8 @@
 ## 上次改动摘要（行程按天色板定稿：7 色全色环铺开 + 地图针白字易读性根因 · 2026-06-20 续）
 
 > 色板定稿。本会话改 `AppearanceMode.swift` / `ItineraryMapView.swift` / `docs/{decisions,design-system,progress}.md` / `scripts/itinerary-day-palette-solve.py`，与并行会话在途改动（`ItineraryView`/`ItineraryReorderCollection`/`TripReminderConfig`/`NotificationManager`/`HomeView`/`Localizable.xcstrings`/`specs/itinerary-map-scroll.md`）**不重叠**，走隔离 index 提交（`design-system.md` 共享、只 patch 自己的 hunk）。**编译绿**；UI 验收交用户。
-- **🟢 7 色定稿**（`AppearanceMode.swift`，`sortOrder % 7`）：`Day1 棕榈绿 → Day2 万寿菊 → Day3 烟蓝(品牌) → 雪青 → 覆盆子 → 青绿 → 赤陶`（绿/橙/蓝/紫/莓红/青/赭红）。**色相绕色环铺开**，每天一个不同色名。CIEDE2000 floor **14.7**，相邻最差 ΔE≈16（蓝↔紫）。前四天按用户偏好钉死、后三天求解。
-- **🟡 「暖色主导」版被否（迭代教训）**：曾做暖色版（珊瑚/海蓝绿/胭脂粉/浆果红），真机一看后几天「三个粉红一家」太像——暖色只占色相环一小段、ΔE 够但色相家族太挤。**决定「像不像」的是色相家族数、非 ΔE 数字**。改全色环铺开。绿色打头＝用户定，**放弃「Day1＝品牌色」**，烟蓝移 Day3。
+- **🟢 7 色定稿**（`AppearanceMode.swift`，`sortOrder % 7`）：`Day1 烟蓝(品牌) → Day2 万寿菊 → Day3 棕榈绿 → 雪青 → 覆盆子 → 青绿 → 赤陶`（蓝/橙/绿/紫/莓红/青/赭红）。**色相绕色环铺开**，每天一个不同色名。CIEDE2000 floor **14.7**，相邻最差 ΔE≈20。前四天按用户偏好钉死、后三天求解。
+- **🟡 「暖色主导」版被否（迭代教训）**：曾做暖色版（珊瑚/海蓝绿/胭脂粉/浆果红），真机一看后几天「三个粉红一家」太像——暖色只占色相环一小段、ΔE 够但色相家族太挤。**决定「像不像」的是色相家族数、非 ΔE 数字**。改全色环铺开。Day1 用回品牌烟蓝、绿色对调到 Day3（对调后相邻最差 16→20）。
 - **🔴 地图针白字易读性根因（`ItineraryMapView.swift`）**：浅色（青绿/赤陶/万寿菊等）低于 WCAG 3:1 → 针上白序号看不清、浅色路线发虚。**加深颜色必塌可分性**（降饱和 floor→8.7、整组压暗→6.6）；根因在「渲染假设日色够深托白字」。解：① 针序号改 `Color.legibleInk`（新增于 `AppearanceMode.swift`，按底色 WCAG 亮度自动取深/浅字）；② 浅色路线加暗 casing 衬底；③ 时间轴浅图标/色点偏柔但有色圈+位置+序号共同标识、不动。**禁止再用加深色板修对比度**。
 - **待办**：① UI 验收（建 7+ 天行程看时间轴、**地图针序号在浅色针上是否清晰**、路线、明暗两态）；② push 由用户定（含前序 `420b6e1`/`fdc84f5`）。
 

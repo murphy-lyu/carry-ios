@@ -28,9 +28,9 @@ import itertools
 # VERIFY_ONLY keeps it as-listed and just reports the floor. Flip VERIFY_ONLY off to brute-force
 # a max-floor order instead (e.g. when adding colours and the order is free to choose).
 PALETTE = [
-    ("palm_green",         (0.455, 0.675, 0.333), (0.573, 0.757, 0.475)),
-    ("marigold",           (0.863, 0.549, 0.235), (0.910, 0.659, 0.404)),
     ("smoky_blue (brand)", (0.357, 0.478, 0.588), (0.478, 0.612, 0.722)),
+    ("marigold",           (0.863, 0.549, 0.235), (0.910, 0.659, 0.404)),
+    ("palm_green",         (0.455, 0.675, 0.333), (0.573, 0.757, 0.475)),
     ("amethyst",           (0.561, 0.420, 0.733), (0.675, 0.561, 0.812)),
     ("raspberry",          (0.780, 0.314, 0.431), (0.859, 0.471, 0.569)),
     ("teal",               (0.176, 0.659, 0.620), (0.357, 0.745, 0.706)),
