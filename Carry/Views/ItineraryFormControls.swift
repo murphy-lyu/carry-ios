@@ -112,9 +112,10 @@ struct ItineraryTimePickerSheet: View {
 /// 可能含中文或各国字符）一律不限。
 enum ItineraryInputFilter {
     /// ASCII 字母 + 数字（航班/车次号、机场代码、航站楼、座位等）。
-    static func alphanumeric(_ c: Character) -> Bool { c.isASCII && (c.isLetter || c.isNumber) }
+    /// `nonisolated`：纯函数、无 actor 状态，需可在 Binding setter 的 nonisolated 上下文（`.filter`）里调用。
+    nonisolated static func alphanumeric(_ c: Character) -> Bool { c.isASCII && (c.isLetter || c.isNumber) }
     /// 电话：数字 + `+ - ( ) 空格`（国际区号/分隔符）。
-    static func phone(_ c: Character) -> Bool { c.isNumber || "+-() ".contains(c) }
+    nonisolated static func phone(_ c: Character) -> Bool { c.isNumber || "+-() ".contains(c) }
 }
 
 extension Binding where Value == String {
