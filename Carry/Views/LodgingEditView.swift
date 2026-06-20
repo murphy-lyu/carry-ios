@@ -87,25 +87,18 @@ struct LodgingEditView: View {
                 }
 
                 Section {
+                    // 入住 / 退房各一行：标签左 · 日期 chip + 时间 chip 右（统一租车 dateTimeChipsRow 范式）。
+                    // 入住日排除最后一天；退房日只列入住日之后（退房恒在行程内）；nights 由两日期派生。
+                    stayEndpointRow("itinerary.lodging.field.checkin_day",
+                                    dayBinding: $checkInDayOrder,
+                                    dayOptions: Array(days.dropLast()),
+                                    has: hasCheckInTime, time: checkInTime) { timeSheet = .checkIn }
+                    stayEndpointRow("itinerary.lodging.field.checkout_day",
+                                    dayBinding: checkOutDayBinding,
+                                    dayOptions: days.filter { $0.sortOrder > checkInDayOrder },
+                                    has: hasCheckOutTime, time: checkOutTime) { timeSheet = .checkOut }
+                    // 由「入住日/退房日」派生的晚数（只读小行，多天行程才有意义）。
                     if days.count > 1 {
-                        // 入住日：排除最后一天（最后一天无法开始过夜）。
-                        Picker(selection: $checkInDayOrder) {
-                            ForEach(days.dropLast(), id: \.sortOrder) { day in
-                                Text(dayLabel(day.sortOrder)).tag(day.sortOrder)
-                            }
-                        } label: {
-                            Text("itinerary.lodging.field.checkin_day")
-                        }
-                        // 退房日：只列入住日之后的天 → 退房恒在行程内、「退房」事件必然可渲染。
-                        // nights 由「退房日 − 入住日」派生（checkOutDayBinding）。
-                        Picker(selection: checkOutDayBinding) {
-                            ForEach(days.filter { $0.sortOrder > checkInDayOrder }, id: \.sortOrder) { day in
-                                Text(dayLabel(day.sortOrder)).tag(day.sortOrder)
-                            }
-                        } label: {
-                            Text("itinerary.lodging.field.checkout_day")
-                        }
-                        // 由「入住日/退房日」派生的晚数（只读行，跟在两日期下方做确认）。
                         LabeledContent {
                             Text(String(format: NSLocalizedString("itinerary.lodging.nights_value", comment: ""), nights))
                                 .foregroundStyle(.secondary)
@@ -113,9 +106,6 @@ struct LodgingEditView: View {
                             Text("itinerary.lodging.field.nights")
                         }
                     }
-                    // 入住/退房时间：chip + 弹出（统一交通范式，去 toggle+内联）。未设显示「时间」占位。
-                    timeChipRow("itinerary.lodging.field.checkin_time", has: hasCheckInTime, time: checkInTime) { timeSheet = .checkIn }
-                    timeChipRow("itinerary.lodging.field.checkout_time", has: hasCheckOutTime, time: checkOutTime) { timeSheet = .checkOut }
                 } header: {
                     Text("itinerary.lodging.section.stay")
                 }
@@ -204,13 +194,31 @@ struct LodgingEditView: View {
 
     // MARK: Helpers
 
-    /// 时间行：标签 + 时间 chip（点开弹出滚轮，可清除回未设）。统一交通的 chip+弹出范式，去 toggle+内联。
+    /// 住宿端点行（入住/退房）：标签 + 日期 chip（多天可点选换天）+ 时间 chip（点开弹出滚轮，可清除）。
+    /// 统一租车 dateTimeChipsRow 范式：日期与时间同一行。`dayOptions` 为空（单天行程）时只显时间。
     @ViewBuilder
-    private func timeChipRow(_ titleKey: LocalizedStringKey, has: Bool, time: Date, onTap: @escaping () -> Void) -> some View {
-        HStack(spacing: 12) {
-            Text(titleKey)
+    private func stayEndpointRow(_ labelKey: LocalizedStringKey,
+                                 dayBinding: Binding<Int>,
+                                 dayOptions: [ItineraryDay],
+                                 has: Bool, time: Date,
+                                 onTapTime: @escaping () -> Void) -> some View {
+        HStack(spacing: 8) {
+            Text(labelKey)
             Spacer()
-            Button(action: onTap) {
+            if dayOptions.count > 1 {
+                Menu {
+                    Picker(selection: dayBinding) {
+                        ForEach(dayOptions, id: \.sortOrder) { day in
+                            Text(dayLabel(day.sortOrder)).tag(day.sortOrder)
+                        }
+                    } label: { EmptyView() }
+                } label: {
+                    FormChip(text: dayLabel(dayBinding.wrappedValue))
+                }
+            } else if dayOptions.count == 1 {
+                FormChip(text: dayLabel(dayBinding.wrappedValue))
+            }
+            Button(action: onTapTime) {
                 FormChip(text: has ? itineraryTimeString(time)
                                    : NSLocalizedString("itinerary.transport.field.time", comment: ""),
                          filled: has)

@@ -1500,14 +1500,11 @@ struct StopEditView: View {
     @State private var name: String
     @State private var category: StopCategory
     @State private var note: String
-    @State private var hasTime: Bool      // 有开始时间
-    @State private var hasEnd: Bool       // 有结束时间（仅在有开始时有意义）
+    @State private var hasTime: Bool      // 有时间（单一「开始时间」，与租车/交通同范式）
     @State private var startTime: Date
-    @State private var endTime: Date
-    @State private var timeSheet: StopTimeField?   // 时间弹层：开始 / 结束（chip+弹出，统一交通范式）
+    @State private var showTimeSheet = false   // 时间弹层（chip+弹出，统一交通范式）
     @State private var showRelocate = false
 
-    private enum StopTimeField: Identifiable { case start, end; var id: Int { hashValue } }
     @State private var costAmountText: String
     @State private var costCurrencyCode: String
     @State private var phone: String
@@ -1521,11 +1518,8 @@ struct StopEditView: View {
         _category = State(initialValue: stop.category)
         _note = State(initialValue: stop.note)
         _hasTime = State(initialValue: stop.plannedStartMinutes >= 0)
-        _hasEnd = State(initialValue: stop.plannedStartMinutes >= 0 && stop.stayMinutes > 0)
         let startMin = stop.plannedStartMinutes >= 0 ? stop.plannedStartMinutes : 9 * 60
         _startTime = State(initialValue: dateFromDayMinutes(startMin))
-        // 结束时间：已存停留则 start+stay，否则默认 start+1h（点开结束 chip 时的初值）。
-        _endTime = State(initialValue: dateFromDayMinutes(stop.stayMinutes > 0 ? startMin + stop.stayMinutes : startMin + 60))
         _costAmountText = State(initialValue: stop.hasCost ? CurrencyCatalog.amountText(stop.costAmount) : "")
         _costCurrencyCode = State(initialValue: stop.costCurrencyCode)
         _phone = State(initialValue: stop.phone)
@@ -1609,8 +1603,8 @@ struct StopEditView: View {
                             .foregroundStyle(CarryAccent.color)
                         }
                     }
-                    // 日期：改这个地点排在哪天（在行程已有的天里选，与交通/住宿同口径）。
-                    // 多天行程可点选换天；单天行程仅作展示。换天 = 把停靠点移到目标天（保留时刻）。
+                    // 日期 + 时间融合一行（统一租车 dateTimeChipsRow 范式）：标签「日期」左·日期chip+时间chip右。
+                    // 多天行程日期 chip 可点选换天（= 把停靠点移到目标天、保留时刻）；时间为单一「开始时间」、可清除。
                     HStack(spacing: 8) {
                         Text("itinerary.transport.field.date")
                         Spacer()
@@ -1627,35 +1621,18 @@ struct StopEditView: View {
                         } else {
                             FormChip(text: dayLabel(dayOrder))
                         }
-                    }
-                    // 时间：chip + 弹出（统一交通范式，去 toggle+内联的行高跳变）。开始可选；有开始才显结束。
-                    HStack(spacing: 8) {
-                        Text("itinerary.transport.field.time")
-                        Spacer()
-                        Button { timeSheet = .start } label: {
+                        Button { showTimeSheet = true } label: {
                             FormChip(text: hasTime ? itineraryTimeString(startTime)
-                                                   : NSLocalizedString("itinerary.stop.edit.start_time", comment: ""),
+                                                   : NSLocalizedString("itinerary.transport.field.time", comment: ""),
                                      filled: hasTime)
                         }
                         .buttonStyle(.plain)
-                        if hasTime {
-                            Text("–").foregroundStyle(.secondary)
-                            Button { timeSheet = .end } label: {
-                                FormChip(text: hasEnd ? itineraryTimeString(endTime)
-                                                      : NSLocalizedString("itinerary.stop.edit.end_time", comment: ""),
-                                         filled: hasEnd)
-                            }
-                            .buttonStyle(.plain)
-                        }
                     }
                     // 电话：搜索地点时可自动回填，也可手填（餐厅/景点联系）。
                     TextField("itinerary.transport.field.phone", text: $phone)
                         .keyboardType(.phonePad)
                 } header: {
                     Text("itinerary.stop.edit.details_header")
-                }
-                .onChange(of: startTime) { _, newStart in
-                    if endTime < newStart { endTime = newStart }   // 结束不早于开始
                 }
 
                 // 固定顺序：费用 → 备注 → 附件，各自独立 Section。
@@ -1694,15 +1671,13 @@ struct StopEditView: View {
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Save") {
                         let startMin = dayMinutes(from: startTime)
-                        // 停留时长 = 结束 − 开始，仅在「有开始 且 有结束」时计；否则 0（只标到访点，无时段）。
-                        let stay = (hasTime && hasEnd) ? max(0, dayMinutes(from: endTime) - startMin) : 0
                         store.updateItineraryStop(
                             tripId: tripId,
                             stopId: stop.id,
                             name: name.trimmingCharacters(in: .whitespacesAndNewlines),
                             category: category,
                             plannedStartMinutes: hasTime ? startMin : -1,
-                            stayMinutes: stay,
+                            stayMinutes: 0,   // 地点只记开始时间；结束时间留待将来有需求再加（stayMinutes 模型字段保留）
                             note: note,
                             phone: phone
                         )
@@ -1729,13 +1704,8 @@ struct StopEditView: View {
                 )
             }
             // 时间弹层（chip+弹出，统一交通范式）；挂在 Form 稳定祖先上。
-            .sheet(item: $timeSheet) { field in
-                switch field {
-                case .start:
-                    ItineraryTimePickerSheet(hasTime: $hasTime, time: $startTime)
-                case .end:
-                    ItineraryTimePickerSheet(hasTime: $hasEnd, time: $endTime)
-                }
+            .sheet(isPresented: $showTimeSheet) {
+                ItineraryTimePickerSheet(hasTime: $hasTime, time: $startTime)
             }
         }
     }
