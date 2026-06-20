@@ -26,7 +26,8 @@ extension TripBookStats {
                 for seg in (day.segments ?? []) where seg.mode == .flight {
                     flightMeters += seg.distanceMeters
                     flightMinutes += seg.durationMinutes
-                    let model = seg.aircraftType.trimmingCharacters(in: .whitespaces)
+                    // 剥品牌前缀归一（"Airbus A321"/"A321" 视为同一型号，正确计数 + 与展示一致）。
+                    let model = aircraftModelDisplay(seg.aircraftType)
                     if !model.isEmpty { aircraft.append(model) }
                     for code in [seg.fromCode, seg.toCode] {
                         let c = code.trimmingCharacters(in: .whitespaces).uppercased()

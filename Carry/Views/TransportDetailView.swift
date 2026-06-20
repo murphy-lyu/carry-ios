@@ -49,18 +49,14 @@ struct TransportDetailView: View {
         let primary: String      // 机场码（如 SHA）或站名
         let secondary: String?   // 站名（有码时）+ 航站楼，· 分隔
         let address: String?     // 详细地址（出门最实用）；与主/次行重复或空则 nil
-        let time: String?        // 「21:00」或「23:15 +1」
+        let time: String?        // 纯时刻「23:15」（跨天 +N 单独走 dayOffset、渲染成右上角小角标）
+        let dayOffset: Int       // 跨天偏移（红眼到达 = 1），> 0 时显「+N」上标
     }
 
     /// 由端点字段拼出 RoutePoint；无地点也无时间 → nil（该端点不渲染）。
     private func routePoint(name: String, code: String, minutes: Int, dayOffset: Int, terminal: String, address: String) -> RoutePoint? {
         let hasPlace = !name.isEmpty || !code.isEmpty
-        var time: String? = nil
-        if minutes >= 0 {
-            var t = timeLabel(dayMinutes: minutes)
-            if dayOffset > 0 { t += " +\(dayOffset)" }
-            time = t
-        }
+        let time: String? = minutes >= 0 ? timeLabel(dayMinutes: minutes) : nil
         guard hasPlace || time != nil else { return nil }
 
         let primary: String
@@ -79,7 +75,8 @@ struct TransportDetailView: View {
         return RoutePoint(primary: primary,
                           secondary: secondary,
                           address: showAddr ? addr : nil,
-                          time: time)
+                          time: time,
+                          dayOffset: time != nil ? max(0, dayOffset) : 0)
     }
 
     private var departurePoint: RoutePoint? {
@@ -192,18 +189,20 @@ struct TransportDetailView: View {
     private func fullRouteCard(fromLabel: String, toLabel: String) -> some View {
         let dep = departurePoint
         let arr = arrivalPoint
+        // 有跨天到达时，两行都预留「+N」小列 → 时钟成列右对齐、+N 右边距与卡片一致（见 placeTimeRow）。
+        let crossDay = (arr?.dayOffset ?? 0) > 0
         if dep != nil || arr != nil {
             Grid(alignment: .leading, horizontalSpacing: 12, verticalSpacing: 0) {
                 if let dep {
                     GridRow {
                         railCell(isDeparture: true, showLine: arr != nil, labelKey: fromLabel)
-                        endpointContent(dep)
+                        endpointContent(dep, crossDay: crossDay)
                     }
                 }
                 if let arr {
                     GridRow {
                         railCell(isDeparture: false, showLine: dep != nil, labelKey: toLabel)
-                        endpointContent(arr)
+                        endpointContent(arr, crossDay: crossDay)
                     }
                 }
             }
@@ -308,14 +307,14 @@ struct TransportDetailView: View {
     }
 
     /// 端点内容（rail 行用）：地址/时间一行 + 上下气口；a11y 合并朗读。
-    private func endpointContent(_ p: RoutePoint) -> some View {
-        placeTimeRow(p)
+    private func endpointContent(_ p: RoutePoint, crossDay: Bool = false) -> some View {
+        placeTimeRow(p, crossDay: crossDay)
             .padding(.vertical, 6)   // 收紧出发/到达行上下内边距，减小两端块之间的空当
             .accessibilityElement(children: .combine)
     }
 
     /// 地址 + 时间一行：左侧机场码（大）+ 站名/航站楼（小），右侧时间（大），基线对齐成一行。
-    private func placeTimeRow(_ p: RoutePoint) -> some View {
+    private func placeTimeRow(_ p: RoutePoint, crossDay: Bool = false) -> some View {
         HStack(alignment: .firstTextBaseline, spacing: 8) {
             VStack(alignment: .leading, spacing: 2) {
                 if !p.primary.isEmpty {
@@ -341,10 +340,22 @@ struct TransportDetailView: View {
             }
             Spacer(minLength: 8)
             if let t = p.time {
-                Text(t)
-                    .font(.system(.title3, design: .rounded).weight(.semibold))
-                    .foregroundStyle(.primary)
-                    .fixedSize()
+                HStack(alignment: .firstTextBaseline, spacing: 4) {
+                    Text(t)
+                        .font(.system(.title3, design: .rounded).weight(.semibold))
+                        .foregroundStyle(.primary)
+                        .fixedSize()
+                    // 跨天「+N」固定宽度小列（gutter）：在场=显 +N、出发行=留空占位 → 两行时钟在 gutter 左缘
+                    // **右对齐**成列；gutter 右缘 = 内容右边距 → +N 与卡片右边距一致、不贴边、呼吸感统一。
+                    // 仅「有跨天到达」的卡片预留（crossDay），同日航班不留列、时钟照常贴右。
+                    if crossDay {
+                        Text(p.dayOffset > 0 ? "+\(p.dayOffset)" : "")
+                            .font(.system(size: 11, weight: .semibold, design: .rounded))
+                            .foregroundStyle(.secondary)
+                            .baselineOffset(6)
+                            .frame(width: 13, alignment: .leading)
+                    }
+                }
             }
         }
     }

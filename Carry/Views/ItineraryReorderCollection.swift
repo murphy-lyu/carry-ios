@@ -27,15 +27,23 @@ nonisolated struct ItineraryDaySection: Hashable, Sendable {
 /// 行标识。`.stop` 可拖；其余（`.leg` / `.transport` / `.lodging` / `.addStop`）不可拖。
 /// `.leg(UUID)` = 该停靠点上方的连接段（与上一点的连线 + 距离），UUID 为「下方那个停靠点」的 id；
 /// 仅在**相邻两个停靠点之间且其间无交通段**时插入（有交通段时，交通段本身就是连接）。
-/// `.transport(UUID)` = 交通段（边）；`.lodging(stay:day:)` = 住宿常驻条。
+/// `.transport(UUID)` = 交通段（边）；`.lodging(stay:day:role:)` = 住宿当天的脊上节点。
 /// 住宿跨多天 → 同一 stay 在多个 section 出现，故行 ID 必须带「天序」维度，
 /// 否则 diffable 快照里 item 标识跨 section 重复会崩（item identifiers 须全局唯一）。
-/// `day` 还用于让 LodgingBannerRow 区分入住/过夜/退房三态。
+/// `day` + `role` 区分入住/出发/过夜/退房——**整中间日同一 stay 出两个节点（depart+overnight）**，
+/// 故 role 也进 id 维度保唯一（同租车两事件的教训）。
+nonisolated enum LodgingRole: Hashable, Sendable {
+    case checkIn, depart, overnight, checkout
+}
+
 nonisolated enum ItineraryRowID: Hashable, Sendable {
     case stop(UUID)
     case leg(UUID)
     case transport(UUID)
-    case lodging(stay: UUID, day: Int)
+    case lodging(stay: UUID, day: Int, role: LodgingRole)
+    /// 住宿端点与相邻地点之间的距离连接段：`departing` 区分「酒店→地点」(true) 与「地点→酒店」(false)。
+    /// 带 day + stop + departing 维度保全局唯一（同 `.leg` 的角色，但一端是酒店坐标）。spec 增补 2026-06-20。
+    case lodgingLeg(stay: UUID, stop: UUID, day: Int, departing: Bool)
     /// 租车事件行：同一租车段在**取车日**（pickup=true）与**还车日**（pickup=false）各出一条。
     /// 带「天序」维度保全局唯一（同 `.lodging` 的教训——跨多天复用不能重复 id）。不可拖、非可重排数据。
     /// spec: itinerary-car-rental.md（增补：租车两事件）。
@@ -63,8 +71,10 @@ struct ItineraryReorderCollection: UIViewRepresentable {
     let legContent: (UUID) -> AnyView
     /// 交通段内容（连接行：mode 图标 + 班次 + 起讫时间），入参为 segment id。
     let transportContent: (UUID) -> AnyView
-    /// 住宿常驻条内容，入参为 (lodging stay id, 当前天序)。
-    let lodgingContent: (UUID, Int) -> AnyView
+    /// 住宿脊上节点内容，入参为 (lodging stay id, 当前天序, 当天角色)。
+    let lodgingContent: (UUID, Int, LodgingRole) -> AnyView
+    /// 住宿端点距离连接段内容，入参为 (stay id, stop id, 当前天序, departing)。
+    let lodgingLegContent: (UUID, UUID, Int, Bool) -> AnyView
     /// 租车事件行内容（segmentID, dayOrder, pickup）。
     let carRentalContent: (UUID, Int, Bool) -> AnyView
     /// 只读日历事件叠加行内容，入参为 (event id, 当前天序)。spec: itinerary-calendar-overlay.md
@@ -182,10 +192,12 @@ struct ItineraryReorderCollection: UIViewRepresentable {
                     cell.contentConfiguration = UIHostingConfiguration { self.parent.stopContent(id) }.margins(.all, 0)
                 case .leg(let toStopID):
                     cell.contentConfiguration = UIHostingConfiguration { self.parent.legContent(toStopID) }.margins(.all, 0)
+                case .lodgingLeg(let stay, let stop, let day, let departing):
+                    cell.contentConfiguration = UIHostingConfiguration { self.parent.lodgingLegContent(stay, stop, day, departing) }.margins(.all, 0)
                 case .transport(let id):
                     cell.contentConfiguration = UIHostingConfiguration { self.parent.transportContent(id) }.margins(.all, 0)
-                case .lodging(let stay, let day):
-                    cell.contentConfiguration = UIHostingConfiguration { self.parent.lodgingContent(stay, day) }.margins(.all, 0)
+                case .lodging(let stay, let day, let role):
+                    cell.contentConfiguration = UIHostingConfiguration { self.parent.lodgingContent(stay, day, role) }.margins(.all, 0)
                 case .carRental(let seg, let day, let pickup):
                     cell.contentConfiguration = UIHostingConfiguration { self.parent.carRentalContent(seg, day, pickup) }.margins(.all, 0)
                 case .calendarEvent(let id, let day):
@@ -334,19 +346,22 @@ struct ItineraryReorderCollection: UIViewRepresentable {
                 // - 有交通段在两点之间 → 交通段本身即连接，不再插 leg；
                 // - 住宿条 / 交通段原样保留；最后追加 addStop（优化入口已移至 day header）。
                 var rows: [ItineraryRowID] = []
-                var lastWasStop = false
+                var previous: ItineraryRowID? = nil
                 for entry in section.entries {
-                    switch entry {
-                    case .stop(let sid):
-                        if lastWasStop { rows.append(.leg(sid)) }
-                        rows.append(.stop(sid))
-                        lastWasStop = true
-                    case .transport, .lodging, .carRental, .calendarEvent:
-                        rows.append(entry)
-                        lastWasStop = false
+                    // 连接段：相邻两地点之间插直线距离 leg（其间有交通段时交通段本身即连接、不插）；
+                    // 地点与住宿端点相邻则插「酒店↔地点」距离 leg（spec 增补 2026-06-20）。
+                    switch (previous, entry) {
+                    case (.stop, .stop(let sid)):
+                        rows.append(.leg(sid))
+                    case (.lodging(let stay, let day, _), .stop(let sid)):
+                        rows.append(.lodgingLeg(stay: stay, stop: sid, day: day, departing: true))   // 酒店→地点
+                    case (.stop(let psid), .lodging(let stay, let day, _)):
+                        rows.append(.lodgingLeg(stay: stay, stop: psid, day: day, departing: false)) // 地点→酒店
                     default:
-                        rows.append(entry)
+                        break
                     }
+                    rows.append(entry)
+                    previous = entry
                 }
                 rows.append(.addStop(section.id))
                 snapshot.appendItems(rows, toSection: section.id)

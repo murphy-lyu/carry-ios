@@ -555,7 +555,8 @@ struct TransportEditView: View {
             if seg.departLocalMinutes >= 0 { hasDepartTime = true; departTime = dateFromMinutes(seg.departLocalMinutes) }
             if seg.arriveLocalMinutes >= 0 { hasArriveTime = true; arriveTime = dateFromMinutes(seg.arriveLocalMinutes) }
             seat = seg.seat; confirmationCode = seg.confirmationCode; note = seg.note
-            aircraftType = seg.aircraftType
+            // 机型剥品牌前缀展示（"Airbus A321" → "A321"），与详情页/Trip Book 一致；存的也归一为型号。
+            aircraftType = aircraftModelDisplay(seg.aircraftType)
             cabinClass = seg.cabinClass
             // 租车还车开关：无显式存储位，从数据派生——还车端空、或与取车端同名同坐标即「同取车」。
             if seg.mode == .carRental {
@@ -704,7 +705,7 @@ struct TransportEditView: View {
     private func applyFlightResult(_ r: FlightLookupResult) {
         if !r.airlineName.isEmpty { carrier = r.airlineName }
         if !r.flightNumber.isEmpty { number = r.flightNumber }
-        aircraftType = r.aircraftType
+        aircraftType = aircraftModelDisplay(r.aircraftType)   // 剥品牌前缀，与各处展示一致
         distanceMeters = r.distanceMeters
         durationMinutes = r.durationMinutes
         if r.from.hasAirport {
