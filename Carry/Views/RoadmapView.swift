@@ -8,7 +8,11 @@ import Combine
 
 private enum RoadmapRemote {
     // Default remote URL. You can override this inside the app UI.
-    static let urlString = "https://raw.githubusercontent.com/murphy-lyu/carry-ios/main/roadmap.json"
+    // 经自营域名 config.nevestudio.app（carry-config Worker 回源 + 缓存）拉取，国内可达——
+    // 原 raw.githubusercontent.com 在中国大陆被 GFW 阻断、无 VPN 拉不到，导致国内用户永远
+    // 看不到远程路线图更新（静默回退内嵌默认）。真源仍是 carry-ios 仓库的 roadmap.json，
+    // Worker 只代发不持有内容。加载优先级不变：远程整份覆盖 → 本地缓存 → 内嵌默认。
+    static let urlString = "https://config.nevestudio.app/roadmap.json"
 }
 
 private enum RoadmapL10n {

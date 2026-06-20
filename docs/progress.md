@@ -3,6 +3,15 @@
 ## 最后更新
 2026-06-20
 
+## 上次改动摘要（法务页 + Roadmap 迁到自营域名规避 GFW · 2026-06-20 续）
+
+> 接航班那条线，把另外两个「挂在 GitHub、国内被墙」的资源也迁到 `nevestudio.app`。本会话改 `Carry/Views/LegalViews.swift` / `Carry/Views/RoadmapView.swift` / `CLAUDE.md` / 新增 `scripts/config-proxy/{worker.js,README.md}` + 本 progress.md；并在 `carry-legal` 仓库加/删了 roadmap.json（见下）。**编译绿**。三个新域名均实测国内可达（用户真机验过航班；法务/roadmap 由 curl 验 200）。
+- **🔴 同根问题**：法务页走 `murphy-lyu.github.io`（GitHub Pages）、Roadmap 走 `raw.githubusercontent.com`——两者在大陆都被 GFW 干扰，无 VPN 打不开/拉不到。法务页打不开是大陆上架的**合规 + 体验缺口**；Roadmap 拉不到 → 国内用户永远只看到内嵌默认（远程更新对国内失效）。
+- **🟢 法务页 → `legal.nevestudio.app`**（Cloudflare Pages 接 `carry-legal` 仓库，自动部署）：`LegalViews.swift` base 从 `github.io/carry-legal/` 改为 `legal.nevestudio.app/`；中文页用干净地址 `/<slug>/zh`（Pages 把 `.html` 308 跳到去 `.html` 地址，直接指终点省一跳）。GitHub Pages 旧址保留、老版本不破。**待办（用户）**：App Store Connect 隐私政策 URL 换成 `https://legal.nevestudio.app/privacy/zh`。
+- **🟢 Roadmap → `config.nevestudio.app`（Worker 代发，非 Pages）**：纠结过「roadmap 挂 legal 仓库」语义不对（用户洁癖，正确）→ 最终**真源 `roadmap.json` 留在 carry-ios 仓库不动**（单一真源、CLAUDE.md 铁律核心不变），新建 `carry-config` Worker（`scripts/config-proxy/`）回源 raw + 缓存 5 分钟 + 路径白名单（只放行 `/roadmap.json`，防开放代理），绑 `config.nevestudio.app`。`RoadmapView.swift` 拉取地址改 `config.nevestudio.app/roadmap.json`。曾短暂把 roadmap.json 推进 carry-legal、随即删除（commit `65d2766`→`a65c3ae`）。
+- **域名分工定型**：`legal.*`=法务（Pages）、`config.*`=app 远程配置（Worker）、`flight.*`=航班代理（Worker）；各司其职、互不混。静态内容将来按「每 app 一文件夹」扩展，不搞子域名泛滥。
+- **待办**：① App Store Connect 隐私 URL（用户）；② push（用户定，会一并推并行会话提交）；③ 真机再扫一眼法务页/roadmap 国内加载（低风险，curl 已绿）。
+
 ## 上次改动摘要（航班代理改用自定义域名规避 GFW + 工作室品牌 Neve 定名 · 2026-06-20 续）
 
 > 本会话只动 `Carry/Models/FlightLookupService.swift` 一处（+ 本 progress.md），与并行会话不重叠。**编译绿**（主 app + Widget）。**待用户真机验收**（国内关 VPN 测航班搜索）。
