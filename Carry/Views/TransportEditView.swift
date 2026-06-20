@@ -72,9 +72,12 @@ struct TransportEditView: View {
     @State private var durationMinutes: Int = 0
     @State private var vehicleModel = ""    // 租车专属
     @State private var licensePlate = ""    // 租车专属
+    @State private var phone = ""           // 租车专属：联系电话
     @State private var costAmountText = ""
     @State private var costCurrencyCode = ""
 
+    @State private var attachmentRequest: AttachmentAddRequest?
+    @State private var pendingAttachments: [PendingAttachment] = []   // 新建段：保存后再 flush 入库
     @State private var didLoad = false
     /// 单一 sheet 驱动（地点搜索 / 时间选择）。同一视图挂多个 .sheet(item:) 会相互抑制，故合并为单枚举。
     @State private var activeSheet: TransportSheet? = nil
@@ -107,8 +110,20 @@ struct TransportEditView: View {
                 placeSection(isFrom: true)
                 placeSection(isFrom: false)
                 moreSection
+                // 固定顺序：费用 → 备注 → 附件，各自独立 Section。
+                costSection
+                noteSection
+                // 附件：既有段直接入库；新建段缓冲在 pending、保存后 flush。呈现挂到 Form（见 .attachmentAddFlow）。
+                AttachmentEditSection(
+                    owner: editingSegment.map { .segment($0.id) },
+                    existing: editingSegment?.attachments ?? [],
+                    pending: $pendingAttachments,
+                    tripId: tripId,
+                    request: $attachmentRequest)
                 if isEditing { deleteSection }
             }
+            .attachmentAddFlow(tripId: tripId, owner: editingSegment.map { .segment($0.id) },
+                               pending: $pendingAttachments, request: $attachmentRequest)
             .navigationTitle(navTitle)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -147,16 +162,22 @@ struct TransportEditView: View {
                             placeholderKey: "itinerary.transport.search.placeholder",
                             biasLatitude: bundle?.latitude ?? 0,
                             biasLongitude: bundle?.longitude ?? 0
-                        ) { name, lat, lon, address in
+                        ) { name, lat, lon, address, pickedPhone in
                             if isFrom {
                                 fromName = name; fromLatitude = lat; fromLongitude = lon; fromAddress = address
+                                // 租车取车点电话自动回填（已填不覆盖）；非租车不收电话。
+                                if mode == .carRental, phone.isEmpty { phone = pickedPhone }
                             } else {
                                 toName = name; toLatitude = lat; toLongitude = lon; toAddress = address
                             }
                         }
                     }
                 case .time(let isFrom):
-                    timePickerSheet(isFrom: isFrom)
+                    ItineraryTimePickerSheet(
+                        hasTime: Binding(get: { isFrom ? hasDepartTime : hasArriveTime },
+                                         set: { if isFrom { hasDepartTime = $0 } else { hasArriveTime = $0 } }),
+                        time: Binding(get: { isFrom ? departTime : arriveTime },
+                                      set: { if isFrom { departTime = $0 } else { arriveTime = $0 } }))
                 }
             }
             .onAppear(perform: loadIfNeeded)
@@ -227,20 +248,13 @@ struct TransportEditView: View {
 
     private var carrierSection: some View {
         Section {
-            TextField(carrierLabel, text: $carrier)
+            // 航班号/车次领衔（旅客主认它），承运方在下——与详情标题同序。租车等无班次号则仅显承运方。
             if showsNumber {
                 TextField(numberLabel, text: $number)
                     .autocorrectionDisabled()
                     .textInputAutocapitalization(.characters)
             }
-            // 机型（航班搜索预填后只读展示；手动录入暂不提供编辑入口，接口数据为主）。
-            if mode == .flight && !aircraftType.isEmpty {
-                LabeledContent {
-                    Text(aircraftType)
-                } label: {
-                    Text("itinerary.flight.field.aircraft")
-                }
-            }
+            TextField(carrierLabel, text: $carrier)
         }
     }
 
@@ -307,9 +321,26 @@ struct TransportEditView: View {
             // 时间 chip 可选——点开在弹出选择器里设 / 清除，未设则显示占位「时间」。
             // 选择器都在弹出层、chip 是普通行高 → 不撑高、不跳变、信息量小（取代原 day Picker 行 + 时间开关行）。
             dateTimeChipsRow(isFrom: isFrom, dayOrder: dayOrder, hasTime: hasTime, time: time)
+            // 租车租期（派生、只读）：随取/还车日期实时更新，给用户「租了几天」的即时反馈（参考 Tripsy）。
+            if isCarReturn, rentalDurationDays >= 1 {
+                LabeledContent {
+                    Text("\(rentalDurationDays)")
+                } label: {
+                    Text(rentalDurationDays == 1 ? "itinerary.transport.field.days.one" : "itinerary.transport.field.days")
+                }
+            }
         } header: {
             Text(sectionHeaderLabel(isFrom: isFrom))
         }
+    }
+
+    /// 租车租期 = 还车日 − 取车日（与详情、住宿「晚数」同一口径，按天差）。
+    private var rentalDurationDays: Int { max(0, arriveDayOrder - departDayOrder) }
+
+    /// 正在编辑的交通段（附件挂载用，需已持久化）；新增态为 nil。
+    private var editingSegment: TransportSegment? {
+        guard let segmentId else { return nil }
+        return days.flatMap { $0.sortedSegments }.first { $0.id == segmentId }
     }
 
     // MARK: 日期 / 时间融合 chip（参考 Tripsy）
@@ -317,11 +348,8 @@ struct TransportEditView: View {
     @ViewBuilder
     private func dateTimeChipsRow(isFrom: Bool, dayOrder: Binding<Int>, hasTime: Binding<Bool>, time: Binding<Date>) -> some View {
         HStack(spacing: 8) {
-            Image(systemName: "calendar")
-                .font(.footnote)
-                .foregroundStyle(.secondary)
-            // 文案标签让此行与上方「机型 / 确认号」等「标签左·值右」行对齐，不再是孤零零一个图标。
-            // 用「日期」而非「时间」：日期是必填主控件、且避开时间 chip 未设时的「时间」占位重名。
+            // 不放图标：表单同区其它行（代码/航站楼/座位…）皆「文字标签左·值右」无图标，
+            // 这里也保持一致，标签左对齐成同一列。用「日期」而非「时间」（避开时间 chip 未设的「时间」占位重名）。
             Text("itinerary.transport.field.date")
             Spacer()
             // 日期 chip：多天行程可点选换天；单天行程仅作信息展示。
@@ -333,83 +361,23 @@ struct TransportEditView: View {
                         }
                     } label: { EmptyView() }
                 } label: {
-                    chipLabel(dayLabel(dayOrder.wrappedValue), filled: true)
+                    FormChip(text: dayLabel(dayOrder.wrappedValue))
                 }
             } else {
-                chipLabel(dayLabel(dayOrder.wrappedValue), filled: true)
+                FormChip(text: dayLabel(dayOrder.wrappedValue))
             }
             // 时间 chip：点开弹出时间选择器；未设显示占位「时间」。
             Button { activeSheet = .time(isFrom: isFrom) } label: {
-                chipLabel(hasTime.wrappedValue ? timeString(time.wrappedValue)
-                                               : NSLocalizedString("itinerary.transport.field.time", comment: ""),
-                          filled: hasTime.wrappedValue)
+                FormChip(text: hasTime.wrappedValue ? itineraryTimeString(time.wrappedValue)
+                                                    : NSLocalizedString("itinerary.transport.field.time", comment: ""),
+                         filled: hasTime.wrappedValue)
             }
             .buttonStyle(.plain)
         }
     }
 
-    /// chip 外观：圆体短标签 + 胶囊底。filled=false（占位）用次要色。
-    private func chipLabel(_ text: String, filled: Bool) -> some View {
-        Text(text)
-            .font(.system(.subheadline, design: .rounded).weight(.medium))
-            .foregroundStyle(filled ? Color.primary : Color.secondary)
-            .padding(.horizontal, 12)
-            .padding(.vertical, 7)
-            .background(Color(.tertiarySystemFill))
-            .clipShape(Capsule())
-    }
-
-    private func timeString(_ date: Date) -> String {
-        let f = DateFormatter()
-        f.locale = .current
-        f.dateFormat = "HH:mm"
-        return f.string(from: date)
-    }
-
-    /// 时间选择器 sheet：滚轮选时分；Done 设定时间，编辑既有时间时可「清除时间」回到未设。
-    @ViewBuilder
-    private func timePickerSheet(isFrom: Bool) -> some View {
-        let hasTime = Binding(get: { isFrom ? hasDepartTime : hasArriveTime },
-                              set: { if isFrom { hasDepartTime = $0 } else { hasArriveTime = $0 } })
-        let time = Binding(get: { isFrom ? departTime : arriveTime },
-                           set: { if isFrom { departTime = $0 } else { arriveTime = $0 } })
-        let wasSet = hasTime.wrappedValue
-        NavigationStack {
-            VStack(spacing: 0) {
-                DatePicker("itinerary.transport.field.time", selection: time, displayedComponents: .hourAndMinute)
-                    .datePickerStyle(.wheel)
-                    .labelsHidden()
-                    .padding(.top, 8)
-                if wasSet {
-                    Button(role: .destructive) {
-                        hasTime.wrappedValue = false
-                        activeSheet = nil
-                    } label: {
-                        Text("itinerary.transport.field.clear_time")
-                            .frame(maxWidth: .infinity)
-                    }
-                    .padding(.vertical, 8)
-                }
-                Spacer()
-            }
-            .navigationTitle("itinerary.transport.field.time")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .confirmationAction) {
-                    Button("common.done") {
-                        hasTime.wrappedValue = true
-                        activeSheet = nil
-                    }
-                    .fontWeight(.semibold)
-                }
-            }
-        }
-        .presentationDetents([.height(360)])
-    }
-
     private var moreSection: some View {
         Section {
-            CostInputRow(amountText: $costAmountText, currencyCode: $costCurrencyCode)
             // 座位 / 确认号：常驻标签（填了值如「3B」「ABC123」也看得懂；空态标签即提示）。
             if showsSeat {
                 LabeledContent {
@@ -424,6 +392,14 @@ struct TransportEditView: View {
                     .autocorrectionDisabled()
             } label: {
                 Text("itinerary.transport.field.confirmation")
+            }
+            // 机型（航班搜索预填后只读展示）：从顶部承运方区挪到「更多」，顶部只留航班号/承运方。
+            if mode == .flight && !aircraftType.isEmpty {
+                LabeledContent {
+                    Text(aircraftModelDisplay(aircraftType))
+                } label: {
+                    Text("itinerary.flight.field.aircraft")
+                }
             }
             // 车型 / 车牌：仅租车显示（你拿到的那台具体的车），都非必填、空态标签即提示。
             if mode == .carRental {
@@ -440,12 +416,28 @@ struct TransportEditView: View {
                 } label: {
                     Text("itinerary.transport.field.plate")
                 }
+                // 电话：取车点搜索可自动回填，也可手填（方便行程中联系）。
+                LabeledContent {
+                    TextField("", text: $phone)
+                        .multilineTextAlignment(.trailing)
+                        .keyboardType(.phonePad)
+                } label: {
+                    Text("itinerary.transport.field.phone")
+                }
             }
-            // 备注：自由文本、自解释，保留 placeholder 式（多行）。
-            TextField("itinerary.transport.field.note", text: $note, axis: .vertical)
-                .lineLimit(1...4)
         } header: {
             Text("itinerary.transport.section.more")
+        }
+    }
+
+    // 费用 / 备注 各自独立 Section、固定顺序（费用 → 备注 → 附件），不与类型字段混排。
+    private var costSection: some View {
+        Section { CostInputRow(amountText: $costAmountText, currencyCode: $costCurrencyCode) }
+    }
+    private var noteSection: some View {
+        Section {
+            TextField("itinerary.transport.field.note", text: $note, axis: .vertical)
+                .lineLimit(1...4)
         }
     }
 
@@ -538,7 +530,7 @@ struct TransportEditView: View {
                         && seg.toLongitude == seg.fromLongitude)
             }
             distanceMeters = seg.distanceMeters; durationMinutes = seg.durationMinutes
-            vehicleModel = seg.vehicleModel; licensePlate = seg.licensePlate
+            vehicleModel = seg.vehicleModel; licensePlate = seg.licensePlate; phone = seg.phone
             if seg.hasCost { costAmountText = CurrencyCatalog.amountText(seg.costAmount); costCurrencyCode = seg.costCurrencyCode }
         } else {
             // 新增：默认模式 + 起降日落到目标天。
@@ -577,9 +569,10 @@ struct TransportEditView: View {
         let savedAircraft = mode == .flight ? aircraftType : ""
         let savedDistance = mode == .flight ? distanceMeters : 0
         let savedDuration = mode == .flight ? durationMinutes : 0
-        // 车型 / 车牌仅租车有意义；切到其它模式一并清空，避免残留。
+        // 车型 / 车牌 / 电话仅租车有意义；切到其它模式一并清空，避免残留。
         let savedVehicleModel = mode == .carRental ? vehicleModel : ""
         let savedLicensePlate = mode == .carRental ? licensePlate : ""
+        let savedPhone = mode == .carRental ? phone : ""
 
         // 租车「还车地点同取车」：把取车地点拷给还车端，保证详情/地图/导出两端数据完整。
         let returnSameAsPickup = mode == .carRental && sameReturnLocation
@@ -607,7 +600,7 @@ struct TransportEditView: View {
                 arriveDayOrder: safeArriveDay, arriveLocalMinutes: arriveMinutes,
                 seat: savedSeat, confirmationCode: confirmationCode, note: note,
                 aircraftType: savedAircraft, distanceMeters: savedDistance, durationMinutes: savedDuration,
-                vehicleModel: savedVehicleModel, licensePlate: savedLicensePlate
+                vehicleModel: savedVehicleModel, licensePlate: savedLicensePlate, phone: savedPhone
             )
             store.setTransportCost(tripId: tripId, segmentId: segmentId,
                                    amount: costAmountValue, currencyCode: costCurrencyToSave)
@@ -627,13 +620,26 @@ struct TransportEditView: View {
                 arriveDayOrder: safeArriveDay, arriveLocalMinutes: arriveMinutes,
                 seat: savedSeat, confirmationCode: confirmationCode, note: note,
                 aircraftType: savedAircraft, distanceMeters: savedDistance, durationMinutes: savedDuration,
-                vehicleModel: savedVehicleModel, licensePlate: savedLicensePlate
+                vehicleModel: savedVehicleModel, licensePlate: savedLicensePlate, phone: savedPhone
             ) {
                 store.setTransportCost(tripId: tripId, segmentId: newId,
                                        amount: costAmountValue, currencyCode: costCurrencyToSave)
+                // 新建段：把缓冲的附件落到刚建好的段。
+                flushPendingAttachments(owner: .segment(newId))
             }
         }
         finish()
+    }
+
+    /// 把新建态缓冲的附件入库到刚持久化的实体（文件已在沙盒）。
+    private func flushPendingAttachments(owner: AttachmentOwner) {
+        for p in pendingAttachments {
+            _ = store.addAttachment(tripId: tripId, owner: owner, kind: p.data.kind,
+                                    displayName: p.data.displayName, fileName: p.data.fileName,
+                                    utiOrExt: p.data.utiOrExt, urlString: p.data.urlString,
+                                    thumbnailData: p.data.thumbnailData)
+        }
+        pendingAttachments.removeAll()
     }
 
     /// 解析录入的金额（空 → 0）。

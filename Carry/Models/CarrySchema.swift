@@ -23,6 +23,7 @@ enum SchemaV1: VersionedSchema {
             ItineraryDay.self,
             ItineraryStop.self,
             StopPhoto.self,
+            ItineraryAttachment.self,
             TransportSegment.self,
             LodgingStay.self,
         ]

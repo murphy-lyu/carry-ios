@@ -32,19 +32,16 @@ struct TransportDetailView: View {
     @EnvironmentObject var store: TripStore
     @Environment(\.dismiss) private var dismiss
     @State private var editing = false
-    @State private var contentHeight: CGFloat = 0
     @AppStorage("distance_unit") private var distanceUnitRaw = DistanceUnit.automatic.rawValue
     private var distanceUnit: DistanceUnit { DistanceUnit(rawValue: distanceUnitRaw) ?? .automatic }
 
-    private var contentDetents: Set<PresentationDetent> {
-        guard contentHeight > 0 else { return [.medium, .large] }
-        return [.height(contentHeight + 28), .large]
-    }
-
-    /// 标题：班次号 · 承运方（航班号/车次领衔，旅客主要认它）；都空退化 mode 名。与时间轴行同序。
+    /// 标题：只放领衔标识（航班号/车次；无则承运方/公司；都空退化 mode 名）。
+    /// 承运方下移到副标题（`headerSubtitle` .full），航司全名两行展示、不从中间断行。
     private var titleText: String {
-        let parts = [segment.number, segment.carrier].filter { !$0.isEmpty }
-        return parts.isEmpty ? NSLocalizedString(segment.mode.localizationKey, comment: "") : parts.joined(separator: " · ")
+        let number = segment.number.trimmingCharacters(in: .whitespaces)
+        if !number.isEmpty { return number }
+        let carrier = segment.carrier.trimmingCharacters(in: .whitespaces)
+        return carrier.isEmpty ? NSLocalizedString(segment.mode.localizationKey, comment: "") : carrier
     }
 
     /// 航线 hero 的一个端点：主行（机场码优先，无码退化用站名）、次行（站名 / 航站楼）、详细地址、时间（含跨天 +N）。
@@ -112,25 +109,19 @@ struct TransportDetailView: View {
     }
 
     var body: some View {
-        ScrollView {
+        DetailSheetScaffold {
+            header
+        } content: {
             VStack(alignment: .leading, spacing: 16) {
-                header
                 routeCard
                 directionsCard
                 detailsCard
+                costCard
+                noteCard
+                AttachmentDetailCard(attachments: segment.attachments ?? [])
                 editButton
             }
-            .padding(20)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .background(GeometryReader { g in
-                Color.clear
-                    .onAppear { contentHeight = g.size.height }
-                    .onChange(of: g.size.height) { _, h in contentHeight = h }
-            })
         }
-        .presentationDetents(contentDetents)
-        .presentationDragIndicator(.visible)
-        .presentationBackground(Color(UIColor.systemBackground))
         .sheet(isPresented: $editing) {
             TransportEditView(tripId: tripId, segmentId: segment.id)
         }
@@ -152,7 +143,11 @@ struct TransportDetailView: View {
         switch focus {
         case .pickup:  return NSLocalizedString("itinerary.transport.section.pickup", comment: "")
         case .dropoff: return NSLocalizedString("itinerary.transport.section.dropoff", comment: "")
-        case .full:    return nil
+        case .full:
+            // 航班/火车等：标题已是班次号 → 承运方放副标题（航司全名两行）；标题已是承运方时不重复。
+            let number = segment.number.trimmingCharacters(in: .whitespaces)
+            let carrier = segment.carrier.trimmingCharacters(in: .whitespaces)
+            return (!number.isEmpty && !carrier.isEmpty) ? carrier : nil
         }
     }
 
@@ -315,7 +310,7 @@ struct TransportDetailView: View {
     /// 端点内容（rail 行用）：地址/时间一行 + 上下气口；a11y 合并朗读。
     private func endpointContent(_ p: RoutePoint) -> some View {
         placeTimeRow(p)
-            .padding(.vertical, 12)
+            .padding(.vertical, 6)   // 收紧出发/到达行上下内边距，减小两端块之间的空当
             .accessibilityElement(children: .combine)
     }
 
@@ -365,6 +360,16 @@ struct TransportDetailView: View {
 
     private var detailRows: [AnyView] {
         var rows: [AnyView] = []
+        // 租车租期（派生、只读）：取/还车跨天数，与住宿「晚数」同款。≥1 天才显（同天租赁由日期自明）。
+        if segment.mode == .carRental {
+            let days = segment.arriveDayOrder - segment.departDayOrder
+            if days >= 1 {
+                rows.append(AnyView(LabeledDetailRow(
+                    icon: "calendar",
+                    labelKey: days == 1 ? "itinerary.transport.field.days.one" : "itinerary.transport.field.days",
+                    value: "\(days)")))
+            }
+        }
         // 随身要用的凭据（座位 / 确认号）：登机/检票时最先要找的，优先级高于描述性规格。
         if !segment.seat.isEmpty {
             rows.append(AnyView(LabeledDetailRow(icon: "chair", labelKey: "itinerary.transport.field.seat", value: segment.seat)))
@@ -379,25 +384,38 @@ struct TransportDetailView: View {
         if !segment.licensePlate.isEmpty {
             rows.append(AnyView(CopyableDetailRow(icon: "licenseplate", labelKey: "itinerary.transport.field.plate", value: segment.licensePlate)))
         }
+        // 电话（租车点）：点按直接拨号，方便行程中联系。
+        if !segment.phone.isEmpty {
+            rows.append(AnyView(CallableDetailRow(labelKey: "itinerary.transport.field.phone", phone: segment.phone)))
+        }
         // 描述性规格（时长 → 机型 → 距离）：刻画这趟行程本身、属"了解一下"，按有用程度排，距离最次要。
+        // 飞行时长放明细列表（与距离/机型一组，对标 Tripsy「航班时长」），不挤进 hero。
         if segment.durationMinutes > 0 {
             rows.append(AnyView(LabeledDetailRow(icon: "clock", labelKey: "itinerary.flight.field.duration", value: durationText(segment.durationMinutes))))
         }
         if !segment.aircraftType.isEmpty {
-            rows.append(AnyView(LabeledDetailRow(icon: "airplane", labelKey: "itinerary.flight.field.aircraft", value: segment.aircraftType)))
+            rows.append(AnyView(LabeledDetailRow(icon: "airplane", labelKey: "itinerary.flight.field.aircraft", value: aircraftModelDisplay(segment.aircraftType))))
         }
         if segment.distanceMeters > 0 {
             rows.append(AnyView(LabeledDetailRow(icon: "ruler", labelKey: "itinerary.flight.field.distance",
                                                  value: CarryDistanceFormat.string(meters: segment.distanceMeters, unit: distanceUnit))))
         }
-        if segment.hasCost {
-            rows.append(AnyView(LabeledDetailRow(icon: "creditcard", labelKey: "cost.field.label",
-                                                 value: CurrencyCatalog.format(segment.costAmount, code: segment.costCurrencyCode))))
-        }
-        if !segment.note.isEmpty {
-            rows.append(AnyView(NoteDetailRow(text: segment.note)))
-        }
         return rows
+    }
+
+    // 费用 / 备注 各自独立成卡、固定顺序（费用 → 备注 → 附件），与编辑页一致、不与类型字段混排。
+    @ViewBuilder
+    private var costCard: some View {
+        if segment.hasCost {
+            DetailRowGroup(rows: [AnyView(LabeledDetailRow(icon: "creditcard", labelKey: "cost.field.label",
+                                                           value: CurrencyCatalog.format(segment.costAmount, code: segment.costCurrencyCode)))])
+        }
+    }
+    @ViewBuilder
+    private var noteCard: some View {
+        if !segment.note.isEmpty {
+            DetailRowGroup(rows: [AnyView(NoteDetailRow(text: segment.note))])
+        }
     }
 
     private var editButton: some View {

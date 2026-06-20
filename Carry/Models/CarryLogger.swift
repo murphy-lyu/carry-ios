@@ -149,6 +149,11 @@ final class CarryLogger {
         case itineraryExported      = "itinerary_exported"
         case itineraryExportFailed  = "itinerary_export_failed"
 
+        // 行程附件（spec: itinerary-attachments.md）
+        case attachmentAdded        = "attachment_added"
+        case attachmentOpened       = "attachment_opened"
+        case attachmentSaveFailed   = "attachment_save_failed"
+
         // 行程详情两面切换（spec: app-navigation-framework.md）——衡量行程/打包频次
         case detailFaceSwitched        = "detail_face_switched"
 
@@ -193,6 +198,7 @@ final class CarryLogger {
         .itineraryRouteCalcFailed, .itineraryImportFailed, .itineraryExportFailed,
         .exchangeRateFetchFailed, .calendarOverlayAccessDenied,
         .photoImportFailed, .flightLookupFailed,
+        .attachmentSaveFailed,
     ]
 
     private let sessionActiveKey = "carry_session_active"

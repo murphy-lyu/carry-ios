@@ -187,15 +187,17 @@ struct AddStopView: View {
                 let item = response?.mapItems.first
                 let coord = item?.placemark.coordinate
                 let address = item?.placemark.title ?? completion.subtitle
+                let phone = item?.phoneNumber ?? ""   // MapKit POI 自带电话（餐厅/景点多有），顺手带出
                 if let relocateStopId {
-                    // relocate：更新本停靠点的坐标/地址/名称，类别保持不变。
+                    // relocate：地点整体换了 → 名称/坐标/地址/电话一并更新（类别保持不变）。
                     store.updateItineraryStop(
                         tripId: tripId,
                         stopId: relocateStopId,
                         name: completion.title,
                         latitude: coord?.latitude ?? 0,
                         longitude: coord?.longitude ?? 0,
-                        address: address
+                        address: address,
+                        phone: phone
                     )
                     onRelocated?(completion.title)
                 } else {
@@ -206,7 +208,8 @@ struct AddStopView: View {
                         latitude: coord?.latitude ?? 0,
                         longitude: coord?.longitude ?? 0,
                         address: address,
-                        category: category
+                        category: category,
+                        phone: phone
                     )
                 }
                 dismiss()
@@ -218,10 +221,10 @@ struct AddStopView: View {
         let name = completer.query.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !name.isEmpty else { return }
         if let relocateStopId {
-            // relocate 到无坐标地点：改名并清空坐标/地址（变回「无定位停靠点」）。
+            // relocate 到无坐标地点：改名并清空坐标/地址/电话（变回「无定位停靠点」）。
             store.updateItineraryStop(
                 tripId: tripId, stopId: relocateStopId,
-                name: name, latitude: 0, longitude: 0, address: ""
+                name: name, latitude: 0, longitude: 0, address: "", phone: ""
             )
             onRelocated?(name)
         } else {

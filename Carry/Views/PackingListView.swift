@@ -958,49 +958,17 @@ struct PackingListView: View {
     }
 
     private var tripInfoCard: some View {
-        VStack(alignment: .leading, spacing: 4) {
-            HStack(spacing: 8) {
-                HStack(spacing: 5) {
-                    Image(systemName: "shippingbox")
-                        .font(.system(size: 10, weight: .medium))
-                        .foregroundStyle(.secondary.opacity(colorScheme == .dark ? 0.9 : 0.82))
-                    Text(packingStatusText)
-                        .font(.system(.caption, design: .rounded).weight(.medium))
-                        .foregroundStyle(.primary.opacity(colorScheme == .dark ? 0.75 : 0.65))
-                }
-                    .animation(.easeInOut(duration: 0.2), value: packedCount)
-                    .animation(.easeInOut(duration: 0.2), value: totalCount)
-
-                Spacer(minLength: 8)
-
-                Button {
-                    showReminderSheet = true
-                } label: {
-                    HStack(spacing: 4) {
-                        Image(systemName: reminderStatusIconName)
-                            .font(.system(size: 9, weight: .semibold))
-                        Text(reminderStatusText)
-                            .font(.system(.caption2, design: .rounded).weight(.medium))
-                        Image(systemName: "chevron.right")
-                            .font(.system(size: 7, weight: .semibold))
-                            .foregroundStyle(.tertiary)
-                    }
-                    .foregroundStyle(colorScheme == .dark ? Color.secondary.opacity(0.94) : .secondary)
-                    .padding(.horizontal, 7)
-                    .padding(.vertical, 4)
-                    .background(
-                        Capsule(style: .continuous)
-                            .fill(colorScheme == .dark ? Color.white.opacity(0.055) : Color.black.opacity(0.022))
-                    )
-                    .overlay(
-                        Capsule(style: .continuous)
-                            .strokeBorder(Color.primary.opacity(colorScheme == .dark ? 0.045 : 0.02), lineWidth: 1)
-                    )
-                }
-                .buttonStyle(.plain)
-            }
-
+        HStack(spacing: 5) {
+            Image(systemName: "shippingbox")
+                .font(.system(size: 10, weight: .medium))
+                .foregroundStyle(.secondary.opacity(colorScheme == .dark ? 0.9 : 0.82))
+            Text(packingStatusText)
+                .font(.system(.caption, design: .rounded).weight(.medium))
+                .foregroundStyle(.primary.opacity(colorScheme == .dark ? 0.75 : 0.65))
+            Spacer(minLength: 0)
         }
+        .animation(.easeInOut(duration: 0.2), value: packedCount)
+        .animation(.easeInOut(duration: 0.2), value: totalCount)
         .padding(.horizontal, 2)
         .padding(.vertical, 4)
     }
@@ -1038,29 +1006,6 @@ struct PackingListView: View {
         .padding(.vertical, 8)
         .padding(.horizontal, 16)
         .background(Color(UIColor.systemBackground))
-    }
-
-    private var reminderStatusText: String {
-        let count = bundle?.reminderConfigs.count ?? 0
-        if count == 0 {
-            return NSLocalizedString("reminder.menu.item", comment: "")
-        }
-        if count == 1 {
-            return NSLocalizedString("trip.reminder.count.one", comment: "")
-        }
-        return String.localizedStringWithFormat(
-            NSLocalizedString("trip.reminders.count", comment: ""),
-            count
-        )
-    }
-
-    private var reminderStatusIconName: String {
-        let count = bundle?.reminderConfigs.count ?? 0
-        let remindersEnabled = bundle?.remindersEnabled == true
-        if !remindersEnabled || count == 0 {
-            return "bell.slash"
-        }
-        return "bell.fill"
     }
 
     private var packingStatusText: String {

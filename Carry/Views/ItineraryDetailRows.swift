@@ -9,6 +9,52 @@
 
 import SwiftUI
 
+/// 详情浮层骨架（地点/交通/住宿共用）：**头部钉在顶部不随滚动**，仅下方卡片区滚动；
+/// 同时保留「短内容贴合高度」——分别量头部高 + 内容高求和设 detent（不撑空、长则封顶 .large 滚动）。
+/// 解决「内容长时滚动顶部关闭键也滚走」的体验问题。
+struct DetailSheetScaffold<Header: View, Content: View>: View {
+    @ViewBuilder var header: Header
+    @ViewBuilder var content: Content
+
+    @State private var headerHeight: CGFloat = 0
+    @State private var contentHeight: CGFloat = 0
+
+    private var detents: Set<PresentationDetent> {
+        guard headerHeight > 0, contentHeight > 0 else { return [.medium, .large] }
+        return [.height(headerHeight + contentHeight + 20), .large]   // +20 ≈ 底部气口
+    }
+
+    var body: some View {
+        VStack(spacing: 0) {
+            header
+                .padding(.horizontal, 20)
+                .padding(.top, 18)
+                .padding(.bottom, 12)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .background(heightReader($headerHeight))
+                .background(Color(UIColor.systemBackground))   // 不透明：滚动内容从下面穿过、不透字
+            ScrollView {
+                content
+                    .padding(.horizontal, 20)
+                    .padding(.bottom, 20)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .background(heightReader($contentHeight))
+            }
+        }
+        .presentationDetents(detents)
+        .presentationDragIndicator(.visible)
+        .presentationBackground(Color(UIColor.systemBackground))
+    }
+
+    private func heightReader(_ binding: Binding<CGFloat>) -> some View {
+        GeometryReader { g in
+            Color.clear
+                .onAppear { binding.wrappedValue = g.size.height }
+                .onChange(of: g.size.height) { _, h in binding.wrappedValue = h }
+        }
+    }
+}
+
 /// 详情页头部：图标圈 + 标题 + 「···」菜单（仅「移除」，破坏性，带二次确认）+ 关闭 X。
 /// 编辑入口在底部主按钮（单手可达），不在此重复。
 struct DetailSheetHeader: View {
@@ -120,6 +166,40 @@ struct LabeledDetailRow: View {
         }
         .padding(.vertical, 11)
         .accessibilityElement(children: .combine)
+    }
+}
+
+/// 带标签 + 点按拨号的信息行（电话）。点击直接拨打（tel:），方便行程中联系。
+struct CallableDetailRow: View {
+    let labelKey: String
+    let phone: String
+
+    @Environment(\.openURL) private var openURL
+
+    var body: some View {
+        Button {
+            let digits = phone.filter { $0.isNumber || $0 == "+" }
+            if !digits.isEmpty, let url = URL(string: "tel://\(digits)") { openURL(url) }
+        } label: {
+            HStack(alignment: .center, spacing: 12) {
+                Image(systemName: "phone")
+                    .font(.system(size: 15)).foregroundStyle(.secondary).frame(width: 22)
+                    .accessibilityHidden(true)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(LocalizedStringKey(labelKey))
+                        .font(.system(.caption, design: .rounded)).foregroundStyle(.secondary)
+                    Text(phone)
+                        .font(.system(.subheadline, design: .rounded)).foregroundStyle(.primary)
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                Image(systemName: "phone.arrow.up.right")
+                    .font(.system(size: 13)).foregroundStyle(.tertiary)
+            }
+            .padding(.vertical, 11)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(Text(phone))
     }
 }
 

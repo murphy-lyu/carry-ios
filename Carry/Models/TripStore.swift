@@ -216,6 +216,7 @@ final class TripStore: ObservableObject {
         Task { @MainActor in
             fetchTrips()
             reconcileBackgroundFiles()
+            reconcileAttachmentFiles()
         }
     }
 
@@ -226,6 +227,83 @@ final class TripStore: ObservableObject {
     private func reconcileBackgroundFiles() {
         let referenced = Set(trips.flatMap { $0.backgrounds.compactMap(\.localFileName) })
         BackgroundImageStore.deleteOrphans(keeping: referenced)
+    }
+
+    /// 回收不再被任何附件引用的孤儿沙盒文件（同 `reconcileBackgroundFiles` 的生命周期兜底：
+    /// 启动 + 每次 restore/merge）。`removeAttachment` 的就地删处理常规路径；这里兜整库 wipe / 级联删。
+    private func reconcileAttachmentFiles() {
+        let referenced = Set(allAttachments().map(\.fileName).filter { !$0.isEmpty })
+        AttachmentStore.deleteOrphans(keeping: referenced)
+    }
+
+    /// 全库所有附件（跨地点/交通/住宿）。
+    private func allAttachments() -> [ItineraryAttachment] {
+        var result: [ItineraryAttachment] = []
+        for trip in trips {
+            for day in trip.safeItineraryDays {
+                for stop in day.sortedStops { result.append(contentsOf: stop.attachments ?? []) }
+                for seg in day.sortedSegments { result.append(contentsOf: seg.attachments ?? []) }
+            }
+            for stay in trip.safeLodgingStays { result.append(contentsOf: stay.attachments ?? []) }
+        }
+        return result
+    }
+
+    // MARK: - 附件（spec: itinerary-attachments.md）
+
+    /// 新增附件到指定实体。沙盒写入由调用方先完成（拿到 fileName/thumbnail），此处只建 model 记录。
+    @discardableResult
+    func addAttachment(tripId: UUID, owner: AttachmentOwner, kind: AttachmentKind,
+                       displayName: String, fileName: String = "", utiOrExt: String = "",
+                       urlString: String = "", thumbnailData: Data = Data()) -> UUID? {
+        guard let trip = trips.first(where: { $0.id == tripId }) else { return nil }
+        let att = ItineraryAttachment(kind: kind, displayName: displayName, fileName: fileName,
+                                      utiOrExt: utiOrExt, urlString: urlString, thumbnailData: thumbnailData)
+        switch owner {
+        case .stop(let id):
+            guard let stop = trip.safeItineraryDays.flatMap({ $0.sortedStops }).first(where: { $0.id == id }) else { return nil }
+            att.sortOrder = (stop.attachments?.map(\.sortOrder).max() ?? -1) + 1
+            att.stop = stop
+            context.insert(att)
+            if stop.attachments == nil { stop.attachments = [] }
+            stop.attachments?.append(att)
+        case .segment(let id):
+            guard let seg = trip.safeItineraryDays.flatMap({ $0.segments ?? [] }).first(where: { $0.id == id }) else { return nil }
+            att.sortOrder = (seg.attachments?.map(\.sortOrder).max() ?? -1) + 1
+            att.segment = seg
+            context.insert(att)
+            if seg.attachments == nil { seg.attachments = [] }
+            seg.attachments?.append(att)
+        case .lodging(let id):
+            guard let stay = trip.safeLodgingStays.first(where: { $0.id == id }) else { return nil }
+            att.sortOrder = (stay.attachments?.map(\.sortOrder).max() ?? -1) + 1
+            att.stay = stay
+            context.insert(att)
+            if stay.attachments == nil { stay.attachments = [] }
+            stay.attachments?.append(att)
+        }
+        save()
+        CarryLogger.shared.log(.attachmentAdded, context: kind.rawValue)
+        return att.id
+    }
+
+    /// 删除附件：就地删沙盒文件 + 删 model 记录（级联删的孤儿由 reconcileAttachmentFiles 兜底）。
+    func removeAttachment(tripId: UUID, attachmentId: UUID) {
+        guard let att = allAttachments().first(where: { $0.id == attachmentId }) else { return }
+        if !att.fileName.isEmpty { AttachmentStore.delete(named: att.fileName) }
+        context.delete(att)
+        save()
+    }
+
+    /// 深拷贝附件（复制行程用）：记录 + **沙盒文件**（新文件名，避免两行程共享一份字节）。
+    private func copyAttachments(_ atts: [ItineraryAttachment]?) -> [ItineraryAttachment] {
+        (atts ?? []).sorted { $0.sortOrder < $1.sortOrder }.map { a in
+            let newFileName = a.fileName.isEmpty ? "" : (AttachmentStore.copy(of: a.fileName) ?? "")
+            return ItineraryAttachment(
+                kind: a.kind, displayName: a.displayName, fileName: newFileName,
+                utiOrExt: a.utiOrExt, urlString: a.urlString, thumbnailData: a.thumbnailData,
+                sortOrder: a.sortOrder, addedAt: a.addedAt)
+        }
     }
 
     func setHomeEmptyStateMockEnabled(_ enabled: Bool) {
@@ -284,6 +362,7 @@ final class TripStore: ObservableObject {
         writeWidgetSnapshot()
         // 6. 回收旧数据残留的孤儿背景图（整库 wipe 不走 removeTrip，靠这里兜底）
         reconcileBackgroundFiles()
+        reconcileAttachmentFiles()
     }
 
     /// 合并后清理副作用：与 restore 不同，**不能清旧通知 / 不能 endAll LA**——
@@ -299,6 +378,7 @@ final class TripStore: ObservableObject {
         }
         writeWidgetSnapshot()
         reconcileBackgroundFiles()
+        reconcileAttachmentFiles()
     }
 
     func setDraftTrip(_ trip: TripBundle?) {
@@ -577,6 +657,7 @@ final class TripStore: ObservableObject {
                     costHomeAmount: stop.costHomeAmount,
                     fromPhotos: stop.fromPhotos
                 )
+                copied.phone = stop.phone
                 // 照片回溯生成的停靠点：深拷贝挂着的照片（新 UUID，含缩略图字节）。
                 copied.photos = stop.sortedPhotos.map { p in
                     StopPhoto(
@@ -588,12 +669,13 @@ final class TripStore: ObservableObject {
                         sortOrder: p.sortOrder
                     )
                 }
+                copied.attachments = copyAttachments(stop.attachments)
                 return copied
             }
             let copiedDay = ItineraryDay(sortOrder: day.sortOrder, title: day.title, note: day.note, stops: copiedStops)
             // 交通段深拷贝（新 UUID）；坐标/时间全在 SwiftData 内，直接复制字段。
             copiedDay.segments = day.sortedSegments.map { seg in
-                TransportSegment(
+                let newSeg = TransportSegment(
                     mode: seg.mode,
                     carrier: seg.carrier, number: seg.number,
                     fromName: seg.fromName, fromCode: seg.fromCode,
@@ -610,25 +692,31 @@ final class TripStore: ObservableObject {
                     note: seg.note, aircraftType: seg.aircraftType,
                     distanceMeters: seg.distanceMeters, durationMinutes: seg.durationMinutes,
                     vehicleModel: seg.vehicleModel, licensePlate: seg.licensePlate,
+                    phone: seg.phone,
                     sortOrder: seg.sortOrder,
                     costAmount: seg.costAmount, costCurrencyCode: seg.costCurrencyCode,
                     costHomeAmount: seg.costHomeAmount
                 )
+                newSeg.attachments = copyAttachments(seg.attachments)
+                return newSeg
             }
             return copiedDay
         }
         // 住宿跨度深拷贝（新 UUID），归副本 bundle。
         newBundle.lodgingStays = original.safeLodgingStays.map { stay in
-            LodgingStay(
+            let newStay = LodgingStay(
                 name: stay.name, address: stay.address,
                 latitude: stay.latitude, longitude: stay.longitude,
                 checkInDayOrder: stay.checkInDayOrder, nights: stay.nights,
                 checkInMinutes: stay.checkInMinutes, checkOutMinutes: stay.checkOutMinutes,
                 confirmationCode: stay.confirmationCode, note: stay.note,
+                phone: stay.phone,
                 sortOrder: stay.sortOrder,
                 costAmount: stay.costAmount, costCurrencyCode: stay.costCurrencyCode,
                 costHomeAmount: stay.costHomeAmount
             )
+            newStay.attachments = copyAttachments(stay.attachments)
+            return newStay
         }
         context.insert(newBundle)
         // Insert in-memory first to avoid full-list refetch jumpiness in UI.
@@ -1049,7 +1137,8 @@ final class TripStore: ObservableObject {
         latitude: Double = 0,
         longitude: Double = 0,
         address: String = "",
-        category: StopCategory = .other
+        category: StopCategory = .other,
+        phone: String = ""
     ) -> UUID? {
         guard let trip = trips.first(where: { $0.id == tripId }),
               let day = trip.safeItineraryDays.first(where: { $0.id == dayId }) else { return nil }
@@ -1060,6 +1149,7 @@ final class TripStore: ObservableObject {
             longitude: longitude,
             address: address,
             category: category,
+            phone: phone,
             sortOrder: nextOrder
         )
         context.insert(stop)
@@ -1165,7 +1255,8 @@ final class TripStore: ObservableObject {
         note: String? = nil,
         latitude: Double? = nil,
         longitude: Double? = nil,
-        address: String? = nil
+        address: String? = nil,
+        phone: String? = nil
     ) {
         guard let trip = trips.first(where: { $0.id == tripId }),
               let stop = trip.safeItineraryDays.flatMap({ $0.stops ?? [] }).first(where: { $0.id == stopId }) else { return }
@@ -1177,6 +1268,7 @@ final class TripStore: ObservableObject {
         if let latitude { stop.latitude = latitude }
         if let longitude { stop.longitude = longitude }
         if let address { stop.address = address }
+        if let phone { stop.phone = phone }
         save()
     }
 
@@ -1274,7 +1366,8 @@ final class TripStore: ObservableObject {
         distanceMeters: Double = 0,
         durationMinutes: Int = 0,
         vehicleModel: String = "",
-        licensePlate: String = ""
+        licensePlate: String = "",
+        phone: String = ""
     ) -> UUID? {
         guard let trip = trips.first(where: { $0.id == tripId }),
               let day = trip.safeItineraryDays.first(where: { $0.id == dayId }) else { return nil }
@@ -1313,6 +1406,7 @@ final class TripStore: ObservableObject {
             durationMinutes: durationMinutes,
             vehicleModel: vehicleModel,
             licensePlate: licensePlate,
+            phone: phone,
             sortOrder: maxOrder + 1
         )
         context.insert(segment)
@@ -1355,7 +1449,8 @@ final class TripStore: ObservableObject {
         distanceMeters: Double? = nil,
         durationMinutes: Int? = nil,
         vehicleModel: String? = nil,
-        licensePlate: String? = nil
+        licensePlate: String? = nil,
+        phone: String? = nil
     ) {
         guard let trip = trips.first(where: { $0.id == tripId }),
               let seg = trip.safeItineraryDays.flatMap({ $0.segments ?? [] }).first(where: { $0.id == segmentId }) else { return }
@@ -1388,6 +1483,7 @@ final class TripStore: ObservableObject {
         if let durationMinutes { seg.durationMinutes = durationMinutes }
         if let vehicleModel { seg.vehicleModel = vehicleModel }
         if let licensePlate { seg.licensePlate = licensePlate }
+        if let phone { seg.phone = phone }
         save()
     }
 
@@ -1416,7 +1512,8 @@ final class TripStore: ObservableObject {
         checkInMinutes: Int = -1,
         checkOutMinutes: Int = -1,
         confirmationCode: String = "",
-        note: String = ""
+        note: String = "",
+        phone: String = ""
     ) -> UUID? {
         guard let trip = trips.first(where: { $0.id == tripId }) else { return nil }
         let nextOrder = (trip.safeLodgingStays.map(\.sortOrder).max() ?? -1) + 1
@@ -1431,6 +1528,7 @@ final class TripStore: ObservableObject {
             checkOutMinutes: checkOutMinutes,
             confirmationCode: confirmationCode,
             note: note,
+            phone: phone,
             sortOrder: nextOrder
         )
         context.insert(stay)
@@ -1454,7 +1552,8 @@ final class TripStore: ObservableObject {
         checkInMinutes: Int? = nil,
         checkOutMinutes: Int? = nil,
         confirmationCode: String? = nil,
-        note: String? = nil
+        note: String? = nil,
+        phone: String? = nil
     ) {
         guard let trip = trips.first(where: { $0.id == tripId }),
               let stay = (trip.lodgingStays ?? []).first(where: { $0.id == stayId }) else { return }
@@ -1468,6 +1567,7 @@ final class TripStore: ObservableObject {
         if let checkOutMinutes { stay.checkOutMinutes = checkOutMinutes }
         if let confirmationCode { stay.confirmationCode = confirmationCode }
         if let note { stay.note = note }
+        if let phone { stay.phone = phone }
         save()
     }
 

@@ -17,15 +17,9 @@ struct LodgingDetailView: View {
     @EnvironmentObject var store: TripStore
     @Environment(\.dismiss) private var dismiss
     @State private var editing = false
-    @State private var contentHeight: CGFloat = 0
 
     private var displayName: String {
         stay.name.isEmpty ? NSLocalizedString("itinerary.category.lodging", comment: "") : stay.name
-    }
-
-    private var contentDetents: Set<PresentationDetent> {
-        guard contentHeight > 0 else { return [.medium, .large] }
-        return [.height(contentHeight + 28), .large]
     }
 
     /// 某天序对应的日期文案（有日期行程 → 「Sun, Jul 19」；无日期 → 「第 N 天」）。
@@ -52,26 +46,20 @@ struct LodgingDetailView: View {
     }
 
     var body: some View {
-        ScrollView {
+        DetailSheetScaffold {
+            header
+        } content: {
             VStack(alignment: .leading, spacing: 16) {
-                header
                 infoCard
                 if let coord = stay.coordinate, !navApps.isEmpty {
                     DirectionsModule(coordinate: coord, name: displayName, navApps: navApps, tint: .accentColor)
                 }
+                costCard
+                noteCard
+                AttachmentDetailCard(attachments: stay.attachments ?? [])
                 editButton
             }
-            .padding(20)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .background(GeometryReader { g in
-                Color.clear
-                    .onAppear { contentHeight = g.size.height }
-                    .onChange(of: g.size.height) { _, h in contentHeight = h }
-            })
         }
-        .presentationDetents(contentDetents)
-        .presentationDragIndicator(.visible)
-        .presentationBackground(Color(UIColor.systemBackground))
         .sheet(isPresented: $editing) {
             LodgingEditView(tripId: tripId, stayId: stay.id)
         }
@@ -107,17 +95,29 @@ struct LodgingDetailView: View {
         if stay.hasCoordinate && !stay.address.isEmpty {
             rows.append(AnyView(CopyableDetailRow(icon: "mappin.and.ellipse", labelKey: "itinerary.lodging.field.address", value: stay.address)))
         }
+        // 电话紧随地址（同属「怎么找到/联系酒店」）：点按直接拨号。
+        if !stay.phone.isEmpty {
+            rows.append(AnyView(CallableDetailRow(labelKey: "itinerary.transport.field.phone", phone: stay.phone)))
+        }
         if !stay.confirmationCode.isEmpty {
             rows.append(AnyView(CopyableDetailRow(icon: "ticket", labelKey: "itinerary.transport.field.confirmation", value: stay.confirmationCode)))
         }
-        if stay.hasCost {
-            rows.append(AnyView(LabeledDetailRow(icon: "creditcard", labelKey: "cost.field.label",
-                                                 value: CurrencyCatalog.format(stay.costAmount, code: stay.costCurrencyCode))))
-        }
-        if !stay.note.isEmpty {
-            rows.append(AnyView(NoteDetailRow(text: stay.note)))
-        }
         return DetailRowGroup(rows: rows)
+    }
+
+    // 费用 / 备注 各自独立成卡、固定顺序（费用 → 备注 → 附件），与编辑页一致。
+    @ViewBuilder
+    private var costCard: some View {
+        if stay.hasCost {
+            DetailRowGroup(rows: [AnyView(LabeledDetailRow(icon: "creditcard", labelKey: "cost.field.label",
+                                                           value: CurrencyCatalog.format(stay.costAmount, code: stay.costCurrencyCode)))])
+        }
+    }
+    @ViewBuilder
+    private var noteCard: some View {
+        if !stay.note.isEmpty {
+            DetailRowGroup(rows: [AnyView(NoteDetailRow(text: stay.note))])
+        }
     }
 
     private var editButton: some View {

@@ -15,6 +15,8 @@
 			</array>
 		</dict>
 	</array>
+	<key>NSCameraUsageDescription</key>
+	<string>Carry uses the camera so you can photograph documents — like a rental contract or hotel confirmation — and attach them to your trip. Photos are stored only on your device.</string>
 	<key>NSCalendarsFullAccessUsageDescription</key>
 	<string>Carry adds your trips and a pack reminder to your calendar so you never miss a departure.</string>
 	<key>NSHealthShareUsageDescription</key>

@@ -16,7 +16,7 @@ struct ItineraryPlaceSearchSheet: View {
     /// 行程目的地坐标，用于搜索区域偏置（可为 0/0）。
     var biasLatitude: Double = 0
     var biasLongitude: Double = 0
-    var onSelect: (_ name: String, _ latitude: Double, _ longitude: Double, _ address: String) -> Void
+    var onSelect: (_ name: String, _ latitude: Double, _ longitude: Double, _ address: String, _ phone: String) -> Void
 
     @Environment(\.dismiss) private var dismiss
     @StateObject private var completer = StopSearchCompleter()
@@ -78,7 +78,9 @@ struct ItineraryPlaceSearchSheet: View {
                 let item = response?.mapItems.first
                 let coord = item?.placemark.coordinate
                 let address = item?.placemark.title ?? completion.subtitle
-                onSelect(completion.title, coord?.latitude ?? 0, coord?.longitude ?? 0, address)
+                // MapKit POI 自带电话（酒店/租车点等多有），顺手带出供「行程中联系」。
+                let phone = item?.phoneNumber ?? ""
+                onSelect(completion.title, coord?.latitude ?? 0, coord?.longitude ?? 0, address, phone)
                 dismiss()
             }
         }

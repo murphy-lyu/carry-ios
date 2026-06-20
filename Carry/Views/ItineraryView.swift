@@ -1054,13 +1054,13 @@ private struct LodgingBannerRow: View {
     var body: some View {
         // 去掉灰底 pill：床图标落 rail 列、文字落内容列，与停靠点同列对齐（north-star §5 网格对齐）。
         // 住宿靠「裸图标 + 浅灰文字 + 无 marker 圆」退到背景，不靠盒子——盒子的内边距会破坏对齐网格。
-        // 三天酒店名**统一 secondary**（保持「同一家酒店」连贯、深色下不暗到像渲染坏了）；
-        // 过夜中间天的「退后」改交给更轻的线索承担：无「入住/退房」前缀 + regular 字重 + 淡一档的床图标。
+        // 三天酒店名 + 床图标**统一不额外调暗**（名称统一 secondary、图标统一 full dayColor，深色下不像渲染坏）；
+        // 过夜中间天的「退后」改交给更轻的线索承担：无「入住/退房」前缀 + regular 字重 + **空心床图标**
+        //（`bed.double` 比 `bed.double.fill` 天然更轻），不再靠 opacity 调暗与统一后的名称打架。
         HStack(spacing: railSpacing) {
             Image(systemName: phase == .night ? "bed.double" : "bed.double.fill")
                 .font(.system(size: 13))
-                // 染当天色；过夜天图标淡一档（opacity 0.5）退后，入住/退房日满色。
-                .foregroundStyle(dayColor.opacity(phase == .night ? 0.5 : 1.0))
+                .foregroundStyle(dayColor)
                 .frame(width: railWidth)
             Text(titleText)
                 .font(.system(.footnote, design: .rounded).weight(phase == .night ? .regular : .medium))
@@ -1229,40 +1229,24 @@ struct StopDetailView: View {
     @EnvironmentObject var store: TripStore
     @Environment(\.dismiss) private var dismiss
     @State private var editing = false
-    @State private var contentHeight: CGFloat = 0
     @State private var zoomedPhoto: ZoomedPhoto?
-
-    /// sheet 高度贴着内容：稀疏地点不留大片空白（看着「刚好」而非「空」），内容多则自然撑大、可拖到大屏。
-    /// 用有意留白消灭空旷感，而非塞空字段填充（north-star §1）。
-    /// +28 ≈ 底部 home-indicator 气口（已去掉 NavigationStack，不再为那条空导航栏的 ~44pt 留高）。
-    private var contentDetents: Set<PresentationDetent> {
-        guard contentHeight > 0 else { return [.medium, .large] }
-        return [.height(contentHeight + 28), .large]
-    }
 
     var body: some View {
         // 不套 NavigationStack：那会带来一条「无标题、只挂个 X」的空导航栏、白占顶部。改把关闭 X 内联进
         // 头部行（见 header），顶部由「名称 + X」填满（对标 Apple 地图地点卡），不再空旷。编辑在底部。
-        ScrollView {
+        DetailSheetScaffold {
+            header
+        } content: {
             VStack(alignment: .leading, spacing: 16) {
-                header
                 if !stop.sortedPhotos.isEmpty { photoStrip }
                 infoCard
                 navModule
+                costCard
+                noteCard
+                AttachmentDetailCard(attachments: stop.attachments ?? [])
                 editButton
             }
-            .padding(20)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .background(GeometryReader { g in
-                Color.clear
-                    .onAppear { contentHeight = g.size.height }
-                    .onChange(of: g.size.height) { _, h in contentHeight = h }
-            })
         }
-        .presentationDetents(contentDetents)
-        .presentationDragIndicator(.visible)
-        // 钉一致的不透明底：避免「部分高度玻璃 / 全屏白」的 iOS 26 默认变脸，读信息更静、两高度一致。
-        .presentationBackground(Color(UIColor.systemBackground))
         // 编辑钻入到详情之上：保存后回到详情（@Model 可观察、详情自动反映新值），再下滑关。
         .sheet(isPresented: $editing) {
             StopEditView(tripId: tripId, stop: stop)
@@ -1351,6 +1335,21 @@ struct StopDetailView: View {
         if !rows.isEmpty { DetailRowGroup(rows: rows) }
     }
 
+    // 费用 / 备注 各自独立成卡、固定顺序（费用 → 备注 → 附件），与编辑页一致。
+    @ViewBuilder
+    private var costCard: some View {
+        if stop.hasCost {
+            DetailRowGroup(rows: [AnyView(LabeledDetailRow(icon: "creditcard", labelKey: "cost.field.label",
+                                                           value: CurrencyCatalog.format(stop.costAmount, code: stop.costCurrencyCode)))])
+        }
+    }
+    @ViewBuilder
+    private var noteCard: some View {
+        if !stop.note.isEmpty {
+            DetailRowGroup(rows: [AnyView(NoteDetailRow(text: stop.note))])
+        }
+    }
+
     private var infoRowViews: [AnyView] {
         var rows: [AnyView] = []
         if stop.plannedStartMinutes >= 0 {
@@ -1360,13 +1359,9 @@ struct StopDetailView: View {
         if stop.hasCoordinate && !stop.address.isEmpty {
             rows.append(AnyView(CopyableDetailRow(icon: "mappin.and.ellipse", labelKey: "itinerary.lodging.field.address", value: stop.address)))
         }
-        if stop.hasCost {
-            // 真实付款币种（不折算）；折算只在 Trip Book 汇总层。spec: itinerary-cost-tracking.md
-            rows.append(AnyView(LabeledDetailRow(icon: "creditcard", labelKey: "cost.field.label",
-                                                 value: CurrencyCatalog.format(stop.costAmount, code: stop.costCurrencyCode))))
-        }
-        if !stop.note.isEmpty {
-            rows.append(AnyView(NoteDetailRow(text: stop.note)))
+        // 电话紧随地址（同属「怎么找到/联系这里」）：点按直接拨号。
+        if !stop.phone.isEmpty {
+            rows.append(AnyView(CallableDetailRow(labelKey: "itinerary.transport.field.phone", phone: stop.phone)))
         }
         return rows
     }
@@ -1462,12 +1457,18 @@ struct StopEditView: View {
     @State private var name: String
     @State private var category: StopCategory
     @State private var note: String
-    @State private var hasTime: Bool
+    @State private var hasTime: Bool      // 有开始时间
+    @State private var hasEnd: Bool       // 有结束时间（仅在有开始时有意义）
     @State private var startTime: Date
     @State private var endTime: Date
+    @State private var timeSheet: StopTimeField?   // 时间弹层：开始 / 结束（chip+弹出，统一交通范式）
     @State private var showRelocate = false
+
+    private enum StopTimeField: Identifiable { case start, end; var id: Int { hashValue } }
     @State private var costAmountText: String
     @State private var costCurrencyCode: String
+    @State private var phone: String
+    @State private var attachmentRequest: AttachmentAddRequest?
 
     init(tripId: UUID, stop: ItineraryStop) {
         self.tripId = tripId
@@ -1476,12 +1477,14 @@ struct StopEditView: View {
         _category = State(initialValue: stop.category)
         _note = State(initialValue: stop.note)
         _hasTime = State(initialValue: stop.plannedStartMinutes >= 0)
+        _hasEnd = State(initialValue: stop.plannedStartMinutes >= 0 && stop.stayMinutes > 0)
         let startMin = stop.plannedStartMinutes >= 0 ? stop.plannedStartMinutes : 9 * 60
         _startTime = State(initialValue: dateFromDayMinutes(startMin))
-        // 结束时间：已存停留则 start+stay，否则默认 start+1h（可选，用户可改/拉平）。
+        // 结束时间：已存停留则 start+stay，否则默认 start+1h（点开结束 chip 时的初值）。
         _endTime = State(initialValue: dateFromDayMinutes(stop.stayMinutes > 0 ? startMin + stop.stayMinutes : startMin + 60))
         _costAmountText = State(initialValue: stop.hasCost ? CurrencyCatalog.amountText(stop.costAmount) : "")
         _costCurrencyCode = State(initialValue: stop.costCurrencyCode)
+        _phone = State(initialValue: stop.phone)
     }
 
     private var costAmountValue: Double {
@@ -1518,8 +1521,6 @@ struct StopEditView: View {
                     }
                 } header: {
                     Text("itinerary.stop.edit.location_header")   // 「地点」（不是「位置」——含名称，语义为「这个地点」）
-                } footer: {
-                    Text("itinerary.stop.edit.name_footer")       // 名称是显示标签，可自定义
                 }
 
                 // 「详情」段：类型 + 可选的「开始 + 结束」时间段（结束以 stayMinutes 存）。
@@ -1528,8 +1529,9 @@ struct StopEditView: View {
                     // 无视选项里的自定义间距（故下拉松、收起挤，且 SwiftUI 不给改）。改用 Menu 后，收起值标签
                     // 由我们手搓 → 图标↔文字间距 100% 可控；下拉仍是系统菜单 Picker（用 Label、间距本就合适）。
                     Menu {
+                        // 与「添加地点」一致：只列地点类别，剔除航班/火车/租车/邮轮（它们是交通段、走「+」交通入口）。
                         Picker(selection: $category) {
-                            ForEach(StopCategory.allCases, id: \.self) { cat in
+                            ForEach(StopCategory.placeSelectableCases, id: \.self) { cat in
                                 Label(cat.titleKey, systemImage: cat.symbolName).tag(cat)
                             }
                         } label: {
@@ -1549,32 +1551,51 @@ struct StopEditView: View {
                             .foregroundStyle(CarryAccent.color)
                         }
                     }
-                    Toggle(isOn: $hasTime) { Text("itinerary.stop.edit.set_time") }
-                        .tint(CarryAccent.color)
-                    if hasTime {
-                        DatePicker(selection: $startTime, displayedComponents: .hourAndMinute) {
-                            Text("itinerary.stop.edit.start_time")
+                    // 时间：chip + 弹出（统一交通范式，去 toggle+内联的行高跳变）。开始可选；有开始才显结束。
+                    HStack(spacing: 8) {
+                        Text("itinerary.transport.field.time")
+                        Spacer()
+                        Button { timeSheet = .start } label: {
+                            FormChip(text: hasTime ? itineraryTimeString(startTime)
+                                                   : NSLocalizedString("itinerary.stop.edit.start_time", comment: ""),
+                                     filled: hasTime)
                         }
-                        DatePicker(selection: $endTime, in: startTime..., displayedComponents: .hourAndMinute) {
-                            Text("itinerary.stop.edit.end_time")
+                        .buttonStyle(.plain)
+                        if hasTime {
+                            Text("–").foregroundStyle(.secondary)
+                            Button { timeSheet = .end } label: {
+                                FormChip(text: hasEnd ? itineraryTimeString(endTime)
+                                                      : NSLocalizedString("itinerary.stop.edit.end_time", comment: ""),
+                                         filled: hasEnd)
+                            }
+                            .buttonStyle(.plain)
                         }
                     }
-                    CostInputRow(amountText: $costAmountText, currencyCode: $costCurrencyCode)
+                    // 电话：搜索地点时可自动回填，也可手填（餐厅/景点联系）。
+                    TextField("itinerary.transport.field.phone", text: $phone)
+                        .keyboardType(.phonePad)
                 } header: {
                     Text("itinerary.stop.edit.details_header")
-                } footer: {
-                    if hasTime {
-                        Text("itinerary.stop.edit.time_footer")
-                    }
                 }
                 .onChange(of: startTime) { _, newStart in
                     if endTime < newStart { endTime = newStart }   // 结束不早于开始
                 }
 
+                // 固定顺序：费用 → 备注 → 附件，各自独立 Section。
+                Section {
+                    CostInputRow(amountText: $costAmountText, currencyCode: $costCurrencyCode)
+                }
                 Section {
                     TextField(text: $note, axis: .vertical) { Text("itinerary.stop.edit.note") }
                         .lineLimit(2...5)
                 }
+                // 地点恒为既有实体（新地点经 AddStopView 搜索添加），owner 始终有 → 直接入库，无需缓冲。
+                AttachmentEditSection(
+                    owner: .stop(stop.id),
+                    existing: stop.attachments ?? [],
+                    pending: .constant([]),
+                    tripId: tripId,
+                    request: $attachmentRequest)
                 Section {
                     Button(role: .destructive) {
                         if let dayId = stop.day?.id {
@@ -1586,6 +1607,7 @@ struct StopEditView: View {
                     }
                 }
             }
+            .attachmentAddFlow(tripId: tripId, owner: .stop(stop.id), pending: .constant([]), request: $attachmentRequest)
             .navigationTitle(Text("itinerary.stop.edit.title"))
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -1595,7 +1617,8 @@ struct StopEditView: View {
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Save") {
                         let startMin = dayMinutes(from: startTime)
-                        let stay = hasTime ? max(0, dayMinutes(from: endTime) - startMin) : 0
+                        // 停留时长 = 结束 − 开始，仅在「有开始 且 有结束」时计；否则 0（只标到访点，无时段）。
+                        let stay = (hasTime && hasEnd) ? max(0, dayMinutes(from: endTime) - startMin) : 0
                         store.updateItineraryStop(
                             tripId: tripId,
                             stopId: stop.id,
@@ -1603,7 +1626,8 @@ struct StopEditView: View {
                             category: category,
                             plannedStartMinutes: hasTime ? startMin : -1,
                             stayMinutes: stay,
-                            note: note
+                            note: note,
+                            phone: phone
                         )
                         store.setStopCost(tripId: tripId, stopId: stop.id,
                                           amount: costAmountValue, currencyCode: costCurrencyToSave)
@@ -1619,8 +1643,18 @@ struct StopEditView: View {
                     biasLatitude: stop.latitude,
                     biasLongitude: stop.longitude,
                     relocateStopId: stop.id,
-                    onRelocated: { newName in name = newName }
+                    // relocate 整体换地点：名称 + 电话都从更新后的 model 刷新，避免保存时用旧值覆盖。
+                    onRelocated: { newName in name = newName; phone = stop.phone }
                 )
+            }
+            // 时间弹层（chip+弹出，统一交通范式）；挂在 Form 稳定祖先上。
+            .sheet(item: $timeSheet) { field in
+                switch field {
+                case .start:
+                    ItineraryTimePickerSheet(hasTime: $hasTime, time: $startTime)
+                case .end:
+                    ItineraryTimePickerSheet(hasTime: $hasEnd, time: $endTime)
+                }
             }
         }
     }

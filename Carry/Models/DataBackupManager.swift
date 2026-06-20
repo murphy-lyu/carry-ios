@@ -37,6 +37,20 @@ struct BackupStopPhoto: Codable, Sendable {
     var sortOrder: Int
 }
 
+/// 附件镜像（spec: itinerary-attachments.md）。缩略图字节随记录走（小）；原文件字节存
+/// CarryBackup.attachmentFiles（按 fileName 索引，仅 export 内嵌）。分享/导出渲染器不读附件 → 天然不外泄。
+struct BackupAttachment: Codable, Sendable {
+    var id: UUID
+    var kindRaw: String
+    var displayName: String
+    var fileName: String
+    var utiOrExt: String
+    var urlString: String
+    var thumbnailData: Data
+    var sortOrder: Int
+    var addedAt: Date
+}
+
 struct BackupItineraryStop: Codable, Sendable {
     var id: UUID
     var name: String
@@ -55,6 +69,10 @@ struct BackupItineraryStop: Codable, Sendable {
     // 照片回溯（spec: photo-trip-reconstruction.md）；可选 + 默认 nil：兼容旧备份，且分享/导出路径不带照片。
     var fromPhotos: Bool? = nil
     var photos: [BackupStopPhoto]? = nil
+    // 联系电话（地点）；可选 + 默认 nil：兼容旧备份。
+    var phone: String? = nil
+    // 附件（spec: itinerary-attachments.md）；可选 + 默认 nil：兼容旧备份。
+    var attachments: [BackupAttachment]? = nil
 }
 
 struct BackupTransportSegment: Codable, Sendable {
@@ -95,6 +113,10 @@ struct BackupTransportSegment: Codable, Sendable {
     // 端点详细地址（地点搜索回填）；可选 + 默认 nil：兼容旧备份。
     var fromAddress: String? = nil
     var toAddress: String? = nil
+    // 联系电话（租车点）；可选 + 默认 nil：兼容旧备份。
+    var phone: String? = nil
+    // 附件（spec: itinerary-attachments.md）；可选 + 默认 nil：兼容旧备份。
+    var attachments: [BackupAttachment]? = nil
 }
 
 struct BackupLodgingStay: Codable, Sendable {
@@ -113,6 +135,10 @@ struct BackupLodgingStay: Codable, Sendable {
     var costAmount: Double?
     var costCurrencyCode: String?
     var costHomeAmount: Double?
+    // 联系电话（酒店）；可选 + 默认 nil：兼容旧备份。
+    var phone: String? = nil
+    // 附件（spec: itinerary-attachments.md）；可选 + 默认 nil：兼容旧备份。
+    var attachments: [BackupAttachment]? = nil
 }
 
 struct BackupItineraryDay: Codable, Sendable {
@@ -180,6 +206,9 @@ struct CarryBackup: Codable, Sendable {
     /// 用户上传的背景图字节，按 sandbox 文件名索引（JSON 中以 base64 编码）。
     /// 可选：旧备份无此字段；还原时写回沙盒，配合各 trip 的 backgroundsData 复原封面。
     var backgroundImages: [String: Data]?
+    /// 行程附件原文件字节，按 sandbox 文件名索引（仅 export 内嵌）。还原时写回沙盒。
+    /// 可选：旧备份无此字段。spec: itinerary-attachments.md。
+    var attachmentFiles: [String: Data]?
 }
 
 // MARK: - DataBackupManager
@@ -237,7 +266,22 @@ final class DataBackupManager {
                 costAmount: s.costAmount, costCurrencyCode: s.costCurrencyCode, costHomeAmount: s.costHomeAmount,
                 aircraftType: s.aircraftType, distanceMeters: s.distanceMeters, durationMinutes: s.durationMinutes,
                 vehicleModel: s.vehicleModel, licensePlate: s.licensePlate,
-                fromAddress: s.fromAddress, toAddress: s.toAddress
+                fromAddress: s.fromAddress, toAddress: s.toAddress,
+                phone: s.phone,
+                attachments: backupAttachments(s.attachments)
+            )
+        }
+    }
+
+    /// 附件 → 备份镜像（缩略图随记录；原文件字节走 attachmentFiles 顶层字典）。
+    private func backupAttachments(_ atts: [ItineraryAttachment]?) -> [BackupAttachment]? {
+        let sorted = (atts ?? []).sorted { $0.sortOrder < $1.sortOrder }
+        guard !sorted.isEmpty else { return nil }
+        return sorted.map { a in
+            BackupAttachment(
+                id: a.id, kindRaw: a.kindRaw, displayName: a.displayName,
+                fileName: a.fileName, utiOrExt: a.utiOrExt, urlString: a.urlString,
+                thumbnailData: a.thumbnailData, sortOrder: a.sortOrder, addedAt: a.addedAt
             )
         }
     }
@@ -251,7 +295,9 @@ final class DataBackupManager {
                 checkInDayOrder: l.checkInDayOrder, nights: l.nights,
                 checkInMinutes: l.checkInMinutes, checkOutMinutes: l.checkOutMinutes,
                 confirmationCode: l.confirmationCode, note: l.note, sortOrder: l.sortOrder,
-                costAmount: l.costAmount, costCurrencyCode: l.costCurrencyCode, costHomeAmount: l.costHomeAmount
+                costAmount: l.costAmount, costCurrencyCode: l.costCurrencyCode, costHomeAmount: l.costHomeAmount,
+                phone: l.phone,
+                attachments: backupAttachments(l.attachments)
             )
         }
     }
@@ -304,7 +350,9 @@ final class DataBackupManager {
                         costCurrencyCode: $0.costCurrencyCode,
                         costHomeAmount: $0.costHomeAmount,
                         fromPhotos: $0.fromPhotos,
-                        photos: photos.isEmpty ? nil : photos
+                        photos: photos.isEmpty ? nil : photos,
+                        phone: $0.phone,
+                        attachments: backupAttachments($0.attachments)
                     )
                 }
                 let segments = backupSegments(day)
@@ -360,12 +408,29 @@ final class DataBackupManager {
         }
 
         var backgroundImages: [String: Data]? = nil
+        var attachmentFiles: [String: Data]? = nil
         if embedImages {
             var dict: [String: Data] = [:]
             for name in Set(trips.flatMap { $0.backgrounds.compactMap(\.localFileName) }) {
                 if let bytes = BackgroundImageStore.data(named: name) { dict[name] = bytes }
             }
             backgroundImages = dict.isEmpty ? nil : dict
+
+            // 附件原文件字节（仅 export 内嵌；auto-backup 不带，沙盒文件仍在）。
+            var attDict: [String: Data] = [:]
+            let attNames = trips.flatMap { trip -> [String] in
+                var names: [String] = []
+                for day in trip.safeItineraryDays {
+                    for stop in day.sortedStops { names += (stop.attachments ?? []).map(\.fileName) }
+                    for seg in day.sortedSegments { names += (seg.attachments ?? []).map(\.fileName) }
+                }
+                for stay in trip.safeLodgingStays { names += (stay.attachments ?? []).map(\.fileName) }
+                return names
+            }
+            for name in Set(attNames) where !name.isEmpty {
+                if let bytes = AttachmentStore.data(named: name) { attDict[name] = bytes }
+            }
+            attachmentFiles = attDict.isEmpty ? nil : attDict
         }
 
         return CarryBackup(
@@ -374,7 +439,8 @@ final class DataBackupManager {
             trips: backupTrips,
             myItems: backupMyItems,
             defaultReminderOffsets: ReminderPreferences.enabledOffsets.sorted(),
-            backgroundImages: backgroundImages
+            backgroundImages: backgroundImages,
+            attachmentFiles: attachmentFiles
         )
     }
 
@@ -544,6 +610,27 @@ final class DataBackupManager {
         }
     }
 
+    /// 写回附件原文件字节（仅 export 备份带；auto-backup 无 attachmentFiles，沙盒文件仍在）。
+    private func restoreAttachmentFiles(from backup: CarryBackup) {
+        for (name, data) in backup.attachmentFiles ?? [:] {
+            AttachmentStore.write(data: data, named: name)
+        }
+    }
+
+    /// 重建附件 model（owner 关系由调用方按实体设置）。
+    private func makeAttachments(_ atts: [BackupAttachment]?, into context: ModelContext) -> [ItineraryAttachment] {
+        (atts ?? []).sorted { $0.sortOrder < $1.sortOrder }.map { ba in
+            let a = ItineraryAttachment(
+                kind: AttachmentKind(rawValue: ba.kindRaw) ?? .file,
+                displayName: ba.displayName, fileName: ba.fileName, utiOrExt: ba.utiOrExt,
+                urlString: ba.urlString, thumbnailData: ba.thumbnailData,
+                sortOrder: ba.sortOrder, addedAt: ba.addedAt)
+            a.id = ba.id
+            context.insert(a)
+            return a
+        }
+    }
+
     /// 重建行程规划的天/停靠点并挂到 trip（restore 与 merge 共用）。
     /// 旧备份无 itineraryDays（nil）→ 不建任何规划数据；id 沿用备份值保真。
     private func restoreItineraryDays(_ days: [BackupItineraryDay]?, for trip: TripBundle, into context: ModelContext) {
@@ -569,6 +656,7 @@ final class DataBackupManager {
                     costHomeAmount: bs.costHomeAmount ?? -1,
                     fromPhotos: bs.fromPhotos ?? false
                 )
+                stop.phone = bs.phone ?? ""
                 stop.id = bs.id
                 stop.day = day
                 context.insert(stop)
@@ -586,6 +674,7 @@ final class DataBackupManager {
                     photo.stop = stop
                     context.insert(photo)
                 }
+                for a in makeAttachments(bs.attachments, into: context) { a.stop = stop }
             }
             // 交通段（spec: itinerary-transport-lodging.md）；旧备份无 segments（nil）→ 不建。
             for bg in (bd.segments ?? []).sorted(by: { $0.sortOrder < $1.sortOrder }) {
@@ -606,6 +695,7 @@ final class DataBackupManager {
                     note: bg.note, aircraftType: bg.aircraftType ?? "",
                     distanceMeters: bg.distanceMeters ?? 0, durationMinutes: bg.durationMinutes ?? 0,
                     vehicleModel: bg.vehicleModel ?? "", licensePlate: bg.licensePlate ?? "",
+                    phone: bg.phone ?? "",
                     sortOrder: bg.sortOrder,
                     costAmount: bg.costAmount ?? 0,
                     costCurrencyCode: bg.costCurrencyCode ?? "",
@@ -614,6 +704,7 @@ final class DataBackupManager {
                 seg.id = bg.id
                 seg.day = day
                 context.insert(seg)
+                for a in makeAttachments(bg.attachments, into: context) { a.segment = seg }
             }
         }
     }
@@ -628,6 +719,7 @@ final class DataBackupManager {
                 checkInDayOrder: bl.checkInDayOrder, nights: bl.nights,
                 checkInMinutes: bl.checkInMinutes, checkOutMinutes: bl.checkOutMinutes,
                 confirmationCode: bl.confirmationCode, note: bl.note,
+                phone: bl.phone ?? "",
                 sortOrder: bl.sortOrder,
                 costAmount: bl.costAmount ?? 0,
                 costCurrencyCode: bl.costCurrencyCode ?? "",
@@ -636,11 +728,13 @@ final class DataBackupManager {
             stay.id = bl.id
             stay.bundle = trip
             context.insert(stay)
+            for a in makeAttachments(bl.attachments, into: context) { a.stay = stay }
         }
     }
 
     private func performMerge(from backup: CarryBackup, into context: ModelContext) throws -> (trips: Int, myItems: Int) {
         restoreBackgroundImages(from: backup)
+        restoreAttachmentFiles(from: backup)
 
         // 取出现有 UUID 集合，用于去重判断
         let existingTripIDs = Set(try context.fetch(FetchDescriptor<TripBundle>()).map(\.id))
@@ -883,6 +977,7 @@ final class DataBackupManager {
 
         // Rewrite background image files to the sandbox before relinking trips.
         restoreBackgroundImages(from: backup)
+        restoreAttachmentFiles(from: backup)
 
         // 还原默认提醒偏好（旧备份无此字段则保持现状）
         if let offsets = backup.defaultReminderOffsets {

@@ -190,6 +190,8 @@ final class ItineraryStop: CostBearing {
     var address: String = ""
     /// StopCategory.rawValue；读取统一走 `category` 计算属性做未知值兜底。
     var categoryRaw: String = StopCategory.other.rawValue
+    /// 联系电话（餐厅/景点等；地点搜索可自动回填，可手填）。
+    var phone: String = ""
     /// 当天计划时段起点（自午夜起的分钟数，-1 = 未设）。
     var plannedStartMinutes: Int = -1
     /// 预计停留时长（分钟，0 = 未设）。
@@ -211,6 +213,10 @@ final class ItineraryStop: CostBearing {
     @Relationship(deleteRule: .cascade, inverse: \StopPhoto.stop)
     var photos: [StopPhoto]? = []
 
+    /// 附件（文件/照片/链接，spec: itinerary-attachments.md）；删地点级联删附件（文件由 Store 漏斗清沙盒）。
+    @Relationship(deleteRule: .cascade, inverse: \ItineraryAttachment.stop)
+    var attachments: [ItineraryAttachment]? = []
+
     init(
         name: String = "",
         latitude: Double = 0,
@@ -220,6 +226,7 @@ final class ItineraryStop: CostBearing {
         plannedStartMinutes: Int = -1,
         stayMinutes: Int = 0,
         note: String = "",
+        phone: String = "",
         sortOrder: Int = 0,
         costAmount: Double = 0,
         costCurrencyCode: String = "",
@@ -235,6 +242,7 @@ final class ItineraryStop: CostBearing {
         self.plannedStartMinutes = plannedStartMinutes
         self.stayMinutes = stayMinutes
         self.note = note
+        self.phone = phone
         self.sortOrder = sortOrder
         self.costAmount = costAmount
         self.costCurrencyCode = costCurrencyCode
@@ -302,6 +310,62 @@ final class StopPhoto {
         self.longitude = longitude
         self.sortOrder = sortOrder
     }
+}
+
+// MARK: - ItineraryAttachment
+
+/// 附件类型（spec: itinerary-attachments.md）。rawValue 存库；UI 按类型取图标/交互。
+enum AttachmentKind: String, Codable, CaseIterable {
+    case file, photo, link
+}
+
+/// 通用行程附件：挂在 地点 / 交通 / 住宿 三类实体上（三选一关系）。
+/// 文件/照片原图字节存沙盒（`AttachmentStore`，model 只存 `fileName`）；照片另存小缩略图字节（列表/详情快渲）；
+/// 链接只存 `urlString`。私有数据——绝不进任何分享/导出路径（见 spec「分享过滤」）。
+@Model
+final class ItineraryAttachment {
+    var id: UUID = UUID()
+    var kindRaw: String = AttachmentKind.file.rawValue
+    /// 文件名 / 用户起的名 / 链接标题；空则 UI 回退（链接显 URL、文件显 fileName）。
+    var displayName: String = ""
+    /// 沙盒文件名（file/photo 用；link 为空）。
+    var fileName: String = ""
+    /// UTType 标识或扩展名（图标/预览用）。
+    var utiOrExt: String = ""
+    /// 链接 URL（link 用）。
+    var urlString: String = ""
+    /// 照片小缩略图字节（约 640px；file/link 为空，列表用 SF 图标）。
+    var thumbnailData: Data = Data()
+    var sortOrder: Int = 0
+    var addedAt: Date = Date()
+
+    // 归属三选一（仅一个非空），镜像 StopPhoto ↔ ItineraryStop。
+    var stop: ItineraryStop?
+    var segment: TransportSegment?
+    var stay: LodgingStay?
+
+    init(
+        kind: AttachmentKind = .file,
+        displayName: String = "",
+        fileName: String = "",
+        utiOrExt: String = "",
+        urlString: String = "",
+        thumbnailData: Data = Data(),
+        sortOrder: Int = 0,
+        addedAt: Date = Date()
+    ) {
+        self.id = UUID()
+        self.kindRaw = kind.rawValue
+        self.displayName = displayName
+        self.fileName = fileName
+        self.utiOrExt = utiOrExt
+        self.urlString = urlString
+        self.thumbnailData = thumbnailData
+        self.sortOrder = sortOrder
+        self.addedAt = addedAt
+    }
+
+    var kind: AttachmentKind { AttachmentKind(rawValue: kindRaw) ?? .file }
 }
 
 // MARK: - TransportMode
@@ -374,6 +438,8 @@ final class TransportSegment: CostBearing {
     /// 租车专属选填：车型（"Toyota Corolla" / "经济型 SUV"）+ 车牌；其它交通不展示，空 = 未填。
     var vehicleModel: String = ""
     var licensePlate: String = ""
+    /// 联系电话（租车点；取车地点搜索可自动回填，可手填）；其它交通不展示。
+    var phone: String = ""
 
     /// 时间轴排序（与同日 stop 共享整数空间）。
     var sortOrder: Int = 0
@@ -387,6 +453,10 @@ final class TransportSegment: CostBearing {
     /// 未来航班动态预留（本轮不接 API，留空）：JSON 编码的延误/登机口/转盘/实际起降。
     /// 可演进——接入时只填充本字段，不改表。
     var liveStatusData: Data = Data()
+
+    /// 附件（文件/照片/链接，spec: itinerary-attachments.md）；删交通段级联删附件。
+    @Relationship(deleteRule: .cascade, inverse: \ItineraryAttachment.segment)
+    var attachments: [ItineraryAttachment]? = []
 
     init(
         mode: TransportMode = .flight,
@@ -418,6 +488,7 @@ final class TransportSegment: CostBearing {
         durationMinutes: Int = 0,
         vehicleModel: String = "",
         licensePlate: String = "",
+        phone: String = "",
         sortOrder: Int = 0,
         costAmount: Double = 0,
         costCurrencyCode: String = "",
@@ -453,6 +524,7 @@ final class TransportSegment: CostBearing {
         self.durationMinutes = durationMinutes
         self.vehicleModel = vehicleModel
         self.licensePlate = licensePlate
+        self.phone = phone
         self.sortOrder = sortOrder
         self.costAmount = costAmount
         self.costCurrencyCode = costCurrencyCode
@@ -501,6 +573,8 @@ final class LodgingStay: CostBearing {
 
     var confirmationCode: String = ""
     var note: String = ""
+    /// 联系电话（酒店；地址搜索可自动回填，可手填）。
+    var phone: String = ""
     var sortOrder: Int = 0
     var bundle: TripBundle?
 
@@ -508,6 +582,10 @@ final class LodgingStay: CostBearing {
     var costAmount: Double = 0
     var costCurrencyCode: String = ""
     var costHomeAmount: Double = -1
+
+    /// 附件（文件/照片/链接，spec: itinerary-attachments.md）；删住宿级联删附件。
+    @Relationship(deleteRule: .cascade, inverse: \ItineraryAttachment.stay)
+    var attachments: [ItineraryAttachment]? = []
 
     init(
         name: String = "",
@@ -520,6 +598,7 @@ final class LodgingStay: CostBearing {
         checkOutMinutes: Int = -1,
         confirmationCode: String = "",
         note: String = "",
+        phone: String = "",
         sortOrder: Int = 0,
         costAmount: Double = 0,
         costCurrencyCode: String = "",
@@ -536,6 +615,7 @@ final class LodgingStay: CostBearing {
         self.checkOutMinutes = checkOutMinutes
         self.confirmationCode = confirmationCode
         self.note = note
+        self.phone = phone
         self.sortOrder = sortOrder
         self.costAmount = costAmount
         self.costCurrencyCode = costCurrencyCode

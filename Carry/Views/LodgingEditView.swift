@@ -33,17 +33,36 @@ struct LodgingEditView: View {
     @State private var checkOutTime = LodgingEditView.noonToday
     @State private var confirmationCode = ""
     @State private var note = ""
+    @State private var phone = ""
     @State private var costAmountText = ""
     @State private var costCurrencyCode = ""
 
     @State private var didLoad = false
     @State private var searching = false
+    @State private var attachmentRequest: AttachmentAddRequest?
+    @State private var pendingAttachments: [PendingAttachment] = []   // 新建住宿：保存后再 flush 入库
+    @State private var timeSheet: LodgingTimeField?   // 入住/退房时间弹层（chip+弹出，统一交通范式）
+
+    private enum LodgingTimeField: Identifiable { case checkIn, checkOut; var id: Int { hashValue } }
 
     private var isEditing: Bool { stayId != nil }
+    /// 正在编辑的住宿（附件挂载用，需已持久化）；新增态为 nil。
+    private var editingStay: LodgingStay? {
+        guard let stayId else { return nil }
+        return (bundle?.lodgingStays ?? []).first { $0.id == stayId }
+    }
     private var bundle: TripBundle? { store.bundle(for: tripId) }
     private var days: [ItineraryDay] { bundle?.safeItineraryDays ?? [] }
-    /// 住宿可跨到的最大晚数：行程总天数（够松，不会卡住正常用法）。
-    private var maxNights: Int { max(1, bundle?.spanDays ?? 1) }
+    private var lastDayOrder: Int { days.last?.sortOrder ?? 0 }
+
+    /// 退房日 ↔ nights 的桥接：录入选「退房日」（更符合心智、退房恒在行程内），内部仍存 nights。
+    /// spec: itinerary-transport-lodging.md（增补：两日期录入）。
+    private var checkOutDayBinding: Binding<Int> {
+        Binding(
+            get: { min(checkInDayOrder + nights, lastDayOrder) },
+            set: { nights = max(1, $0 - checkInDayOrder) }
+        )
+    }
 
     var body: some View {
         NavigationStack {
@@ -69,37 +88,63 @@ struct LodgingEditView: View {
 
                 Section {
                     if days.count > 1 {
+                        // 入住日：排除最后一天（最后一天无法开始过夜）。
                         Picker(selection: $checkInDayOrder) {
-                            ForEach(days, id: \.sortOrder) { day in
+                            ForEach(days.dropLast(), id: \.sortOrder) { day in
                                 Text(dayLabel(day.sortOrder)).tag(day.sortOrder)
                             }
                         } label: {
                             Text("itinerary.lodging.field.checkin_day")
                         }
-                    }
-                    Stepper(value: $nights, in: 1...maxNights) {
-                        HStack {
-                            Text("itinerary.lodging.field.nights")
-                            Spacer()
+                        // 退房日：只列入住日之后的天 → 退房恒在行程内、「退房」事件必然可渲染。
+                        // nights 由「退房日 − 入住日」派生（checkOutDayBinding）。
+                        Picker(selection: checkOutDayBinding) {
+                            ForEach(days.filter { $0.sortOrder > checkInDayOrder }, id: \.sortOrder) { day in
+                                Text(dayLabel(day.sortOrder)).tag(day.sortOrder)
+                            }
+                        } label: {
+                            Text("itinerary.lodging.field.checkout_day")
+                        }
+                        // 由「入住日/退房日」派生的晚数（只读行，跟在两日期下方做确认）。
+                        LabeledContent {
                             Text(String(format: NSLocalizedString("itinerary.lodging.nights_value", comment: ""), nights))
                                 .foregroundStyle(.secondary)
+                        } label: {
+                            Text("itinerary.lodging.field.nights")
                         }
                     }
-                    timeRow("itinerary.lodging.field.checkin_time", isOn: $hasCheckInTime, time: $checkInTime)
-                    timeRow("itinerary.lodging.field.checkout_time", isOn: $hasCheckOutTime, time: $checkOutTime)
+                    // 入住/退房时间：chip + 弹出（统一交通范式，去 toggle+内联）。未设显示「时间」占位。
+                    timeChipRow("itinerary.lodging.field.checkin_time", has: hasCheckInTime, time: checkInTime) { timeSheet = .checkIn }
+                    timeChipRow("itinerary.lodging.field.checkout_time", has: hasCheckOutTime, time: checkOutTime) { timeSheet = .checkOut }
                 } header: {
                     Text("itinerary.lodging.section.stay")
                 }
 
                 Section {
-                    CostInputRow(amountText: $costAmountText, currencyCode: $costCurrencyCode)
                     TextField("itinerary.transport.field.confirmation", text: $confirmationCode)
                         .autocorrectionDisabled()
-                    TextField("itinerary.transport.field.note", text: $note, axis: .vertical)
-                        .lineLimit(1...4)
+                    // 电话：搜酒店时可自动回填，也可手填（方便行程中联系）。
+                    TextField("itinerary.transport.field.phone", text: $phone)
+                        .keyboardType(.phonePad)
                 } header: {
                     Text("itinerary.transport.section.more")
                 }
+                // 固定顺序：费用 → 备注 → 附件，各自独立 Section。
+                Section {
+                    CostInputRow(amountText: $costAmountText, currencyCode: $costCurrencyCode)
+                }
+                Section {
+                    TextField("itinerary.transport.field.note", text: $note, axis: .vertical)
+                        .lineLimit(1...4)
+                }
+
+                // 附件：既有住宿直接入库；新建缓冲到 pending、保存后 flush。呈现挂到 Form（见 .attachmentAddFlow）。
+                AttachmentEditSection(
+                    owner: editingStay.map { .lodging($0.id) },
+                    existing: editingStay?.attachments ?? [],
+                    pending: $pendingAttachments,
+                    tripId: tripId,
+                    request: $attachmentRequest)
 
                 if isEditing {
                     Section {
@@ -112,8 +157,14 @@ struct LodgingEditView: View {
                     }
                 }
             }
+            .attachmentAddFlow(tripId: tripId, owner: editingStay.map { .lodging($0.id) },
+                               pending: $pendingAttachments, request: $attachmentRequest)
             .navigationTitle(Text(isEditing ? "itinerary.lodging.edit.title" : "itinerary.lodging.add.title"))
             .navigationBarTitleDisplayMode(.inline)
+            // 入住日改动时夹断 nights，保证退房日始终落在行程内（≥入住次日、≤末日）。
+            .onChange(of: checkInDayOrder) { _, newVal in
+                nights = max(1, min(nights, lastDayOrder - newVal))
+            }
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("common.cancel") { dismiss() }
@@ -130,11 +181,21 @@ struct LodgingEditView: View {
                     placeholderKey: "itinerary.lodging.search.placeholder",
                     biasLatitude: bundle?.latitude ?? 0,
                     biasLongitude: bundle?.longitude ?? 0
-                ) { pickedName, lat, lon, pickedAddress in
+                ) { pickedName, lat, lon, pickedAddress, pickedPhone in
                     name = pickedName
                     latitude = lat
                     longitude = lon
                     if address.isEmpty { address = pickedAddress }
+                    if phone.isEmpty { phone = pickedPhone }   // 自动回填，已填则不覆盖
+                }
+            }
+            // 入住/退房时间弹层（chip+弹出，统一交通范式）；挂在 Form 稳定祖先上。
+            .sheet(item: $timeSheet) { field in
+                switch field {
+                case .checkIn:
+                    ItineraryTimePickerSheet(hasTime: $hasCheckInTime, time: $checkInTime)
+                case .checkOut:
+                    ItineraryTimePickerSheet(hasTime: $hasCheckOutTime, time: $checkOutTime)
                 }
             }
             .onAppear(perform: loadIfNeeded)
@@ -143,20 +204,18 @@ struct LodgingEditView: View {
 
     // MARK: Helpers
 
-    /// 时间行：单行「标签 · 时间 chip · 开关」。开关开时在开关左侧内联显示紧凑时间，
-    /// 不再让 labelsHidden 的选择器单独占一行、左侧留大片空白（修布局散乱）。
+    /// 时间行：标签 + 时间 chip（点开弹出滚轮，可清除回未设）。统一交通的 chip+弹出范式，去 toggle+内联。
     @ViewBuilder
-    private func timeRow(_ titleKey: LocalizedStringKey, isOn: Binding<Bool>, time: Binding<Date>) -> some View {
+    private func timeChipRow(_ titleKey: LocalizedStringKey, has: Bool, time: Date, onTap: @escaping () -> Void) -> some View {
         HStack(spacing: 12) {
             Text(titleKey)
-                .accessibilityHidden(true)   // 视觉标签；a11y 由下方 Toggle 承载，避免重复朗读
             Spacer()
-            if isOn.wrappedValue {
-                DatePicker(titleKey, selection: time, displayedComponents: .hourAndMinute)
-                    .labelsHidden()
+            Button(action: onTap) {
+                FormChip(text: has ? itineraryTimeString(time)
+                                   : NSLocalizedString("itinerary.transport.field.time", comment: ""),
+                         filled: has)
             }
-            Toggle(titleKey, isOn: isOn.animation())
-                .labelsHidden()
+            .buttonStyle(.plain)
         }
     }
 
@@ -196,7 +255,7 @@ struct LodgingEditView: View {
             nights = max(1, stay.nights)
             if stay.checkInMinutes >= 0 { hasCheckInTime = true; checkInTime = dateFromMinutes(stay.checkInMinutes) }
             if stay.checkOutMinutes >= 0 { hasCheckOutTime = true; checkOutTime = dateFromMinutes(stay.checkOutMinutes) }
-            confirmationCode = stay.confirmationCode; note = stay.note
+            confirmationCode = stay.confirmationCode; note = stay.note; phone = stay.phone
             if stay.hasCost { costAmountText = CurrencyCatalog.amountText(stay.costAmount); costCurrencyCode = stay.costCurrencyCode }
         } else {
             checkInDayOrder = initialCheckInDayOrder
@@ -223,7 +282,7 @@ struct LodgingEditView: View {
                 latitude: latitude, longitude: longitude,
                 checkInDayOrder: checkInDayOrder, nights: nights,
                 checkInMinutes: inMinutes, checkOutMinutes: outMinutes,
-                confirmationCode: confirmationCode, note: note
+                confirmationCode: confirmationCode, note: note, phone: phone
             )
             store.setLodgingCost(tripId: tripId, stayId: stayId,
                                  amount: costAmountValue, currencyCode: costCurrencyToSave)
@@ -234,10 +293,17 @@ struct LodgingEditView: View {
                 latitude: latitude, longitude: longitude,
                 checkInDayOrder: checkInDayOrder, nights: nights,
                 checkInMinutes: inMinutes, checkOutMinutes: outMinutes,
-                confirmationCode: confirmationCode, note: note
+                confirmationCode: confirmationCode, note: note, phone: phone
             ) {
                 store.setLodgingCost(tripId: tripId, stayId: newId,
                                      amount: costAmountValue, currencyCode: costCurrencyToSave)
+                // 新建住宿：把缓冲的附件落到刚建好的住宿。
+                for p in pendingAttachments {
+                    _ = store.addAttachment(tripId: tripId, owner: .lodging(newId), kind: p.data.kind,
+                                            displayName: p.data.displayName, fileName: p.data.fileName,
+                                            utiOrExt: p.data.utiOrExt, urlString: p.data.urlString,
+                                            thumbnailData: p.data.thumbnailData)
+                }
             }
         }
         dismiss()

@@ -1,9 +1,6 @@
 {
   "sourceLanguage" : "en",
   "strings" : {
-    "Carry Trip" : {
-
-    },
     "CFBundleDisplayName" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -74,6 +71,7 @@
         }
       }
     },
+    "Carry Trip" : {},
     "NSCalendarsFullAccessUsageDescription" : {
       "comment" : "Privacy - Calendars Full Access Usage Description",
       "localizations" : {
@@ -129,6 +127,65 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "啟程會將你的行程和打包提醒加入行事曆，讓你不錯過任何一次出發。"
+          }
+        }
+      }
+    },
+    "NSCameraUsageDescription" : {
+      "comment" : "Privacy - Camera Usage Description",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Carry nutzt die Kamera, damit du Dokumente – etwa einen Mietvertrag oder eine Hotelbestätigung – fotografieren und deiner Reise anhängen kannst. Die Fotos bleiben nur auf deinem Gerät."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Carry uses the camera so you can photograph documents — like a rental contract or hotel confirmation — and attach them to your trip. Photos are stored only on your device."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Carry usa la cámara para que puedas fotografiar documentos —como un contrato de alquiler o una confirmación de hotel— y adjuntarlos a tu viaje. Las fotos se guardan solo en tu dispositivo."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Carry utilise l’appareil photo pour que vous puissiez photographier des documents — comme un contrat de location ou une confirmation d’hôtel — et les joindre à votre voyage. Les photos restent uniquement sur votre appareil."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "レンタル契約書やホテルの予約確認書などの書類を撮影して旅行に添付できるよう、カメラを使用します。写真は端末内にのみ保存されます。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "렌터카 계약서나 호텔 예약 확인서 같은 서류를 촬영해 여행에 첨부할 수 있도록 카메라를 사용합니다. 사진은 기기에만 저장됩니다."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "O Carry usa a câmera para você fotografar documentos — como um contrato de aluguel ou uma confirmação de hotel — e anexá-los à sua viagem. As fotos ficam apenas no seu dispositivo."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "启程使用相机，让你拍摄合同、确认函等文件并附加到行程。照片仅保存在你的设备本机。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "啟程使用相機，讓你拍攝合約、確認函等文件並附加到行程。相片僅儲存在你的裝置本機。"
           }
         }
       }
