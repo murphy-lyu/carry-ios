@@ -42,7 +42,9 @@ private enum ItinerarySheet: Identifiable {
     case transportDetail(TransportSegment, focus: TransportDetailFocus)
     case editTransport(UUID)
     case addLodging(checkInDayOrder: Int)
-    case lodgingDetail(LodgingStay)
+    /// `dayOrder` = the day whose row was tapped (check-in / overnight / checkout) — drives the
+    /// detail's accent so it matches the colour the user touched, not always the check-in day.
+    case lodgingDetail(LodgingStay, dayOrder: Int)
     case editLodging(UUID)
     case calendarEvent(CalendarOverlayEvent)
 
@@ -57,7 +59,7 @@ private enum ItinerarySheet: Identifiable {
         case .transportDetail(let seg, let focus): return "trdetail-\(seg.id)-\(focus.idToken)"
         case .editTransport(let id): return "edittr-\(id)"
         case .addLodging(let order): return "addlg-\(order)"
-        case .lodgingDetail(let stay): return "lgdetail-\(stay.id)"
+        case .lodgingDetail(let stay, let dayOrder): return "lgdetail-\(stay.id)-\(dayOrder)"
         case .editLodging(let id): return "editlg-\(id)"
         case .calendarEvent(let ev): return "calev-\(ev.id)"
         }
@@ -170,12 +172,12 @@ struct ItineraryView: View {
                 TransportEditView(tripId: tripId, segmentId: id)
             case .addLodging(let order):
                 LodgingEditView(tripId: tripId, initialCheckInDayOrder: order)
-            case .lodgingDetail(let stay):
+            case .lodgingDetail(let stay, let dayOrder):
                 LodgingDetailView(
                     tripId: tripId,
                     stay: stay,
                     navApps: navApps,
-                    dayColor: ItineraryDayPalette.color(forDayIndex: stay.checkInDayOrder)
+                    dayColor: ItineraryDayPalette.color(forDayIndex: dayOrder)
                 )
             case .editLodging(let id):
                 LodgingEditView(tripId: tripId, stayId: id)
@@ -600,7 +602,7 @@ struct ItineraryView: View {
                              showBottomLine: !isLastOnRail(rowID, in: day))
                 .padding(.horizontal, 16)
                 .contentShape(Rectangle())
-                .onTapGesture { activeSheet = .lodgingDetail(stay) }
+                .onTapGesture { activeSheet = .lodgingDetail(stay, dayOrder: dayOrder) }
         }
     }
 
