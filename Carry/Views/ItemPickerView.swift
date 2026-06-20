@@ -1672,8 +1672,8 @@ struct ItemPickerView: View {
                 selectedSceneKeys: sceneKeys,
                 sections: sections
             )
-            // 新建行程：把设置里的默认提醒档位快照进该行程（非实时联动）。
-            bundle.reminderConfigs = ReminderPreferences.defaultConfigs
+            // 通知改为全局驱动（Settings 唯一真相源，spec: notification-center.md）——
+            // 不再快照档位进行程；新行程的通知由 NotificationManager 读全局设置排。
             store.setDraftTrip(bundle)
             if sections.isEmpty {
                 finalizeEmptyTrip(bundle: bundle, city: info.destinationCity)

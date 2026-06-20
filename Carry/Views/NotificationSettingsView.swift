@@ -1,204 +1,307 @@
 import SwiftUI
 import UserNotifications
 
-/// 设置 →「行程提醒」二级页。首版仅「出发提醒」组：用户选择新建行程的默认提醒
-/// 档位（开关）。该选择仅作用于"之后新建"的行程（创建时快照进行程），每个行程
-/// 仍可在物品清单里单独增删提醒、互不影响。未来航班 / 协作等通知场景在此页按分组扩展。
+/// 设置 →「行程提醒」二级页 = 通知中心（spec: notification-center.md）。
+/// 按类型分组、每类是一条全局规则、自动套到所有行程/事件；改任一项即 `rescheduleAllTrips`。
+/// Settings 为唯一真相源（无 per-trip 快照；逐航班/住宿静音在各自详情页就近放）。
 struct NotificationSettingsView: View {
-    @AppStorage(ReminderPreferences.storageKey) private var offsetsRaw = "0,1"
-    @AppStorage(ReminderPreferences.timeKey) private var defaultMinutes = 540  // 09:00
+    @EnvironmentObject private var store: TripStore
     @Environment(\.colorScheme) private var colorScheme
     @Environment(\.scenePhase) private var scenePhase
 
-    /// 系统通知授权态。`.denied` → 这里所有档位都形同虚设（通知发不出去），必须给用户一条出路。
-    /// 在 `.task` 与「从系统设置返回前台」时刷新，让横幅随真实授权态出现/消失。
+    // 出发提醒（A）
+    @AppStorage(ReminderPreferences.departureEnabledKey) private var departureEnabled = true
+    @AppStorage(ReminderPreferences.storageKey) private var offsetsRaw = "0,1"
+    @AppStorage(ReminderPreferences.timeKey) private var departureMinutes = 540
+    // 打包进度（A）
+    @AppStorage(ReminderPreferences.packProgressEnabledKey) private var packEnabled = false
+    @AppStorage(ReminderPreferences.packProgressOffsetKey) private var packOffsetDays = 1
+    // 交通（B）
+    @AppStorage(ReminderPreferences.transportEnabledKey) private var transportEnabled = true
+    @AppStorage(ReminderPreferences.transportLeadsKey) private var transportLeadsRaw = "180"
+    // 租车（B，默认关）
+    @AppStorage(ReminderPreferences.carRentalEnabledKey) private var carRentalEnabled = false
+    @AppStorage(ReminderPreferences.carRentalLeadsKey) private var carRentalLeadsRaw = "1440"
+    // 住宿（B，默认关）
+    @AppStorage(ReminderPreferences.lodgingEnabledKey) private var lodgingEnabled = false
+    @AppStorage(ReminderPreferences.lodgingCheckInMinKey) private var lodgingCheckInMin = 540
+    @AppStorage(ReminderPreferences.lodgingCheckOutLeadKey) private var lodgingCheckOutLead = 1440
+    // 每日摘要（C，默认关）
+    @AppStorage(ReminderPreferences.dailySummaryEnabledKey) private var dailyEnabled = false
+    @AppStorage(ReminderPreferences.dailySummaryMinKey) private var dailyMinutes = 480
+
     @State private var notificationStatus: UNAuthorizationStatus = .notDetermined
     private var notificationsBlocked: Bool { notificationStatus == .denied }
 
-    private var timeBinding: Binding<Date> {
+    // MARK: 样式
+    private var cardFill: Color {
+        colorScheme == .dark ? Color(UIColor.secondarySystemGroupedBackground).opacity(0.72)
+                             : Color(UIColor.secondarySystemGroupedBackground)
+    }
+    private var cardStroke: Color {
+        colorScheme == .dark ? Color.white.opacity(0.045) : Color.primary.opacity(0.05)
+    }
+
+    private func minutesBinding(_ value: Binding<Int>) -> Binding<Date> {
         Binding(
-            get: {
-                Calendar.current.date(from: DateComponents(hour: defaultMinutes / 60, minute: defaultMinutes % 60)) ?? Date()
-            },
-            set: { newDate in
-                let c = Calendar.current.dateComponents([.hour, .minute], from: newDate)
-                defaultMinutes = (c.hour ?? 9) * 60 + (c.minute ?? 0)
+            get: { Calendar.current.date(from: DateComponents(hour: value.wrappedValue / 60, minute: value.wrappedValue % 60)) ?? Date() },
+            set: { d in
+                let c = Calendar.current.dateComponents([.hour, .minute], from: d)
+                value.wrappedValue = (c.hour ?? 9) * 60 + (c.minute ?? 0)
+                store.rescheduleAllTrips()
             }
         )
     }
 
-    private var cardFill: Color {
-        colorScheme == .dark
-            ? Color(UIColor.secondarySystemGroupedBackground).opacity(0.72)
-            : Color(UIColor.secondarySystemGroupedBackground)
-    }
-
-    private var cardStroke: Color {
-        colorScheme == .dark
-            ? Color.white.opacity(0.045)
-            : Color.primary.opacity(0.05)
-    }
-
-    private var enabled: Set<Int> {
-        Set(offsetsRaw.split(separator: ",").compactMap { Int($0) })
-    }
-
-    private func setOn(_ days: Int, _ on: Bool) {
-        var set = enabled
-        if on { set.insert(days) } else { set.remove(days) }
-        offsetsRaw = set.sorted().map(String.init).joined(separator: ",")
-    }
-
-    private func refreshStatus() async {
-        notificationStatus = await NotificationManager.authorizationStatus()
-    }
-
-    /// 深链到本 App 的系统通知设置页（iOS 16+，比通用设置页更直达）。
+    private func refreshStatus() async { notificationStatus = await NotificationManager.authorizationStatus() }
     private func openNotificationSettings() {
         guard let url = URL(string: UIApplication.openNotificationSettingsURLString) else { return }
         UIApplication.shared.open(url)
     }
 
-    /// 授权态横幅：仅在「已拒绝 / 未设置」时出现，给被首次引导漏掉授权的用户一条出路。
-    /// - 已拒绝 → 深链系统设置（系统不再二次弹窗，只能去设置开）。
-    /// - 未设置 → 应用内直接请求授权（补回「首次没看到 / 划掉」的场景）。
-    /// 已授权则整块不渲染，页面回到纯净的提醒配置。
-    @ViewBuilder
-    private var permissionBanner: some View {
-        if notificationStatus == .denied || notificationStatus == .notDetermined {
-            let denied = notificationStatus == .denied
-            VStack(alignment: .leading, spacing: 12) {
-                HStack(alignment: .top, spacing: 12) {
-                    Image(systemName: denied ? "bell.slash.fill" : "bell.badge.fill")
-                        .font(.system(size: 18))
-                        .foregroundStyle(CarryAccent.color)
-                        .frame(width: 24)
-                    VStack(alignment: .leading, spacing: 3) {
-                        Text(denied ? "settings.notifications.permission.denied.title"
-                                    : "settings.notifications.permission.undetermined.title")
-                            .font(.system(size: 15, weight: .semibold))
-                            .foregroundStyle(.primary)
-                        Text(denied ? "settings.notifications.permission.denied.subtitle"
-                                    : "settings.notifications.permission.undetermined.subtitle")
-                            .font(.footnote)
-                            .foregroundStyle(.secondary)
-                            .lineSpacing(1.4)
-                            .fixedSize(horizontal: false, vertical: true)
-                    }
-                    Spacer(minLength: 0)
-                }
-                Button {
-                    if denied {
-                        openNotificationSettings()
-                    } else {
-                        Task { await NotificationManager.requestAuthorizationIfNeeded(); await refreshStatus() }
-                    }
-                } label: {
-                    Text(denied ? "settings.notifications.permission.denied.button"
-                                : "settings.notifications.permission.undetermined.button")
-                        .font(.system(size: 15, weight: .semibold))
-                        .foregroundStyle(.white)
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 11)
-                        .background(CarryAccent.color, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
-                }
-            }
-            .padding(16)
-            .background(
-                RoundedRectangle(cornerRadius: 18, style: .continuous)
-                    .fill(cardFill)
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 18, style: .continuous)
-                            .strokeBorder(cardStroke, lineWidth: 1)
-                    )
-            )
-        }
-    }
-
+    // MARK: Body
     var body: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: 24) {
-
+            VStack(alignment: .leading, spacing: 22) {
                 permissionBanner
 
-                VStack(alignment: .leading, spacing: 8) {
-                    Text("settings.notifications.section.general")
-                        .font(.system(size: 13, weight: .medium))
-                        .foregroundStyle(.secondary)
-                        .textCase(.uppercase)
-                        .kerning(0.4)
-                        .padding(.horizontal, 4)
+                departureSection
+                packSection
+                transportSection
+                carRentalSection
+                lodgingSection
+                dailySection
 
-                    VStack(spacing: 0) {
-                        // 全局默认提醒时间：下方所有档位统一用它（per-trip 仍可逐条覆盖）
-                        HStack(spacing: 12) {
-                            Text("settings.notifications.time")
-                                .font(.body)
-                                .foregroundStyle(.primary)
-                            Spacer()
-                            DatePicker("", selection: timeBinding, displayedComponents: .hourAndMinute)
-                                .labelsHidden()
-                                .accessibilityLabel(Text("settings.notifications.time"))
-                        }
-                        .padding(.horizontal, 18)
-                        .frame(height: 58)
-
-                        Divider().padding(.leading, 18)
-
-                        ForEach(Array(TripReminderConfig.presets.enumerated()), id: \.element.daysBeforeDeparture) { index, preset in
-                            HStack(spacing: 12) {
-                                Text(preset.localizedLabel)
-                                    .font(.body)
-                                    .foregroundStyle(.primary)
-                                Spacer()
-                                Toggle("", isOn: Binding(
-                                    get: { enabled.contains(preset.daysBeforeDeparture) },
-                                    set: { setOn(preset.daysBeforeDeparture, $0) }
-                                ))
-                                .labelsHidden()
-                                .tint(CarryAccent.color)
-                                .accessibilityLabel(Text(preset.localizedLabel))
-                            }
-                            .padding(.horizontal, 18)
-                            .frame(height: 58)
-
-                            if index < TripReminderConfig.presets.count - 1 {
-                                Divider().padding(.leading, 18)
-                            }
-                        }
-                    }
-                    .background(
-                        RoundedRectangle(cornerRadius: 18, style: .continuous)
-                            .fill(cardFill)
-                            .overlay(
-                                RoundedRectangle(cornerRadius: 18, style: .continuous)
-                                    .strokeBorder(cardStroke, lineWidth: 1)
-                            )
-                    )
-                    // 通知被拒时这些档位发不出通知 → 置灰 + 禁用，把「去开通知」引导给上方横幅。
-                    .opacity(notificationsBlocked ? 0.5 : 1)
-                    .disabled(notificationsBlocked)
-
-                    Text("settings.notifications.footer")
-                        .font(.footnote)
-                        .foregroundStyle(.tertiary)
-                        .lineSpacing(1.4)
-                        .padding(.horizontal, 4)
-                }
-
+                Text("settings.notif.footer")
+                    .font(.footnote).foregroundStyle(.tertiary).lineSpacing(1.4)
+                    .padding(.horizontal, 4)
             }
-            .padding(.horizontal, 16)
-            .padding(.top, 8)
-            .padding(.bottom, 24)
+            .padding(.horizontal, 16).padding(.top, 8).padding(.bottom, 24)
+            .opacity(notificationsBlocked ? 0.5 : 1)
+            .disabled(notificationsBlocked)
         }
         .background(Color(.systemGroupedBackground).ignoresSafeArea())
         .navigationTitle(Text("settings.notifications.entry"))
         .navigationBarTitleDisplayMode(.inline)
         .toolbar(.hidden, for: .tabBar)
         .task { await refreshStatus() }
-        // 用户去系统设置改了授权回到 App → 重读，让横幅 / 置灰随真实态更新。
-        .onChange(of: scenePhase) { _, phase in
-            if phase == .active { Task { await refreshStatus() } }
+        .onChange(of: scenePhase) { _, phase in if phase == .active { Task { await refreshStatus() } } }
+    }
+
+    // MARK: 分组卡片骨架
+    @ViewBuilder
+    private func sectionCard<Content: View>(_ titleKey: LocalizedStringKey, subtitle: LocalizedStringKey?,
+                                            isOn: Binding<Bool>, @ViewBuilder content: () -> Content) -> some View {
+        VStack(alignment: .leading, spacing: 0) {
+            HStack(alignment: .top, spacing: 12) {
+                VStack(alignment: .leading, spacing: 3) {
+                    Text(titleKey).font(.system(size: 16, weight: .semibold)).foregroundStyle(.primary)
+                    if let subtitle {
+                        Text(subtitle).font(.footnote).foregroundStyle(.secondary)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                }
+                Spacer(minLength: 8)
+                Toggle("", isOn: isOn).labelsHidden().tint(CarryAccent.color)
+                    .onChange(of: isOn.wrappedValue) { _, _ in store.rescheduleAllTrips() }
+            }
+            .padding(.horizontal, 16).padding(.vertical, 14)
+            if isOn.wrappedValue {
+                Divider().padding(.leading, 16)
+                content().padding(.horizontal, 16).padding(.vertical, 4)
+            }
+        }
+        .background(
+            RoundedRectangle(cornerRadius: 18, style: .continuous).fill(cardFill)
+                .overlay(RoundedRectangle(cornerRadius: 18, style: .continuous).strokeBorder(cardStroke, lineWidth: 1))
+        )
+    }
+
+    // MARK: 出发提醒（A）
+    private var departureSection: some View {
+        sectionCard("settings.notif.departure.title", subtitle: "settings.notif.departure.subtitle", isOn: $departureEnabled) {
+            VStack(spacing: 0) {
+                timeRow("settings.notifications.time", binding: minutesBinding($departureMinutes))
+                ForEach(TripReminderConfig.presets, id: \.daysBeforeDeparture) { preset in
+                    Divider()
+                    HStack {
+                        Text(preset.localizedLabel).font(.body)
+                        Spacer()
+                        Toggle("", isOn: Binding(
+                            get: { enabledOffsets.contains(preset.daysBeforeDeparture) },
+                            set: { setOffset(preset.daysBeforeDeparture, $0) }
+                        )).labelsHidden().tint(CarryAccent.color)
+                    }
+                    .frame(height: 50)
+                }
+            }
+        }
+    }
+
+    private var enabledOffsets: Set<Int> { Set(offsetsRaw.split(separator: ",").compactMap { Int($0) }) }
+    private func setOffset(_ day: Int, _ on: Bool) {
+        var s = enabledOffsets
+        if on { s.insert(day) } else { s.remove(day) }
+        offsetsRaw = s.sorted().map(String.init).joined(separator: ",")
+        store.rescheduleAllTrips()
+    }
+
+    // MARK: 打包进度（A）
+    private var packSection: some View {
+        sectionCard("settings.notif.pack.title", subtitle: "settings.notif.pack.subtitle", isOn: $packEnabled) {
+            HStack {
+                Text("settings.notif.pack.when").font(.body)
+                Spacer()
+                Picker("", selection: Binding(get: { packOffsetDays }, set: { packOffsetDays = $0; store.rescheduleAllTrips() })) {
+                    ForEach([0, 1, 2, 3], id: \.self) { d in Text(offsetLabel(d)).tag(d) }
+                }.labelsHidden().tint(CarryAccent.color)
+            }.frame(height: 50)
+        }
+    }
+
+    // MARK: 交通（B）
+    private var transportSection: some View {
+        sectionCard("settings.notif.transport.title", subtitle: "settings.notif.transport.subtitle", isOn: $transportEnabled) {
+            LeadListEditor(leadsRaw: $transportLeadsRaw, onChange: { store.rescheduleAllTrips() })
+        }
+    }
+    private var carRentalSection: some View {
+        sectionCard("settings.notif.carrental.title", subtitle: "settings.notif.carrental.subtitle", isOn: $carRentalEnabled) {
+            LeadListEditor(leadsRaw: $carRentalLeadsRaw, onChange: { store.rescheduleAllTrips() })
+        }
+    }
+
+    // MARK: 住宿（B）
+    private var lodgingSection: some View {
+        sectionCard("settings.notif.lodging.title", subtitle: "settings.notif.lodging.subtitle", isOn: $lodgingEnabled) {
+            VStack(spacing: 0) {
+                timeRow("settings.notif.lodging.checkin_time", binding: minutesBinding($lodgingCheckInMin))
+                Divider()
+                HStack {
+                    Text("settings.notif.lodging.checkout_lead").font(.body)
+                    Spacer()
+                    Picker("", selection: Binding(get: { lodgingCheckOutLead }, set: { lodgingCheckOutLead = $0; store.rescheduleAllTrips() })) {
+                        ForEach([0, 180, 1440], id: \.self) { m in Text(NotifLead.text(m)).tag(m) }
+                    }.labelsHidden().tint(CarryAccent.color)
+                }.frame(height: 50)
+            }
+        }
+    }
+
+    // MARK: 每日摘要（C）
+    private var dailySection: some View {
+        sectionCard("settings.notif.daily.title", subtitle: "settings.notif.daily.subtitle", isOn: $dailyEnabled) {
+            timeRow("settings.notif.daily.time", binding: minutesBinding($dailyMinutes))
+        }
+    }
+
+    // MARK: 通用行
+    private func timeRow(_ titleKey: LocalizedStringKey, binding: Binding<Date>) -> some View {
+        HStack {
+            Text(titleKey).font(.body)
+            Spacer()
+            DatePicker("", selection: binding, displayedComponents: .hourAndMinute).labelsHidden()
+        }.frame(height: 50)
+    }
+
+    private func offsetLabel(_ d: Int) -> String {
+        d == 0 ? String(localized: "reminder.label.departureDay")
+               : (d == 1 ? String(localized: "reminder.label.oneDayBefore")
+                         : String.localizedStringWithFormat(NSLocalizedString("reminder.label.daysBefore", comment: ""), d))
+    }
+
+    // MARK: 权限横幅（沿用既有三态）
+    @ViewBuilder private var permissionBanner: some View {
+        if notificationStatus == .denied || notificationStatus == .notDetermined {
+            let denied = notificationStatus == .denied
+            VStack(alignment: .leading, spacing: 12) {
+                HStack(alignment: .top, spacing: 12) {
+                    Image(systemName: denied ? "bell.slash.fill" : "bell.badge.fill")
+                        .font(.system(size: 18)).foregroundStyle(CarryAccent.color).frame(width: 24)
+                    VStack(alignment: .leading, spacing: 3) {
+                        Text(denied ? "settings.notifications.permission.denied.title" : "settings.notifications.permission.undetermined.title")
+                            .font(.system(size: 15, weight: .semibold)).foregroundStyle(.primary)
+                        Text(denied ? "settings.notifications.permission.denied.subtitle" : "settings.notifications.permission.undetermined.subtitle")
+                            .font(.footnote).foregroundStyle(.secondary).lineSpacing(1.4).fixedSize(horizontal: false, vertical: true)
+                    }
+                    Spacer(minLength: 0)
+                }
+                Button {
+                    if denied { openNotificationSettings() }
+                    else { Task { await NotificationManager.requestAuthorizationIfNeeded(); await refreshStatus() } }
+                } label: {
+                    Text(denied ? "settings.notifications.permission.denied.button" : "settings.notifications.permission.undetermined.button")
+                        .font(.system(size: 15, weight: .semibold)).foregroundStyle(.white)
+                        .frame(maxWidth: .infinity).padding(.vertical, 11)
+                        .background(CarryAccent.color, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+                }
+            }
+            .padding(16)
+            .background(
+                RoundedRectangle(cornerRadius: 18, style: .continuous).fill(cardFill)
+                    .overlay(RoundedRectangle(cornerRadius: 18, style: .continuous).strokeBorder(cardStroke, lineWidth: 1))
+            )
+            // 通知被拒时横幅本身不该被禁用/置灰（它是唯一出路）。
+            .opacity(1).allowsHitTesting(true)
+        }
+    }
+}
+
+// MARK: - 提前量工具
+enum NotifLead {
+    /// 可添加的预设提前量（分钟）。
+    static let presets: [Int] = [30, 60, 120, 180, 360, 720, 1440, 2880]
+    static func text(_ minutes: Int) -> String {
+        if minutes == 0 { return String(localized: "notif.lead.atTime") }
+        if minutes % 1440 == 0 { return String.localizedStringWithFormat(NSLocalizedString("notif.lead.days", comment: ""), minutes / 1440) }
+        if minutes % 60 == 0 { return String.localizedStringWithFormat(NSLocalizedString("notif.lead.hours", comment: ""), minutes / 60) }
+        return String.localizedStringWithFormat(NSLocalizedString("notif.lead.minutes", comment: ""), minutes)
+    }
+}
+
+/// 多档提前量编辑器：列出每条「· X 前」+ 删除，底部「添加提醒时间」选预设。可见可增删（spec 要求）。
+private struct LeadListEditor: View {
+    @Binding var leadsRaw: String
+    var onChange: () -> Void
+    @Environment(\.colorScheme) private var colorScheme
+
+    private var leads: [Int] { Array(Set(leadsRaw.split(separator: ",").compactMap { Int($0) })).sorted(by: >) }
+    private func write(_ v: [Int]) {
+        leadsRaw = Set(v).sorted(by: >).map(String.init).joined(separator: ",")
+        onChange()
+    }
+
+    var body: some View {
+        VStack(spacing: 0) {
+            ForEach(leads, id: \.self) { lead in
+                Divider().opacity(lead == leads.first ? 0 : 1)
+                HStack {
+                    Text(String(format: NSLocalizedString("settings.notif.lead_before", comment: ""), NotifLead.text(lead)))
+                        .font(.body)
+                    Spacer()
+                    // 至少留一档：开着却没档位 = 什么都不发，反而困惑。最后一档时禁用减号。
+                    Button { write(leads.filter { $0 != lead }) } label: {
+                        Image(systemName: "minus.circle.fill").font(.system(size: 18))
+                            .foregroundStyle(colorScheme == .dark ? Color.secondary.opacity(0.9) : .secondary)
+                    }.buttonStyle(.plain)
+                    .disabled(leads.count <= 1)
+                    .opacity(leads.count <= 1 ? 0.3 : 1)
+                }.frame(height: 50)
+            }
+            Divider()
+            Menu {
+                ForEach(NotifLead.presets.filter { !leads.contains($0) }, id: \.self) { m in
+                    Button(NotifLead.text(m)) { write(leads + [m]) }
+                }
+            } label: {
+                HStack(spacing: 6) {
+                    Image(systemName: "plus.circle.fill").font(.system(size: 15, weight: .semibold))
+                    Text("settings.notif.add_lead").font(.body)
+                    Spacer()
+                }
+                .foregroundStyle(CarryAccent.color).frame(height: 50)
+            }
+            .disabled(NotifLead.presets.allSatisfy { leads.contains($0) })
         }
     }
 }

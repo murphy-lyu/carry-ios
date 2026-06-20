@@ -57,6 +57,7 @@ struct LodgingDetailView: View {
                 costCard
                 noteCard
                 AttachmentDetailCard(attachments: stay.attachments ?? [])
+                muteCard
                 editButton
             }
         }
@@ -118,6 +119,23 @@ struct LodgingDetailView: View {
         if !stay.note.isEmpty {
             DetailRowGroup(rows: [AnyView(NoteDetailRow(text: stay.note))])
         }
+    }
+
+    /// 逐条静音此住宿的通知（入住/退房，spec: notification-center.md）。
+    private var muteCard: some View {
+        DetailRowGroup(rows: [AnyView(
+            HStack(spacing: 12) {
+                Image(systemName: stay.remindersMuted ? "bell.slash" : "bell")
+                    .font(.system(size: 15)).foregroundStyle(.secondary).frame(width: 22)
+                Text("notif.mute.lodging").font(.subheadline)
+                Spacer()
+                Toggle("", isOn: Binding(
+                    get: { !stay.remindersMuted },
+                    set: { store.setLodgingReminderMuted(tripId: tripId, stayId: stay.id, muted: !$0) }
+                )).labelsHidden().tint(CarryAccent.color)
+            }
+            .padding(.vertical, 8)
+        )])
     }
 
     private var editButton: some View {

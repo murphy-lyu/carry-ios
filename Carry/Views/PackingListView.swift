@@ -76,7 +76,6 @@ struct PackingListView: View {
     @State private var hasTriggeredCompletion = false
     @State private var shimmerPhase: CGFloat = -1
 
-    @State private var showReminderSheet = false
     @State private var showSuggestSheet = false
     @State private var showBackgroundPicker = false
     @State private var showPhotoImport = false
@@ -214,17 +213,13 @@ struct PackingListView: View {
                                 Label("itinerary.reorder.menu", systemImage: "arrow.up.arrow.down")
                             }
                         }
-                        // 共享「行程级操作」（两个 tab 通用、顺序一致）：编辑行程 → 行程提醒 → 添加背景图。
-                        // （复制行程已下移到「分享行程」上方。）
+                        // 共享「行程级操作」（两个 tab 通用、顺序一致）：编辑行程 → 添加背景图。
+                        // 通知配置已统一收进 设置 → 行程提醒（Settings 唯一真相源，spec: notification-center.md），
+                        // 故此处不再有「行程提醒」入口；逐航班/住宿静音在各自详情页就近放。
                         Button {
                             showEditSheet = true
                         } label: {
                             Label("Edit trip", systemImage: "pencil")
-                        }
-                        Button {
-                            showReminderSheet = true
-                        } label: {
-                            Label("reminder.menu.item", systemImage: bundle?.remindersEnabled == true ? "bell" : "bell.slash")
                         }
                         if backgroundImage != nil {
                             Button(role: .destructive) {
@@ -451,12 +446,6 @@ struct PackingListView: View {
                     // the save registered (the detail screen otherwise doesn't visibly change).
                     UINotificationFeedbackGenerator().notificationOccurred(.success)
                 }
-            }
-        }
-        .sheet(isPresented: $showReminderSheet) {
-            if let bundle = bundle {
-                TripReminderSheet(bundle: bundle)
-                    .environmentObject(store)
             }
         }
         .sheet(isPresented: $showPhotoImport) {

@@ -8,7 +8,6 @@ import UserNotifications
 enum NotificationManager {
 
     private static let tripPrefix = "carry.trip."
-    private static let reminderInfix = ".reminder."
 
     // MARK: - Permission
 
@@ -35,42 +34,181 @@ enum NotificationManager {
 
     // MARK: - Scheduling
 
+    /// 通知中心总入口（spec: notification-center.md）：先清该行程所有类别，再按全局设置逐类重排。
+    /// 所有 identifier 以 `carry.trip.{id}` 开头，故 `cancelReminders` 一次清空全类别。
     static func scheduleReminders(for trip: TripBundle) {
         cancelReminders(forTripId: trip.id)
-        // 无日期「规划中」行程没有出发日，不排打包提醒（先清后不排 = 退回时也自动撤销）。
-        guard !trip.isDateless else { return }
-        for config in trip.reminderConfigs {
-            scheduleReminder(for: trip, config: config)
+        guard !trip.isDateless else { return }   // 无日期行程无锚点，全类别不排
+        let now = Date()
+        scheduleDeparture(for: trip, now: now)
+        schedulePackProgress(for: trip, now: now)
+        scheduleTransport(for: trip, now: now)
+        scheduleLodging(for: trip, now: now)
+        scheduleDailySummary(for: trip, now: now)
+    }
+
+    // MARK: A 类——出发日锚
+
+    /// 出发提醒（含打包催促）。档位读全局设置（Settings 唯一真相源，无 per-trip 快照）。
+    private static func scheduleDeparture(for trip: TripBundle, now: Date) {
+        guard ReminderPreferences.departureEnabled else { return }
+        guard trip.departureDate >= Calendar.current.startOfDay(for: now) else { return }  // 出发已过整体短路
+        let destination = trip.destinationCity.isEmpty ? trip.name : trip.destinationCity
+        let h = ReminderPreferences.defaultMinutes / 60, m = ReminderPreferences.defaultMinutes % 60
+        for offset in ReminderPreferences.enabledOffsets.sorted() {
+            let cfg = TripReminderConfig(daysBeforeDeparture: offset, hour: h, minute: m)
+            guard let fireDate = cfg.fireDate(relativeTo: trip.departureDate) else { continue }
+            let (title, body) = notificationContent(daysBeforeDeparture: offset, tripName: trip.name, destination: destination)
+            scheduleAt(fireDate, id: "\(tripPrefix)\(trip.id.uuidString).depart.\(offset)",
+                       title: title, body: body, allowImminentFallback: true, now: now)
         }
     }
 
-    static func scheduleReminder(for trip: TripBundle, config: TripReminderConfig) {
-        let now = Date()
-        guard let fireDate = config.fireDate(relativeTo: trip.departureDate) else { return }
-        // 行程出发日已过：不再排提醒（用户卸/重装等场景下的合理短路）
+    /// 打包进度提醒：出发前 N 天，仅「有物品且未打完」才发「还剩 X 件」。打完不吵。
+    private static func schedulePackProgress(for trip: TripBundle, now: Date) {
+        guard ReminderPreferences.packProgressEnabled else { return }
         guard trip.departureDate >= Calendar.current.startOfDay(for: now) else { return }
+        let remaining = trip.totalCount - trip.packedCount
+        guard trip.totalCount > 0, remaining > 0 else { return }
+        let h = ReminderPreferences.defaultMinutes / 60, m = ReminderPreferences.defaultMinutes % 60
+        let cfg = TripReminderConfig(daysBeforeDeparture: ReminderPreferences.packProgressOffsetDays, hour: h, minute: m)
+        guard let fireDate = cfg.fireDate(relativeTo: trip.departureDate) else { return }
+        let title = String(format: NSLocalizedString("notif.pack.title", comment: ""), trip.name)
+        let body = String.localizedStringWithFormat(NSLocalizedString("notif.pack.body", comment: ""), remaining)
+        scheduleAt(fireDate, id: "\(tripPrefix)\(trip.id.uuidString).pack",
+                   title: title, body: body, allowImminentFallback: false, now: now)
+    }
 
-        let destination = trip.destinationCity.isEmpty ? trip.name : trip.destinationCity
-        let (title, body) = notificationContent(
-            daysBeforeDeparture: config.daysBeforeDeparture,
-            tripName: trip.name,
-            destination: destination
-        )
+    // MARK: B 类——事件时刻锚
 
-        // C8 时区锁定：显式把 timeZone 写进 components。否则
-        // UNCalendarNotificationTrigger 默认按"触发时系统时区"重新解析，
-        // 跨时区飞行后通知时间会漂移（北京设的 9 点 → 落地纽约变 EST 9 点）。
-        var comps = Calendar.current.dateComponents([.year, .month, .day, .hour, .minute], from: fireDate)
-        comps.timeZone = TimeZone.current
-
-        // C7 已过 fireDate 的降级：fireDate 已过但行程未到（如早 8 点编辑"出发当天 7 点"
-        // 的提醒），不静默丢弃 → 60 秒后触发一次，让用户至少收到一次。
-        let identifier = identifier(tripId: trip.id, configId: config.id)
-        if fireDate > now {
-            schedule(id: identifier, title: title, body: body, components: comps)
-        } else {
-            scheduleAfterInterval(id: identifier, title: title, body: body, interval: 60)
+    private static func scheduleTransport(for trip: TripBundle, now: Date) {
+        for seg in trip.safeItineraryDays.flatMap({ $0.sortedSegments }) {
+            guard !seg.remindersMuted else { continue }   // 逐段静音
+            let isCar = seg.mode == .carRental
+            guard (isCar ? ReminderPreferences.carRentalEnabled : ReminderPreferences.transportEnabled) else { continue }
+            let leads = isCar ? ReminderPreferences.carRentalLeadsMinutes : ReminderPreferences.transportLeadsMinutes
+            guard !leads.isEmpty else { continue }
+            scheduleTransportEvent(trip: trip, seg: seg, isReturn: false, leads: leads, now: now)
+            if isCar { scheduleTransportEvent(trip: trip, seg: seg, isReturn: true, leads: leads, now: now) }
         }
+    }
+
+    private static func scheduleTransportEvent(trip: TripBundle, seg: TransportSegment, isReturn: Bool, leads: [Int], now: Date) {
+        let dayOrder = isReturn ? seg.arriveDayOrder : seg.departDayOrder
+        let minutes = isReturn ? seg.arriveLocalMinutes : seg.departLocalMinutes
+        let tzId = isReturn ? seg.toTimeZoneId : seg.fromTimeZoneId
+        guard let eventDate = absoluteDate(tripDeparture: trip.departureDate, dayOrder: dayOrder, minutes: minutes, tzId: tzId) else { return }
+        let role = isReturn ? "dropoff" : "depart"
+        let tz = TimeZone(identifier: tzId) ?? .current
+        for lead in leads {
+            let fireDate = eventDate.addingTimeInterval(TimeInterval(-lead * 60))
+            let (title, body) = transportContent(seg: seg, isReturn: isReturn, leadMinutes: lead)
+            scheduleAt(fireDate, id: "\(tripPrefix)\(trip.id.uuidString).transport.\(seg.id.uuidString).\(role).\(lead)",
+                       title: title, body: body, allowImminentFallback: false, now: now, tz: tz)
+        }
+    }
+
+    private static func scheduleLodging(for trip: TripBundle, now: Date) {
+        guard ReminderPreferences.lodgingEnabled else { return }
+        for stay in trip.safeLodgingStays {
+            guard !stay.remindersMuted else { continue }   // 逐条静音
+            let inMin = stay.checkInMinutes >= 0 ? stay.checkInMinutes : ReminderPreferences.lodgingCheckInMinutes
+            if let inDate = absoluteDate(tripDeparture: trip.departureDate, dayOrder: stay.checkInDayOrder, minutes: inMin, tzId: "") {
+                let (t, b) = lodgingContent(stay: stay, isCheckOut: false)
+                scheduleAt(inDate, id: "\(tripPrefix)\(trip.id.uuidString).lodging.\(stay.id.uuidString).in",
+                           title: t, body: b, allowImminentFallback: false, now: now)
+            }
+            let outClock = stay.checkOutMinutes >= 0 ? stay.checkOutMinutes : 11 * 60
+            if let outDate = absoluteDate(tripDeparture: trip.departureDate, dayOrder: stay.checkOutDayOrder, minutes: outClock, tzId: "") {
+                let fireDate = outDate.addingTimeInterval(TimeInterval(-ReminderPreferences.lodgingCheckOutLeadMinutes * 60))
+                let (t, b) = lodgingContent(stay: stay, isCheckOut: true)
+                scheduleAt(fireDate, id: "\(tripPrefix)\(trip.id.uuidString).lodging.\(stay.id.uuidString).out",
+                           title: t, body: b, allowImminentFallback: false, now: now)
+            }
+        }
+    }
+
+    // MARK: C 类——行程日锚
+
+    private static func scheduleDailySummary(for trip: TripBundle, now: Date) {
+        guard ReminderPreferences.dailySummaryEnabled else { return }
+        let mins = ReminderPreferences.dailySummaryMinutes
+        for day in trip.safeItineraryDays {
+            let count = (day.stops?.count ?? 0) + day.sortedSegments.count
+            guard count > 0 else { continue }
+            guard let fireDate = absoluteDate(tripDeparture: trip.departureDate, dayOrder: day.sortOrder, minutes: mins, tzId: "") else { continue }
+            let title = String(format: NSLocalizedString("notif.daily.title", comment: ""),
+                               trip.destinationCity.isEmpty ? trip.name : trip.destinationCity)
+            let body = String.localizedStringWithFormat(NSLocalizedString("notif.daily.body", comment: ""), count)
+            scheduleAt(fireDate, id: "\(tripPrefix)\(trip.id.uuidString).daily.\(day.sortOrder)",
+                       title: title, body: body, allowImminentFallback: false, now: now)
+        }
+    }
+
+    // MARK: 通用排期 + 事件绝对时刻
+
+    /// 把「行程出发日 + dayOrder 天 + 当天分钟 + 事件时区」算成绝对 Date（minutes<0 视为未设→nil）。
+    private static func absoluteDate(tripDeparture: Date, dayOrder: Int, minutes: Int, tzId: String) -> Date? {
+        guard minutes >= 0 else { return nil }
+        let tz = TimeZone(identifier: tzId) ?? .current
+        guard let dayDate = Calendar.current.date(byAdding: .day, value: dayOrder, to: tripDeparture) else { return nil }
+        var comps = Calendar.current.dateComponents([.year, .month, .day], from: dayDate)  // 年月日按行程布局推
+        comps.hour = minutes / 60
+        comps.minute = minutes % 60
+        comps.timeZone = tz
+        var cal = Calendar(identifier: .gregorian); cal.timeZone = tz
+        return cal.date(from: comps)
+    }
+
+    /// 排一条：fireDate 在事件时区锁定（防跨时区漂移，沿用 C8）；已过 fireDate 时按
+    /// `allowImminentFallback` 决定 60s 兜底（出发提醒）或直接跳过（事件类）。
+    private static func scheduleAt(_ fireDate: Date, id: String, title: String, body: String,
+                                   allowImminentFallback: Bool, now: Date, tz: TimeZone = .current) {
+        if fireDate > now {
+            var cal = Calendar(identifier: .gregorian); cal.timeZone = tz
+            var comps = cal.dateComponents([.year, .month, .day, .hour, .minute], from: fireDate)
+            comps.timeZone = tz
+            schedule(id: id, title: title, body: body, components: comps)
+        } else if allowImminentFallback {
+            scheduleAfterInterval(id: id, title: title, body: body, interval: 60)
+        }
+    }
+
+    // MARK: 事件类文案
+
+    /// 提前量可读文案（"3 小时" / "1 天" / "45 分钟"）。
+    private static func leadText(_ minutes: Int) -> String {
+        if minutes % 1440 == 0 { return String.localizedStringWithFormat(NSLocalizedString("notif.lead.days", comment: ""), minutes / 1440) }
+        if minutes % 60 == 0 { return String.localizedStringWithFormat(NSLocalizedString("notif.lead.hours", comment: ""), minutes / 60) }
+        return String.localizedStringWithFormat(NSLocalizedString("notif.lead.minutes", comment: ""), minutes)
+    }
+
+    private static func transportContent(seg: TransportSegment, isReturn: Bool, leadMinutes: Int) -> (String, String) {
+        let lead = leadText(leadMinutes)
+        if seg.mode == .carRental {
+            let company = seg.carrier.isEmpty ? NSLocalizedString("notif.car.fallback", comment: "") : seg.carrier
+            let titleKey = isReturn ? "notif.car.dropoff.title" : "notif.car.pickup.title"
+            let bodyKey = isReturn ? "notif.car.dropoff.body" : "notif.car.pickup.body"
+            return (String(format: NSLocalizedString(titleKey, comment: ""), company),
+                    String(format: NSLocalizedString(bodyKey, comment: ""), lead))
+        }
+        let label = seg.number.isEmpty
+            ? (seg.carrier.isEmpty ? NSLocalizedString("notif.transport.generic", comment: "") : seg.carrier)
+            : seg.number
+        let route = [seg.fromName, seg.toName].filter { !$0.isEmpty }.joined(separator: " → ")
+        let title = String(format: NSLocalizedString("notif.transport.title", comment: ""), label)
+        let body = route.isEmpty
+            ? String(format: NSLocalizedString("notif.transport.body", comment: ""), lead)
+            : String(format: NSLocalizedString("notif.transport.body.route", comment: ""), lead, route)
+        return (title, body)
+    }
+
+    private static func lodgingContent(stay: LodgingStay, isCheckOut: Bool) -> (String, String) {
+        let name = stay.name.isEmpty ? NSLocalizedString("notif.lodging.fallback", comment: "") : stay.name
+        let titleKey = isCheckOut ? "notif.lodging.checkout.title" : "notif.lodging.checkin.title"
+        let bodyKey = isCheckOut ? "notif.lodging.checkout.body" : "notif.lodging.checkin.body"
+        return (String(format: NSLocalizedString(titleKey, comment: ""), name),
+                NSLocalizedString(bodyKey, comment: ""))
     }
 
     /// 一次性 N 秒后触发（用于"已过 fireDate"的降级路径）
@@ -144,11 +282,6 @@ enum NotificationManager {
         }
     }
 
-    static func cancelReminder(tripId: UUID, configId: UUID) {
-        let id = identifier(tripId: tripId, configId: configId)
-        UNUserNotificationCenter.current().removePendingNotificationRequests(withIdentifiers: [id])
-    }
-
 #if DEBUG
     static func scheduleTestNotifications() {
         let center = UNUserNotificationCenter.current()
@@ -187,17 +320,12 @@ enum NotificationManager {
 
     // MARK: - Private
 
-    private static func identifier(tripId: UUID, configId: UUID) -> String {
-        tripPrefix + tripId.uuidString + reminderInfix + configId.uuidString
-    }
-
-    /// 从打包提醒通知的 identifier 中提取 tripId。
-    /// 格式：carry.trip.{uuid}.reminder.{uuid}
+    /// 从任意类别通知的 identifier 中提取 tripId（所有命名空间都形如 `carry.trip.{uuid}.…`）。
     static func tripId(fromIdentifier identifier: String) -> UUID? {
         guard identifier.hasPrefix(tripPrefix) else { return nil }
         let afterPrefix = identifier.dropFirst(tripPrefix.count)
-        guard let infixRange = afterPrefix.range(of: reminderInfix) else { return nil }
-        let uuidString = String(afterPrefix[..<infixRange.lowerBound])
+        // tripId = 紧跟前缀的 UUID（到下一个 '.' 为止）
+        let uuidString = String(afterPrefix.prefix { $0 != "." })
         return UUID(uuidString: uuidString)
     }
 

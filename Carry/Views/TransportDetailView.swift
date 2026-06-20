@@ -116,6 +116,7 @@ struct TransportDetailView: View {
                 costCard
                 noteCard
                 AttachmentDetailCard(attachments: segment.attachments ?? [])
+                muteCard
                 editButton
             }
         }
@@ -431,6 +432,28 @@ struct TransportDetailView: View {
     private var noteCard: some View {
         if !segment.note.isEmpty {
             DetailRowGroup(rows: [AnyView(NoteDetailRow(text: segment.note))])
+        }
+    }
+
+    /// 逐段静音（spec: notification-center.md）：仅当此段有时刻（可能产生提醒）时才显。
+    /// 开关「接收提醒」开=不静音；关=静音此段，不随全局规则提醒。
+    @ViewBuilder
+    private var muteCard: some View {
+        if segment.departLocalMinutes >= 0 || segment.arriveLocalMinutes >= 0 {
+            DetailRowGroup(rows: [AnyView(
+                HStack(spacing: 12) {
+                    Image(systemName: segment.remindersMuted ? "bell.slash" : "bell")
+                        .font(.system(size: 15)).foregroundStyle(.secondary).frame(width: 22)
+                    Text(segment.mode == .carRental ? "notif.mute.carrental" : "notif.mute.transport")
+                        .font(.subheadline)
+                    Spacer()
+                    Toggle("", isOn: Binding(
+                        get: { !segment.remindersMuted },
+                        set: { store.setTransportReminderMuted(tripId: tripId, segmentId: segment.id, muted: !$0) }
+                    )).labelsHidden().tint(CarryAccent.color)
+                }
+                .padding(.vertical, 8)
+            )])
         }
     }
 

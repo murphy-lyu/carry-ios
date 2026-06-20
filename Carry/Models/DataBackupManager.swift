@@ -116,6 +116,8 @@ struct BackupTransportSegment: Codable, Sendable {
     var toAddress: String? = nil
     // 联系电话（租车点）；可选 + 默认 nil：兼容旧备份。
     var phone: String? = nil
+    // 通知静音（spec: notification-center.md）；可选 + 默认 nil：兼容旧备份。
+    var remindersMuted: Bool? = nil
     // 附件（spec: itinerary-attachments.md）；可选 + 默认 nil：兼容旧备份。
     var attachments: [BackupAttachment]? = nil
 }
@@ -138,6 +140,8 @@ struct BackupLodgingStay: Codable, Sendable {
     var costHomeAmount: Double?
     // 联系电话（酒店）；可选 + 默认 nil：兼容旧备份。
     var phone: String? = nil
+    // 通知静音（spec: notification-center.md）；可选 + 默认 nil：兼容旧备份。
+    var remindersMuted: Bool? = nil
     // 附件（spec: itinerary-attachments.md）；可选 + 默认 nil：兼容旧备份。
     var attachments: [BackupAttachment]? = nil
 }
@@ -269,6 +273,7 @@ final class DataBackupManager {
                 vehicleModel: s.vehicleModel, licensePlate: s.licensePlate,
                 fromAddress: s.fromAddress, toAddress: s.toAddress,
                 phone: s.phone,
+                remindersMuted: s.remindersMuted,
                 attachments: backupAttachments(s.attachments)
             )
         }
@@ -298,6 +303,7 @@ final class DataBackupManager {
                 confirmationCode: l.confirmationCode, note: l.note, sortOrder: l.sortOrder,
                 costAmount: l.costAmount, costCurrencyCode: l.costCurrencyCode, costHomeAmount: l.costHomeAmount,
                 phone: l.phone,
+                remindersMuted: l.remindersMuted,
                 attachments: backupAttachments(l.attachments)
             )
         }
@@ -703,6 +709,7 @@ final class DataBackupManager {
                     costHomeAmount: bg.costHomeAmount ?? -1
                 )
                 seg.id = bg.id
+                seg.remindersMuted = bg.remindersMuted ?? false
                 seg.day = day
                 context.insert(seg)
                 for a in makeAttachments(bg.attachments, into: context) { a.segment = seg }
@@ -727,6 +734,7 @@ final class DataBackupManager {
                 costHomeAmount: bl.costHomeAmount ?? -1
             )
             stay.id = bl.id
+            stay.remindersMuted = bl.remindersMuted ?? false
             stay.bundle = trip
             context.insert(stay)
             for a in makeAttachments(bl.attachments, into: context) { a.stay = stay }

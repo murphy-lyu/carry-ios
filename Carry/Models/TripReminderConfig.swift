@@ -105,3 +105,104 @@ enum ReminderPreferences {
         }
     }
 }
+
+// MARK: - 通知中心：多类别全局配置（spec: notification-center.md）
+//
+// Settings 为唯一真相源、无 per-trip 快照。出发提醒沿用上面 ReminderPreferences 的
+// enabledOffsets / defaultMinutes（旧 key 向后兼容）；下面是新增类别。
+// 所有 key 用 "carry.notif." 前缀，一旦发布禁止改名（见 decisions.md）。
+extension ReminderPreferences {
+
+    private static func intList(_ key: String, default def: [Int]) -> [Int] {
+        guard let raw = UserDefaults.standard.string(forKey: key) else { return def }
+        let parsed = raw.split(separator: ",").compactMap { Int($0) }
+        return parsed.isEmpty ? [] : Array(Set(parsed)).sorted(by: >)   // 提前量大→小
+    }
+    private static func setIntList(_ key: String, _ value: [Int]) {
+        UserDefaults.standard.set(Set(value).sorted(by: >).map(String.init).joined(separator: ","), forKey: key)
+    }
+    private static func bool(_ key: String, default def: Bool) -> Bool {
+        UserDefaults.standard.object(forKey: key) as? Bool ?? def
+    }
+    private static func int(_ key: String, default def: Int) -> Int {
+        UserDefaults.standard.object(forKey: key) as? Int ?? def
+    }
+
+    // MARK: 出发提醒开关（A）——总开关；档位仍走 enabledOffsets
+    static let departureEnabledKey = "carry.notif.departure_enabled"
+    static var departureEnabled: Bool {
+        get { bool(departureEnabledKey, default: true) }
+        set { UserDefaults.standard.set(newValue, forKey: departureEnabledKey) }
+    }
+
+    // MARK: 打包进度提醒（A，仅未打完才发「还剩 N 件」）
+    static let packProgressEnabledKey = "carry.notif.pack_progress_enabled"
+    static let packProgressOffsetKey = "carry.notif.pack_progress_offset_days"
+    static var packProgressEnabled: Bool {
+        get { bool(packProgressEnabledKey, default: false) }
+        set { UserDefaults.standard.set(newValue, forKey: packProgressEnabledKey) }
+    }
+    /// 出发前 N 天触发（用全局默认时间 defaultMinutes）。默认前 1 天。
+    static var packProgressOffsetDays: Int {
+        get { int(packProgressOffsetKey, default: 1) }
+        set { UserDefaults.standard.set(newValue, forKey: packProgressOffsetKey) }
+    }
+
+    // MARK: 交通出发提醒（B，多档提前量分钟）——航班/火车/巴士/渡轮
+    static let transportEnabledKey = "carry.notif.transport_enabled"
+    static let transportLeadsKey = "carry.notif.transport_leads_min"
+    static var transportEnabled: Bool {
+        get { bool(transportEnabledKey, default: true) }   // 默认开
+        set { UserDefaults.standard.set(newValue, forKey: transportEnabledKey) }
+    }
+    /// 起飞/发车前多少分钟提醒；可多条（如 [180, 60]）。默认 [180]=3 小时。
+    static var transportLeadsMinutes: [Int] {
+        get { intList(transportLeadsKey, default: [180]) }
+        set { setIntList(transportLeadsKey, newValue) }
+    }
+
+    // MARK: 租车取/还车提醒（B，默认关）
+    static let carRentalEnabledKey = "carry.notif.carrental_enabled"
+    static let carRentalLeadsKey = "carry.notif.carrental_leads_min"
+    static var carRentalEnabled: Bool {
+        get { bool(carRentalEnabledKey, default: false) }  // 默认关
+        set { UserDefaults.standard.set(newValue, forKey: carRentalEnabledKey) }
+    }
+    /// 取/还车前多少分钟提醒；可多条。默认 [1440]=1 天。
+    static var carRentalLeadsMinutes: [Int] {
+        get { intList(carRentalLeadsKey, default: [1440]) }
+        set { setIntList(carRentalLeadsKey, newValue) }
+    }
+
+    // MARK: 住宿提醒（B，默认关）——入住当天时刻 + 退房前提前量
+    static let lodgingEnabledKey = "carry.notif.lodging_enabled"
+    static let lodgingCheckInMinKey = "carry.notif.lodging_checkin_min"
+    static let lodgingCheckOutLeadKey = "carry.notif.lodging_checkout_lead_min"
+    static var lodgingEnabled: Bool {
+        get { bool(lodgingEnabledKey, default: false) }
+        set { UserDefaults.standard.set(newValue, forKey: lodgingEnabledKey) }
+    }
+    /// 入住当天提醒时刻（自午夜分钟）。默认 540=09:00。
+    static var lodgingCheckInMinutes: Int {
+        get { int(lodgingCheckInMinKey, default: 540) }
+        set { UserDefaults.standard.set(newValue, forKey: lodgingCheckInMinKey) }
+    }
+    /// 退房前提前量（分钟）。默认 1440=前 1 天（落在入住时刻同一时间点）。
+    static var lodgingCheckOutLeadMinutes: Int {
+        get { int(lodgingCheckOutLeadKey, default: 1440) }
+        set { UserDefaults.standard.set(newValue, forKey: lodgingCheckOutLeadKey) }
+    }
+
+    // MARK: 每日行程摘要（C，默认关）
+    static let dailySummaryEnabledKey = "carry.notif.daily_enabled"
+    static let dailySummaryMinKey = "carry.notif.daily_min"
+    static var dailySummaryEnabled: Bool {
+        get { bool(dailySummaryEnabledKey, default: false) }
+        set { UserDefaults.standard.set(newValue, forKey: dailySummaryEnabledKey) }
+    }
+    /// 每个行程日的推送时刻（自午夜分钟）。默认 480=08:00。
+    static var dailySummaryMinutes: Int {
+        get { int(dailySummaryMinKey, default: 480) }
+        set { UserDefaults.standard.set(newValue, forKey: dailySummaryMinKey) }
+    }
+}

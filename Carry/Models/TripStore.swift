@@ -697,6 +697,7 @@ final class TripStore: ObservableObject {
                     costAmount: seg.costAmount, costCurrencyCode: seg.costCurrencyCode,
                     costHomeAmount: seg.costHomeAmount
                 )
+                newSeg.remindersMuted = seg.remindersMuted
                 newSeg.attachments = copyAttachments(seg.attachments)
                 return newSeg
             }
@@ -715,6 +716,7 @@ final class TripStore: ObservableObject {
                 costAmount: stay.costAmount, costCurrencyCode: stay.costCurrencyCode,
                 costHomeAmount: stay.costHomeAmount
             )
+            newStay.remindersMuted = stay.remindersMuted
             newStay.attachments = copyAttachments(stay.attachments)
             return newStay
         }
@@ -795,50 +797,23 @@ final class TripStore: ObservableObject {
 #endif
     }
 
-    func setRemindersEnabled(_ enabled: Bool, tripId: UUID) {
-        guard let trip = trips.first(where: { $0.id == tripId }) else { return }
-        trip.remindersEnabled = enabled
-        save()
-        if enabled {
+    /// 改全局通知设置后，重排所有行程的通知（Settings 唯一真相源 → 改设置即套全部行程，
+    /// spec: notification-center.md）。供「设置 → 行程提醒」任一开关/值变更时调用。
+    func rescheduleAllTrips() {
+        for trip in trips {
             NotificationManager.scheduleReminders(for: trip)
-        } else {
-            NotificationManager.cancelReminders(forTripId: tripId)
         }
     }
 
-    func addReminder(_ config: TripReminderConfig, tripId: UUID) {
-        guard let trip = trips.first(where: { $0.id == tripId }) else { return }
-        var configs = trip.reminderConfigs
-        guard !configs.contains(where: { $0.isSameTrigger(as: config) }) else { return }
-        configs.append(config)
-        trip.reminderConfigs = configs
-        save()
-        NotificationManager.scheduleReminder(for: trip, config: config)
+    /// 打包状态变化 → 仅在「打包进度提醒」开启时重排（默认关 → 零额外开销，spec: notification-center.md）。
+    private func reschedulePackProgress(_ trip: TripBundle) {
+        guard ReminderPreferences.packProgressEnabled else { return }
+        NotificationManager.scheduleReminders(for: trip)
     }
-
-    func removeReminder(configId: UUID, tripId: UUID) {
-        guard let trip = trips.first(where: { $0.id == tripId }) else { return }
-        var configs = trip.reminderConfigs
-        configs.removeAll { $0.id == configId }
-        trip.reminderConfigs = configs
-        save()
-        NotificationManager.cancelReminder(tripId: tripId, configId: configId)
-    }
-
-    func updateReminderTime(configId: UUID, hour: Int, minute: Int, tripId: UUID) {
-        guard let trip = trips.first(where: { $0.id == tripId }) else { return }
-        var configs = trip.reminderConfigs
-        guard let index = configs.firstIndex(where: { $0.id == configId }) else { return }
-        NotificationManager.cancelReminder(tripId: tripId, configId: configId)
-        configs[index].hour = hour
-        configs[index].minute = minute
-        trip.reminderConfigs = configs
-        save()
-        // 只在行程总开关开 + 非 dateless 时重排：否则会挂上本不该存在的通知
-        // （如总开关已 OFF 或行程已退回规划中时改某档时间）。
-        if trip.remindersEnabled && !trip.isDateless {
-            NotificationManager.scheduleReminder(for: trip, config: configs[index])
-        }
+    /// 地点变化 → 仅在「每日行程摘要」开启时重排（默认关 → 零额外开销）。
+    private func rescheduleDailySummary(_ trip: TripBundle) {
+        guard ReminderPreferences.dailySummaryEnabled else { return }
+        NotificationManager.scheduleReminders(for: trip)
     }
 
     func toggleItem(tripId: UUID, itemId: UUID) {
@@ -848,6 +823,7 @@ final class TripStore: ObservableObject {
                 item.isPacked.toggle()
                 CarryLogger.shared.log(item.isPacked ? .itemChecked : .itemUnchecked)
                 save()
+                reschedulePackProgress(trip)
 #if !targetEnvironment(macCatalyst)
                 Task { @MainActor in LiveActivityManager.shared.update(for: trip) }
 #endif
@@ -865,6 +841,7 @@ final class TripStore: ObservableObject {
         }
         save()
         CarryLogger.shared.log(.tripCompleted)
+        reschedulePackProgress(trip)   // 全打完 → 撤销「还剩 N 件」提醒
 #if !targetEnvironment(macCatalyst)
         Task { @MainActor in LiveActivityManager.shared.update(for: trip) }
 #endif
@@ -879,6 +856,7 @@ final class TripStore: ObservableObject {
         }
         save()
         CarryLogger.shared.log(.tripUncompleted)
+        reschedulePackProgress(trip)
 #if !targetEnvironment(macCatalyst)
         Task { @MainActor in LiveActivityManager.shared.update(for: trip) }
 #endif
@@ -915,6 +893,7 @@ final class TripStore: ObservableObject {
                 fetchTrips()
                 if wasNew && !name.isEmpty {
                     CarryLogger.shared.log(.itemAdded)
+                    reschedulePackProgress(trip)
 #if !targetEnvironment(macCatalyst)
                     Task { @MainActor in LiveActivityManager.shared.update(for: trip) }
 #endif
@@ -952,6 +931,7 @@ final class TripStore: ObservableObject {
                 fetchTrips()
                 if wasNamed {
                     CarryLogger.shared.log(.itemDeleted)
+                    reschedulePackProgress(trip)
 #if !targetEnvironment(macCatalyst)
                     Task { @MainActor in LiveActivityManager.shared.update(for: trip) }
 #endif
@@ -1157,6 +1137,7 @@ final class TripStore: ObservableObject {
         day.stops?.append(stop)
         save()
         CarryLogger.shared.log(.itineraryStopAdded)
+        rescheduleDailySummary(trip)
         return stop.id
     }
 
@@ -1281,6 +1262,7 @@ final class TripStore: ObservableObject {
         for (index, s) in day.sortedStops.enumerated() { s.sortOrder = index }
         save()
         CarryLogger.shared.log(.itineraryStopRemoved)
+        rescheduleDailySummary(trip)
     }
 
     /// 重排某天内停靠点。`newOrder` 为期望顺序的 stop id 数组，sortOrder 重写为 0,1,2…
@@ -1326,6 +1308,7 @@ final class TripStore: ObservableObject {
         }
         save()
         CarryLogger.shared.log(didCross ? .itineraryStopMovedDay : .itineraryStopReordered)
+        rescheduleDailySummary(trip)
     }
 
     /// 把某停靠点移到另一天（地点编辑页「改日期」用）。重设 `day` 关系（inverse 自动维护两边数组），
@@ -1341,6 +1324,7 @@ final class TripStore: ObservableObject {
         stop.sortOrder = newOrder
         save()
         CarryLogger.shared.log(.itineraryStopMovedDay)
+        rescheduleDailySummary(trip)
     }
 
     // MARK: - Itinerary Transport（交通段 CRUD · spec: itinerary-transport-lodging.md）
@@ -1431,6 +1415,7 @@ final class TripStore: ObservableObject {
         day.segments?.append(segment)
         save()
         CarryLogger.shared.log(.transportAdded, context: "mode=\(mode.rawValue)")
+        NotificationManager.scheduleReminders(for: trip)   // 交通变更 → 重排该行程通知
         return segment.id
     }
 
@@ -1504,6 +1489,7 @@ final class TripStore: ObservableObject {
         if let licensePlate { seg.licensePlate = licensePlate }
         if let phone { seg.phone = phone }
         save()
+        NotificationManager.scheduleReminders(for: trip)   // 交通变更 → 重排该行程通知
     }
 
     func removeTransportSegment(tripId: UUID, dayId: UUID, segmentId: UUID) {
@@ -1514,6 +1500,7 @@ final class TripStore: ObservableObject {
         day.segments?.removeAll { $0.id == segmentId }
         save()
         CarryLogger.shared.log(.transportRemoved)
+        NotificationManager.scheduleReminders(for: trip)   // 交通变更 → 重排该行程通知
     }
 
     // MARK: - Lodging（住宿跨度 CRUD · spec: itinerary-transport-lodging.md）
@@ -1555,6 +1542,7 @@ final class TripStore: ObservableObject {
         trip.lodgingStays?.append(stay)
         save()
         CarryLogger.shared.log(.lodgingAdded)
+        NotificationManager.scheduleReminders(for: trip)   // 住宿变更 → 重排该行程通知
         return stay.id
     }
 
@@ -1588,6 +1576,7 @@ final class TripStore: ObservableObject {
         if let note { stay.note = note }
         if let phone { stay.phone = phone }
         save()
+        NotificationManager.scheduleReminders(for: trip)   // 住宿变更 → 重排该行程通知
     }
 
     func removeLodgingStay(tripId: UUID, stayId: UUID) {
@@ -1597,6 +1586,27 @@ final class TripStore: ObservableObject {
         trip.lodgingStays?.removeAll { $0.id == stayId }
         save()
         CarryLogger.shared.log(.lodgingRemoved)
+        NotificationManager.scheduleReminders(for: trip)   // 住宿变更 → 重排该行程通知
+    }
+
+    /// 设/取消此交通段的通知静音（spec: notification-center.md）。即时生效 + 重排该行程。
+    func setTransportReminderMuted(tripId: UUID, segmentId: UUID, muted: Bool) {
+        guard let trip = trips.first(where: { $0.id == tripId }),
+              let seg = trip.safeItineraryDays.flatMap({ $0.segments ?? [] }).first(where: { $0.id == segmentId }) else { return }
+        seg.remindersMuted = muted
+        save()
+        CarryLogger.shared.log(.reminderMutedToggled, context: "kind=transport muted=\(muted)")
+        NotificationManager.scheduleReminders(for: trip)
+    }
+
+    /// 设/取消此住宿的通知静音。即时生效 + 重排该行程。
+    func setLodgingReminderMuted(tripId: UUID, stayId: UUID, muted: Bool) {
+        guard let trip = trips.first(where: { $0.id == tripId }),
+              let stay = (trip.lodgingStays ?? []).first(where: { $0.id == stayId }) else { return }
+        stay.remindersMuted = muted
+        save()
+        CarryLogger.shared.log(.reminderMutedToggled, context: "kind=lodging muted=\(muted)")
+        NotificationManager.scheduleReminders(for: trip)
     }
 
     // MARK: - 费用记录（spec: itinerary-cost-tracking.md）
@@ -1723,6 +1733,7 @@ final class TripStore: ObservableObject {
             draftTrip = trip
         } else {
             save()
+            reschedulePackProgress(trip)
 #if !targetEnvironment(macCatalyst)
             Task { @MainActor in LiveActivityManager.shared.update(for: trip) }
 #endif

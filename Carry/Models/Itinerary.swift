@@ -472,6 +472,9 @@ final class TransportSegment: CostBearing {
     /// 可演进——接入时只填充本字段，不改表。
     var liveStatusData: Data = Data()
 
+    /// 是否静音此交通段的通知（spec: notification-center.md）。默认 false = 按全局规则提醒。
+    var remindersMuted: Bool = false
+
     /// 附件（文件/照片/链接，spec: itinerary-attachments.md）；删交通段级联删附件。
     @Relationship(deleteRule: .cascade, inverse: \ItineraryAttachment.segment)
     var attachments: [ItineraryAttachment]? = []
@@ -595,6 +598,8 @@ final class LodgingStay: CostBearing {
     var note: String = ""
     /// 联系电话（酒店；地址搜索可自动回填，可手填）。
     var phone: String = ""
+    /// 是否静音此住宿的通知（spec: notification-center.md）。默认 false。
+    var remindersMuted: Bool = false
     var sortOrder: Int = 0
     var bundle: TripBundle?
 
