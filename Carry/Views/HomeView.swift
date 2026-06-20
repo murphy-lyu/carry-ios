@@ -224,17 +224,11 @@ struct HomeView: View {
     }
 
     private func openTripBook() {
-        #if DEBUG
-        print("🔬[Tap] openTripBook()")
-        #endif
         UIImpactFeedbackGenerator(style: .light).impactOccurred()
         showTripBook = true
     }
 
     private func openTrip(_ bundle: TripBundle) {
-        #if DEBUG
-        print("🔬[Tap] openTrip(\(bundle.name)) ← 卡片被触发")
-        #endif
         UIImpactFeedbackGenerator(style: .soft).impactOccurred()
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.06) {
             router.path.append(bundle.id)

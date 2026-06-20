@@ -597,3 +597,16 @@ return hit === self ? nil : hit
 2. **禁止**再在 SwiftUI 层加 `.background(...).onTapGesture{}` / 透明吸 tap 层 / 满帧 `contentShape` 去"堵穿透"——那是被验证会反复失效的错层补丁。（按钮**各自**的 `.contentShape(Rectangle())` 是为按钮自身满帧命中、可保留，与防穿透无关。）
 3. 已知并接受的取舍（同 §19）：底栏那条区域**不能上滑滚列表**（落空隙的 pan 被底栏吃掉）——tap/pan 在「底栏作 UIKit 兄弟视图」架构下互斥，用户已明确选「不穿透」优先。
 4. 若哪天要让底栏区域**也能滚列表**，那是改架构（如把底栏并入滚动内容），不是回去动 hitTest——别为这个再开 SwiftUI 补丁的口子。
+
+### 33b. 🔴 §33 的不放行区**依赖底栏 frame 高度准**——空态启动后导入数据会让它停在 0（2026-06-20）
+
+> §33 的根因解是对的，但有个**前提**之前没保住：「不放行区 = `barView.bounds`」只有在 `barView` 的 frame 高度**等于真实底栏高度**时才有效。出现过一个**只在「空数据启动 → 导入行程 → 回首页」复现、重启即好、还时好时坏**的穿透——点底栏三按钮，结果跳进按钮正下方那张行程卡的详情页。
+
+**根因**：底栏宿主 `barHosting`（`UIHostingController`）的高度**无显式约束**，纯靠 SwiftUI 内容**固有尺寸**撑（`installBottomBar` 只加 leading/trailing/bottom）。而 `bottomActionBar` 在空态下**不渲染**（`if !isEffectivelyEmpty`）。于是：
+- **空数据启动** → 底栏内容空 → 固有高 **0** → `barView.bounds.height = 0` → 不放行区≈0。
+- **导入数据** → `updateUIViewController` 把底栏 `rootView` 换成三按钮（内容画出来了），**但** `UIHostingController` **默认不会在 `rootView` 变化时重新发布固有尺寸** → frame 高度**停在 0** → `bar.bounds.contains()` 永远 false → 防穿透被跳过 → 穿到下层卡片。
+- **重启即好**：有数据启动时底栏一上来就是三按钮、固有高直接 54。**时好时坏**：偶有无关布局 pass（滚动/动画/旋转）触发重测量 → 高度变 54 → 那次正常。
+
+**根因解（标准做法，非补丁）**：建 `barHosting` 时设 **`barHosting.sizingOptions = .intrinsicContentSize`**（iOS 16+，本项目 17+ 恒可用）。它让 hosting controller 在 SwiftUI 内容变化时**自动同步固有尺寸** → 空→满切换时底栏 frame 立刻长到 54 → 不放行区永远跟上真实高度。`CarryBottomSheetFX.makeUIViewController` 里 `barHosting` 创建处。
+
+**碰底栏再加一条必守**：底栏宿主**必须**带 `sizingOptions = .intrinsicContentSize`（只要底栏高度仍是固有尺寸驱动）。删了它、或新写一个不带它的 hosting，§33 的不放行区就会在「空态启动→内容出现」时停在旧尺寸、穿透重现。要么保留它，要么给底栏一个**显式高度约束**（二选一，别两个都没有）。

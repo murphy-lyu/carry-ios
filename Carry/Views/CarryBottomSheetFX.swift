@@ -52,6 +52,12 @@ struct CarryBottomSheetFX<Content: View, Bar: View>: UIViewControllerRepresentab
         // 底栏宿主：clear 背景，空白区域不吃 touch（让 pan 穿透到下方列表/卡片，仅按钮吃 tap）。
         let barHosting = UIHostingController(rootView: AnyView(bottomBar()))
         barHosting.view.backgroundColor = .clear
+        // 🔴 底栏高度无显式约束、纯靠内容固有尺寸撑（见 installBottomBar）。UIHostingController **默认不会**
+        // 在 rootView 变化时重新发布固有尺寸 → 空态启动（底栏内容空、固有高 0）后导入数据，底栏内容变三按钮、
+        // 但 frame 高度停在 0 → FXPassthroughView 的「不放行区」(barView.bounds) ≈0 → 点击穿到下层行程卡、误开行程
+        // （只在「空态启动→导入」出现、重启即好、还时好时坏=偶有无关布局 pass 救场）。
+        // `.intrinsicContentSize` 让 hosting 在内容变化时自动同步固有高度 → 不放行区永远跟上真实高度。见 playbook §33。
+        barHosting.sizingOptions = .intrinsicContentSize
         vc.installBottomBar(barHosting)
         context.coordinator.hostingVC = hosting
         context.coordinator.barHostingVC = barHosting
@@ -1147,18 +1153,6 @@ private final class FXPassthroughView: UIView {
         // 背后卡片 Button → 误开行程。**根治**：凡落在底栏 frame 内的点，一律由底栏认领（命中按钮→按钮；
         // 落空隙→底栏自身吸掉），**永不下传卡片**——与底栏 SwiftUI 内容是否透明无关，故底栏 UI 怎么改都不复发。
         // convert 用 UIView API（自动处理底栏的缩放 transform，见 placeSheet 对 barView 施加的 transform）。
-        #if DEBUG
-        // 🔬 临时排查（空态→导入穿透）：探针放在最顶、**不依赖 barView**，照出 hitTest 是否被调用、
-        // barView 弱引用是否 nil、不放行区高度。坐实后本块删除。
-        if point.y > bounds.height - 160 {
-            if let b = barView {
-                let pInBar = b.convert(point, from: self)
-                print("🔬[HT] point=\(point) barView=set win=\(b.window != nil) hidden=\(b.isHidden) alpha=\(b.alpha) h=\(b.bounds.height) contains=\(b.bounds.contains(pInBar))")
-            } else {
-                print("🔬[HT] point=\(point) barView=nil ← 弱引用已丢，防穿透失效")
-            }
-        }
-        #endif
         if let bar = barView, bar.window != nil, !bar.isHidden, bar.alpha > 0.01 {
             let pInBar = bar.convert(point, from: self)
             if bar.bounds.contains(pInBar) {
