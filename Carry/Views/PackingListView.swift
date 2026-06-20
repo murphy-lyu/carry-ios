@@ -293,8 +293,8 @@ struct PackingListView: View {
                         if detailTab == .packing {
                             Button {
                                 CarryLogger.shared.log(.packingListShared)
-                                // 从最顶层 presenter 呈现，兼容详情以 sheet 呈现的上下文。
-                                UIApplication.shared.presentActivitySheet(items: [shareText])
+                                // 混合分享：聊天内联文本 + AirDrop/存文件用规范文件名（从最顶层 presenter 呈现）。
+                                if let bundle { TripShare.presentPackingList(text: shareText, for: bundle) }
                             } label: {
                                 Label("Share list", systemImage: "square.and.arrow.up")
                             }

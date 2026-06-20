@@ -429,12 +429,30 @@ enum TripShare {
         UIApplication.shared.presentActivitySheet(items: [url])
     }
 
+    /// 「分享清单」（打包面）：复用混合 item source——聊天内联文本 + AirDrop/存文件给规范名 `.txt`。
+    /// 文件名与行程「发送给朋友」同风格、加「打包清单」区分字段，便于在文件/隔空投送里一眼区分两类。
+    @MainActor
+    static func presentPackingList(text: String, for trip: TripBundle) {
+        let source = PackingListShareItemSource(text: text, baseName: packingFileBaseName(for: trip))
+        UIApplication.shared.presentActivitySheet(items: [source])
+    }
+
+    /// 打包清单分享文件名主体：与行程「发送给朋友」同风格，插入「打包清单」区分字段
+    /// （如「云南 打包清单 (6月)」vs 行程「云南 (6月)」）。
+    static func packingFileBaseName(for trip: TripBundle) -> String {
+        fileBaseName(for: trip,
+                     tag: NSLocalizedString("packing.share.filename_tag",
+                                            comment: "Distinguishing tag in packing-list share filename"))
+    }
+
     /// 可导入文件的文件名主体：`行程名 (出发月份)`——月份做括号补充（同地不同月攻略不同）。
     /// 行程名退回目的地/「Carry」；无日期行程省略月份；月份跟随语言（中文「6月」/ 英文「Jun」）。
-    private static func fileBaseName(for trip: TripBundle) -> String {
+    /// `tag` 非空时插在行程名与月份之间（打包清单分享用，作区分字段）。
+    private static func fileBaseName(for trip: TripBundle, tag: String? = nil) -> String {
         let nameRaw = !trip.name.isEmpty ? trip.name
             : (!trip.destinationCity.isEmpty ? trip.destinationCity : "Carry")
         var base = nameRaw
+        if let tag, !tag.isEmpty { base += " \(tag)" }
         if !trip.isDateless {
             let month: String
             if Locale.current.language.languageCode == .chinese {
