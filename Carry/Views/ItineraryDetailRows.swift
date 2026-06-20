@@ -10,8 +10,9 @@
 import SwiftUI
 
 /// 详情浮层骨架（地点/交通/住宿共用）：**头部钉在顶部不随滚动**，仅下方卡片区滚动；
-/// 同时保留「短内容贴合高度」——分别量头部高 + 内容高求和设 detent（不撑空、长则封顶 .large 滚动）。
-/// 解决「内容长时滚动顶部关闭键也滚走」的体验问题。
+/// detent 贴合内容高度（量头部 + 内容求和），长内容在内部滚动。
+/// **刻意只给单一 `.height` detent、不含 `.large`**：系统 `.large`（满屏）会触发 iOS 26
+/// 把弹层「脱离成带两侧边距的浮动卡片」——这正是高内容详情弹出即缩的根因；不进 `.large` 即不缩。
 struct DetailSheetScaffold<Header: View, Content: View>: View {
     @ViewBuilder var header: Header
     @ViewBuilder var content: Content
@@ -20,8 +21,8 @@ struct DetailSheetScaffold<Header: View, Content: View>: View {
     @State private var contentHeight: CGFloat = 0
 
     private var detents: Set<PresentationDetent> {
-        guard headerHeight > 0, contentHeight > 0 else { return [.medium, .large] }
-        return [.height(headerHeight + contentHeight + 20), .large]   // +20 ≈ 底部气口
+        guard headerHeight > 0, contentHeight > 0 else { return [.medium] }
+        return [.height(headerHeight + contentHeight + 20)]   // +20 ≈ 底部气口；刻意不含 .large
     }
 
     var body: some View {
