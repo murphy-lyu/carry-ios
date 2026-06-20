@@ -3,6 +3,15 @@
 ## 最后更新
 2026-06-20
 
+## 上次改动摘要（航班代理改用自定义域名规避 GFW + 工作室品牌 Neve 定名 · 2026-06-20 续）
+
+> 本会话只动 `Carry/Models/FlightLookupService.swift` 一处（+ 本 progress.md），与并行会话不重叠。**编译绿**（主 app + Widget）。**待用户真机验收**（国内关 VPN 测航班搜索）。
+- **🔴 根因：航班查询在中国大陆无 VPN 拿不到结果**——不是 API Free 档的问题。链路是 `App → Cloudflare Worker(carry-flight) → 上游 AeroDataBox(经 RapidAPI)`，App 只连 `carry-flight.murphy-latte.workers.dev`。`*.workers.dev` 是 GFW 干扰最稳定的一类域名（DNS 污染 + TLS SNI 阻断）→ 连不上 Worker（第二跳在墙外、与此无关）。实测两跳服务都在线，纯网络可达性问题。
+- **🟢 解：给 Worker 绑自定义域名 `flight.nevestudio.app`**（甩掉 `workers.dev` 这层针对性封锁）→ App `proxyURLString` 从 `https://carry-flight.murphy-latte.workers.dev/flight` 改为 `https://flight.nevestudio.app/flight`。旧 workers.dev 路由仍在线、两条并存不停机。已验证新域名 SSL 签好、打到 Worker（无 token 返回 401）。
+- **⚠️ 不保证彻底**：Cloudflare 普通免费边缘在国内仍可能被限速。验收若仍不通 → **Plan B：代理挪到香港/新加坡小服务器**（GFW 不主动阻断、无需 ICP）。决定性验证＝用户真机关 VPN 实测。
+- **🟢 工作室品牌定名 Neve**（域名 `nevestudio.app`，Cloudflare Registrar 注册）：Carry 之后做一系列「Made with love / 慢生活」小 App 的总品牌；Neve = 意大利语「雪」= 冰 = 太太的名字（私心彩蛋）。口头叫「Neve」，`nevestudio.app` 当数字大本营；将来咖啡馆可另用干净的名字/域名。
+- **影响上架**：中国大陆上架时，若航班搜索国内不可用，功能降级安全（有「手动输入」兜底 `flightSearchManualFallback`），非硬 blocker，但体验缺口待 Plan B 决定。
+
 ## 上次改动摘要（行程按天色板定稿：7 色全色环铺开 + 地图针白字易读性根因 · 2026-06-20 续）
 
 > 色板定稿。本会话改 `AppearanceMode.swift` / `ItineraryMapView.swift` / `docs/{decisions,design-system,progress}.md` / `scripts/itinerary-day-palette-solve.py`，与并行会话在途改动（`ItineraryView`/`ItineraryReorderCollection`/`TripReminderConfig`/`NotificationManager`/`HomeView`/`Localizable.xcstrings`/`specs/itinerary-map-scroll.md`）**不重叠**，走隔离 index 提交（`design-system.md` 共享、只 patch 自己的 hunk）。**编译绿**；UI 验收交用户。

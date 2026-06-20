@@ -15,8 +15,10 @@ import CoreLocation
 // MARK: - 配置
 
 nonisolated enum FlightLookupConfig {
-    /// 航班查询代理地址（你的 Cloudflare Worker）。公开、无敏感；换数据市场只改 Worker、不改这里。
-    static let proxyURLString = "https://carry-flight.murphy-latte.workers.dev/flight"
+    /// 航班查询代理地址（你的 Cloudflare Worker，绑自定义域名）。公开、无敏感；换数据市场只改 Worker、不改这里。
+    /// 用自定义域名 `flight.nevestudio.app` 而非 `*.workers.dev`——后者在中国大陆被 GFW 干扰
+    /// （DNS 污染 / TLS 阻断），无 VPN 拿不到结果；自定义域名甩掉这一层。
+    static let proxyURLString = "https://flight.nevestudio.app/flight"
     /// 与 Worker 的 APP_TOKEN secret 对应；非空则随请求发 X-App-Token 头，挡住盗用 Worker。
     /// 注：低安全级「门槛」、客户端可提取（非真密钥，真 key 只在 Worker）；要轮换时两边同步改。
     /// 值不写死在源码（公开仓库会被密钥扫描），从 gitignore 的 `Secrets.plist`（随 bundle 打包）读取；
