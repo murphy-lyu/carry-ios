@@ -759,8 +759,19 @@ struct ItineraryView: View {
                 .frame(width: 8, height: 8)
                 .frame(width: 30)                                // = railWidth，圆点居中落在标记列、压在 spine 上
             VStack(alignment: .leading, spacing: 2) {
-                Text(dayDateLabel(day) ?? dayDisplayTitle(day))
-                    .font(.system(.headline, design: .rounded).weight(.semibold))
+                HStack(alignment: .firstTextBaseline, spacing: 6) {
+                    Text(dayDateLabel(day) ?? dayDisplayTitle(day))
+                        .font(.system(.headline, design: .rounded).weight(.semibold))
+                    // 多时区行程：当天所在时区小标（如 GMT+1）；单时区不显（spec: itinerary-timezone.md D1/D2）。
+                    if let zone = dayZoneLabel(day) {
+                        Text(zone)
+                            .font(.system(.caption2, design: .rounded).weight(.medium))
+                            .foregroundStyle(.secondary)
+                            .padding(.horizontal, 6)
+                            .padding(.vertical, 2)
+                            .background(Capsule().fill(Color(.tertiarySystemFill)))
+                    }
+                }
                 if let title = customDayTitle(day) {
                     Text(title)
                         .font(.system(.caption2, design: .rounded))
@@ -794,6 +805,24 @@ struct ItineraryView: View {
     private func customDayTitle(_ day: ItineraryDay) -> String? {
         let trimmed = day.title.trimmingCharacters(in: .whitespacesAndNewlines)
         return trimmed.isEmpty ? nil : trimmed
+    }
+
+    /// 多时区行程时，当天代表时区的小标（如 "GMT+1"，按当天实际日期算偏移、含夏令时）；
+    /// 单时区行程或缺时区信息返回 nil（spec: itinerary-timezone.md D1/D2）。
+    private func dayZoneLabel(_ day: ItineraryDay) -> String? {
+        guard let bundle, bundle.isMultiTimeZone else { return nil }
+        guard let tz = TimeZone(identifier: day.representativeTimeZoneId(trip: bundle)) else { return nil }
+        let base = Calendar.current.startOfDay(for: bundle.departureDate)
+        let date = Calendar.current.date(byAdding: .day, value: day.sortOrder, to: base) ?? base
+        return gmtOffsetLabel(tz.secondsFromGMT(for: date))
+    }
+
+    /// 秒偏移 → "GMT+8" / "GMT−3:30" / "GMT+0"（负号用 U+2212 减号，排版更齐）。
+    private func gmtOffsetLabel(_ seconds: Int) -> String {
+        let sign = seconds < 0 ? "−" : "+"
+        let mins = abs(seconds) / 60
+        let h = mins / 60, m = mins % 60
+        return m == 0 ? "GMT\(sign)\(h)" : String(format: "GMT%@%d:%02d", sign, h, m)
     }
 
     /// 有日期行程：优先显示真实日期；无日期行程（永远只 1 天）显示「想去的地点」愿望清单标题——
