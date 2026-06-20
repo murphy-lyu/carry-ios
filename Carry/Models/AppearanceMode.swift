@@ -32,26 +32,28 @@ enum CarryAccent {
 /// dropped); the brand smoky blue moves to Day 3. Used ONLY by itinerary planning — nowhere else
 /// may introduce non-accent colours.
 ///
-/// 7 colours, cycled by `sortOrder % 7` (see decisions.md 2026-06-20). Trimmed from 10 — removed
-/// near-duplicates (caramel/clay/rosewood) so every colour is clearly distinct. The order is solved
-/// (CIEDE2000 over both light & dark): all 7 are mutually distinct (min ΔE ≈ 14.4) and the order
-/// maximises adjacent-day separation (worst neighbour ΔE ≈ 16.2). With N=7 the 5-day window can't
-/// hide any pair, so the floor IS the global min — keep all 7 well apart.
+/// 7 colours, cycled by `sortOrder % 7` (see decisions.md 2026-06-20). The hues are spread right
+/// around the wheel — green / orange / blue / violet / raspberry / teal / terracotta — so every day
+/// reads as a clearly different colour name (an earlier warm-only set had three look-alike pinks).
+/// The order is solved (CIEDE2000 over both light & dark): all 7 are mutually distinct (min ΔE ≈
+/// 14.7) and the order maximises adjacent-day separation (worst neighbour ΔE ≈ 16, the blue↔violet
+/// pair Day 3↔4). With N=7 the 5-day window can't hide any pair, so the floor IS the global min —
+/// keep all 7 well apart. Day order is product-pinned (green→orange→blue→violet by request).
 ///
-/// NOTE on legibility: several hues are intentionally light/cheerful and fall below WCAG 3:1 on
-/// white. Foreground marks must therefore NOT assume the colour is dark — e.g. map-pin numbers use
-/// `Color.legibleInk` (adaptive dark/white) instead of hard-coded white. Do NOT "fix" contrast by
-/// darkening the palette: light values carry the separation (deepening collapses ΔE — tried, failed).
+/// NOTE on legibility: some hues are light enough to fall below WCAG 3:1 on white. Foreground marks
+/// must therefore NOT assume the colour is dark — e.g. map-pin numbers use `Color.legibleInk`
+/// (adaptive dark/white) instead of hard-coded white. Do NOT "fix" contrast by darkening the
+/// palette: light values carry the separation (deepening collapses ΔE — tried, failed).
 /// Re-run `scripts/itinerary-day-palette-solve.py` to re-verify before any change.
 enum ItineraryDayPalette {
     private static let palette: [UIColor] = [
         adaptive(light: (0.455, 0.675, 0.333), dark: (0.573, 0.757, 0.475)),  // 0 · Day 1 — 棕榈绿 palm green
         adaptive(light: (0.863, 0.549, 0.235), dark: (0.910, 0.659, 0.404)),  // 1 · Day 2 — 万寿菊 marigold
         CarryAccent.uiColor,                                                   // 2 · Day 3 — 烟蓝 smoky blue (brand)
-        adaptive(light: (0.878, 0.478, 0.373), dark: (0.910, 0.596, 0.510)),  // 3 · Day 4 — 珊瑚 coral
-        adaptive(light: (0.239, 0.639, 0.604), dark: (0.404, 0.737, 0.706)),  // 4 · Day 5 — 海蓝绿 lagoon teal
-        adaptive(light: (0.925, 0.651, 0.690), dark: (0.949, 0.733, 0.761)),  // 5 · Day 6 — 胭脂粉 blush pink
-        adaptive(light: (0.760, 0.345, 0.420), dark: (0.835, 0.482, 0.553)),  // 6 · Day 7 — 浆果红 berry
+        adaptive(light: (0.561, 0.420, 0.733), dark: (0.675, 0.561, 0.812)),  // 3 · Day 4 — 雪青 amethyst
+        adaptive(light: (0.780, 0.314, 0.431), dark: (0.859, 0.471, 0.569)),  // 4 · Day 5 — 覆盆子 raspberry
+        adaptive(light: (0.176, 0.659, 0.620), dark: (0.357, 0.745, 0.706)),  // 5 · Day 6 — 青绿 teal
+        adaptive(light: (0.773, 0.420, 0.290), dark: (0.855, 0.549, 0.451)),  // 6 · Day 7 — 赤陶 clay
     ]
 
     private static func adaptive(light: (CGFloat, CGFloat, CGFloat),
