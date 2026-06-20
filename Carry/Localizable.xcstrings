@@ -112,6 +112,16 @@
         }
       }
     },
+    "%@ → %@" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$@ → %2$@"
+          }
+        }
+      }
+    },
     "%lld" : {
       "localizations" : {
         "de" : {
@@ -363,6 +373,7 @@
         }
       }
     },
+    "+%lld" : {},
     "1 %@ ≈ %@ %@" : {
       "localizations" : {
         "en" : {
@@ -1539,6 +1550,7 @@
       }
     },
     "All reminders added" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -25862,6 +25874,7 @@
       }
     },
     "You have already added all available reminder presets." : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -46051,55 +46064,55 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Morgen geht’s los — pack heute Abend und leg deine Dokumente bereit."
+            "value" : "Morgen geht’s los — schon aufgeregt?"
           }
         },
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Leaving tomorrow — pack tonight and get your documents ready."
+            "value" : "You set off tomorrow — excited?"
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Sales mañana: haz la maleta esta noche y prepara tus documentos."
+            "value" : "¡Mañana sales! ¿Con ganas?"
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Départ demain — faites vos bagages ce soir et préparez vos documents."
+            "value" : "Départ demain — impatient ?"
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "明日出発。今夜のうちに荷造りを済ませ、書類も準備しておきましょう。"
+            "value" : "明日は出発。楽しみですね？"
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "내일 출발이에요. 오늘 밤 짐을 챙기고 서류도 준비해 두세요."
+            "value" : "내일 출발이에요. 설레나요?"
           }
         },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Você viaja amanhã — arrume as malas hoje à noite e separe seus documentos."
+            "value" : "Você parte amanhã — animado?"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "明天出发，今晚收好行李、备齐证件。"
+            "value" : "明天就要出发啦，期待吗？"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "明天出發，今晚收好行李、備齊證件。"
+            "value" : "明天就要出發啦，期待嗎？"
           }
         }
       }
@@ -46169,55 +46182,55 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Noch eine Woche — wirf einen Blick aufs Wetter und überlege, was du mitnimmst."
+            "value" : "Wie läuft die Planung? Orte und Unterkünfte schon im Blick?"
           }
         },
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "One week to go — check the forecast so you can plan what to bring."
+            "value" : "How’s the planning going? Got the places and stays you want sorted?"
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Falta una semana: mira el clima del destino para preparar qué llevar."
+            "value" : "¿Cómo va la planificación? ¿Ya tienes los lugares y hoteles?"
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Encore une semaine — consultez la météo pour préparer vos affaires."
+            "value" : "La planification avance ? Les lieux et hôtels sont réservés ?"
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "あと1週間。現地の天気を見て、持ち物を考え始めましょう。"
+            "value" : "計画は順調ですか？行きたい場所や宿は決まりましたか？"
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "일주일 남았어요. 도착지 날씨를 보고 무엇을 챙길지 준비해 보세요."
+            "value" : "계획은 잘 되고 있나요? 가고 싶은 곳과 숙소는 정했나요?"
           }
         },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Falta uma semana — veja o clima do destino para planejar o que levar."
+            "value" : "Como vai o planejamento? Já tem os lugares e hotéis?"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "还有一周，看看目的地天气，该带什么早做准备。"
+            "value" : "行程安排得怎么样啦？想去的地方、想订的酒店，都安排上了吗？"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "還有一週，看看目的地天氣，該帶什麼早做準備。"
+            "value" : "行程安排得怎麼樣啦？想去的地方、想訂的飯店，都安排好了嗎？"
           }
         }
       }
@@ -46523,55 +46536,55 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Noch drei Tage — leg deine Packliste an."
+            "value" : "Steht dein Reiseplan schon?"
           }
         },
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Three days to go — time to start your packing list."
+            "value" : "Is your itinerary all set?"
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Faltan tres días: empieza tu lista de equipaje."
+            "value" : "¿Tienes el itinerario listo?"
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Encore trois jours — commencez votre liste d’affaires."
+            "value" : "Votre itinéraire est-il prêt ?"
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "あと3日。持ち物リストを作り始めましょう。"
+            "value" : "旅程はもう決まりましたか？"
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "3일 남았어요. 챙길 짐 목록을 만들기 시작해요."
+            "value" : "일정은 다 정하셨나요?"
           }
         },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Faltam três dias — comece sua lista de bagagem."
+            "value" : "Seu roteiro já está pronto?"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "还有 3 天，可以开始列要带的东西了。"
+            "value" : "行程都安排好了吗？"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "還有 3 天，可以開始列要帶的東西了。"
+            "value" : "行程都安排好了嗎？"
           }
         }
       }
@@ -46641,55 +46654,55 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Rückgabe in %@."
+            "value" : "Heute bis %@ zurückgeben — plane es ein."
           }
         },
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Return in %@."
+            "value" : "Drop off by %@ today — plan your time around it."
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Devolución en %@."
+            "value" : "Hoy devuelves a las %@: organiza tu tiempo."
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Restitution dans %@."
+            "value" : "Restitution aujourd’hui à %@ — organisez-vous."
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "%@後に返却。"
+            "value" : "今日 %@ に返却。時間を見ておいてね。"
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "%@ 후 반납."
+            "value" : "오늘 %@ 반납이에요. 시간 맞춰 준비해요～"
           }
         },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Devolução em %@."
+            "value" : "Devolução hoje às %@ — organize seu tempo."
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "%@后还车。"
+            "value" : "今天 %@ 该还车啦，记得安排好时间～"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "%@後還車。"
+            "value" : "今天 %@ 該還車囉，記得安排好時間～"
           }
         }
       }
@@ -46936,55 +46949,114 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "%lld Punkte für heute."
+            "value" : "%lld Stopps heute — los geht’s mit „%@“."
           }
         },
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "%lld things on today's plan."
+            "value" : "%lld stops await today — starting with %@."
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "%lld cosas en el plan de hoy."
+            "value" : "Hoy te esperan %lld paradas, empezando por «%@»."
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "%lld choses au programme."
+            "value" : "%lld étapes vous attendent, à commencer par « %@ »."
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "本日の予定は %lld 件。"
+            "value" : "今日は %lld か所。「%@」から始まります～"
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "오늘 일정 %lld개."
+            "value" : "오늘 %lld곳이 기다려요. 「%@」부터 시작해요～"
           }
         },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "%lld itens no plano de hoje."
+            "value" : "%lld paradas hoje, a começar por “%@”."
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "今天有 %lld 项安排。"
+            "value" : "今天 %lld 处在等你，从「%@」开始～"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "今天有 %lld 項安排。"
+            "value" : "今天 %lld 處在等你，從「%@」開始～"
+          }
+        }
+      }
+    },
+    "notif.daily.body.noname" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld Stopps warten heute auf dich."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld stops await you today."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hoy te esperan %lld paradas."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld étapes vous attendent aujourd’hui."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "今日は %lld か所が待っています～"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "오늘 %lld곳이 기다려요～"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld paradas esperam por você hoje."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "今天 %lld 处在等你～"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "今天 %lld 處在等你～"
           }
         }
       }
@@ -46995,55 +47067,55 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Heute in %@"
+            "value" : "%@ — ein neuer Tag"
           }
         },
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Today in %@"
+            "value" : "%@ — a new day"
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Hoy en %@"
+            "value" : "%@: un nuevo día"
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Aujourd'hui à %@"
+            "value" : "%@ — une nouvelle journée"
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "今日の%@"
+            "value" : "%@、新しい一日"
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "오늘 %@"
+            "value" : "%@, 새로운 하루"
           }
         },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Hoje em %@"
+            "value" : "%@ — um novo dia"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "今天的%@"
+            "value" : "%@，新的一天"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "今天的%@"
+            "value" : "%@，新的一天"
           }
         }
       }
@@ -47054,55 +47126,55 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Heute geht’s los — gute Reise!"
+            "value" : "Gute Reise!"
           }
         },
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Today’s the day — have a wonderful trip!"
+            "value" : "Have a wonderful trip!"
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "¡Hoy es el día, buen viaje!"
+            "value" : "¡Buen viaje!"
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "C’est le grand jour — bon voyage !"
+            "value" : "Bon voyage !"
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "いよいよ出発の日。素敵な旅を！"
+            "value" : "素敵な旅を！"
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "드디어 출발하는 날이에요. 즐거운 여행 되세요!"
+            "value" : "즐거운 여행 되세요!"
           }
         },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Hoje é o dia — boa viagem!"
+            "value" : "Boa viagem!"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "今天出发，旅途愉快！"
+            "value" : "旅途愉快！"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "今天出發，旅途愉快！"
+            "value" : "旅途愉快！"
           }
         }
       }
@@ -47113,55 +47185,55 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Heute — auf nach 「%@」"
+            "value" : "%@ – Abreise heute"
           }
         },
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Today — off to 「%@」"
+            "value" : "%@ — departing today"
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Hoy — rumbo a 「%@」"
+            "value" : "%@: sales hoy"
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Aujourd'hui — direction 「%@」"
+            "value" : "%@ — départ aujourd’hui"
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "今日 — 「%@」へ出発"
+            "value" : "「%@」、今日出発"
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "오늘 — 「%@」으로 출발"
+            "value" : "「%@」, 오늘 출발"
           }
         },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Hoje — rumo a 「%@」"
+            "value" : "%@ — partida hoje"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "今天，去「%@」"
+            "value" : "「%@」，今天出发"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "今天，去「%@」"
+            "value" : "「%@」，今天出發"
           }
         }
       }
@@ -47526,55 +47598,55 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Check-out steht an – nichts vergessen."
+            "value" : "Heute Check-out — alles einpacken, nichts vergessen."
           }
         },
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Check-out is coming up — don't forget anything."
+            "value" : "Checking out today — grab everything and leave nothing behind."
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Pronto será la salida; no olvides nada."
+            "value" : "Hoy haces el check-out: llévate todo, no olvides nada."
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Le départ approche — n'oubliez rien."
+            "value" : "Départ aujourd’hui — emportez tout, n’oubliez rien."
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "まもなくチェックアウト。忘れ物にご注意を。"
+            "value" : "本日チェックアウト。忘れ物のないように～"
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "곧 체크아웃이에요. 빠뜨린 건 없는지 확인하세요."
+            "value" : "오늘 체크아웃이에요. 빠뜨린 물건 없이 챙겨요～"
           }
         },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "O check-out está chegando — não esqueça nada."
+            "value" : "Check-out hoje — leve tudo, não esqueça nada."
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "快退房了，别落下东西。"
+            "value" : "今天退房，东西记得带齐，别落下啦～"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "快退房了，別落下東西。"
+            "value" : "今天退房，東西記得帶齊，別落下囉～"
           }
         }
       }
@@ -47998,55 +48070,55 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Noch %lld Dinge ungepackt – nichts vergessen."
+            "value" : "Noch %lld Dinge offen — heute Abend einpacken."
           }
         },
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "%lld items still unpacked — don't leave them behind."
+            "value" : "%lld things still to pack — get them in tonight."
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Quedan %lld cosas por guardar; no las olvides."
+            "value" : "Faltan %lld cosas: guárdalas esta noche."
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "%lld objets pas encore rangés — ne les oubliez pas."
+            "value" : "Encore %lld choses — rangez-les ce soir."
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "あと %lld 点が未パッキングです。忘れずに。"
+            "value" : "あと %lld 点。今夜のうちに荷造りを～"
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "아직 %lld개를 안 챙겼어요. 빠뜨리지 마세요."
+            "value" : "%lld개 남았어요. 오늘 밤 챙겨두세요～"
           }
         },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Faltam %lld itens — não esqueça nada."
+            "value" : "Faltam %lld itens — guarde hoje à noite."
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "还有 %lld 件没打包，别落下了。"
+            "value" : "还差 %lld 件没收拾，趁今晚收好吧～"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "還有 %lld 件沒打包，別落下了。"
+            "value" : "還差 %lld 件沒收拾，趁今晚收好吧～"
           }
         }
       }
@@ -48057,55 +48129,55 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Pack-Check – %@"
+            "value" : "Zeit zu packen"
           }
         },
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Packing check — %@"
+            "value" : "Time to pack"
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Revisión de equipaje: %@"
+            "value" : "Hora de hacer la maleta"
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Vérif des bagages — %@"
+            "value" : "Il est temps de faire les bagages"
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "荷造りチェック · %@"
+            "value" : "荷造りの時間です"
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "짐 점검 · %@"
+            "value" : "짐 쌀 시간이에요"
           }
         },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Verificação da mala — %@"
+            "value" : "Hora de arrumar a mala"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "打包检查 · %@"
+            "value" : "该打包啦"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "打包檢查 · %@"
+            "value" : "該打包囉"
           }
         }
       }
@@ -48165,6 +48237,124 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "%@後出發。"
+          }
+        }
+      }
+    },
+    "notif.transport.body.flight" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Noch %@ bis zum Abflug — früh los, entspannt zum Flug."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ to takeoff — head out early and fly off with ease."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ para el despegue: sal con tiempo y vuela tranquilo."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Décollage dans %@ — partez tôt, prenez l’avion sereinement."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "離陸まで %@。早めに出て、ゆとりを持って空港へ。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "이륙까지 %@. 일찍 나서 여유롭게 비행기 타요～"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ para a decolagem — saia cedo e voe tranquilo."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "还有 %@ 起飞，提前出发，从容赶飞机～"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "還有 %@ 起飛，提前出發，從容趕飛機～"
+          }
+        }
+      }
+    },
+    "notif.transport.body.other" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Noch %@ bis zur Abfahrt — plane etwas Zeit ein."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ to departure — leave a little time and travel easy."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ para la salida: deja algo de tiempo."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Départ dans %@ — prévoyez un peu de temps."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "発車まで %@。時間に余裕を持って。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "출발까지 %@. 시간을 넉넉히 두세요～"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ para a partida — reserve um tempinho."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "还有 %@ 发车，记得留足时间～"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "還有 %@ 發車，記得留足時間～"
           }
         }
       }
@@ -57766,55 +57956,55 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Erinnerung vor Abholung und Rückgabe."
+            "value" : "Eine Erinnerung vor der Rückgabe."
           }
         },
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "A reminder before pick-up and drop-off."
+            "value" : "A reminder before you need to return the car."
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Aviso antes de recoger y devolver."
+            "value" : "Un aviso antes de devolver el coche."
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Un rappel avant le retrait et la restitution."
+            "value" : "Un rappel avant de rendre la voiture."
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "受け取りと返却の前に通知。"
+            "value" : "返却の前にお知らせします。"
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "픽업과 반납 전에 알려줘요."
+            "value" : "반납 전에 미리 알려드려요."
           }
         },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Aviso antes da retirada e devolução."
+            "value" : "Um lembrete antes de devolver o carro."
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "取车、还车前提醒你。"
+            "value" : "还车前提醒你，别耽误行程。"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "取車、還車前提醒你。"
+            "value" : "還車前提醒你，別耽誤行程。"
           }
         }
       }
@@ -57825,55 +58015,55 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Mietwagen"
+            "value" : "Rückgabe Mietwagen"
           }
         },
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Car rental"
+            "value" : "Car return"
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Coche de alquiler"
+            "value" : "Devolución del coche"
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Voiture de location"
+            "value" : "Restitution du véhicule"
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "レンタカー"
+            "value" : "返却リマインダー"
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "렌터카"
+            "value" : "차량 반납 알림"
           }
         },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Carro alugado"
+            "value" : "Devolução do carro"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "租车提醒"
+            "value" : "还车提醒"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "租車提醒"
+            "value" : "還車提醒"
           }
         }
       }
@@ -58061,55 +58251,55 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Vor der Abreise packen und vorbereiten."
+            "value" : "Eine Erinnerung, wenn deine Reise näher rückt."
           }
         },
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Get packed and ready before you leave."
+            "value" : "A gentle countdown as your trip draws near."
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Prepárate y haz la maleta antes de salir."
+            "value" : "Un recordatorio cuando tu viaje se acerca."
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Préparez-vous et faites vos bagages avant de partir."
+            "value" : "Un rappel à l’approche de votre voyage."
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "出発前に荷造りと準備を。"
+            "value" : "旅行が近づいたら前もってお知らせします。"
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "출발 전에 짐 싸고 준비하세요."
+            "value" : "여행이 다가오면 미리 알려드려요."
           }
         },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Arrume as malas e prepare-se antes de partir."
+            "value" : "Um lembrete quando sua viagem se aproxima."
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "出发前提醒你打包、做好准备。"
+            "value" : "行程临近时提前提醒你，从容准备出发。"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "出發前提醒你打包、做好準備。"
+            "value" : "行程臨近時提前提醒你，從容準備出發。"
           }
         }
       }
@@ -58415,55 +58605,55 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Erinnerungen für Check-in und Check-out."
+            "value" : "Eine Erinnerung vor dem Check-out — nichts vergessen."
           }
         },
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Reminders for check-in and check-out."
+            "value" : "A reminder before check-out, so nothing gets left behind."
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Recordatorios de entrada y salida."
+            "value" : "Un aviso antes de la salida, para no olvidar nada."
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Rappels d'arrivée et de départ."
+            "value" : "Un rappel avant le départ, pour ne rien oublier."
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "チェックイン・チェックアウトの通知。"
+            "value" : "チェックアウト前に、忘れ物のないように。"
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "체크인·체크아웃 알림."
+            "value" : "체크아웃 전에 빠뜨린 물건 없도록 알려드려요."
           }
         },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Lembretes de check-in e check-out."
+            "value" : "Um lembrete antes do check-out, para não esquecer nada."
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "入住、退房提醒。"
+            "value" : "退房前提醒你，东西别落下。"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "入住、退房提醒。"
+            "value" : "退房前提醒你，東西別落下。"
           }
         }
       }
@@ -58474,55 +58664,55 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Unterkunft"
+            "value" : "Check-out"
           }
         },
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Lodging"
+            "value" : "Check-out"
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Alojamiento"
+            "value" : "Salida del hotel"
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Hébergement"
+            "value" : "Départ de l’hôtel"
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "宿泊"
+            "value" : "チェックアウト"
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "숙소 알림"
+            "value" : "체크아웃 알림"
           }
         },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Hospedagem"
+            "value" : "Check-out"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "住宿提醒"
+            "value" : "退房提醒"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "住宿提醒"
+            "value" : "退房提醒"
           }
         }
       }
@@ -58533,55 +58723,55 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Erinnert an Ungepacktes, falls noch nicht fertig."
+            "value" : "Ein Anstoß zum Packen am Vorabend — samt Restliste."
           }
         },
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "If you're not fully packed, nudge you with what's left."
+            "value" : "A nudge to pack the night before — with what’s left to do."
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Si no terminaste, te avisa de lo que falta."
+            "value" : "Un aviso para hacer la maleta la víspera, con lo que falta."
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Si ce n'est pas fini, vous rappelle ce qu'il reste."
+            "value" : "Un rappel pour préparer vos bagages la veille — avec ce qu’il reste."
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "荷造りが未完了なら残り点数を通知。"
+            "value" : "前夜に荷造りのお知らせ。残りの数もお伝えします。"
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "아직 안 끝났으면 남은 개수를 알려줘요."
+            "value" : "전날 밤 짐 싸기 알림과 남은 개수를 알려드려요."
           }
         },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Se faltar, avisa o que ainda resta."
+            "value" : "Um lembrete para arrumar a mala na véspera, com o que falta."
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "若还没打包完，提醒你还剩多少件。"
+            "value" : "出发前一晚提醒你打包，还差几件也会一并告诉你。"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "若還沒打包完，提醒你還剩多少件。"
+            "value" : "出發前一晚提醒你打包，還差幾件也會一併告訴你。"
           }
         }
       }
@@ -58592,55 +58782,55 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Pack-Fortschritt"
+            "value" : "Packen"
           }
         },
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Packing progress"
+            "value" : "Packing"
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Progreso de equipaje"
+            "value" : "Equipaje"
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Progression des bagages"
+            "value" : "Bagages"
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "荷造りの進捗"
+            "value" : "荷造り"
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "짐 싸기 진행"
+            "value" : "짐 싸기 알림"
           }
         },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Progresso da mala"
+            "value" : "Bagagem"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "打包进度提醒"
+            "value" : "打包提醒"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "打包進度提醒"
+            "value" : "打包提醒"
           }
         }
       }
@@ -58940,6 +59130,7 @@
       }
     },
     "settings.notifications.footer" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -59529,6 +59720,7 @@
       }
     },
     "settings.notifications.section.general" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -64953,7 +65145,7 @@
         }
       }
     },
-    "–" : {},
+    " +%lld" : {},
     "☀️ Tropical / beach" : {
       "extractionState" : "manual",
       "localizations" : {

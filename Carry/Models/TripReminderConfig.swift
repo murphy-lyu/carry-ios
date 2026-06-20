@@ -19,16 +19,14 @@ struct TripReminderConfig: Codable, Identifiable, Equatable {
         TripReminderConfig(daysBeforeDeparture: 1, hour: 9),
     ]
 
-    /// 全部可选档位：设置页开关与 per-trip 加提醒选择器共用同一组。
-    /// 注：这里的 hour 仅为名义占位——实际默认时间统一取 `ReminderPreferences.defaultMinutes`
-    ///（设置页可改），per-trip 加完后还可逐条调。故此处时间值已不直接生效。
+    /// 出发提醒档位（=「行程倒计时」，spec: notification-center.md）。刻意精简成「当天 → 明天 →
+    /// 几天后 → 一周」的有节奏阶梯：去掉「前2天」(夹在 1/3 天间冗余) 与「前2周」(对休闲游太远)。
+    /// 注：hour 仅名义占位——实际时间统一取 `ReminderPreferences.defaultMinutes`（设置页可改）。
     static let presets: [TripReminderConfig] = [
         TripReminderConfig(daysBeforeDeparture: 0, hour: 7),
         TripReminderConfig(daysBeforeDeparture: 1, hour: 9),
-        TripReminderConfig(daysBeforeDeparture: 2, hour: 9),
         TripReminderConfig(daysBeforeDeparture: 3, hour: 9),
         TripReminderConfig(daysBeforeDeparture: 7, hour: 9),
-        TripReminderConfig(daysBeforeDeparture: 14, hour: 9),
     ]
 
     var timeString: String {
@@ -142,10 +140,17 @@ extension ReminderPreferences {
         get { bool(packProgressEnabledKey, default: false) }
         set { UserDefaults.standard.set(newValue, forKey: packProgressEnabledKey) }
     }
-    /// 出发前 N 天触发（用全局默认时间 defaultMinutes）。默认前 1 天。
+    /// 出发前 N 天触发。默认前 1 天。
     static var packProgressOffsetDays: Int {
         get { int(packProgressOffsetKey, default: 1) }
         set { UserDefaults.standard.set(newValue, forKey: packProgressOffsetKey) }
+    }
+    /// 打包提醒**独立时间**（自午夜分钟）。默认 1200=20:00——打包发生在出发前一晚，
+    /// 与出发提醒（清晨倒计时）刻意分开。
+    static let packMinutesKey = "carry.notif.pack_minutes"
+    static var packReminderMinutes: Int {
+        get { int(packMinutesKey, default: 1200) }
+        set { UserDefaults.standard.set(newValue, forKey: packMinutesKey) }
     }
 
     // MARK: 交通出发提醒（B，多档提前量分钟）——航班/火车/巴士/渡轮
@@ -168,9 +173,9 @@ extension ReminderPreferences {
         get { bool(carRentalEnabledKey, default: false) }  // 默认关
         set { UserDefaults.standard.set(newValue, forKey: carRentalEnabledKey) }
     }
-    /// 取/还车前多少分钟提醒；可多条。默认 [1440]=1 天。
+    /// 还车前多少分钟提醒；可多条。默认 [180]=3 小时（同日，正文「今天 X 还车」才成立）。
     static var carRentalLeadsMinutes: [Int] {
-        get { intList(carRentalLeadsKey, default: [1440]) }
+        get { intList(carRentalLeadsKey, default: [180]) }
         set { setIntList(carRentalLeadsKey, newValue) }
     }
 
@@ -187,9 +192,9 @@ extension ReminderPreferences {
         get { int(lodgingCheckInMinKey, default: 540) }
         set { UserDefaults.standard.set(newValue, forKey: lodgingCheckInMinKey) }
     }
-    /// 退房前提前量（分钟）。默认 1440=前 1 天（落在入住时刻同一时间点）。
+    /// 退房前提前量（分钟）。默认 180=3 小时（同日，正文「今天退房」才成立）。
     static var lodgingCheckOutLeadMinutes: Int {
-        get { int(lodgingCheckOutLeadKey, default: 1440) }
+        get { int(lodgingCheckOutLeadKey, default: 180) }
         set { UserDefaults.standard.set(newValue, forKey: lodgingCheckOutLeadKey) }
     }
 

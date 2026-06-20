@@ -70,10 +70,11 @@ enum NotificationManager {
         guard trip.departureDate >= Calendar.current.startOfDay(for: now) else { return }
         let remaining = trip.totalCount - trip.packedCount
         guard trip.totalCount > 0, remaining > 0 else { return }
-        let h = ReminderPreferences.defaultMinutes / 60, m = ReminderPreferences.defaultMinutes % 60
-        let cfg = TripReminderConfig(daysBeforeDeparture: ReminderPreferences.packProgressOffsetDays, hour: h, minute: m)
+        // 打包用**自己的时间**（默认出发前一晚 20:00），与出发提醒（清晨倒计时）分开。
+        let mins = ReminderPreferences.packReminderMinutes
+        let cfg = TripReminderConfig(daysBeforeDeparture: ReminderPreferences.packProgressOffsetDays, hour: mins / 60, minute: mins % 60)
         guard let fireDate = cfg.fireDate(relativeTo: trip.departureDate) else { return }
-        let title = String(format: NSLocalizedString("notif.pack.title", comment: ""), trip.name)
+        let title = NSLocalizedString("notif.pack.title", comment: "")
         let body = String.localizedStringWithFormat(NSLocalizedString("notif.pack.body", comment: ""), remaining)
         scheduleAt(fireDate, id: "\(tripPrefix)\(trip.id.uuidString).pack",
                    title: title, body: body, allowImminentFallback: false, now: now)
@@ -88,8 +89,8 @@ enum NotificationManager {
             guard (isCar ? ReminderPreferences.carRentalEnabled : ReminderPreferences.transportEnabled) else { continue }
             let leads = isCar ? ReminderPreferences.carRentalLeadsMinutes : ReminderPreferences.transportLeadsMinutes
             guard !leads.isEmpty else { continue }
-            scheduleTransportEvent(trip: trip, seg: seg, isReturn: false, leads: leads, now: now)
-            if isCar { scheduleTransportEvent(trip: trip, seg: seg, isReturn: true, leads: leads, now: now) }
+            // 租车只提醒「还车」（取车用户绝不会忘）；其它交通提醒出发。
+            scheduleTransportEvent(trip: trip, seg: seg, isReturn: isCar, leads: leads, now: now)
         }
     }
 
@@ -112,19 +113,13 @@ enum NotificationManager {
         guard ReminderPreferences.lodgingEnabled else { return }
         for stay in trip.safeLodgingStays {
             guard !stay.remindersMuted else { continue }   // 逐条静音
-            let inMin = stay.checkInMinutes >= 0 ? stay.checkInMinutes : ReminderPreferences.lodgingCheckInMinutes
-            if let inDate = absoluteDate(tripDeparture: trip.departureDate, dayOrder: stay.checkInDayOrder, minutes: inMin, tzId: "") {
-                let (t, b) = lodgingContent(stay: stay, isCheckOut: false)
-                scheduleAt(inDate, id: "\(tripPrefix)\(trip.id.uuidString).lodging.\(stay.id.uuidString).in",
-                           title: t, body: b, allowImminentFallback: false, now: now)
-            }
+            // 只提醒「退房」（入住用户不会忘）。退房时刻 − 提前量（同日，故「今天退房」成立）。
             let outClock = stay.checkOutMinutes >= 0 ? stay.checkOutMinutes : 11 * 60
-            if let outDate = absoluteDate(tripDeparture: trip.departureDate, dayOrder: stay.checkOutDayOrder, minutes: outClock, tzId: "") {
-                let fireDate = outDate.addingTimeInterval(TimeInterval(-ReminderPreferences.lodgingCheckOutLeadMinutes * 60))
-                let (t, b) = lodgingContent(stay: stay, isCheckOut: true)
-                scheduleAt(fireDate, id: "\(tripPrefix)\(trip.id.uuidString).lodging.\(stay.id.uuidString).out",
-                           title: t, body: b, allowImminentFallback: false, now: now)
-            }
+            guard let outDate = absoluteDate(tripDeparture: trip.departureDate, dayOrder: stay.checkOutDayOrder, minutes: outClock, tzId: "") else { continue }
+            let fireDate = outDate.addingTimeInterval(TimeInterval(-ReminderPreferences.lodgingCheckOutLeadMinutes * 60))
+            let (t, b) = lodgingContent(stay: stay)
+            scheduleAt(fireDate, id: "\(tripPrefix)\(trip.id.uuidString).lodging.\(stay.id.uuidString).out",
+                       title: t, body: b, allowImminentFallback: false, now: now)
         }
     }
 
@@ -139,10 +134,21 @@ enum NotificationManager {
             guard let fireDate = absoluteDate(tripDeparture: trip.departureDate, dayOrder: day.sortOrder, minutes: mins, tzId: "") else { continue }
             let title = String(format: NSLocalizedString("notif.daily.title", comment: ""),
                                trip.destinationCity.isEmpty ? trip.name : trip.destinationCity)
-            let body = String.localizedStringWithFormat(NSLocalizedString("notif.daily.body", comment: ""), count)
+            // 带出当天第一个安排,具体又有期待;取不到名字则退到无名版。
+            let firstName = firstPlanName(day: day)
+            let body = firstName.isEmpty
+                ? String.localizedStringWithFormat(NSLocalizedString("notif.daily.body.noname", comment: ""), count)
+                : String.localizedStringWithFormat(NSLocalizedString("notif.daily.body", comment: ""), count, firstName)
             scheduleAt(fireDate, id: "\(tripPrefix)\(trip.id.uuidString).daily.\(day.sortOrder)",
                        title: title, body: body, allowImminentFallback: false, now: now)
         }
+    }
+
+    /// 当天按 sortOrder 最靠前的安排名(地点取名、交通取班次/承运方);无名返回空串。
+    private static func firstPlanName(day: ItineraryDay) -> String {
+        var items: [(Int, String)] = (day.stops ?? []).map { ($0.sortOrder, $0.name) }
+        items += day.sortedSegments.map { ($0.sortOrder, $0.number.isEmpty ? $0.carrier : $0.number) }
+        return items.filter { !$0.1.isEmpty }.sorted { $0.0 < $1.0 }.first?.1 ?? ""
     }
 
     // MARK: 通用排期 + 事件绝对时刻
@@ -184,31 +190,29 @@ enum NotificationManager {
     }
 
     private static func transportContent(seg: TransportSegment, isReturn: Bool, leadMinutes: Int) -> (String, String) {
-        let lead = leadText(leadMinutes)
         if seg.mode == .carRental {
+            // 只还车（取车不提醒）。正文带「还车时刻」——lead 同日，故「今天」成立。
             let company = seg.carrier.isEmpty ? NSLocalizedString("notif.car.fallback", comment: "") : seg.carrier
-            let titleKey = isReturn ? "notif.car.dropoff.title" : "notif.car.pickup.title"
-            let bodyKey = isReturn ? "notif.car.dropoff.body" : "notif.car.pickup.body"
-            return (String(format: NSLocalizedString(titleKey, comment: ""), company),
-                    String(format: NSLocalizedString(bodyKey, comment: ""), lead))
+            let returnTime = seg.arriveLocalMinutes >= 0
+                ? String(format: "%02d:%02d", seg.arriveLocalMinutes / 60, seg.arriveLocalMinutes % 60) : ""
+            return (String(format: NSLocalizedString("notif.car.dropoff.title", comment: ""), company),
+                    String(format: NSLocalizedString("notif.car.dropoff.body", comment: ""), returnTime))
         }
         let label = seg.number.isEmpty
             ? (seg.carrier.isEmpty ? NSLocalizedString("notif.transport.generic", comment: "") : seg.carrier)
             : seg.number
-        let route = [seg.fromName, seg.toName].filter { !$0.isEmpty }.joined(separator: " → ")
+        let lead = leadText(leadMinutes)
         let title = String(format: NSLocalizedString("notif.transport.title", comment: ""), label)
-        let body = route.isEmpty
-            ? String(format: NSLocalizedString("notif.transport.body", comment: ""), lead)
-            : String(format: NSLocalizedString("notif.transport.body.route", comment: ""), lead, route)
-        return (title, body)
+        // 航班 / 非航班两套口吻：航班=起飞·赶飞机；火车巴士渡轮=发车·留足时间。
+        let bodyKey = seg.mode == .flight ? "notif.transport.body.flight" : "notif.transport.body.other"
+        return (title, String(format: NSLocalizedString(bodyKey, comment: ""), lead))
     }
 
-    private static func lodgingContent(stay: LodgingStay, isCheckOut: Bool) -> (String, String) {
+    /// 只「退房」提醒（入住不提醒）。正文聚焦「别落下东西」，不提超时（不施压）。
+    private static func lodgingContent(stay: LodgingStay) -> (String, String) {
         let name = stay.name.isEmpty ? NSLocalizedString("notif.lodging.fallback", comment: "") : stay.name
-        let titleKey = isCheckOut ? "notif.lodging.checkout.title" : "notif.lodging.checkin.title"
-        let bodyKey = isCheckOut ? "notif.lodging.checkout.body" : "notif.lodging.checkin.body"
-        return (String(format: NSLocalizedString(titleKey, comment: ""), name),
-                NSLocalizedString(bodyKey, comment: ""))
+        return (String(format: NSLocalizedString("notif.lodging.checkout.title", comment: ""), name),
+                NSLocalizedString("notif.lodging.checkout.body", comment: ""))
     }
 
     /// 一次性 N 秒后触发（用于"已过 fireDate"的降级路径）

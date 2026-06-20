@@ -16,16 +16,16 @@ struct NotificationSettingsView: View {
     // 打包进度（A）
     @AppStorage(ReminderPreferences.packProgressEnabledKey) private var packEnabled = false
     @AppStorage(ReminderPreferences.packProgressOffsetKey) private var packOffsetDays = 1
+    @AppStorage(ReminderPreferences.packMinutesKey) private var packMinutes = 1200  // 20:00 独立时间
     // 交通（B）
     @AppStorage(ReminderPreferences.transportEnabledKey) private var transportEnabled = true
     @AppStorage(ReminderPreferences.transportLeadsKey) private var transportLeadsRaw = "180"
-    // 租车（B，默认关）
+    // 还车（B，默认关；只还车、取车不提醒）
     @AppStorage(ReminderPreferences.carRentalEnabledKey) private var carRentalEnabled = false
-    @AppStorage(ReminderPreferences.carRentalLeadsKey) private var carRentalLeadsRaw = "1440"
-    // 住宿（B，默认关）
+    @AppStorage(ReminderPreferences.carRentalLeadsKey) private var carRentalLeadsRaw = "180"
+    // 退房（B，默认关；只退房、入住不提醒）
     @AppStorage(ReminderPreferences.lodgingEnabledKey) private var lodgingEnabled = false
-    @AppStorage(ReminderPreferences.lodgingCheckInMinKey) private var lodgingCheckInMin = 540
-    @AppStorage(ReminderPreferences.lodgingCheckOutLeadKey) private var lodgingCheckOutLead = 1440
+    @AppStorage(ReminderPreferences.lodgingCheckOutLeadKey) private var lodgingCheckOutLead = 180
     // 每日摘要（C，默认关）
     @AppStorage(ReminderPreferences.dailySummaryEnabledKey) private var dailyEnabled = false
     @AppStorage(ReminderPreferences.dailySummaryMinKey) private var dailyMinutes = 480
@@ -148,14 +148,19 @@ struct NotificationSettingsView: View {
 
     // MARK: 打包进度（A）
     private var packSection: some View {
+        // 打包有自己的时间（默认出发前一晚 20:00），与出发提醒分开。
         sectionCard("settings.notif.pack.title", subtitle: "settings.notif.pack.subtitle", isOn: $packEnabled) {
-            HStack {
-                Text("settings.notif.pack.when").font(.body)
-                Spacer()
-                Picker("", selection: Binding(get: { packOffsetDays }, set: { packOffsetDays = $0; store.rescheduleAllTrips() })) {
-                    ForEach([0, 1, 2, 3], id: \.self) { d in Text(offsetLabel(d)).tag(d) }
-                }.labelsHidden().tint(CarryAccent.color)
-            }.frame(height: 50)
+            VStack(spacing: 0) {
+                timeRow("settings.notifications.time", binding: minutesBinding($packMinutes))
+                Divider()
+                HStack {
+                    Text("settings.notif.pack.when").font(.body)
+                    Spacer()
+                    Picker("", selection: Binding(get: { packOffsetDays }, set: { packOffsetDays = $0; store.rescheduleAllTrips() })) {
+                        ForEach([0, 1, 2, 3], id: \.self) { d in Text(offsetLabel(d)).tag(d) }
+                    }.labelsHidden().tint(CarryAccent.color)
+                }.frame(height: 50)
+            }
         }
     }
 
@@ -173,18 +178,15 @@ struct NotificationSettingsView: View {
 
     // MARK: 住宿（B）
     private var lodgingSection: some View {
+        // 只「退房」提醒（入住不提醒）。退房前提前量同日。
         sectionCard("settings.notif.lodging.title", subtitle: "settings.notif.lodging.subtitle", isOn: $lodgingEnabled) {
-            VStack(spacing: 0) {
-                timeRow("settings.notif.lodging.checkin_time", binding: minutesBinding($lodgingCheckInMin))
-                Divider()
-                HStack {
-                    Text("settings.notif.lodging.checkout_lead").font(.body)
-                    Spacer()
-                    Picker("", selection: Binding(get: { lodgingCheckOutLead }, set: { lodgingCheckOutLead = $0; store.rescheduleAllTrips() })) {
-                        ForEach([0, 180, 1440], id: \.self) { m in Text(NotifLead.text(m)).tag(m) }
-                    }.labelsHidden().tint(CarryAccent.color)
-                }.frame(height: 50)
-            }
+            HStack {
+                Text("settings.notif.lodging.checkout_lead").font(.body)
+                Spacer()
+                Picker("", selection: Binding(get: { lodgingCheckOutLead }, set: { lodgingCheckOutLead = $0; store.rescheduleAllTrips() })) {
+                    ForEach([0, 60, 120, 180, 360], id: \.self) { m in Text(NotifLead.text(m)).tag(m) }
+                }.labelsHidden().tint(CarryAccent.color)
+            }.frame(height: 50)
         }
     }
 
