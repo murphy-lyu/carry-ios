@@ -303,7 +303,8 @@ struct FlightSearchSheet: View {
         } label: {
             VStack(alignment: .leading, spacing: 12) {
                 HStack {
-                    Text(r.airlineName.isEmpty ? (recognized?.displayName ?? "") : r.airlineName)
+                    // 优先本地化航司名（按航班号识别），与保存后的显示口径一致；未识别才回落上游英文。
+                    Text(recognized?.displayName ?? r.airlineName)
                         .font(.subheadline.weight(.semibold))
                         .foregroundStyle(.primary)
                     Spacer()

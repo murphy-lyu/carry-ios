@@ -3,6 +3,13 @@
 ## 最后更新
 2026-06-21
 
+## 上次改动摘要（航班名本地化：机场/航司名按界面语言显示 · spec: itinerary-flight-name-localization.md · 2026-06-21）
+
+> 中文环境下已保存航班的机场名/航司名显示英文——根因是「已有的多语言库（`airlines.json`/`airports.json`，含 9 语言）只用于搜索选点，没接到显示层」。改 render-time resolution：存语言无关的码、显示时按当前语言查名、回落原文。**编译绿**；UI 验收交用户。本会话改的与并行会话不重叠/已隔离提交。
+- **🟢 航司名**（新 `FlightNameCache.swift`，普通 enum + `static let` 同步缓存 225K 小库）：`displayCarrier(for:)` 航班从航班号 `FlightNumberParser.split` 出 IATA → 本地化 `displayName`；非航班/未识别 → 存的承运方原文。接入时间轴行、详情副标题/标题、搜索结果卡。gate 在 `.flight`（火车号不误判航司）。
+- **🟢 机场名**（仅详情副行露名，时间轴/Trip Book 显码本就语言无关）：`AirportDatabase` 加 O(1) `airport(forIATA:)`（新 `byIATA` 索引）；`TransportDetailView` 用 `@State + .task(id:)` 异步解析本地化名（1.6M 大库不在主线程同步解码），回落英文。
+- **确定性、零迁移、无新字段、无启发式**：码/号命中库 → 本地化；否则原文。同时修好「上游英文」与「手动搜索冻结语言」（render-time 解析跟随设备语言、切语言也变）。机场名非自由文本→无覆盖顾虑；承运方自定义（非航班/未识别）原样保留。
+
 ## 上次改动摘要（通知中心整体改造：统一进 Settings + per-event 静音 + 文案重写 · spec: notification-center.md · 2026-06-21）
 
 > 把全 App 通知统一成「设置 → 行程提醒」中心。**已提交**（`381ef8b` 代码+文案 / `248574e` 收尾文案微调）；**未 push**。编译绿，设置页明暗双模自验过。与并行会话（住宿上标等）交织过，xcstrings 走 surgical 提交。

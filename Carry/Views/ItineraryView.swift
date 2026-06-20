@@ -954,7 +954,8 @@ private struct TransportTimelineRow: View {
         // 交通标题与地点标题同级、同字号（.body）——航班/火车是和地点平级的时间轴事件，不该更小。
         let baseFont = Font.system(.body, design: .rounded)
         let number = segment.number.trimmingCharacters(in: .whitespaces)
-        let carrier = segment.carrier.trimmingCharacters(in: .whitespaces)
+        // 航司名按界面语言显示：航班从航班号解析本地化航司名，非航班/未识别则用存的承运方原文。
+        let carrier = FlightNameCache.displayCarrier(for: segment)
         if number.isEmpty {
             let main = carrier.isEmpty ? NSLocalizedString(segment.mode.localizationKey, comment: "") : carrier
             return Text(main).font(baseFont.weight(.semibold)).foregroundStyle(.primary)

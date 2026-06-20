@@ -62,6 +62,7 @@ actor AirportDatabase {
     static let shared = AirportDatabase()
 
     private var airports: [Airport] = []
+    private var byIATA: [String: Airport] = [:]
     private var loaded = false
     private static let logger = Logger(subsystem: "com.carry.app", category: "AirportDatabase")
 
@@ -76,10 +77,21 @@ actor AirportDatabase {
         do {
             let data = try Data(contentsOf: url)
             airports = try JSONDecoder().decode([Airport].self, from: data)
+            byIATA = Dictionary(airports.compactMap { $0.iata.isEmpty ? nil : ($0.iata.uppercased(), $0) },
+                                uniquingKeysWith: { a, _ in a })
             loaded = true  // 仅解码成功后置位：失败时下次 search 重试（快速失败），避免整生命周期静默返回空。
         } catch {
             Self.logger.error("airports.json decode failed: \(error.localizedDescription, privacy: .public)")
         }
+    }
+
+    /// O(1) 精确按 IATA 码取机场——用于显示已保存航段时按码解析本地化机场名（`Airport.displayName`）。
+    /// 与 `search` 区分：search 是模糊检索（输入补全），此处是「码已知、取规范条目」。
+    func airport(forIATA code: String) -> Airport? {
+        ensureLoaded()
+        let key = code.trimmingCharacters(in: .whitespaces).uppercased()
+        guard !key.isEmpty else { return nil }
+        return byIATA[key]
     }
 
     /// 检索机场。匹配 IATA / ICAO / 英文名·城市 / 中文名，按相关性 + 大型机场优先排序。

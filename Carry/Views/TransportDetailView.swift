@@ -32,6 +32,9 @@ struct TransportDetailView: View {
     @EnvironmentObject var store: TripStore
     @Environment(\.dismiss) private var dismiss
     @State private var editing = false
+    /// IATA 码 → 本地化机场名，详情出现时经 `AirportDatabase` 异步解析（1.6 MB 库不在主线程同步解码）。
+    /// 解析前回落到存的英文机场名；解析后刷新为当前界面语言。
+    @State private var airportNames: [String: String] = [:]
     @AppStorage("distance_unit") private var distanceUnitRaw = DistanceUnit.automatic.rawValue
     private var distanceUnit: DistanceUnit { DistanceUnit(rawValue: distanceUnitRaw) ?? .automatic }
 
@@ -40,7 +43,7 @@ struct TransportDetailView: View {
     private var titleText: String {
         let number = segment.number.trimmingCharacters(in: .whitespaces)
         if !number.isEmpty { return number }
-        let carrier = segment.carrier.trimmingCharacters(in: .whitespaces)
+        let carrier = FlightNameCache.displayCarrier(for: segment)
         return carrier.isEmpty ? NSLocalizedString(segment.mode.localizationKey, comment: "") : carrier
     }
 
@@ -80,15 +83,39 @@ struct TransportDetailView: View {
     }
 
     private var departurePoint: RoutePoint? {
-        routePoint(name: segment.fromName, code: segment.fromCode,
+        routePoint(name: localizedAirportName(code: segment.fromCode, fallback: segment.fromName),
+                   code: segment.fromCode,
                    minutes: segment.departLocalMinutes, dayOffset: 0,
                    terminal: terminalDisplay(segment.fromTerminal), address: segment.fromAddress)
     }
     private var arrivalPoint: RoutePoint? {
-        routePoint(name: segment.toName, code: segment.toCode,
+        routePoint(name: localizedAirportName(code: segment.toCode, fallback: segment.toName),
+                   code: segment.toCode,
                    minutes: segment.arriveLocalMinutes,
                    dayOffset: segment.arriveDayOrder - segment.departDayOrder,
                    terminal: terminalDisplay(segment.toTerminal), address: segment.toAddress)
+    }
+
+    /// 机场名按界面语言显示：码命中本地库则用本地化名，否则回落存的原文（非机场地点/未收录机场不受影响）。
+    private func localizedAirportName(code: String, fallback: String) -> String {
+        let key = code.trimmingCharacters(in: .whitespaces).uppercased()
+        if !key.isEmpty, let name = airportNames[key] { return name }
+        return fallback
+    }
+
+    /// 解析本段起讫机场的本地化名（仅当存了 IATA 码）。`.task(id:)` 在详情出现 / 切段时跑一次。
+    /// `@MainActor`：`await` 机场 actor 后回到主线程再写 `@State`。
+    @MainActor
+    private func resolveAirportNames() async {
+        var result: [String: String] = [:]
+        for code in [segment.fromCode, segment.toCode] {
+            let key = code.trimmingCharacters(in: .whitespaces).uppercased()
+            guard !key.isEmpty, result[key] == nil else { continue }
+            if let airport = await AirportDatabase.shared.airport(forIATA: key) {
+                result[key] = airport.displayName
+            }
+        }
+        airportNames = result
     }
 
     /// 航站楼显示：仅航班、且值以数字开头时加「T」前缀（2 → T2，国际通用航站楼记法）。
@@ -123,6 +150,7 @@ struct TransportDetailView: View {
         .sheet(isPresented: $editing) {
             TransportEditView(tripId: tripId, segmentId: segment.id)
         }
+        .task(id: segment.id) { await resolveAirportNames() }
     }
 
     private var header: some View {
@@ -143,8 +171,9 @@ struct TransportDetailView: View {
         case .dropoff: return NSLocalizedString("itinerary.transport.section.dropoff", comment: "")
         case .full:
             // 航班/火车等：标题已是班次号 → 承运方放副标题（航司全名两行）；标题已是承运方时不重复。
+            // 航司名按界面语言显示（航班从航班号解析本地化航司名，否则存的承运方原文）。
             let number = segment.number.trimmingCharacters(in: .whitespaces)
-            let carrier = segment.carrier.trimmingCharacters(in: .whitespaces)
+            let carrier = FlightNameCache.displayCarrier(for: segment)
             return (!number.isEmpty && !carrier.isEmpty) ? carrier : nil
         }
     }
