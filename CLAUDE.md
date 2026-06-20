@@ -190,6 +190,33 @@ Carry 在中国大陆 App Store 上架，涉及地理政治敏感内容时必须
 - **密钥/口令绝不硬编码进源码（`carry-ios` 是公开仓库）**：任何 key / token / 口令——哪怕是低安全级的客户端门槛（如航班代理的 `appToken`）——都**不准**以字面量写在被 git 跟踪的源码里（公开仓库会被密钥扫描器秒扫）。做法：放 **gitignore 的 `Carry/Resources/Secrets.plist`**（随 bundle 打包、运行时读取、缺失降级空），新机/CI 按 `scripts/flight-proxy/README` 自建。真正的上游 API key **只在 Cloudflare Worker 的 secret 里**，永不进 App/git。半公开 token 的防线是「上游月额度上限 + Worker 限流 + 缓存」，不是「保密」；万一泄露走**轮换**（Worker secret + Secrets.plist 同步换新、旧值即作废），不必改写 git 历史。
 - **隐私政策需要更新就直接做、别挂起**：涉及新数据使用时，直接改 `carry-legal` 仓库（`~/Documents/Projects/carry-legal`，权限已具）`privacy/zh.html`+`index.html`（中英同步、PIPL 第 14 条不删）并 push，不要当待办挂着等确认（用户长期授权）。
 
+## 并行会话纪律（多会话同时改 Carry 时 · 每次必须遵守）
+
+> 用户常为赶进度同时开多个会话改不同模块。这是**被允许、被鼓励的工作方式**，不要劝用户改回单会话。但多会话若**共用同一个工作目录**，会共享同一个 git 暂存区（index）→ A 会话刚 `git add`、B 会话一 `commit` 就把 A 的改动也卷进 B 的提交。**防止互相卷入是我的默认职责，不是用户的监督义务**——用户只管并行，下面两条由我在会话里负责落实。
+> 来源：2026-06-19，三会话共用 `~/Documents/Projects/Carry`，一次提交卷入了另一会话刚 `git add` 的 20+ 文件（先错提交→`reset --mixed` 撤销→隔离 index 重提才修好）。
+
+### 1. 并发下提交必须走「隔离 index」，禁止「暂存→提交整个 index」两步路径
+**提交前先判断是否存在并行会话**：工作区若出现**本会话从未碰过的改动**（`git status` 里有我没改过的文件，尤其是会话期间**新冒出来**的文件/分支变化）→ 视为有并行会话。此时**绝不**用「`git add` 我的文件 → `git commit`」——这两步之间会被并行会话的 `git add` 注入，`git commit` 提交的是当下整个共享 index。
+
+正确做法＝**临时隔离 index**，与共享 index 物理分离、并行会话碰不到：
+```bash
+export GIT_INDEX_FILE=/tmp/myindex && rm -f /tmp/myindex
+git read-tree HEAD                          # 临时 index = 当前 HEAD 树
+git add -- <只属于本会话的文件...>           # 独占文件：直接 add 工作区版本
+# 共享文件（如 Localizable.xcstrings，混了并行会话的 hunk）只取我的 hunk：
+#   生成「HEAD baseline + 仅我的改动」的 patch → git apply --cached 到临时 index
+git apply --cached /tmp/my-hunks.patch
+git diff --cached --name-only               # 提交前核验：只有我的文件
+GIT_INDEX_FILE=/tmp/myindex git commit -F - <<'MSG' ... MSG
+git reset --mixed -q HEAD                    # 提交后把主 index 同步回新 HEAD、不动工作区
+```
+要点：① 独占文件 `git add` 工作区版即可；② **共享文件**（被并行会话也改过的，典型 `.xcstrings`/`docs`）只能用 patch 取自己的 hunk，**不能**整文件 `git add`（会带上并行 key），也**不能**用 `git commit -- <path>`（它提工作区、同样卷入，见 [[git-commit-pathspec-commits-worktree-not-index]]）；③ 提交后 `git reset --mixed HEAD` 同步主 index，给并行会话留干净状态。
+**无并行会话时**（工作区改动全是我的）→ 普通 `git add` + `git commit` 即可，不必上隔离 index。
+
+### 2. 会话开始即识别并行场景、主动提示 worktree
+会话开始/接手时若发现**在共享主仓库**（`~/Documents/Projects/Carry`）且像多模块并行（progress.md 交接提到并行会话、或工作区已有他人在途改动）→ **主动告诉用户**：并行会话各开独立 **git worktree**（同仓库、各自独立工作目录+暂存区，物理隔离、永不互相卷入），并可代为创建（`git worktree add ../Carry-<模块> -b feature/<模块>`）。判据：worktree = 「独立文件夹 + 绑一分支」，多会话需要的本质是「独立暂存区」。
+**边界（对用户老实说）**：「打开第 N 个会话、放哪个目录」这个动作发生在任何会话读到本规则之前，规范无法替用户自动完成；但只要第 1 条提交纪律落实，**即便忘了开 worktree、会话挤在一起，提交也不会互相卷入**——worktree 是「更省心」，提交隔离是「兜底安全网」。
+
 ## 框架协作与诊断纪律（核心规范 · 每次必须遵守）
 
 > 反复踩坑攒出来的三条核心工作方式，凌驾于"快点改完"之上。
