@@ -689,7 +689,7 @@ final class TripStore: ObservableObject {
                     departDayOrder: seg.departDayOrder, departLocalMinutes: seg.departLocalMinutes,
                     arriveDayOrder: seg.arriveDayOrder, arriveLocalMinutes: seg.arriveLocalMinutes,
                     seat: seg.seat, confirmationCode: seg.confirmationCode,
-                    note: seg.note, aircraftType: seg.aircraftType,
+                    note: seg.note, aircraftType: seg.aircraftType, cabinClass: seg.cabinClass,
                     distanceMeters: seg.distanceMeters, durationMinutes: seg.durationMinutes,
                     vehicleModel: seg.vehicleModel, licensePlate: seg.licensePlate,
                     phone: seg.phone,
@@ -1363,6 +1363,7 @@ final class TripStore: ObservableObject {
         confirmationCode: String = "",
         note: String = "",
         aircraftType: String = "",
+        cabinClass: String = "",
         distanceMeters: Double = 0,
         durationMinutes: Int = 0,
         vehicleModel: String = "",
@@ -1402,6 +1403,7 @@ final class TripStore: ObservableObject {
             confirmationCode: confirmationCode,
             note: note,
             aircraftType: aircraftType,
+            cabinClass: cabinClass,
             distanceMeters: distanceMeters,
             durationMinutes: durationMinutes,
             vehicleModel: vehicleModel,
@@ -1446,6 +1448,7 @@ final class TripStore: ObservableObject {
         confirmationCode: String? = nil,
         note: String? = nil,
         aircraftType: String? = nil,
+        cabinClass: String? = nil,
         distanceMeters: Double? = nil,
         durationMinutes: Int? = nil,
         vehicleModel: String? = nil,
@@ -1479,6 +1482,7 @@ final class TripStore: ObservableObject {
         if let confirmationCode { seg.confirmationCode = confirmationCode }
         if let note { seg.note = note }
         if let aircraftType { seg.aircraftType = aircraftType }
+        if let cabinClass { seg.cabinClass = cabinClass }
         if let distanceMeters { seg.distanceMeters = distanceMeters }
         if let durationMinutes { seg.durationMinutes = durationMinutes }
         if let vehicleModel { seg.vehicleModel = vehicleModel }

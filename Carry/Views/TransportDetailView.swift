@@ -374,6 +374,11 @@ struct TransportDetailView: View {
         if !segment.seat.isEmpty {
             rows.append(AnyView(LabeledDetailRow(icon: "chair", labelKey: "itinerary.transport.field.seat", value: segment.seat)))
         }
+        // 舱位等级（仅航班设了才显）：受控词表，按设备 locale 本地化展示。
+        if let cabin = CabinClass(rawValue: segment.cabinClass) {
+            rows.append(AnyView(LabeledDetailRow(icon: "chair.lounge.fill", labelKey: "itinerary.flight.field.cabin",
+                                                 value: NSLocalizedString(cabin.localizationKey, comment: ""))))
+        }
         if !segment.confirmationCode.isEmpty {
             rows.append(AnyView(CopyableDetailRow(icon: "ticket", labelKey: "itinerary.transport.field.confirmation", value: segment.confirmationCode)))
         }
@@ -407,7 +412,7 @@ struct TransportDetailView: View {
     @ViewBuilder
     private var costCard: some View {
         if segment.hasCost {
-            DetailRowGroup(rows: [AnyView(LabeledDetailRow(icon: "creditcard", labelKey: "cost.field.label",
+            DetailRowGroup(rows: [AnyView(LabeledDetailRow(icon: "creditcard", labelKey: "cost.field.total",
                                                            value: CurrencyCatalog.format(segment.costAmount, code: segment.costCurrencyCode)))])
         }
     }

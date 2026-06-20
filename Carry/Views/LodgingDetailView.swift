@@ -109,7 +109,7 @@ struct LodgingDetailView: View {
     @ViewBuilder
     private var costCard: some View {
         if stay.hasCost {
-            DetailRowGroup(rows: [AnyView(LabeledDetailRow(icon: "creditcard", labelKey: "cost.field.label",
+            DetailRowGroup(rows: [AnyView(LabeledDetailRow(icon: "creditcard", labelKey: "cost.field.total",
                                                            value: CurrencyCatalog.format(stay.costAmount, code: stay.costCurrencyCode)))])
         }
     }

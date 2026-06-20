@@ -37,6 +37,13 @@ struct FlightSearchSheet: View {
     private var trimmedNumber: String { number.trimmingCharacters(in: .whitespaces) }
     private var parsedFlight: (airline: String, number: String)? { FlightNumberParser.split(trimmedNumber) }
 
+    /// 手动兜底预填：查不到航班时，把用户已输入的航班号 + 即时识别到的航司带进手动表单
+    /// （别让用户在手动页从头重打）；其余字段留空给用户补。
+    private var manualPrefill: FlightLookupResult {
+        FlightLookupResult(airlineName: recognized?.displayName ?? "",
+                           flightNumber: trimmedNumber.uppercased())
+    }
+
     var body: some View {
         NavigationStack {
             ScrollView {
@@ -71,7 +78,8 @@ struct FlightSearchSheet: View {
                                       onFinish: { dismiss() })
                 case .manual:
                     TransportEditView(tripId: tripId, dayId: dayId, initialMode: .flight,
-                                      embedInOwnNavigationStack: false, onFinish: { dismiss() })
+                                      prefill: manualPrefill, embedInOwnNavigationStack: false,
+                                      onFinish: { dismiss() })
                 }
             }
             .onAppear(perform: setup)

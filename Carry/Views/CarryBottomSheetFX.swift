@@ -1147,6 +1147,18 @@ private final class FXPassthroughView: UIView {
         // 背后卡片 Button → 误开行程。**根治**：凡落在底栏 frame 内的点，一律由底栏认领（命中按钮→按钮；
         // 落空隙→底栏自身吸掉），**永不下传卡片**——与底栏 SwiftUI 内容是否透明无关，故底栏 UI 怎么改都不复发。
         // convert 用 UIView API（自动处理底栏的缩放 transform，见 placeSheet 对 barView 施加的 transform）。
+        #if DEBUG
+        // 🔬 临时排查（空态→导入穿透）：探针放在最顶、**不依赖 barView**，照出 hitTest 是否被调用、
+        // barView 弱引用是否 nil、不放行区高度。坐实后本块删除。
+        if point.y > bounds.height - 160 {
+            if let b = barView {
+                let pInBar = b.convert(point, from: self)
+                print("🔬[HT] point=\(point) barView=set win=\(b.window != nil) hidden=\(b.isHidden) alpha=\(b.alpha) h=\(b.bounds.height) contains=\(b.bounds.contains(pInBar))")
+            } else {
+                print("🔬[HT] point=\(point) barView=nil ← 弱引用已丢，防穿透失效")
+            }
+        }
+        #endif
         if let bar = barView, bar.window != nil, !bar.isHidden, bar.alpha > 0.01 {
             let pInBar = bar.convert(point, from: self)
             if bar.bounds.contains(pInBar) {

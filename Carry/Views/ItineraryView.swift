@@ -1339,7 +1339,7 @@ struct StopDetailView: View {
     @ViewBuilder
     private var costCard: some View {
         if stop.hasCost {
-            DetailRowGroup(rows: [AnyView(LabeledDetailRow(icon: "creditcard", labelKey: "cost.field.label",
+            DetailRowGroup(rows: [AnyView(LabeledDetailRow(icon: "creditcard", labelKey: "cost.field.total",
                                                            value: CurrencyCatalog.format(stop.costAmount, code: stop.costCurrencyCode)))])
         }
     }

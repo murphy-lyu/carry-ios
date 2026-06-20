@@ -46,19 +46,31 @@ func itineraryTimeString(_ date: Date) -> String {
     return f.string(from: date)
 }
 
-/// 共用时间选择器弹层：滚轮选时分；「完成」设定、编辑既有时可「清除时间」回到未设。
+/// 共用时间选择器弹层：滚轮选时分；「完成」提交、「取消」回退、编辑既有时可「清除时间」回到未设。
 /// 自管 dismiss——调用方用 `.sheet(item:)` 在**稳定祖先（Form / NavigationStack）**上呈现（勿挂列表行）。
+///
+/// 内部用本地草稿 `draft`：滚轮只改草稿、「完成」才写回调用方状态 → 「取消 / 下滑关闭」都能干净回退，
+/// 不会出现「滚一下就实时改了入住/退房时间、关掉也回不去」的问题。
 struct ItineraryTimePickerSheet: View {
     @Binding var hasTime: Bool
     @Binding var time: Date
 
     @Environment(\.dismiss) private var dismiss
 
+    @State private var draft: Date
+    private let wasSet: Bool
+
+    init(hasTime: Binding<Bool>, time: Binding<Date>) {
+        _hasTime = hasTime
+        _time = time
+        _draft = State(initialValue: time.wrappedValue)
+        wasSet = hasTime.wrappedValue
+    }
+
     var body: some View {
-        let wasSet = hasTime
         NavigationStack {
             VStack(spacing: 0) {
-                DatePicker("itinerary.transport.field.time", selection: $time, displayedComponents: .hourAndMinute)
+                DatePicker("itinerary.transport.field.time", selection: $draft, displayedComponents: .hourAndMinute)
                     .datePickerStyle(.wheel)
                     .labelsHidden()
                     .padding(.top, 8)
@@ -76,8 +88,12 @@ struct ItineraryTimePickerSheet: View {
             .navigationTitle("itinerary.transport.field.time")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("common.cancel") { dismiss() }   // 不写回 draft → 自动回退
+                }
                 ToolbarItem(placement: .confirmationAction) {
                     Button("common.done") {
+                        time = draft       // 仅此刻提交
                         hasTime = true
                         dismiss()
                     }

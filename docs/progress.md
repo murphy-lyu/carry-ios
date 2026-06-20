@@ -1,7 +1,25 @@
 # 项目进度
 
 ## 最后更新
-2026-06-19
+2026-06-20
+
+## 上次改动摘要（行程详情/编辑大打磨 + 通用附件 + 电话 + 表单日期时间统一 · 2026-06-20）
+
+> 一整轮「行程模块」打磨，**已全部提交并 push 到 main**（截至 `121b12b`/`584a316`）。后续仍有少量本会话后期小改 + 多个并行会话的在途改动**未提交**（见文末「⚠️ 交接」）。本会话用过模拟器实测（用户授权）。
+- **🟢 活动详情卡（交通/地点/住宿）系统性重排**：字段排序框架（骨架→定位/凭据→描述规格→费用→备注→附件，写入 design-system）；**费用 / 备注 / 附件各自独立成卡（详情）/独立 Section（编辑），固定顺序 费用→备注→附件**，不与类型字段混排。
+- **🟢 交通「航线 hero」独立成卡**：出发/到达竖直 rail 串成一段旅程；marker 随 mode（租车=钥匙、其余=↗↘）。**租车详情按端聚焦**（取车/还车各只显该端地址 + 导航卡 DirectionsModule；「取车/还车」移到浮窗副标题；聚焦端去「+N」）。
+- **🟢 通用附件「文件/照片/链接/拍照」**：新 `ItineraryAttachment`（挂 地点/交通/住宿，cascade）；原文件存沙盒（`AttachmentStore`，25MB 上限、`reconcileAttachmentFiles` 兜底回收），照片存 640px 缩略图；链接走应用内 `SFSafariViewController`（不外跳）；拍照 `CameraPicker`（仅相机可用时显示，Info.plist+InfoPlist.xcstrings 加 `NSCameraUsageDescription`）。**新建实体也能加**（owner 为 nil 缓冲 `pending`，保存后 flush）。备份带字节、复制行程拷文件。**分享/导出审计通过**（渲染器不读附件）。隐私政策（carry-legal 中英）已补。组件：`AttachmentEditSection`(纯渲染+回调)/`.attachmentAddFlow`(呈现挂稳定父级 Form)/`AttachmentDetailCard`。详情尾标统一 `eye`+固定边框对齐。
+- **🟢 电话字段（住宿/租车/地点）**：MapKit `MKMapItem.phoneNumber` 自动回填（Tripsy 同款，零接口）+ 可手填；详情 `CallableDetailRow` 点按 `tel:` 拨号。`ItineraryPlaceSearchSheet` 回调加 `phone`。
+- **🟢 表单日期/时间交互统一**：抽 `ItineraryFormControls.swift`（`FormChip` + `ItineraryTimePickerSheet` + `itineraryTimeString`）；交通/地点/住宿三处时间一律 **chip+弹出**（去 toggle+内联跳变）；地点开始/结束改双时间 chip。日期/天控件因结构不同保留各自。**去掉日期行的日历图标**（表单同区其它行无图标，对齐一列）。
+- **🟢 详情浮层钉头部**：`DetailSheetScaffold`——头部固定不随滚动、仅卡片区滚动；自定义 detent 封顶 0.94×（避免 iOS26 把弹层缩成内缩卡片）。
+- **🟢 机型只显型号**：`aircraftModelDisplay` 剥厂商前缀（Airbus A330-200→A330-200），ATR 等不剥；非破坏（仅展示层）。编辑页航班号领衔、航司在下；机型挪入「更多」。
+- **🟢 编辑地点类别只列地点类**（`StopCategory.placeSelectableCases`，剔除航班/火车/租车/邮轮）——之前只有「添加」过滤、「编辑」漏了，已对齐。地点编辑两条 footer 文案按用户要求删除（死键同删）。
+- **🟢 删除按钮文案随类型**（删除租车/航班…）；租车「天数」派生显示（编辑+详情，同住宿晚数口径）。
+- **✅ 排查「新增无时间地点排到顶部」**：模拟器实测**未复现**——新地点正确落当天底部（代码 sortOrder=max+1 + timeline 按 sortOrder，本就垫底）。临时调试日志已删。若复现需用户提供具体场景。
+
+## ⚠️ 交接（2026-06-20，多并行会话共用同一 checkout，git 交织）
+> 工作区当前混了**本会话后期小改**（ItineraryView / Transport*Detail / Transport*Edit / LodgingDetail / Localizable）+ **其它并行会话在途改动**（CostInputRow / FlightSearchSheet / DataBackupManager 的 `cabinClass` 舱位等级 / `cost.field.total` 改名 等），**均未提交**。`main` 领先 origin 1（`584a316` 详情卡 iOS26 内缩修复，已提交未推）。
+> **新会话接手前必读**：先 `git status` 看清；提交务必走「隔离 index + 显式 `git add 我的文件`」，**禁止 `git add -A` / `git commit -a`**（会卷入并行会话改动）。详见 CLAUDE.md「并行会话纪律」。根治：各会话开独立 `git worktree`。
 
 ## 上次改动摘要（Trip Book 纳入航班/住宿统计 · spec 前提反转 · 2026-06-19 续 4）
 

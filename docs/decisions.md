@@ -1,5 +1,34 @@
 # 决策日志
 
+## 2026-06-20 行程详情/编辑大打磨：通用附件 · 电话 · 日期时间组件统一 · 详情卡结构定稿
+
+### 通用附件（文件/照片/链接）落到所有行程实体（spec: itinerary-attachments.md）
+- **架构**：新增 `ItineraryAttachment` @Model + `AttachmentKind`（file/photo/link），以 `.cascade` 关系挂到 `ItineraryStop`/`TransportSegment`/`LodgingStay` 三类实体（交通/住宿/地点全覆盖）。文件**字节存沙盒、仅文件名进 model**（镜像 `BackgroundImageStore` 范式），`AttachmentStore` 负责 save/data/delete/copy/deleteOrphans，**上限 25MB**；照片存「缩略图 + 原图」，链接不抓标题（避免网络副作用与不确定性）。
+- **备份/还原闭环**：`DataBackupManager` 新增 `BackupAttachment` + 三实体 backup struct 带 attachments 字段 + `attachmentFiles` 字节字典（可选、向后兼容，遵守「沙盒关联文件须显式随备份带字节」铁律）；`duplicateTrip` 经 `copyAttachments` 深拷贝。
+- **分享/导出过滤掉附件**：附件是私人随身资料（订单截图、护照页…），分享给同行者的清单/导出 PDF 一律不含；隐私政策（carry-legal zh.html + index.html）同步加「附件仅本地、不随分享外发」段。
+- **新建实体（owner 尚无 id）也能加附件**：用 `attachmentAddFlow` ViewModifier 把 PhotosPicker/fileImporter/相机/链接输入**统一挂到稳定父 Form**（不挂 Section 行——列表行回收会令 sheet 瞬间自关，已踩坑），owner 为空时先 buffer 到 pending、保存时 flush 进 store。相机走 `UIImagePickerController`（NSCameraUsageDescription 补全 9 语言）。
+- **链接输入用独立 sheet、不用 alert**：alert 内 TextField 在 sheet 之上有 focus bug（无法输入/粘贴）→ 改 `LinkInputSheet`。
+- **链接 App 内打开**：用 `SFSafariViewController`（UIViewControllerRepresentable）在 Carry 内开，不外跳 Safari。
+
+### 电话字段：MapKit 自动回填 + 点按拨号
+- `phone` 字段加到 `LodgingStay`/`TransportSegment`（租车）/`ItineraryStop`。地点搜索经 `MKLocalSearch` → `MKMapItem.phoneNumber` **自动回填**（零录入，对标 Tripsy 拿电话/地址的方式），搜索回调签名扩成 `(name, lat, lon, address, phone)`。
+- 详情页 `CallableDetailRow`：点按 `tel://` 直接拨号，方便行程中联系酒店/租车行。
+
+### 日期+时间交互组件全模块统一（chip + 弹出选择器）
+- 交通/地点/住宿三处编辑表单的「可选日期/时间」**统一成 `FormChip` + 弹出 `ItineraryTimePickerSheet`**，弃「Toggle + 内联 DatePicker」（内联展开会令表单行高跳变、体验差）。见 [[carry-form-datetime-chip-pattern]]。
+- **编辑表单日期行去掉日历图标**：与时间 chip 视觉统一（chip 自解释，不靠图标领位），不是表单里每行都要图标——按需，不画蛇添足。日期行加常驻文字标签（先前用户反馈「填了值标签消失剩裸值」的延续修正）。
+
+### 详情/编辑卡片结构定稿
+- **费用→备注→附件 固定顺序、各自独立卡**：详情与编辑里三者都拆成 standalone 卡片，顺序恒定。费用不再靠近顶部（先前用户反馈成本不该在最上方）。
+- **详情浮层头部钉死不随滚动**：`DetailSheetScaffold` 量头部+内容高度、**只给单一 `.height` detent、刻意不含 `.large`**——iOS 26 的 `.large` 会把弹层「脱成两侧带边距的浮动卡片」（详情弹出即缩的根因）；不进 `.large` 即不缩。长内容仅下方卡片区内部滚动，关闭 X 常驻。
+- **机型只显类型码**：`aircraftModelDisplay` 过滤掉「Airbus/Boeing/Embraer/Bombardier/COMAC/McDonnell Douglas」厂商前缀（保留 ATR），只留 `A330-200` 这类型号；机型从主区挪进「更多」。
+- **航班号领衔**：承运方降为副标题（延续 06-19 标题约定）。
+- **租车不用航班（起降）图标**：取车/还车用 key 图标；按 pickup/return 端点聚焦（focus 枚举 .full/.pickup/.dropoff），聚焦视图去掉「+N」、显示详细地址 + 导航入口 + 租期天数。删除按钮文案 mode-aware（「删除租车」等）。新增 `vehicleModel`/`licensePlate` 字段。
+- **地点分类菜单只留地点类**：移除交通方式等非地点分类（`placeSelectableCases`）；地点添加/编辑表单去掉 footer 文案。
+
+### 排序复核：新建无时间地点落到列表底部（确认非 bug）
+用户反馈「新地点加到顶部」——逐层读代码均指向底部（`addItineraryStop` 的 sortOrder = 现有 max + 1），无法静态复现；经模拟器实测确认新地点确实落底部、为非问题（[[verify-code-reachability-before-asserting]] 的实践：先复现再断言）。无代码改动。
+
 ## 2026-06-19 Trip Book 纳入航班/住宿统计（前提反转，spec: trip-book.md）
 背景：用户问飞行时间/里程、座位偏好、机型统计该不该进 Trip Book。`trip-book.md` 原把「航班里程/时长/机场 Top」「住宿晚数」列为 🔴 不做，**唯一理由是「没数据」**——但该前提已被后续功能推翻（与 2026-06-16「总花费」反转同一逻辑）：航班搜索 + `FlightLookupService` 让 `TransportSegment` 带上 `distanceMeters`/`durationMinutes`/`aircraftType`/`fromCode`/`toCode`（航班号查询自动回填、零新增录入）；住宿改「入住日+退房日」后 `nights` 成确定派生值。
 决策：

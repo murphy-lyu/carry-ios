@@ -41,7 +41,7 @@ struct CostInputRow: View {
 
     var body: some View {
         HStack(spacing: 12) {
-            Text("cost.field.label")
+            Text("cost.field.total")
                 .font(.body)
                 .foregroundStyle(.primary)
             Spacer(minLength: 12)

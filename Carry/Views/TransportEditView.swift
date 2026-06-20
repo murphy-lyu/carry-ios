@@ -68,6 +68,7 @@ struct TransportEditView: View {
     @State private var confirmationCode = ""
     @State private var note = ""
     @State private var aircraftType = ""
+    @State private var cabinClass = ""   // CabinClass.rawValue，空 = 未填
     @State private var distanceMeters: Double = 0
     @State private var durationMinutes: Int = 0
     @State private var vehicleModel = ""    // 租车专属
@@ -353,11 +354,14 @@ struct TransportEditView: View {
             Text("itinerary.transport.field.date")
             Spacer()
             // 日期 chip：多天行程可点选换天；单天行程仅作信息展示。
-            if days.count > 1 {
+            // 到达 chip 对「边」型交通（航班/火车…）在出发已落末日时多给「末日+1」，
+            // 让红眼返程能选「次日落地」（见 selectableDayOrders）。
+            let dayOptions = selectableDayOrders(isFrom: isFrom)
+            if dayOptions.count > 1 {
                 Menu {
                     Picker(selection: dayOrder) {
-                        ForEach(days, id: \.sortOrder) { d in
-                            Text(dayLabel(d.sortOrder)).tag(d.sortOrder)
+                        ForEach(dayOptions, id: \.self) { order in
+                            Text(dayLabel(order)).tag(order)
                         }
                     } label: { EmptyView() }
                 } label: {
@@ -376,6 +380,19 @@ struct TransportEditView: View {
         }
     }
 
+    /// 日期 chip 的可选天。出发恒为行程内的天；**到达**对「边」型交通（航班/火车/巴士/渡轮）
+    /// 在出发已落最后一天时，额外给出「末日+1」——红眼返程跨午夜落到行程结束日之后，
+    /// 该到达不需要成为一个真实行程天（航班渲染为「边」、到达只是时刻+「+N」角标）。
+    /// 租车「还车」是离散事件、须落在真实天，故不放开。
+    private func selectableDayOrders(isFrom: Bool) -> [Int] {
+        let base = days.map(\.sortOrder)
+        guard let last = base.max() else { return base }
+        if !isFrom, mode != .carRental, departDayOrder >= last {
+            return base + [last + 1]
+        }
+        return base
+    }
+
     private var moreSection: some View {
         Section {
             // 座位 / 确认号：常驻标签（填了值如「3B」「ABC123」也看得懂；空态标签即提示）。
@@ -386,6 +403,22 @@ struct TransportEditView: View {
                     Text("itinerary.transport.field.seat")
                 }
             }
+            // 舱位等级（仅航班）：受控词表用原生 .menu Picker（标题留 LabeledContent 外、值在右），
+            // 纯手动——航班查询不返回舱位。空 = 未填。
+            if mode == .flight {
+                LabeledContent {
+                    Picker("", selection: $cabinClass) {
+                        Text("cabin.unset").tag("")
+                        ForEach(CabinClass.allCases) { c in
+                            Text(LocalizedStringKey(c.localizationKey)).tag(c.rawValue)
+                        }
+                    }
+                    .labelsHidden()
+                    .pickerStyle(.menu)
+                } label: {
+                    Text("itinerary.flight.field.cabin")
+                }
+            }
             LabeledContent {
                 TextField("", text: $confirmationCode)
                     .multilineTextAlignment(.trailing)
@@ -393,10 +426,11 @@ struct TransportEditView: View {
             } label: {
                 Text("itinerary.transport.field.confirmation")
             }
-            // 机型（航班搜索预填后只读展示）：从顶部承运方区挪到「更多」，顶部只留航班号/承运方。
-            if mode == .flight && !aircraftType.isEmpty {
+            // 机型：可编辑（航班搜索预填后可改、手动添加可填）。常驻于「更多」，顶部只留航班号/承运方。
+            // 存接口原值，详情页展示时再经 aircraftModelDisplay 剥品牌前缀。
+            if mode == .flight {
                 LabeledContent {
-                    Text(aircraftModelDisplay(aircraftType))
+                    TextField("", text: $aircraftType).multilineTextAlignment(.trailing)
                 } label: {
                     Text("itinerary.flight.field.aircraft")
                 }
@@ -522,6 +556,7 @@ struct TransportEditView: View {
             if seg.arriveLocalMinutes >= 0 { hasArriveTime = true; arriveTime = dateFromMinutes(seg.arriveLocalMinutes) }
             seat = seg.seat; confirmationCode = seg.confirmationCode; note = seg.note
             aircraftType = seg.aircraftType
+            cabinClass = seg.cabinClass
             // 租车还车开关：无显式存储位，从数据派生——还车端空、或与取车端同名同坐标即「同取车」。
             if seg.mode == .carRental {
                 sameReturnLocation = seg.toName.isEmpty
@@ -565,8 +600,9 @@ struct TransportEditView: View {
         // 时区仅航班机场选点会填；切到非航班模式时一并清空，避免残留。
         let savedFromTZ = mode == .flight ? fromTimeZoneId : ""
         let savedToTZ = mode == .flight ? toTimeZoneId : ""
-        // 机型 / 航程 / 时长仅航班有意义。
+        // 机型 / 舱位 / 航程 / 时长仅航班有意义。
         let savedAircraft = mode == .flight ? aircraftType : ""
+        let savedCabin = mode == .flight ? cabinClass : ""
         let savedDistance = mode == .flight ? distanceMeters : 0
         let savedDuration = mode == .flight ? durationMinutes : 0
         // 车型 / 车牌 / 电话仅租车有意义；切到其它模式一并清空，避免残留。
@@ -599,7 +635,7 @@ struct TransportEditView: View {
                 departDayOrder: departDayOrder, departLocalMinutes: departMinutes,
                 arriveDayOrder: safeArriveDay, arriveLocalMinutes: arriveMinutes,
                 seat: savedSeat, confirmationCode: confirmationCode, note: note,
-                aircraftType: savedAircraft, distanceMeters: savedDistance, durationMinutes: savedDuration,
+                aircraftType: savedAircraft, cabinClass: savedCabin, distanceMeters: savedDistance, durationMinutes: savedDuration,
                 vehicleModel: savedVehicleModel, licensePlate: savedLicensePlate, phone: savedPhone
             )
             store.setTransportCost(tripId: tripId, segmentId: segmentId,
@@ -619,7 +655,7 @@ struct TransportEditView: View {
                 departDayOrder: departDayOrder, departLocalMinutes: departMinutes,
                 arriveDayOrder: safeArriveDay, arriveLocalMinutes: arriveMinutes,
                 seat: savedSeat, confirmationCode: confirmationCode, note: note,
-                aircraftType: savedAircraft, distanceMeters: savedDistance, durationMinutes: savedDuration,
+                aircraftType: savedAircraft, cabinClass: savedCabin, distanceMeters: savedDistance, durationMinutes: savedDuration,
                 vehicleModel: savedVehicleModel, licensePlate: savedLicensePlate, phone: savedPhone
             ) {
                 store.setTransportCost(tripId: tripId, segmentId: newId,
@@ -710,7 +746,9 @@ struct TransportEditView: View {
             let span = bundle.spanDays
             let dOrder = clampOrder(daysBetween(tripStart, depYMD), span: span)
             departDayOrder = dOrder
-            arriveDayOrder = clampOrder(dOrder + cross, span: span)
+            // 出发夹在行程内；到达 = 出发 + 跨天数，**不设上限**——红眼返程可落到行程末日之后
+            // （与手动 chip 的「末日+1」一致，时间轴按差值显示「+N」）。
+            arriveDayOrder = dOrder + cross
         } else {
             arriveDayOrder = departDayOrder + cross
         }

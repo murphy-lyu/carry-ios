@@ -386,6 +386,22 @@ enum TransportMode: String, Codable, CaseIterable {
     var localizationKey: String { "itinerary.transport.mode.\(rawValue)" }
 }
 
+// MARK: - CabinClass（舱位等级 · 受控词表）
+
+/// 航班舱位等级。存 `rawValue`（稳定 key），展示按语言本地化（避免自由文本中英混填）。
+/// 纯手动——航班号查询返回的是航班时刻表、不含舱位（舱位是「这张票」的属性）。空 = 未填。
+enum CabinClass: String, CaseIterable, Identifiable {
+    case economy
+    case premiumEconomy = "premium_economy"
+    case business
+    case first
+
+    var id: String { rawValue }
+
+    /// 本地化 key（String，不耦合 SwiftUI；view 侧包 LocalizedStringKey）。与 TransportMode 同范式。
+    var localizationKey: String { "cabin.\(rawValue)" }
+}
+
 // MARK: - TransportSegment
 
 /// 一段交通（时间轴上的「边」）：连接两点的移动，有出发地+到达地、起降时间、承运方/班次。
@@ -431,6 +447,8 @@ final class TransportSegment: CostBearing {
     var note: String = ""
     /// 机型（如 "A320" / "Boeing 787 Dreamliner"）；航班号查询可自动回填，可空（spec: itinerary-flight-lookup.md）。
     var aircraftType: String = ""
+    /// 舱位等级（`CabinClass.rawValue`，空 = 未填）；纯手动，航班查询不返回。仅航班有意义。
+    var cabinClass: String = ""
     /// 航程（米）+ 飞行时长（分钟）——航班号查询时取自接口（greatCircleDistance / 起降时刻差），0 = 未知。
     var distanceMeters: Double = 0
     var durationMinutes: Int = 0
@@ -484,6 +502,7 @@ final class TransportSegment: CostBearing {
         confirmationCode: String = "",
         note: String = "",
         aircraftType: String = "",
+        cabinClass: String = "",
         distanceMeters: Double = 0,
         durationMinutes: Int = 0,
         vehicleModel: String = "",
@@ -520,6 +539,7 @@ final class TransportSegment: CostBearing {
         self.confirmationCode = confirmationCode
         self.note = note
         self.aircraftType = aircraftType
+        self.cabinClass = cabinClass
         self.distanceMeters = distanceMeters
         self.durationMinutes = durationMinutes
         self.vehicleModel = vehicleModel
