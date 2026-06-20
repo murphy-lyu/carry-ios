@@ -89,6 +89,8 @@ struct HomeView: View {
     // 读同一份 appearance 设置，给 sheet 内容显式套 preferredColorScheme，使在设置页内
     // 切换外观时设置页本身也立即生效（否则要关掉重开才更新）。
     @AppStorage("appearance_mode") private var appearanceModeRaw = AppearanceMode.system.rawValue
+    @AppStorage("distance_unit") private var distanceUnitRaw = DistanceUnit.automatic.rawValue
+    private var distanceUnit: DistanceUnit { DistanceUnit(rawValue: distanceUnitRaw) ?? .automatic }
     @State private var showSearch = false
     @State private var showTripBook = false
     @State private var showSpendDetail = false
@@ -1000,6 +1002,10 @@ struct HomeView: View {
                     if stats.visitedContinentCount > 0 { tripBookContinentsCard(stats) }
                     if stats.domesticCount + stats.internationalCount > 0 { tripBookScopeCard(stats) }
                     if stats.seasonCounts.values.reduce(0, +) > 0 { tripBookSeasonsCard(stats) }
+                    // 航班 / 住宿（部分覆盖：仅加了航班/住宿的行程有数；无则整块隐藏）。
+                    if stats.hasFlightStats { tripBookFlightCard(stats) }
+                    if !stats.airportTallies.isEmpty { tripBookAirportsCard(stats) }
+                    if stats.totalNights > 0 { tripBookLodgingCard(stats) }
                     // 费用压轴：前面都是出行习惯/统计，花费性质特殊（用户记账数据），单独置于最后。
                     // 对汇率管理器的观察收在 ExchangeRateScope 这一层子视图（花费卡的真正消费者），
                     // 不上抬到根 HomeView——根是首页 UIKit FX sheet（含底栏）的宿主，在根层观察会令其
@@ -1356,6 +1362,103 @@ struct HomeView: View {
                 }
             }
         }
+    }
+
+    // MARK: 航班 / 住宿卡（spec 前提反转见 trip-book.md）
+
+    /// 「飞行」卡：累计里程 + 飞行时长（合一），机型作轻量小行收底。
+    private func tripBookFlightCard(_ s: TripBookStats) -> some View {
+        let distance = s.flightDistanceMeters > 0
+            ? CarryDistanceFormat.string(meters: s.flightDistanceMeters, unit: distanceUnit) : "—"
+        let duration = s.flightDurationMinutes > 0
+            ? tripBookDurationText(s.flightDurationMinutes) : "—"
+        return tripBookCard("tripbook.flight.title", systemImage: "airplane") {
+            HStack(spacing: 0) {
+                tripBookBigStatText(distance, "tripbook.flight.distance")
+                Divider().frame(height: 36)
+                tripBookBigStatText(duration, "tripbook.flight.duration")
+            }
+            if let summary = aircraftSummaryText(s) {
+                Divider()
+                HStack(spacing: 6) {
+                    Image(systemName: "airplane.circle")
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
+                    Text(summary)
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
+                }
+            }
+        }
+    }
+
+    /// 「常经停机场」卡：按 IATA 码计数降序（镜像「最常去国家」），码作烟蓝胶囊 chip。
+    private func tripBookAirportsCard(_ s: TripBookStats) -> some View {
+        let shown = Array(s.airportTallies.prefix(6))
+        return tripBookCard("tripbook.airports.title", systemImage: "airplane.departure") {
+            VStack(spacing: 10) {
+                ForEach(shown, id: \.label) { tally in
+                    HStack(spacing: 10) {
+                        Text(tally.label)
+                            .font(.system(.footnote, design: .rounded).weight(.semibold))
+                            .foregroundStyle(CarryAccent.color)
+                            .padding(.horizontal, 8)
+                            .padding(.vertical, 3)
+                            .background(Capsule().fill(CarryAccent.color.opacity(0.12)))
+                        Spacer()
+                        Text(verbatim: "\(tally.count)×")
+                            .font(.system(.subheadline, design: .rounded).weight(.semibold))
+                            .foregroundStyle(.secondary)
+                    }
+                }
+            }
+        }
+    }
+
+    /// 「住宿」卡：累计住宿晚数（住宿改「入住日 + 退房日」后可派生）。
+    private func tripBookLodgingCard(_ s: TripBookStats) -> some View {
+        tripBookCard("tripbook.lodging.title", systemImage: "bed.double") {
+            VStack(spacing: 4) {
+                CountUpText(value: s.totalNights,
+                            font: .system(size: 34, weight: .bold, design: .rounded))
+                    .foregroundStyle(.primary)
+                Text("tripbook.lodging.nights_label")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+            .frame(maxWidth: .infinity)
+        }
+    }
+
+    /// 字符串版大数字（里程/时长含单位、无法用 Int 滚动），长值自动缩放保持单行。
+    private func tripBookBigStatText(_ value: String, _ label: LocalizedStringKey) -> some View {
+        VStack(spacing: 4) {
+            Text(value)
+                .font(.system(size: 30, weight: .bold, design: .rounded))
+                .foregroundStyle(.primary)
+                .lineLimit(1)
+                .minimumScaleFactor(0.6)
+            Text(label)
+                .font(.caption)
+                .foregroundStyle(.secondary)
+        }
+        .frame(maxWidth: .infinity)
+    }
+
+    /// 累计飞行时长「127h 30m」（h/m 通用、与详情页同范式）。
+    private func tripBookDurationText(_ minutes: Int) -> String {
+        let h = minutes / 60, m = minutes % 60
+        return h > 0 ? "\(h)h \(m)m" : "\(m)m"
+    }
+
+    /// 机型小行文案：1 种 → 「机型 · A320」；≥2 种 → 「N 种机型 · 最常 A320」。无机型 → nil。
+    private func aircraftSummaryText(_ s: TripBookStats) -> String? {
+        guard let top = s.aircraftTallies.first else { return nil }
+        if s.distinctAircraftCount == 1 {
+            return String(format: NSLocalizedString("tripbook.aircraft.one", comment: ""), top.label)
+        }
+        return String(format: NSLocalizedString("tripbook.aircraft.many", comment: ""),
+                      Int64(s.distinctAircraftCount), top.label)
     }
 
     // MARK: Trip Book helpers
@@ -1720,15 +1823,11 @@ struct TripCard: View {
 
     // MARK: Redesign style helpers
 
-    /// The "live" accent for spine + progress.
+    /// The "live" accent for the trip's leading spine.
     // Over a photo the accent (a dark colour in Light mode) reads as a black bar; switch the
-    // spine + progress fill to white so they match the white text on the scrimmed photo.
+    // spine fill to white so it matches the white text on the scrimmed photo.
     private var styleAccent: Color { onPhoto ? .white : Color.accentColor }
 
-    private var progress: Double {
-        bundle.totalCount == 0 ? 0 : Double(bundle.packedCount) / Double(bundle.totalCount)
-    }
-    
     private var dateAndDurationText: String {
         // 无日期「规划中」行程不显示日期区间，改显示轻标签「未来某天」（单一来源 tripdates.unset，
         // 与行程详情页头部共用，避免重复维护）。
@@ -1767,13 +1866,6 @@ struct TripCard: View {
 
     private var progressMetaTextColor: Color {
         colorScheme == .dark ? Color.white.opacity(0.62) : Color(uiColor: .secondaryLabel)
-    }
-
-    private var progressTrackColor: Color {
-        if onPhoto { return Color.white.opacity(0.28) }   // translucent white track over a photo
-        return colorScheme == .dark
-            ? Color.white.opacity(0.05)
-            : Color.primary.opacity(0.14)
     }
 
     /// 最高一级层级：临近、要行动的「即将出发」行程（非已结束、非无日期规划）。
@@ -1963,33 +2055,6 @@ struct TripCard: View {
                     }
                 }
                 .animation(.easeInOut(duration: 0.3), value: isComplete)
-
-                // 仅「即将出发」展示打包进度：规划中（日期未定）与已结束行程不展示打包信息；
-                // 且 0 件时也不画空轨（噪音）。与上方件数 pill 的显隐口径一致（都用 isHero）。
-                if isHero && !isComplete && bundle.totalCount > 0 {
-                    Color.clear.frame(height: 8)
-                    GeometryReader { geo in
-                        ZStack(alignment: .leading) {
-                            Capsule()
-                                .fill(progressTrackColor)
-                                .frame(height: 3)
-                            Capsule()
-                                .fill(
-                                    LinearGradient(
-                                        colors: [
-                                            styleAccent,
-                                            styleAccent.opacity(0.7)
-                                        ],
-                                        startPoint: .leading,
-                                        endPoint: .trailing
-                                    )
-                                )
-                                .frame(width: max(0, geo.size.width * progress), height: 3)
-                                .animation(.spring(response: 0.42, dampingFraction: 0.82), value: progress)
-                        }
-                    }
-                    .frame(height: 3)
-                }
             }
             .frame(maxWidth: .infinity, alignment: .leading)
         }

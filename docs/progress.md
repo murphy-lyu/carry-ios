@@ -3,6 +3,52 @@
 ## 最后更新
 2026-06-19
 
+## 上次改动摘要（Trip Book 纳入航班/住宿统计 · spec 前提反转 · 2026-06-19 续 4）
+
+> 用户问飞行时间/里程、座位、机型该不该进 Trip Book。评估后（详见 `decisions.md` / `trip-book.md`）：原 🔴「没数据」前提已被航班搜索 + 住宿两日期推翻 → 这几项转为可做。**编译绿（主 app + Widget）**；**未提交、未 push**；UI 验收交用户。
+- **🟢 飞行卡**（`hasFlightStats` 门控）：累计里程（`CarryDistanceFormat` + `distance_unit` 偏好）+ 飞行时长（`Xh Ym`）两大数；底部**轻量机型小行**（「N 种机型 · 最常 X」，1 种时「机型 · X」）。
+- **🟢 机场 Top 卡**（`airportTallies` 非空门控）：按 IATA 码经停次数降序前 6，码作烟蓝胶囊 chip + `N×`，镜像「最常去国家」卡。
+- **🟢 住宿累计晚数卡**（`totalNights>0` 门控）：大数 + 「累计住宿晚数」。
+- **座位偏好不做**：`seat` 自由文本无法可靠反推窗/过道/中间，做准须新增录入 → 违背克制。
+- **落点**：`TripBookStats`（+`LabelTally`、航班/住宿聚合字段、`compute` 计数）、`TripBookStats+Trips`（从 `safeItineraryDays` 的 flight 段 + `safeLodgingStays` 映射）、`HomeView`（3 张卡 + helper、加 `distance_unit` @AppStorage）、`Localizable.xcstrings`（8 key × 9 语言，clean filter 验证无重排噪声、并行会话在途文案未丢）。**全部 hide-when-empty**，老用户无数据不显示空卡。
+
+## ⚠️ 交接（2026-06-19 续：交通详情收尾 + 住宿两日期/图标，未提交、与并行会话交织）
+
+> ⚠️ **续 4 追加**：上面 Trip Book 航班/住宿统计的改动也落在这批未提交集里，新增动了 `Carry/Models/TripBookStats.swift`、`TripBookStats+Trips.swift`、`Carry/Views/HomeView.swift`（均非并行会话共享文件，冲突风险低），并续改 `Localizable.xcstrings` / `specs/trip-book.md` / `docs/decisions.md`。提交时一并处理。
+
+> 本会话尾段的改动**全部未提交**，且与并行「附件/地址」会话**共享同几个文件**（`LodgingEditView` / `TransportDetailView` / `ItineraryView` / `Localizable.xcstrings` / `Itinerary` / `TripStore` / `DataBackupManager` / `CarrySchema` 等），逐 hunk 交织。**未 push（main 领先 origin 27；token 已远程轮换、push 安全）**。新会话接手前先 `git status` 看清，提交时与并行会话协调、别互相覆盖。
+> ✅ **build 已绿（2026-06-19 续 3）**：附件重构已接完——`AttachmentEditSection`/`attachmentAddFlow` 改为按 owner 分流（入库/缓冲），三编辑页调用点均补齐 `owner/existing/pending/tripId`。详见下方「续 3」。
+
+- **本会话已提交**（按序）：`16135f0` 租车两事件渲染、`f76409d` 住宿过夜名提 secondary、`ed99513` 交通打磨大批、`12932a9` 文档、`9545ba6` 交通/租车标题字号对齐地点。
+- **未提交（本会话尾段，落在上面交织文件里）**：
+  1. **航班/火车详情标题拆两行**（班次号标题 + 承运方副标题）。
+  2. **飞行时长放回明细列表**（试 hero 连接线失败，反转回 Tripsy 式；hero 只留两端点）。
+  3. **住宿条床图标透明度统一**（full dayColor，过夜靠空心图标+regular+无前缀退后）。
+  4. **住宿录入改「入住日 + 退房日」两日期**（弃「住几晚」Stepper，nights 派生、退房恒在行程内）+ 「住宿」组内**只读行**显「晚数 · N 晚」（原 footer 太弱、已移进 Section）。spec/decisions 已记。
+- **待办**：① 真机/模拟器 UI 验收（用户来，本会话后期奉用户要求**未自驱模拟器**）；② 与并行会话协调后整批提交；③ push（token 已处理）。
+
+## 上次改动摘要（附件补齐：详情拆卡 + 拍照 + 新建即加 + 电话 · 2026-06-19 续 3）
+
+> 编译绿（iPhone 17 Pro / iOS 27）；未 push。
+- **🟢 详情页费用/备注独立成卡**：交通/地点/住宿详情把费用、备注从信息卡拆出，与附件并列、固定顺序 **费用 → 备注 → 附件**（与编辑页一致；信息卡只留骨架+定位/凭据+规格）。design-system 已更新。
+- **🟢 拍照加附件**：附件菜单加「拍照」（`CameraPicker` = UIImagePickerController `.camera`），仅相机可用时显示（模拟器隐藏）；Info.plist + InfoPlist.xcstrings 加 `NSCameraUsageDescription`（9 语言）。
+- **🟢 新建实体也能加附件**：owner 为 nil（新建交通/住宿）时附件缓冲 `pending`（文件先落沙盒），保存拿到 id 后 flush 入库；取消由 `reconcileAttachmentFiles` 兜底清孤儿。`AttachmentEditSection`/`.attachmentAddFlow` 重构为按 owner 分流。地点恒既有实体、用 `.constant([])`。
+- **🟢 电话字段（住宿/租车/地点）+ 应用内 Safari 链接**（本轮稍前）：MapKit `MKMapItem.phoneNumber` 自动回填、`CallableDetailRow` 点按拨号；链接用 `SFSafariViewController` 应用内打开。
+
+## 上次改动摘要（活动详情卡重排 + 航线 hero + 租车字段/详情/天数 + 通用附件 · 2026-06-19 续 2）
+
+> 本轮全程**编译绿**（iPhone 17 Pro / iOS 27 模拟器）；**未 push**。UI 验收交用户。涉及 spec：`itinerary-car-rental.md`、`itinerary-attachments.md`（新建，已 Shipped）；规范沉淀进 `docs/design-system.md`。
+
+- **🟢 活动详情卡字段排序框架**：交通/地点/住宿三类详情卡按统一信息层级（骨架→定位/凭据→描述规格→费用→备注）重排，费用不再靠上。框架写入 design-system。
+- **🟢 交通「航线 hero」独立成卡**：出发/到达单拎一卡、竖直 rail 串成「一段旅程」，机场码/时间放大；marker 随 mode（租车=钥匙、其余=↗↘）；rail 半段线修正不越界。
+- **🟢 租车详情按端聚焦 + 导航**：取车/还车各只显该端地址（`.pickup`/`.dropoff`），「取车/还车」移到浮窗**副标题**，并接 `DirectionsModule`；聚焦端去掉「+N」。
+- **🟢 租车新字段**：`vehicleModel`/`licensePlate`（详情/编辑，仅租车）、端点 `fromAddress`/`toAddress`（详情名称下显详细地址，捕获原被丢弃的搜索 placemark.title）、派生「天数」（编辑+详情，同住宿晚数口径）。全部轻量迁移 + 备份/复制/store/9 语言全链路同步。删除按钮文案随类型（删除租车/航班…）。
+- **🟢 通用附件「文件/照片/链接」（新功能，全行程实体共用）**：新 `ItineraryAttachment` model（挂 地点/交通/住宿，cascade）；原文件存沙盒（`AttachmentStore`，25MB 上限、孤儿回收 `reconcileAttachmentFiles`），照片另存 640px 缩略图；链接纯 URL。复用 SwiftUI 原生 `photosPicker`/`fileImporter`/`quickLookPreview`（无 UIKit 包装）。详情查看（`AttachmentDetailCard`）、编辑管理（`AttachmentEditSection`，仅既有实体）。备份带字节（auto-backup 不带、export 内嵌 `attachmentFiles` 字典）、复制行程拷文件、`duplicateTrip` 同步。**分享/导出审计通过**：渲染器不读 `.attachments`，天然不外泄。隐私政策（carry-legal zh+en）已补「附件仅本地、不上传、不随分享」。埋点 `attachmentAdded/Opened/SaveFailed`。v1 取舍：未做拍照（仅相册/文件/链接）；附件仅在编辑既有实体时可加。
+  - **附件添加流程修复**：`.sheet`/picker 原挂在 Form Section（列表行）上 → 行回收时被销毁（链接 sheet 一弹即消失）。重构为 `AttachmentEditSection`（纯渲染 + `request` 回调）+ `.attachmentAddFlow` 修饰器（呈现挂稳定父级 Form）；confirmationDialog → Menu；链接输入用独立 sheet 而非 alert+TextField（嵌套呈现失焦坑）。
+- **🟢 编辑页「费用/备注/附件」各自独立 Section、固定顺序**（费用→备注→附件）：三类编辑页把这三项从「更多/详情」混排里拆出、收到表单底部固定次序，不与类型字段混在一起。详情页保持信息卡聚合（场景不同）。
+- **🟢 链接在 Carry 内打开**：附件链接点按用 `SFSafariViewController`（应用内 Safari）打开、不跳出；仅 http/https，其它 scheme 交系统。
+- **🟢 电话字段（住宿 / 租车 / 地点）**：MapKit 搜索结果的 `MKMapItem.phoneNumber` 自动回填（Tripsy 同款，零额外接口），可手填；详情卡 `CallableDetailRow` 点按直接 `tel:` 拨号。住宿电话紧随地址、租车在车牌后（仅租车）、地点在详情段。航班/火车不加（无可拨地点电话）。全链路（model/备份/复制/store/9 语言 `itinerary.transport.field.phone`）同步，轻量迁移。`ItineraryPlaceSearchSheet` 回调加 `phone` 参数，两调用方（住宿/交通）+ 地点搜索 `AddStopView` 均接上。
+
 ## 上次改动摘要（行程时间轴统一 + 租车两事件/详情 + 航班标题与航站楼 · 2026-06-19 续）
 
 > 一大轮「行程交通」打磨,与并行航班/租车会话**共享多个文件、逐 hunk 交织**;按用户授权**整批合入一个 commit `ed99513`**(含并行会话的租车详情/字段/备份工作,整体编译绿)。**模拟器 iOS 26.5 实测**;**未 push**(main 领先 origin 25)。spec: `itinerary-car-rental.md`(含多条增补)。

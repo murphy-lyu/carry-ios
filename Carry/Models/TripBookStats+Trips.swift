@@ -16,6 +16,26 @@ extension TripBookStats {
             let cal = Calendar.current
             let month: Int? = t.isDateless ? nil : cal.component(.month, from: t.departureDate)
             let year: Int? = t.isDateless ? nil : cal.component(.year, from: t.departureDate)
+
+            // 航班统计：只看 flight 段（里程/时长/机型由航班号查询回填，火车等不会有）。
+            var flightMeters: Double = 0
+            var flightMinutes = 0
+            var aircraft: [String] = []
+            var airports: [String] = []
+            for day in t.safeItineraryDays {
+                for seg in (day.segments ?? []) where seg.mode == .flight {
+                    flightMeters += seg.distanceMeters
+                    flightMinutes += seg.durationMinutes
+                    let model = seg.aircraftType.trimmingCharacters(in: .whitespaces)
+                    if !model.isEmpty { aircraft.append(model) }
+                    for code in [seg.fromCode, seg.toCode] {
+                        let c = code.trimmingCharacters(in: .whitespaces).uppercased()
+                        if !c.isEmpty { airports.append(c) }
+                    }
+                }
+            }
+            let nights = t.safeLodgingStays.reduce(0) { $0 + max(0, $1.nights) }
+
             return TripStatInput(
                 days: t.spanDays,   // 旅行天数 = 含两端实际天数（非晚数）；与首页/行程页同口径
                 isDateless: t.isDateless,
@@ -25,7 +45,12 @@ extension TripBookStats {
                 departureMonth: month,
                 departureYear: year,
                 packedItems: t.packedCount,
-                totalItems: t.totalCount
+                totalItems: t.totalCount,
+                flightDistanceMeters: flightMeters,
+                flightDurationMinutes: flightMinutes,
+                aircraftTypes: aircraft,
+                airportCodes: airports,
+                lodgingNights: nights
             )
         }
         return compute(inputs: inputs)

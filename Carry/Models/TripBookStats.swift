@@ -27,11 +27,25 @@ struct TripStatInput {
     var departureYear: Int? = nil
     var packedItems: Int = 0
     var totalItems: Int = 0
+
+    // 航班统计（仅 flight 段；航班号查询/手填回填，缺则 0/空）。spec 前提反转见 trip-book.md。
+    var flightDistanceMeters: Double = 0   // Σ 大圆里程（米）
+    var flightDurationMinutes: Int = 0     // Σ 飞行时长（分钟）
+    var aircraftTypes: [String] = []       // 非空机型，每航段一条（可重复，用于计数）
+    var airportCodes: [String] = []        // flight 段 from/to IATA 码（非空、已大写）
+    /// 累计住宿晚数（Σ stay.nights）；住宿改「入住日 + 退房日」后可派生。
+    var lodgingNights: Int = 0
 }
 
 struct CountryTally: Equatable {
     let code: String   // 归并后的展示码
     let count: Int     // 含该国家/地区的（已到访）行程数
+}
+
+/// 通用「标签 → 次数」计数项（机型 / 机场），按 count 降序、同数按 label 字母序。
+struct LabelTally: Equatable {
+    let label: String
+    let count: Int     // 出现次数（按航段计，一趟多段各计一次）
 }
 
 struct TripBookStats: Equatable {
@@ -51,8 +65,20 @@ struct TripBookStats: Equatable {
     var packedItems: Int = 0
     var totalItems: Int = 0
 
+    // 航班 / 住宿（部分覆盖：仅加了航班/住宿的行程有数；无数据时 UI 整块隐藏）。
+    var flightDistanceMeters: Double = 0
+    var flightDurationMinutes: Int = 0
+    var aircraftTallies: [LabelTally] = []   // 机型 → 航段次，降序
+    var airportTallies: [LabelTally] = []    // IATA 码 → 经停次，降序
+    var totalNights: Int = 0
+
     var visitedContinentCount: Int { continentCounts.keys.count }
     var packingCompletion: Double { totalItems > 0 ? Double(packedItems) / Double(totalItems) : 0 }
+
+    /// 是否有可展示的飞行数据（里程或时长任一 > 0）→ 决定飞行卡是否出现。
+    var hasFlightStats: Bool { flightDistanceMeters > 0 || flightDurationMinutes > 0 }
+    /// 坐过的不同机型数。
+    var distinctAircraftCount: Int { aircraftTallies.count }
 
     /// 纯聚合。`homeCountry`/`normalize` 默认取全局 storefront 口径，单测时可注入。
     static func compute(
@@ -65,6 +91,8 @@ struct TripBookStats: Equatable {
         var countryTrips: [String: Int] = [:]      // 归并码 → 含它的已到访行程数
         var continentTrips: [Continent: Int] = [:]  // 大洲 → 含它的已到访行程数
         var visited = Set<String>()
+        var aircraftCounts: [String: Int] = [:]     // 机型 → 航段次
+        var airportCounts: [String: Int] = [:]      // IATA 码 → 经停次
 
         for t in inputs {
             // 行程册 = 旅行「回顾」：所有统计只算**已发生**的行程（已出发 + 进行中），
@@ -104,6 +132,13 @@ struct TripBookStats: Equatable {
             }
             let continents = Set(normalized.compactMap { CountryData.continentByAlpha2[$0] })
             for c in continents { continentTrips[c, default: 0] += 1 }
+
+            // 航班 / 住宿：按航段累计（一趟多段各计一次）；缺失字段贡献 0/空、不污染。
+            s.flightDistanceMeters += t.flightDistanceMeters
+            s.flightDurationMinutes += t.flightDurationMinutes
+            s.totalNights += t.lodgingNights
+            for a in t.aircraftTypes { aircraftCounts[a, default: 0] += 1 }
+            for code in t.airportCodes { airportCounts[code, default: 0] += 1 }
         }
 
         s.visitedCountryCount = visited.count
@@ -112,6 +147,13 @@ struct TripBookStats: Equatable {
         s.countryTallies = countryTrips
             .map { CountryTally(code: $0.key, count: $0.value) }
             .sorted { $0.count != $1.count ? $0.count > $1.count : $0.code < $1.code }
+        // 机型 / 机场：按次数降序，同数按 label 字母序稳定排序。
+        let sortTally: ([String: Int]) -> [LabelTally] = { dict in
+            dict.map { LabelTally(label: $0.key, count: $0.value) }
+                .sorted { $0.count != $1.count ? $0.count > $1.count : $0.label < $1.label }
+        }
+        s.aircraftTallies = sortTally(aircraftCounts)
+        s.airportTallies = sortTally(airportCounts)
         return s
     }
 
