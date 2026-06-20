@@ -79,6 +79,7 @@ struct PackingListView: View {
     @State private var showSuggestSheet = false
     @State private var showBackgroundPicker = false
     @State private var showPhotoImport = false
+    @State private var showSpend = false   // 行程花费页（spec: itinerary-trip-spend.md）
     @State private var pendingPickedProvider: NSItemProvider?
     @State private var repositionProvider: PickedBackgroundProvider?
 
@@ -211,6 +212,14 @@ struct PackingListView: View {
                                 withAnimation(.spring(duration: 0.3, bounce: 0.2)) { isReorderingItinerary = true }
                             } label: {
                                 Label("itinerary.reorder.menu", systemImage: "arrow.up.arrow.down")
+                            }
+                        }
+                        // 行程花费：总额 + 分布 + 逐笔清单（spec: itinerary-trip-spend.md）。
+                        if detailTab == .itinerary {
+                            Button {
+                                showSpend = true
+                            } label: {
+                                Label("tripspend.menu", systemImage: "chart.pie")
                             }
                         }
                         // 共享「行程级操作」（两个 tab 通用、顺序一致）：编辑行程 → 添加背景图。
@@ -450,6 +459,10 @@ struct PackingListView: View {
         }
         .sheet(isPresented: $showPhotoImport) {
             PhotoTripImportView(tripId: tripId)
+                .environmentObject(store)
+        }
+        .sheet(isPresented: $showSpend) {
+            TripSpendView(tripId: tripId)
                 .environmentObject(store)
         }
         .alert(
