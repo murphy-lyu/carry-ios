@@ -27,18 +27,31 @@ enum CarryAccent {
 /// Per-day colours for itinerary route planning (map pins + routes + timeline nodes).
 /// This is a DELIBERATE, scoped exception to the single-accent rule (see decisions.md 2026-06-13):
 /// a multi-day route drawn in one accent is an unreadable tangle, so each day gets a distinct,
-/// muted, dark-mode-adaptive hue. Day 1 keeps the brand smoky blue (CarryAccent) for continuity;
-/// the rest cycle through a restrained palette. Used ONLY by itinerary planning — nowhere else
-/// may introduce non-accent colours.
+/// dark-mode-adaptive hue. Day 1 keeps the brand smoky blue (CarryAccent) for continuity;
+/// the rest cycle through a warm, sunny "going on a trip" palette. Used ONLY by itinerary
+/// planning — nowhere else may introduce non-accent colours.
+///
+/// 10 colours, cycled by `sortOrder % 10` (see decisions.md 2026-06-20). Warm-dominant (7 warm +
+/// sea-teal/palm-green reliefs + brand blue) for a cheerful, vacation feel — a pure-warm set was
+/// tried and rejected (warm hues span too little of the wheel, ΔE collapsed to ~8).
+/// The ORDER is solved, not arbitrary: a CIEDE2000 search (over both light & dark) arranges the
+/// hues so ANY 5 consecutive days are mutually distinct (guaranteed min ΔE ≈ 12.5), so long trips
+/// (15, 31, …) never place look-alike colours near each other. The front 7 carry 6 distinct hue
+/// families (near-duplicate pinks/golds pushed to days 8–10); palm green sits at Day 3 by request.
+/// Do NOT reorder or add colours casually — re-run `scripts/itinerary-day-palette-solve.py` to
+/// re-verify the 5-day-window guarantee first.
 enum ItineraryDayPalette {
     private static let palette: [UIColor] = [
-        CarryAccent.uiColor,                                                   // Day 1 — 烟蓝 (brand)
-        adaptive(light: (0.710, 0.443, 0.353), dark: (0.788, 0.557, 0.471)),  // 陶土 terracotta
-        adaptive(light: (0.369, 0.541, 0.431), dark: (0.486, 0.659, 0.549)),  // 鼠尾草绿 sage
-        adaptive(light: (0.541, 0.416, 0.576), dark: (0.663, 0.553, 0.694)),  // 梅紫 plum
-        adaptive(light: (0.690, 0.537, 0.290), dark: (0.788, 0.659, 0.416)),  // 赭黄 ochre
-        adaptive(light: (0.369, 0.420, 0.588), dark: (0.510, 0.565, 0.722)),  // 暮蓝 slate indigo
-        adaptive(light: (0.690, 0.416, 0.510), dark: (0.788, 0.553, 0.627)),  // 玫灰 dusty rose
+        CarryAccent.uiColor,                                                   // 0 · Day 1 — 烟蓝 smoky blue (brand)
+        adaptive(light: (0.878, 0.478, 0.373), dark: (0.910, 0.596, 0.510)),  // 1 · 珊瑚 coral
+        adaptive(light: (0.455, 0.675, 0.333), dark: (0.573, 0.757, 0.475)),  // 2 · 棕榈绿 palm green
+        adaptive(light: (0.820, 0.580, 0.310), dark: (0.882, 0.682, 0.451)),  // 3 · 焦糖 caramel
+        adaptive(light: (0.745, 0.412, 0.471), dark: (0.831, 0.541, 0.592)),  // 4 · 豆沙玫 rosewood
+        adaptive(light: (0.239, 0.639, 0.604), dark: (0.404, 0.737, 0.706)),  // 5 · 海蓝绿 lagoon teal
+        adaptive(light: (0.792, 0.451, 0.337), dark: (0.859, 0.565, 0.461)),  // 6 · 赤陶 clay
+        adaptive(light: (0.925, 0.651, 0.690), dark: (0.949, 0.733, 0.761)),  // 7 · 胭脂粉 blush pink
+        adaptive(light: (0.863, 0.549, 0.235), dark: (0.910, 0.659, 0.404)),  // 8 · 万寿菊 marigold
+        adaptive(light: (0.760, 0.345, 0.420), dark: (0.835, 0.482, 0.553)),  // 9 · 浆果红 berry
     ]
 
     private static func adaptive(light: (CGFloat, CGFloat, CGFloat),

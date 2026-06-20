@@ -3,6 +3,15 @@
 ## 最后更新
 2026-06-20
 
+## 上次改动摘要（行程按天色板：7→10 色 + 转暖色「出发去玩」基调 + 5 天窗求解 · 2026-06-20 续）
+
+> 本会话只动 4 个文件（`AppearanceMode.swift` / `docs/decisions.md` / `docs/design-system.md` / 新增 `scripts/itinerary-day-palette-solve.py`）+ 本 `progress.md`，与并行会话在途改动（`ItineraryView`/`ItineraryReorderCollection`/`TripReminderConfig`/`Localizable.xcstrings`/`specs/itinerary-map-scroll.md`）**完全不重叠**，走隔离 index 提交。**编译绿**（主 app + Widget）；UI 验收交用户。
+- **🟢 `ItineraryDayPalette` 7 → 10 色，整组转暖**（`AppearanceMode.swift`）：第 1 天保留品牌烟蓝，其余 珊瑚 / 棕榈绿 / 焦糖 / 豆沙玫 / 海蓝绿 / 赤陶 / 胭脂粉 / 万寿菊 / 浆果红——7 暖色 + 海蓝绿/棕榈绿两点「海岛」点缀，「出发去玩」的愉快基调。明暗双值自适应、纯展示层（`sortOrder` 派生，零迁移）。
+- **🟢 色序经 CIEDE2000 求解**（新增脚本 `scripts/itinerary-day-palette-solve.py`，明暗取较差值、穷举、Day 1 钉死）：**任意连续 5 天保底色差 ΔE≈12.5**，对 31 天循环也成立。额外产品约束且不损 floor：前 7 天 6 种不同色系（重复粉/金移到 Day 8–10）、棕榈绿按用户偏好落 Day 3。
+- **🟡 否决项（记 decisions）**：纯 10 暖色 ΔE 崩到约 8（暖色只占色相环一小段）→ 暖色主导 + 冷色调剂；再降饱和向哑光靠也把暖色拉近（floor 8.7）→ 不降。亦反转「需 15/31 个唯一色」伪需求为「N 色循环 + 局部可分」。
+- **维护铁律**：新增/重排/调色前先重跑求解脚本复核 5 天窗保证、再回写 Swift。
+- **待办**：① UI 验收（建 10+ 天行程看时间轴/地图针线/Day 头部色点的明暗两态）；② push 由用户定。
+
 ## 上次改动摘要（住宿上脊导航锚点 + Trip Book 航班/住宿统计 + 底栏穿透根因 + 一串航班细节 · 2026-06-20 续）
 
 > 本会话产出**已分批提交、未 push**。⚠️ **交接**：工作区另有并行 **notification-center（提醒静音）** 会话的在途改动**未提交**，与本会话部分文件（`ItineraryView`/`TransportDetailView`/`Localizable.xcstrings` + 通知专属 `NotificationManager`/`TripReminderConfig` 等）交织。本会话用「**隔离 index 逐 hunk**」只提了自己的部分（`4c28bce`），通知那块**原样留在工作区**——新会话先 `git status` 看清，提交时与那条线协调（理想各开 worktree）。

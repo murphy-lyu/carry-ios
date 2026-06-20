@@ -224,7 +224,9 @@ Apple 原生风格，极简、克制、优雅。
 
 ### 行程规划组件（2026-06-12，feature 分支：itinerary-route-planning）
 
-> ⚠️ **按天分色 = 单一强调色原则的唯一破例（2026-06-13 定，仅限行程规划）**：见 `decisions.md`。`ItineraryDayPalette`（`AppearanceMode.swift`）按 `ItineraryDay.sortOrder` 取色：7 色循环、明暗自适应、克制低饱和，**第 1 天＝烟蓝（CarryAccent）**，其余陶土/鼠尾草绿/梅紫/赭黄/暮蓝/玫灰。**只**用于行程的「数据节点」（地图针/路线、时间轴序号圆点/连线/类别图标、Day 头部色点）；行程内的**控件**（按钮 tint）仍用 `CarryAccent`。`ItineraryDayPalette` 禁止在行程规划之外引用。
+> ⚠️ **按天分色 = 单一强调色原则的唯一破例（2026-06-13 定，仅限行程规划）**：见 `decisions.md`。`ItineraryDayPalette`（`AppearanceMode.swift`）按 `ItineraryDay.sortOrder` 取色：**10 色循环**、明暗自适应，**暖色主导**（2026-06-20 改为「出发去玩」的暖色基调），**第 1 天＝烟蓝（CarryAccent）**，其余依次 珊瑚 / 棕榈绿 / 焦糖 / 豆沙玫 / 海蓝绿 / 赤陶 / 胭脂粉 / 万寿菊 / 浆果红。7 个暖色 + 海蓝绿/棕榈绿两点「海岛」点缀 + 品牌烟蓝。**只**用于行程的「数据节点」（地图针/路线、时间轴序号圆点/连线/类别图标、Day 头部色点）；行程内的**控件**（按钮 tint）仍用 `CarryAccent`。`ItineraryDayPalette` 禁止在行程规划之外引用。
+>
+> **色序不是随便排的（根因约束）**：用 CIEDE2000（明暗两套取较差值）穷举求解，使**任意连续 5 天两两色差都够大**（保底 ΔE≈12.5），长行程（15 天、31 天…）循环时也绝不会把相近色排到一起。前 7 天承载 **6 种不同色系**（重复的粉/金挪到 Day 8–10），棕榈绿按产品要求落在 Day 3。**纯暖色不可行**（暖色只占色相环一小段，10 个全暖 ΔE 崩到约 8、相邻天糊在一起）——故暖色主导 + 少量明快冷色（海蓝绿/棕榈绿，读作海岛而非阴郁）调剂。**新增 / 重排 / 调色前必须重跑 `scripts/itinerary-day-palette-solve.py` 复核 5 天窗保证**，再把结果回写 Swift。颜色由 `sortOrder` 派生、纯展示层，不进 model/备份/schema，扩容零迁移。
 
 - **时间轴行（TimelineStopRow）**：leading 24pt 序号圆点（`dayColor.opacity(0.15)` 底 + `dayColor` 数字）+ 上下 1.5pt 连线（`dayColor.opacity(0.25)`，首/末点对应半段隐藏）。**序号圆点垂直居中于整条内容**（上下两段对称连线撑出）——使相邻两圆点间连线对称，连接段（固定 `legGap`）里的**直线距离**标签（9pt secondary，systemBackground 垫底）落在两点正中。内容=类别 SF Symbol（`dayColor`）+ 名称 + 地址（caption secondary）；设了时间显示 `pin.fill`+时间，无坐标显示 `mappin.slash`（tertiary）。rail 以 `.overlay` 贴合内容高度（不反向撑高内容，避免自适应 cell 的幽灵高度）。水平内边距 16，行内分隔线隐藏（连线即分隔）。
 - **Day 头部**：leading 8pt 当天色点（图例）+ 主行「Day N」或自定义标题；有日期行程次行「周几 月/日」（`Date.formatted` 本地化）。吸顶（`pinToVisibleBounds`，`systemBackground` 垫底，与 cv 背景一致）。**尾部 tool accessory（2026-06-16）**：作用于「整天」的工具操作放 header 尾部（对齐 Apple section-header accessory），当前承载「Optimize order」（坐标点 ≥4 才显示、排序模式隐藏）。规范：① 中性 **secondary** 色 = 工具，不用 `CarryAccent`（强调色留给主 CTA / 选中态）；② 垂直内边距压到最小，使有/无 accessory 的天 header **等高**（§Spacing 节奏），点击区靠横向铺开补回（矮而宽，对齐「See All」式附属按钮）；③ 图标 `accessibilityHidden`、按钮带完整 a11y 标签。
