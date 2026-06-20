@@ -188,8 +188,9 @@ struct AddStopView: View {
                 let coord = item?.placemark.coordinate
                 let address = item?.placemark.title ?? completion.subtitle
                 let phone = item?.phoneNumber ?? ""   // MapKit POI 自带电话（餐厅/景点多有），顺手带出
+                let tzId = item?.placemark.timeZone?.identifier ?? ""   // 顺手捕获地点时区（spec: itinerary-timezone.md）
                 if let relocateStopId {
-                    // relocate：地点整体换了 → 名称/坐标/地址/电话一并更新（类别保持不变）。
+                    // relocate：地点整体换了 → 名称/坐标/地址/电话/时区一并更新（类别保持不变）。
                     store.updateItineraryStop(
                         tripId: tripId,
                         stopId: relocateStopId,
@@ -197,7 +198,8 @@ struct AddStopView: View {
                         latitude: coord?.latitude ?? 0,
                         longitude: coord?.longitude ?? 0,
                         address: address,
-                        phone: phone
+                        phone: phone,
+                        timeZoneId: tzId
                     )
                     onRelocated?(completion.title)
                 } else {
@@ -209,7 +211,8 @@ struct AddStopView: View {
                         longitude: coord?.longitude ?? 0,
                         address: address,
                         category: category,
-                        phone: phone
+                        phone: phone,
+                        timeZoneId: tzId
                     )
                 }
                 dismiss()

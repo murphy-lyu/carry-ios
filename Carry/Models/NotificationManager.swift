@@ -97,7 +97,9 @@ enum NotificationManager {
     private static func scheduleTransportEvent(trip: TripBundle, seg: TransportSegment, isReturn: Bool, leads: [Int], now: Date) {
         let dayOrder = isReturn ? seg.arriveDayOrder : seg.departDayOrder
         let minutes = isReturn ? seg.arriveLocalMinutes : seg.departLocalMinutes
-        let tzId = isReturn ? seg.toTimeZoneId : seg.fromTimeZoneId
+        // 端点自身时区（航班=机场库，其它交通=地点搜索捕获）；缺失回退行程主时区（spec: itinerary-timezone.md）。
+        let rawTz = isReturn ? seg.toTimeZoneId : seg.fromTimeZoneId
+        let tzId = rawTz.isEmpty ? trip.primaryTimeZoneId : rawTz
         guard let eventDate = absoluteDate(tripDeparture: trip.departureDate, dayOrder: dayOrder, minutes: minutes, tzId: tzId) else { return }
         let role = isReturn ? "dropoff" : "depart"
         let tz = TimeZone(identifier: tzId) ?? .current
@@ -114,12 +116,15 @@ enum NotificationManager {
         for stay in trip.safeLodgingStays {
             guard !stay.remindersMuted else { continue }   // 逐条静音
             // 只提醒「退房」（入住用户不会忘）。退房时刻 − 提前量（同日，故「今天退房」成立）。
+            // 用酒店所在地时区（缺失回退行程主时区）——修掉原 tzId:"" 按设备时区算、跨时区错点触发的 bug。
+            let tzId = stay.effectiveTimeZoneId(trip: trip)
+            let tz = TimeZone(identifier: tzId) ?? .current
             let outClock = stay.checkOutMinutes >= 0 ? stay.checkOutMinutes : 11 * 60
-            guard let outDate = absoluteDate(tripDeparture: trip.departureDate, dayOrder: stay.checkOutDayOrder, minutes: outClock, tzId: "") else { continue }
+            guard let outDate = absoluteDate(tripDeparture: trip.departureDate, dayOrder: stay.checkOutDayOrder, minutes: outClock, tzId: tzId) else { continue }
             let fireDate = outDate.addingTimeInterval(TimeInterval(-ReminderPreferences.lodgingCheckOutLeadMinutes * 60))
             let (t, b) = lodgingContent(stay: stay)
             scheduleAt(fireDate, id: "\(tripPrefix)\(trip.id.uuidString).lodging.\(stay.id.uuidString).out",
-                       title: t, body: b, allowImminentFallback: false, now: now)
+                       title: t, body: b, allowImminentFallback: false, now: now, tz: tz)
         }
     }
 
@@ -131,7 +136,10 @@ enum NotificationManager {
         for day in trip.safeItineraryDays {
             let count = (day.stops?.count ?? 0) + day.sortedSegments.count
             guard count > 0 else { continue }
-            guard let fireDate = absoluteDate(tripDeparture: trip.departureDate, dayOrder: day.sortOrder, minutes: mins, tzId: "") else { continue }
+            // 用当天代表时区（缺失回退行程主时区）——每日提醒在「当地的 mins 时刻」触发，而非设备时区。
+            let tzId = day.representativeTimeZoneId(trip: trip)
+            let tz = TimeZone(identifier: tzId) ?? .current
+            guard let fireDate = absoluteDate(tripDeparture: trip.departureDate, dayOrder: day.sortOrder, minutes: mins, tzId: tzId) else { continue }
             let title = String(format: NSLocalizedString("notif.daily.title", comment: ""),
                                trip.destinationCity.isEmpty ? trip.name : trip.destinationCity)
             // 带出当天第一个安排,具体又有期待;取不到名字则退到无名版。
@@ -140,7 +148,7 @@ enum NotificationManager {
                 ? String.localizedStringWithFormat(NSLocalizedString("notif.daily.body.noname", comment: ""), count)
                 : String.localizedStringWithFormat(NSLocalizedString("notif.daily.body", comment: ""), count, firstName)
             scheduleAt(fireDate, id: "\(tripPrefix)\(trip.id.uuidString).daily.\(day.sortOrder)",
-                       title: title, body: body, allowImminentFallback: false, now: now)
+                       title: title, body: body, allowImminentFallback: false, now: now, tz: tz)
         }
     }
 

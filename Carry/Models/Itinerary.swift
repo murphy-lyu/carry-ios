@@ -192,6 +192,9 @@ final class ItineraryStop: CostBearing {
     var categoryRaw: String = StopCategory.other.rawValue
     /// 联系电话（餐厅/景点等；地点搜索可自动回填，可手填）。
     var phone: String = ""
+    /// 该地点的 IANA 时区（如 "Europe/Paris"；地点搜索时从 placemark 自动捕获，空 = 未知）。
+    /// spec: itinerary-timezone.md。时间字段是「该时区的当地墙上分钟数」，绝对时刻由它推出。
+    var timeZoneId: String = ""
     /// 当天计划时段起点（自午夜起的分钟数，-1 = 未设）。
     var plannedStartMinutes: Int = -1
     /// 预计停留时长（分钟，0 = 未设）。
@@ -227,6 +230,7 @@ final class ItineraryStop: CostBearing {
         stayMinutes: Int = 0,
         note: String = "",
         phone: String = "",
+        timeZoneId: String = "",
         sortOrder: Int = 0,
         costAmount: Double = 0,
         costCurrencyCode: String = "",
@@ -243,6 +247,7 @@ final class ItineraryStop: CostBearing {
         self.stayMinutes = stayMinutes
         self.note = note
         self.phone = phone
+        self.timeZoneId = timeZoneId
         self.sortOrder = sortOrder
         self.costAmount = costAmount
         self.costCurrencyCode = costCurrencyCode
@@ -598,6 +603,9 @@ final class LodgingStay: CostBearing {
     var note: String = ""
     /// 联系电话（酒店；地址搜索可自动回填，可手填）。
     var phone: String = ""
+    /// 酒店所在地的 IANA 时区（如 "Europe/Paris"；地址搜索时从 placemark 捕获，空 = 未知）。
+    /// spec: itinerary-timezone.md。入住/退房时间都是「该时区的当地墙上分钟数」。
+    var timeZoneId: String = ""
     /// 是否静音此住宿的通知（spec: notification-center.md）。默认 false。
     var remindersMuted: Bool = false
     var sortOrder: Int = 0
@@ -624,6 +632,7 @@ final class LodgingStay: CostBearing {
         confirmationCode: String = "",
         note: String = "",
         phone: String = "",
+        timeZoneId: String = "",
         sortOrder: Int = 0,
         costAmount: Double = 0,
         costCurrencyCode: String = "",
@@ -641,6 +650,7 @@ final class LodgingStay: CostBearing {
         self.confirmationCode = confirmationCode
         self.note = note
         self.phone = phone
+        self.timeZoneId = timeZoneId
         self.sortOrder = sortOrder
         self.costAmount = costAmount
         self.costCurrencyCode = costCurrencyCode
@@ -659,5 +669,67 @@ final class LodgingStay: CostBearing {
     /// 是否覆盖某天（含入住日、不含退房日——退房日不在此处过夜）。
     func covers(dayOrder: Int) -> Bool {
         dayOrder >= checkInDayOrder && dayOrder < checkOutDayOrder
+    }
+}
+
+// MARK: - 行程时区辅助（spec: itinerary-timezone.md）
+//
+// 时间字段存「当地墙上分钟数」，时区存在各活动的 timeZoneId（地点搜索自动捕获）。
+// 任何活动缺自身时区时回退到「行程主时区」，保证通知/绝对时刻永远有合理时区；
+// 「是否多时区」决定 UI 是否显示时区提示。
+
+extension TripBundle {
+    /// 全行程有时间活动捕获到的 IANA 时区（非空），按出现顺序。
+    var activityTimeZoneIds: [String] {
+        var ids: [String] = []
+        func add(_ id: String) { if !id.isEmpty { ids.append(id) } }
+        for day in safeItineraryDays {
+            for stop in (day.stops ?? []) { add(stop.timeZoneId) }
+            for seg in day.sortedSegments { add(seg.fromTimeZoneId); add(seg.toTimeZoneId) }
+        }
+        for stay in safeLodgingStays { add(stay.timeZoneId) }
+        return ids
+    }
+
+    /// 行程「主时区」：活动里出现最多的时区（并列取最早出现）；一个都没有 → 设备当前时区。
+    var primaryTimeZoneId: String {
+        let ids = activityTimeZoneIds
+        guard !ids.isEmpty else { return TimeZone.current.identifier }
+        var counts: [String: Int] = [:]
+        var firstIndex: [String: Int] = [:]
+        for (i, id) in ids.enumerated() {
+            counts[id, default: 0] += 1
+            if firstIndex[id] == nil { firstIndex[id] = i }
+        }
+        return counts.max { a, b in
+            a.value != b.value ? a.value < b.value : (firstIndex[a.key] ?? 0) > (firstIndex[b.key] ?? 0)
+        }!.key
+    }
+
+    /// 行程是否跨 ≥2 个时区——决定 UI 是否显示时区提示（spec D1/D2）。
+    var isMultiTimeZone: Bool { Set(activityTimeZoneIds).count >= 2 }
+}
+
+extension ItineraryStop {
+    /// 该地点的有效时区（自身缺失则回退行程主时区）。
+    func effectiveTimeZoneId(trip: TripBundle?) -> String {
+        if !timeZoneId.isEmpty { return timeZoneId }
+        return trip?.primaryTimeZoneId ?? TimeZone.current.identifier
+    }
+}
+
+extension LodgingStay {
+    func effectiveTimeZoneId(trip: TripBundle?) -> String {
+        if !timeZoneId.isEmpty { return timeZoneId }
+        return trip?.primaryTimeZoneId ?? TimeZone.current.identifier
+    }
+}
+
+extension ItineraryDay {
+    /// 当天代表时区：首个有时区的地点 → 首个交通段出发时区 → 行程主时区。用于「每日提醒」定点。
+    func representativeTimeZoneId(trip: TripBundle) -> String {
+        if let z = sortedStops.compactMap({ $0.timeZoneId.isEmpty ? nil : $0.timeZoneId }).first { return z }
+        if let z = sortedSegments.compactMap({ $0.fromTimeZoneId.isEmpty ? nil : $0.fromTimeZoneId }).first { return z }
+        return trip.primaryTimeZoneId
     }
 }

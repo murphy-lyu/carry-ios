@@ -34,6 +34,7 @@ struct LodgingEditView: View {
     @State private var confirmationCode = ""
     @State private var note = ""
     @State private var phone = ""
+    @State private var timeZoneId = ""   // 酒店所在地时区（地址搜索自动捕获）
     @State private var costAmountText = ""
     @State private var costCurrencyCode = ""
 
@@ -174,12 +175,13 @@ struct LodgingEditView: View {
                     placeholderKey: "itinerary.lodging.search.placeholder",
                     biasLatitude: bundle?.latitude ?? 0,
                     biasLongitude: bundle?.longitude ?? 0
-                ) { pickedName, lat, lon, pickedAddress, pickedPhone in
+                ) { pickedName, lat, lon, pickedAddress, pickedPhone, pickedTZ in
                     name = pickedName
                     latitude = lat
                     longitude = lon
                     if address.isEmpty { address = pickedAddress }
                     if phone.isEmpty { phone = pickedPhone }   // 自动回填，已填则不覆盖
+                    if !pickedTZ.isEmpty { timeZoneId = pickedTZ }   // 换地址即更新时区（地址变了时区也该跟着变）
                 }
             }
             // 入住/退房时间弹层（chip+弹出，统一交通范式）；挂在 Form 稳定祖先上。
@@ -267,6 +269,7 @@ struct LodgingEditView: View {
             if stay.checkInMinutes >= 0 { hasCheckInTime = true; checkInTime = dateFromMinutes(stay.checkInMinutes) }
             if stay.checkOutMinutes >= 0 { hasCheckOutTime = true; checkOutTime = dateFromMinutes(stay.checkOutMinutes) }
             confirmationCode = stay.confirmationCode; note = stay.note; phone = stay.phone
+            timeZoneId = stay.timeZoneId
             if stay.hasCost { costAmountText = CurrencyCatalog.amountText(stay.costAmount); costCurrencyCode = stay.costCurrencyCode }
         } else {
             checkInDayOrder = initialCheckInDayOrder
@@ -293,7 +296,8 @@ struct LodgingEditView: View {
                 latitude: latitude, longitude: longitude,
                 checkInDayOrder: checkInDayOrder, nights: nights,
                 checkInMinutes: inMinutes, checkOutMinutes: outMinutes,
-                confirmationCode: confirmationCode, note: note, phone: phone
+                confirmationCode: confirmationCode, note: note, phone: phone,
+                timeZoneId: timeZoneId
             )
             store.setLodgingCost(tripId: tripId, stayId: stayId,
                                  amount: costAmountValue, currencyCode: costCurrencyToSave)
@@ -304,7 +308,8 @@ struct LodgingEditView: View {
                 latitude: latitude, longitude: longitude,
                 checkInDayOrder: checkInDayOrder, nights: nights,
                 checkInMinutes: inMinutes, checkOutMinutes: outMinutes,
-                confirmationCode: confirmationCode, note: note, phone: phone
+                confirmationCode: confirmationCode, note: note, phone: phone,
+                timeZoneId: timeZoneId
             ) {
                 store.setLodgingCost(tripId: tripId, stayId: newId,
                                      amount: costAmountValue, currencyCode: costCurrencyToSave)

@@ -16,7 +16,7 @@ struct ItineraryPlaceSearchSheet: View {
     /// 行程目的地坐标，用于搜索区域偏置（可为 0/0）。
     var biasLatitude: Double = 0
     var biasLongitude: Double = 0
-    var onSelect: (_ name: String, _ latitude: Double, _ longitude: Double, _ address: String, _ phone: String) -> Void
+    var onSelect: (_ name: String, _ latitude: Double, _ longitude: Double, _ address: String, _ phone: String, _ timeZoneId: String) -> Void
 
     @Environment(\.dismiss) private var dismiss
     @StateObject private var completer = StopSearchCompleter()
@@ -80,7 +80,9 @@ struct ItineraryPlaceSearchSheet: View {
                 let address = item?.placemark.title ?? completion.subtitle
                 // MapKit POI 自带电话（酒店/租车点等多有），顺手带出供「行程中联系」。
                 let phone = item?.phoneNumber ?? ""
-                onSelect(completion.title, coord?.latitude ?? 0, coord?.longitude ?? 0, address, phone)
+                // 顺手捕获该地点的 IANA 时区（placemark 自带），供行程时区系统化用（spec: itinerary-timezone.md）。
+                let tzId = item?.placemark.timeZone?.identifier ?? ""
+                onSelect(completion.title, coord?.latitude ?? 0, coord?.longitude ?? 0, address, phone, tzId)
                 dismiss()
             }
         }

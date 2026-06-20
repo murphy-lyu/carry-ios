@@ -658,6 +658,7 @@ final class TripStore: ObservableObject {
                     fromPhotos: stop.fromPhotos
                 )
                 copied.phone = stop.phone
+                copied.timeZoneId = stop.timeZoneId
                 // 照片回溯生成的停靠点：深拷贝挂着的照片（新 UUID，含缩略图字节）。
                 copied.photos = stop.sortedPhotos.map { p in
                     StopPhoto(
@@ -717,6 +718,7 @@ final class TripStore: ObservableObject {
                 costHomeAmount: stay.costHomeAmount
             )
             newStay.remindersMuted = stay.remindersMuted
+            newStay.timeZoneId = stay.timeZoneId
             newStay.attachments = copyAttachments(stay.attachments)
             return newStay
         }
@@ -1118,7 +1120,8 @@ final class TripStore: ObservableObject {
         longitude: Double = 0,
         address: String = "",
         category: StopCategory = .other,
-        phone: String = ""
+        phone: String = "",
+        timeZoneId: String = ""
     ) -> UUID? {
         guard let trip = trips.first(where: { $0.id == tripId }),
               let day = trip.safeItineraryDays.first(where: { $0.id == dayId }) else { return nil }
@@ -1130,6 +1133,7 @@ final class TripStore: ObservableObject {
             address: address,
             category: category,
             phone: phone,
+            timeZoneId: timeZoneId,
             sortOrder: nextOrder
         )
         context.insert(stop)
@@ -1237,7 +1241,8 @@ final class TripStore: ObservableObject {
         latitude: Double? = nil,
         longitude: Double? = nil,
         address: String? = nil,
-        phone: String? = nil
+        phone: String? = nil,
+        timeZoneId: String? = nil
     ) {
         guard let trip = trips.first(where: { $0.id == tripId }),
               let stop = trip.safeItineraryDays.flatMap({ $0.stops ?? [] }).first(where: { $0.id == stopId }) else { return }
@@ -1250,6 +1255,7 @@ final class TripStore: ObservableObject {
         if let longitude { stop.longitude = longitude }
         if let address { stop.address = address }
         if let phone { stop.phone = phone }
+        if let timeZoneId { stop.timeZoneId = timeZoneId }
         save()
     }
 
@@ -1519,7 +1525,8 @@ final class TripStore: ObservableObject {
         checkOutMinutes: Int = -1,
         confirmationCode: String = "",
         note: String = "",
-        phone: String = ""
+        phone: String = "",
+        timeZoneId: String = ""
     ) -> UUID? {
         guard let trip = trips.first(where: { $0.id == tripId }) else { return nil }
         let nextOrder = (trip.safeLodgingStays.map(\.sortOrder).max() ?? -1) + 1
@@ -1535,6 +1542,7 @@ final class TripStore: ObservableObject {
             confirmationCode: confirmationCode,
             note: note,
             phone: phone,
+            timeZoneId: timeZoneId,
             sortOrder: nextOrder
         )
         context.insert(stay)
@@ -1560,7 +1568,8 @@ final class TripStore: ObservableObject {
         checkOutMinutes: Int? = nil,
         confirmationCode: String? = nil,
         note: String? = nil,
-        phone: String? = nil
+        phone: String? = nil,
+        timeZoneId: String? = nil
     ) {
         guard let trip = trips.first(where: { $0.id == tripId }),
               let stay = (trip.lodgingStays ?? []).first(where: { $0.id == stayId }) else { return }
@@ -1575,6 +1584,7 @@ final class TripStore: ObservableObject {
         if let confirmationCode { stay.confirmationCode = confirmationCode }
         if let note { stay.note = note }
         if let phone { stay.phone = phone }
+        if let timeZoneId { stay.timeZoneId = timeZoneId }
         save()
         NotificationManager.scheduleReminders(for: trip)   // 住宿变更 → 重排该行程通知
     }

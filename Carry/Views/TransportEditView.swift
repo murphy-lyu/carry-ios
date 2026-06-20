@@ -163,13 +163,15 @@ struct TransportEditView: View {
                             placeholderKey: "itinerary.transport.search.placeholder",
                             biasLatitude: bundle?.latitude ?? 0,
                             biasLongitude: bundle?.longitude ?? 0
-                        ) { name, lat, lon, address, pickedPhone in
+                        ) { name, lat, lon, address, pickedPhone, pickedTZ in
                             if isFrom {
                                 fromName = name; fromLatitude = lat; fromLongitude = lon; fromAddress = address
+                                if !pickedTZ.isEmpty { fromTimeZoneId = pickedTZ }   // 捕获取车/出发点时区
                                 // 租车取车点电话自动回填（已填不覆盖）；非租车不收电话。
                                 if mode == .carRental, phone.isEmpty { phone = pickedPhone }
                             } else {
                                 toName = name; toLatitude = lat; toLongitude = lon; toAddress = address
+                                if !pickedTZ.isEmpty { toTimeZoneId = pickedTZ }   // 捕获还车/到达点时区
                             }
                         }
                     }
@@ -604,9 +606,10 @@ struct TransportEditView: View {
         let savedFromTerminal = showsTerminal ? fromTerminal : ""
         let savedToTerminal = showsTerminal ? toTerminal : ""
         let savedSeat = showsSeat ? seat : ""
-        // 时区仅航班机场选点会填；切到非航班模式时一并清空，避免残留。
-        let savedFromTZ = mode == .flight ? fromTimeZoneId : ""
-        let savedToTZ = mode == .flight ? toTimeZoneId : ""
+        // 时区：航班从机场库回填、其它交通从地点搜索捕获——都保留（spec: itinerary-timezone.md）。
+        // 类型在创建时固定（改类型=删除重加），故无「切模式残留旧区」之虞。
+        let savedFromTZ = fromTimeZoneId
+        let savedToTZ = toTimeZoneId
         // 机型 / 舱位 / 航程 / 时长仅航班有意义。
         let savedAircraft = mode == .flight ? aircraftType : ""
         let savedCabin = mode == .flight ? cabinClass : ""

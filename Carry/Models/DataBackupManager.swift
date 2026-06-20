@@ -71,6 +71,8 @@ struct BackupItineraryStop: Codable, Sendable {
     var photos: [BackupStopPhoto]? = nil
     // 联系电话（地点）；可选 + 默认 nil：兼容旧备份。
     var phone: String? = nil
+    // 时区（spec: itinerary-timezone.md）；可选 + 默认 nil：兼容旧备份。
+    var timeZoneId: String? = nil
     // 附件（spec: itinerary-attachments.md）；可选 + 默认 nil：兼容旧备份。
     var attachments: [BackupAttachment]? = nil
 }
@@ -140,6 +142,8 @@ struct BackupLodgingStay: Codable, Sendable {
     var costHomeAmount: Double?
     // 联系电话（酒店）；可选 + 默认 nil：兼容旧备份。
     var phone: String? = nil
+    // 时区（spec: itinerary-timezone.md）；可选 + 默认 nil：兼容旧备份。
+    var timeZoneId: String? = nil
     // 通知静音（spec: notification-center.md）；可选 + 默认 nil：兼容旧备份。
     var remindersMuted: Bool? = nil
     // 附件（spec: itinerary-attachments.md）；可选 + 默认 nil：兼容旧备份。
@@ -303,6 +307,7 @@ final class DataBackupManager {
                 confirmationCode: l.confirmationCode, note: l.note, sortOrder: l.sortOrder,
                 costAmount: l.costAmount, costCurrencyCode: l.costCurrencyCode, costHomeAmount: l.costHomeAmount,
                 phone: l.phone,
+                timeZoneId: l.timeZoneId,
                 remindersMuted: l.remindersMuted,
                 attachments: backupAttachments(l.attachments)
             )
@@ -359,6 +364,7 @@ final class DataBackupManager {
                         fromPhotos: $0.fromPhotos,
                         photos: photos.isEmpty ? nil : photos,
                         phone: $0.phone,
+                        timeZoneId: $0.timeZoneId,
                         attachments: backupAttachments($0.attachments)
                     )
                 }
@@ -664,6 +670,7 @@ final class DataBackupManager {
                     fromPhotos: bs.fromPhotos ?? false
                 )
                 stop.phone = bs.phone ?? ""
+                stop.timeZoneId = bs.timeZoneId ?? ""
                 stop.id = bs.id
                 stop.day = day
                 context.insert(stop)
@@ -735,6 +742,7 @@ final class DataBackupManager {
             )
             stay.id = bl.id
             stay.remindersMuted = bl.remindersMuted ?? false
+            stay.timeZoneId = bl.timeZoneId ?? ""
             stay.bundle = trip
             context.insert(stay)
             for a in makeAttachments(bl.attachments, into: context) { a.stay = stay }
@@ -847,7 +855,8 @@ final class DataBackupManager {
                     address: $0.address, categoryRaw: $0.categoryRaw,
                     plannedStartMinutes: $0.plannedStartMinutes, stayMinutes: $0.stayMinutes,
                     note: $0.note, sortOrder: $0.sortOrder,
-                    costAmount: $0.costAmount, costCurrencyCode: $0.costCurrencyCode, costHomeAmount: $0.costHomeAmount
+                    costAmount: $0.costAmount, costCurrencyCode: $0.costCurrencyCode, costHomeAmount: $0.costHomeAmount,
+                    timeZoneId: $0.timeZoneId
                 )
             }
             let segments = backupSegments(day)
