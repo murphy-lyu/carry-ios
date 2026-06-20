@@ -1469,6 +1469,7 @@ struct StopEditView: View {
     @State private var costCurrencyCode: String
     @State private var phone: String
     @State private var attachmentRequest: AttachmentAddRequest?
+    @State private var dayOrder: Int   // 这个地点在哪天（行程已有的天，可改）
 
     init(tripId: UUID, stop: ItineraryStop) {
         self.tripId = tripId
@@ -1485,7 +1486,11 @@ struct StopEditView: View {
         _costAmountText = State(initialValue: stop.hasCost ? CurrencyCatalog.amountText(stop.costAmount) : "")
         _costCurrencyCode = State(initialValue: stop.costCurrencyCode)
         _phone = State(initialValue: stop.phone)
+        _dayOrder = State(initialValue: stop.day?.sortOrder ?? 0)
     }
+
+    private var bundle: TripBundle? { store.bundle(for: tripId) }
+    private var days: [ItineraryDay] { bundle?.safeItineraryDays ?? [] }
 
     private var costAmountValue: Double {
         CurrencyCatalog.parseAmount(costAmountText)
@@ -1495,6 +1500,16 @@ struct StopEditView: View {
         costAmountText.trimmingCharacters(in: .whitespaces).isEmpty
             ? ""
             : (costCurrencyCode.isEmpty ? CurrencyCatalog.homeCurrencyCode : costCurrencyCode.uppercased())
+    }
+
+    /// 行程天的可读标签（有日期 → 周几·月·日；无日期 → 「第 N 天」），与交通/住宿编辑页同口径。
+    private func dayLabel(_ order: Int) -> String {
+        if let bundle, !bundle.isDateless {
+            let base = Calendar.current.startOfDay(for: bundle.departureDate)
+            let date = Calendar.current.date(byAdding: .day, value: order, to: base) ?? base
+            return date.formatted(.dateTime.weekday(.abbreviated).month(.abbreviated).day())
+        }
+        return String(format: NSLocalizedString("itinerary.day.title", comment: ""), order + 1)
     }
 
     var body: some View {
@@ -1549,6 +1564,25 @@ struct StopEditView: View {
                                     .imageScale(.small)
                             }
                             .foregroundStyle(CarryAccent.color)
+                        }
+                    }
+                    // 日期：改这个地点排在哪天（在行程已有的天里选，与交通/住宿同口径）。
+                    // 多天行程可点选换天；单天行程仅作展示。换天 = 把停靠点移到目标天（保留时刻）。
+                    HStack(spacing: 8) {
+                        Text("itinerary.transport.field.date")
+                        Spacer()
+                        if days.count > 1 {
+                            Menu {
+                                Picker(selection: $dayOrder) {
+                                    ForEach(days, id: \.sortOrder) { d in
+                                        Text(dayLabel(d.sortOrder)).tag(d.sortOrder)
+                                    }
+                                } label: { EmptyView() }
+                            } label: {
+                                FormChip(text: dayLabel(dayOrder))
+                            }
+                        } else {
+                            FormChip(text: dayLabel(dayOrder))
                         }
                     }
                     // 时间：chip + 弹出（统一交通范式，去 toggle+内联的行高跳变）。开始可选；有开始才显结束。
@@ -1631,6 +1665,10 @@ struct StopEditView: View {
                         )
                         store.setStopCost(tripId: tripId, stopId: stop.id,
                                           amount: costAmountValue, currencyCode: costCurrencyToSave)
+                        // 改了日期 → 把停靠点移到目标天（时刻按当天分钟存、自然保留）。
+                        if dayOrder != (stop.day?.sortOrder ?? 0) {
+                            store.moveItineraryStop(tripId: tripId, stopId: stop.id, toDayOrder: dayOrder)
+                        }
                         dismiss()
                     }
                 }

@@ -1328,6 +1328,21 @@ final class TripStore: ObservableObject {
         CarryLogger.shared.log(didCross ? .itineraryStopMovedDay : .itineraryStopReordered)
     }
 
+    /// 把某停靠点移到另一天（地点编辑页「改日期」用）。重设 `day` 关系（inverse 自动维护两边数组），
+    /// 追加到目标天末尾；同天则直接返回。时间按当天分钟存，移动后自然保留在新一天的同一时刻。
+    func moveItineraryStop(tripId: UUID, stopId: UUID, toDayOrder: Int) {
+        guard let trip = trips.first(where: { $0.id == tripId }) else { return }
+        let days = trip.safeItineraryDays
+        guard let stop = days.flatMap({ $0.stops ?? [] }).first(where: { $0.id == stopId }),
+              let target = days.first(where: { $0.sortOrder == toDayOrder }) else { return }
+        if stop.day?.id == target.id { return }   // 同天，无需移动
+        let newOrder = (target.stops?.map(\.sortOrder).max() ?? -1) + 1   // 追加到目标天末尾
+        stop.day = target                         // 关系反向自动从旧天移除、加入新天
+        stop.sortOrder = newOrder
+        save()
+        CarryLogger.shared.log(.itineraryStopMovedDay)
+    }
+
     // MARK: - Itinerary Transport（交通段 CRUD · spec: itinerary-transport-lodging.md）
     //
     // 埋点（transportAdded/Edited/Removed）随 UI 接入时一起补（CLAUDE.md「定义即接线」：
