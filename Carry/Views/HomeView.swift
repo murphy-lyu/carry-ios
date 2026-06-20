@@ -997,15 +997,20 @@ struct HomeView: View {
         return NavigationStack {
             ScrollView {
                 VStack(spacing: 14) {
+                    // 叙事顺序：总量 → 去了哪（国家/大洲）→ 走了多远（飞行/机场/住宿）
+                    // → 我是哪类旅行者（国内国际/季节）→ 花了多少。高光「旅程」段（部分覆盖、
+                    // hide-when-empty）紧贴地理段，把「跨 N 国 → 飞 X 公里 → 住 Y 晚」接成一条弧线；
+                    // 偏分析的出行习惯（国内国际/季节）退到中后段；花费性质特殊、压轴。
                     tripBookOverviewCard(stats)
                     tripBookCountriesCard(stats)
                     if stats.visitedContinentCount > 0 { tripBookContinentsCard(stats) }
-                    if stats.domesticCount + stats.internationalCount > 0 { tripBookScopeCard(stats) }
-                    if stats.seasonCounts.values.reduce(0, +) > 0 { tripBookSeasonsCard(stats) }
-                    // 航班 / 住宿（部分覆盖：仅加了航班/住宿的行程有数；无则整块隐藏）。
+                    // 旅程段（仅加了航班/住宿的行程有数；无则整块隐藏，自动让位给下方习惯段）。
                     if stats.hasFlightStats { tripBookFlightCard(stats) }
                     if !stats.airportTallies.isEmpty { tripBookAirportsCard(stats) }
                     if stats.totalNights > 0 { tripBookLodgingCard(stats) }
+                    // 出行习惯段。
+                    if stats.domesticCount + stats.internationalCount > 0 { tripBookScopeCard(stats) }
+                    if stats.seasonCounts.values.reduce(0, +) > 0 { tripBookSeasonsCard(stats) }
                     // 费用压轴：前面都是出行习惯/统计，花费性质特殊（用户记账数据），单独置于最后。
                     // 对汇率管理器的观察收在 ExchangeRateScope 这一层子视图（花费卡的真正消费者），
                     // 不上抬到根 HomeView——根是首页 UIKit FX sheet（含底栏）的宿主，在根层观察会令其
