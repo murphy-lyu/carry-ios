@@ -22,22 +22,25 @@ RGB tuples back into `ItineraryDayPalette.palette`. Pure stdlib; no dependencies
 import math
 import itertools
 
-# Final palette in slot order (slot 0 = Day 1 = brand). Edit here, re-run, copy back to Swift.
+# Final palette in slot order (slot 0 = Day 1). Edit here, re-run, copy back to Swift.
 #   name, light rgb (0-1), dark rgb (0-1)
+# Current order is PRODUCT-FIXED (Day 1 green / Day 2 marigold / Day 3 brand blue, by request);
+# VERIFY_ONLY keeps it as-listed and just reports the floor. Flip VERIFY_ONLY off to brute-force
+# a max-floor order instead (e.g. when adding colours and the order is free to choose).
 PALETTE = [
+    ("palm_green",         (0.455, 0.675, 0.333), (0.573, 0.757, 0.475)),
+    ("marigold",           (0.863, 0.549, 0.235), (0.910, 0.659, 0.404)),
     ("smoky_blue (brand)", (0.357, 0.478, 0.588), (0.478, 0.612, 0.722)),
     ("coral",              (0.878, 0.478, 0.373), (0.910, 0.596, 0.510)),
-    ("palm_green",         (0.455, 0.675, 0.333), (0.573, 0.757, 0.475)),
-    ("caramel",            (0.820, 0.580, 0.310), (0.882, 0.682, 0.451)),
-    ("rosewood",           (0.745, 0.412, 0.471), (0.831, 0.541, 0.592)),
     ("lagoon_teal",        (0.239, 0.639, 0.604), (0.404, 0.737, 0.706)),
-    ("clay",               (0.792, 0.451, 0.337), (0.859, 0.565, 0.461)),
     ("blush_pink",         (0.925, 0.651, 0.690), (0.949, 0.733, 0.761)),
-    ("marigold",           (0.863, 0.549, 0.235), (0.910, 0.659, 0.404)),
     ("berry",              (0.760, 0.345, 0.420), (0.835, 0.482, 0.553)),
 ]
 WINDOW = 5          # "no look-alike hues within N consecutive days"
-PIN_FIRST = True    # keep slot 0 (brand blue) fixed during the search
+PIN_FIRST = True    # (when solving) keep slot 0 fixed
+VERIFY_ONLY = True  # report the PALETTE order as-listed instead of brute-forcing a new one
+# Note: with N=7 every pair shares some 5-day window (max cyclic gap 3 ≤ 4), so the floor is just
+# the global min ΔE — the order can't change it; it only affects which days sit adjacent.
 
 
 def _srgb_to_lin(c):
@@ -125,14 +128,18 @@ def main():
                 worst = min(worst, d[order[a]][order[b]])
         return worst
 
-    movable = list(range(1, n)) if PIN_FIRST else list(range(n))
-    head = (0,) if PIN_FIRST else ()
-    best_score, best = -1.0, None
-    for perm in itertools.permutations(movable):
-        order = head + perm
-        s = floor_of(order)
-        if s > best_score:
-            best_score, best = s, order
+    if VERIFY_ONLY:
+        best = tuple(range(n))
+        best_score = floor_of(best)
+    else:
+        movable = list(range(1, n)) if PIN_FIRST else list(range(n))
+        head = (0,) if PIN_FIRST else ()
+        best_score, best = -1.0, None
+        for perm in itertools.permutations(movable):
+            order = head + perm
+            s = floor_of(order)
+            if s > best_score:
+                best_score, best = s, order
 
     print(f"slot  name                 light    dark")
     for i, idx in enumerate(best):

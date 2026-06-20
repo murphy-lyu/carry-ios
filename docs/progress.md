@@ -3,14 +3,12 @@
 ## 最后更新
 2026-06-20
 
-## 上次改动摘要（行程按天色板：7→10 色 + 转暖色「出发去玩」基调 + 5 天窗求解 · 2026-06-20 续）
+## 上次改动摘要（行程按天色板：转暖 + 精简 7 色 + 绿色打头 + 地图针白字易读性根因 · 2026-06-20 续）
 
-> 本会话只动 4 个文件（`AppearanceMode.swift` / `docs/decisions.md` / `docs/design-system.md` / 新增 `scripts/itinerary-day-palette-solve.py`）+ 本 `progress.md`，与并行会话在途改动（`ItineraryView`/`ItineraryReorderCollection`/`TripReminderConfig`/`Localizable.xcstrings`/`specs/itinerary-map-scroll.md`）**完全不重叠**，走隔离 index 提交。**编译绿**（主 app + Widget）；UI 验收交用户。
-- **🟢 `ItineraryDayPalette` 7 → 10 色，整组转暖**（`AppearanceMode.swift`）：第 1 天保留品牌烟蓝，其余 珊瑚 / 棕榈绿 / 焦糖 / 豆沙玫 / 海蓝绿 / 赤陶 / 胭脂粉 / 万寿菊 / 浆果红——7 暖色 + 海蓝绿/棕榈绿两点「海岛」点缀，「出发去玩」的愉快基调。明暗双值自适应、纯展示层（`sortOrder` 派生，零迁移）。
-- **🟢 色序经 CIEDE2000 求解**（新增脚本 `scripts/itinerary-day-palette-solve.py`，明暗取较差值、穷举、Day 1 钉死）：**任意连续 5 天保底色差 ΔE≈12.5**，对 31 天循环也成立。额外产品约束且不损 floor：前 7 天 6 种不同色系（重复粉/金移到 Day 8–10）、棕榈绿按用户偏好落 Day 3。
-- **🟡 否决项（记 decisions）**：纯 10 暖色 ΔE 崩到约 8（暖色只占色相环一小段）→ 暖色主导 + 冷色调剂；再降饱和向哑光靠也把暖色拉近（floor 8.7）→ 不降。亦反转「需 15/31 个唯一色」伪需求为「N 色循环 + 局部可分」。
-- **维护铁律**：新增/重排/调色前先重跑求解脚本复核 5 天窗保证、再回写 Swift。
-- **待办**：① UI 验收（建 10+ 天行程看时间轴/地图针线/Day 头部色点的明暗两态）；② push 由用户定。
+> 色板定稿。本会话改 `AppearanceMode.swift` / `ItineraryMapView.swift` / `docs/{decisions,design-system,progress}.md` / `scripts/itinerary-day-palette-solve.py`，与并行会话在途改动（`ItineraryView`/`ItineraryReorderCollection`/`TripReminderConfig`/`Localizable.xcstrings`/`specs/itinerary-map-scroll.md`）**不重叠**，走隔离 index 提交。**编译绿**；UI 验收交用户。前序 v3 的 10 色版已提交（`420b6e1`），本轮在其上定稿为 7 色。
+- **🟢 7 色暖色版定稿**（`AppearanceMode.swift`，`sortOrder % 7`）：`Day1 棕榈绿 → Day2 万寿菊 → Day3 烟蓝(品牌) → 珊瑚 → 海蓝绿 → 胭脂粉 → 浆果红`。绿色打头＝用户定（出行心情），**主动放弃「Day1＝品牌色」**，烟蓝移 Day3。曾扩到 10 色，去近似色（焦糖/赤陶/豆沙玫）精简到 7 → 更干净，CIEDE2000 floor 反升到 **14.4**（相邻最差 16.2）。脚本改 `VERIFY_ONLY` 验证产品定序。
+- **🔴 地图针白字易读性根因（`ItineraryMapView.swift`）**：暖亮浅色（胭脂粉对白底 1.97 等）低于 WCAG 3:1 → 针上白色序号看不清、浅色路线发虚。**试过加深颜色必塌可分性**（降饱和 floor→8.7、整组压暗→6.6）；根因在「渲染假设日色够深托白字」。解：① 针序号改 `Color.legibleInk`（新增于 `AppearanceMode.swift`，按底色 WCAG 亮度自动取深/浅字）；② 浅色路线加暗 casing 衬底；③ 时间轴浅图标/色点偏柔但有色圈+位置+序号共同标识、不动。**禁止再用加深色板修对比度**。
+- **待办**：① UI 验收（建 7+ 天行程看时间轴、**地图针序号在浅色针上是否清晰**、路线、明暗两态）；② push 由用户定（含前序 `420b6e1`）。
 
 ## 上次改动摘要（住宿上脊导航锚点 + Trip Book 航班/住宿统计 + 底栏穿透根因 + 一串航班细节 · 2026-06-20 续）
 

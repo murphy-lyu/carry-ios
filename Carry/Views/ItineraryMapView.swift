@@ -348,7 +348,7 @@ struct ItineraryMapView: View {
     }
 
     /// 地图针 + 路线（按天编号、按天着色），预览与全屏共用。
-    /// 自定义圆形针（当天色实心圆 + 白序号 + 白描边 + 阴影），与列表序号圆点同语言、比原生气泡针干净。
+    /// 自定义圆形针（当天色实心圆 + 自适应深浅序号 + 白描边 + 阴影），与列表序号圆点同语言、比原生气泡针干净。
     /// `dimmed`：当天为空、把整趟作上下文淡化展示时为真（针/线退到背景，不抢当天的「空」）。
     @MapContentBuilder
     private func mapAnnotations(for days: [ItineraryDay], dimmed: Bool = false) -> some MapContent {
@@ -359,6 +359,12 @@ struct ItineraryMapView: View {
                 }
             }
             if day.routeCoords.count >= 2 {
+                // Subtle dark casing under the colour line — gives the lighter day hues (blush,
+                // coral…) a visible edge against Apple's pale light-mode map tiles; nearly invisible
+                // on the dark map (where the bright line already pops), so it only helps where needed.
+                MapPolyline(coordinates: day.routeCoords)
+                    .stroke(Color.black.opacity(dimmed ? 0.05 : 0.16),
+                            style: StrokeStyle(lineWidth: 5, lineCap: .round, lineJoin: .round))
                 MapPolyline(coordinates: day.routeCoords)
                     .stroke(day.color.opacity(dimmed ? 0.3 : 1),
                             style: StrokeStyle(lineWidth: 3, lineCap: .round, lineJoin: .round))
@@ -404,7 +410,9 @@ struct ItineraryMapView: View {
             Circle().strokeBorder(.white, lineWidth: 1.5)
             Text("\(index)")
                 .font(.system(size: 12, weight: .bold, design: .rounded).monospacedDigit())
-                .foregroundStyle(.white)
+                // Adaptive ink: white vanishes on the lighter day hues (blush/coral/marigold);
+                // legibleInk flips to dark on those fills so the number always reads.
+                .foregroundStyle(color.legibleInk)
         }
         .frame(width: 24, height: 24)
         .shadow(color: .black.opacity(0.22), radius: 2.5, x: 0, y: 1)

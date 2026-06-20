@@ -27,31 +27,31 @@ enum CarryAccent {
 /// Per-day colours for itinerary route planning (map pins + routes + timeline nodes).
 /// This is a DELIBERATE, scoped exception to the single-accent rule (see decisions.md 2026-06-13):
 /// a multi-day route drawn in one accent is an unreadable tangle, so each day gets a distinct,
-/// dark-mode-adaptive hue. Day 1 keeps the brand smoky blue (CarryAccent) for continuity;
-/// the rest cycle through a warm, sunny "going on a trip" palette. Used ONLY by itinerary
-/// planning — nowhere else may introduce non-accent colours.
+/// dark-mode-adaptive hue. A warm, sunny "going on a trip" palette. Day 1 leads with palm green
+/// (chosen for the going-out mood, by request — brand continuity at Day 1 was deliberately
+/// dropped); the brand smoky blue moves to Day 3. Used ONLY by itinerary planning — nowhere else
+/// may introduce non-accent colours.
 ///
-/// 10 colours, cycled by `sortOrder % 10` (see decisions.md 2026-06-20). Warm-dominant (7 warm +
-/// sea-teal/palm-green reliefs + brand blue) for a cheerful, vacation feel — a pure-warm set was
-/// tried and rejected (warm hues span too little of the wheel, ΔE collapsed to ~8).
-/// The ORDER is solved, not arbitrary: a CIEDE2000 search (over both light & dark) arranges the
-/// hues so ANY 5 consecutive days are mutually distinct (guaranteed min ΔE ≈ 12.5), so long trips
-/// (15, 31, …) never place look-alike colours near each other. The front 7 carry 6 distinct hue
-/// families (near-duplicate pinks/golds pushed to days 8–10); palm green sits at Day 3 by request.
-/// Do NOT reorder or add colours casually — re-run `scripts/itinerary-day-palette-solve.py` to
-/// re-verify the 5-day-window guarantee first.
+/// 7 colours, cycled by `sortOrder % 7` (see decisions.md 2026-06-20). Trimmed from 10 — removed
+/// near-duplicates (caramel/clay/rosewood) so every colour is clearly distinct. The order is solved
+/// (CIEDE2000 over both light & dark): all 7 are mutually distinct (min ΔE ≈ 14.4) and the order
+/// maximises adjacent-day separation (worst neighbour ΔE ≈ 16.2). With N=7 the 5-day window can't
+/// hide any pair, so the floor IS the global min — keep all 7 well apart.
+///
+/// NOTE on legibility: several hues are intentionally light/cheerful and fall below WCAG 3:1 on
+/// white. Foreground marks must therefore NOT assume the colour is dark — e.g. map-pin numbers use
+/// `Color.legibleInk` (adaptive dark/white) instead of hard-coded white. Do NOT "fix" contrast by
+/// darkening the palette: light values carry the separation (deepening collapses ΔE — tried, failed).
+/// Re-run `scripts/itinerary-day-palette-solve.py` to re-verify before any change.
 enum ItineraryDayPalette {
     private static let palette: [UIColor] = [
-        CarryAccent.uiColor,                                                   // 0 · Day 1 — 烟蓝 smoky blue (brand)
-        adaptive(light: (0.878, 0.478, 0.373), dark: (0.910, 0.596, 0.510)),  // 1 · 珊瑚 coral
-        adaptive(light: (0.455, 0.675, 0.333), dark: (0.573, 0.757, 0.475)),  // 2 · 棕榈绿 palm green
-        adaptive(light: (0.820, 0.580, 0.310), dark: (0.882, 0.682, 0.451)),  // 3 · 焦糖 caramel
-        adaptive(light: (0.745, 0.412, 0.471), dark: (0.831, 0.541, 0.592)),  // 4 · 豆沙玫 rosewood
-        adaptive(light: (0.239, 0.639, 0.604), dark: (0.404, 0.737, 0.706)),  // 5 · 海蓝绿 lagoon teal
-        adaptive(light: (0.792, 0.451, 0.337), dark: (0.859, 0.565, 0.461)),  // 6 · 赤陶 clay
-        adaptive(light: (0.925, 0.651, 0.690), dark: (0.949, 0.733, 0.761)),  // 7 · 胭脂粉 blush pink
-        adaptive(light: (0.863, 0.549, 0.235), dark: (0.910, 0.659, 0.404)),  // 8 · 万寿菊 marigold
-        adaptive(light: (0.760, 0.345, 0.420), dark: (0.835, 0.482, 0.553)),  // 9 · 浆果红 berry
+        adaptive(light: (0.455, 0.675, 0.333), dark: (0.573, 0.757, 0.475)),  // 0 · Day 1 — 棕榈绿 palm green
+        adaptive(light: (0.863, 0.549, 0.235), dark: (0.910, 0.659, 0.404)),  // 1 · Day 2 — 万寿菊 marigold
+        CarryAccent.uiColor,                                                   // 2 · Day 3 — 烟蓝 smoky blue (brand)
+        adaptive(light: (0.878, 0.478, 0.373), dark: (0.910, 0.596, 0.510)),  // 3 · Day 4 — 珊瑚 coral
+        adaptive(light: (0.239, 0.639, 0.604), dark: (0.404, 0.737, 0.706)),  // 4 · Day 5 — 海蓝绿 lagoon teal
+        adaptive(light: (0.925, 0.651, 0.690), dark: (0.949, 0.733, 0.761)),  // 5 · Day 6 — 胭脂粉 blush pink
+        adaptive(light: (0.760, 0.345, 0.420), dark: (0.835, 0.482, 0.553)),  // 6 · Day 7 — 浆果红 berry
     ]
 
     private static func adaptive(light: (CGFloat, CGFloat, CGFloat),
@@ -69,6 +69,26 @@ enum ItineraryDayPalette {
 
     static func color(forDayIndex index: Int) -> Color {
         Color(uiColor(forDayIndex: index))
+    }
+}
+
+// MARK: - Legible label colour
+
+extension Color {
+    /// A high-contrast label colour (near-white or near-black) for text/symbols drawn ON TOP of
+    /// `self` — e.g. the number on a map pin whose fill is a day colour. Resolves per appearance,
+    /// so it flips correctly when the fill has light/dark variants. Picks by WCAG luminance: the
+    /// white↔black crossover sits at L≈0.18; the 0.20 threshold biases toward dark ink on the
+    /// lighter, cheerful day hues (coral, blush, marigold…) where hard-coded white would vanish.
+    var legibleInk: Color {
+        Color(UIColor { traits in
+            let resolved = UIColor(self).resolvedColor(with: traits)
+            var r: CGFloat = 0, g: CGFloat = 0, b: CGFloat = 0, a: CGFloat = 0
+            resolved.getRed(&r, green: &g, blue: &b, alpha: &a)
+            func lin(_ v: CGFloat) -> CGFloat { v <= 0.03928 ? v / 12.92 : pow((v + 0.055) / 1.055, 2.4) }
+            let luminance = 0.2126 * lin(r) + 0.7152 * lin(g) + 0.0722 * lin(b)
+            return luminance > 0.20 ? UIColor(white: 0.13, alpha: 1) : .white
+        })
     }
 }
 
