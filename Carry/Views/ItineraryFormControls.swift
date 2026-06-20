@@ -104,3 +104,29 @@ struct ItineraryTimePickerSheet: View {
         .presentationDetents([.height(360)])
     }
 }
+
+// MARK: - 输入格式过滤
+
+/// 行程表单里「格式固定」字段的输入限制（spec: 见各编辑表单）。
+/// 只用于**代码/编号/电话**这类字符集确定的字段；**自由文本**（名称/备注/地址/承运方/车型/车牌等，
+/// 可能含中文或各国字符）一律不限。
+enum ItineraryInputFilter {
+    /// ASCII 字母 + 数字（航班/车次号、机场代码、航站楼、座位等）。
+    static func alphanumeric(_ c: Character) -> Bool { c.isASCII && (c.isLetter || c.isNumber) }
+    /// 电话：数字 + `+ - ( ) 空格`（国际区号/分隔符）。
+    static func phone(_ c: Character) -> Bool { c.isNumber || "+-() ".contains(c) }
+}
+
+extension Binding where Value == String {
+    /// 过滤输入：只保留 `allowed` 字符；`uppercase` 时转大写。代码/编号类字段套此即只能输入对应格式。
+    /// 即时过滤（空格/符号/中文/emoji 进不去）；自由文本字段**不要**套，会误伤合法输入。
+    func filteringInput(_ allowed: @escaping (Character) -> Bool, uppercase: Bool = false) -> Binding<String> {
+        Binding(
+            get: { wrappedValue },
+            set: { newValue in
+                let filtered = String(newValue.filter(allowed))
+                wrappedValue = uppercase ? filtered.uppercased() : filtered
+            }
+        )
+    }
+}

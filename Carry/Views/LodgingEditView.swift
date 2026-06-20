@@ -111,10 +111,13 @@ struct LodgingEditView: View {
                 }
 
                 Section {
-                    TextField("itinerary.transport.field.confirmation", text: $confirmationCode)
+                    // 确认号 = 字母+数字（不强制大写，部分订单号区分大小写）。
+                    TextField("itinerary.transport.field.confirmation",
+                              text: $confirmationCode.filteringInput(ItineraryInputFilter.alphanumeric))
                         .autocorrectionDisabled()
-                    // 电话：搜酒店时可自动回填，也可手填（方便行程中联系）。
-                    TextField("itinerary.transport.field.phone", text: $phone)
+                    // 电话：搜酒店时可自动回填，也可手填（方便行程中联系）。= 数字 + `+-() 空格`。
+                    TextField("itinerary.transport.field.phone",
+                              text: $phone.filteringInput(ItineraryInputFilter.phone))
                         .keyboardType(.phonePad)
                 } header: {
                     Text("itinerary.transport.section.more")

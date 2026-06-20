@@ -1630,8 +1630,9 @@ struct StopEditView: View {
                         }
                         .buttonStyle(.plain)
                     }
-                    // 电话：搜索地点时可自动回填，也可手填（餐厅/景点联系）。
-                    TextField("itinerary.transport.field.phone", text: $phone)
+                    // 电话：搜索地点时可自动回填，也可手填（餐厅/景点联系）。= 数字 + `+-() 空格`。
+                    TextField("itinerary.transport.field.phone",
+                              text: $phone.filteringInput(ItineraryInputFilter.phone))
                         .keyboardType(.phonePad)
                 } header: {
                     Text("itinerary.stop.edit.details_header")

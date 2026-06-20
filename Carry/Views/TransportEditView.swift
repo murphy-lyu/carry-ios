@@ -251,7 +251,8 @@ struct TransportEditView: View {
         Section {
             // 航班号/车次领衔（旅客主认它），承运方在下——与详情标题同序。租车等无班次号则仅显承运方。
             if showsNumber {
-                TextField(numberLabel, text: $number)
+                // 班次号 = 字母+数字（即时过滤其余，大小写随用户输入、不强制）。承运方是自由文本（可中文），不限。
+                TextField(numberLabel, text: $number.filteringInput(ItineraryInputFilter.alphanumeric))
                     .autocorrectionDisabled()
                     .textInputAutocapitalization(.characters)
             }
@@ -302,7 +303,8 @@ struct TransportEditView: View {
             // 常驻标签（标签左·值右，同「机型」行）——避免填了值后 placeholder 标签消失、剩裸值「HGH」「3」看不懂。
             if showsCode {
                 LabeledContent {
-                    TextField("", text: code)
+                    // 机场/站代码（IATA）= 字母+数字（大小写随用户输入、不强制）。
+                    TextField("", text: code.filteringInput(ItineraryInputFilter.alphanumeric))
                         .multilineTextAlignment(.trailing)
                         .autocorrectionDisabled()
                         .textInputAutocapitalization(.characters)
@@ -312,7 +314,8 @@ struct TransportEditView: View {
             }
             if showsTerminal {
                 LabeledContent {
-                    TextField("", text: terminal)
+                    // 航站楼/站台 = 字母+数字（如 T2 / B / 2，大小写随用户输入、不强制）。
+                    TextField("", text: terminal.filteringInput(ItineraryInputFilter.alphanumeric))
                         .multilineTextAlignment(.trailing)
                 } label: {
                     Text(terminalLabel)
@@ -398,7 +401,9 @@ struct TransportEditView: View {
             // 座位 / 确认号：常驻标签（填了值如「3B」「ABC123」也看得懂；空态标签即提示）。
             if showsSeat {
                 LabeledContent {
-                    TextField("", text: $seat).multilineTextAlignment(.trailing)
+                    // 座位 = 字母+数字（如 32A，大小写随用户输入、不强制）。
+                    TextField("", text: $seat.filteringInput(ItineraryInputFilter.alphanumeric))
+                        .multilineTextAlignment(.trailing)
                 } label: {
                     Text("itinerary.transport.field.seat")
                 }
@@ -420,7 +425,8 @@ struct TransportEditView: View {
                 }
             }
             LabeledContent {
-                TextField("", text: $confirmationCode)
+                // 确认号 = 字母+数字（即时过滤空格/符号）。**不强制大写**——部分订单号区分大小写。
+                TextField("", text: $confirmationCode.filteringInput(ItineraryInputFilter.alphanumeric))
                     .multilineTextAlignment(.trailing)
                     .autocorrectionDisabled()
             } label: {
@@ -450,9 +456,9 @@ struct TransportEditView: View {
                 } label: {
                     Text("itinerary.transport.field.plate")
                 }
-                // 电话：取车点搜索可自动回填，也可手填（方便行程中联系）。
+                // 电话：取车点搜索可自动回填，也可手填（方便行程中联系）。= 数字 + `+-() 空格`。
                 LabeledContent {
-                    TextField("", text: $phone)
+                    TextField("", text: $phone.filteringInput(ItineraryInputFilter.phone))
                         .multilineTextAlignment(.trailing)
                         .keyboardType(.phonePad)
                 } label: {

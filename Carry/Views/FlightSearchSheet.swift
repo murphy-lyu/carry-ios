@@ -96,7 +96,8 @@ struct FlightSearchSheet: View {
             // 强制大写：航班号习惯全大写；自动大写键盘可能被绕过（如小写输入法），故 binding 兜底转大写。
             TextField("flight.search.placeholder", text: Binding(
                 get: { number },
-                set: { number = $0.uppercased() }
+                // 只保留字母+数字（航班号字符集），其余（空格/符号/中文/emoji）即时过滤掉；并强制大写。
+                set: { number = String($0.filter { $0.isASCII && ($0.isLetter || $0.isNumber) }).uppercased() }
             ))
                 .font(.title3)
                 .autocorrectionDisabled()
@@ -208,9 +209,13 @@ struct FlightSearchSheet: View {
             Text(d.formatted(.dateTime.month(.abbreviated)))
                 .font(.system(.caption2, design: .rounded).weight(.semibold))
                 .foregroundStyle(.secondary)
+                .lineLimit(1)
+                .minimumScaleFactor(0.6)
             Text(d.formatted(.dateTime.day()))
                 .font(.system(.title3, design: .rounded).weight(.semibold))
                 .foregroundStyle(.primary)
+                .lineLimit(1)
+                .minimumScaleFactor(0.6)   // 大字号/窄机型下 2 位日号缩放适配，避免被 clipShape 裁成 1 位
         }
         .frame(width: 42, height: 42)
         .background(suggested ? Color(.systemFill) : Color(.tertiarySystemFill))
