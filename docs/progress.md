@@ -1,7 +1,19 @@
 # 项目进度
 
 ## 最后更新
-2026-06-20
+2026-06-21
+
+## 上次改动摘要（通知中心整体改造：统一进 Settings + per-event 静音 + 文案重写 · spec: notification-center.md · 2026-06-21）
+
+> 把全 App 通知统一成「设置 → 行程提醒」中心。**已提交**（`381ef8b` 代码+文案 / `248574e` 收尾文案微调）；**未 push**。编译绿，设置页明暗双模自验过。与并行会话（住宿上标等）交织过，xcstrings 走 surgical 提交。
+- **🟢 架构：Settings 为唯一真相源**。删 per-trip 提醒编辑（`TripReminderSheet`/`ReminderPickerSheet` + 行程 ··· 菜单「行程提醒」入口 + addReminder/removeReminder/updateReminderTime/setRemindersEnabled）；出发提醒改读全局设置，改设置即 `store.rescheduleAllTrips()` 套全部行程。`TripBundle.reminderConfigs`/`remindersEnabled` 字段保留（schema，已 vestigial）。
+- **🟢 引擎重写 `NotificationManager`（A/B/C 三锚）**：A=出发日锚（出发提醒、打包提醒）；B=事件时刻锚（交通起飞/发车、还车、退房——按「出发日+dayOrder+当天分钟+事件时区」算绝对时刻、trigger 锁 timeZone，命名空间分离可独立取消）；C=行程日锚（每日摘要）。
+- **🟢 6 类通知**（默认值）：出发提醒（开，档位精简成 `[0,1,3,7]`=当天/前1/前3/前1周，清晨 09:00）；**打包提醒**（关，**自己的时间默认出发前一晚 20:00**，与出发提醒分开——打包发生在晚上）；交通出发（开，多档提前量默认 3h，**航班/非航班两套口吻**）；**还车**（关，**只还车、取车不提醒**，同日 3h）；**退房**（关，**只退房、入住不提醒**，同日 3h）；每日摘要（关，08:00，**正文带出当天第一站**）。
+- **🟢 逐事件静音**：`TransportSegment`/`LodgingStay` 加 `remindersMuted`（轻量迁移+备份+duplicate 全链路）；交通/住宿**详情页**底部「接收提醒」开关。
+- **🟢 文案哲学（Made with Love）**：相信用户、温和提醒、**不提后果不施压**（不说逾期/超时罚款）、有人情味；远档问规划、近档收拾、清晨倒计时、晚上打包。9 语言齐、中文全角。
+- **门控重排**：地点变更只在「每日摘要」开、打包变更只在「打包提醒」开时才重排 → 默认用户零额外开销。埋点 `reminderMutedToggled`。
+- **本会话另落地的小改动**（均已提交进 main）：首页卡片去打包进度条留件数 pill；打包页去重复提醒 pill；设置段「一般旅行提醒」→「出发提醒」；行程详情弹层 iOS 26 缩卡片修复（删 `.large` 单一 `.height`，`584a316`/根因实测）；地点编辑加「日期」改天（`#5`，`dc6e34e`，`moveItineraryStop`）。
+- **待办（都另开会话）**：① **全 App 时区**未系统化，需单独 spec（见记忆 carry-timezone-handling-todo）；② **地点只留「到达时间」**去掉结束时间（已与用户定调，spec 待写）；③ push 由用户定。
 
 ## 上次改动摘要（法务页 + Roadmap 迁到自营域名规避 GFW · 2026-06-20 续）
 
