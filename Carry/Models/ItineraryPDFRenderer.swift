@@ -204,7 +204,7 @@ enum ItineraryPDFRenderer {
             // 机场仍显 IATA 码（语言无关），故此处只需本地化航司名。spec: itinerary-flight-name-localization.md。
             let carrier = t.carrierName(forLanguageKey: T.lang.nameLanguageKey)
             let parts = [carrier, t.number].filter { !$0.isEmpty }
-            return parts.isEmpty ? modeName(t.mode) : parts.joined(separator: " ")
+            return parts.isEmpty ? T.modeName(t.mode) : parts.joined(separator: " ")
         }
 
         private func transportRoute(_ t: TransportSegment) -> String? {
@@ -226,16 +226,5 @@ enum ItineraryPDFRenderer {
             return "\(f) → \(tt)"
         }
 
-        private func modeName(_ m: TransportMode) -> String {
-            // 文档内交通方式名（双语，不取设备 locale）。
-            switch (T.lang, m) {
-            case (.en, .flight): return "Flight"; case (.zh, .flight): return "航班"
-            case (.en, .train): return "Train"; case (.zh, .train): return "火车"
-            case (.en, .bus): return "Bus"; case (.zh, .bus): return "巴士"
-            case (.en, .ferry): return "Ferry"; case (.zh, .ferry): return "渡轮"
-            case (.en, .carRental): return "Car"; case (.zh, .carRental): return "自驾"
-            case (.en, .other): return "Transport"; case (.zh, .other): return "交通"
-            }
-        }
     }
 }

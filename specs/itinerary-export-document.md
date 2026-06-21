@@ -76,3 +76,12 @@
 ## 后续（非本轮）
 
 - 中英对照（side-by-side）版；Excel 数据导出（如有呼声）；申请人信息更多字段。
+
+## 三语导出：加繁体（2026-06-21）
+
+导出语言从「英 / 中（简体）」扩为 **English / 简体中文 / 繁體中文**：
+- `DocLanguage` 加 `.zhHant`（`locale = zh_Hant_TW`；`displayName = 繁體中文`；`nameLanguageKey = "zh-Hant"`）；旧 `.zh` 选项名改「简体中文」便于三选区分。Picker 遍历 `allCases`，自动多一项。
+- `ItineraryDocumentText.pick` 从两参（en/zhHans）扩成三参（+可选 zhHant）：**繁体未单独给则回落简体**——仅用于「日期 / 目的地 / 住宿 / 入住 / 退房 / 第N天 / N晚」这类**繁简同字**文案，字形一致、回落无误；繁简有别的显式给地道繁体（行程表 / 申請人 / 旅行目的 / 產生 / 頁 / 火車 / 渡輪 / 自駕，按台·港用语，**非简转繁**）。
+- `modeName` 移入 `ItineraryDocumentText`（原在 PDF Drawer、双语元组 switch），用 `pick` 自然支持三语。
+- 导出**默认语言**：台/港/澳（Hant 脚本或 TW/HK/MO 地区）设备默认繁体，其余中文默认简体，否则英文（与 `AirportLocale` 口径一致）。
+- 机场 / 航司名经 `nameLanguageKey = "zh-Hant"` 自动取繁体名（`nm` 字典本就有 zh-Hant，机制就绪、零额外工作）。

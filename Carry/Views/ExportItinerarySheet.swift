@@ -26,7 +26,14 @@ struct ExportItinerarySheet: View {
         nonmutating set { languageRaw = newValue.rawValue }
     }
     private var defaultLanguage: DocLanguage {
-        (Locale.current.language.languageCode?.identifier == "zh") ? .zh : .en
+        let lang = Locale.current.language
+        guard lang.languageCode?.identifier == "zh" else { return .en }
+        // 繁体脚本 / 台·港·澳 → 繁体；其余中文 → 简体（与 AirportLocale 口径一致）。
+        if lang.script?.identifier == "Hant" { return .zhHant }
+        switch Locale.current.region?.identifier {
+        case "TW", "HK", "MO": return .zhHant
+        default:               return .zh
+        }
     }
 
     var body: some View {

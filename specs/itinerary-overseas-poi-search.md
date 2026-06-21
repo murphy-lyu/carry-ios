@@ -108,23 +108,11 @@ Carry 的「地点 / 住宿」检索用 MapKit（`StopSearchCompleter` = `MKLoca
 
 ---
 
-## 11. 决策(已定 2026-06-21)
-1. **Worker 域名 = `places.nevestudio.app`**（按功能精准命名,与 `flight.`/`config.` 一脉;不用 `map*`——我们不提供地图渲染,且 "map" 在合规语境上有误导）。
-2. **策略服务端可控（运控,见 §12）**：起步**全 storefront 都开 Mapbox**（体验一致）;成本若 Cover 不住,在 **Worker 端一键切**「仅大陆开 / 关闭」,**无需 App 发版**。
-3. **Mapbox 用 Search Box**（session typeahead,体验最好）——追求最优体验,定了。
-4. **不做回填**：App 未上线、无在野历史数据;本地少量测试数据重选即捕获时区。此问题随「未上线」自然消解。
-
-## 12. 服务端可控策略（运控,§11.2 的最优落地）
-
-不另建后台——**Worker 即控制面**(单一咽喉:App 永远只调 Worker)。
-
-- **App 始终调 Worker**(客户端无 per-storefront 分支、行为统一);请求带上 `storefront`/region。
-- **Worker 按服务端策略决定是否真去 Mapbox**:策略存 Worker 的**环境变量/配置**(Cloudflare 后台即时改),例如 `OVERSEAS_POLICY = all | cn_only | off`:
-  - `all`(起步):任何 storefront 都代发 Mapbox。
-  - `cn_only`:仅大陆 storefront 代发(非大陆本来 MapKit 就全球可用,省额度)。
-  - `off`:全关(返回空,App 自然只剩高德)。
-- **好处**:成本/可用性策略**随时在 Cloudflare 改、零发版、零审核**;客户端永远不用动。与 Carry 既有「内置默认 + 远程下发」哲学一致(roadmap.json / 航班换市场只改 Worker)。
-- 可进一步细化:按 region 限流、按额度自动降级——都在 Worker 内,App 无感。
+## 11. 开放问题(实现前定)
+1. Worker 域名:复用 `config.nevestudio.app`(加 `/search` 路径)还是新 `search.nevestudio.app`?(倾向新子域,职责清晰)
+2. 非大陆 storefront 是否也开 Mapbox(冗余、更全)还是只大陆开(省额度)?(倾向:都开,体验一致;额度不够再收。)
+3. Mapbox 用 **Search Box**(session,typeahead 体验好)还是 **Geocoding v6**(per-request,简单)?(倾向 Search Box。)
+4. 是否需要把已加的「海外地点无时区」历史数据回填?(可不做,用户重选即捕获。)
 
 ---
 

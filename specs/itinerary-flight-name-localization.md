@@ -16,7 +16,7 @@
 - **做法（语言键解耦）**：给目录加「按指定语言键查名」——`Airline.localizedName(for:)` / `Airport.localizedName(for:)`（`nm[key] ?? name`，键 nil = 英文）；`displayName` 退化为 `localizedName(for: AirportLocale.languageKey)`（设备键）。`DocLanguage.nameLanguageKey`（.en→nil、.zh→`zh-Hans`，与 `DocLanguage.zh.locale` 的 `zh_Hans_CN` 一致）把导出语言映射成目录键。
 - **承运方参数化**：`TransportSegment.carrierName(forLanguageKey:)`（核心），`displayCarrier` = 设备键版本。导出渲染器 `ItineraryPDFRenderer.transportLine` 改用 `t.carrierName(forLanguageKey: T.lang.nameLanguageKey)` → 航司名按所选语言。
 - **机场在导出只显 IATA 码**（`transportRoute` 的 `place = code 优先`，无码才用名）——码语言无关，故导出**只需本地化航司名**；机场名渲染未动。若日后想在导出显机场全名，已备好 `Airport.localizedName(for:)`，传 `T.lang.nameLanguageKey` 即可。
-- **zh 单一项**：导出只 EN/ZH，ZH 即简体（zh-Hans）；暂不提供 zh-Hant 导出（属导出选项扩展，单独议）。
+- **繁体导出（2026-06-21 已加）**：导出语言从 EN/ZH 扩为 **EN / 简体 / 繁體**——`DocLanguage` 加 `.zhHant`（`locale=zh_Hant_TW`、`nameLanguageKey="zh-Hant"`、选项名「繁體中文」）；`ItineraryDocumentText.pick` 扩成三参（繁体未给则回落简体，仅用于繁简同字文案，有别的显式给地道繁体）；`modeName` 移入 `ItineraryDocumentText` 用 `pick`；导出默认语言对台/港/澳（Hant 脚本）设备取繁体。机场/航司名经 `nameLanguageKey="zh-Hant"` 自动取繁体（机制本就支持）。详见 `itinerary-export-document.md`。
 
 ### 显示点覆盖审计（2026-06-21）
 
