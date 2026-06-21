@@ -760,7 +760,9 @@ struct PackingListView: View {
                 result.append(item)
             }
         }
-        return result
+        // 克制（ADA）：winter/tropical 场景物品多，整列会堆成长卡 → 优先 alert 项、最多 4 件。
+        let prioritized = result.filter(\.isAlert) + result.filter { !$0.isAlert }
+        return Array(prioritized.prefix(4))
     }
 
     @ViewBuilder
