@@ -387,7 +387,10 @@ struct ItineraryReorderCollection: UIViewRepresentable {
                       let model = parent.sections.first(where: { $0.id == sectionIDs[indexPath.section] }),
                       let header = collectionView.supplementaryView(forElementKind: headerKind, at: indexPath) as? UICollectionViewCell
                 else { continue }
+                // 必须与 headerRegistration 完全一致——尤其 `.margins(.all, 0)`，否则默认内边距会把整个
+                // 头部（含彩色圆点）右移、与时间轴 rail 错位（已踩坑：漏了 margins 致圆点不再与活动图标同列）。
                 header.contentConfiguration = UIHostingConfiguration { self.parent.headerContent(model) }
+                    .margins(.all, 0)
             }
         }
 

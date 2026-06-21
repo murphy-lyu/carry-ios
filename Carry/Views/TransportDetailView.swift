@@ -51,10 +51,26 @@ struct TransportDetailView: View {
         let address: String?     // 详细地址（出门最实用）；与主/次行重复或空则 nil
         let time: String?        // 纯时刻「23:15」（跨天 +N 单独走 dayOffset、渲染成右上角小角标）
         let dayOffset: Int       // 跨天偏移（红眼到达 = 1），> 0 时显「+N」上标
+        let zone: String?        // 该端时区（GMT±N）——仅「两端跨时区」时填，消除时刻歧义
+    }
+
+    /// 本段是否两端跨时区（两端都有时区且不同）——是则在两端时刻下显各自时区。
+    private var crossesTimeZone: Bool {
+        !segment.fromTimeZoneId.isEmpty && !segment.toTimeZoneId.isEmpty
+            && segment.fromTimeZoneId != segment.toTimeZoneId
+    }
+
+    /// IANA → "GMT+8" / "GMT−3:30"（按当前日期算偏移；标签用途，跨夏令时边界外都准）。
+    private func gmtZoneLabel(_ tzId: String) -> String? {
+        guard !tzId.isEmpty, let tz = TimeZone(identifier: tzId) else { return nil }
+        let secs = tz.secondsFromGMT(for: Date())
+        let sign = secs < 0 ? "−" : "+"
+        let mins = abs(secs) / 60, h = mins / 60, m = mins % 60
+        return m == 0 ? "GMT\(sign)\(h)" : String(format: "GMT%@%d:%02d", sign, h, m)
     }
 
     /// 由端点字段拼出 RoutePoint；无地点也无时间 → nil（该端点不渲染）。
-    private func routePoint(name: String, code: String, minutes: Int, dayOffset: Int, terminal: String, address: String) -> RoutePoint? {
+    private func routePoint(name: String, code: String, minutes: Int, dayOffset: Int, terminal: String, address: String, zone: String? = nil) -> RoutePoint? {
         let hasPlace = !name.isEmpty || !code.isEmpty
         let time: String? = minutes >= 0 ? timeLabel(dayMinutes: minutes) : nil
         guard hasPlace || time != nil else { return nil }
@@ -76,21 +92,24 @@ struct TransportDetailView: View {
                           secondary: secondary,
                           address: showAddr ? addr : nil,
                           time: time,
-                          dayOffset: time != nil ? max(0, dayOffset) : 0)
+                          dayOffset: time != nil ? max(0, dayOffset) : 0,
+                          zone: zone)
     }
 
     private var departurePoint: RoutePoint? {
         routePoint(name: localizedAirportName(code: segment.fromCode, fallback: segment.fromName),
                    code: segment.fromCode,
                    minutes: segment.departLocalMinutes, dayOffset: 0,
-                   terminal: terminalDisplay(segment.fromTerminal), address: segment.fromAddress)
+                   terminal: terminalDisplay(segment.fromTerminal), address: segment.fromAddress,
+                   zone: crossesTimeZone ? gmtZoneLabel(segment.fromTimeZoneId) : nil)
     }
     private var arrivalPoint: RoutePoint? {
         routePoint(name: localizedAirportName(code: segment.toCode, fallback: segment.toName),
                    code: segment.toCode,
                    minutes: segment.arriveLocalMinutes,
                    dayOffset: segment.arriveDayOrder - segment.departDayOrder,
-                   terminal: terminalDisplay(segment.toTerminal), address: segment.toAddress)
+                   terminal: terminalDisplay(segment.toTerminal), address: segment.toAddress,
+                   zone: crossesTimeZone ? gmtZoneLabel(segment.toTimeZoneId) : nil)
     }
 
     /// 机场名按界面语言显示：码命中机场目录则用本地化名，否则回落存的原文（非机场地点/未收录机场不受影响）。
@@ -350,20 +369,30 @@ struct TransportDetailView: View {
             }
             Spacer(minLength: 8)
             if let t = p.time {
-                HStack(alignment: .firstTextBaseline, spacing: 4) {
-                    Text(t)
-                        .font(.system(.title3, design: .rounded).weight(.semibold))
-                        .foregroundStyle(.primary)
-                        .fixedSize()
-                    // 跨天「+N」固定宽度小列（gutter）：在场=显 +N、出发行=留空占位 → 两行时钟在 gutter 左缘
-                    // **右对齐**成列；gutter 右缘 = 内容右边距 → +N 与卡片右边距一致、不贴边、呼吸感统一。
-                    // 仅「有跨天到达」的卡片预留（crossDay），同日航班不留列、时钟照常贴右。
-                    if crossDay {
-                        Text(p.dayOffset > 0 ? "+\(p.dayOffset)" : "")
-                            .font(.system(size: 11, weight: .semibold, design: .rounded))
+                VStack(alignment: .trailing, spacing: 1) {
+                    HStack(alignment: .firstTextBaseline, spacing: 4) {
+                        Text(t)
+                            .font(.system(.title3, design: .rounded).weight(.semibold))
+                            .foregroundStyle(.primary)
+                            .fixedSize()
+                        // 跨天「+N」固定宽度小列（gutter）：在场=显 +N、出发行=留空占位 → 两行时钟在 gutter 左缘
+                        // **右对齐**成列；gutter 右缘 = 内容右边距 → +N 与卡片右边距一致、不贴边、呼吸感统一。
+                        // 仅「有跨天到达」的卡片预留（crossDay），同日航班不留列、时钟照常贴右。
+                        if crossDay {
+                            Text(p.dayOffset > 0 ? "+\(p.dayOffset)" : "")
+                                .font(.system(size: 11, weight: .semibold, design: .rounded))
+                                .foregroundStyle(.secondary)
+                                .baselineOffset(6)
+                                .frame(width: 13, alignment: .leading)
+                        }
+                    }
+                    // 跨时区时显该端时区（GMT±N）——消除「出发时刻 vs 到达时刻不在同一时区」的歧义
+                    // （这是详情里唯一真有歧义、值得显时区的地方；spec: itinerary-timezone.md 详情卡决策）。
+                    if let z = p.zone {
+                        Text(z)
+                            .font(.system(size: 11, design: .rounded))
                             .foregroundStyle(.secondary)
-                            .baselineOffset(6)
-                            .frame(width: 13, alignment: .leading)
+                            .fixedSize()
                     }
                 }
             }

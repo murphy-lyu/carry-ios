@@ -186,11 +186,15 @@ struct LodgingEditView: View {
             }
             // 入住/退房时间弹层（chip+弹出，统一交通范式）；挂在 Form 稳定祖先上。
             .sheet(item: $timeSheet) { field in
+                // 入住/退房共用酒店所在地时区；多时区行程或自动推导失败时点亮兜底「时区」行。
+                let showZone = (bundle?.isMultiTimeZone ?? false) || timeZoneId.isEmpty
                 switch field {
                 case .checkIn:
-                    ItineraryTimePickerSheet(hasTime: $hasCheckInTime, time: $checkInTime)
+                    ItineraryTimePickerSheet(hasTime: $hasCheckInTime, time: $checkInTime,
+                                             timeZoneId: $timeZoneId, showZone: showZone)
                 case .checkOut:
-                    ItineraryTimePickerSheet(hasTime: $hasCheckOutTime, time: $checkOutTime)
+                    ItineraryTimePickerSheet(hasTime: $hasCheckOutTime, time: $checkOutTime,
+                                             timeZoneId: $timeZoneId, showZone: showZone)
                 }
             }
             .onAppear(perform: loadIfNeeded)

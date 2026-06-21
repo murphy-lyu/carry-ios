@@ -55,17 +55,28 @@ struct ItineraryTimePickerSheet: View {
     @Binding var hasTime: Bool
     @Binding var time: Date
 
+    /// 可选：该活动端点的 IANA 时区（""=自动按地点推导）。传入且 `showZone` 时，弹层底部出现安静的
+    /// 「时区」兜底行——只在多时区行程 / 自动推导失败时由调用方点亮（spec: itinerary-timezone.md Phase 3）。
+    private let zoneBinding: Binding<String>?
+    private let showZone: Bool
+
     @Environment(\.dismiss) private var dismiss
 
     @State private var draft: Date
+    @State private var showZonePicker = false
     private let wasSet: Bool
 
-    init(hasTime: Binding<Bool>, time: Binding<Date>) {
+    init(hasTime: Binding<Bool>, time: Binding<Date>,
+         timeZoneId: Binding<String>? = nil, showZone: Bool = false) {
         _hasTime = hasTime
         _time = time
+        zoneBinding = timeZoneId
+        self.showZone = showZone
         _draft = State(initialValue: time.wrappedValue)
         wasSet = hasTime.wrappedValue
     }
+
+    private var zoneRowVisible: Bool { showZone && zoneBinding != nil }
 
     var body: some View {
         NavigationStack {
@@ -82,6 +93,26 @@ struct ItineraryTimePickerSheet: View {
                         Text("itinerary.transport.field.clear_time").frame(maxWidth: .infinity)
                     }
                     .padding(.vertical, 8)
+                }
+                if zoneRowVisible, let zone = zoneBinding {
+                    Divider().padding(.horizontal, 16)
+                    Button { showZonePicker = true } label: {
+                        HStack(spacing: 8) {
+                            Text("itinerary.timezone.field")
+                                .foregroundStyle(.primary)
+                            Spacer(minLength: 8)
+                            Text(TimeZoneDisplay.label(zone.wrappedValue))
+                                .foregroundStyle(.secondary)
+                            Image(systemName: "chevron.right")
+                                .font(.footnote.weight(.semibold))
+                                .foregroundStyle(.tertiary)
+                        }
+                        .font(.system(.subheadline))
+                        .padding(.horizontal, 16)
+                        .padding(.vertical, 12)
+                        .contentShape(Rectangle())
+                    }
+                    .buttonStyle(.plain)
                 }
                 Spacer()
             }
@@ -100,8 +131,102 @@ struct ItineraryTimePickerSheet: View {
                     .fontWeight(.semibold)
                 }
             }
+            .sheet(isPresented: $showZonePicker) {
+                if let zone = zoneBinding { TimeZonePickerSheet(timeZoneId: zone) }
+            }
         }
-        .presentationDetents([.height(360)])
+        .presentationDetents([.height(zoneRowVisible ? 430 : 360)])
+    }
+}
+
+// MARK: - 时区显示 / 选择（spec: itinerary-timezone.md Phase 3）
+
+/// IANA 时区的友好显示。
+enum TimeZoneDisplay {
+    /// 城市名（IANA 末段、下划线转空格），如 "Europe/Paris" → "Paris"；空 → 本地化「自动」。
+    static func city(_ id: String) -> String {
+        guard !id.isEmpty else { return NSLocalizedString("itinerary.timezone.auto", comment: "") }
+        let last = id.split(separator: "/").last.map(String.init) ?? id
+        return last.replacingOccurrences(of: "_", with: " ")
+    }
+
+    /// "GMT+8" / "GMT−3:30"（按当前日期算偏移）。
+    static func gmt(_ id: String, now: Date = Date()) -> String? {
+        guard !id.isEmpty, let tz = TimeZone(identifier: id) else { return nil }
+        let secs = tz.secondsFromGMT(for: now)
+        let sign = secs < 0 ? "−" : "+"
+        let mins = abs(secs) / 60, h = mins / 60, m = mins % 60
+        return m == 0 ? "GMT\(sign)\(h)" : String(format: "GMT%@%d:%02d", sign, h, m)
+    }
+
+    /// 行内标签：空→「自动」；否则「城市 · GMT±N」。
+    static func label(_ id: String) -> String {
+        guard !id.isEmpty else { return NSLocalizedString("itinerary.timezone.auto", comment: "") }
+        if let g = gmt(id) { return "\(city(id)) · \(g)" }
+        return city(id)
+    }
+}
+
+/// 可搜索的 IANA 时区列表 + 顶部「自动（按地点）」复位项。写回 `timeZoneId`（""=自动）。
+struct TimeZonePickerSheet: View {
+    @Binding var timeZoneId: String
+    @Environment(\.dismiss) private var dismiss
+    @State private var query = ""
+
+    private struct Row: Identifiable { let id: String; let city: String; let gmt: String; let offset: Int }
+
+    private var rows: [Row] {
+        let now = Date()
+        return TimeZone.knownTimeZoneIdentifiers.compactMap { id -> Row? in
+            guard let tz = TimeZone(identifier: id) else { return nil }
+            return Row(id: id, city: TimeZoneDisplay.city(id),
+                       gmt: TimeZoneDisplay.gmt(id, now: now) ?? "", offset: tz.secondsFromGMT(for: now))
+        }
+        .sorted { $0.offset != $1.offset ? $0.offset < $1.offset : $0.city < $1.city }
+    }
+
+    private var filtered: [Row] {
+        let q = query.trimmingCharacters(in: .whitespaces).lowercased()
+        guard !q.isEmpty else { return rows }
+        return rows.filter { $0.city.lowercased().contains(q) || $0.id.lowercased().contains(q) || $0.gmt.lowercased().contains(q) }
+    }
+
+    var body: some View {
+        NavigationStack {
+            List {
+                Section {
+                    Button { timeZoneId = ""; dismiss() } label: {
+                        HStack {
+                            Text("itinerary.timezone.auto").foregroundStyle(.primary)
+                            Spacer()
+                            if timeZoneId.isEmpty { Image(systemName: "checkmark").foregroundStyle(CarryAccent.color) }
+                        }
+                    }
+                }
+                Section {
+                    ForEach(filtered) { row in
+                        Button { timeZoneId = row.id; dismiss() } label: {
+                            HStack(spacing: 8) {
+                                Text(row.city).foregroundStyle(.primary)
+                                Spacer(minLength: 8)
+                                Text(row.gmt).font(.footnote).foregroundStyle(.secondary)
+                                if row.id == timeZoneId {
+                                    Image(systemName: "checkmark").foregroundStyle(CarryAccent.color)
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            .navigationTitle("itinerary.timezone.picker.title")
+            .navigationBarTitleDisplayMode(.inline)
+            .searchable(text: $query, prompt: Text("itinerary.timezone.search"))
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("common.cancel") { dismiss() }
+                }
+            }
+        }
     }
 }
 

@@ -180,10 +180,17 @@ struct TransportEditView: View {
                         hasTime: Binding(get: { isFrom ? hasDepartTime : hasArriveTime },
                                          set: { if isFrom { hasDepartTime = $0 } else { hasArriveTime = $0 } }),
                         time: Binding(get: { isFrom ? departTime : arriveTime },
-                                      set: { if isFrom { departTime = $0 } else { arriveTime = $0 } }))
+                                      set: { if isFrom { departTime = $0 } else { arriveTime = $0 } }),
+                        timeZoneId: isFrom ? $fromTimeZoneId : $toTimeZoneId,
+                        showZone: zoneRowVisible(zoneId: isFrom ? fromTimeZoneId : toTimeZoneId))
                 }
             }
             .onAppear(perform: loadIfNeeded)
+    }
+
+    /// 时间选择器是否点亮「时区」兜底行：多时区行程、或该端自动推导失败（时区为空）时才显（spec: itinerary-timezone.md Phase 3）。
+    private func zoneRowVisible(zoneId: String) -> Bool {
+        (bundle?.isMultiTimeZone ?? false) || zoneId.isEmpty
     }
 
     // MARK: 类型自适应（spec: itinerary-cost-tracking 之外的交互打磨 — Type 唯一权威，字段随之切换）
