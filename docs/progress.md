@@ -52,6 +52,27 @@
 
 - **待办**：① UI 验收（退房文案带/不带时刻、还车 12/24h、设置页默认时间、**冷启动后通知不丢**）；② 提交 + push（用户定）；③ 64 预算裁剪只在多个密集行程 >60 条时触发，DEBUG 有日志可观测。
 
+## 上次改动摘要（海外检索多源加固 + Geoapify 备份 + 时区归一 · 本会话 review · 2026-06-21）
+
+> 对上两个会话的「海外 POI 检索」+「时区系统」做两轮代码审查 + 全部修复，并接入备份检索源。**编译绿（主 app + Widget）；Worker 已部署 + 线上 curl 验证通过**。已提交 `19f19b9`（海外检索 review 批 + Geoapify）/ `c87370c`（时区种子）/ `1bdf150`（时区归一）；**未 push**。App 侧 UI 验收交用户（模拟器搜海外地点走一遍）。决策见 decisions.md 同日条目；运维见 docs/infrastructure.md。
+
+**1. 🟢 海外检索多源 + Geoapify 备份 + `SEARCH_PROVIDER` 自动降级**
+- Worker 加 provider 抽象，`auto` = Mapbox 主 + Geoapify「主源硬失败才降级」；suggest id 带 `mb:`/`ga:` 前缀路由回来源；Geoapify 把 retrieve 数据编进 id（base64url）离线解析。App 零改动。线上切 `geoapify` 验证 `ga:` 通、再切回 `auto`。
+
+**2. 🔴 合规红线加固（堵伪造绕过）**
+- `ga:` id 客户端可伪造 `cc` 绕过 CN 过滤 → 改用**坐标 IANA 时区**判定（沪/乌/港/澳）+ country code 双防线；比 bbox 准（不误杀首尔/台北）。线上验证恶意 id → `domestic_excluded`。
+
+**3. 🟢 时区三修**
+- 大陆时区归一北京时间（`Asia/Urumqi` 等 → `Asia/Shanghai`，`TimeZoneCanonicalizer`，MapKit 捕获 + 备份导入两入口）；详情卡 GMT 偏移按事件日期算（夏令时）；多时区 Day 标种子取出发地。
+
+**4. 🟢 海外检索 review 批 bug**
+- Mapbox session token retrieve 后轮换（漏钱）；结果乱序覆盖防护；解析失败退回无坐标停靠点（原死点击）；sheet 关闭取消在途请求；Worker 常量时间 token、query 上限、disabled 按 path 返回、纯 geoapify 不强求 MAPBOX_TOKEN、降级结果不缓存、翻译 cache 兜底。
+
+**5. 数据校准（一次性，非代码）**
+- 用户真实备份 `carry_backup_2026-06-20_15-01.json` 扫全 14 条：1 处 `Asia/Urumqi` 归一 + 23 处空时区按坐标补全 → `*.calibrated.json`（其余字段逐字节未变）。
+
+- **待办**：① push（用户定）；② App 侧 UI 验收（搜海外地点：session 轮换 / 乱序 / 死点击 / 详情卡夏令时 / 关闭清理）；③ Geoapify key 用户已轮换。
+
 ## 上次改动摘要（按天色板定稿 + 住宿详情跟随当天色 + 航班机场/航司名本地化全链路 · 2026-06-21）
 
 > 本会话三块、各自独立提交（隔离 index、与并行「时区 / HomeView / 海外 POI」会话不重叠）。**全程编译绿；未 push**（领先 origin 30）；UI 验收交用户。

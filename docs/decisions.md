@@ -1,5 +1,28 @@
 # 决策日志
 
+## 2026-06-21 海外检索多源加固 + 时区归一（本会话 review + 加固；详见 docs/infrastructure.md）
+
+### 海外检索多源抽象 + Geoapify 备份源 + `SEARCH_PROVIDER` 云控自动降级
+原因：海外 POI 检索单点依赖 Mapbox（`carry-places` Worker），Mapbox 故障/超额 = 功能全挂、且要发版才能换源。Worker 是咽喉，应能零发版换源救老用户。
+实现：Worker 加 provider 抽象——`SEARCH_PROVIDER = mapbox | geoapify | auto`（默认 `auto`：Mapbox 主，**仅主源硬失败**（异常/非 200；空结果不算失败）才降级 Geoapify）。suggest 结果 id 带 `mb:`/`ga:` 前缀，`/retrieve` 据此路由回来源；Geoapify autocomplete 单次即带坐标，把 retrieve 所需数据塞进 id（base64url）→ **离线解析、零二次请求**。降级结果**不缓存**（避免主源恢复后仍吐 10 分钟备源）。App 侧零改动。
+放弃：双源并发取并集（成本翻倍、排序难合）；备源做二次 place-details 请求（多耗额度、依赖其可用，不如把数据编进 id）。
+
+### 合规红线（境内一律走高德）改用「坐标 IANA 时区」判定，不靠 country code / bbox
+原因：① `ga:` id 客户端可控，伪造 `cc=jp` + 北京坐标可绕过「按 country code 挡 CN」；② 粗 bbox 兜底会误杀首尔/台北/河内（都在矩形内、是核心目的地）。
+实现：`complianceCheck` = country code 命中 CN/HK/MO 挡 + **坐标 tz-lookup 落在 `Asia/Shanghai`/`Urumqi`/`Hong_Kong`/`Macau` 也挡**（坐标无法伪造其所在时区）。精准——首尔→Asia/Seoul 放行、北京伪造 jp→Asia/Shanghai 挡。线上验证：构造恶意 id → `domestic_excluded`。
+放弃：信任客户端 storefront 反查 `request.cf.country`（旅行用户常人在境外但 storefront=CHN，会误杀）→ storefront 仅成本开关、非合规边界；合规由**无条件** CN 过滤保证。
+
+### 中国大陆时区一律归一到北京时间（`Asia/Shanghai`）
+原因：中国全国统一民用北京时间（GMT+8），新疆/西藏地理上属 UTC+6、MapKit/坐标查会给 `Asia/Urumqi`/`Kashgar` 等，导致纯国内行程（如 重庆→伊宁）被误判「跨时区」、每个 Day 头显无意义 GMT+8 标。
+实现：`TimeZoneCanonicalizer.canonical()` 把大陆境内别名（`Asia/Urumqi`/`Kashgar`/`Harbin`/`Chongqing`/`Chungking`）→ `Asia/Shanghai`，在**两个数据写入口**应用：MapKit 地点解析（`AddStopView`）、备份导入（`DataBackupManager`）。港澳（独立法域）与境外不动；机场库本就全 `Asia/Shanghai`；手动选时区尊重用户。
+放弃：在每个读取访问器都归一（写入口归一即可保证存量+新数据一致、少改面）。
+
+### 其它本会话审查修复
+- **Mapbox session token retrieve 后轮换**：Search Box 按 session 计费（N×suggest + 1×retrieve = 1 次），不轮换则后续 suggest 被逐条计费（隐性漏钱）。
+- **详情卡 GMT 偏移按事件日期算**（非「今天」）：跨夏令时才对（夏天规划冬天伦敦航班应 GMT+0）。时区选择器仍按「当前」（通用选择器、不绑事件）。
+- **多时区 Day 标种子取「最早出现的所在地时区」**（≈出发地），非主时区（最频繁≈目的地）：首站前的空白天显出发地。
+- 海外检索其它：结果乱序覆盖防护（写回前校验 query）、解析失败退回无坐标停靠点（原死点击）、sheet 关闭取消在途请求；Worker 常量时间 token 比较、query 长度上限、disabled 按 path 返回正确形状、纯 geoapify 模式不强求 MAPBOX_TOKEN。
+
 ## 2026-06-21 Trip Book 花费体系细化 + 列表卡统一规则 + 浅色卡 elevation（spec: trip-book.md / itinerary-trip-spend.md）
 - **花费分类「前提反转」二次**：trip-book.md 原定「Trip Book 不做餐饮/购物分类、只按实体类型聚合」，依据是「需新增让用户填消费类别的录入」。前提已不成立——单行程花费页落地后 `SpendCategory.from(stopCategory:)` 把用户加地点时本来就选的 `StopCategory` **零新增录入**地映射成 7 类。与航班里程/住宿晚数/总花费三次反转**同一逻辑链**（前提变了→决策反转）。故 Trip Book 花费卡升级为 7 类（地点拆 餐饮/景点/活动/购物/其他）。跨行程 `TripSpendStats` 与单行程 `TripSpendDetail` **共用 `SpendCategory`**，口径不漂移。
 - **Trip Book 守单一烟蓝、不抄单行程页多彩**：花费卡比例带/图例、下钻明细行图标一律单烟蓝（`CarryAccent`，按额降序走 rank 透明度）。单行程花费页用多彩是「操作型详情」，Trip Book 是「克制回顾」——同一套 `SpendCategory` 两种呈现，刻意区分。
