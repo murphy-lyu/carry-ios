@@ -23,11 +23,14 @@ nonisolated enum TripsyZipReader {
     /// 解压失败的单个条目跳过、不中断（健壮性优先；缺图最多丢附件、不毁整次导入）。
     static func extract(zipData data: Data, to destDir: URL) throws {
         let entries = try centralDirectoryEntries(in: data)
+        let destPrefix = destDir.standardizedFileURL.path + "/"
         for entry in entries {
             // 目录条目（以 / 结尾、无数据）跳过
             if entry.fileName.hasSuffix("/") { continue }
-            guard let bytes = fileData(for: entry, in: data) else { continue }
             let outURL = destDir.appendingPathComponent(entry.fileName)
+            // Zip-slip 防护：拒绝解析后逃出 destDir 的条目（如含 "../" 的异常/恶意文件名）。
+            guard outURL.standardizedFileURL.path.hasPrefix(destPrefix) else { continue }
+            guard let bytes = fileData(for: entry, in: data) else { continue }
             try? FileManager.default.createDirectory(
                 at: outURL.deletingLastPathComponent(), withIntermediateDirectories: true)
             try? bytes.write(to: outURL, options: .atomic)

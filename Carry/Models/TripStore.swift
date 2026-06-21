@@ -342,6 +342,16 @@ final class TripStore: ObservableObject {
         return result
     }
 
+    /// 合并一个内存中的 `CarryBackup`（从 Tripsy 转换而来，spec: tripsy-import.md）。
+    /// 与 `mergeFromData` 同样的合并 + 副作用，但不经 JSON 往返。
+    @discardableResult
+    func mergeBackup(_ backup: CarryBackup) throws -> (trips: Int, myItems: Int) {
+        let existingIds = Set(trips.map(\.id))
+        let result = try DataBackupManager.shared.merge(backup, into: context)
+        applyPostMergeSideEffects(previousTripIds: existingIds)
+        return result
+    }
+
     /// 还原后清理副作用：旧 trip 的 pending 通知 / Live Activity 必须全清，否则会出现
     /// "通知 ID 指向已不存在的 trip" 或"灵动岛挂着旧行程"等幽灵。然后按新还原的 trip
     /// 重排所有提醒，并触发 widget snapshot 重写。

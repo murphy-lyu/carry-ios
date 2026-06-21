@@ -615,6 +615,14 @@ final class DataBackupManager {
         return try performMerge(from: backup, into: context)
     }
 
+    /// 合并一个已在内存中构建好的 `CarryBackup`（如从 Tripsy 转换而来，spec: tripsy-import.md）。
+    /// 与 `mergeFromData` 同一段 `performMerge` 逻辑，但**跳过 JSON 编/解码往返**——避免把
+    /// 附件图片字节 base64 编一遍又解一遍的浪费（值已是合法内存对象，无需版本校验）。
+    @discardableResult
+    func merge(_ backup: CarryBackup, into context: ModelContext) throws -> (trips: Int, myItems: Int) {
+        try performMerge(from: backup, into: context)
+    }
+
     /// Rewrite the backed-up background image bytes to the sandbox (filenames are UUIDs, so
     /// overwriting is safe/idempotent). Trip `backgroundsData` then references them.
     private func restoreBackgroundImages(from backup: CarryBackup) {

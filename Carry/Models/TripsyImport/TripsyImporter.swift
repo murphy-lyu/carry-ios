@@ -58,8 +58,8 @@ enum TripsyImporter {
 
     /// 解析 zip → 行程草稿列表。不写库；图片字节已读进内存，可在返回前清理临时目录。
     /// `nonisolated`：从 `Task.detached` 后台调用；整条解析链（ZipReader/SQLite/Converter）皆 nonisolated。
-    /// `makeBackupData` 不在此列——它从 @MainActor 的 performImport 调用、且要碰 @MainActor 的
-    /// `currentBackupVersion` 与 `CarryBackup` 编码，故留在主 actor。
+    /// `makeBackup` 不在此列——它从 @MainActor 的 performImport 调用、且要碰 @MainActor 的
+    /// `currentBackupVersion`，故留在主 actor。
     nonisolated static func parse(zipData: Data) throws -> TripsyParseResult {
         let tmp = FileManager.default.temporaryDirectory
             .appendingPathComponent("tripsy-import-\(UUID().uuidString)", isDirectory: true)
@@ -84,12 +84,12 @@ enum TripsyImporter {
         return TripsyParseResult(drafts: drafts)
     }
 
-    /// 把选中的草稿编码成 CarryBackup JSON（与 DataBackupManager 解码器一致：iso8601）。
-    static func makeBackupData(from drafts: [TripsyTripDraft]) -> Data? {
+    /// 把选中的草稿组装成内存中的 `CarryBackup`，直接交给 `TripStore.mergeBackup`（不经 JSON 往返）。
+    static func makeBackup(from drafts: [TripsyTripDraft]) -> CarryBackup? {
         guard !drafts.isEmpty else { return nil }
         var files: [String: Data] = [:]
         for d in drafts { for (k, v) in d.attachmentFiles { files[k] = v } }
-        let backup = CarryBackup(
+        return CarryBackup(
             version: DataBackupManager.currentBackupVersion,
             createdAt: Date(),
             trips: drafts.map(\.backupTrip),
@@ -98,9 +98,6 @@ enum TripsyImporter {
             backgroundImages: nil,
             attachmentFiles: files.isEmpty ? nil : files
         )
-        let enc = JSONEncoder()
-        enc.dateEncodingStrategy = .iso8601
-        return try? enc.encode(backup)
     }
 
     nonisolated private static func firstFile(in dir: URL, withExtension ext: String) -> URL? {

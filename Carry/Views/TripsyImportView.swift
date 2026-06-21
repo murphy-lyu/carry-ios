@@ -182,13 +182,13 @@ struct TripsyImportView: View {
         let chosen = drafts.filter { selected.contains($0.id) }
         CarryLogger.shared.log(.tripsyImportStarted, context: "selected=\(chosen.count) total=\(drafts.count)")
 
-        guard let data = TripsyImporter.makeBackupData(from: chosen) else {
-            CarryLogger.shared.log(.tripsyImportFailed, context: "reason=encode_failed")
+        guard let backup = TripsyImporter.makeBackup(from: chosen) else {
+            CarryLogger.shared.log(.tripsyImportFailed, context: "reason=build_failed")
             importing = false
             return
         }
         do {
-            let result = try store.mergeFromData(data)
+            let result = try store.mergeBackup(backup)
             CarryLogger.shared.log(.tripsyImportSucceeded,
                                    context: "trips=\(result.trips) selected=\(chosen.count)")
             onImported(result.trips)
