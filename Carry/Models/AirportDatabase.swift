@@ -57,54 +57,57 @@ enum AirportLocale {
     }
 }
 
-/// 全球机场检索。actor 隔离状态：JSON 在首次检索时于后台执行器懒加载、解码，不阻塞主线程。
-actor AirportDatabase {
-    static let shared = AirportDatabase()
+/// 机场**不可变参考数据**的单一来源：`airports.json`（~1.6 MB）经 `static let` 一次性、线程安全懒加载。
+/// `all` 供搜索遍历、`byIATA` 供「码已知」O(1) 同步取名。搜索（`AirportDatabase` actor，后台扫表）与
+/// 显示（详情按码同步取本地化名）**共用这一份**。1.6 MB 解码较重 → 启动 `preload()` 后台预热，避免首次
+/// 访问卡主线程、并消除详情页机场名的异步刷新闪烁。spec: itinerary-flight-name-localization.md。
+enum AirportCatalog {
+    private static let logger = Logger(subsystem: "com.carry.app", category: "AirportCatalog")
 
-    private var airports: [Airport] = []
-    private var byIATA: [String: Airport] = [:]
-    private var loaded = false
-    private static let logger = Logger(subsystem: "com.carry.app", category: "AirportDatabase")
-
-    private init() {}
-
-    private func ensureLoaded() {
-        guard !loaded else { return }
+    /// 全部机场（搜索遍历用）。bundle 内资源、有效构建必有，故（理论上不会发生的）读失败回落空。
+    static let all: [Airport] = {
         guard let url = Bundle.main.url(forResource: "airports", withExtension: "json") else {
-            Self.logger.error("airports.json missing from bundle")
-            return  // 不置 loaded：理论上不该发生，但万一失败也不永久失能，下次 search 可重试。
+            logger.error("airports.json missing from bundle"); return []
         }
-        do {
-            let data = try Data(contentsOf: url)
-            airports = try JSONDecoder().decode([Airport].self, from: data)
-            byIATA = Dictionary(airports.compactMap { $0.iata.isEmpty ? nil : ($0.iata.uppercased(), $0) },
-                                uniquingKeysWith: { a, _ in a })
-            loaded = true  // 仅解码成功后置位：失败时下次 search 重试（快速失败），避免整生命周期静默返回空。
-        } catch {
-            Self.logger.error("airports.json decode failed: \(error.localizedDescription, privacy: .public)")
+        do { return try JSONDecoder().decode([Airport].self, from: Data(contentsOf: url)) }
+        catch {
+            logger.error("airports.json decode failed: \(error.localizedDescription, privacy: .public)")
+            return []
         }
-    }
+    }()
 
-    /// O(1) 精确按 IATA 码取机场——用于显示已保存航段时按码解析本地化机场名（`Airport.displayName`）。
-    /// 与 `search` 区分：search 是模糊检索（输入补全），此处是「码已知、取规范条目」。
-    func airport(forIATA code: String) -> Airport? {
-        ensureLoaded()
+    /// IATA 码（大写）→ 机场，供 O(1) 取名。
+    static let byIATA: [String: Airport] = Dictionary(
+        all.compactMap { $0.iata.isEmpty ? nil : ($0.iata.uppercased(), $0) },
+        uniquingKeysWith: { a, _ in a })
+
+    /// O(1) 精确按 IATA 码取机场（**同步**）——显示已保存航段时按码解析本地化机场名（`Airport.displayName`）。
+    static func airport(forIATA code: String) -> Airport? {
         let key = code.trimmingCharacters(in: .whitespaces).uppercased()
         guard !key.isEmpty else { return nil }
         return byIATA[key]
     }
 
+    /// 启动时后台预热：强制把 1.6 MB 库解码进内存，让后续搜索/显示同步直取、零卡顿、零闪。
+    static func preload() { _ = byIATA }
+}
+
+/// 全球机场检索引擎。actor：模糊检索是逐键扫全表（CPU 重），放后台执行器、不卡主线程打字。
+/// 数据本身在 `AirportCatalog`（单一同步源），此处只做匹配 / 排序。
+actor AirportDatabase {
+    static let shared = AirportDatabase()
+    private init() {}
+
     /// 检索机场。匹配 IATA / ICAO / 英文名·城市 / 中文名，按相关性 + 大型机场优先排序。
     /// 全球范围，无区域过滤、无目的地偏置（境外搜不到的根因正是区域限制，这里不引入）。
     func search(_ raw: String, limit: Int = 40) -> [Airport] {
-        ensureLoaded()
         let q = raw.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !q.isEmpty else { return [] }
         let upper = q.uppercased()
         let lower = q.lowercased()
 
         var scored: [(score: Int, airport: Airport)] = []
-        for a in airports {
+        for a in AirportCatalog.all {
             if let s = Self.matchScore(a, query: q, upper: upper, lower: lower) {
                 scored.append((s, a))
             }

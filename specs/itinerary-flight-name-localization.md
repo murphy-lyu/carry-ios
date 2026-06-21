@@ -6,7 +6,7 @@
 ## 落地（定稿决策，2026-06-21）
 
 - **航司（单一数据源）**：`AirlineDatabase` 从 actor 改为**非 actor 同步目录**（不可变参考数据无需 actor 隔离）——`static let` 一次性、线程安全懒加载 `airlines.json`（225K），`airline(forIATA:)` / `airlineName(forFlightNumber:)` 同步 O(1)。**搜索与显示共用这一份，不重复加载**（原先一度引入 `FlightNameCache` 做第二份同步缓存，已删除并入此处）。承运方展示逻辑放 `TransportSegment.displayCarrier`（模型自我呈现、数据层不耦合模型）：航班从航班号解析本地化航司名、否则存的 `carrier` 原文，gate 在 `.flight`。接入时间轴 `TransportTimelineRow.titleView`、详情 `headerSubtitle`/`titleText`、搜索结果卡（优先 `recognized.displayName`）。de-actor 后 `FlightSearchSheet.numberChanged` 也从 `Task{await}` 简化为同步直取。
-- **机场**：只在详情副行露名（时间轴 / Trip Book 显码、本就语言无关）。`TransportDetailView` 用 `@State airportNames` + `.task(id:segment.id)` 异步经新接口 `AirportDatabase.airport(forIATA:)`（O(1)，新加 `byIATA` 索引）解析本地化名，解析前回落英文、解析后刷新。1.6M 大库**不在主线程同步解码**。
+- **机场（单一数据源 + 同步零闪）**：把机场不可变数据抽成 `AirportCatalog`（`static let all`/`byIATA`，一次性懒加载），`AirportDatabase` actor 退化为只读 `AirportCatalog.all` 的**搜索引擎**（模糊检索逐键扫表、仍放后台不卡打字），二者共用一份、不重复加载。详情 `TransportDetailView` 改为**同步**取 `AirportCatalog.airport(forIATA:)?.displayName`（去掉 `@State`+`.task` 异步）→ 首帧即正确、**零异步刷新闪烁**。1.6M 大库不在主线程同步解码：`CarryApp` 启动在后台 `Task.detached` 调 `AirportCatalog.preload()`（+`AirlineDatabase.preload()`）预热，详情/搜索打开时已就绪。只在详情副行露名（时间轴 / Trip Book 显码、本就语言无关）。
 - **确定性、无启发式**：码命中库 → 本地化名；否则 → 存名。同时修好「上游英文」与「手动搜索冻结语言」，且**零迁移、无新字段**。机场名非自由文本（只能搜索选）→ 无覆盖顾虑；承运方是自由文本但航班解析 gate 在 `.flight`（火车号 `G403` 不会误判为航司 `G4`），非航班/自定义承运方原样保留。
 - **决策记录**（取代下方 Draft 待确认项）：① 用「码/号 → 库」确定性解析，不加 `carrierEdited` 标志、不用等值启发式；② 航司 IATA 从航班号 `split` 取（航班号即航司身份，不另存字段）；③ 航司同步缓存（小库，首帧即正确无闪烁）、机场异步 `.task`（大库、按需单页）——按数据体积分工。
 

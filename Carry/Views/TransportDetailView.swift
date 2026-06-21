@@ -32,9 +32,6 @@ struct TransportDetailView: View {
     @EnvironmentObject var store: TripStore
     @Environment(\.dismiss) private var dismiss
     @State private var editing = false
-    /// IATA 码 → 本地化机场名，详情出现时经 `AirportDatabase` 异步解析（1.6 MB 库不在主线程同步解码）。
-    /// 解析前回落到存的英文机场名；解析后刷新为当前界面语言。
-    @State private var airportNames: [String: String] = [:]
     @AppStorage("distance_unit") private var distanceUnitRaw = DistanceUnit.automatic.rawValue
     private var distanceUnit: DistanceUnit { DistanceUnit(rawValue: distanceUnitRaw) ?? .automatic }
 
@@ -96,26 +93,10 @@ struct TransportDetailView: View {
                    terminal: terminalDisplay(segment.toTerminal), address: segment.toAddress)
     }
 
-    /// 机场名按界面语言显示：码命中本地库则用本地化名，否则回落存的原文（非机场地点/未收录机场不受影响）。
+    /// 机场名按界面语言显示：码命中机场目录则用本地化名，否则回落存的原文（非机场地点/未收录机场不受影响）。
+    /// 同步取自 `AirportCatalog`（单一数据源、启动已预热）→ 首帧即正确、无异步刷新闪烁。
     private func localizedAirportName(code: String, fallback: String) -> String {
-        let key = code.trimmingCharacters(in: .whitespaces).uppercased()
-        if !key.isEmpty, let name = airportNames[key] { return name }
-        return fallback
-    }
-
-    /// 解析本段起讫机场的本地化名（仅当存了 IATA 码）。`.task(id:)` 在详情出现 / 切段时跑一次。
-    /// `@MainActor`：`await` 机场 actor 后回到主线程再写 `@State`。
-    @MainActor
-    private func resolveAirportNames() async {
-        var result: [String: String] = [:]
-        for code in [segment.fromCode, segment.toCode] {
-            let key = code.trimmingCharacters(in: .whitespaces).uppercased()
-            guard !key.isEmpty, result[key] == nil else { continue }
-            if let airport = await AirportDatabase.shared.airport(forIATA: key) {
-                result[key] = airport.displayName
-            }
-        }
-        airportNames = result
+        AirportCatalog.airport(forIATA: code)?.displayName ?? fallback
     }
 
     /// 航站楼显示：仅航班、且值以数字开头时加「T」前缀（2 → T2，国际通用航站楼记法）。
@@ -150,7 +131,6 @@ struct TransportDetailView: View {
         .sheet(isPresented: $editing) {
             TransportEditView(tripId: tripId, segmentId: segment.id)
         }
-        .task(id: segment.id) { await resolveAirportNames() }
     }
 
     private var header: some View {

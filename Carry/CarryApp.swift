@@ -67,6 +67,12 @@ struct CarryApp: App {
                     store.writeWidgetSnapshot()
                     // 预热汇率：让费用录入时能就地捕获本位币快照（spec: itinerary-cost-tracking.md）
                     ExchangeRateManager.shared.fetchIfNeeded()
+                    // 后台预热机场/航司目录（1.6M/225K 解码），让行程页/详情同步取本地化名、零卡顿零闪
+                    // （spec: itinerary-flight-name-localization.md）。
+                    Task.detached(priority: .utility) {
+                        AirportCatalog.preload()
+                        AirlineDatabase.preload()
+                    }
                     // 注册通知委托，让打包提醒点击后直接跳到对应行程
                     notificationDelegate.router = router
                     UNUserNotificationCenter.current().delegate = notificationDelegate
