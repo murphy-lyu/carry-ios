@@ -27,6 +27,10 @@ struct TripSpendBreakdown: Equatable {
     /// 按 7 类消费类别（`SpendCategory`）聚合的本位币金额。交通/住宿单列，地点按 `StopCategory`
     /// 细分为 餐饮/景点/活动/购物/其他——与单行程花费页同一套口径（复用 `SpendCategory`），不漂移。
     var byCategory: [SpendCategory: Double] = [:]
+    /// 交通**按方式**再拆（航班/火车/巴士/渡轮/租车/其他）的本位币金额，供「查看全部」下钻按方式分行展示——
+    /// 避免把租车/火车塌缩成一个「交通」行只能取一个图标（飞机）。是 `byCategory[.transport]` 的细分，
+    /// 两者同源、`byCategory[.transport]` == 各方式之和；卡片仍用 `byCategory`（交通合一）。
+    var transportByMode: [TransportMode: Double] = [:]
     /// 是否记录过费用（即便某笔因无汇率未计入合计，也为 true）。
     var hadAnyRecorded: Bool = false
 
@@ -69,27 +73,29 @@ struct TripSpendStats {
         let home = homeCode.uppercased()
         for trip in trips where trip.countsAsVisited {
             var b = TripSpendBreakdown()
-            func add(_ entity: CostBearing, _ category: SpendCategory) {
+            func add(_ entity: CostBearing, _ category: SpendCategory, mode: TransportMode? = nil) {
                 b.hadAnyRecorded = true
                 if let value = CostResolver.homeValue(snapshot: entity.costHomeAmount,
                                                       amount: entity.costAmount,
                                                       code: entity.costCurrencyCode,
                                                       convert: convert) {
                     b.byCategory[category, default: 0] += value
+                    if let mode { b.transportByMode[mode, default: 0] += value }   // 交通再按方式拆
                     if entity.costCurrencyCode.uppercased() != home { stats.approximate = true }
                 } else {
                     stats.hasUnconverted = true
                 }
             }
             for day in trip.safeItineraryDays {
-                // 地点按 StopCategory 细分（餐饮/景点/活动/购物/其他）；交通/住宿单列。
+                // 地点按 StopCategory 细分（餐饮/景点/活动/购物/其他）；交通按方式拆；住宿单列。
                 for stop in (day.stops ?? []) where stop.hasCost { add(stop, SpendCategory.from(stopCategory: stop.category)) }
-                for seg in (day.segments ?? []) where seg.hasCost { add(seg, .transport) }
+                for seg in (day.segments ?? []) where seg.hasCost { add(seg, .transport, mode: seg.mode) }
             }
             for stay in trip.safeLodgingStays where stay.hasCost { add(stay, .lodging) }
 
             if b.hadAnyRecorded {
                 for (cat, amt) in b.byCategory { stats.overall.byCategory[cat, default: 0] += amt }
+                for (m, amt) in b.transportByMode { stats.overall.transportByMode[m, default: 0] += amt }
                 stats.overall.hadAnyRecorded = true
                 stats.perTrip.append(TripSpendRow(id: trip.id, name: trip.name, breakdown: b))
             }

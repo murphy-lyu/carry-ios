@@ -1177,10 +1177,11 @@ struct HomeView: View {
             List {
                 ForEach(s.perTrip) { row in
                     Section(header: Text(row.name)) {
-                        ForEach(row.breakdown.sortedNonZero, id: \.category) { item in
-                            spendDetailLine(spendCategoryName(item.category), item.amount, s.homeCode)
+                        ForEach(spendDetailRows(row.breakdown)) { r in
+                            spendDetailLine(symbol: r.symbol, label: r.label, amount: r.amount, code: s.homeCode)
                         }
-                        HStack {
+                        HStack(spacing: 10) {
+                            Color.clear.frame(width: 22, height: 1)   // 对齐类目行图标列
                             Text("tripbook.spend.trip_total")
                                 .font(.subheadline.weight(.semibold))
                                 .foregroundStyle(.primary)
@@ -1202,8 +1203,36 @@ struct HomeView: View {
         }
     }
 
-    private func spendDetailLine(_ label: String, _ amount: Double, _ code: String) -> some View {
-        HStack {
+    /// 下钻明细一行（图标 + 名称 + 金额）。交通段或类目都复用此通用行。
+    private struct SpendDetailRow: Identifiable {
+        let id: String
+        let symbol: String
+        let label: String
+        let amount: Double
+    }
+
+    /// 「查看全部」每趟的明细行：**交通按方式拆**（航班/火车/租车…各自图标，修「租车显示成飞机」），
+    /// 其余类目各一行；统一按金额降序。交通合计 = 各方式之和，与 Trip total 口径一致。
+    private func spendDetailRows(_ b: TripSpendBreakdown) -> [SpendDetailRow] {
+        var rows: [SpendDetailRow] = []
+        for (mode, amt) in b.transportByMode where amt > 0 {
+            rows.append(SpendDetailRow(id: "m.\(mode.rawValue)", symbol: mode.symbolName,
+                                       label: NSLocalizedString(mode.localizationKey, comment: ""), amount: amt))
+        }
+        for (cat, amt) in b.byCategory where cat != .transport && amt > 0 {
+            rows.append(SpendDetailRow(id: "c.\(cat.rawValue)", symbol: cat.symbolName,
+                                       label: spendCategoryName(cat), amount: amt))
+        }
+        return rows.sorted { $0.amount > $1.amount }
+    }
+
+    /// 下钻行：图标（单烟蓝，跟随花费卡的单一强调色，不用单行程页的多彩）+ 名称 + 金额。
+    private func spendDetailLine(symbol: String, label: String, amount: Double, code: String) -> some View {
+        HStack(spacing: 10) {
+            Image(systemName: symbol)
+                .font(.footnote)
+                .foregroundStyle(CarryAccent.color)
+                .frame(width: 22)
             Text(label).font(.subheadline).foregroundStyle(.secondary)
             Spacer()
             Text(CurrencyCatalog.format(amount, code: code))
@@ -1386,7 +1415,7 @@ struct HomeView: View {
     private func tripBookScopeCard(_ s: TripBookStats) -> some View {
         let total = max(1, s.domesticCount + s.internationalCount)
         let intlFrac = CGFloat(s.internationalCount) / CGFloat(total)
-        return tripBookCard("tripbook.scope.title", systemImage: "airplane.departure") {
+        return tripBookCard("tripbook.scope.title", systemImage: "map") {
             GeometryReader { geo in
                 HStack(spacing: 0) {
                     Rectangle().fill(CarryAccent.color)
