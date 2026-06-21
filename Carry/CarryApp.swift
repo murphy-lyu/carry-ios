@@ -52,6 +52,13 @@ struct CarryApp: App {
         // App-wide UIKit tint so system-presented UI (confirmationDialogs, alerts, context
         // menus) uses the single accent too — SwiftUI's `.tint()` doesn't reach these.
         UIWindow.appearance().tintColor = CarryAccent.uiColor
+        // 在最早时机（App 构造）后台预热机场/航司目录（1.6M/225K 解码），让行程页/详情/地图同步取本地化名、
+        // 零卡顿零闪——比 view onAppear 更早，进一步缩小「内容早于预热出现 → 首次同步访问在主线程解码」的
+        // 窗口（spec: itinerary-flight-name-localization.md）。
+        Task.detached(priority: .userInitiated) {
+            AirportCatalog.preload()
+            AirlineDatabase.preload()
+        }
     }
 
     var body: some Scene {
@@ -67,13 +74,6 @@ struct CarryApp: App {
                     store.writeWidgetSnapshot()
                     // 预热汇率：让费用录入时能就地捕获本位币快照（spec: itinerary-cost-tracking.md）
                     ExchangeRateManager.shared.fetchIfNeeded()
-                    // 后台预热机场/航司目录（1.6M/225K 解码），让行程页/详情同步取本地化名、零卡顿零闪
-                    // （spec: itinerary-flight-name-localization.md）。用 .userInitiated：预热是用户即将看到的
-                    // 内容的准备、要尽快就绪，缩小「详情早于预热打开 → 首次同步访问在主线程解码」的窗口。
-                    Task.detached(priority: .userInitiated) {
-                        AirportCatalog.preload()
-                        AirlineDatabase.preload()
-                    }
                     // 注册通知委托，让打包提醒点击后直接跳到对应行程
                     notificationDelegate.router = router
                     UNUserNotificationCenter.current().delegate = notificationDelegate

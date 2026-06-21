@@ -198,16 +198,18 @@ enum NotificationManager {
     }
 
     private static func transportContent(seg: TransportSegment, isReturn: Bool, leadMinutes: Int) -> (String, String) {
+        // 承运方按界面语言（航班解析本地化航司名，否则存值）；通知本就走设备 locale，口径一致。
+        let carrier = seg.displayCarrier
         if seg.mode == .carRental {
             // 只还车（取车不提醒）。正文带「还车时刻」——lead 同日，故「今天」成立。
-            let company = seg.carrier.isEmpty ? NSLocalizedString("notif.car.fallback", comment: "") : seg.carrier
+            let company = carrier.isEmpty ? NSLocalizedString("notif.car.fallback", comment: "") : carrier
             let returnTime = seg.arriveLocalMinutes >= 0
                 ? String(format: "%02d:%02d", seg.arriveLocalMinutes / 60, seg.arriveLocalMinutes % 60) : ""
             return (String(format: NSLocalizedString("notif.car.dropoff.title", comment: ""), company),
                     String(format: NSLocalizedString("notif.car.dropoff.body", comment: ""), returnTime))
         }
         let label = seg.number.isEmpty
-            ? (seg.carrier.isEmpty ? NSLocalizedString("notif.transport.generic", comment: "") : seg.carrier)
+            ? (carrier.isEmpty ? NSLocalizedString("notif.transport.generic", comment: "") : carrier)
             : seg.number
         let lead = leadText(leadMinutes)
         let title = String(format: NSLocalizedString("notif.transport.title", comment: ""), label)

@@ -51,7 +51,9 @@ nonisolated enum AirlineDatabase {
         }
         do {
             let list = try JSONDecoder().decode([Airline].self, from: Data(contentsOf: url))
-            return Dictionary(list.map { ($0.iata, $0) }, uniquingKeysWith: { a, _ in a })
+            // 键统一转大写（查询侧也 .uppercased()）——不依赖数据全大写，与 AirportCatalog 对齐。
+            return Dictionary(list.compactMap { $0.iata.isEmpty ? nil : ($0.iata.uppercased(), $0) },
+                              uniquingKeysWith: { a, _ in a })
         } catch {
             logger.error("airlines.json decode failed: \(error.localizedDescription, privacy: .public)")
             return [:]

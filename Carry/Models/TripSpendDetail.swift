@@ -144,11 +144,16 @@ struct TripSpendDetail {
     }
 
     /// 交通段展示名：优先「起 → 讫」路线（花费场景最可识别），退班次号 → 承运方 → 单端名 → 空（UI 回退类别名）。
+    /// 机场名/承运方按界面语言（码命中机场目录则本地化、承运方走 `displayCarrier`），与时间轴/详情口径一致。
     private static func transportName(_ seg: TransportSegment) -> String {
-        let ends = [seg.fromName, seg.toName].filter { !$0.isEmpty }
+        func endpoint(_ code: String, _ name: String) -> String {
+            AirportCatalog.airport(forIATA: code)?.displayName ?? name
+        }
+        let ends = [endpoint(seg.fromCode, seg.fromName), endpoint(seg.toCode, seg.toName)].filter { !$0.isEmpty }
         if ends.count == 2 { return "\(ends[0]) → \(ends[1])" }
         if !seg.number.isEmpty { return seg.number }
-        if !seg.carrier.isEmpty { return seg.carrier }
+        let carrier = seg.displayCarrier
+        if !carrier.isEmpty { return carrier }
         return ends.first ?? ""
     }
 }
