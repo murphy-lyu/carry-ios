@@ -1232,14 +1232,24 @@ private struct CalendarEventRow: View {
                 .foregroundStyle(.secondary)
                 .lineLimit(1)
             Spacer(minLength: 8)
-            Text(event.isAllDay
-                 ? NSLocalizedString("itinerary.calendar.all_day", comment: "")
-                 : timeLabel(dayMinutes: event.startMinutes))
+            Text(timeText)
                 .font(.system(.caption, design: .rounded))
                 .foregroundStyle(.tertiary)
         }
         .padding(.vertical, 7)
         .accessibilityElement(children: .combine)
+    }
+
+    /// 右侧时间：全天 →「全天」；定时 → 开始时间，若同日且有更晚的结束 → 「开始–结束」（对标航班/有起止的停靠点）。
+    /// 跨午夜/跨天事件不拼范围（右侧窄列里「18:00–次日…」会误读），只显开始时间。
+    private var timeText: String {
+        if event.isAllDay { return NSLocalizedString("itinerary.calendar.all_day", comment: "") }
+        let start = timeLabel(dayMinutes: event.startMinutes)
+        let cal = Calendar.current
+        guard event.endDate > event.startDate,
+              cal.isDate(event.startDate, inSameDayAs: event.endDate) else { return start }
+        let endMinutes = cal.component(.hour, from: event.endDate) * 60 + cal.component(.minute, from: event.endDate)
+        return "\(start)–\(timeLabel(dayMinutes: endMinutes))"
     }
 }
 

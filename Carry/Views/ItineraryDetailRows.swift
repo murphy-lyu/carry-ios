@@ -326,6 +326,47 @@ struct CopyableDetailRow: View {
     }
 }
 
+/// 带标签 + 点按打开的链接行（日历事件 / 附件 URL）。烟蓝值 = 「可点打开」信号（与电话行同一约定）。
+/// 裸域名（无 scheme）自动补 https://，避免 openURL 拿到相对 URL 打不开。
+struct LinkDetailRow: View {
+    let labelKey: String
+    let urlString: String
+
+    @Environment(\.openURL) private var openURL
+
+    private var resolvedURL: URL? {
+        let trimmed = urlString.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return nil }
+        let normalized = trimmed.contains("://") ? trimmed : "https://\(trimmed)"
+        return URL(string: normalized)
+    }
+
+    var body: some View {
+        Button {
+            if let resolvedURL { openURL(resolvedURL) }
+        } label: {
+            HStack(alignment: .center, spacing: 12) {
+                Image(systemName: "link")
+                    .font(.system(size: 15)).foregroundStyle(.secondary).frame(width: 22)
+                    .accessibilityHidden(true)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(LocalizedStringKey(labelKey))
+                        .font(.system(.caption, design: .rounded)).foregroundStyle(.secondary)
+                    // 中段截断：长链接保留首尾（域名 + 末段），比尾部截断更可读。
+                    Text(urlString)
+                        .font(.system(.subheadline, design: .rounded)).foregroundStyle(CarryAccent.color)
+                        .lineLimit(1).truncationMode(.middle)
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+            }
+            .padding(.vertical, 11)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(Text(urlString))
+    }
+}
+
 /// 备注行：图标 + 「备注」标签 + 可展开/收起长文（`ExpandableText`，可长按选取复制）。
 struct NoteDetailRow: View {
     let text: String

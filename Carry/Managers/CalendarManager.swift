@@ -22,6 +22,7 @@ struct CalendarOverlayEvent: Identifiable {
     let calendarTitle: String   // 所属日历名（详情浮层头部，如「中国大陆节假日」）
     let location: String        // 事件地点（可空）
     let notes: String           // 事件备注（可空）
+    let url: String             // 事件链接（会议/预订/详情，可空）——只读详情里作可点链接行
     let timeZoneId: String      // 事件时区 IANA（可空，定时事件展示用）
 }
 
@@ -334,6 +335,8 @@ final class CalendarManager {
                     calendarTitle: ev.calendar.title,
                     location: ev.location ?? "",
                     notes: ev.notes ?? "",
+                    // carry:// 事件已在上面被滤除，这里的 url 必是外部链接（会议/预订/详情）。
+                    url: ev.url?.scheme == "carry" ? "" : (ev.url?.absoluteString ?? ""),
                     timeZoneId: ev.timeZone?.identifier ?? ""
                 )
             }
