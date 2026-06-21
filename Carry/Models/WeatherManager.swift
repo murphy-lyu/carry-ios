@@ -13,6 +13,12 @@ import WeatherKit
 
 // MARK: - DayWeatherInfo
 
+/// 天气大类——从 WeatherKit `WeatherCondition` 归一的粗分类，供打包信号判断用，
+/// 把 WeatherKit 类型隔离在 WeatherManager 内（spec: weather-aware-packing.md）。
+enum WeatherCategory {
+    case clear, cloudy, fog, wind, rain, snow, sleet, storm, other
+}
+
 /// Lightweight value type used by DestinationInfoView.
 /// Keeps WeatherKit types isolated to WeatherManager only.
 struct DayWeatherInfo: Identifiable {
@@ -20,8 +26,15 @@ struct DayWeatherInfo: Identifiable {
     let date: Date
     /// SF Symbol name for the weather condition
     let symbolName: String
-    /// Already-formatted high temperature string (e.g. "24°")
+    /// Already-formatted high temperature string (e.g. "24°") — 仅 UI 展示用
     let highTemp: String
+    /// 信号提炼用的原始量（spec: weather-aware-packing.md）。摄氏统一存储，判断时与阈值比较；
+    /// 展示仍用 `highTemp`（已按设备单位格式化）。
+    let highC: Double
+    let lowC: Double
+    /// 降水概率 0...1
+    let precipChance: Double
+    let category: WeatherCategory
 }
 
 // MARK: - WeatherManager
@@ -93,6 +106,15 @@ final class WeatherManager: ObservableObject {
                                longitude: Double,
                                tripStartDate: Date,
                                tripEndDate: Date) async {
+#if DEBUG
+        // DEBUG「模拟天气」开关：喂 mock 到 weatherByDestination（单一真源）——展示卡、打包贴士卡、
+        // 信号判断都吃同一份，便于在模拟器验证天气功能（无需真机/真实预报）。
+        if UserDefaults.standard.bool(forKey: "debug_mock_weather_enabled") {
+            weatherByDestination[destinationIndex] = Self.debugMockDays(
+                index: destinationIndex, tripStart: tripStartDate, tripEnd: tripEndDate)
+            return
+        }
+#endif
         let todayString = Self.dateFormatter.string(from: Date())
         let key = CacheKey(lat: latitude, lon: longitude, dateString: todayString)
 
@@ -103,8 +125,8 @@ final class WeatherManager: ObservableObject {
         }
 
         do {
-            let location = CLLocation(latitude: latitude, longitude: longitude)
-            let weather = try await WeatherService.shared.weather(for: location)
+            // 经共享缓存拉取（与天气预警评估器合并，避免同地点重复调 WeatherKit）。
+            let weather = try await WeatherFetchCache.shared.weather(lat: latitude, lon: longitude)
 
             // Don't show weather for trips that end in the past
             let now = Date()
@@ -124,7 +146,11 @@ final class WeatherManager: ObservableObject {
                 DayWeatherInfo(
                     date: day.date,
                     symbolName: day.symbolName,
-                    highTemp: tempFormatter.string(from: day.highTemperature)
+                    highTemp: tempFormatter.string(from: day.highTemperature),
+                    highC: day.highTemperature.converted(to: .celsius).value,
+                    lowC: day.lowTemperature.converted(to: .celsius).value,
+                    precipChance: day.precipitationChance,
+                    category: Self.category(for: day.condition)
                 )
             }
 
@@ -143,6 +169,53 @@ final class WeatherManager: ObservableObject {
             } else {
                 weatherByDestination[destinationIndex] = []
             }
+        }
+    }
+
+#if DEBUG
+    /// DEBUG 模拟天气：含雨天（便于触发天气贴士卡 / rain 信号），覆盖行程窗口。
+    static func debugMockDays(index: Int, tripStart: Date, tripEnd: Date) -> [DayWeatherInfo] {
+        let cal = Calendar.current
+        let start = max(tripStart, Date())
+        let span = (cal.dateComponents([.day], from: cal.startOfDay(for: start), to: tripEnd).day ?? 0) + 1
+        let count = min(7, max(1, span))
+        return (0..<count).compactMap { offset in
+            guard let date = cal.date(byAdding: .day, value: offset, to: start) else { return nil }
+            let isRain = offset % 3 == 1
+            let high = 18.0 + Double(index)
+            return DayWeatherInfo(
+                date: date,
+                symbolName: isRain ? "cloud.rain.fill" : "cloud.sun.fill",
+                highTemp: "\(Int(high))°",
+                highC: high, lowC: high - 6,
+                precipChance: isRain ? 0.8 : 0.1,
+                category: isRain ? .rain : .cloudy
+            )
+        }
+    }
+#endif
+
+    /// WeatherKit `WeatherCondition` → 粗分类。只区分打包信号关心的几类，其余归 `.other`。
+    private static func category(for condition: WeatherCondition) -> WeatherCategory {
+        switch condition {
+        case .clear, .mostlyClear, .hot:
+            return .clear
+        case .cloudy, .mostlyCloudy, .partlyCloudy:
+            return .cloudy
+        case .foggy, .haze, .smoky:
+            return .fog
+        case .breezy, .windy:
+            return .wind
+        case .drizzle, .rain, .heavyRain, .sunShowers, .freezingDrizzle, .freezingRain:
+            return .rain
+        case .flurries, .snow, .heavySnow, .blowingSnow, .sunFlurries, .blizzard:
+            return .snow
+        case .sleet, .wintryMix, .hail:
+            return .sleet
+        case .thunderstorms, .strongStorms, .isolatedThunderstorms, .scatteredThunderstorms, .tropicalStorm, .hurricane:
+            return .storm
+        default:
+            return .other
         }
     }
 }

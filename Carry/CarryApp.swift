@@ -217,8 +217,13 @@ final class PackReminderNotificationDelegate: NSObject, UNUserNotificationCenter
         didReceive response: UNNotificationResponse,
         withCompletionHandler completionHandler: @escaping () -> Void
     ) {
-        if let tripId = NotificationManager.tripId(fromIdentifier: response.notification.request.identifier) {
+        let identifier = response.notification.request.identifier
+        if let tripId = NotificationManager.tripId(fromIdentifier: identifier) {
             CarryLogger.shared.log(.notificationTapped, context: "tripId=\(tripId)")
+            // 天气预警点击单独记一笔（spec: weather-aware-packing.md, Part 2）
+            if identifier.contains(".weather") {
+                CarryLogger.shared.log(.weatherAlertFired, context: "tripId=\(tripId)")
+            }
             DispatchQueue.main.async { [weak self] in
                 self?.router?.pendingTripId = tripId
             }

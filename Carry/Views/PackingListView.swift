@@ -715,16 +715,116 @@ struct PackingListView: View {
     }
 
     /// DestinationInfo 作为 collection 顶部不可重排行（随列表滚动）。无则 nil。
+    /// 天气贴士卡接在 DestinationInfo 之下（spec: weather-aware-packing.md）——紧贴预报、看→做零跳转。
     private var destinationInfoContent: (() -> AnyView)? {
         guard let trip = bundle,
               trip.departureDate >= Calendar.current.startOfDay(for: Date()) else { return nil }
         return {
             AnyView(
-                DestinationInfoView(trip: trip, weatherManager: weatherManager)
-                    .padding(.top, 14)
-                    .padding(.bottom, 8)
+                VStack(spacing: 0) {
+                    DestinationInfoView(trip: trip, weatherManager: weatherManager)
+                        .padding(.top, 14)
+                        .padding(.bottom, 8)
+                    let wItems = weatherSuggestionItems
+                    if !wItems.isEmpty {
+                        weatherSuggestionCard(items: wItems)
+                            .padding(.bottom, 8)
+                    }
+                }
             )
         }
+    }
+
+    // MARK: 天气贴士（spec: weather-aware-packing.md）
+
+    /// 行程那几天真实预报里「显著且未被覆盖」的天气 → 现有场景物品，过滤掉已在清单/已消除的。
+    /// 空 → 不显（例外驱动）。已选场景 + ClimateInference 已推断场景算「已覆盖」，避免重复打扰。
+    private var weatherSuggestionItems: [SceneItem] {
+        guard let trip = bundle, !trip.isDateless else { return [] }
+        let days = weatherManager.weatherByDestination.values.flatMap { $0 }
+        guard !days.isEmpty else { return [] }
+        var covered = Set(trip.selectedSceneKeys)
+        covered.formUnion(ClimateInference.inferredSceneKeys(countryCode: trip.countryCode,
+                                                             departureDate: trip.departureDate))
+        let scenes = WeatherPackingSignals.notableSceneKeys(days: days, alreadyCovered: covered)
+        guard !scenes.isEmpty else { return [] }
+        let existing = Set(trip.safeSections.flatMap { $0.items ?? [] }.map { $0.name.lowercased() })
+        let dismissed = Set(trip.dismissedSurpriseNames.map { $0.lowercased() })
+        var seen = Set<String>()
+        var result: [SceneItem] = []
+        for key in scenes {
+            for item in sceneItems(for: key) {
+                let lower = item.name.lowercased()
+                guard !existing.contains(lower), !dismissed.contains(lower), !seen.contains(lower) else { continue }
+                seen.insert(lower)
+                result.append(item)
+            }
+        }
+        // 克制（ADA）：winter/tropical 场景物品多，整列会堆成长卡 → 优先 alert 项、最多 4 件。
+        let prioritized = result.filter(\.isAlert) + result.filter { !$0.isAlert }
+        return Array(prioritized.prefix(4))
+    }
+
+    @ViewBuilder
+    private func weatherSuggestionCard(items: [SceneItem]) -> some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack(alignment: .top, spacing: 10) {
+                Image(systemName: "cloud.sun.fill")
+                    .font(.system(size: 18))
+                    .foregroundStyle(CarryAccent.color)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("weather.nudge.title")
+                        .font(.system(size: 15, weight: .semibold))
+                        .foregroundStyle(.primary)
+                    Text("weather.nudge.subtitle")
+                        .font(.system(size: 13))
+                        .foregroundStyle(.secondary)
+                }
+                Spacer(minLength: 8)
+                Button { dismissWeatherSuggestions(items) } label: {
+                    Text("weather.nudge.dismiss")
+                        .font(.system(size: 13, weight: .medium))
+                        .foregroundStyle(.secondary)
+                }
+                .buttonStyle(.plain)
+            }
+            VStack(spacing: 0) {
+                ForEach(Array(items.enumerated()), id: \.element.name) { idx, item in
+                    if idx > 0 { Divider().padding(.leading, 2) }
+                    Button { addWeatherItem(item) } label: {
+                        HStack(spacing: 10) {
+                            Text(LocalizedStringKey(item.name))
+                                .font(.system(size: 15))
+                                .foregroundStyle(.primary)
+                            Spacer(minLength: 8)
+                            Image(systemName: "plus.circle.fill")
+                                .font(.system(size: 20))
+                                .foregroundStyle(CarryAccent.color)
+                        }
+                        .padding(.vertical, 10)
+                        .contentShape(Rectangle())
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+        }
+        .padding(16)
+        .background(
+            RoundedRectangle(cornerRadius: 20, style: .continuous)
+                .fill(Color(.secondarySystemGroupedBackground))
+        )
+        .padding(.horizontal, 16)
+        .onAppear { CarryLogger.shared.log(.weatherNudgeShown, context: "items=\(items.count)") }
+    }
+
+    private func addWeatherItem(_ item: SceneItem) {
+        store.addSurpriseItem(tripId: tripId, item: SurpriseItem(name: item.name, note: "", category: item.category))
+        CarryLogger.shared.log(.weatherNudgeAccepted, context: "item=\(item.name)")
+    }
+
+    private func dismissWeatherSuggestions(_ items: [SceneItem]) {
+        for item in items { store.dismissSurpriseItem(tripId: tripId, itemName: item.name) }
+        CarryLogger.shared.log(.weatherNudgeDismissed, context: "items=\(items.count)")
     }
 
     @ViewBuilder

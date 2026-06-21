@@ -30,6 +30,8 @@ struct NotificationSettingsView: View {
     @AppStorage(ReminderPreferences.dailySummaryEnabledKey) private var dailyEnabled = false
     @AppStorage(ReminderPreferences.dailySummaryMinKey) private var dailyMinutes = 540
 
+    @AppStorage(ReminderPreferences.weatherAlertsEnabledKey) private var weatherAlertsEnabled = true
+
     @State private var notificationStatus: UNAuthorizationStatus = .notDetermined
     private var notificationsBlocked: Bool { notificationStatus == .denied }
 
@@ -71,6 +73,7 @@ struct NotificationSettingsView: View {
                 carRentalSection
                 lodgingSection
                 dailySection
+                weatherAlertsSection
 
                 Text("settings.notif.footer")
                     .font(.footnote).foregroundStyle(.tertiary).lineSpacing(1.4)
@@ -188,6 +191,16 @@ struct NotificationSettingsView: View {
     private var dailySection: some View {
         sectionCard("settings.notif.daily.title", subtitle: "settings.notif.daily.subtitle", isOn: $dailyEnabled) {
             timeRow("settings.notif.daily.time", binding: minutesBinding($dailyMinutes))
+        }
+    }
+
+    // MARK: 天气提醒（spec: weather-aware-packing.md, Part 2）——例外驱动、平时不响
+    private var weatherAlertsSection: some View {
+        sectionCard("settings.notif.weather.title", subtitle: "settings.notif.weather.subtitle", isOn: $weatherAlertsEnabled) {
+            Text("settings.notif.weather.note")
+                .font(.footnote).foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
+                .padding(.vertical, 6)
         }
     }
 
