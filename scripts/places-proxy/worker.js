@@ -67,8 +67,12 @@ async function handleSuggest(url, env) {
   const cached = await cache.match(cacheKey);
   if (cached) return cached;
 
+  // 中文/日文/韩文 query → 先翻成英文再查 Mapbox（其海外 POI 基本无中文别名索引,
+  // 「卢浮宫」直接查会空)。翻译走 DeepL、结果缓存,失败优雅回退原 query。显示仍按 language 本地化。
+  const mapboxQ = hasCJK(q) ? ((await translateToEnglish(q, env)) || q) : q;
+
   const up = new URL(`${MAPBOX}/suggest`);
-  up.searchParams.set("q", q);
+  up.searchParams.set("q", mapboxQ);
   up.searchParams.set("access_token", env.MAPBOX_TOKEN);
   up.searchParams.set("session_token", session);
   up.searchParams.set("language", language);
@@ -138,6 +142,45 @@ async function handleRetrieve(url, env) {
     timeZoneId,
   };
   return json({ place }, 200, RETRIEVE_TTL, cacheKey, cache);
+}
+
+// 含中日韩文字（CJK 表意 + 假名 + 谚文）→ 视为需翻译。
+function hasCJK(s) {
+  return /[㐀-鿿぀-ヿ가-힯]/.test(s);
+}
+
+// 经 DeepL 把 query 翻成英文（源语言自动检测）。缓存 30 天控量;无 key/失败 → null（调用方回退原词)。
+async function translateToEnglish(text, env) {
+  if (!env.DEEPL_KEY) return null;
+  const cache = caches.default;
+  const ck = new Request(`https://carry-places-cache/tr?q=${encodeURIComponent(text)}`);
+  const hit = await cache.match(ck);
+  if (hit) { try { return (await hit.json()).t; } catch (_) { /* fallthrough */ } }
+
+  // 免费档 key 以 ":fx" 结尾,走 api-free;否则 pro 域名。
+  const host = env.DEEPL_KEY.endsWith(":fx") ? "https://api-free.deepl.com" : "https://api.deepl.com";
+  const body = new URLSearchParams();
+  body.set("text", text);
+  body.set("target_lang", "EN");
+  let resp;
+  try {
+    resp = await fetch(`${host}/v2/translate`, {
+      method: "POST",
+      headers: {
+        Authorization: `DeepL-Auth-Key ${env.DEEPL_KEY}`,
+        "Content-Type": "application/x-www-form-urlencoded",
+      },
+      body: body.toString(),
+    });
+  } catch (_) { return null; }
+  if (!resp.ok) return null;
+  const data = await resp.json().catch(() => null);
+  const t = data?.translations?.[0]?.text || null;
+  if (t) {
+    const r = new Response(JSON.stringify({ t }), { headers: { "Cache-Control": "public, max-age=2592000" } });
+    cache.put(ck, r.clone());
+  }
+  return t;
 }
 
 function json(body, status = 200, cacheSeconds = 0, cacheKey = null, cache = null) {
