@@ -288,12 +288,14 @@ func generatePackingSections(selectedScenes: [String], tripDays: Int = 1, isInte
     baseItems.forEach { insert($0) }
     selectedScenes.flatMap { sceneItems(for: $0) }.forEach { insert($0) }
 
-    // On the mainland China storefront, replace Passport with the destination-specific
-    // travel permit for HK/Macau (港澳通行证) or Taiwan (台湾通行证).
+    // 大陆 storefront 下按目的地给对的证件（spec: CLAUDE.md 政策合规约定）：
+    // 港澳 → 港澳通行证、台湾 → 台湾通行证（均移除护照）；纯大陆境内 → 身份证
+    //（护照本就被 internationalOnly 在上面过滤掉，这里只补默认证件）；出境 → 保留护照。
     if isChinaStorefront && !destinationCodes.isEmpty {
         let upper = Set(destinationCodes.map { $0.uppercased() })
         let hasHKMO = upper.contains("HK") || upper.contains("MO")
         let hasTW   = upper.contains("TW")
+        let goesAbroad = upper.contains { $0 != "CN" }   // 含港澳台或任何境外
         if hasHKMO || hasTW {
             merged.removeAll { $0.name == canonicalItemName("Passport") }
             if hasHKMO {
@@ -302,6 +304,12 @@ func generatePackingSections(selectedScenes: [String], tripDays: Int = 1, isInte
             }
             if hasTW {
                 let item = makeSceneItem("Taiwan permit", isAlert: true)
+                merged.append((item.name, item.category, item.isAlert))
+            }
+        } else if !goesAbroad {
+            // 纯大陆境内：默认推荐身份证（与护照的 internationalOnly 对称）。
+            let item = makeSceneItem("ID card", isAlert: true)
+            if !merged.contains(where: { $0.name == item.name }) {
                 merged.append((item.name, item.category, item.isAlert))
             }
         }
