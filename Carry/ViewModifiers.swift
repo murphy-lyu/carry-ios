@@ -209,9 +209,33 @@ struct CarryHeroCardBackground: ViewModifier {
     }
 }
 
+extension PresentationDetent {
+    /// 「按内容自算高度」的 sheet detent，**钳在屏幕高 0.90 以下**（单一真源）。
+    /// 根因（斜向滚动 bug）：内容超屏时 `.height(自算值)` ≈ 满屏 → 触发 iOS 26 把弹层「脱离成带两侧边距、
+    /// 可 2D 拖动的浮动卡片」。钳到屏高以下后弹层永远是正常 sheet，超长内容改内部竖直滚动。
+    /// **任何按内容自算高度的 sheet 一律走此入口，禁止裸用 `.height(动态值)`。** 固定小常量高度不在此限。
+    static func cappedContentHeight(_ ideal: CGFloat) -> PresentationDetent {
+        .height(min(ideal, UIScreen.main.bounds.height * 0.90))
+    }
+}
+
 extension View {
-    func carrySurfaceCardBackground(cornerRadius: CGFloat = 24) -> some View {
+    // MARK: Carry Elevation System（canonical · 单一真源 · design-system.md §Elevation）
+
+    /// 【canonical】标准卡片：浮在 `carryCanvas` 上的信息卡——白底 / 深色提亮填充 + 0.5px 描边 +
+    /// 阴影 `黑0.08 / r16 / y6`（浅）· 深色不投影。**全 App 卡片唯一标准**，新代码一律用它。
+    func carryCard(cornerRadius: CGFloat = CarryRadius.card) -> some View {
         modifier(CarrySurfaceCardBackground(cornerRadius: cornerRadius))
+    }
+
+    /// 【canonical】Hero 卡：主角卡（首页行程卡）渐变填充，无描边/阴影；默认 28 圆角。
+    func carryHeroCard(cornerRadius: CGFloat = CarryRadius.hero) -> some View {
+        modifier(CarryHeroCardBackground(cornerRadius: cornerRadius))
+    }
+
+    /// 旧名 · 渐废（等各屏拉齐到 `carryCard` 后移除）。现委托到 canonical，保证单一实现。
+    func carrySurfaceCardBackground(cornerRadius: CGFloat = CarryRadius.card) -> some View {
+        carryCard(cornerRadius: cornerRadius)
     }
 
     func carryPageBackground() -> some View {
@@ -222,8 +246,9 @@ extension View {
         background(CarrySubtleBackground())
     }
 
-    func carryHeroCardBackground(cornerRadius: CGFloat = 28) -> some View {
-        modifier(CarryHeroCardBackground(cornerRadius: cornerRadius))
+    /// 旧名 · 渐废（用 `carryHeroCard`）。现委托到 canonical。
+    func carryHeroCardBackground(cornerRadius: CGFloat = CarryRadius.hero) -> some View {
+        carryHeroCard(cornerRadius: cornerRadius)
     }
 }
 

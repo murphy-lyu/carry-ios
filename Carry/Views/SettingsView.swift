@@ -19,6 +19,7 @@ enum SettingsRoute: Hashable {
     case liveActivity
     case widgetGuide
     case cycleReminder
+    case dataManagement   // 二级「数据与备份」页（导出/导入/本地备份/抹除）
     case dataRecovery
     case about
     case roadmap
@@ -32,9 +33,14 @@ struct SettingsView: View {
 
     @State private var notificationStatus: UNAuthorizationStatus = .notDetermined
     @State private var showCoffeeSheet = false
-    @State private var showImporter = false
+    // 文件导入种类——备份(.json) 与 Tripsy(.zip) 合用单个 fileImporter，避免多个 .fileImporter
+    // 相互抑制。nil = 未在导入。
+    private enum FileImportKind { case backup, tripsy }
+    @State private var fileImportKind: FileImportKind?
     @State private var showImportConfirmation = false
     @State private var pendingImportData: Data?
+    // 从 Tripsy 导入（spec: tripsy-import.md）
+    @State private var tripsyImportSession: TripsyImportSession?
     // 本位币（费用记录用，spec: itinerary-cost-tracking.md）；空 = 用设备 locale 默认。
     @AppStorage(ExchangeRateManager.preferredCurrencyDefaultsKey) private var preferredCurrencyRaw = ""
 
@@ -55,6 +61,17 @@ struct SettingsView: View {
         )
     }
     @State private var restoreToastMessage: String?
+    @State private var showEraseConfirmation = false
+    // 抹除「撤销窗口」：确认后延迟执行的可取消任务 + 底部撤销吐司可见性 + 倒计时环进度（spec: erase-all-data.md）
+    @State private var pendingEraseTask: Task<Void, Never>?
+    @State private var eraseUndoVisible = false
+    @State private var eraseStartDate: Date?   // 撤销窗口起点；环按真实流逝时间算进度（TimelineView 帧驱动，不靠 withAnimation）
+    // 本次窗口实际时长（单一真源）：开始时按 VoiceOver 状态快照一次，同时驱动「延迟删除」与「环耗尽」，
+    // 避免两处写死的时长隐式耦合。开始时快照（而非每帧读 isVoiceOverRunning）→ 中途切 VoiceOver 不会令环跳变。
+    @State private var eraseWindowSeconds: TimeInterval = 9
+    private let eraseUndoWindowDefault: TimeInterval = 9
+    // VoiceOver/旁白开启时延长窗口（WCAG 2.2.1 Timing Adjustable）——限时自动操作对依赖辅助技术的用户需更充裕时间触达「撤销」。
+    private let eraseUndoWindowAccessible: TimeInterval = 20
     // 备份信息缓存：onAppear 时读取一次，避免每次 body 求值触发磁盘 I/O
     @State private var cachedBackupDate: Date? = nil
     // 当前 App Icon 显示名：onAppear / 前台激活时刷新（图标切换后同步）
@@ -172,6 +189,54 @@ struct SettingsView: View {
                 }
             }
         }
+    }
+
+    /// 抹除「撤销窗口」（spec: erase-all-data.md）：确认后**不立即删**，延迟 `eraseWindowSeconds`（默认 9s，
+    /// VoiceOver 下 20s）；期间底部「撤销」一键反悔。数据在窗口结束才真正删除——故失败朝「不删」方向
+    ///（app 被杀/未到点/离开/进后台 → 数据仍在），最安全。
+    private func startEraseWithUndo() {
+        UINotificationFeedbackGenerator().notificationOccurred(.warning)
+        pendingEraseTask?.cancel()
+        // 开始时按 VoiceOver 状态快照本次窗口时长（一次），延迟删除与环耗尽都用它、同源同起点。
+        eraseWindowSeconds = UIAccessibility.isVoiceOverRunning ? eraseUndoWindowAccessible : eraseUndoWindowDefault
+        eraseStartDate = Date()
+        withAnimation(.easeInOut(duration: 0.2)) { eraseUndoVisible = true }
+        pendingEraseTask = Task { @MainActor in
+            try? await Task.sleep(for: .seconds(eraseWindowSeconds))
+            guard !Task.isCancelled else { return }
+            withAnimation(.easeInOut(duration: 0.2)) { eraseUndoVisible = false }
+            store.eraseAllData()
+            refreshBackupCache()   // 备份已清 → 同步刷新「上次备份」状态
+            UINotificationFeedbackGenerator().notificationOccurred(.success)
+            pendingEraseTask = nil
+            eraseStartDate = nil
+        }
+    }
+
+    private func undoErase() {
+        pendingEraseTask?.cancel()
+        pendingEraseTask = nil
+        eraseStartDate = nil
+        withAnimation(.easeInOut(duration: 0.2)) { eraseUndoVisible = false }
+        UIImpactFeedbackGenerator(style: .light).impactOccurred()
+    }
+
+    /// 离开「数据与备份」页即**中止**待执行的抹除（spec: erase-all-data.md）。撤销逃生口随页面消失，
+    /// 若任由全局 Task 在后台跑完，会「撤销没了、删除照常」两头落空——故离开=中止，朝「不删」方向最安全。
+    /// 用户已过 alert 强确认，真要删再来一次即可，安全优先于少点一次。
+    private func cancelPendingEraseOnLeave() {
+        guard pendingEraseTask != nil else { return }
+        pendingEraseTask?.cancel()
+        pendingEraseTask = nil
+        eraseStartDate = nil
+        eraseUndoVisible = false
+    }
+
+    /// 倒计时环进度（1→0）：按「当前帧时间 − 窗口起点」对 `eraseUndoWindow` 求比，clamp 到 [0,1]。
+    /// 帧驱动（TimelineView 每帧调用），不依赖 withAnimation 是否在视图插入瞬间触发，确定可靠。
+    private func eraseRingProgress(now: Date) -> CGFloat {
+        guard let start = eraseStartDate else { return 1 }
+        return max(0, min(1, 1 - CGFloat(now.timeIntervalSince(start) / eraseWindowSeconds)))
     }
 
     private func restoreSuccessMessage(count: Int) -> String {
@@ -313,72 +378,16 @@ struct SettingsView: View {
                             sectionHeader("settings.section.reminders_display")
                         }
 
+                        // 数据相关功能（导出/导入/本地备份/抹除）低频且含破坏性操作，收进二级页，
+                        // 不在一级菜单铺开（尤其「抹掉所有数据」不应裸露在一级）。
                         Section {
                             settingsCard {
-                                settingsRow(
-                                    title: "settings.data.export",
-                                    valueText: cachedBackupDate != nil ? nil : NSLocalizedString("settings.data.restore.no_backup", comment: "")
-                                ) {
-                                    shareBackupFile()
-                                }
-                                settingsRow(title: "settings.data.import") {
-                                    showImporter = true
-                                }
-                                settingsNavigationRow(
-                                    title: "settings.data.local_backup",
-                                    route: .dataRecovery
-                                )
+                                settingsNavigationRow(title: "settings.data.title", route: .dataManagement)
                             }
                             .padding(.horizontal, 16)
                             .padding(.bottom, 18)
-                            .alert(
-                                Text("settings.data.import.confirm.title"),
-                                isPresented: $showImportConfirmation
-                            ) {
-                                Button {
-                                    guard let data = pendingImportData else { return }
-                                    do {
-                                        let result = try store.mergeFromData(data)
-                                        refreshBackupCache()   // 导入会重写磁盘备份 → 同步刷新「上次备份」日期
-                                        showToast(mergeSuccessMessage(count: result.trips))
-                                        CarryLogger.shared.log(.backupMerged,
-                                            context: "trips=\(result.trips) myItems=\(result.myItems)")
-                                    } catch {
-                                        showToast(error.localizedDescription)
-                                        CarryLogger.shared.log(.backupRestoreFailed,
-                                            context: "source=merge error=\(error.localizedDescription)")
-                                    }
-                                    pendingImportData = nil
-                                } label: {
-                                    Text("settings.data.import.action.merge")
-                                }
-                                Button(role: .destructive) {
-                                    guard let data = pendingImportData else { return }
-                                    do {
-                                        let result = try store.restoreFromData(data)
-                                        refreshBackupCache()   // 导入会重写磁盘备份 → 同步刷新「上次备份」日期
-                                        showToast(restoreSuccessMessage(count: result.trips))
-                                        CarryLogger.shared.log(.backupRestored,
-                                            context: "trips=\(result.trips) myItems=\(result.myItems)")
-                                    } catch {
-                                        showToast(error.localizedDescription)
-                                        CarryLogger.shared.log(.backupRestoreFailed,
-                                            context: "source=replace error=\(error.localizedDescription)")
-                                    }
-                                    pendingImportData = nil
-                                } label: {
-                                    Text("settings.data.import.action")
-                                }
-                                Button(role: .cancel) {
-                                    pendingImportData = nil
-                                } label: {
-                                    Text("Cancel")
-                                }
-                            } message: {
-                                Text("settings.data.import.confirm.message")
-                            }
                         } header: {
-                            sectionHeader("settings.data.title")
+                            sectionHeader("settings.section.manage")
                         }
 
                         Section {
@@ -417,43 +426,68 @@ struct SettingsView: View {
                 }
                 .background(Color(.systemGroupedBackground).ignoresSafeArea())
         }
-        .overlay(alignment: .bottom) {
-            if let msg = restoreToastMessage {
-                Text(msg)
-                    .font(.subheadline.weight(.medium))
-                    .foregroundStyle(.white)
-                    .padding(.horizontal, 16)
-                    .padding(.vertical, 10)
-                    .background(Color.black.opacity(0.88))
-                    .clipShape(Capsule())
-                    .padding(.bottom, 32)
-                    .transition(.move(edge: .bottom).combined(with: .opacity))
-            }
-        }
-        .animation(.easeInOut(duration: 0.2), value: restoreToastMessage != nil)
+        // 注：导入结果 toast 与抹除撤销 toast 已移到二级页 dataManagementPage（动作都在那页发生；
+        // 留在根页会被 push 出来的二级页盖住、看不见）。fileImporter 仍挂根页（模态呈现跨栈无碍）。
+        // 备份导入(.json) 与 Tripsy 导入(.zip) 合用单个 fileImporter——同一 view 挂多个
+        // .fileImporter 会相互抑制（同 .sheet 的坑），曾导致「Import Backup」点击无反应。
+        // 用 fileImportKind 选内容类型；completion 里按文件扩展名分流（不读 state，
+        // 避免 isPresented 复位的时序问题）。
         .fileImporter(
-            isPresented: $showImporter,
-            allowedContentTypes: [.json],
+            isPresented: Binding(
+                get: { fileImportKind != nil },
+                set: { if !$0 { fileImportKind = nil } }
+            ),
+            allowedContentTypes: fileImportKind == .tripsy ? [.zip] : [.json],
             allowsMultipleSelection: false
         ) { result in
+            // 捕获本次导入种类（completion 首行读，早于 isPresented 复位）——失败分支无 URL 可判别，
+            // 据此把埋点归到正确事件；成功分支仍按文件扩展名分流（更可靠）。
+            let wasTripsy = fileImportKind == .tripsy
             switch result {
             case .success(let urls):
                 guard let url = urls.first else { return }
+                let isTripsy = url.pathExtension.lowercased() == "zip"
                 // Read within the security scope before it expires
                 let accessing = url.startAccessingSecurityScopedResource()
                 defer { if accessing { url.stopAccessingSecurityScopedResource() } }
                 guard let data = try? Data(contentsOf: url) else {
-                    showToast(NSLocalizedString("settings.data.restore.error.corrupt", comment: ""))
-                    CarryLogger.shared.log(.backupRestoreFailed, context: "reason=file_unreadable")
+                    showToast(NSLocalizedString(isTripsy ? "tripsy_import.error.not_tripsy" : "settings.data.restore.error.corrupt", comment: ""))
+                    CarryLogger.shared.log(isTripsy ? .tripsyImportFailed : .backupRestoreFailed, context: "reason=file_unreadable")
                     return
                 }
-                pendingImportData = data
-                showImportConfirmation = true
+                if isTripsy {
+                    // 解析含 SQLite + 图片解码，放后台线程，完成后回主线程弹预览。
+                    Task.detached(priority: .userInitiated) {
+                        do {
+                            let parsed = try TripsyImporter.parse(zipData: data)
+                            await MainActor.run {
+                                tripsyImportSession = TripsyImportSession(drafts: parsed.drafts)
+                            }
+                        } catch {
+                            let msg = (error as? LocalizedError)?.errorDescription
+                                ?? NSLocalizedString("tripsy_import.error.not_tripsy", comment: "")
+                            await MainActor.run {
+                                showToast(msg)
+                                CarryLogger.shared.log(.tripsyImportFailed, context: "reason=parse")
+                            }
+                        }
+                    }
+                } else {
+                    pendingImportData = data
+                    showImportConfirmation = true
+                }
             case .failure(let error):
                 showToast(error.localizedDescription)
-                CarryLogger.shared.log(.backupRestoreFailed,
+                CarryLogger.shared.log(wasTripsy ? .tripsyImportFailed : .backupRestoreFailed,
                     context: "reason=picker_failed error=\(error.localizedDescription)")
             }
+        }
+        .sheet(item: $tripsyImportSession) { session in
+            TripsyImportView(drafts: session.drafts) { count in
+                refreshBackupCache()   // 导入会重写磁盘备份 → 同步刷新「上次备份」日期
+                showToast(mergeSuccessMessage(count: count))
+            }
+            .environmentObject(store)
         }
         .navigationDestination(for: SettingsRoute.self) { route in
             settingsDestination(route)
@@ -477,6 +511,10 @@ struct SettingsView: View {
             if phase == .active {
                 refreshBackupCache()
                 currentIconName = currentAppIconDisplayName()
+            } else if phase == .background {
+                // App 进后台即按「离开」中止待执行的抹除：与「离开页面即中止」同理（用户不在看 = 不删），
+                // 也消除「Task.sleep 后台暂停 vs 环走墙钟」的时序错位。只认 .background（.inactive 是瞬态、不处理）。
+                cancelPendingEraseOnLeave()
             }
         }
         .onReceive(
@@ -706,6 +744,230 @@ struct SettingsView: View {
     /// Resolves a SettingsRoute to its destination view. tab bar 显隐由 ContentView
     /// 外层 settingsPath.isEmpty 统一驱动，二级页不再各自挂 .toolbar(.hidden)。
     @ViewBuilder
+    /// 二级「数据与备份」页（spec: erase-all-data.md）。复用根 SettingsView 的 state/helper；
+    /// fileImporter 与 toast 仍挂在根视图树（跨栈呈现），此处只放卡片 + 各自的确认弹层。
+    private var dataManagementPage: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 0) {
+                // 进页副标题：点明数据在本机、可带走/还原/抹除（呼应数据自主权）。
+                Text("settings.data.intro")
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .padding(.horizontal, 20)
+                    .padding(.top, 8)
+                    .padding(.bottom, 4)
+
+                sectionHeader("settings.section.backup")
+                settingsCard {
+                    settingsRow(
+                        title: "settings.data.export",
+                        valueText: cachedBackupDate != nil ? nil : NSLocalizedString("settings.data.restore.no_backup", comment: "")
+                    ) {
+                        shareBackupFile()
+                    }
+                    settingsRow(title: "settings.data.import") {
+                        fileImportKind = .backup
+                    }
+                    settingsNavigationRow(
+                        title: "settings.data.local_backup",
+                        route: .dataRecovery
+                    )
+                }
+                .padding(.horizontal, 16)
+                .padding(.bottom, 18)
+                .disabled(eraseUndoVisible)   // 抹除撤销窗口期锁住备份操作，杜绝「导入后又被抹除」冲突 + 双吐司叠压
+                .alert(
+                    Text("settings.data.import.confirm.title"),
+                    isPresented: $showImportConfirmation
+                ) {
+                    Button {
+                        guard let data = pendingImportData else { return }
+                        do {
+                            let result = try store.mergeFromData(data)
+                            refreshBackupCache()   // 导入会重写磁盘备份 → 同步刷新「上次备份」日期
+                            showToast(mergeSuccessMessage(count: result.trips))
+                            CarryLogger.shared.log(.backupMerged,
+                                context: "trips=\(result.trips) myItems=\(result.myItems)")
+                        } catch {
+                            showToast(error.localizedDescription)
+                            CarryLogger.shared.log(.backupRestoreFailed,
+                                context: "source=merge error=\(error.localizedDescription)")
+                        }
+                        pendingImportData = nil
+                    } label: {
+                        Text("settings.data.import.action.merge")
+                    }
+                    Button(role: .destructive) {
+                        guard let data = pendingImportData else { return }
+                        do {
+                            let result = try store.restoreFromData(data)
+                            refreshBackupCache()   // 导入会重写磁盘备份 → 同步刷新「上次备份」日期
+                            showToast(restoreSuccessMessage(count: result.trips))
+                            CarryLogger.shared.log(.backupRestored,
+                                context: "trips=\(result.trips) myItems=\(result.myItems)")
+                        } catch {
+                            showToast(error.localizedDescription)
+                            CarryLogger.shared.log(.backupRestoreFailed,
+                                context: "source=replace error=\(error.localizedDescription)")
+                        }
+                        pendingImportData = nil
+                    } label: {
+                        Text("settings.data.import.action")
+                    }
+                    Button(role: .cancel) {
+                        pendingImportData = nil
+                    } label: {
+                        Text("Cancel")
+                    }
+                } message: {
+                    Text("settings.data.import.confirm.message")
+                }
+
+                // 迁移：从其他 App 一次性导入数据。独立成组——「Import from Tripsy」不是备份，
+                // 不应挂在「Backup」标题下（分类错误）。将来「从 X 导入」也归这里。
+                sectionHeader("settings.section.migrate")
+                settingsCard {
+                    settingsRow(title: "settings.data.import_tripsy") {
+                        fileImportKind = .tripsy
+                    }
+                }
+                .padding(.horizontal, 16)
+                .padding(.bottom, 18)
+
+                // 抹掉所有数据（本地一键重置）。独立卡片、红字破坏性行 + 原生二次确认；
+                // 与其余行同尺寸、无前导图标，保持克制一致。
+                // 抹除：淡红底卡把「危险」收进一个有边界的容器（学 Flighty，但更克制）；红字标动作。
+                // Destructive 用规范 token `Color(.systemRed)`；明暗两套低透明度 fill/stroke，自适应、不刺眼。
+                sectionHeader("settings.section.danger")
+                VStack(spacing: 0) {
+                    Button {
+                        UIImpactFeedbackGenerator(style: .rigid).impactOccurred()
+                        showEraseConfirmation = true
+                    } label: {
+                        HStack(spacing: 14) {
+                            Text("settings.data.erase")
+                                .font(.body)
+                                .foregroundStyle(Color(.systemRed))
+                            Spacer()
+                        }
+                        .padding(.horizontal, 18)
+                        .frame(height: 58)
+                        .contentShape(Rectangle())
+                    }
+                    .buttonStyle(.plain)
+                }
+                .background(
+                    RoundedRectangle(cornerRadius: 28, style: .continuous)
+                        .fill(Color(.systemRed).opacity(colorScheme == .dark ? 0.14 : 0.06))
+                        .overlay(
+                            // 中性描边（同其它卡），不勾红边——避免「输入框报错」式的廉价红圈。
+                            RoundedRectangle(cornerRadius: 28, style: .continuous)
+                                .strokeBorder(settingsGroupStroke, lineWidth: 1)
+                        )
+                )
+                .shadow(color: settingsGroupShadow, radius: colorScheme == .dark ? 10 : 12, x: 0, y: colorScheme == .dark ? 3 : 4)
+                .padding(.horizontal, 16)
+                .padding(.bottom, 8)
+                .disabled(eraseUndoVisible)   // 撤销窗口期锁住抹除入口，防重复触发
+                // 用标准 .alert（居中弹窗、始终带 Cancel；与本页导入确认、本地备份恢复一致）。
+                // 不用 .confirmationDialog——在 regular 宽度下它会渲染成 popover、取消按钮被隐成点外部关闭。
+                .alert(
+                    Text("settings.data.erase.confirm.title"),
+                    isPresented: $showEraseConfirmation
+                ) {
+                    Button(role: .destructive) {
+                        startEraseWithUndo()   // 不立即删：开撤销窗口（eraseUndoWindow 秒），到点才真正抹除
+                    } label: {
+                        Text("settings.data.erase.confirm.action")
+                    }
+                    Button(role: .cancel) { } label: { Text("Cancel") }
+                } message: {
+                    Text("settings.data.erase.confirm.message")
+                }
+
+                // 点击前就告知后果（学 Flighty：决策前知情）；红集中在动作区，说明回归平静的灰、不施压。
+                Text("settings.data.erase.confirm.message")
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .padding(.horizontal, 20)
+                    .padding(.bottom, 18)
+            }
+            .padding(.bottom, 20)
+        }
+        .background(Color(.systemGroupedBackground).ignoresSafeArea())
+        .navigationTitle(Text("settings.data.title"))
+        .navigationBarTitleDisplayMode(.inline)
+        // 导入/导出结果 toast（动作在本页发生，overlay 须挂本页才可见，不能留在根页被本页盖住）。
+        .overlay(alignment: .bottom) {
+            if let msg = restoreToastMessage {
+                Text(msg)
+                    .font(.subheadline.weight(.medium))
+                    .foregroundStyle(.white)
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 10)
+                    .background(Color.black.opacity(0.88))
+                    .clipShape(Capsule())
+                    .padding(.bottom, 32)
+                    .transition(.move(edge: .bottom).combined(with: .opacity))
+            }
+        }
+        .animation(.easeInOut(duration: 0.2), value: restoreToastMessage != nil)
+        // 抹除撤销吐司（ADA 级）：倒计时环（含剩余秒数）可视化窗口在关闭 + 细分隔线 + 浮起阴影；
+        // 「撤销」用品牌强调色，是安全/可点的逃生口。长语言文案最多两行、toast 随之加高，短文案自然单行。
+        .overlay(alignment: .bottom) {
+            if eraseUndoVisible {
+                HStack(spacing: 12) {
+                    TimelineView(.animation) { ctx in
+                        let p = eraseRingProgress(now: ctx.date)
+                        let secs = max(1, Int(ceil(Double(p) * eraseWindowSeconds)))
+                        ZStack {
+                            Circle().stroke(Color.white.opacity(0.22), lineWidth: 3)
+                            Circle().trim(from: 0, to: p)
+                                .stroke(CarryAccent.color, style: StrokeStyle(lineWidth: 3, lineCap: .round))
+                                .rotationEffect(.degrees(-90))
+                            Text("\(secs)")
+                                .font(.system(size: 13, weight: .semibold, design: .rounded))
+                                .monospacedDigit()
+                                .foregroundStyle(.white)
+                        }
+                    }
+                    .frame(width: 28, height: 28)
+
+                    Text("settings.data.erase.undo.message")
+                        .font(.subheadline.weight(.medium))
+                        .foregroundStyle(.white)
+                        .lineLimit(2)
+                        .frame(maxWidth: 220, alignment: .leading)
+
+                    Rectangle().fill(Color.white.opacity(0.16)).frame(width: 1, height: 22)
+
+                    Button { undoErase() } label: {
+                        Text("settings.data.erase.undo.action")
+                            .font(.subheadline.weight(.semibold))
+                            .foregroundStyle(CarryAccent.color)
+                    }
+                    .buttonStyle(.plain)
+                }
+                .padding(.leading, 16)
+                .padding(.trailing, 18)
+                .padding(.vertical, 14)
+                .background(
+                    RoundedRectangle(cornerRadius: 22, style: .continuous)
+                        .fill(Color.black.opacity(0.92))
+                        .shadow(color: .black.opacity(0.28), radius: 16, x: 0, y: 8)
+                )
+                .padding(.horizontal, 24)
+                .padding(.bottom, 34)
+                .transition(.move(edge: .bottom).combined(with: .opacity))
+            }
+        }
+        // 离开本页（返回 / 关设置）即中止待执行的抹除——撤销逃生口随页面消失，故离开=中止，朝「不删」最安全。
+        .onDisappear { cancelPendingEraseOnLeave() }
+    }
+
+    @ViewBuilder
     private func settingsDestination(_ route: SettingsRoute) -> some View {
         switch route {
         case .appIcon:
@@ -730,6 +992,8 @@ struct SettingsView: View {
 #endif
         case .cycleReminder:
             CycleReminderSettingsView()
+        case .dataManagement:
+            dataManagementPage
         case .dataRecovery:
             DataRecoveryView()
         case .about:

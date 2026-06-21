@@ -43,11 +43,8 @@ struct DirectionsModule: View {
                 .padding(.vertical, 10)
             }
         }
-        .padding(.horizontal, 14)
-        .background(
-            RoundedRectangle(cornerRadius: 14, style: .continuous)
-                .fill(Color(.secondarySystemBackground))
-        )
+        .padding(.horizontal, 16)
+        .carryCard(cornerRadius: CarryRadius.card)
     }
 
     /// 交通方式选择器：4 段（驾车默认 / 公交 / 步行 / 骑行）。选中即联动 Get Directions 调起的方式，避免

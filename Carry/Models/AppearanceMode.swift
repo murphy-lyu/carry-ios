@@ -22,6 +22,34 @@ enum CarryAccent {
     static let color = Color(uiColor)
 }
 
+// MARK: - Detail sheet surfaces (grouped elevation)
+
+// MARK: - Carry Elevation System（canonical · 单一真源 · design-system.md §Elevation）
+
+/// 圆角刻度——全 App 三档，禁止散落魔法值。媒体缩略图（照片/图标 8–10）为唯一例外。
+enum CarryRadius {
+    static let control: CGFloat = 12   // chip / 按钮 / 搜索框
+    static let card: CGFloat = 18      // 标准卡片（carryCard 默认）
+    static let hero: CGFloat = 28      // Hero 卡 / 大面板 / sheet 角
+}
+
+extension Color {
+    /// 画布——一切分组页/详情/设置/搜索的「地」。卡片浮于其上（原生 grouped 层次，对标 Apple 设置/钱包/
+    /// 地图地点卡）；深色自动近黑、不加假光。**View 不再硬编码 `systemGroupedBackground`，统一走此 token。**
+    static let carryCanvas = Color(.systemGroupedBackground)
+    /// 卡内「连接线圆点垫底」用的不透明遮罩色——须与 `carryCard` 卡面同色，才能在卡内干净盖住穿过圆心的
+    /// 连接线（浅=白、深=抬亮灰 rgb 0.16，对齐卡面）。
+    static let carrySheetCard = Color(UIColor { traits in
+        traits.userInterfaceStyle == .dark
+            ? UIColor(red: 0.16, green: 0.16, blue: 0.17, alpha: 1)
+            : .systemBackground
+    })
+    /// 卡片级景深色（黑 0.08，仅浅色；深色置空守「不加假光」铁律）。`carryCard` 内部与 CTA 按钮共用，配 r16/y6。
+    static let carryCardShadow = Color(UIColor { traits in
+        traits.userInterfaceStyle == .dark ? .clear : UIColor.black.withAlphaComponent(0.08)
+    })
+}
+
 // MARK: - ItineraryDayPalette
 
 /// Per-day colours for itinerary route planning (map pins + routes + timeline nodes).

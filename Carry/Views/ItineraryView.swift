@@ -963,11 +963,20 @@ private struct TransportTimelineRow: View {
             TimelineRail(icon: segment.mode.symbolName, dayColor: dayColor,
                          showTopLine: showTopLine, showBottomLine: showBottomLine)
             VStack(alignment: .leading, spacing: 2) {
-                // 主行：航班号/车次领衔（旅客主要认它），承运方降浅色次要；都空退化 mode 名。
-                // 字体/字重逐段在 titleView 内设定（航班号 semibold、承运方 regular），故此处不再统一 .font。
-                titleView
-                    .lineLimit(1)
-                // 次行：起讫站 + 航站楼 + 时间，内联 route。
+                // 主行：航班号/车次 · 承运方（左）——— 起降时刻区间（右），与地点/租车行同列右对齐，
+                // 整条时间轴「标题 ——— 时间」读成一列。字体/字重逐段在 titleView 内设定（航班号 semibold、
+                // 承运方 regular），故此处不再统一 .font。
+                HStack(alignment: .center, spacing: 6) {
+                    titleView
+                        .lineLimit(1)
+                    if let time = timeRangeText {
+                        Spacer(minLength: 6)
+                        time
+                            .foregroundStyle(.secondary)
+                            .fixedSize()
+                    }
+                }
+                // 次行：起讫站 + 航站楼，纯「在哪」——时间已上移主行、跨天 +N 随到达时刻。
                 if let route = routeText {
                     route
                         .font(.system(.footnote, design: .rounded))
@@ -982,48 +991,70 @@ private struct TransportTimelineRow: View {
 
     /// 主行：航班号/车次领衔（旅客主要认它），承运方降浅色次要；无班次号（租车）只显公司，都空退化 mode 名。
     private var titleView: Text {
-        // 交通标题与地点标题同级、同字号（.body）——航班/火车是和地点平级的时间轴事件，不该更小。
-        let baseFont = Font.system(.body, design: .rounded)
+        // 班次号（航班号/车次）与地点标题同级、同字号（.body）——航班/火车是和地点平级的时间轴事件，
+        // 班次号作锚不该更小。承运方是次要归属信息，降一档到 .subheadline，靠「字号 + 字重 + 灰色」
+        // 三重退后，与班次号拉开真正的两级层级（对标 Flighty / Apple Wallet：航班号大、航司名小一档且灰）。
+        let leadFont = Font.system(.body, design: .rounded)
+        let carrierFont = Font.system(.subheadline, design: .rounded)
         let number = segment.number.trimmingCharacters(in: .whitespaces)
         // 航司名按界面语言显示：航班从航班号解析本地化航司名，非航班/未识别则用存的承运方原文。
         let carrier = segment.displayCarrier
         if number.isEmpty {
+            // 无班次号（租车等）：承运方升为主锚，用班次号同款字号/字重，避免整行偏小。
             let main = carrier.isEmpty ? NSLocalizedString(segment.mode.localizationKey, comment: "") : carrier
-            return Text(main).font(baseFont.weight(.semibold)).foregroundStyle(.primary)
+            return Text(main).font(leadFont.weight(.semibold)).foregroundStyle(.primary)
         }
-        // 航班号 semibold/primary 作锚；承运方 regular/secondary 退后 → 一行两级清晰层次。
-        let lead = Text(number).font(baseFont.weight(.semibold)).foregroundStyle(.primary)
+        // 班次号 semibold/primary 作锚；承运方 subheadline/regular/secondary 退后 → 一行两级清晰层次。
+        let lead = Text(number).font(leadFont.weight(.semibold)).foregroundStyle(.primary)
+        // 拼接 Text 默认按「文字基线」对齐——大小字底线齐平、小字视觉重心偏低（看着沉下去一点）。
+        // 给小一档的承运方加正 baselineOffset 上移约半个 cap 高度差（17↔15pt），改成「视觉重心对齐」。
         return carrier.isEmpty ? lead
-            : lead + Text(" · \(carrier)").font(baseFont.weight(.regular)).foregroundStyle(.secondary)
+            : lead + Text(" · \(carrier)").font(carrierFont.weight(.regular)).foregroundStyle(.secondary).baselineOffset(0.7)
     }
 
-    /// 「SHA T2 8:00 → PEK T3 10:15」，缺项自适应；航站楼紧跟代码（同属「在哪」），跨天到达加「+N」。
+    /// 「CKG T3 → XIY T5」，缺项自适应；航站楼紧跟代码（同属「在哪」）。时间已上移主行右侧、
+    /// 跨天「+N」随到达时刻，故此处不再拼时间/上标。
     private var routeText: Text? {
-        let from = endpointLabel(name: segment.fromName, code: segment.fromCode, terminal: segment.fromTerminal,
-                                 minutes: segment.departLocalMinutes)
-        let to = endpointLabel(name: segment.toName, code: segment.toCode, terminal: segment.toTerminal,
-                               minutes: segment.arriveLocalMinutes)
+        let from = endpointLabel(name: segment.fromName, code: segment.fromCode, terminal: segment.fromTerminal)
+        let to = endpointLabel(name: segment.toName, code: segment.toCode, terminal: segment.toTerminal)
         let f = from.trimmingCharacters(in: .whitespaces)
         let t = to.trimmingCharacters(in: .whitespaces)
         if f.isEmpty && t.isEmpty { return nil }
-        let base = Text("\(f) → \(t)")
-        let dayOffset = segment.arriveDayOrder - segment.departDayOrder
-        guard dayOffset > 0 else { return base }
-        // 跨天「+N」做成右上角小上标（更小字号 + 上移基线），与详情卡一致、内联不抢眼。
-        return base + Text("\u{2009}+\(dayOffset)")
-            .font(.system(size: 9, weight: .semibold, design: .rounded))
-            .baselineOffset(4)
+        return Text("\(f) → \(t)")
     }
 
-    /// 端点文字：机场代码/站名 + 航站楼（紧跟、同属「在哪」）+ 时间。跨天「+N」不在这里拼，
-    /// 由 routeText 做成右上角小上标（与详情卡一致）。
-    private func endpointLabel(name: String, code: String, terminal: String, minutes: Int) -> String {
+    /// 起降时刻区间（主行右对齐，与地点行 `21:00–21:20` / 租车单时刻同列同款 caption·medium·secondary）：
+    /// 两端皆有 → 「10:35–11:55」；仅一端有 → 该端单时刻；都无 → nil。跨天到达加右上小上标「+N」。
+    private var timeRangeText: Text? {
+        let dep = segment.departLocalMinutes
+        let arr = segment.arriveLocalMinutes
+        let hasDep = dep >= 0, hasArr = arr >= 0
+        guard hasDep || hasArr else { return nil }
+        let baseFont = Font.system(.caption, design: .rounded).weight(.medium)
+        func clock(_ m: Int) -> Text { Text(timeLabel(dayMinutes: m)).font(baseFont) }
+        let dayOffset = segment.arriveDayOrder - segment.departDayOrder
+        // 跨天「+N」做成右上角小上标（更小字号 + 上移基线），与详情卡 / 原内联一致。
+        let plus = dayOffset > 0
+            ? Text("\u{2009}+\(dayOffset)").font(.system(size: 9, weight: .semibold, design: .rounded)).baselineOffset(4)
+            : nil
+        let core: Text
+        if hasDep && hasArr {
+            core = clock(dep) + Text("–").font(baseFont) + clock(arr)
+        } else if hasArr {
+            core = clock(arr)
+        } else {
+            core = clock(dep)
+        }
+        return plus.map { core + $0 } ?? core
+    }
+
+    /// 端点文字：机场代码/站名 + 航站楼（紧跟、同属「在哪」）。时间不在这里拼（见 timeRangeText）。
+    private func endpointLabel(name: String, code: String, terminal: String) -> String {
         let place = !code.isEmpty ? code : name
         var parts: [String] = []
         if !place.isEmpty { parts.append(place) }
         let term = terminalDisplay(terminal)
         if !term.isEmpty { parts.append(term) }
-        if minutes >= 0 { parts.append(timeLabel(dayMinutes: minutes)) }
         return parts.joined(separator: " ")
     }
 
@@ -1321,7 +1352,7 @@ struct StopDetailView: View {
                 costCard
                 noteCard
                 AttachmentDetailCard(attachments: stop.attachments ?? [])
-                editButton
+                DetailActionFooter(onEdit: { editing = true }, onDelete: deleteStop)
             }
         }
         // 编辑钻入到详情之上：保存后回到详情（@Model 可观察、详情自动反映新值），再下滑关。
@@ -1367,35 +1398,26 @@ struct StopDetailView: View {
         }
     }
 
-    /// 底部「编辑」：这屏的「应用内主动作」、单手可达。按设计系统按钮三档走 Tier 2（烟蓝 = 可点）：
-    /// 淡烟蓝填充 + 烟蓝文字的整宽按钮，有存在感、明确可点，但不抢 Get Directions（灰·链出）的角色。
-    private var editButton: some View {
-        Button { editing = true } label: {
-            HStack(spacing: 6) {
-                Image(systemName: "pencil").font(.system(size: 14, weight: .semibold))
-                Text("itinerary.stop.detail.edit")
-                    .font(.system(.subheadline, design: .rounded).weight(.semibold))
-            }
-            .foregroundStyle(Color.accentColor)
-            .frame(maxWidth: .infinity)
-            .padding(.vertical, 14)
-            .background(
-                RoundedRectangle(cornerRadius: 14, style: .continuous)
-                    .fill(Color.accentColor.opacity(0.14))
-            )
-            .contentShape(Rectangle())
-        }
-        .buttonStyle(.plain)
-    }
+    // 底部动作（编辑 + 移除）已统一收到 `DetailActionFooter`（详见 ItineraryDetailRows）。
 
     private var header: some View {
         DetailSheetHeader(
             iconSystemName: stop.category.symbolName,
             iconTint: dayColor,
             title: stop.name,
-            onDelete: deleteStop,
+            subtitle: stopDateSubtitle,
             onClose: { dismiss() }
         )
+    }
+
+    /// 地点所在那天的绝对日期（周几·月·日）——作头部副标题（对标 Apple 地图地点卡「名称 + 一行上下文」，
+    /// 头部结构 图标+标题+副标题 与交通详情统一）。无日期行程为 nil；格式与交通端点/住宿/Day 头一致（单一口径）。
+    private var stopDateSubtitle: String? {
+        guard let bundle = store.bundle(for: tripId), !bundle.isDateless,
+              let order = stop.day?.sortOrder else { return nil }
+        let start = Calendar.current.startOfDay(for: bundle.departureDate)
+        let date = Calendar.current.date(byAdding: .day, value: order, to: start) ?? start
+        return date.formatted(.dateTime.weekday(.abbreviated).month(.abbreviated).day())
     }
 
     private func deleteStop() {
@@ -1429,6 +1451,8 @@ struct StopDetailView: View {
 
     private var infoRowViews: [AnyView] {
         var rows: [AnyView] = []
+        // Time 行只放时间（标签=值，语义对齐）；日期是「哪天」的上下文 → 放头部副标题（见 stopDateSubtitle），
+        // 不塞进「Time」行造成「时间标签显日期」的错配。统一靠「日期的处理方式」一致、而非强求同槽位。
         if stop.plannedStartMinutes >= 0 {
             rows.append(AnyView(LabeledDetailRow(icon: "clock", labelKey: "itinerary.transport.field.time", value: timeRangeLabel)))
         }

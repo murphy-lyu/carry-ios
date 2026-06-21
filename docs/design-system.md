@@ -10,8 +10,8 @@ Apple 原生风格，极简、克制、优雅。
 ### 语义色（优先使用）
 - Background Primary：Color(.systemBackground)
 - Background Secondary：Color(.secondarySystemBackground)
-- Background Grouped：Color(.systemGroupedBackground)
-- Surface Card：Color(.secondarySystemBackground)
+- Background Grouped：Color(.systemGroupedBackground)（画布 token = `Color.carryCanvas`，见 §Elevation System）
+- Surface Card：**不是单一颜色 token** —— 卡面是「填充 + 0.5px 描边 + 投影」的组合，统一走 `carryCard()`（见 §Elevation System）。**禁止**直接用 `secondarySystemBackground` 当卡背景。
 - Label Primary：Color(.label)
 - Label Secondary：Color(.secondaryLabel)
 - Label Tertiary：Color(.tertiaryLabel)
@@ -126,11 +126,31 @@ Apple 原生风格，极简、克制、优雅。
 常用值：4 / 8 / 12 / 16 / 20 / 24 / 32 / 40 / 48
 页面水平边距：16pt（标准）/ 20pt（宽松）
 
-## 圆角
-- 大卡片 / 通用 Sheet：16pt
-- 标准按钮 / 输入框容器：12pt
-- Tag / Chip / 小元素：8pt
-- 头像小尺寸：8pt，大尺寸：全圆（.clipShape(Circle())）
+## Elevation System（canonical · 2026-06-21 重定 · 单一真源）
+
+> 这是全 App 卡片 / 画布 / 圆角 / 阴影的**唯一标准**，作废本节之前散落的旧值。审查得出：旧规范自相矛盾
+> （两套卡片阴影、Surface Card token 对不上、圆角 12 个值打架），故按 ADA 标准收敛成三层 + 极简刻度。
+> 代码真源：`CarryRadius`（`AppearanceMode.swift`）+ `carryCard()` / `carryHeroCard()`（`ViewModifiers.swift`）。
+
+### 三层语义
+| 层 | 用途 | token / modifier |
+|---|---|---|
+| **画布 Canvas** | 一切分组页/详情/设置/搜索的「地」 | `Color.carryCanvas`（= `systemGroupedBackground`）。**View 不再硬编码 `systemGroupedBackground`** |
+| **卡片 Card** | 浮在画布上的信息卡（绝大多数） | `.carryCard(cornerRadius:)` |
+| **Hero** | 主角卡（首页行程卡），渐变填充 | `.carryHeroCard(cornerRadius:)` |
+
+### 卡片 Card（`carryCard` = `CarrySurfaceCardBackground`）
+- **填充**：浅色 = 纯白 `systemBackground`；深色 = 提亮灰 `rgb 0.16@0.84`（近黑背景上靠填充对比分界）
+- **描边**：0.5px continuous —— 浅 `black 0.05` / 深 `white 0.06`（投影最弱的上沿也有 crisp 分界）
+- **投影**：**浅色** `black 0.08 / r16 / y6`；**深色不投影**（深背景吃投影 + 守「不加假光」铁律）
+- 通用原则：「卡浮在浅背景上」用 **elevation（投影）**，**不靠把卡调得比背景更亮**
+
+### 圆角刻度（从 12 个值收敛到 3 档 · `CarryRadius`）
+- `control = 12`：chip / 按钮 / 输入框 / 搜索框
+- `card = 18`：标准卡片（`carryCard` 默认）
+- `hero = 28`：Hero 卡 / 大面板 / sheet 角
+- **唯一例外**：媒体缩略图（照片 / 图标）8–10pt
+- 头像：小尺寸 8pt，大尺寸全圆（`.clipShape(Circle())`）
 
 ### 首页底部缩放 Sheet（CarryBottomSheetFX，独立规格）
 首页主 Sheet 是自定义 UIKit 缩放 sheet，不走上面的通用 16pt；视觉对标 Flighty/Tripsy：
@@ -148,9 +168,14 @@ Apple 原生风格，极简、克制、优雅。
 - **背景图展示统一走 `PositionedImage`**：以用户所选裁剪框中心为焦点居中、按选区大小定缩放并钳制铺满——主体永不被切，不同尺寸/机型只多露周边（非破坏式，原图+归一化 `BackgroundCrop`）。
 - 3·Thumb / 4·Map 的 56pt 小图同样走 `PositionedImage`；无图兜底分别为墨色字母块 / 实时地图（地图仅实验，见 decisions）。
 
-## 阴影（仅 Light Mode 使用，Dark Mode 禁用阴影）
-- 卡片：shadow(color: .black.opacity(0.06), radius: 8, y: 2)
-- 浮层：shadow(color: .black.opacity(0.12), radius: 16, y: 4)
+## 阴影（仅 Light Mode 使用，Dark Mode 禁用阴影 · 收敛到 2 档）
+
+> 审查发现旧有 8+ 种阴影各搞各的。按 ADA 标准收敛成**两档**，由 Elevation System 统一：
+
+- **卡片档**（默认）：`black 0.08 / r16 / y6` + 0.5px 描边 —— 即 `carryCard`；色 token = `Color.carryCardShadow`（CTA 按钮同款）
+- **抬升档**（浮动 Tab 条 / Hero 等更高层）：`black 0.12 / r20 / y7`
+- 深色一律不投影（靠填充对比 + 描边分界）
+- 其余历史阴影值（`0.06/r8`、`0.03/r10`、`0.16/r12` 等）一律作废，逐屏拉齐时归并到上两档
 
 ## 动画
 - 标准弹簧：.spring(duration: 0.3, bounce: 0.2)
@@ -170,17 +195,11 @@ Apple 原生风格，极简、克制、优雅。
 - 禁用状态：使用另一档实心语义色降一阶，Light Mode 选更可辨识的系统灰阶（例如 `Color(.systemGray3)` + `Color(.secondaryLabel)`），Dark Mode 选更稳的深色语义背景（例如 `Color(.secondarySystemBackground)` + `Color(.secondaryLabel)`），不得透底
 - 组件实现建议：不要依赖 `.disabled(...)` 触发系统半透明效果；用明确的背景、前景和命中控制来表达可点/不可点
 
-### 卡片（Card）
-- 背景：Surface Card
-- 圆角：16pt
-- 内边距：16pt
-- Light Mode 加阴影，Dark Mode 不加阴影
-
-#### Surface 卡分界：暗=填充对比、浅=elevation（2026-06-21，`CarrySurfaceCardBackground`）
-背景近白时卡片**无法靠「更亮」与背景分离**（提亮填充无效，半透明白叠近白=看不清分界）。故两模式用**不同**分离机制：
-- **暗色**：卡填充比近黑背景明显亮（`rgb 0.16`@0.84）→ 靠填充对比；不投影（暗背景吃投影）。
-- **浅色**：iOS 标准 **elevation** —— 纯白不透明填充 + 柔和投影（`black 0.08 / r16 / y6`）+ 0.5px 描边 crisp 边缘（投影最弱的上沿也有分界）。
-- 通用原则：**「卡浮在浅背景上」用 elevation（投影），不靠把卡调得比背景更亮**。
+### 卡片（Card）→ 见 §Elevation System
+卡片规格已并入 **§Elevation System**（canonical 单一真源）。要点：用 `.carryCard(cornerRadius: CarryRadius.card)`，
+**禁止**手写 `RoundedRectangle + secondarySystemBackground` 自造卡（这是旧规范碎成 3 套的根源）。
+- 内边距：16pt（卡内横向）/ 6pt（卡顶底气口，配 11pt 行内边距）
+- 详情浮层范例：行程四类详情（地点/航班/租车/住宿）= 画布 `carryCanvas` + `carryCard(18)`，是这套标准的旗舰实现。
 
 ### 输入框（TextField）
 - 背景：Background Secondary

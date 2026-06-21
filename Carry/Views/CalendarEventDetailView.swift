@@ -18,7 +18,8 @@ struct CalendarEventDetailView: View {
     /// sheet 高度贴着内容（稀疏事件不留大片空白）。+28 ≈ home-indicator 气口。
     private var contentDetents: Set<PresentationDetent> {
         guard contentHeight > 0 else { return [.medium] }
-        return [.height(contentHeight + 28)]
+        // 单一真源 cappedContentHeight：钳在屏高以下，长事件也不会顶满屏触发 iOS 26 脱离（斜滚根因）。
+        return [.cappedContentHeight(contentHeight + 28)]
     }
 
     var body: some View {

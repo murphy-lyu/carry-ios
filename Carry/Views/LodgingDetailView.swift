@@ -58,7 +58,7 @@ struct LodgingDetailView: View {
                 noteCard
                 AttachmentDetailCard(attachments: stay.attachments ?? [])
                 muteCard
-                editButton
+                DetailActionFooter(onEdit: { editing = true }, onDelete: deleteStay)
             }
         }
         .sheet(isPresented: $editing) {
@@ -71,7 +71,6 @@ struct LodgingDetailView: View {
             iconSystemName: "bed.double.fill",
             iconTint: dayColor,
             title: displayName,
-            onDelete: deleteStay,
             onClose: { dismiss() }
         )
     }
@@ -138,22 +137,5 @@ struct LodgingDetailView: View {
         )])
     }
 
-    private var editButton: some View {
-        Button { editing = true } label: {
-            HStack(spacing: 6) {
-                Image(systemName: "pencil").font(.system(size: 14, weight: .semibold))
-                Text("itinerary.stop.detail.edit")
-                    .font(.system(.subheadline, design: .rounded).weight(.semibold))
-            }
-            .foregroundStyle(Color.accentColor)
-            .frame(maxWidth: .infinity)
-            .padding(.vertical, 14)
-            .background(
-                RoundedRectangle(cornerRadius: 14, style: .continuous)
-                    .fill(Color.accentColor.opacity(0.14))
-            )
-            .contentShape(Rectangle())
-        }
-        .buttonStyle(.plain)
-    }
+    // 底部动作（编辑 + 移除）已统一收到 `DetailActionFooter`。
 }

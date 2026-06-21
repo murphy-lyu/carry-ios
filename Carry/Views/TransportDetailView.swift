@@ -54,6 +54,7 @@ struct TransportDetailView: View {
         let time: String?        // 纯时刻「23:15」（跨天 +N 单独走 dayOffset、渲染成右上角小角标）
         let dayOffset: Int       // 跨天偏移（红眼到达 = 1），> 0 时显「+N」上标
         let zone: String?        // 该端时区（GMT±N）——仅「两端跨时区」时填，消除时刻歧义
+        let date: String?        // 该端绝对日期（周几·月·日）——截图发同行人时自含「哪天」；无日期行程为 nil
     }
 
     /// 本段是否两端跨时区（两端都有时区且不同）——是则在两端时刻下显各自时区。
@@ -80,8 +81,17 @@ struct TransportDetailView: View {
         return Calendar.current.date(byAdding: .day, value: dayOrder, to: start) ?? start
     }
 
+    /// 该端点的绝对日期标签（周几·月·日，本地化）——截图发同行人时自含「哪天」。
+    /// 无日期行程返回 nil。格式与住宿 / Day 头一致（单一口径）。
+    private func eventDateLabel(dayOrder: Int) -> String? {
+        guard let bundle = store.bundle(for: tripId), !bundle.isDateless else { return nil }
+        let start = Calendar.current.startOfDay(for: bundle.departureDate)
+        let date = Calendar.current.date(byAdding: .day, value: dayOrder, to: start) ?? start
+        return date.formatted(.dateTime.weekday(.abbreviated).month(.abbreviated).day())
+    }
+
     /// 由端点字段拼出 RoutePoint；无地点也无时间 → nil（该端点不渲染）。
-    private func routePoint(name: String, code: String, minutes: Int, dayOffset: Int, terminal: String, address: String, zone: String? = nil) -> RoutePoint? {
+    private func routePoint(name: String, code: String, minutes: Int, dayOffset: Int, dayOrder: Int, terminal: String, address: String, zone: String? = nil) -> RoutePoint? {
         let hasPlace = !name.isEmpty || !code.isEmpty
         let time: String? = minutes >= 0 ? timeLabel(dayMinutes: minutes) : nil
         guard hasPlace || time != nil else { return nil }
@@ -104,13 +114,14 @@ struct TransportDetailView: View {
                           address: showAddr ? addr : nil,
                           time: time,
                           dayOffset: time != nil ? max(0, dayOffset) : 0,
-                          zone: zone)
+                          zone: zone,
+                          date: eventDateLabel(dayOrder: dayOrder))
     }
 
     private var departurePoint: RoutePoint? {
         routePoint(name: localizedAirportName(code: segment.fromCode, fallback: segment.fromName),
                    code: segment.fromCode,
-                   minutes: segment.departLocalMinutes, dayOffset: 0,
+                   minutes: segment.departLocalMinutes, dayOffset: 0, dayOrder: segment.departDayOrder,
                    terminal: terminalDisplay(segment.fromTerminal), address: segment.fromAddress,
                    zone: crossesTimeZone ? gmtZoneLabel(segment.fromTimeZoneId, on: eventDate(dayOrder: segment.departDayOrder)) : nil)
     }
@@ -119,6 +130,7 @@ struct TransportDetailView: View {
                    code: segment.toCode,
                    minutes: segment.arriveLocalMinutes,
                    dayOffset: segment.arriveDayOrder - segment.departDayOrder,
+                   dayOrder: segment.arriveDayOrder,
                    terminal: terminalDisplay(segment.toTerminal), address: segment.toAddress,
                    zone: crossesTimeZone ? gmtZoneLabel(segment.toTimeZoneId, on: eventDate(dayOrder: segment.arriveDayOrder)) : nil)
     }
@@ -175,7 +187,7 @@ struct TransportDetailView: View {
                 noteCard
                 AttachmentDetailCard(attachments: segment.attachments ?? [])
                 muteCard
-                editButton
+                DetailActionFooter(onEdit: { editing = true }, onDelete: deleteSegment)
             }
         }
         .sheet(isPresented: $editing) {
@@ -190,7 +202,6 @@ struct TransportDetailView: View {
             iconTint: dayColor,
             title: titleText,
             subtitle: headerSubtitle,
-            onDelete: deleteSegment,
             onClose: { dismiss() }
         )
     }
@@ -241,7 +252,7 @@ struct TransportDetailView: View {
     /// 单端聚焦视图无对照起点、详情又已锚定在还车那天 → 显「+N」反而困惑，去掉。
     private var focusedArrivalPoint: RoutePoint? {
         routePoint(name: segment.toName, code: segment.toCode,
-                   minutes: segment.arriveLocalMinutes, dayOffset: 0,
+                   minutes: segment.arriveLocalMinutes, dayOffset: 0, dayOrder: segment.arriveDayOrder,
                    terminal: terminalDisplay(segment.toTerminal), address: segment.toAddress)
     }
 
@@ -270,10 +281,7 @@ struct TransportDetailView: View {
             .padding(.horizontal, 16)
             .padding(.vertical, 6)
             .frame(maxWidth: .infinity, alignment: .leading)
-            .background(
-                RoundedRectangle(cornerRadius: 14, style: .continuous)
-                    .fill(Color(.secondarySystemBackground))
-            )
+            .carryCard(cornerRadius: CarryRadius.card)
         }
     }
 
@@ -285,7 +293,7 @@ struct TransportDetailView: View {
             // marker 顶部对齐到名称行（而非对整块居中），与名称/时间共一条视觉锚线；地址往下排。
             HStack(alignment: .top, spacing: 12) {
                 ZStack {
-                    Circle().fill(Color(.secondarySystemBackground))
+                    Circle().fill(Color.carrySheetCard)
                     Circle().fill(dayColor.opacity(0.15))
                     Image(systemName: markerSymbol(isDeparture: isDeparture))
                         .font(.system(size: 11, weight: .semibold))
@@ -298,10 +306,7 @@ struct TransportDetailView: View {
             .padding(.horizontal, 16)
             .padding(.vertical, 14)
             .frame(maxWidth: .infinity, alignment: .leading)
-            .background(
-                RoundedRectangle(cornerRadius: 14, style: .continuous)
-                    .fill(Color(.secondarySystemBackground))
-            )
+            .carryCard(cornerRadius: CarryRadius.card)
         }
     }
 
@@ -354,7 +359,7 @@ struct TransportDetailView: View {
                 }
             }
             ZStack {
-                Circle().fill(Color(.secondarySystemBackground))  // 不透明垫底，挡住穿过圆心的连接线
+                Circle().fill(Color.carrySheetCard)  // 不透明垫底，挡住穿过圆心的连接线
                 Circle().fill(dayColor.opacity(0.15))
                 Image(systemName: markerSymbol(isDeparture: isDeparture))
                     .font(.system(size: 11, weight: .semibold))
@@ -400,23 +405,32 @@ struct TransportDetailView: View {
                 }
             }
             Spacer(minLength: 8)
-            if let t = p.time {
+            if p.time != nil || p.date != nil {
                 VStack(alignment: .trailing, spacing: 1) {
-                    HStack(alignment: .firstTextBaseline, spacing: 4) {
-                        Text(t)
-                            .font(.system(.title3, design: .rounded).weight(.semibold))
-                            .foregroundStyle(.primary)
-                            .fixedSize()
-                        // 跨天「+N」固定宽度小列（gutter）：在场=显 +N、出发行=留空占位 → 两行时钟在 gutter 左缘
-                        // **右对齐**成列；gutter 右缘 = 内容右边距 → +N 与卡片右边距一致、不贴边、呼吸感统一。
-                        // 仅「有跨天到达」的卡片预留（crossDay），同日航班不留列、时钟照常贴右。
-                        if crossDay {
-                            Text(p.dayOffset > 0 ? "+\(p.dayOffset)" : "")
-                                .font(.system(size: 11, weight: .semibold, design: .rounded))
-                                .foregroundStyle(.secondary)
-                                .baselineOffset(6)
-                                .frame(width: 13, alignment: .leading)
+                    if let t = p.time {
+                        HStack(alignment: .firstTextBaseline, spacing: 4) {
+                            Text(t)
+                                .font(.system(.title3, design: .rounded).weight(.semibold))
+                                .foregroundStyle(.primary)
+                                .fixedSize()
+                            // 跨天「+N」固定宽度小列（gutter）：在场=显 +N、出发行=留空占位 → 两行时钟在 gutter 左缘
+                            // **右对齐**成列；gutter 右缘 = 内容右边距 → +N 与卡片右边距一致、不贴边、呼吸感统一。
+                            // 仅「有跨天到达」的卡片预留（crossDay），同日航班不留列、时钟照常贴右。
+                            if crossDay {
+                                Text(p.dayOffset > 0 ? "+\(p.dayOffset)" : "")
+                                    .font(.system(size: 11, weight: .semibold, design: .rounded))
+                                    .foregroundStyle(.secondary)
+                                    .baselineOffset(6)
+                                    .frame(width: 13, alignment: .leading)
+                            }
                         }
+                    }
+                    // 日期（周几·月·日）：时刻正下方、右对齐、安静灰——截图发同行人时自含「哪天取/还、哪天起/落」。
+                    if let d = p.date {
+                        Text(d)
+                            .font(.system(.caption, design: .rounded))
+                            .foregroundStyle(.secondary)
+                            .fixedSize()
                     }
                     // 跨时区时显该端时区（GMT±N）——消除「出发时刻 vs 到达时刻不在同一时区」的歧义
                     // （这是详情里唯一真有歧义、值得显时区的地方；spec: itinerary-timezone.md 详情卡决策）。
@@ -527,22 +541,5 @@ struct TransportDetailView: View {
         }
     }
 
-    private var editButton: some View {
-        Button { editing = true } label: {
-            HStack(spacing: 6) {
-                Image(systemName: "pencil").font(.system(size: 14, weight: .semibold))
-                Text("itinerary.stop.detail.edit")
-                    .font(.system(.subheadline, design: .rounded).weight(.semibold))
-            }
-            .foregroundStyle(Color.accentColor)
-            .frame(maxWidth: .infinity)
-            .padding(.vertical, 14)
-            .background(
-                RoundedRectangle(cornerRadius: 14, style: .continuous)
-                    .fill(Color.accentColor.opacity(0.14))
-            )
-            .contentShape(Rectangle())
-        }
-        .buttonStyle(.plain)
-    }
+    // 底部动作（编辑 + 移除）已统一收到 `DetailActionFooter`。
 }
