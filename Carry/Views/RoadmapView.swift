@@ -81,9 +81,9 @@ private struct RoadmapPayload: Codable {
                 id: "upcoming",
                 title: RoadmapL10n.text(en: "Upcoming", zhHans: "即将推出", zhHant: "即將推出"),
                 items: [
-                    RoadmapItem(id: "calendar-import", title: RoadmapL10n.text(en: "Import trips from Calendar", zhHans: "从日历导入行程", zhHant: "從行事曆匯入行程"), status: .planned, note: nil),
+                    RoadmapItem(id: "flight-status", title: RoadmapL10n.text(en: "Live flight status", zhHans: "航班实时动态", zhHant: "航班即時動態"), status: .inProgress, note: nil),
                     RoadmapItem(id: "apple-watch", title: RoadmapL10n.text(en: "Apple Watch app", zhHans: "Apple Watch 支持", zhHant: "Apple Watch 支援"), status: .planned, note: nil),
-                    RoadmapItem(id: "travel-content", title: RoadmapL10n.text(en: "Travel guides & outfit tips", zhHans: "旅行攻略与着装建议", zhHant: "旅行攻略與著裝建議"), status: .planned, note: nil)
+                    RoadmapItem(id: "mac-app", title: RoadmapL10n.text(en: "Mac app", zhHans: "Mac 支持", zhHant: "Mac 支援"), status: .planned, note: nil)
                 ]
             ),
             RoadmapSection(
@@ -95,31 +95,31 @@ private struct RoadmapPayload: Codable {
                     RoadmapItem(id: "lodging", title: RoadmapL10n.text(en: "Lodging & car rental", zhHans: "住宿与租车", zhHant: "住宿與租車"), status: .done, note: nil),
                     RoadmapItem(id: "trip-book", title: RoadmapL10n.text(en: "Trip Book (spending)", zhHans: "Trip Book·行程花费", zhHant: "Trip Book·行程花費"), status: .done, note: nil),
                     RoadmapItem(id: "itinerary-export", title: RoadmapL10n.text(en: "Export itinerary (PDF)", zhHans: "导出行程单 PDF", zhHant: "匯出行程單 PDF"), status: .done, note: nil),
-                    RoadmapItem(id: "attachments", title: RoadmapL10n.text(en: "Trip attachments", zhHans: "行程附件（文件·照片·链接）", zhHant: "行程附件（檔案·相片·連結）"), status: .done, note: nil),
+                    RoadmapItem(id: "smart-suggestions", title: RoadmapL10n.text(en: "Smart suggestions", zhHans: "智能推荐清单", zhHant: "智能推薦清單"), status: .done, note: nil),
                     RoadmapItem(id: "photo-trip", title: RoadmapL10n.text(en: "Rebuild trip from photos", zhHans: "用照片还原行程", zhHant: "用相片還原行程"), status: .done, note: nil),
                     RoadmapItem(id: "overseas-search", title: RoadmapL10n.text(en: "Overseas place search", zhHans: "海外地点检索", zhHant: "海外地點檢索"), status: .done, note: nil),
                     RoadmapItem(id: "trip-reminders", title: RoadmapL10n.text(en: "Trip reminders", zhHans: "行程提醒中心", zhHant: "行程提醒中心"), status: .done, note: nil),
-                    RoadmapItem(id: "icloud-sync", title: RoadmapL10n.text(en: "iCloud sync", zhHans: "iCloud 同步", zhHant: "iCloud 同步"), status: .done, note: nil),
-                    RoadmapItem(id: "destination-info", title: RoadmapL10n.text(en: "Destination info (plugs, voltage, currency)", zhHans: "目的地实用信息（充电插头、电压、货币）", zhHant: "目的地實用資訊（充電插頭、電壓、貨幣）"), status: .done, note: nil),
-                    RoadmapItem(id: "weather", title: RoadmapL10n.text(en: "Weather forecast", zhHans: "目的地天气预报", zhHant: "目的地天氣預報"), status: .done, note: nil),
                     RoadmapItem(id: "live-activity", title: RoadmapL10n.text(en: "Live Activity (Dynamic Island & Lock Screen)", zhHans: "灵动岛 & 锁屏打包进度", zhHant: "靈動島 & 鎖定畫面打包進度"), status: .done, note: nil),
                     RoadmapItem(id: "home-widget", title: RoadmapL10n.text(en: "Home Screen widget", zhHans: "桌面小组件", zhHant: "主畫面小工具"), status: .done, note: nil),
-                    RoadmapItem(id: "period-reminder", title: RoadmapL10n.text(en: "Period-aware packing", zhHans: "经期打包提醒", zhHant: "生理期打包提醒"), status: .done, note: nil),
-                    RoadmapItem(id: "quick-actions", title: RoadmapL10n.text(en: "Home Screen quick actions", zhHans: "主屏快捷操作", zhHant: "主畫面快速操作"), status: .done, note: nil),
-                    RoadmapItem(id: "calendar-sync", title: RoadmapL10n.text(en: "Calendar sync", zhHans: "日历同步", zhHant: "行事曆同步"), status: .done, note: nil),
-                    RoadmapItem(id: "smart-suggestions", title: RoadmapL10n.text(en: "Smart suggestions", zhHans: "智能推荐清单", zhHant: "智能推薦清單"), status: .done, note: nil),
-                    RoadmapItem(id: "worth-considering", title: RoadmapL10n.text(en: "Little Joys", zhHans: "小确幸", zhHant: "小確幸"), status: .done, note: nil),
-                    RoadmapItem(id: "trip-background", title: RoadmapL10n.text(en: "Trip background photo", zhHans: "行程背景图", zhHant: "行程背景圖"), status: .done, note: nil),
                     RoadmapItem(id: "world-map", title: RoadmapL10n.text(en: "World map & visited countries", zhHans: "世界地图 & 到访国家", zhHant: "世界地圖 & 到訪國家"), status: .done, note: nil),
-                    RoadmapItem(id: "packing-reminder", title: RoadmapL10n.text(en: "Packing reminders", zhHans: "打包提醒", zhHant: "打包提醒"), status: .done, note: nil),
+                    RoadmapItem(id: "weather", title: RoadmapL10n.text(en: "Weather forecast", zhHans: "目的地天气预报", zhHant: "目的地天氣預報"), status: .done, note: nil),
+                    RoadmapItem(id: "destination-info", title: RoadmapL10n.text(en: "Destination info (plugs, voltage, currency)", zhHans: "目的地实用信息（充电插头、电压、货币）", zhHant: "目的地實用資訊（充電插頭、電壓、貨幣）"), status: .done, note: nil),
+                    RoadmapItem(id: "period-reminder", title: RoadmapL10n.text(en: "Period-aware packing", zhHans: "经期打包提醒", zhHant: "生理期打包提醒"), status: .done, note: nil),
+                    RoadmapItem(id: "icloud-sync", title: RoadmapL10n.text(en: "iCloud sync", zhHans: "iCloud 同步", zhHant: "iCloud 同步"), status: .done, note: nil),
+                    RoadmapItem(id: "attachments", title: RoadmapL10n.text(en: "Trip attachments", zhHans: "行程附件（文件·照片·链接）", zhHant: "行程附件（檔案·相片·連結）"), status: .done, note: nil),
+                    RoadmapItem(id: "calendar-sync", title: RoadmapL10n.text(en: "Calendar sync", zhHans: "日历同步", zhHant: "行事曆同步"), status: .done, note: nil),
                     RoadmapItem(id: "share-list", title: RoadmapL10n.text(en: "Share packing list", zhHans: "分享清单", zhHant: "分享清單"), status: .done, note: nil),
+                    RoadmapItem(id: "quick-actions", title: RoadmapL10n.text(en: "Home Screen quick actions", zhHans: "主屏快捷操作", zhHant: "主畫面快速操作"), status: .done, note: nil),
+                    RoadmapItem(id: "siri-shortcuts", title: RoadmapL10n.text(en: "Siri shortcuts", zhHans: "Siri 快捷指令", zhHant: "Siri 捷徑"), status: .done, note: nil),
+                    RoadmapItem(id: "packing-reminder", title: RoadmapL10n.text(en: "Packing reminders", zhHans: "打包提醒", zhHant: "打包提醒"), status: .done, note: nil),
+                    RoadmapItem(id: "trip-background", title: RoadmapL10n.text(en: "Trip background photo", zhHans: "行程背景图", zhHant: "行程背景圖"), status: .done, note: nil),
+                    RoadmapItem(id: "worth-considering", title: RoadmapL10n.text(en: "Little Joys", zhHans: "小确幸", zhHant: "小確幸"), status: .done, note: nil),
                     RoadmapItem(id: "custom-section", title: RoadmapL10n.text(en: "Custom sections", zhHans: "自定义分类", zhHant: "自定義分類"), status: .done, note: nil),
                     RoadmapItem(id: "sorting", title: RoadmapL10n.text(en: "Item & section sorting", zhHans: "物品与分类排序", zhHant: "物品與分類排序"), status: .done, note: nil),
                     RoadmapItem(id: "item-quantity", title: RoadmapL10n.text(en: "Item quantity", zhHans: "物品数量", zhHant: "物品數量"), status: .done, note: nil),
                     RoadmapItem(id: "trip-duplicate", title: RoadmapL10n.text(en: "Trip duplication", zhHans: "复制行程", zhHant: "複製行程"), status: .done, note: nil),
                     RoadmapItem(id: "backup-restore", title: RoadmapL10n.text(en: "Backup & restore", zhHans: "备份与还原", zhHant: "備份與還原"), status: .done, note: nil),
-                    RoadmapItem(id: "app-icons", title: RoadmapL10n.text(en: "Themes", zhHans: "主题", zhHant: "主題"), status: .done, note: nil),
-                    RoadmapItem(id: "siri-shortcuts", title: RoadmapL10n.text(en: "Siri shortcuts", zhHans: "Siri 快捷指令", zhHant: "Siri 捷徑"), status: .done, note: nil)
+                    RoadmapItem(id: "app-icons", title: RoadmapL10n.text(en: "Themes", zhHans: "主题", zhHant: "主題"), status: .done, note: nil)
                 ]
             )
         ]

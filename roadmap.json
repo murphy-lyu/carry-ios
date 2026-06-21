@@ -8,11 +8,11 @@
       "titleZhHant": "即將推出",
       "items": [
         {
-          "id": "calendar-import",
-          "title": "从日历导入行程",
-          "titleEn": "Import trips from Calendar",
-          "titleZhHant": "從行事曆匯入行程",
-          "status": "planned"
+          "id": "flight-status",
+          "title": "航班实时动态",
+          "titleEn": "Live flight status",
+          "titleZhHant": "航班即時動態",
+          "status": "in_progress"
         },
         {
           "id": "apple-watch",
@@ -22,10 +22,10 @@
           "status": "planned"
         },
         {
-          "id": "travel-content",
-          "title": "旅行攻略与着装建议",
-          "titleEn": "Travel guides & outfit tips",
-          "titleZhHant": "旅行攻略與著裝建議",
+          "id": "mac-app",
+          "title": "Mac 支持",
+          "titleEn": "Mac app",
+          "titleZhHant": "Mac 支援",
           "status": "planned"
         }
       ]
@@ -72,10 +72,10 @@
           "status": "done"
         },
         {
-          "id": "attachments",
-          "title": "行程附件（文件·照片·链接）",
-          "titleEn": "Trip attachments",
-          "titleZhHant": "行程附件（檔案·相片·連結）",
+          "id": "smart-suggestions",
+          "title": "智能推荐清单",
+          "titleEn": "Smart suggestions",
+          "titleZhHant": "智能推薦清單",
           "status": "done"
         },
         {
@@ -100,27 +100,6 @@
           "status": "done"
         },
         {
-          "id": "icloud-sync",
-          "title": "iCloud 同步",
-          "titleEn": "iCloud sync",
-          "titleZhHant": "iCloud 同步",
-          "status": "done"
-        },
-        {
-          "id": "destination-info",
-          "title": "目的地实用信息（充电插头、电压、货币）",
-          "titleEn": "Destination info (plugs, voltage, currency)",
-          "titleZhHant": "目的地實用資訊（充電插頭、電壓、貨幣）",
-          "status": "done"
-        },
-        {
-          "id": "weather",
-          "title": "目的地天气预报",
-          "titleEn": "Weather forecast",
-          "titleZhHant": "目的地天氣預報",
-          "status": "done"
-        },
-        {
           "id": "live-activity",
           "title": "灵动岛 & 锁屏打包进度",
           "titleEn": "Live Activity (Dynamic Island & Lock Screen)",
@@ -135,6 +114,27 @@
           "status": "done"
         },
         {
+          "id": "world-map",
+          "title": "世界地图 & 到访国家",
+          "titleEn": "World map & visited countries",
+          "titleZhHant": "世界地圖 & 到訪國家",
+          "status": "done"
+        },
+        {
+          "id": "weather",
+          "title": "目的地天气预报",
+          "titleEn": "Weather forecast",
+          "titleZhHant": "目的地天氣預報",
+          "status": "done"
+        },
+        {
+          "id": "destination-info",
+          "title": "目的地实用信息（充电插头、电压、货币）",
+          "titleEn": "Destination info (plugs, voltage, currency)",
+          "titleZhHant": "目的地實用資訊（充電插頭、電壓、貨幣）",
+          "status": "done"
+        },
+        {
           "id": "period-reminder",
           "title": "经期打包提醒",
           "titleEn": "Period-aware packing",
@@ -142,10 +142,17 @@
           "status": "done"
         },
         {
-          "id": "quick-actions",
-          "title": "主屏快捷操作",
-          "titleEn": "Home Screen quick actions",
-          "titleZhHant": "主畫面快速操作",
+          "id": "icloud-sync",
+          "title": "iCloud 同步",
+          "titleEn": "iCloud sync",
+          "titleZhHant": "iCloud 同步",
+          "status": "done"
+        },
+        {
+          "id": "attachments",
+          "title": "行程附件（文件·照片·链接）",
+          "titleEn": "Trip attachments",
+          "titleZhHant": "行程附件（檔案·相片·連結）",
           "status": "done"
         },
         {
@@ -156,31 +163,24 @@
           "status": "done"
         },
         {
-          "id": "smart-suggestions",
-          "title": "智能推荐清单",
-          "titleEn": "Smart suggestions",
-          "titleZhHant": "智能推薦清單",
+          "id": "share-list",
+          "title": "分享清单",
+          "titleEn": "Share packing list",
+          "titleZhHant": "分享清單",
           "status": "done"
         },
         {
-          "id": "worth-considering",
-          "title": "小确幸",
-          "titleEn": "Little Joys",
-          "titleZhHant": "小確幸",
+          "id": "quick-actions",
+          "title": "主屏快捷操作",
+          "titleEn": "Home Screen quick actions",
+          "titleZhHant": "主畫面快速操作",
           "status": "done"
         },
         {
-          "id": "trip-background",
-          "title": "行程背景图",
-          "titleEn": "Trip background photo",
-          "titleZhHant": "行程背景圖",
-          "status": "done"
-        },
-        {
-          "id": "world-map",
-          "title": "世界地图 & 到访国家",
-          "titleEn": "World map & visited countries",
-          "titleZhHant": "世界地圖 & 到訪國家",
+          "id": "siri-shortcuts",
+          "title": "Siri 快捷指令",
+          "titleEn": "Siri shortcuts",
+          "titleZhHant": "Siri 捷徑",
           "status": "done"
         },
         {
@@ -191,10 +191,17 @@
           "status": "done"
         },
         {
-          "id": "share-list",
-          "title": "分享清单",
-          "titleEn": "Share packing list",
-          "titleZhHant": "分享清單",
+          "id": "trip-background",
+          "title": "行程背景图",
+          "titleEn": "Trip background photo",
+          "titleZhHant": "行程背景圖",
+          "status": "done"
+        },
+        {
+          "id": "worth-considering",
+          "title": "小确幸",
+          "titleEn": "Little Joys",
+          "titleZhHant": "小確幸",
           "status": "done"
         },
         {
@@ -237,13 +244,6 @@
           "title": "主题",
           "titleEn": "Themes",
           "titleZhHant": "主題",
-          "status": "done"
-        },
-        {
-          "id": "siri-shortcuts",
-          "title": "Siri 快捷指令",
-          "titleEn": "Siri shortcuts",
-          "titleZhHant": "Siri 捷徑",
           "status": "done"
         }
       ]
