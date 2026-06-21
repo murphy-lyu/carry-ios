@@ -3,6 +3,26 @@
 ## 最后更新
 2026-06-21
 
+## 上次改动摘要（按天色板定稿 + 住宿详情跟随当天色 + 航班机场/航司名本地化全链路 · 2026-06-21）
+
+> 本会话三块、各自独立提交（隔离 index、与并行「时区 / HomeView / 海外 POI」会话不重叠）。**全程编译绿；未 push**（领先 origin 30）；UI 验收交用户。
+
+**1. 行程按天色板定稿**（`420b6e1`/`fdc84f5`/`6e734f6`/`c38f6fe`）
+- 经「哑光 10 → 暖色 10 → 精简 7 → 全色环铺开 7」多轮，最终：`Day1 烟蓝(品牌) → 万寿菊 → 棕榈绿 → 雪青 → 覆盆子 → 青绿 → 赤陶`，每天一个清楚不同色名。
+- 色序用 `scripts/itinerary-day-palette-solve.py`（CIEDE2000、明暗取较差值）求解：两两 ≥ ΔE 14.7、相邻最差 ≈20。前 4 天（蓝/橙/绿/紫）按用户偏好钉死。否决「纯暖色」（暖色占色相环一小段、ΔE 崩到 8）与「降饱和」。决策见 decisions.md；规范见 design-system.md。
+
+**2. 住宿详情跟随「被点那天」的色**（`18e7425`）
+- 住宿跨两天、列表入住/退房各显当天色；点退房行（覆盆子）原详情却显入住日色（雪青）——不一致。改：`.lodgingDetail` 路由带 `dayOrder`，详情按被点那天取色。
+
+**3. 航班机场/航司名按界面语言本地化**（spec: `itinerary-flight-name-localization.md`；`3e73e89`→`76279de`）
+- 根因：多语言库（`airlines.json`/`airports.json`，9 语言）只用于搜索、没接显示层 → 直显英文。改 **render-time resolution**：存语言无关的码/航班号，显示时按当前语言查名、回落原文。零迁移、无新字段、无启发式。
+- **航司**：`AirlineDatabase` 去 actor 化为同步单一源（不可变参考数据无需 actor），`TransportSegment.carrierName(forLanguageKey:)`/`displayCarrier`。覆盖**全部显示点**：时间轴 / 详情 / 搜索卡 / 导出 / Trip Book 花费 / 通知。
+- **机场**：`AirportCatalog`（数据单一源）+ `AirportDatabase` actor 仅搜索；详情按码取 `displayName`。
+- **导出按「所选语言」**（非设备 locale）：`DocLanguage.nameLanguageKey` + `Airline/Airport.localizedName(for:)`；**新增繁体导出** `.zhHant`（固定文案补地道繁体、非简转繁；`modeName` 移入 `ItineraryDocumentText`；台/港/澳设备默认繁体）。
+- **🔴 性能松解（关键决策，`76279de`）**：机场库 1.6M 改**按需加载**、**删掉「每次启动预热」**——不用航班的用户零开销；详情机场名后台 `Task.detached` 异步（首次开某航班详情时那行一瞬「英→中」、次要可接受）。航司库 225K 随用随载。地图端点标签不本地化（次要 a11y + 避免逼加载大库）。
+- **并发**：项目 `SWIFT_DEFAULT_ACTOR_ISOLATION=MainActor`；纯数据/工具类型显式标 `nonisolated`（`Airport`/`Airline`/`AirportCatalog`/`AirlineDatabase`/`AirportLocale`/`FlightNumberParser`）。
+- **待办**：① push（用户定，本地领先 origin 30，含本会话全部 + 并行已提交）；② UI 验收（中文环境航司/机场名、繁体导出 PDF、详情机场名一瞬刷新）。
+
 ## 上次改动摘要（行程时区系统化 Phase 1+2 · spec: itinerary-timezone.md · 2026-06-21 夜）
 
 > 跨多文件大改 + SwiftData 轻量迁移（加可选字段，未上线故无需 schema 版本）。**编译绿**（主 app + Widget）。**已提交未 push**（`88382eb` Phase 1 / `67cd49e` Phase 2 / `ef37140` 实测修复）。**模拟器实测通过**（用户授权后跑 iOS 26.5）：建上海→巴黎行程（The Bund + AF111 PVG→CDG），Day 头 Jun 21 显 GMT+8、Jun 22+ 顺延 GMT+2 ✓。
