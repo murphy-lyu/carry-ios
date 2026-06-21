@@ -3,6 +3,55 @@
 ## 最后更新
 2026-06-21
 
+## 上次改动摘要（Trip Book 花费体系：7 类细分 + 按方式拆 + 时间轴 View all；浅色卡片 elevation；列表卡统一规则 · 2026-06-21）
+
+> 单会话、纯 Trip Book / 花费模块；5 个隔离-index commit（`e42b4e8`/`9a4eaf7`/`e8247cd`/`ba444bd`/`86d8950`），与并行通知会话不重叠、未碰其文件。全程编译绿；**未 push**（用户在另一会话统一 push）；UI 验收交用户（含用增强备份 `carry_backup_augmented.json` 在模拟器验过 >10 国家/机场的 View all）。
+
+**1. 花费体系细化**（`e42b4e8`/`e8247cd`）
+- `TripSpendStats` 由「交通/住宿/地点」3 类 → 按 `SpendCategory` **7 类**（地点拆 餐饮/景点/活动/购物/其他，零新增录入、复用单行程页 `TripSpendDetail` 口径不漂移）。`TripSpendBreakdown` 由固定三字段重构为 `[SpendCategory: Double]`。
+- 交通再按 `TransportMode` 拆（`transportByMode`，与 `byCategory[.transport]` 同源、和=Trip total）——「查看全部」下钻按方式分行，修「租车/火车都显示成飞机」（同单行程逐笔修法）。明细行单烟蓝图标（不用单行程页多彩，守 Trip Book 单一强调色）。
+- 花费卡加「最高一趟」texture 行（≥2 趟才出，中性措辞避免超支暗示）。scope 卡图标 `airplane.departure`→`map`（消与机场卡撞图标 + 脱离飞行区误读）。
+
+**2. 花费「查看全部」改时间轴**（`ba444bd`）
+- 「按趟堆叠」→「按时间倒序流水账」：年分段（倒序）+ 年度小计 + 每趟左侧日期标记 + **整宽卡片**（日期不占左列、消右偏）；无日期行程归底「未排期」组。`TripSpendRow` 带 `departureDate`。
+
+**3. Trip Book 卡片增减**
+- 新增：在地足迹卡（`StopCategory` 计数）、飞行「最远一程」（路线+距离+时长，≥2 段有距离才出，`FlightLeg`/`longestFlight*`）。
+- **撤掉**概览「最长一趟/最频繁年份」：无父卡可挂、hero 已挤 → 根因撤除（含模型字段/计算/文案）。对比「最远一程/最高一趟」能成立=各有父卡延伸。
+
+**4. 浅色卡片 elevation 根因修复**（`ba444bd`）
+- `CarrySurfaceCardBackground` 浅色由「半透明白叠近白背景、无边框无投影」（看不清分界）→ 纯白不透明 + 柔和投影 + 0.5px 描边（iOS 标准 elevation，背景近白时卡片无法「更亮」只能抬升）；暗色保留填充对比、不变。仅 Trip Book 在用。
+
+**5. 列表卡统一规则「预览 10 + View all」**（`86d8950`）
+- 国家/机场预览前 10 + 「View all」全列表 sheet（替机场旧「+N」**静默兜底**）；大洲天生 ≤7 → 套规则即「永远全展示」、自然豁免。
+- affordance 统一（Apple「See All → 目标页用内容名」）：按钮一律 `View all`、sheet 标题用各自卡片名（花费 sheet 从「View all expenses」→「Total spend」）。删死 key `tripbook.airports.more`/`tripbook.spend.view_all`。
+
+- **待办**：① push（用户在另一会话统一）；② 真机回归一遍三卡阈值 + 时间轴跨年分组；③ 大洲不动（≤7 全展示，已确认非 bug）。
+
+## 上次改动摘要（通知默认时间调整 + 退房提醒模型切换 + 通知模块审计/根因修复/64 配额重构 · spec: notification-budget.md · 2026-06-21 晚）
+
+> 单会话、纯通知模块。**全程编译绿**（主 app + Widget）；**未提交**（push 由用户定）；UI 验收交用户。与并行会话（`TripSpendStats.swift`/`HomeView.swift`）不重叠、全程未碰。
+
+**1. 通知默认时间/提前量调整**
+- 每日摘要 08:00→**09:00**；打包提醒 20:00→**21:00**；租车还车 3h→**1h**；住宿退房（见下，模型已改）。两份默认值同步（`ReminderPreferences` + 设置页 `@AppStorage`）。
+- 删死代码 `ReminderPreferences.lodgingCheckInMinutes`（key `carry.notif.lodging_checkin_min`，零调用、设置页未暴露的入住提醒残留）；注意与 `LodgingStay.checkInMinutes`（用户填的入住时间，活代码）无关、未动。
+
+**2. 退房提醒：提前量 → 清晨固定时刻（C 类行程日锚）**
+- 根因：退房是「当天 deadline 前撤离」、人已在房间，不是「提前赶去」的交通型事件；套交通提前量模型别扭、1h 弹「12点退房」基本冗余。改**退房当天清晨固定时刻**（默认 **09:00**，同出发提醒/每日摘要），晨间唤醒、从容收拾。
+- **早退房 clamp**：退房时刻早于清晨锚 → 落在退房时刻本身，杜绝「已退房才提醒」。
+- 文案 **T1+C**：标题 `退房 · 酒店名`；正文退房时刻有填→`今天 12:00 前退房，记得收拾好行李、结清账单。`（按设备 12/24h 本地化），没填→回落无时刻版。新增 `notif.lodging.checkout.body.timed`、改 `notif.lodging.checkout.body`/`settings.notif.lodging.subtitle`、删废弃 `settings.notif.lodging.checkout_lead`——9 语言齐、全角校验过。设置页住宿段从提前量 Picker 改时:分 DatePicker。
+- 顺手统一：还车通知时刻从硬编码 `%02d:%02d`（24h）改 `clockLabel`（跟随设备 12/24h）。
+
+**3. 🔴 通知重排竞态（高危真 bug，已修）**
+- 原 `scheduleReminders` 先 `cancelReminders`（异步 getPending 回调里 removePending 旧 id）再同步 add；id 确定性、新旧相同 → removePending 提交晚于 add 且删的正是刚 add 的同 id → **重排时把刚排好的通知删掉**（首次排空 pending 不触发，故漏测；改设置/编辑后通知静默失效）。修复并入下方全局预算结构。
+
+**4. 🟢 64 挂起上限：全局预算调度（spec: notification-budget.md）**
+- iOS 每 App 挂起本地通知上限 64、超出系统静默丢最远的。改「各行程独立调度」为**全局预算**：`NotificationManager.reschedule(trips:)` 跨所有行程构建值类型 `Candidate`（主线程读 @Model）→ `commit` 在 getPending 回调里 `budget=64−foreign−4`、按 fireDate 升序取前 budget（近端优先）。**竞态根除**：删除集=「前缀匹配−选中集」与新增集天然不相交。
+- **滚动补位**：冷启动（`TripStore.init` 的 Task、`fetchTrips` 之后）+ 回前台（`willEnterForeground`）重排，远端随临近补位。TripStore 18 处单行程 `scheduleReminders(for:)` 收口为全局 `refreshNotifications()`。删死代码 `scheduleAt`/`schedule`/`scheduleAfterInterval`。
+- **🔴 自审抓出并修掉新引入的雷**：冷启动 refresh 原放 `App.onAppear`，但 `trips` 在 init 的 Task 里**异步**加载 → onAppear 跑时 trips 空 → 候选空 → commit 把已排通知全删（每次冷启动清空）。已移进 init Task 内 `fetchTrips()` 之后。
+
+- **待办**：① UI 验收（退房文案带/不带时刻、还车 12/24h、设置页默认时间、**冷启动后通知不丢**）；② 提交 + push（用户定）；③ 64 预算裁剪只在多个密集行程 >60 条时触发，DEBUG 有日志可观测。
+
 ## 上次改动摘要（按天色板定稿 + 住宿详情跟随当天色 + 航班机场/航司名本地化全链路 · 2026-06-21）
 
 > 本会话三块、各自独立提交（隔离 index、与并行「时区 / HomeView / 海外 POI」会话不重叠）。**全程编译绿；未 push**（领先 origin 30）；UI 验收交用户。

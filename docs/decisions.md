@@ -1,5 +1,27 @@
 # 决策日志
 
+## 2026-06-21 Trip Book 花费体系细化 + 列表卡统一规则 + 浅色卡 elevation（spec: trip-book.md / itinerary-trip-spend.md）
+- **花费分类「前提反转」二次**：trip-book.md 原定「Trip Book 不做餐饮/购物分类、只按实体类型聚合」，依据是「需新增让用户填消费类别的录入」。前提已不成立——单行程花费页落地后 `SpendCategory.from(stopCategory:)` 把用户加地点时本来就选的 `StopCategory` **零新增录入**地映射成 7 类。与航班里程/住宿晚数/总花费三次反转**同一逻辑链**（前提变了→决策反转）。故 Trip Book 花费卡升级为 7 类（地点拆 餐饮/景点/活动/购物/其他）。跨行程 `TripSpendStats` 与单行程 `TripSpendDetail` **共用 `SpendCategory`**，口径不漂移。
+- **Trip Book 守单一烟蓝、不抄单行程页多彩**：花费卡比例带/图例、下钻明细行图标一律单烟蓝（`CarryAccent`，按额降序走 rank 透明度）。单行程花费页用多彩是「操作型详情」，Trip Book 是「克制回顾」——同一套 `SpendCategory` 两种呈现，刻意区分。
+- **交通图标错 = 按方式拆，不是换图标**：把多种交通方式塌缩成一个「交通」行，一行只能挂一个图标（永远错，租车/火车都显飞机）。根因解 = 模型加 `transportByMode`（交通按 `TransportMode` 再拆），下钻每方式一行、各取各图标；与 `byCategory[.transport]` 同源、各方式和 = Trip total。卡片仍按类目合一（altitude 区分：卡=类目级、下钻=方式级）。
+- **撤「最长一趟/最频繁年份」**：这两个 superlative **无父卡可挂**（Trip Book 无「行程清单」卡、无「按年」卡），唯一落点是已拥挤的概览 hero、用户否决。对比「最远一程（挂飞行卡）/最高一趟（挂花费卡）」能成立=各有父卡延伸。强行塞 hero 或单开卡（两条一行字撑不起卡）都更碎 → **根因撤除**（删 UI + 模型字段/计算 + 文案，不留死代码）。
+- **花费「查看全部」= 时间轴流水账**：把「按趟堆叠」改「按时间倒序」。用户给的字面「年→月→日→行程」四级标题**压成三级**：年=分段标题 + 每趟左侧日期标记（月/日合一）+ 趟内明细。理由：每趟仅一个日期，拆「月」「日」两级 = 一堆只含 1 子项的空壳标题，碎、违克制。日期**不占左列**（改卡片上方一行）→ 卡片撑满整宽、消除右偏。无日期行程归底部「未排期」组（不硬塞某年）。年标题带**年度小计**（该年各趟 total 之和）。
+- **浅色卡片用 elevation、不是提亮填充**：`CarrySurfaceCardBackground` 暗色靠「卡填充比近黑背景亮」分界；浅色背景已近白、卡片**无法更亮**，故改 iOS 标准 elevation —— 纯白不透明填充 + 柔和投影 + 0.5px 描边。暗色保留填充对比、不投影。
+- **列表卡统一规则「预览 N + View all」**：① 自然有界的列表（大洲，地球只 7 洲）→ 全展示、永不触发（规则套上去自然=全展示，不是特例）；② 无界列表（国家/机场）→ 预览 10 + View all 全列表 sheet。替掉机场旧「+N 个」**静默兜底**（违「无静默截断」诚实原则）。affordance 走 Apple「See All → 目标页用内容名」惯例：**按钮一律泛化「View all」、sheet 标题用各自卡片名**（花费 sheet「View all expenses」→「Total spend」），不自我重复。
+
+## 2026-06-21 晚 通知调度架构：全局预算 + 退房模型切换（spec: notification-budget.md）
+
+### 退房提醒：从「提前量」改为「退房当天清晨固定时刻」（C 类行程日锚）
+原因：退房本质是「当天 deadline 前撤离」、人已在房间，**不是**「提前赶去」的交通型事件——把赶飞机的提前量倒计时套到退房上，模型就错配（怎么调都别扭）。且大家多准点/延迟退房，1h 弹「12 点退房」时人早醒了在收拾，提醒冗余；真正有价值的是**当天清晨**「今天要退房、12 点前走」，给从容收拾/结账的 runway。故归入晨间唤醒锚（同出发提醒/每日摘要），默认 09:00。
+实现：删提前量 key `lodging_checkout_lead_min`、新 `lodging_checkout_min`（默认 540）。**早退房 clamp**：`fireMins = checkOutMinutes>=0 ? min(morning, checkOutMinutes) : morning`，退房时刻早于清晨锚则落在退房时刻本身，杜绝「已退房才提醒」。文案 T1+C：标题 `退房 · 酒店名`，正文带退房时刻（`clockLabel` 按设备 12/24h 本地化）、没填回落无时刻版。还车时刻一并从硬编码 `%02d:%02d` 统一到 `clockLabel`。
+放弃：仅调大提前量（治标不治本，模型仍错配）；按类配额公平性（近端优先已由时间维度天然给出，加配额增复杂度无明确收益）。
+
+### 通知调度收口为「全局预算」单一入口，规避 iOS 64 上限 + 重排竞态
+原因①（竞态，真 bug）：原 `scheduleReminders` 先 `cancelReminders`（异步 getPending 回调里 removePending 旧 id）再同步 add，id 确定性、新旧相同 → 那条 removePending 提交晚于 add 且删的正是刚 add 的同 id → **重排把刚排好的通知删掉**（首次排 pending 空不触发，故漏测）。原因②（64 上限）：iOS 每 App 挂起本地通知上限 64、超出系统静默丢最远的；原各行程独立调度无全局视野，多个密集行程叠加即破 64、远端静默排不上、且不自动补回。
+实现：唯一入口 `NotificationManager.reschedule(trips:)` 跨**所有行程**构建值类型 `Candidate`（主线程读 @Model，回调只碰值类型避免 off-main）→ `commit` 在单个 getPending 回调里 `budget=64−foreign−safetyMargin(4)`、按 fireDate 升序取前 budget（近端优先）。**竞态根除**：删除集=「`carry.trip.` 前缀匹配 − 本次选中集」，与新增集**数学上不相交** → 无论回调早晚都不误删。**滚动补位**：冷启动 + 回前台重排，远端随临近 + 用户开 App 进入预算窗口。TripStore 18 处单行程调度收口为全局 `refreshNotifications()`。
+**冷启动重排必须在 `trips` 加载后**（踩坑教训）：`TripStore.init` 的 `fetchTrips()` 在 `Task { @MainActor }` 里**异步**执行；若把 refresh 放 `App.onAppear`，onAppear 跑时 trips 仍空 → 候选空 → commit 把已排通知全当陈旧删（每次冷启动清空）。**正解放进 init 的 Task 内、`fetchTrips()` 之后**；回前台走 `willEnterForeground`（此时 trips 早已加载）。推广：任何「读全量数据再据此做副作用」的启动逻辑，必须挂在数据加载完成点之后，不能挂在与异步加载无序的生命周期钩子（onAppear）上。
+放弃：防抖（常见行程量开销可忽略，打包/每日重排默认门控关）；把 refresh 塞进 `fetchTrips()`（被调 14 次、多为 per-mutation，会重复触发）。残余边界：>budget 条全落在用户长期不开 App 的近期窗口仍只触发最近 budget 条——64 上限的物理边界，文档登记。
+
 ## 2026-06-21 通知中心整体改造（spec: notification-center.md）
 - **Settings 为唯一真相源，删 per-trip 提醒编辑**：原「行程 ··· 菜单 → TripReminderSheet 逐趟编辑」全删，出发提醒改读全局设置、改设置即重排所有行程。理由：B/C 类（交通/住宿/每日）本就逐事件自动派生、无需 per-trip；A 类全局默认覆盖绝大多数；要逐事件不同 → 用「事件级静音」而非完整编辑器。`TripBundle.reminderConfigs`/`remindersEnabled` 字段保留（schema 不破，已 vestigial）。
 - **通知按「锚点」分三类（架构骨架）**：A 出发日锚（出发提醒/打包提醒，相对出发前 N 天）；B 事件时刻锚（交通/还车/退房，相对事件起始时刻前 X，按事件时区算绝对时刻、trigger 锁 timeZone）；C 行程日锚（每日摘要，每个行程日某时刻）。identifier 分命名空间（depart/pack/transport/lodging/daily）可独立取消。

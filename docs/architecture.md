@@ -84,7 +84,9 @@ ZStack（全窗口）
   - `DestinationMapThumbnail.swift`：`TripBackgroundView`(有图→`PositionedImage`；无图→`.monogram` 墨色字母块 / `.map` 实时 MKMapView)；入口在 `PackingListView` 详情页「…」菜单
   - `HomeStyleFlag.swift`：`HomeCardStyle`（现仅 `.featured`=2·Map 默认正式样式 / `.glass`=4·Map 实验；1·Plain/3·Thumb 已删）。Dev Options 仍可切 2↔4；若最终只留 2·Map,再删此文件 + 切换器
 - CurrencyCatalog（`Models/CurrencyCatalog.swift`）：国家码→币种（code+符号）静态表 + 展示助手（`deviceDefaultCode`/`homeCurrencyCode`/`allCodes`/`localizedName`/`symbol`/`format`/`amountText`）；币种名/格式走 `Locale`，不进 xcstrings
-- TripSpendStats（`Models/TripSpendStats.swift`，纯函数）：Trip Book 花费聚合——按本位币把已发生行程的费用折算成交通/住宿/地点三类目 + 每趟明细；`CostResolver.homeValue` 快照优先/实时兜底/无汇率诚实标注（`hasUnconverted`/`approximate`）。注入 `convert` 闭包解耦汇率源（便于单测）
+- TripSpendStats（`Models/TripSpendStats.swift`，纯函数）：Trip Book **跨行程**花费聚合——按本位币把已发生行程的费用按 `SpendCategory` **7 类**聚合（`TripSpendBreakdown.byCategory`：交通/住宿 + 地点拆 餐饮/景点/活动/购物/其他）+ 交通再按 `TransportMode` 拆（`transportByMode`，供下钻分行）+ 每趟明细（`TripSpendRow` 带 `departureDate` 供时间轴）；`CostResolver.homeValue` 快照优先/实时兜底/无汇率诚实标注（`hasUnconverted`/`approximate`）。注入 `convert` 闭包解耦汇率源（便于单测）
+- TripSpendDetail（`Models/TripSpendDetail.swift`，纯函数）：**单行程**花费聚合（7 类 + 按天/按币种维度 + 逐笔 `SpendItem`，含 `mode` 决定逐笔图标）；与 `TripSpendStats` **共用 `SpendCategory`**，口径不漂移。供单行程花费页（`Views/TripSpendView.swift`）。
+- TripBookStats（`Models/TripBookStats.swift` + `+Trips.swift` 适配器，纯函数）：Trip Book 各卡聚合（国家/大洲/季节/国内国际/打包率 + 飞行里程·时长·机型·机场 + 住宿晚数 + 在地足迹 `StopCategory` 计数 + 最远一程 `FlightLeg`）；`homeCountry`/`normalize` 默认取 storefront 口径、可注入单测
 - CurrencyPickerView / CostInputRow（`Views/`）：货币选择器（全屏可搜索 + 建议分区，本位币模式写设置/选择模式回传 code）；费用录入行（金额 + 币种 chip），三处编辑页共用
 - CoffeeStore：StoreKit 内购（打赏功能）
 - CarryShortcuts / AppIntents：Siri/Spotlight 快捷指令
