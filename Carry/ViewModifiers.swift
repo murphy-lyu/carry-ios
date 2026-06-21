@@ -153,10 +153,22 @@ struct CarrySurfaceCardBackground: ViewModifier {
     @Environment(\.colorScheme) private var colorScheme
 
     func body(content: Content) -> some View {
-        content
+        let dark = colorScheme == .dark
+        return content
             .background(
                 RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
-                    .fill(colorScheme == .dark ? Color(red: 0.16, green: 0.16, blue: 0.17).opacity(0.84) : Color(UIColor.systemBackground).opacity(0.50))
+                    // 暗：卡填充比近黑背景明显亮 → 靠填充对比分界。
+                    // 浅：背景已近白、卡片无法「更亮」，改用 iOS 标准 elevation —— 纯白不透明填充 + 柔和投影抬升。
+                    .fill(dark ? Color(red: 0.16, green: 0.16, blue: 0.17).opacity(0.84)
+                               : Color(UIColor.systemBackground))
+                    .overlay(   // 0.5px 描边 crisp 边缘（投影最弱的上沿也有明确分界）
+                        RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+                            .strokeBorder(dark ? Color.white.opacity(0.06) : Color.black.opacity(0.05),
+                                          lineWidth: 0.5)
+                    )
+                    // 浅色柔和投影；暗色背景吃投影 → 不投，靠填充对比即可。
+                    .shadow(color: dark ? .clear : Color.black.opacity(0.08),
+                            radius: dark ? 0 : 16, x: 0, y: dark ? 0 : 6)
             )
     }
 }

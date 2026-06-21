@@ -50,6 +50,9 @@ struct TripSpendBreakdown: Equatable {
 struct TripSpendRow: Identifiable {
     let id: UUID
     let name: String
+    /// 出发日期（无日期「规划中」行程为 nil）。用于「查看全部」section 头区分同地多次行程；
+    /// 仅传 `Date`、格式化留给 View（保持本聚合 Locale-free、可单测）。
+    let departureDate: Date?
     let breakdown: TripSpendBreakdown
 }
 
@@ -97,7 +100,9 @@ struct TripSpendStats {
                 for (cat, amt) in b.byCategory { stats.overall.byCategory[cat, default: 0] += amt }
                 for (m, amt) in b.transportByMode { stats.overall.transportByMode[m, default: 0] += amt }
                 stats.overall.hadAnyRecorded = true
-                stats.perTrip.append(TripSpendRow(id: trip.id, name: trip.name, breakdown: b))
+                stats.perTrip.append(TripSpendRow(id: trip.id, name: trip.name,
+                                                  departureDate: trip.isDateless ? nil : trip.departureDate,
+                                                  breakdown: b))
             }
         }
         stats.perTrip.sort { $0.breakdown.total > $1.breakdown.total }

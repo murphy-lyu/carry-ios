@@ -1172,27 +1172,36 @@ struct HomeView: View {
     }
 
     /// 「查看全部花费」：按每趟分组（承接 Q2「每趟总花费」），每趟列非零类目 + 该趟合计。
+    /// 「查看全部」= 时间轴流水账：年分段（倒序）→ 每趟左侧日期标记 + 圆点（呼应行程页 timeline）
+    /// → 趟内按方式/类目逐行。总额上提到行名行；无日期行程归底部「未排期」组（不塞进某年）。
     private func spendDetailSheet(_ s: TripSpendStats) -> some View {
         NavigationStack {
-            List {
-                ForEach(s.perTrip) { row in
-                    Section(header: Text(row.name)) {
-                        ForEach(spendDetailRows(row.breakdown)) { r in
-                            spendDetailLine(symbol: r.symbol, label: r.label, amount: r.amount, code: s.homeCode)
-                        }
-                        HStack(spacing: 10) {
-                            Color.clear.frame(width: 22, height: 1)   // 对齐类目行图标列
-                            Text("tripbook.spend.trip_total")
-                                .font(.subheadline.weight(.semibold))
-                                .foregroundStyle(.primary)
-                            Spacer()
-                            Text(CurrencyCatalog.format(row.breakdown.total, code: s.homeCode))
-                                .font(.system(.subheadline, design: .rounded).weight(.semibold))
-                                .foregroundStyle(.primary)
+            ScrollView {
+                LazyVStack(alignment: .leading, spacing: 24) {
+                    ForEach(spendTimelineGroups(s.perTrip)) { group in
+                        VStack(alignment: .leading, spacing: 12) {
+                            HStack(alignment: .firstTextBaseline) {
+                                Text(group.title)
+                                    .font(.system(.title2, design: .rounded).weight(.bold))
+                                    .foregroundStyle(.primary)
+                                Spacer()
+                                Text(CurrencyCatalog.format(group.total, code: s.homeCode))
+                                    .font(.system(.subheadline, design: .rounded).weight(.medium))
+                                    .foregroundStyle(.secondary)
+                            }
+                            .padding(.horizontal, 4)
+                            ForEach(group.trips) { row in
+                                spendTimelineTrip(row, code: s.homeCode)
+                            }
                         }
                     }
                 }
+                .padding(.horizontal, 16)
+                .padding(.top, 8)
+                .padding(.bottom, 32)
             }
+            .scrollContentBackground(.hidden)
+            .background(CarrySubtleBackground())
             .navigationTitle("tripbook.spend.view_all")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -1201,6 +1210,80 @@ struct HomeView: View {
                 }
             }
         }
+    }
+
+    /// 一趟的时间轴块：上方一行日期标记（烟蓝圆点 + 月日，左对齐成竖向时间线）+ 下方**整宽卡片**
+    /// （行名·总额 + 逐笔明细）。日期不再占左列，卡片得以撑满，避免整体右偏。
+    private func spendTimelineTrip(_ row: TripSpendRow, code: String) -> some View {
+        VStack(alignment: .leading, spacing: 8) {
+            if let date = row.departureDate {
+                Text(date.formatted(.dateTime.month(.abbreviated).day()))
+                    .font(.system(.subheadline, design: .rounded).weight(.medium))
+                    .foregroundStyle(CarryAccent.color)
+                    .padding(.leading, 4)
+            }
+            VStack(alignment: .leading, spacing: 10) {
+                HStack(alignment: .firstTextBaseline, spacing: 8) {
+                    Text(row.name)
+                        .font(.system(.headline, design: .rounded).weight(.semibold))
+                        .foregroundStyle(.primary)
+                        .lineLimit(1).truncationMode(.tail)
+                    Spacer(minLength: 8)
+                    Text(CurrencyCatalog.format(row.breakdown.total, code: code))
+                        .font(.system(.headline, design: .rounded).weight(.semibold))
+                        .foregroundStyle(.primary)
+                        .layoutPriority(1)
+                }
+                VStack(spacing: 9) {
+                    ForEach(spendDetailRows(row.breakdown)) { r in
+                        spendDetailLine(symbol: r.symbol, label: r.label, amount: r.amount, code: code)
+                    }
+                }
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)   // 撑满整宽
+            .padding(14)
+            .carrySurfaceCardBackground(cornerRadius: 16)
+        }
+    }
+
+    private struct SpendTimelineGroup: Identifiable {
+        let id: String
+        let title: String
+        let total: Double          // 该年（/未排期组）花费小计，本位币
+        let trips: [TripSpendRow]
+    }
+
+    /// 按年分组（倒序，年内按出发日倒序）；无日期行程单列底部「未排期」组。各组带本位币花费小计。
+    private func spendTimelineGroups(_ trips: [TripSpendRow]) -> [SpendTimelineGroup] {
+        let dated = trips.compactMap { r -> (date: Date, row: TripSpendRow)? in
+            guard let d = r.departureDate else { return nil }
+            return (d, r)
+        }
+        .sorted { $0.date > $1.date }   // 最近在上
+
+        var groups: [SpendTimelineGroup] = []
+        var currentYear: Int? = nil
+        var bucket: [TripSpendRow] = []
+        func flush() {
+            if let y = currentYear, !bucket.isEmpty {
+                let total = bucket.reduce(0) { $0 + $1.breakdown.total }
+                groups.append(SpendTimelineGroup(id: "y\(y)", title: String(y), total: total, trips: bucket))
+            }
+        }
+        for item in dated {
+            let year = Calendar.current.component(.year, from: item.date)
+            if year != currentYear { flush(); currentYear = year; bucket = [] }
+            bucket.append(item.row)
+        }
+        flush()
+
+        let undated = trips.filter { $0.departureDate == nil }
+        if !undated.isEmpty {
+            let total = undated.reduce(0) { $0 + $1.breakdown.total }
+            groups.append(SpendTimelineGroup(id: "undated",
+                title: NSLocalizedString("tripbook.spend.undated", comment: ""), total: total, trips: undated))
+        }
+        return groups
     }
 
     /// 下钻明细一行（图标 + 名称 + 金额）。交通段或类目都复用此通用行。
@@ -1521,7 +1604,9 @@ struct HomeView: View {
 
     /// 「常经停机场」卡：按 IATA 码计数降序（镜像「最常去国家」），码作烟蓝胶囊 chip。
     private func tripBookAirportsCard(_ s: TripBookStats) -> some View {
-        let shown = Array(s.airportTallies.prefix(6))
+        let cap = 6
+        let shown = Array(s.airportTallies.prefix(cap))
+        let remaining = s.airportTallies.count - shown.count   // 截断兜底：诚实标注还有多少未列
         return tripBookCard("tripbook.airports.title", systemImage: "airplane.departure") {
             VStack(spacing: 10) {
                 ForEach(shown, id: \.label) { tally in
@@ -1537,6 +1622,12 @@ struct HomeView: View {
                             .font(.system(.subheadline, design: .rounded).weight(.semibold))
                             .foregroundStyle(.secondary)
                     }
+                }
+                if remaining > 0 {
+                    Text(String(format: NSLocalizedString("tripbook.airports.more", comment: ""), Int64(remaining)))
+                        .font(.caption)
+                        .foregroundStyle(.tertiary)
+                        .frame(maxWidth: .infinity, alignment: .leading)
                 }
             }
         }
