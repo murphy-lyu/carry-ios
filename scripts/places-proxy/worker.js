@@ -59,7 +59,9 @@ async function handleSuggest(url, env) {
   const q = (url.searchParams.get("q") || "").trim();
   if (!q) return json({ suggestions: [] });
   const session = url.searchParams.get("session") || "carry";
-  const language = url.searchParams.get("language") || "en";
+  // 一律用英文查 Mapbox:实测 language=zh 会把 POI 排序带歪（偏行政区划,Tokyo Tower→「东京都」)。
+  // 海外地点显示英文/当地名,对旅行者更实用、也是通行做法。中文 query 已由翻译层转英文(见下)。
+  const language = "en";
   const proximity = url.searchParams.get("proximity") || "";   // "lon,lat"
 
   const cache = caches.default;
