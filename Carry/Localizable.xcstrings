@@ -44528,56 +44528,56 @@
       "localizations" : {
         "de" : {
           "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Carry stores everything on your device. We do not collect, transmit, or share any of your information.\n\nWe operate no servers. We use no analytics, no tracking, no advertising SDKs. We don't know who you are, where you've been, or what you've packed.\n\nWhen you enable iCloud sync (in a future version), your trips travel through Apple's CloudKit into your own iCloud account, governed by Apple's privacy policy. We have no access to that data either.\n\nLocal notifications are scheduled and delivered entirely on your device.\n\nIf you uninstall Carry, your local data goes with it. To clear iCloud data, use iOS → Settings → Apple ID → iCloud → Manage Account Storage → Carry.\n\nFor everything else, see the full version."
+            "state" : "translated",
+            "value" : "Carry ist so gebaut, dass es auf deinem Gerät läuft. Keine Konten, keine Analyse, kein Tracking, keine Werbung – wir wissen nicht, wer du bist, wo du warst oder was du eingepackt hast. Deine Reisen, Listen und Anhänge bleiben in der Sandbox deines Geräts.\n\nEinige optionale Funktionen benötigen das Netzwerk, um Ergebnisse abzurufen. Wenn du einen Flug nachschlägst oder einen Ort suchst, sendet die App nur diese Anfrage – eine Flugnummer und ein Datum oder deine Suchbegriffe und die ungefähren Koordinaten deines Reiseziels – an Apple oder Drittanbieter-Datendienste (über unseren Abfrage-Proxy), um die Antwort zu erhalten. Diese Anfragen sind nicht mit deiner Identität verknüpft, und es werden keine weiteren Angaben über dich übermittelt. Wetter und Karten-Geokodierung funktionieren auf dieselbe Weise über Apple.\n\nEinige Funktionen bitten um Erlaubnis, Daten zu lesen, die dein Gerät nie verlassen: deinen Kalender (nur die von dir gewählten Kalender), Aufnahmezeitpunkt und Ort der Fotos, die du zum Rekonstruieren einer Reise auswählst, und – nur wenn du es aktivierst – deine Zyklusdaten aus Apple Health für zyklusbezogene Erinnerungen. All das wird auf dem Gerät verarbeitet und nie an uns gesendet.\n\nWenn du die iCloud-Synchronisierung aktivierst (in einer künftigen Version), gelangen deine Reisen über Apples CloudKit in dein eigenes iCloud-Konto und unterliegen Apples Datenschutzrichtlinie. Wenn du Carry deinstallierst, werden deine lokalen Daten mit entfernt.\n\nAlles Weitere findest du in der vollständigen Version."
           }
         },
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Carry stores everything on your device. We do not collect, transmit, or share any of your information.\n\nWe operate no servers. We use no analytics, no tracking, no advertising SDKs. We don't know who you are, where you've been, or what you've packed.\n\nWhen you enable iCloud sync (in a future version), your trips travel through Apple's CloudKit into your own iCloud account, governed by Apple's privacy policy. We have no access to that data either.\n\nLocal notifications are scheduled and delivered entirely on your device.\n\nWhen you use the map's location button, the app accesses your device location through Apple's MapKit framework to show your position on the map. This data stays on your device and is never sent to us.\n\nIf you uninstall Carry, your local data goes with it. To clear iCloud data, use iOS → Settings → Apple ID → iCloud → Manage Account Storage → Carry.\n\nFor everything else, see the full version."
+            "value" : "Carry is built to run on your device. No accounts, no analytics, no tracking, no advertising — we don't know who you are, where you've been, or what you've packed. Your trips, lists, and attachments stay in your device's sandbox.\n\nA few optional features need the network to fetch results. When you look up a flight or search for a place, the App sends only that query — a flight number and date, or your search terms and your destination's rough coordinates — to Apple or third-party data providers (through our query proxy) to get the answer back. These requests aren't tied to your identity, and nothing else about you is sent. Weather and map geocoding work the same way, through Apple.\n\nSome features ask permission to read data that never leaves your device: your calendar (only the calendars you pick), the capture time and location of photos you select to rebuild a trip, and — only if you turn it on — your Apple Health cycle dates for period-aware reminders. All of it is processed on-device and never sent to us.\n\nWhen you enable iCloud sync (a future version), your trips travel through Apple's CloudKit into your own iCloud account, governed by Apple's privacy policy. Uninstalling Carry removes your local data with it.\n\nFor everything else, see the full version."
           }
         },
         "es" : {
           "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Carry stores everything on your device. We do not collect, transmit, or share any of your information.\n\nWe operate no servers. We use no analytics, no tracking, no advertising SDKs. We don't know who you are, where you've been, or what you've packed.\n\nWhen you enable iCloud sync (in a future version), your trips travel through Apple's CloudKit into your own iCloud account, governed by Apple's privacy policy. We have no access to that data either.\n\nLocal notifications are scheduled and delivered entirely on your device.\n\nIf you uninstall Carry, your local data goes with it. To clear iCloud data, use iOS → Settings → Apple ID → iCloud → Manage Account Storage → Carry.\n\nFor everything else, see the full version."
+            "state" : "translated",
+            "value" : "Carry está diseñada para funcionar en tu dispositivo. Sin cuentas, sin analíticas, sin rastreo, sin publicidad: no sabemos quién eres, dónde has estado ni qué has empacado. Tus viajes, listas y archivos adjuntos permanecen en la zona protegida (sandbox) de tu dispositivo.\n\nAlgunas funciones opcionales necesitan conexión para obtener resultados. Cuando consultas un vuelo o buscas un lugar, la app envía solo esa consulta —un número de vuelo y una fecha, o tus términos de búsqueda y las coordenadas aproximadas de tu destino— a Apple o a proveedores de datos de terceros (a través de nuestro proxy de consultas) para recibir la respuesta. Estas solicitudes no están vinculadas a tu identidad y no se envía ningún otro dato sobre ti. El tiempo y la geocodificación de mapas funcionan del mismo modo, a través de Apple.\n\nAlgunas funciones piden permiso para leer datos que nunca salen de tu dispositivo: tu calendario (solo los calendarios que elijas), la fecha y el lugar de captura de las fotos que selecciones para reconstruir un viaje y —solo si lo activas— las fechas de tu ciclo en Apple Salud para los recordatorios según tu ciclo. Todo se procesa en el dispositivo y nunca se nos envía.\n\nCuando actives la sincronización con iCloud (en una versión futura), tus viajes viajarán a través de CloudKit de Apple a tu propia cuenta de iCloud, regida por la política de privacidad de Apple. Si desinstalas Carry, tus datos locales se eliminan con ella.\n\nPara todo lo demás, consulta la versión completa."
           }
         },
         "fr" : {
           "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Carry stores everything on your device. We do not collect, transmit, or share any of your information.\n\nWe operate no servers. We use no analytics, no tracking, no advertising SDKs. We don't know who you are, where you've been, or what you've packed.\n\nWhen you enable iCloud sync (in a future version), your trips travel through Apple's CloudKit into your own iCloud account, governed by Apple's privacy policy. We have no access to that data either.\n\nLocal notifications are scheduled and delivered entirely on your device.\n\nIf you uninstall Carry, your local data goes with it. To clear iCloud data, use iOS → Settings → Apple ID → iCloud → Manage Account Storage → Carry.\n\nFor everything else, see the full version."
+            "state" : "translated",
+            "value" : "Carry est conçue pour fonctionner sur votre appareil. Aucun compte, aucune analyse, aucun suivi, aucune publicité : nous ne savons pas qui vous êtes, où vous êtes allé ni ce que vous avez emporté. Vos voyages, vos listes et vos pièces jointes restent dans le bac à sable (sandbox) de votre appareil.\n\nQuelques fonctionnalités optionnelles ont besoin du réseau pour récupérer des résultats. Lorsque vous recherchez un vol ou un lieu, l'app n'envoie que cette requête — un numéro de vol et une date, ou vos termes de recherche et les coordonnées approximatives de votre destination — à Apple ou à des fournisseurs de données tiers (via notre proxy de requêtes) pour obtenir la réponse. Ces requêtes ne sont pas liées à votre identité et aucune autre information vous concernant n'est transmise. La météo et le géocodage des cartes fonctionnent de la même manière, via Apple.\n\nCertaines fonctionnalités demandent l'autorisation de lire des données qui ne quittent jamais votre appareil : votre calendrier (uniquement les calendriers que vous choisissez), la date et le lieu de prise des photos que vous sélectionnez pour reconstituer un voyage et — seulement si vous l'activez — les dates de votre cycle dans Apple Santé pour les rappels liés au cycle. Tout est traité sur l'appareil et ne nous est jamais envoyé.\n\nLorsque vous activez la synchronisation iCloud (dans une version future), vos voyages transitent par CloudKit d'Apple vers votre propre compte iCloud, régi par la politique de confidentialité d'Apple. Si vous désinstallez Carry, vos données locales sont supprimées avec elle.\n\nPour tout le reste, consultez la version complète."
           }
         },
         "ja" : {
           "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Carry stores everything on your device. We do not collect, transmit, or share any of your information.\n\nWe operate no servers. We use no analytics, no tracking, no advertising SDKs. We don't know who you are, where you've been, or what you've packed.\n\nWhen you enable iCloud sync (in a future version), your trips travel through Apple's CloudKit into your own iCloud account, governed by Apple's privacy policy. We have no access to that data either.\n\nLocal notifications are scheduled and delivered entirely on your device.\n\nIf you uninstall Carry, your local data goes with it. To clear iCloud data, use iOS → Settings → Apple ID → iCloud → Manage Account Storage → Carry.\n\nFor everything else, see the full version."
+            "state" : "translated",
+            "value" : "Carry はあなたのデバイス上で動くように作られている。アカウントなし、解析なし、トラッキングなし、広告なし——私たちはあなたが誰か、どこへ行ったか、何を詰めたかを知らない。あなたの旅程・リスト・添付ファイルは、デバイスのサンドボックス内にとどまる。\n\nいくつかの任意機能は、結果を取得するためにネットワークを必要とする。フライトを調べたり場所を検索したりするとき、アプリはその問い合わせ——便名と日付、または入力した検索語と目的地のおおよその座標——だけを、Apple またはサードパーティのデータ提供者へ（当社のクエリプロキシ経由で）送信し、答えを受け取る。これらのリクエストはあなたの身元と結びつかず、それ以外の情報は送信されない。天気と地図のジオコーディングも同様に、Apple を介して行われる。\n\n一部の機能は、デバイスから決して出ないデータの読み取り許可を求める。あなたのカレンダー（あなたが選んだカレンダーのみ）、旅程を再構築するために選んだ写真の撮影日時と場所、そして——オンにした場合のみ——生理周期に合わせたリマインダーのための Apple ヘルスの周期データ。いずれもデバイス内で処理され、私たちに送信されることはない。\n\niCloud 同期（将来のバージョン）を有効にすると、あなたの旅程は Apple の CloudKit を通じてあなた自身の iCloud アカウントへ入り、Apple のプライバシーポリシーに従う。Carry をアンインストールすると、ローカルデータも一緒に削除される。\n\nそのほかの詳細は、完全版を参照のこと。"
           }
         },
         "ko" : {
           "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Carry stores everything on your device. We do not collect, transmit, or share any of your information.\n\nWe operate no servers. We use no analytics, no tracking, no advertising SDKs. We don't know who you are, where you've been, or what you've packed.\n\nWhen you enable iCloud sync (in a future version), your trips travel through Apple's CloudKit into your own iCloud account, governed by Apple's privacy policy. We have no access to that data either.\n\nLocal notifications are scheduled and delivered entirely on your device.\n\nIf you uninstall Carry, your local data goes with it. To clear iCloud data, use iOS → Settings → Apple ID → iCloud → Manage Account Storage → Carry.\n\nFor everything else, see the full version."
+            "state" : "translated",
+            "value" : "Carry는 사용자의 기기에서 작동하도록 만들어졌어요. 계정도, 분석도, 추적도, 광고도 없어요. 우리는 당신이 누구인지, 어디에 다녀왔는지, 무엇을 챙겼는지 알지 못해요. 당신의 여행, 목록, 첨부 파일은 기기의 샌드박스 안에 머물러요.\n\n일부 선택 기능은 결과를 가져오기 위해 네트워크가 필요해요. 항공편을 조회하거나 장소를 검색할 때, 앱은 그 조회 내용만——항공편 번호와 날짜, 또는 입력한 검색어와 목적지의 대략적인 좌표만——을 Apple 또는 제3자 데이터 제공업체에(당사의 조회 프록시를 통해) 보내 답을 받아와요. 이 요청은 당신의 신원과 연결되지 않으며, 그 밖의 어떤 정보도 전송되지 않아요. 날씨와 지도의 지오코딩도 같은 방식으로 Apple을 통해 이루어져요.\n\n일부 기능은 기기를 절대 벗어나지 않는 데이터를 읽기 위한 권한을 요청해요. 당신의 캘린더(당신이 선택한 캘린더만), 여행을 재구성하기 위해 선택한 사진의 촬영 시간과 위치, 그리고——직접 켰을 때만——생리 주기 알림을 위한 Apple 건강의 주기 데이터예요. 모두 기기 내에서 처리되며 우리에게 전송되지 않아요.\n\niCloud 동기화(향후 버전)를 켜면, 당신의 여행은 Apple의 CloudKit을 통해 당신 자신의 iCloud 계정으로 들어가며 Apple의 개인정보 처리방침을 따라요. Carry를 삭제하면 로컬 데이터도 함께 사라져요.\n\n그 밖의 모든 내용은 전체 버전을 참고하세요."
           }
         },
         "pt-BR" : {
           "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Carry stores everything on your device. We do not collect, transmit, or share any of your information.\n\nWe operate no servers. We use no analytics, no tracking, no advertising SDKs. We don't know who you are, where you've been, or what you've packed.\n\nWhen you enable iCloud sync (in a future version), your trips travel through Apple's CloudKit into your own iCloud account, governed by Apple's privacy policy. We have no access to that data either.\n\nLocal notifications are scheduled and delivered entirely on your device.\n\nIf you uninstall Carry, your local data goes with it. To clear iCloud data, use iOS → Settings → Apple ID → iCloud → Manage Account Storage → Carry.\n\nFor everything else, see the full version."
+            "state" : "translated",
+            "value" : "O Carry foi feito para funcionar no seu dispositivo. Sem contas, sem análises, sem rastreamento, sem publicidade — não sabemos quem você é, onde você esteve ou o que você levou na mala. Suas viagens, listas e anexos ficam na sandbox do seu dispositivo.\n\nAlguns recursos opcionais precisam de rede para buscar resultados. Quando você consulta um voo ou pesquisa um lugar, o app envia apenas essa consulta — um número de voo e uma data, ou seus termos de busca e as coordenadas aproximadas do seu destino — para a Apple ou para provedores de dados terceiros (por meio do nosso proxy de consultas) a fim de receber a resposta. Essas solicitações não são vinculadas à sua identidade, e nenhuma outra informação sobre você é enviada. A previsão do tempo e a geocodificação de mapas funcionam da mesma forma, por meio da Apple.\n\nAlguns recursos pedem permissão para ler dados que nunca saem do seu dispositivo: seu calendário (apenas os calendários que você escolher), a data e o local de captura das fotos que você selecionar para reconstruir uma viagem e — somente se você ativar — as datas do seu ciclo no Apple Saúde para lembretes de acordo com o ciclo. Tudo é processado no dispositivo e nunca enviado para nós.\n\nQuando você ativar a sincronização com o iCloud (em uma versão futura), suas viagens passarão pelo CloudKit da Apple para a sua própria conta do iCloud, regida pela política de privacidade da Apple. Se você desinstalar o Carry, seus dados locais são removidos junto.\n\nPara todo o resto, consulte a versão completa."
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Carry 将所有数据保存在你的设备上。我们不收集、不传输、也不与任何第三方共享你的信息。\n\n我们没有服务器，也没有任何数据分析、追踪、广告 SDK。我们不知道你是谁、你去过哪里、你打包了什么。\n\n当你启用 iCloud 同步（未来版本），行程会通过 Apple 的 CloudKit 进入你自己的 iCloud 账户，这部分受 Apple 隐私政策约束——我们同样无法访问。\n\n所有本地通知的调度与触发都在你的设备上完成。\n\n当你点击地图上的定位按钮时，App 会通过 Apple MapKit 框架读取你的设备位置以显示当前位置。该数据仅在设备本地处理，不会发送给我们。\n\n卸载 Carry，本地数据会一并被 iOS 删除。如需清空 iCloud 副本，前往「设置 → Apple ID → iCloud → 管理账户存储 → Carry」。\n\n本页未尽事宜以完整版为准。"
+            "value" : "Carry 的设计是让一切都在你的设备上运行。没有账户、没有数据分析、没有追踪、没有广告——我们不知道你是谁、去过哪里、打包了什么。你的行程、清单和附件都保存在设备的沙盒里。\n\n少数可选功能需要联网才能取回结果。当你查询航班或检索地点时，App 只会把这一次查询本身——航班号和日期，或你输入的关键词与目的地的大致坐标——发送给 Apple 或第三方数据服务（经由我们的查询代理）以取回结果。这些请求不与你的身份关联，也不会附带其他任何个人信息。天气与地图的地理编码同理，均经由 Apple。\n\n部分功能会请求读取始终不离开设备的数据：你的日历（仅限你选择的日历）、你选中用于重建行程的照片的拍摄时间与地点、以及——仅在你主动开启时——Apple 健康中的经期数据用于经期打包提醒。这些都在设备本地处理，绝不发送给我们。\n\n当你启用 iCloud 同步（未来版本），行程会通过 Apple 的 CloudKit 进入你自己的 iCloud 账户，受 Apple 隐私政策约束。卸载 Carry，本地数据会一并被删除。\n\n本页未尽事宜以完整版为准。"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Carry 將所有資料保存在你的裝置上。我們不收集、不傳輸、也不與任何第三方共享你的資訊。\n\n我們沒有伺服器，也沒有任何資料分析、追蹤、廣告 SDK。我們不知道你是誰、你去過哪裡、你打包了什麼。\n\n當你啟用 iCloud 同步（未來版本），行程會透過 Apple 的 CloudKit 進入你自己的 iCloud 帳戶，這部分受 Apple 隱私政策約束——我們同樣無法存取。\n\n所有本機通知的排程與觸發都在你的裝置上完成。\n\n當你點擊地圖上的定位按鈕時，App 會透過 Apple MapKit 框架讀取你的裝置位置以顯示當前位置。該資料僅在裝置本機處理，不會傳送給我們。\n\n解除安裝 Carry，本機資料會一併被 iOS 刪除。如需清空 iCloud 副本，前往「設定 → Apple ID → iCloud → 管理帳戶儲存空間 → Carry」。\n\n本頁未盡事宜以完整版為準。"
+            "value" : "Carry 的設計是讓一切都在你的裝置上運作。沒有帳號、沒有數據分析、沒有追蹤、沒有廣告——我們不知道你是誰、去過哪裡、打包了什麼。你的行程、清單與附件都保存在裝置的沙盒裡。\n\n少數選用功能需要連線才能取回結果。當你查詢航班或搜尋地點時，App 只會把這一次查詢本身——航班編號與日期，或你輸入的關鍵字與目的地的大致座標——傳送給 Apple 或第三方資料服務（經由我們的查詢代理）以取回結果。這些請求不會與你的身分連結，也不會夾帶其他任何個人資訊。天氣與地圖的地理編碼亦同，皆經由 Apple。\n\n部分功能會請求讀取始終不離開裝置的資料：你的行事曆（僅限你選擇的行事曆）、你選取用於重建行程的相片的拍攝時間與地點、以及——僅在你主動開啟時——Apple 健康中的經期資料，用於經期打包提醒。這些都在裝置本機處理，絕不傳送給我們。\n\n當你啟用 iCloud 同步（未來版本），行程會透過 Apple 的 CloudKit 進入你自己的 iCloud 帳戶，並受 Apple 隱私權政策規範。解除安裝 Carry，本機資料會一併被刪除。\n\n本頁未盡事宜以完整版為準。"
           }
         }
       }
@@ -44587,56 +44587,56 @@
       "localizations" : {
         "de" : {
           "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "By using Carry, you agree to use it for personal, non-commercial purposes, on devices you own.\n\nCarry is provided \"as is\". We do our best to make it useful and reliable, but we can't guarantee it's bug-free or that every preset suggestion fits your specific trip. For critical items — passports, medication, anything you'd genuinely regret forgetting — please double-check yourself. We're not responsible for losses caused by missing items or notifications that didn't fire as expected.\n\nYour data is yours. Please back up your device regularly and don't treat Carry as the sole storage for important information.\n\nWe may change features, design, or these terms in future versions. Continued use means you accept the changes.\n\nFor anything we missed, the full version covers it."
+            "state" : "translated",
+            "value" : "Carry ist ein Reisebegleiter: Es hilft dir, Reisen zu planen – Flüge, Unterkünfte, Orte, Routen – und szenenbasierte Packlisten zu erstellen. Mit der Nutzung erklärst du dich damit einverstanden, es für persönliche, nicht kommerzielle Zwecke auf Geräten zu verwenden, die dir gehören.\n\nEinige optionale Funktionen – Flugsuche, Ortssuche, Wetter, Karten – benötigen eine Netzwerkverbindung; wie diese Daten verarbeitet werden, erfährst du in der Datenschutzrichtlinie.\n\nCarry wird „wie besehen“ bereitgestellt. Wir geben unser Bestes, es nützlich und zuverlässig zu machen, können aber nicht garantieren, dass es fehlerfrei ist oder dass jeder Vorschlag zu deiner konkreten Reise passt. Bei wichtigen Dingen – Reisepass, Medikamente, alles, dessen Fehlen du wirklich bereuen würdest – prüfe bitte selbst nach. Wir haften nicht für Verluste durch vergessene Gegenstände oder Benachrichtigungen, die nicht wie erwartet ausgelöst wurden.\n\nDeine Daten gehören dir. Bitte sichere dein Gerät regelmäßig und nutze Carry nicht als alleinigen Speicher für wichtige Informationen.\n\nWir können Funktionen, Design oder diese Bedingungen in künftigen Versionen ändern. Die fortgesetzte Nutzung gilt als Annahme der Änderungen.\n\nAlles, was wir hier nicht erwähnt haben, deckt die vollständige Version ab."
           }
         },
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "By using Carry, you agree to use it for personal, non-commercial purposes, on devices you own.\n\nCarry is provided \"as is\". We do our best to make it useful and reliable, but we can't guarantee it's bug-free or that every preset suggestion fits your specific trip. For critical items — passports, medication, anything you'd genuinely regret forgetting — please double-check yourself. We're not responsible for losses caused by missing items or notifications that didn't fire as expected.\n\nYour data is yours. Please back up your device regularly and don't treat Carry as the sole storage for important information.\n\nWe may change features, design, or these terms in future versions. Continued use means you accept the changes.\n\nFor anything we missed, the full version covers it."
+            "value" : "Carry is a travel assistant: it helps you plan trips — flights, lodging, places, routes — and build scene-based packing lists. By using it, you agree to use it for personal, non-commercial purposes, on devices you own.\n\nSome optional features — flight lookup, place search, weather, maps — need a network connection; see the Privacy Policy for how that data is handled.\n\nCarry is provided \"as is.\" We do our best to make it useful and reliable, but we can't guarantee it's bug-free or that every suggestion fits your specific trip. For critical items — passports, medication, anything you'd genuinely regret forgetting — please double-check yourself. We're not responsible for losses caused by missing items or notifications that didn't fire as expected.\n\nYour data is yours. Please back up your device regularly and don't treat Carry as the sole storage for important information.\n\nWe may change features, design, or these terms in future versions. Continued use means you accept the changes.\n\nFor anything we missed, the full version covers it."
           }
         },
         "es" : {
           "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "By using Carry, you agree to use it for personal, non-commercial purposes, on devices you own.\n\nCarry is provided \"as is\". We do our best to make it useful and reliable, but we can't guarantee it's bug-free or that every preset suggestion fits your specific trip. For critical items — passports, medication, anything you'd genuinely regret forgetting — please double-check yourself. We're not responsible for losses caused by missing items or notifications that didn't fire as expected.\n\nYour data is yours. Please back up your device regularly and don't treat Carry as the sole storage for important information.\n\nWe may change features, design, or these terms in future versions. Continued use means you accept the changes.\n\nFor anything we missed, the full version covers it."
+            "state" : "translated",
+            "value" : "Carry es un asistente de viaje: te ayuda a planificar viajes —vuelos, alojamiento, lugares, rutas— y a crear listas de equipaje según el contexto. Al usarla, aceptas usarla con fines personales y no comerciales, en dispositivos de tu propiedad.\n\nAlgunas funciones opcionales —consulta de vuelos, búsqueda de lugares, tiempo, mapas— necesitan conexión; consulta la Política de Privacidad para saber cómo se tratan esos datos.\n\nCarry se ofrece «tal cual». Hacemos todo lo posible por que sea útil y fiable, pero no podemos garantizar que esté libre de errores ni que cada sugerencia se ajuste a tu viaje concreto. Para los artículos importantes —pasaporte, medicación, cualquier cosa que de verdad lamentarías olvidar— compruébalo tú mismo. No nos hacemos responsables de las pérdidas causadas por objetos olvidados o por notificaciones que no se activaron como esperabas.\n\nTus datos son tuyos. Haz copias de seguridad de tu dispositivo con regularidad y no uses Carry como único almacenamiento de información importante.\n\nPodemos cambiar funciones, diseño o estas condiciones en versiones futuras. Seguir usando la app significa que aceptas los cambios.\n\nTodo lo que no hayamos mencionado aquí lo cubre la versión completa."
           }
         },
         "fr" : {
           "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "By using Carry, you agree to use it for personal, non-commercial purposes, on devices you own.\n\nCarry is provided \"as is\". We do our best to make it useful and reliable, but we can't guarantee it's bug-free or that every preset suggestion fits your specific trip. For critical items — passports, medication, anything you'd genuinely regret forgetting — please double-check yourself. We're not responsible for losses caused by missing items or notifications that didn't fire as expected.\n\nYour data is yours. Please back up your device regularly and don't treat Carry as the sole storage for important information.\n\nWe may change features, design, or these terms in future versions. Continued use means you accept the changes.\n\nFor anything we missed, the full version covers it."
+            "state" : "translated",
+            "value" : "Carry est un assistant de voyage : il vous aide à planifier vos voyages — vols, hébergements, lieux, itinéraires — et à composer des listes de bagages selon le contexte. En l'utilisant, vous acceptez de l'utiliser à des fins personnelles et non commerciales, sur des appareils qui vous appartiennent.\n\nCertaines fonctionnalités optionnelles — recherche de vol, recherche de lieu, météo, cartes — nécessitent une connexion réseau ; consultez la Politique de confidentialité pour savoir comment ces données sont traitées.\n\nCarry est fourni « en l'état ». Nous faisons de notre mieux pour qu'il soit utile et fiable, mais nous ne pouvons pas garantir qu'il soit exempt de bugs ni que chaque suggestion convienne à votre voyage particulier. Pour les éléments essentiels — passeport, médicaments, tout ce que vous regretteriez vraiment d'oublier — vérifiez par vous-même. Nous ne sommes pas responsables des pertes causées par des objets oubliés ou par des notifications qui ne se sont pas déclenchées comme prévu.\n\nVos données vous appartiennent. Sauvegardez régulièrement votre appareil et ne faites pas de Carry le seul espace de stockage de vos informations importantes.\n\nNous pouvons modifier les fonctionnalités, le design ou ces conditions dans de futures versions. Continuer à utiliser l'app vaut acceptation des changements.\n\nPour tout ce que nous n'aurions pas mentionné, la version complète fait foi."
           }
         },
         "ja" : {
           "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "By using Carry, you agree to use it for personal, non-commercial purposes, on devices you own.\n\nCarry is provided \"as is\". We do our best to make it useful and reliable, but we can't guarantee it's bug-free or that every preset suggestion fits your specific trip. For critical items — passports, medication, anything you'd genuinely regret forgetting — please double-check yourself. We're not responsible for losses caused by missing items or notifications that didn't fire as expected.\n\nYour data is yours. Please back up your device regularly and don't treat Carry as the sole storage for important information.\n\nWe may change features, design, or these terms in future versions. Continued use means you accept the changes.\n\nFor anything we missed, the full version covers it."
+            "state" : "translated",
+            "value" : "Carry は旅行アシスタントだ。フライト・宿泊・場所・ルートといった旅程の計画と、シーンに合わせた持ち物リストづくりを手伝う。利用することで、あなたは自分が所有するデバイス上で、個人的かつ非商用の目的に限って使うことに同意したものとする。\n\n一部の任意機能——フライト検索・場所検索・天気・地図——はネットワーク接続を必要とする。これらのデータの扱いについてはプライバシーポリシーを参照のこと。\n\nCarry は「現状のまま」提供される。私たちは有用で信頼できるものにするよう最善を尽くすが、バグがないことや、すべての提案があなたの個別の旅行に合うことは保証できない。パスポート・薬など、忘れたら本当に後悔するような重要なものは、必ず自分で確認してほしい。持ち物の漏れや、想定どおりに発火しなかった通知による損失について、私たちは責任を負わない。\n\nあなたのデータはあなたのものだ。デバイスは定期的にバックアップし、重要な情報の唯一の保存先として Carry を頼らないでほしい。\n\n今後のバージョンで、機能・デザイン・本規約を変更することがある。継続して利用する場合、その変更に同意したものとみなす。\n\nここで触れていない事項は、完全版に従う。"
           }
         },
         "ko" : {
           "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "By using Carry, you agree to use it for personal, non-commercial purposes, on devices you own.\n\nCarry is provided \"as is\". We do our best to make it useful and reliable, but we can't guarantee it's bug-free or that every preset suggestion fits your specific trip. For critical items — passports, medication, anything you'd genuinely regret forgetting — please double-check yourself. We're not responsible for losses caused by missing items or notifications that didn't fire as expected.\n\nYour data is yours. Please back up your device regularly and don't treat Carry as the sole storage for important information.\n\nWe may change features, design, or these terms in future versions. Continued use means you accept the changes.\n\nFor anything we missed, the full version covers it."
+            "state" : "translated",
+            "value" : "Carry는 여행 도우미예요. 항공편, 숙소, 장소, 경로 등 여행 일정을 계획하고 상황에 맞는 짐 싸기 목록을 만드는 일을 도와줘요. Carry를 사용하면 본인이 소유한 기기에서 개인적·비상업적 용도로만 사용하는 데 동의하는 것이 돼요.\n\n일부 선택 기능——항공편 조회, 장소 검색, 날씨, 지도——은 네트워크 연결이 필요해요. 이 데이터가 어떻게 처리되는지는 개인정보 처리방침을 참고하세요.\n\nCarry는 '있는 그대로' 제공돼요. 유용하고 안정적으로 만들기 위해 최선을 다하지만, 버그가 없다거나 모든 제안이 당신의 특정 여행에 꼭 맞는다고 보장할 수는 없어요. 여권, 약처럼 잊으면 정말 후회할 중요한 물품은 꼭 직접 확인해 주세요. 물품 누락이나 예상대로 울리지 않은 알림으로 인한 손실에 대해서는 책임지지 않아요.\n\n당신의 데이터는 당신의 것이에요. 기기를 정기적으로 백업하고, Carry를 중요한 정보의 유일한 저장 수단으로 삼지 마세요.\n\n앞으로의 버전에서 기능, 디자인 또는 본 약관을 변경할 수 있어요. 계속 사용하면 변경 사항에 동의하는 것으로 봐요.\n\n여기서 다루지 않은 내용은 전체 버전을 따라요."
           }
         },
         "pt-BR" : {
           "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "By using Carry, you agree to use it for personal, non-commercial purposes, on devices you own.\n\nCarry is provided \"as is\". We do our best to make it useful and reliable, but we can't guarantee it's bug-free or that every preset suggestion fits your specific trip. For critical items — passports, medication, anything you'd genuinely regret forgetting — please double-check yourself. We're not responsible for losses caused by missing items or notifications that didn't fire as expected.\n\nYour data is yours. Please back up your device regularly and don't treat Carry as the sole storage for important information.\n\nWe may change features, design, or these terms in future versions. Continued use means you accept the changes.\n\nFor anything we missed, the full version covers it."
+            "state" : "translated",
+            "value" : "O Carry é um assistente de viagem: ajuda você a planejar viagens — voos, hospedagem, lugares, rotas — e a montar listas de bagagem de acordo com o contexto. Ao usá-lo, você concorda em utilizá-lo para fins pessoais e não comerciais, em dispositivos de sua propriedade.\n\nAlguns recursos opcionais — consulta de voos, busca de lugares, previsão do tempo, mapas — precisam de conexão; consulte a Política de Privacidade para saber como esses dados são tratados.\n\nO Carry é fornecido \"no estado em que se encontra\". Fazemos o possível para que seja útil e confiável, mas não podemos garantir que esteja livre de bugs nem que cada sugestão sirva para a sua viagem específica. Para itens essenciais — passaporte, medicamentos, qualquer coisa cuja falta você realmente lamentaria — confira você mesmo. Não nos responsabilizamos por perdas causadas por itens esquecidos ou por notificações que não dispararam como esperado.\n\nSeus dados são seus. Faça backup do seu dispositivo regularmente e não use o Carry como único local de armazenamento de informações importantes.\n\nPodemos alterar recursos, design ou estes termos em versões futuras. Continuar usando significa que você aceita as alterações.\n\nPara qualquer coisa que não tenhamos mencionado, a versão completa cobre."
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "使用 Carry，即表示你同意将其用于个人、非商业用途，运行在你拥有的设备上。\n\nCarry 按「现状」提供。我们尽力让它好用、可靠，但无法保证它没有 bug，也无法保证每条预设建议都适合你这次出行。涉及证件、药品等关键物品，请务必自行核对——我们不对因物品遗漏或通知未按预期触发造成的损失负责。\n\n你的数据是你自己的。请定期通过 iOS 备份你的设备，也请不要把 Carry 当作重要信息的唯一保存方式。\n\n我们可能在未来版本中调整功能、设计或本条款。继续使用即视为你接受这些变更。\n\n本页未尽事宜以完整版为准。"
+            "value" : "Carry 是一款旅行助手：帮你规划行程——航班、住宿、地点、路线——并按场景整理打包清单。使用 Carry，即表示你同意将其用于个人、非商业用途，运行在你拥有的设备上。\n\n部分可选功能——航班查询、地点检索、天气、地图——需要联网；这部分数据如何处理，详见隐私政策。\n\nCarry 按「现状」提供。我们尽力让它好用、可靠，但无法保证它没有 bug，也无法保证每条建议都适合你这次出行。涉及证件、药品等关键物品，请务必自行核对——我们不对因物品遗漏或通知未按预期触发造成的损失负责。\n\n你的数据是你自己的。请定期通过 iOS 备份你的设备，也请不要把 Carry 当作重要信息的唯一保存方式。\n\n我们可能在未来版本中调整功能、设计或本条款。继续使用即视为你接受这些变更。\n\n本页未尽事宜以完整版为准。"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "使用 Carry，即表示你同意將其用於個人、非商業用途，運行在你擁有的裝置上。\n\nCarry 按「現狀」提供。我們盡力讓它好用、可靠，但無法保證它沒有 bug，也無法保證每條預設建議都適合你這次出行。涉及證件、藥品等關鍵物品，請務必自行核對——我們不對因物品遺漏或通知未按預期觸發造成的損失負責。\n\n你的資料是你自己的。請定期透過 iOS 備份你的裝置，也請不要把 Carry 當作重要資訊的唯一保存方式。\n\n我們可能在未來版本中調整功能、設計或本條款。繼續使用即視為你接受這些變更。\n\n本頁未盡事宜以完整版為準。"
+            "value" : "Carry 是一款旅行助手：幫你規劃行程——航班、住宿、地點、路線——並依場景整理打包清單。使用 Carry，即表示你同意將其用於個人、非商業用途，運行在你擁有的裝置上。\n\n部分選用功能——航班查詢、地點搜尋、天氣、地圖——需要連線；這部分資料如何處理，詳見隱私權政策。\n\nCarry 以「現狀」提供。我們盡力讓它好用、可靠，但無法保證它沒有 bug，也無法保證每條建議都適合你這次出行。涉及證件、藥品等關鍵物品，請務必自行核對——我們不對因物品遺漏或通知未按預期觸發造成的損失負責。\n\n你的資料是你自己的。請定期透過 iOS 備份你的裝置，也請不要把 Carry 當作重要資訊的唯一保存方式。\n\n我們可能在未來版本中調整功能、設計或本條款。繼續使用即視為你接受這些變更。\n\n本頁未盡事宜以完整版為準。"
           }
         }
       }
@@ -44646,56 +44646,56 @@
       "localizations" : {
         "de" : {
           "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Last updated May 27, 2026"
+            "state" : "translated",
+            "value" : "Zuletzt aktualisiert am 21. Juni 2026"
           }
         },
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Last updated May 27, 2026"
+            "value" : "Last updated June 21, 2026"
           }
         },
         "es" : {
           "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Last updated May 27, 2026"
+            "state" : "translated",
+            "value" : "Última actualización: 21 de junio de 2026"
           }
         },
         "fr" : {
           "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Last updated May 27, 2026"
+            "state" : "translated",
+            "value" : "Dernière mise à jour le 21 juin 2026"
           }
         },
         "ja" : {
           "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Last updated May 27, 2026"
+            "state" : "translated",
+            "value" : "最終更新日 2026年6月21日"
           }
         },
         "ko" : {
           "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Last updated May 27, 2026"
+            "state" : "translated",
+            "value" : "마지막 업데이트 2026년 6월 21일"
           }
         },
         "pt-BR" : {
           "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Last updated May 27, 2026"
+            "state" : "translated",
+            "value" : "Última atualização: 21 de junho de 2026"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "最后更新于 2026 年 5 月 27 日"
+            "value" : "最后更新于 2026 年 6 月 21 日"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "最後更新於 2026 年 5 月 27 日"
+            "value" : "最後更新於 2026 年 6 月 21 日"
           }
         }
       }
