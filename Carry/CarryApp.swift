@@ -68,8 +68,9 @@ struct CarryApp: App {
                     // 预热汇率：让费用录入时能就地捕获本位币快照（spec: itinerary-cost-tracking.md）
                     ExchangeRateManager.shared.fetchIfNeeded()
                     // 后台预热机场/航司目录（1.6M/225K 解码），让行程页/详情同步取本地化名、零卡顿零闪
-                    // （spec: itinerary-flight-name-localization.md）。
-                    Task.detached(priority: .utility) {
+                    // （spec: itinerary-flight-name-localization.md）。用 .userInitiated：预热是用户即将看到的
+                    // 内容的准备、要尽快就绪，缩小「详情早于预热打开 → 首次同步访问在主线程解码」的窗口。
+                    Task.detached(priority: .userInitiated) {
                         AirportCatalog.preload()
                         AirlineDatabase.preload()
                     }

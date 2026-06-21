@@ -379,10 +379,13 @@ struct ItineraryMapView: View {
                     .stroke(color.opacity(dimmed ? 0.3 : 0.9),
                             style: StrokeStyle(lineWidth: 2.5, lineCap: .round, dash: [2, 7]))
                 // 起讫两端各放一个小端点标记（mode 图标），让弧线两头有落点、不悬空。
-                Annotation(seg.fromName, coordinate: seg.fromCoordinate!) {
+                // 注解标题（机场名）按界面语言显示：码命中机场目录则本地化，否则存的原文。
+                Annotation(AirportCatalog.airport(forIATA: seg.fromCode)?.displayName ?? seg.fromName,
+                           coordinate: seg.fromCoordinate!) {
                     transportEndpointMarker(mode: seg.mode, color: color, dimmed: dimmed)
                 }
-                Annotation(seg.toName, coordinate: seg.toCoordinate!) {
+                Annotation(AirportCatalog.airport(forIATA: seg.toCode)?.displayName ?? seg.toName,
+                           coordinate: seg.toCoordinate!) {
                     transportEndpointMarker(mode: seg.mode, color: color, dimmed: dimmed)
                 }
             }

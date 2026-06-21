@@ -18,6 +18,18 @@
 - **机场在导出只显 IATA 码**（`transportRoute` 的 `place = code 优先`，无码才用名）——码语言无关，故导出**只需本地化航司名**；机场名渲染未动。若日后想在导出显机场全名，已备好 `Airport.localizedName(for:)`，传 `T.lang.nameLanguageKey` 即可。
 - **zh 单一项**：导出只 EN/ZH，ZH 即简体（zh-Hans）；暂不提供 zh-Hant 导出（属导出选项扩展，单独议）。
 
+### 显示点覆盖审计（2026-06-21）
+
+grep 全仓所有 `carrier`/`fromName`/`toName` 显示点，确认根因门「覆盖所有触发路径」：
+- ✅ **已覆盖**：时间轴行航司名、详情航司名+机场名、搜索结果卡、导出航司名、地图端点注解标题（机场名）。
+- ✅ **无需改**（已显 IATA 码、语言无关 / 非机场地点）：时间轴路线 `endpointLabel`（码优先）、PDF 路线 `transportRoute`（码优先）、租车「公司」（用户自填、非航司）。
+- ⏳ **遗留（同款一行修，因并行会话正改这两文件、暂缓避免撞车）**：
+  - `TripSpendDetail.transportName`（Trip Book 花费明细）：现显 `fromName → toName`（英文机场名）/ `carrier`，应改本地化机场名 + `displayCarrier`。**较明显**（每笔航班花费都露英文机场名）。
+  - `NotificationManager.transportContent`：航班提醒**仅无班次号时**显 `carrier`，应改 `displayCarrier`。较小（有班次号时显号、不露承运方）。
+  - 待并行 spend / notification-center 会话落地后补这两处（机械替换：`seg.carrier`→`seg.displayCarrier`、`seg.fromName`→按码本地化）。
+- **性能**：`Airline`/`Airport` 是不可变值类型，`byIATA` 字典与 `all` 数组共享底层 String/dict 存储（COW，无内容复制）；查名 O(1)。机场 1.6M 启动 `.userInitiated` 后台预热——唯一边界：详情若早于预热完成打开，首次同步访问会在主线程解码（一次性 ~百 ms 卡顿，极罕见；用提高优先级缩小窗口，换来「零闪」）。
+- **边界取舍（已知、接受）**：① 代码共享航班显「市场航司」（航班号前缀），非「实际承运」——用户订的即市场航司，合理；② 用户手改可识别航班的承运方会被规范名盖（极罕见）；③ 库未收录的小机场 → 回落英文。
+
 ## 问题
 
 中文（及其它非英文）环境下，已保存航班的**机场名**和**航司名**显示为英文。
