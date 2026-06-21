@@ -31,11 +31,15 @@ struct Airport: Decodable, Identifiable, Hashable, Sendable {
 
     var id: String { iata }
 
-    /// 按设备语言选显示名：命中 nm 对应语言则用之，否则回落英文原名。
-    var displayName: String {
-        guard let key = AirportLocale.languageKey else { return name }
+    /// 按**指定语言键**取名：命中 `nm` 则用之，否则回落英文 `name`；键为 nil = 英文。
+    /// 显式键让「App 内显示（设备语言）」与「导出（所选语言）」共用同一解析。
+    func localizedName(for languageKey: String?) -> String {
+        guard let key = languageKey else { return name }
         return nm?[key] ?? name
     }
+
+    /// 按**设备**语言选显示名（App 内显示用）。导出按所选语言改走 `localizedName(for:)`。
+    var displayName: String { localizedName(for: AirportLocale.languageKey) }
 }
 
 /// 设备语言 → 数据集 nm 键的映射。返回 nil = 英文（直接用 name）。

@@ -23,6 +23,15 @@ enum DocLanguage: String, CaseIterable, Identifiable {
         }
     }
 
+    /// 机场/航司多语言名（`nm`）的语言键：用于按**所选导出语言**取名（与设备语言无关）。
+    /// `.en` → nil（回落英文原名）；`.zh` → 简体（与 `locale` 的 `zh_Hans_CN` 一致，导出 ZH 即简体）。
+    var nameLanguageKey: String? {
+        switch self {
+        case .en: return nil
+        case .zh: return "zh-Hans"
+        }
+    }
+
     /// 导出选项里给用户看的语言名（按其自身语言写）。
     var displayName: String {
         switch self {

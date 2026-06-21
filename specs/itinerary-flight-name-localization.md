@@ -8,7 +8,15 @@
 - **航司（单一数据源）**：`AirlineDatabase` 从 actor 改为**非 actor 同步目录**（不可变参考数据无需 actor 隔离）——`static let` 一次性、线程安全懒加载 `airlines.json`（225K），`airline(forIATA:)` / `airlineName(forFlightNumber:)` 同步 O(1)。**搜索与显示共用这一份，不重复加载**（原先一度引入 `FlightNameCache` 做第二份同步缓存，已删除并入此处）。承运方展示逻辑放 `TransportSegment.displayCarrier`（模型自我呈现、数据层不耦合模型）：航班从航班号解析本地化航司名、否则存的 `carrier` 原文，gate 在 `.flight`。接入时间轴 `TransportTimelineRow.titleView`、详情 `headerSubtitle`/`titleText`、搜索结果卡（优先 `recognized.displayName`）。de-actor 后 `FlightSearchSheet.numberChanged` 也从 `Task{await}` 简化为同步直取。
 - **机场（单一数据源 + 同步零闪）**：把机场不可变数据抽成 `AirportCatalog`（`static let all`/`byIATA`，一次性懒加载），`AirportDatabase` actor 退化为只读 `AirportCatalog.all` 的**搜索引擎**（模糊检索逐键扫表、仍放后台不卡打字），二者共用一份、不重复加载。详情 `TransportDetailView` 改为**同步**取 `AirportCatalog.airport(forIATA:)?.displayName`（去掉 `@State`+`.task` 异步）→ 首帧即正确、**零异步刷新闪烁**。1.6M 大库不在主线程同步解码：`CarryApp` 启动在后台 `Task.detached` 调 `AirportCatalog.preload()`（+`AirlineDatabase.preload()`）预热，详情/搜索打开时已就绪。只在详情副行露名（时间轴 / Trip Book 显码、本就语言无关）。
 - **确定性、无启发式**：码命中库 → 本地化名；否则 → 存名。同时修好「上游英文」与「手动搜索冻结语言」，且**零迁移、无新字段**。机场名非自由文本（只能搜索选）→ 无覆盖顾虑；承运方是自由文本但航班解析 gate 在 `.flight`（火车号 `G403` 不会误判为航司 `G4`），非航班/自定义承运方原样保留。
-- **决策记录**（取代下方 Draft 待确认项）：① 用「码/号 → 库」确定性解析，不加 `carrierEdited` 标志、不用等值启发式；② 航司 IATA 从航班号 `split` 取（航班号即航司身份，不另存字段）；③ 航司同步缓存（小库，首帧即正确无闪烁）、机场异步 `.task`（大库、按需单页）——按数据体积分工。
+- **决策记录**（取代下方 Draft 待确认项）：① 用「码/号 → 库」确定性解析，不加 `carrierEdited` 标志、不用等值启发式；② 航司 IATA 从航班号 `split` 取（航班号即航司身份，不另存字段）；③ 数据/搜索分离：机场数据 `AirportCatalog` 同步单一源、搜索 `AirportDatabase` actor 读它跑后台；启动后台预热消除详情异步刷新闪。
+
+### 导出/分享文档本地化（2026-06-21 追加）
+
+- **关键区分**：App 内显示按**设备语言**；导出文档按**用户在导出时选的语言**（`DocLanguage` .en/.zh，与设备无关）。两者不能混。
+- **做法（语言键解耦）**：给目录加「按指定语言键查名」——`Airline.localizedName(for:)` / `Airport.localizedName(for:)`（`nm[key] ?? name`，键 nil = 英文）；`displayName` 退化为 `localizedName(for: AirportLocale.languageKey)`（设备键）。`DocLanguage.nameLanguageKey`（.en→nil、.zh→`zh-Hans`，与 `DocLanguage.zh.locale` 的 `zh_Hans_CN` 一致）把导出语言映射成目录键。
+- **承运方参数化**：`TransportSegment.carrierName(forLanguageKey:)`（核心），`displayCarrier` = 设备键版本。导出渲染器 `ItineraryPDFRenderer.transportLine` 改用 `t.carrierName(forLanguageKey: T.lang.nameLanguageKey)` → 航司名按所选语言。
+- **机场在导出只显 IATA 码**（`transportRoute` 的 `place = code 优先`，无码才用名）——码语言无关，故导出**只需本地化航司名**；机场名渲染未动。若日后想在导出显机场全名，已备好 `Airport.localizedName(for:)`，传 `T.lang.nameLanguageKey` 即可。
+- **zh 单一项**：导出只 EN/ZH，ZH 即简体（zh-Hans）；暂不提供 zh-Hant 导出（属导出选项扩展，单独议）。
 
 ## 问题
 

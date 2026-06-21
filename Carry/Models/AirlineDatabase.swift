@@ -23,12 +23,16 @@ struct Airline: Decodable, Identifiable, Hashable, Sendable {
 
     var id: String { iata }
 
-    /// 按设备语言选显示名：命中 nm 对应语言则用之，否则回落英文原名。
-    /// 复用机场库的 AirportLocale（设备语言 → nm 键映射，通用、不重复造）。
-    var displayName: String {
-        guard let key = AirportLocale.languageKey else { return name }
+    /// 按**指定语言键**取名：命中 `nm` 对应语言则用之，否则回落英文 `name`；键为 nil = 英文。
+    /// 显式键让「App 内显示（设备语言）」与「导出（所选语言）」共用同一解析、各传各的键。
+    func localizedName(for languageKey: String?) -> String {
+        guard let key = languageKey else { return name }
         return nm?[key] ?? name
     }
+
+    /// 按**设备**语言取显示名（App 内显示用）。导出按**所选语言**改走 `localizedName(for:)`。
+    /// 复用机场库的 AirportLocale（设备语言 → nm 键映射，通用、不重复造）。
+    var displayName: String { localizedName(for: AirportLocale.languageKey) }
 }
 
 /// 全球航司目录。**不可变参考数据 → 无需 actor 隔离**：`airlines.json`（~225 KB，~986 条）经
@@ -64,11 +68,12 @@ enum AirlineDatabase {
         return byIATA[key]
     }
 
-    /// 航班号 → 本地化航司名（"MU5801" → 中国东方航空 / 按界面语言），号解析不出航司则 nil。
+    /// 航班号 → 按 `languageKey` 的航司名（"MU5801" → 中国东方航空），号解析不出航司则 nil。
+    /// 键 = nil 时回落英文；App 内显示传 `AirportLocale.languageKey`（设备语言），导出传所选语言键。
     /// **仅航班用**——调用方须 gate 在 `.flight`（火车号 "G403" 会被 `split` 误拆成航司 "G4"）。
-    static func airlineName(forFlightNumber number: String) -> String? {
+    static func airlineName(forFlightNumber number: String, languageKey: String?) -> String? {
         guard let parts = FlightNumberParser.split(number) else { return nil }
-        return byIATA[parts.airline]?.displayName  // split 已返回大写前缀，与 iata 键一致
+        return byIATA[parts.airline]?.localizedName(for: languageKey)  // split 已返回大写前缀，与 iata 键一致
     }
 }
 

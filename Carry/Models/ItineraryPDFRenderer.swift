@@ -200,7 +200,10 @@ enum ItineraryPDFRenderer {
         }
 
         private func transportLine(_ t: TransportSegment) -> String {
-            let parts = [t.carrier, t.number].filter { !$0.isEmpty }
+            // 航司名按**所选导出语言**取（航班从航班号解析，否则存的承运方原文）——与设备语言无关。
+            // 机场仍显 IATA 码（语言无关），故此处只需本地化航司名。spec: itinerary-flight-name-localization.md。
+            let carrier = t.carrierName(forLanguageKey: T.lang.nameLanguageKey)
+            let parts = [carrier, t.number].filter { !$0.isEmpty }
             return parts.isEmpty ? modeName(t.mode) : parts.joined(separator: " ")
         }
 
