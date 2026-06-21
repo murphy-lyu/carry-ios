@@ -51,6 +51,10 @@ final class CarryLogger {
         case backupWriteFailed      = "backup_write_failed"
         case backupSafetyCopyCreated = "backup_safety_copy_created"
         case backupCorrupted        = "backup_corrupted"
+        // 从 Tripsy 导入（spec: tripsy-import.md）
+        case tripsyImportStarted    = "tripsy_import_started"
+        case tripsyImportSucceeded  = "tripsy_import_succeeded"
+        case tripsyImportFailed     = "tripsy_import_failed"
         // 物品选择器
         case pickerOpened           = "picker_opened"
         case pickerCategoryExpanded = "picker_category_expanded"
@@ -199,7 +203,7 @@ final class CarryLogger {
         .itineraryRouteCalcFailed, .itineraryImportFailed, .itineraryExportFailed,
         .exchangeRateFetchFailed, .calendarOverlayAccessDenied,
         .photoImportFailed, .flightLookupFailed,
-        .attachmentSaveFailed,
+        .attachmentSaveFailed, .tripsyImportFailed,
     ]
 
     private let sessionActiveKey = "carry_session_active"
