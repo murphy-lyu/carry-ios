@@ -15,12 +15,12 @@ npx wrangler login          # 浏览器授权（和你 Cloudflare 同账号）
 # 设密钥（不进 git）：
 npx wrangler secret put MAPBOX_TOKEN   # 粘贴 carry-places-worker 那个 token（pk....）
 npx wrangler secret put APP_TOKEN      # 随便一串长随机值；要和 App 里 Secrets.plist 的对应（见下）
-npx wrangler secret put DEEPL_KEY      # DeepL API key（中文→英文翻译,解决「卢浮宫」搜不到;免费档 key 以 :fx 结尾）
+npx wrangler secret put AZURE_TRANSLATOR_KEY   # Azure Translator 的 KEY 1（中文→英文翻译,解决「卢浮宫」搜不到）
 
 npx wrangler deploy         # 部署
 ```
 
-> **DEEPL_KEY**:Mapbox 海外 POI 无中文别名,中文 query 会被先经 DeepL 翻成英文再查（只在含中日韩文字时触发,翻译结果缓存 30 天控量）。没配 DEEPL_KEY 时中文搜海外会回退（多半空),英文/当地名不受影响。DeepL API Free 档 500k 字/月、足够。
+> **翻译层(Azure Translator)**:Mapbox 海外 POI 无中文别名,中文 query 会被先经 Azure 翻成英文再查（只在含中日韩文字时触发,结果缓存 30 天控量）。没配 `AZURE_TRANSLATOR_KEY` 时中文搜海外会回退（多半空),英文/当地名不受影响。Region 在 `wrangler.toml` 的 `AZURE_TRANSLATOR_REGION`（默认 eastasia，非密钥）。Azure Translator F0 免费档 200 万字/月、足够。
 
 部署后在 **Cloudflare 后台 → Workers → carry-places → Domains → Add Custom Domain** 绑 **`places.nevestudio.app`**（和航班一样）。
 

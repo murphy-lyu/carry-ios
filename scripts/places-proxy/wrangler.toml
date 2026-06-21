@@ -6,6 +6,7 @@ compatibility_date = "2024-11-01"
 # 成本若 Cover 不住，在 Cloudflare 后台或这里改后重新 deploy，即时生效、App 不用发版。
 [vars]
 OVERSEAS_POLICY = "all"
+AZURE_TRANSLATOR_REGION = "eastasia"   # Azure Translator 资源的 Location（非密钥,放 vars 即可）
 
 # 自定义域名（国内可达 + 规避 GFW）。部署后在 Cloudflare 后台给该 Worker 绑 places.nevestudio.app，
 # 或用下方 routes（需域名已托管在本账号）。二选一即可。

@@ -149,33 +149,30 @@ function hasCJK(s) {
   return /[㐀-鿿぀-ヿ가-힯]/.test(s);
 }
 
-// 经 DeepL 把 query 翻成英文（源语言自动检测）。缓存 30 天控量;无 key/失败 → null（调用方回退原词)。
+// 经 Azure Translator 把 query 翻成英文（源语言自动检测）。缓存 30 天控量;无 key/失败 → null（调用方回退原词)。
 async function translateToEnglish(text, env) {
-  if (!env.DEEPL_KEY) return null;
+  if (!env.AZURE_TRANSLATOR_KEY) return null;
   const cache = caches.default;
   const ck = new Request(`https://carry-places-cache/tr?q=${encodeURIComponent(text)}`);
   const hit = await cache.match(ck);
   if (hit) { try { return (await hit.json()).t; } catch (_) { /* fallthrough */ } }
 
-  // 免费档 key 以 ":fx" 结尾,走 api-free;否则 pro 域名。
-  const host = env.DEEPL_KEY.endsWith(":fx") ? "https://api-free.deepl.com" : "https://api.deepl.com";
-  const body = new URLSearchParams();
-  body.set("text", text);
-  body.set("target_lang", "EN");
+  const region = env.AZURE_TRANSLATOR_REGION || "eastasia";
   let resp;
   try {
-    resp = await fetch(`${host}/v2/translate`, {
+    resp = await fetch("https://api.cognitive.microsofttranslator.com/translate?api-version=3.0&to=en", {
       method: "POST",
       headers: {
-        Authorization: `DeepL-Auth-Key ${env.DEEPL_KEY}`,
-        "Content-Type": "application/x-www-form-urlencoded",
+        "Ocp-Apim-Subscription-Key": env.AZURE_TRANSLATOR_KEY,
+        "Ocp-Apim-Subscription-Region": region,   // 区域型资源必须带,否则 401
+        "Content-Type": "application/json",
       },
-      body: body.toString(),
+      body: JSON.stringify([{ Text: text }]),
     });
   } catch (_) { return null; }
   if (!resp.ok) return null;
   const data = await resp.json().catch(() => null);
-  const t = data?.translations?.[0]?.text || null;
+  const t = data?.[0]?.translations?.[0]?.text || null;
   if (t) {
     const r = new Response(JSON.stringify({ t }), { headers: { "Cache-Control": "public, max-age=2592000" } });
     cache.put(ck, r.clone());
