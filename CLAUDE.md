@@ -393,6 +393,7 @@ private let itemNameAliases: [String: String] = [
 - docs/design-north-star.md：设计最高标准（ADA 级评判框架，凌驾于 design-system.md）
 - docs/design-system.md：视觉规范与组件标准（当前落地，非上限）
 - docs/architecture.md：架构与模块说明
+- docs/infrastructure.md：外部服务 / 自营域名 / Cloudflare Worker / 密钥 / 云控开关 / 排查指引（单一真源）
 - docs/decisions.md：决策日志
 - docs/progress.md：进度追踪
 - specs/：功能 spec 文件目录
@@ -407,6 +408,7 @@ private let itemNameAliases: [String: String] = [
 | 实现任何 UI / 视觉需求 | **先** `docs/design-north-star.md`（最高标准/评判框架）+ `docs/design-system.md`（Color Token、组件规范、Mac Catalyst 面板规格） |
 | 触碰 `CarryBottomSheet.swift` | `docs/home-sheet-debug-playbook.md` — 必读，避免重踩已知问题 |
 | 架构新增或模块重构 | `docs/architecture.md` |
+| 外部服务/Worker/域名/密钥问题（国内不可达·搜不到·翻译失效·航班查不到·新机构建失效） | `docs/infrastructure.md` |
 | 遇到可能重复讨论的设计决策 | `docs/decisions.md` — 确认是否已有定论 |
 | 发布前 | `docs/release-checklist.md` |
 | 性能相关改动 | `docs/performance-audit-2026-05-27.md` |
