@@ -94,6 +94,8 @@ struct HomeView: View {
     @State private var showSearch = false
     @State private var showTripBook = false
     @State private var showSpendDetail = false
+    @State private var showAllCountries = false
+    @State private var showAllAirports = false
     @State private var searchText = ""
     @FocusState private var searchFieldFocused: Bool
     /// 点搜索结果时暂存目标行程；在 sheet 真正 dismiss 完成后（onDismiss）再跳转，
@@ -1037,6 +1039,17 @@ struct HomeView: View {
             }
             .scrollContentBackground(.hidden)
             .background(CarrySubtleBackground())
+            // 国家/机场超过预览上限时的「查看全部」全列表（大洲天生 ≤7、不会触发，故无需）。
+            .sheet(isPresented: $showAllCountries) {
+                tripBookListSheet("tripbook.countries.title", dismiss: { showAllCountries = false }) {
+                    ForEach(stats.countryTallies, id: \.code) { tripBookCountryRow($0) }
+                }
+            }
+            .sheet(isPresented: $showAllAirports) {
+                tripBookListSheet("tripbook.airports.title", dismiss: { showAllAirports = false }) {
+                    ForEach(stats.airportTallies, id: \.label) { tripBookAirportRow($0) }
+                }
+            }
             .navigationTitle("home.tripbook.title")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -1105,7 +1118,7 @@ struct HomeView: View {
                 if !s.perTrip.isEmpty {
                     Button { showSpendDetail = true } label: {
                         HStack(spacing: 4) {
-                            Text("tripbook.spend.view_all")
+                            Text("tripbook.see_all")
                             Image(systemName: "chevron.right").font(.caption2.weight(.semibold))
                         }
                         .font(.subheadline)
@@ -1202,7 +1215,7 @@ struct HomeView: View {
             }
             .scrollContentBackground(.hidden)
             .background(CarrySubtleBackground())
-            .navigationTitle("tripbook.spend.view_all")
+            .navigationTitle("tripbook.spend.title")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
@@ -1451,21 +1464,83 @@ struct HomeView: View {
                     .foregroundStyle(.secondary)
             }
             if !s.countryTallies.isEmpty {
+                // 统一规则：预览前 10，超出给「查看全部」。国家是回顾册核心，预览给得宽（10）。
                 VStack(spacing: 10) {
-                    ForEach(s.countryTallies, id: \.code) { tally in
-                        HStack(spacing: 10) {
-                            Text(flagEmoji(for: tally.code))
-                                .font(.system(size: 18))
-                            Text(countryDisplayName(tally.code))
-                                .font(.subheadline)
-                                .foregroundStyle(.primary)
-                            Spacer()
-                            Text(verbatim: "\(tally.count)×")
-                                .font(.system(.subheadline, design: .rounded).weight(.semibold))
-                                .foregroundStyle(.secondary)
-                        }
+                    ForEach(s.countryTallies.prefix(tripBookListPreviewCap), id: \.code) { tripBookCountryRow($0) }
+                    if s.countryTallies.count > tripBookListPreviewCap {
+                        tripBookViewAllButton { showAllCountries = true }
                     }
                 }
+            }
+        }
+    }
+
+    /// 列表卡预览上限（统一规则：最多预览 N 条，超出给「查看全部」）。大洲天生 ≤7 → 永不触发、全展示。
+    private var tripBookListPreviewCap: Int { 10 }
+
+    private func tripBookCountryRow(_ tally: CountryTally) -> some View {
+        HStack(spacing: 10) {
+            Text(flagEmoji(for: tally.code)).font(.system(size: 18))
+            Text(countryDisplayName(tally.code))
+                .font(.subheadline)
+                .foregroundStyle(.primary)
+            Spacer()
+            Text(verbatim: "\(tally.count)×")
+                .font(.system(.subheadline, design: .rounded).weight(.semibold))
+                .foregroundStyle(.secondary)
+        }
+    }
+
+    private func tripBookAirportRow(_ tally: LabelTally) -> some View {
+        HStack(spacing: 10) {
+            Text(tally.label)
+                .font(.system(.footnote, design: .rounded).weight(.semibold))
+                .foregroundStyle(CarryAccent.color)
+                .padding(.horizontal, 8)
+                .padding(.vertical, 3)
+                .background(Capsule().fill(CarryAccent.color.opacity(0.12)))
+            Spacer()
+            Text(verbatim: "\(tally.count)×")
+                .font(.system(.subheadline, design: .rounded).weight(.semibold))
+                .foregroundStyle(.secondary)
+        }
+    }
+
+    /// 卡内「查看全部」入口（与花费卡同款）。
+    private func tripBookViewAllButton(_ action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            HStack(spacing: 4) {
+                Text("tripbook.see_all")
+                Image(systemName: "chevron.right").font(.caption2.weight(.semibold))
+            }
+            .font(.subheadline)
+            .foregroundStyle(CarryAccent.color)
+            .frame(maxWidth: .infinity)
+        }
+        .buttonStyle(.plain)
+        .padding(.top, 2)
+    }
+
+    /// 全列表 sheet（国家 / 机场「查看全部」共用）：单张 surface 卡内列出全部行。
+    private func tripBookListSheet<Content: View>(_ titleKey: LocalizedStringKey,
+                                                  dismiss: @escaping () -> Void,
+                                                  @ViewBuilder content: () -> Content) -> some View {
+        NavigationStack {
+            ScrollView {
+                VStack(spacing: 10) { content() }
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(16)
+                    .carrySurfaceCardBackground(cornerRadius: 20)
+                    .padding(.horizontal, 16)
+                    .padding(.top, 8)
+                    .padding(.bottom, 32)
+            }
+            .scrollContentBackground(.hidden)
+            .background(CarrySubtleBackground())
+            .navigationTitle(titleKey)
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .topBarTrailing) { SheetCloseButton(action: dismiss) }
             }
         }
     }
@@ -1604,30 +1679,12 @@ struct HomeView: View {
 
     /// 「常经停机场」卡：按 IATA 码计数降序（镜像「最常去国家」），码作烟蓝胶囊 chip。
     private func tripBookAirportsCard(_ s: TripBookStats) -> some View {
-        let cap = 6
-        let shown = Array(s.airportTallies.prefix(cap))
-        let remaining = s.airportTallies.count - shown.count   // 截断兜底：诚实标注还有多少未列
-        return tripBookCard("tripbook.airports.title", systemImage: "airplane.departure") {
+        // 统一规则：预览前 10，超出给「查看全部」（替掉旧的「+N」静默兜底）。
+        tripBookCard("tripbook.airports.title", systemImage: "airplane.departure") {
             VStack(spacing: 10) {
-                ForEach(shown, id: \.label) { tally in
-                    HStack(spacing: 10) {
-                        Text(tally.label)
-                            .font(.system(.footnote, design: .rounded).weight(.semibold))
-                            .foregroundStyle(CarryAccent.color)
-                            .padding(.horizontal, 8)
-                            .padding(.vertical, 3)
-                            .background(Capsule().fill(CarryAccent.color.opacity(0.12)))
-                        Spacer()
-                        Text(verbatim: "\(tally.count)×")
-                            .font(.system(.subheadline, design: .rounded).weight(.semibold))
-                            .foregroundStyle(.secondary)
-                    }
-                }
-                if remaining > 0 {
-                    Text(String(format: NSLocalizedString("tripbook.airports.more", comment: ""), Int64(remaining)))
-                        .font(.caption)
-                        .foregroundStyle(.tertiary)
-                        .frame(maxWidth: .infinity, alignment: .leading)
+                ForEach(s.airportTallies.prefix(tripBookListPreviewCap), id: \.label) { tripBookAirportRow($0) }
+                if s.airportTallies.count > tripBookListPreviewCap {
+                    tripBookViewAllButton { showAllAirports = true }
                 }
             }
         }
