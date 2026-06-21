@@ -714,8 +714,11 @@ extension TripBundle {
     /// 而非回退出发地）。spec: itinerary-timezone.md D3。
     func displayTimeZoneIds() -> [Int: String] {
         var result: [Int: String] = [:]
-        var current = primaryTimeZoneId   // 起点 ≈ 出发地
-        for day in safeItineraryDays.sorted(by: { $0.sortOrder < $1.sortOrder }) {
+        let sorted = safeItineraryDays.sorted(by: { $0.sortOrder < $1.sortOrder })
+        // 种子用「最早出现的所在地时区」(≈ 出发地/首站)，而非主时区(最频繁≈目的地)：
+        //   首站之前的纯空白天应显示出发地，而非行程里出现最多的目的地时区。无任何时区信号才退回主时区。
+        var current = sorted.compactMap { $0.ownTimeZoneId }.first ?? primaryTimeZoneId
+        for day in sorted {
             let own = day.ownTimeZoneId
             result[day.sortOrder] = own ?? current
             if let arr = day.endArrivalTimeZoneId { current = arr }   // 当天有交通落地 → 之后所在地顺延到到达区
