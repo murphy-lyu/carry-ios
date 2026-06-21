@@ -16,7 +16,6 @@ enum WeatherSignal: String, CaseIterable {
     case snow        // 有雪
     case heat        // 高温
     case cold        // 低温
-    case bigSwing    // 早晚温差大
 }
 
 enum WeatherPackingSignals {
@@ -29,8 +28,6 @@ enum WeatherPackingSignals {
     static let coldLowC: Double = 5
     /// 降水：任一天降水概率 ≥ 此值（0...1），即便天气状况未直接判为雨
     static let rainChance: Double = 0.6
-    /// 温差：窗口内 max(高温) − min(低温) ≥ 此值（℃）
-    static let swingC: Double = 12
 
     // MARK: 信号提炼
 
@@ -43,11 +40,6 @@ enum WeatherPackingSignals {
         if days.contains(where: { $0.category == .snow }) { result.insert(.snow) }
         if days.contains(where: { $0.highC >= heatHighC }) { result.insert(.heat) }
         if days.contains(where: { $0.lowC <= coldLowC }) { result.insert(.cold) }
-
-        if let hi = days.map(\.highC).max(), let lo = days.map(\.lowC).min(),
-           hi - lo >= swingC {
-            result.insert(.bigSwing)
-        }
         return result
     }
 
@@ -60,15 +52,13 @@ enum WeatherPackingSignals {
 
     // MARK: 信号 → 场景（复用 SceneItemMap 的场景键）
 
-    /// 单个信号映射到的现有场景键；无对应场景的信号返回 nil。
-    /// `bigSwing` 暂不映射独立场景（保留给将来「多带一件外套」的单品建议），返回 nil。
-    static func sceneKey(for signal: WeatherSignal) -> String? {
+    /// 单个信号映射到的现有场景键。
+    static func sceneKey(for signal: WeatherSignal) -> String {
         switch signal {
-        case .rain:     return "rainy_city"
-        case .snow:     return "winter"
-        case .cold:     return "winter"
-        case .heat:     return "tropical"
-        case .bigSwing: return nil
+        case .rain: return "rainy_city"
+        case .snow: return "winter"
+        case .cold: return "winter"
+        case .heat: return "tropical"
         }
     }
 
@@ -81,7 +71,7 @@ enum WeatherPackingSignals {
         var seen = Set<String>()
         var result: [String] = []
         for s in ordered where signals.contains(s) {
-            guard let key = sceneKey(for: s) else { continue }
+            let key = sceneKey(for: s)
             guard !alreadyCovered.contains(key), !seen.contains(key) else { continue }
             seen.insert(key)
             result.append(key)

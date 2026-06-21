@@ -10,13 +10,11 @@
 
 import Foundation
 
-/// 单个行程的天气预警结论。`kind` 决定通知文案；`fetchedAt` 用于新鲜度判断。
-/// `officialSummary` 仅 severe（WeatherKit 官方预警）时有值。
+/// 单个行程的天气预警结论。`kind` 决定（本地化）通知文案；`fetchedAt` 用于新鲜度判断。
 nonisolated struct WeatherAlertPayload: Codable, Sendable, Equatable {
     enum Kind: String, Codable, Sendable { case severe, snow, heat, cold, rain }
     var kind: Kind
     var fetchedAt: Date
-    var officialSummary: String?
 }
 
 nonisolated enum WeatherAlertStore {

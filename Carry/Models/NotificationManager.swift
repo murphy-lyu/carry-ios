@@ -77,12 +77,12 @@ enum NotificationManager {
         let cfg = TripReminderConfig(daysBeforeDeparture: 1, hour: 18, minute: 0)
         guard let fireDate = cfg.fireDate(relativeTo: trip.departureDate) else { return }
         let dest = trip.destinationCity.isEmpty ? trip.name : trip.destinationCity
-        let (title, body) = weatherAlertContent(kind: payload.kind, destination: dest, official: payload.officialSummary)
+        let (title, body) = weatherAlertContent(kind: payload.kind, destination: dest)
         makeCandidate(fireDate, id: "\(tripPrefix)\(trip.id.uuidString).weather",
                       title: title, body: body, allowImminentFallback: true, now: now, tz: .current, into: &out)
     }
 
-    private static func weatherAlertContent(kind: WeatherAlertPayload.Kind, destination: String, official: String?) -> (String, String) {
+    private static func weatherAlertContent(kind: WeatherAlertPayload.Kind, destination: String) -> (String, String) {
         let titleKey: String
         switch kind {
         case .severe: titleKey = "notif.weather.title.severe"
@@ -92,13 +92,8 @@ enum NotificationManager {
         case .rain:   titleKey = "notif.weather.title.rain"
         }
         let title = NSLocalizedString(titleKey, comment: "")
-        // 官方预警有摘要（权威）→ 用摘要；阈值类 → 本地化「回扣打包」文案 + 目的地。
-        let body: String
-        if let official, !official.isEmpty {
-            body = official
-        } else {
-            body = String(format: NSLocalizedString("notif.weather.body", comment: ""), destination)
-        }
+        // 全本地化「回扣打包」文案 + 目的地（不直接塞可能是外语的官方摘要）。
+        let body = String(format: NSLocalizedString("notif.weather.body", comment: ""), destination)
         return (title, body)
     }
 

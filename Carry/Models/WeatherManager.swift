@@ -116,8 +116,8 @@ final class WeatherManager: ObservableObject {
         }
 
         do {
-            let location = CLLocation(latitude: latitude, longitude: longitude)
-            let weather = try await WeatherService.shared.weather(for: location)
+            // 经共享缓存拉取（与天气预警评估器合并，避免同地点重复调 WeatherKit）。
+            let weather = try await WeatherFetchCache.shared.weather(lat: latitude, lon: longitude)
 
             // Don't show weather for trips that end in the past
             let now = Date()

@@ -15,12 +15,17 @@ import WeatherKit
 
 enum WeatherAlertEvaluator {
 
+    /// 单飞守卫（@MainActor 静态 → 竞态安全）：同一时刻只跑一个评估 pass，
+    /// 避免并发 detached 任务对 WeatherAlertStore 读-改-写互相覆盖。
+    @MainActor private static var isEvaluating = false
+
     /// 评估即将出发行程的天气预警，写入 store；有变化则回主线程触发一次重排。
     /// 节流：cache 新鲜（<6h）的行程跳过，避免频繁调 WeatherKit。`onUpdated` 在主线程执行。
     @MainActor
     static func refresh(trips: [TripBundle], onUpdated: @escaping @MainActor @Sendable () -> Void) {
         WeatherAlertStore.prune(keeping: Set(trips.map(\.id)))
         guard ReminderPreferences.weatherAlertsEnabled else { return }
+        guard !isEvaluating else { return }   // 单飞：上一轮还没跑完就跳过
         let now = Date()
         // 候选：有日期、有坐标、出发在未来且在预报窗口(~10 天)内。
         let snaps: [Snapshot] = trips.compactMap { t in
@@ -32,21 +37,28 @@ enum WeatherAlertEvaluator {
         }
         guard !snaps.isEmpty else { return }
 
+        isEvaluating = true
         Task.detached {
             var changed = false
             for s in snaps {
                 if let p = WeatherAlertStore.payload(for: s.id),
                    Date().timeIntervalSince(p.fetchedAt) < 6 * 3600 { continue }   // 节流
                 let payload = await evaluate(s)
-                WeatherAlertStore.set(payload, for: s.id)
-                changed = true
+                let before = WeatherAlertStore.payload(for: s.id)
+                if before != payload {            // 仅在结论变化时标记需重排，避免无谓重排
+                    WeatherAlertStore.set(payload, for: s.id)
+                    changed = true
+                }
                 if let payload {
                     await MainActor.run {
                         CarryLogger.shared.log(.weatherAlertScheduled, context: "kind=\(payload.kind.rawValue)")
                     }
                 }
             }
-            if changed { await MainActor.run { onUpdated() } }
+            await MainActor.run {
+                isEvaluating = false
+                if changed { onUpdated() }
+            }
         }
     }
 
@@ -57,10 +69,10 @@ enum WeatherAlertEvaluator {
     /// 拉一个行程目的地的天气，按门槛判断是否产生预警载荷。失败/无事 → nil。
     nonisolated private static func evaluate(_ s: Snapshot) async -> WeatherAlertPayload? {
         do {
-            let weather = try await WeatherService.shared.weather(for: CLLocation(latitude: s.lat, longitude: s.lon))
-            // 1) 官方 severe / extreme 预警优先
-            if let severe = weather.weatherAlerts?.first(where: { $0.severity == .severe || $0.severity == .extreme }) {
-                return WeatherAlertPayload(kind: .severe, fetchedAt: Date(), officialSummary: severe.summary)
+            let weather = try await WeatherFetchCache.shared.weather(lat: s.lat, lon: s.lon)
+            // 1) 官方 severe / extreme 预警优先（用本地化文案推送，不直接塞可能是外语的官方摘要）
+            if weather.weatherAlerts?.contains(where: { $0.severity == .severe || $0.severity == .extreme }) == true {
+                return WeatherAlertPayload(kind: .severe, fetchedAt: Date())
             }
             // 2) 阈值类——仅行程窗口内的日预报
             let cal = Calendar.current
@@ -69,16 +81,16 @@ enum WeatherAlertEvaluator {
             guard !days.isEmpty else { return nil }
 
             if days.contains(where: { $0.condition == .blizzard || $0.condition == .heavySnow || $0.condition == .snow }) {
-                return WeatherAlertPayload(kind: .snow, fetchedAt: Date(), officialSummary: nil)
+                return WeatherAlertPayload(kind: .snow, fetchedAt: Date())
             }
             if days.contains(where: { $0.highTemperature.converted(to: .celsius).value >= 35 }) {
-                return WeatherAlertPayload(kind: .heat, fetchedAt: Date(), officialSummary: nil)
+                return WeatherAlertPayload(kind: .heat, fetchedAt: Date())
             }
             if days.contains(where: { $0.lowTemperature.converted(to: .celsius).value <= -5 }) {
-                return WeatherAlertPayload(kind: .cold, fetchedAt: Date(), officialSummary: nil)
+                return WeatherAlertPayload(kind: .cold, fetchedAt: Date())
             }
             if days.filter({ $0.precipitationChance >= 0.7 }).count >= 2 {
-                return WeatherAlertPayload(kind: .rain, fetchedAt: Date(), officialSummary: nil)
+                return WeatherAlertPayload(kind: .rain, fetchedAt: Date())
             }
             return nil
         } catch {
