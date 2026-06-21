@@ -14,7 +14,7 @@ import Foundation
 import OSLog
 
 /// 单条机场记录。`hans`/`hant` 为可选——缺失时显示回落英文原名。
-struct Airport: Decodable, Identifiable, Hashable, Sendable {
+nonisolated struct Airport: Decodable, Identifiable, Hashable, Sendable {
     let iata: String
     let icao: String
     let name: String
@@ -44,7 +44,7 @@ struct Airport: Decodable, Identifiable, Hashable, Sendable {
 
 /// 设备语言 → 数据集 nm 键的映射。返回 nil = 英文（直接用 name）。
 /// 中文按地区习惯区分简繁（Hant/TW/HK/MO 视为繁体）；pt 归 pt-BR。
-enum AirportLocale {
+nonisolated enum AirportLocale {
     static var languageKey: String? {
         let id = (Locale.preferredLanguages.first ?? "en").lowercased()
         if id.hasPrefix("zh") {
@@ -65,7 +65,7 @@ enum AirportLocale {
 /// `all` 供搜索遍历、`byIATA` 供「码已知」O(1) 同步取名。搜索（`AirportDatabase` actor，后台扫表）与
 /// 显示（详情按码同步取本地化名）**共用这一份**。1.6 MB 解码较重 → 启动 `preload()` 后台预热，避免首次
 /// 访问卡主线程、并消除详情页机场名的异步刷新闪烁。spec: itinerary-flight-name-localization.md。
-enum AirportCatalog {
+nonisolated enum AirportCatalog {
     private static let logger = Logger(subsystem: "com.carry.app", category: "AirportCatalog")
 
     /// 全部机场（搜索遍历用）。bundle 内资源、有效构建必有，故（理论上不会发生的）读失败回落空。

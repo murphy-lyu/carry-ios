@@ -14,7 +14,7 @@ import Foundation
 import OSLog
 
 /// 单条航司记录。`nm` 缺失时显示回落英文原名。
-struct Airline: Decodable, Identifiable, Hashable, Sendable {
+nonisolated struct Airline: Decodable, Identifiable, Hashable, Sendable {
     let iata: String
     let icao: String
     let name: String
@@ -40,7 +40,7 @@ struct Airline: Decodable, Identifiable, Hashable, Sendable {
 /// 表小、耗时可忽略）。搜索（识别航司）与显示（按界面语言查名，时间轴行 / 详情 / 搜索卡）共用**这一份**，
 /// 不重复加载。`displayName` 按调用时 locale 取名，故缓存一份即可随界面语言变化。
 /// 单一数据源说明见 spec: itinerary-flight-name-localization.md。
-enum AirlineDatabase {
+nonisolated enum AirlineDatabase {
     private static let logger = Logger(subsystem: "com.carry.app", category: "AirlineDatabase")
 
     /// IATA 码 → 航司，一次性懒加载。是 bundle 内资源、有效构建必有，故（理论上不会发生的）读失败回落空表。
@@ -80,7 +80,7 @@ enum AirlineDatabase {
 /// 从航班号解析「航司 IATA 前缀 + 班次号」。如 "MU5431" → ("MU","5431")、"9C8888" → ("9C","8888")。
 /// 航司码 = 前 2 位字母数字（IATA 规则：两位，可含一个数字如 9C/3U/U2）；其后必须是纯数字班次。
 /// 解析不出（位数不足/格式不符）返回 nil。纯展示/识别用，不做严格校验（最终以查询结果为准）。
-enum FlightNumberParser {
+nonisolated enum FlightNumberParser {
     static func split(_ raw: String) -> (airline: String, number: String)? {
         let s = raw.uppercased().filter { !$0.isWhitespace }
         guard s.count >= 3 else { return nil }
