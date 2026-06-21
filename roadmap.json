@@ -1,5 +1,5 @@
 {
-  "updatedAt": "2026-06-07",
+  "updatedAt": "2026-06-21",
   "sections": [
     {
       "id": "upcoming",
@@ -7,13 +7,6 @@
       "titleEn": "Upcoming",
       "titleZhHant": "即將推出",
       "items": [
-        {
-          "id": "trip-planning",
-          "title": "行程规划",
-          "titleEn": "Trip planning",
-          "titleZhHant": "行程規劃",
-          "status": "in_progress"
-        },
         {
           "id": "calendar-import",
           "title": "从日历导入行程",
@@ -27,6 +20,13 @@
           "titleEn": "Apple Watch app",
           "titleZhHant": "Apple Watch 支援",
           "status": "planned"
+        },
+        {
+          "id": "travel-content",
+          "title": "旅行攻略与着装建议",
+          "titleEn": "Travel guides & outfit tips",
+          "titleZhHant": "旅行攻略與著裝建議",
+          "status": "planned"
         }
       ]
     },
@@ -36,6 +36,69 @@
       "titleEn": "Shipped",
       "titleZhHant": "已上線",
       "items": [
+        {
+          "id": "trip-planning",
+          "title": "行程规划与路线",
+          "titleEn": "Trip planning & routes",
+          "titleZhHant": "行程規劃與路線",
+          "status": "done"
+        },
+        {
+          "id": "flights",
+          "title": "航班（含航班号自动填）",
+          "titleEn": "Flights (auto-fill by number)",
+          "titleZhHant": "航班（含航班號自動填）",
+          "status": "done"
+        },
+        {
+          "id": "lodging",
+          "title": "住宿与租车",
+          "titleEn": "Lodging & car rental",
+          "titleZhHant": "住宿與租車",
+          "status": "done"
+        },
+        {
+          "id": "trip-book",
+          "title": "Trip Book·行程花费",
+          "titleEn": "Trip Book (spending)",
+          "titleZhHant": "Trip Book·行程花費",
+          "status": "done"
+        },
+        {
+          "id": "itinerary-export",
+          "title": "导出行程单 PDF",
+          "titleEn": "Export itinerary (PDF)",
+          "titleZhHant": "匯出行程單 PDF",
+          "status": "done"
+        },
+        {
+          "id": "attachments",
+          "title": "行程附件（文件·照片·链接）",
+          "titleEn": "Trip attachments",
+          "titleZhHant": "行程附件（檔案·相片·連結）",
+          "status": "done"
+        },
+        {
+          "id": "photo-trip",
+          "title": "用照片还原行程",
+          "titleEn": "Rebuild trip from photos",
+          "titleZhHant": "用相片還原行程",
+          "status": "done"
+        },
+        {
+          "id": "overseas-search",
+          "title": "海外地点检索",
+          "titleEn": "Overseas place search",
+          "titleZhHant": "海外地點檢索",
+          "status": "done"
+        },
+        {
+          "id": "trip-reminders",
+          "title": "行程提醒中心",
+          "titleEn": "Trip reminders",
+          "titleZhHant": "行程提醒中心",
+          "status": "done"
+        },
         {
           "id": "icloud-sync",
           "title": "iCloud 同步",

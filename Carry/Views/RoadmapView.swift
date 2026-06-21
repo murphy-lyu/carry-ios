@@ -81,15 +81,24 @@ private struct RoadmapPayload: Codable {
                 id: "upcoming",
                 title: RoadmapL10n.text(en: "Upcoming", zhHans: "即将推出", zhHant: "即將推出"),
                 items: [
-                    RoadmapItem(id: "trip-planning", title: RoadmapL10n.text(en: "Trip planning", zhHans: "行程规划", zhHant: "行程規劃"), status: .inProgress, note: nil),
                     RoadmapItem(id: "calendar-import", title: RoadmapL10n.text(en: "Import trips from Calendar", zhHans: "从日历导入行程", zhHant: "從行事曆匯入行程"), status: .planned, note: nil),
-                    RoadmapItem(id: "apple-watch", title: RoadmapL10n.text(en: "Apple Watch app", zhHans: "Apple Watch 支持", zhHant: "Apple Watch 支援"), status: .planned, note: nil)
+                    RoadmapItem(id: "apple-watch", title: RoadmapL10n.text(en: "Apple Watch app", zhHans: "Apple Watch 支持", zhHant: "Apple Watch 支援"), status: .planned, note: nil),
+                    RoadmapItem(id: "travel-content", title: RoadmapL10n.text(en: "Travel guides & outfit tips", zhHans: "旅行攻略与着装建议", zhHant: "旅行攻略與著裝建議"), status: .planned, note: nil)
                 ]
             ),
             RoadmapSection(
                 id: "done",
                 title: RoadmapL10n.text(en: "Shipped", zhHans: "已上线", zhHant: "已上線"),
                 items: [
+                    RoadmapItem(id: "trip-planning", title: RoadmapL10n.text(en: "Trip planning & routes", zhHans: "行程规划与路线", zhHant: "行程規劃與路線"), status: .done, note: nil),
+                    RoadmapItem(id: "flights", title: RoadmapL10n.text(en: "Flights (auto-fill by number)", zhHans: "航班（含航班号自动填）", zhHant: "航班（含航班號自動填）"), status: .done, note: nil),
+                    RoadmapItem(id: "lodging", title: RoadmapL10n.text(en: "Lodging & car rental", zhHans: "住宿与租车", zhHant: "住宿與租車"), status: .done, note: nil),
+                    RoadmapItem(id: "trip-book", title: RoadmapL10n.text(en: "Trip Book (spending)", zhHans: "Trip Book·行程花费", zhHant: "Trip Book·行程花費"), status: .done, note: nil),
+                    RoadmapItem(id: "itinerary-export", title: RoadmapL10n.text(en: "Export itinerary (PDF)", zhHans: "导出行程单 PDF", zhHant: "匯出行程單 PDF"), status: .done, note: nil),
+                    RoadmapItem(id: "attachments", title: RoadmapL10n.text(en: "Trip attachments", zhHans: "行程附件（文件·照片·链接）", zhHant: "行程附件（檔案·相片·連結）"), status: .done, note: nil),
+                    RoadmapItem(id: "photo-trip", title: RoadmapL10n.text(en: "Rebuild trip from photos", zhHans: "用照片还原行程", zhHant: "用相片還原行程"), status: .done, note: nil),
+                    RoadmapItem(id: "overseas-search", title: RoadmapL10n.text(en: "Overseas place search", zhHans: "海外地点检索", zhHant: "海外地點檢索"), status: .done, note: nil),
+                    RoadmapItem(id: "trip-reminders", title: RoadmapL10n.text(en: "Trip reminders", zhHans: "行程提醒中心", zhHant: "行程提醒中心"), status: .done, note: nil),
                     RoadmapItem(id: "icloud-sync", title: RoadmapL10n.text(en: "iCloud sync", zhHans: "iCloud 同步", zhHant: "iCloud 同步"), status: .done, note: nil),
                     RoadmapItem(id: "destination-info", title: RoadmapL10n.text(en: "Destination info (plugs, voltage, currency)", zhHans: "目的地实用信息（充电插头、电压、货币）", zhHant: "目的地實用資訊（充電插頭、電壓、貨幣）"), status: .done, note: nil),
                     RoadmapItem(id: "weather", title: RoadmapL10n.text(en: "Weather forecast", zhHans: "目的地天气预报", zhHant: "目的地天氣預報"), status: .done, note: nil),
