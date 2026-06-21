@@ -46,19 +46,24 @@ private struct CarryCopyToastView: View {
 /// detent 贴合内容高度（量头部 + 内容求和），长内容在内部滚动。
 /// **刻意只给单一 `.height` detent、不含 `.large`**：系统 `.large`（满屏）会触发 iOS 26
 /// 把弹层「脱离成带两侧边距的浮动卡片」——这正是高内容详情弹出即缩的根因；不进 `.large` 即不缩。
-struct DetailSheetScaffold<Header: View, Content: View>: View {
+struct DetailSheetScaffold<Header: View, Content: View, Footer: View>: View {
     @ViewBuilder var header: Header
     @ViewBuilder var content: Content
+    /// 底部**悬浮动作条**（编辑/移除）：钉在底部、内容从其身后滑过 → 毛玻璃实时模糊，原生工具条质感
+    /// （对标 Tripsy / Apple 地图底栏）。不放进滚动内容里（那样会跟着滚走、且是平卡、没有玻璃透叠）。
+    @ViewBuilder var footer: Footer
 
     @State private var headerHeight: CGFloat = 0
     @State private var contentHeight: CGFloat = 0
+    @State private var footerHeight: CGFloat = 0
     @State private var toastText: String?
     @State private var toastToken = 0
 
     private var detents: Set<PresentationDetent> {
         guard headerHeight > 0, contentHeight > 0 else { return [.medium] }
         // 自算高度走单一真源 cappedContentHeight：钳在屏高以下，绝不顶到满屏触发 iOS 26 脱离（斜滚根因）。
-        return [.cappedContentHeight(headerHeight + contentHeight + 20)]   // +20 ≈ 底部气口
+        // 含 footerHeight：底部动作条经 safeAreaInset 占布局高，detent 须含它（否则 sheet 偏矮、内容被压）。
+        return [.cappedContentHeight(headerHeight + contentHeight + footerHeight + 8)]
     }
 
     var body: some View {
@@ -75,9 +80,18 @@ struct DetailSheetScaffold<Header: View, Content: View>: View {
                     .padding(.horizontal, 20)
                     // 顶部 inset 12：让首卡向上扩散的柔性阴影（r16）渲染在 ScrollView 裁切边界之内，不被顶部切掉。
                     .padding(.top, 12)
-                    .padding(.bottom, 20)
+                    .padding(.bottom, 8)
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .background(heightReader($contentHeight))
+            }
+            // 底部悬浮动作条 = 原生 `safeAreaInset`：框架把内容**顶到栏之上**（不再渗到栏下 / 不从 home indicator 区穿出）。
+            // `bottomBarFade`：内容在栏上沿柔和淡出 + 渐变垫底**自带 ignoresSafeArea、延伸到屏幕底盖住 home indicator**
+            // （与首页/行程列表底栏同款单一真源）。顺框架、不再手动 overlay 对抗安全区。
+            .safeAreaInset(edge: .bottom, spacing: 0) {
+                footer
+                    .padding(.horizontal, 20)
+                    .bottomBarFade(Color.carryCanvas)
+                    .background(heightReader($footerHeight))
             }
         }
         .presentationDetents(detents)
@@ -125,12 +139,18 @@ struct DetailSheetHeader: View {
     var subtitle: String? = nil
     let onClose: () -> Void
 
+    @State private var titleHeight: CGFloat = 0
+    @State private var titleOneLineHeight: CGFloat = 0
+
     private var hasSubtitle: Bool { !(subtitle?.isEmpty ?? true) }
+    private let titleFont = Font.system(.title3, design: .rounded).weight(.semibold)
+    /// 标题是否折行（如超长店名）。判据：实测标题高 > 单行高（同字体强制 1 行的隐藏探针）。
+    private var titleWraps: Bool { titleHeight > titleOneLineHeight + 1 }
 
     var body: some View {
-        // 三元素（图标圈 / 标题块 / 关闭 X）真正按中心对齐——共享一条中线，不再用 `.top` + 手动 padding 凑近似。
-        // 标题最多两行（标题 + 可选副标题），居中读起来稳；超长标题由 VStack 自身换行，图标/X 仍居整块中心。
-        HStack(alignment: .center, spacing: 12) {
+        // 对齐自适应：标题**单行** → 图标/X 与「标题+副标题」块**居中**（短标题最稳，对标 Apple 地图地点卡）；
+        // 标题**折行**（2+ 行）→ 改**顶对齐**，让图标/X 贴第一行、不下沉到中段（避免居中时图标飘到第 2 行旁）。
+        HStack(alignment: titleWraps ? .top : .center, spacing: 12) {
             ZStack {
                 // 0.20（原 0.15）：详情画布改分组灰后，15% 淡填充在灰底上对比变弱、图标圈发灰；
                 // 提到 0.20 让它在灰画布上重新「站住」，并与右侧白色玻璃按钮区分开。
@@ -143,8 +163,9 @@ struct DetailSheetHeader: View {
             .accessibilityHidden(true)
             VStack(alignment: .leading, spacing: 2) {
                 Text(title)
-                    .font(.system(.title3, design: .rounded).weight(.semibold))
+                    .font(titleFont)
                     .foregroundStyle(.primary)
+                    .background(heightReader($titleHeight))   // 量标题实际高（含折行）
                 if let subtitle, hasSubtitle {
                     Text(subtitle)
                         .font(.system(.subheadline, design: .rounded))
@@ -156,6 +177,12 @@ struct DetailSheetHeader: View {
                 .buttonStyle(.plain)
                 .accessibilityLabel(Text("common.close"))
         }
+        // 隐藏单行探针：同字体强制 1 行，量「单行高」作折行判据（高度只读、不影响布局）。
+        .background(
+            Text(title).font(titleFont).lineLimit(1)
+                .hidden()
+                .background(heightReader($titleOneLineHeight))
+        )
     }
 
     private func circleGlyph(_ name: String) -> some View {
@@ -166,6 +193,14 @@ struct DetailSheetHeader: View {
             .glassCircleButton()
             .frame(width: 44, height: 44)
             .contentShape(Rectangle())
+    }
+
+    private func heightReader(_ binding: Binding<CGFloat>) -> some View {
+        GeometryReader { g in
+            Color.clear
+                .onAppear { binding.wrappedValue = g.size.height }
+                .onChange(of: g.size.height) { _, h in binding.wrappedValue = h }
+        }
     }
 }
 
@@ -192,6 +227,9 @@ struct LabeledDetailRow: View {
     let icon: String
     let labelKey: String
     let value: String
+    /// 可选右侧值（如入住/退房的时刻）：与主值分列——主值答「哪一天」靠左，trailing 答「几点」靠右、
+    /// 等宽数字竖直对齐，避免用中点把日期+时间黏成一串（对标 Apple 行程表/票据的列式排版）。
+    var trailing: String? = nil
 
     var body: some View {
         // 图标与「标签+值」整体垂直居中（不贴标签顶）。
@@ -206,6 +244,12 @@ struct LabeledDetailRow: View {
                     .font(.system(.subheadline, design: .rounded)).foregroundStyle(.primary)
             }
             .frame(maxWidth: .infinity, alignment: .leading)
+            if let trailing {
+                // 右列时刻：与主值同级（primary）、等宽数字，跨行竖直对齐成正式时间列。
+                Text(trailing)
+                    .font(.system(.subheadline, design: .rounded)).foregroundStyle(.primary)
+                    .monospacedDigit()
+            }
         }
         .padding(.vertical, 11)
         .accessibilityElement(children: .combine)
@@ -311,37 +355,64 @@ struct NoteDetailRow: View {
 struct DetailActionFooter: View {
     let onEdit: () -> Void
     let onDelete: () -> Void
+    /// 可选「提醒此实体」开关：交通/住宿有（收进 ··· 菜单作 Toggle）；地点无 → 传 nil 不显此项。
+    /// 标签复用现有 mute key（如 `notif.mute.transport` / `notif.mute.lodging`），零新增本地化。
+    var reminderLabelKey: String? = nil
+    var reminderOn: Binding<Bool>? = nil
 
     @State private var confirmingDelete = false
 
     var body: some View {
-        VStack(spacing: 14) {
+        // 两个**分离**的悬浮毛玻璃元件（编辑胶囊 + 独立的 ··· 圆，中间留空）——明确是两个按钮，不是「一个胶囊切两半」。
+        // 由 DetailSheetScaffold 钉在底部、内容从身后滑过 → 毛玻璃实时模糊（对标 Tripsy 那排分离药丸/圆）。
+        HStack(spacing: 10) {
+            // 编辑 = 主操作，独立玻璃胶囊，占满左侧。
             Button(action: onEdit) {
-                HStack(spacing: 6) {
-                    Image(systemName: "pencil").font(.system(size: 14, weight: .semibold))
+                HStack(spacing: 7) {
+                    Image(systemName: "pencil").font(.system(size: 15, weight: .semibold))
                     Text("itinerary.stop.detail.edit")
-                        .font(.system(.subheadline, design: .rounded).weight(.semibold))
+                        .font(.system(.body, design: .rounded).weight(.semibold))
                 }
-                .foregroundStyle(Color.accentColor)
-                .padding(.horizontal, 30)
-                .padding(.vertical, 12)
-                .background(Capsule().fill(Color.accentColor.opacity(0.14)))
+                .foregroundStyle(CarryAccent.color)
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 15)
+                .background(.thickMaterial, in: Capsule())
+                .overlay(Capsule().strokeBorder(Color.primary.opacity(0.07), lineWidth: 0.5))
+                // compositingGroup 先把「毛玻璃 + 描边」拍平成一层，阴影才按胶囊真实轮廓投、不露方形残影。
+                .compositingGroup()
+                .shadow(color: Color.carryCardShadow, radius: 16, x: 0, y: 6)
                 .contentShape(Capsule())
             }
             .buttonStyle(.plain)
+            .accessibilityLabel(Text("itinerary.stop.detail.edit"))
 
-            Button { confirmingDelete = true } label: {
-                Text("common.remove")
-                    .font(.system(.subheadline, design: .rounded))
-                    .foregroundStyle(Color(.systemRed))
-                    .padding(.vertical, 4)
-                    .padding(.horizontal, 12)
-                    .contentShape(Rectangle())
+            // ··· = 独立玻璃圆（溢出菜单：提醒开关 + 移除），与编辑之间留空、是分开的两个按钮。
+            Menu {
+                // ··· 固定在底部 → 菜单恒向上展开；iOS 上展开时「声明越靠前 = 越靠近锚点（底部）」。
+                // 故「移除」声明在最前 → 落到菜单**最底部**（破坏性动作远离主操作、不易误触，对标 Tripsy）。
+                Button(role: .destructive) { confirmingDelete = true } label: {
+                    Label("common.remove", systemImage: "trash")
+                }
+                if let reminderOn, let reminderLabelKey {
+                    Divider()
+                    Toggle(isOn: reminderOn) {
+                        Label(LocalizedStringKey(reminderLabelKey), systemImage: "bell")
+                    }
+                }
+            } label: {
+                Image(systemName: "ellipsis")
+                    .font(.system(size: 17, weight: .semibold))
+                    .foregroundStyle(.secondary)
+                    .frame(width: 52, height: 52)
+                    .background(.thickMaterial, in: Circle())
+                    .overlay(Circle().strokeBorder(Color.primary.opacity(0.07), lineWidth: 0.5))
+                    // compositingGroup 拍平后阴影按圆形真实轮廓投，消除方形残影。
+                    .compositingGroup()
+                    .shadow(color: Color.carryCardShadow, radius: 16, x: 0, y: 6)
+                    .contentShape(Circle())
             }
-            .buttonStyle(.plain)
+            .accessibilityLabel(Text("common.more"))
         }
-        .frame(maxWidth: .infinity)
-        .padding(.top, 4)
         .alert(Text("itinerary.detail.remove_confirm"), isPresented: $confirmingDelete) {
             Button("common.cancel", role: .cancel) {}
             Button("common.remove", role: .destructive, action: onDelete)

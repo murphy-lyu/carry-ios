@@ -181,14 +181,16 @@ struct TransportDetailView: View {
         } content: {
             VStack(alignment: .leading, spacing: 16) {
                 routeCard
-                directionsCard
+                // 导航排在详情之后（与地点/景点/住宿统一：[实体信息] → 导航 → 费用 → 备注）。
                 detailsCard
+                directionsCard
                 costCard
                 noteCard
                 AttachmentDetailCard(attachments: segment.attachments ?? [])
-                muteCard
-                DetailActionFooter(onEdit: { editing = true }, onDelete: deleteSegment)
             }
+        } footer: {
+            DetailActionFooter(onEdit: { editing = true }, onDelete: deleteSegment,
+                               reminderLabelKey: reminderMenuKey, reminderOn: reminderBinding)
         }
         .sheet(isPresented: $editing) {
             TransportEditView(tripId: tripId, segmentId: segment.id)
@@ -456,16 +458,6 @@ struct TransportDetailView: View {
 
     private var detailRows: [AnyView] {
         var rows: [AnyView] = []
-        // 租车租期（派生、只读）：取/还车跨天数，与住宿「晚数」同款。≥1 天才显（同天租赁由日期自明）。
-        if segment.mode == .carRental {
-            let days = segment.arriveDayOrder - segment.departDayOrder
-            if days >= 1 {
-                rows.append(AnyView(LabeledDetailRow(
-                    icon: "calendar",
-                    labelKey: days == 1 ? "itinerary.transport.field.days.one" : "itinerary.transport.field.days",
-                    value: "\(days)")))
-            }
-        }
         // 随身要用的凭据（座位 / 确认号）：登机/检票时最先要找的，优先级高于描述性规格。
         if !segment.seat.isEmpty {
             rows.append(AnyView(LabeledDetailRow(icon: "chair", labelKey: "itinerary.transport.field.seat", value: segment.seat)))
@@ -489,17 +481,29 @@ struct TransportDetailView: View {
         if !segment.phone.isEmpty {
             rows.append(AnyView(CallableDetailRow(labelKey: "itinerary.transport.field.phone", phone: segment.phone)))
         }
+        // 租车租期（派生、只读）排在凭据/识别/联系之后——与航班「时长」同属描述性、最次要（取车日期已在顶部地址卡）。
+        // ≥1 天才显（同天租赁由日期自明），与住宿「晚数」同款。
+        if segment.mode == .carRental {
+            let days = segment.arriveDayOrder - segment.departDayOrder
+            if days >= 1 {
+                rows.append(AnyView(LabeledDetailRow(
+                    icon: "calendar",
+                    labelKey: days == 1 ? "itinerary.transport.field.days.one" : "itinerary.transport.field.days",
+                    value: "\(days)")))
+            }
+        }
         // 描述性规格（时长 → 机型 → 距离）：刻画这趟行程本身、属"了解一下"，按有用程度排，距离最次要。
         // 飞行时长放明细列表（与距离/机型一组，对标 Tripsy「航班时长」），不挤进 hero。
         if segment.durationMinutes > 0 {
             rows.append(AnyView(LabeledDetailRow(icon: "clock", labelKey: "itinerary.flight.field.duration", value: durationText(segment.durationMinutes))))
         }
-        if !segment.aircraftType.isEmpty {
-            rows.append(AnyView(LabeledDetailRow(icon: "airplane", labelKey: "itinerary.flight.field.aircraft", value: aircraftModelDisplay(segment.aircraftType))))
-        }
+        // 距离在前、机型在后（用户指定顺序：时长 → 距离 → 机型）。
         if segment.distanceMeters > 0 {
             rows.append(AnyView(LabeledDetailRow(icon: "ruler", labelKey: "itinerary.flight.field.distance",
                                                  value: CarryDistanceFormat.string(meters: segment.distanceMeters, unit: distanceUnit))))
+        }
+        if !segment.aircraftType.isEmpty {
+            rows.append(AnyView(LabeledDetailRow(icon: "airplane", labelKey: "itinerary.flight.field.aircraft", value: aircraftModelDisplay(segment.aircraftType))))
         }
         return rows
     }
@@ -519,26 +523,17 @@ struct TransportDetailView: View {
         }
     }
 
-    /// 逐段静音（spec: notification-center.md）：仅当此段有时刻（可能产生提醒）时才显。
-    /// 开关「接收提醒」开=不静音；关=静音此段，不随全局规则提醒。
-    @ViewBuilder
-    private var muteCard: some View {
-        if segment.departLocalMinutes >= 0 || segment.arriveLocalMinutes >= 0 {
-            DetailRowGroup(rows: [AnyView(
-                HStack(spacing: 12) {
-                    Image(systemName: segment.remindersMuted ? "bell.slash" : "bell")
-                        .font(.system(size: 15)).foregroundStyle(.secondary).frame(width: 22)
-                    Text(segment.mode == .carRental ? "notif.mute.carrental" : "notif.mute.transport")
-                        .font(.subheadline)
-                    Spacer()
-                    Toggle("", isOn: Binding(
-                        get: { !segment.remindersMuted },
-                        set: { store.setTransportReminderMuted(tripId: tripId, segmentId: segment.id, muted: !$0) }
-                    )).labelsHidden().tint(CarryAccent.color)
-                }
-                .padding(.vertical, 8)
-            )])
-        }
+    /// 「提醒此段」收进底部动作条的 ··· 菜单（替代原 muteCard 卡）：仅当此段有时刻（可能产生提醒）时才提供。
+    /// 开关「接收提醒」开=不静音；关=静音此段，不随全局规则提醒（spec: notification-center.md）。
+    private var reminderApplicable: Bool { segment.departLocalMinutes >= 0 || segment.arriveLocalMinutes >= 0 }
+    private var reminderMenuKey: String? {
+        guard reminderApplicable else { return nil }
+        return segment.mode == .carRental ? "notif.mute.carrental" : "notif.mute.transport"
+    }
+    private var reminderBinding: Binding<Bool>? {
+        guard reminderApplicable else { return nil }
+        return Binding(get: { !segment.remindersMuted },
+                       set: { store.setTransportReminderMuted(tripId: tripId, segmentId: segment.id, muted: !$0) })
     }
 
     // 底部动作（编辑 + 移除）已统一收到 `DetailActionFooter`。

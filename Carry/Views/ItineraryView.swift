@@ -1352,8 +1352,9 @@ struct StopDetailView: View {
                 costCard
                 noteCard
                 AttachmentDetailCard(attachments: stop.attachments ?? [])
-                DetailActionFooter(onEdit: { editing = true }, onDelete: deleteStop)
             }
+        } footer: {
+            DetailActionFooter(onEdit: { editing = true }, onDelete: deleteStop)
         }
         // 编辑钻入到详情之上：保存后回到详情（@Model 可观察、详情自动反映新值），再下滑关。
         .sheet(isPresented: $editing) {
@@ -1405,19 +1406,25 @@ struct StopDetailView: View {
             iconSystemName: stop.category.symbolName,
             iconTint: dayColor,
             title: stop.name,
-            subtitle: stopDateSubtitle,
+            subtitle: stopScheduleSubtitle,
             onClose: { dismiss() }
         )
     }
 
-    /// 地点所在那天的绝对日期（周几·月·日）——作头部副标题（对标 Apple 地图地点卡「名称 + 一行上下文」，
-    /// 头部结构 图标+标题+副标题 与交通详情统一）。无日期行程为 nil；格式与交通端点/住宿/Day 头一致（单一口径）。
-    private var stopDateSubtitle: String? {
-        guard let bundle = store.bundle(for: tripId), !bundle.isDateless,
-              let order = stop.day?.sortOrder else { return nil }
-        let start = Calendar.current.startOfDay(for: bundle.departureDate)
-        let date = Calendar.current.date(byAdding: .day, value: order, to: start) ?? start
-        return date.formatted(.dateTime.weekday(.abbreviated).month(.abbreviated).day())
+    /// 头部副标题 =「行程时间」：日期 + 时间区间（如 `Sat, May 2 · 21:00–21:20`）。把「这一站排在何时」（schedule
+    /// 属性）聚到头部，与卡内「地点信息」（地址/电话）分离——对标 Apple 地图/日历「标题 + 日期·时间」范式（north-star §9）。
+    /// 无日期行程只显时间、无时间只显日期、都无则 nil。格式与交通端点/住宿/Day 头一致（单一口径）。
+    private var stopScheduleSubtitle: String? {
+        let datePart: String? = {
+            guard let bundle = store.bundle(for: tripId), !bundle.isDateless,
+                  let order = stop.day?.sortOrder else { return nil }
+            let start = Calendar.current.startOfDay(for: bundle.departureDate)
+            let date = Calendar.current.date(byAdding: .day, value: order, to: start) ?? start
+            return date.formatted(.dateTime.weekday(.abbreviated).month(.abbreviated).day())
+        }()
+        let timePart: String? = stop.plannedStartMinutes >= 0 ? timeRangeLabel : nil
+        let parts = [datePart, timePart].compactMap { $0 }
+        return parts.isEmpty ? nil : parts.joined(separator: " · ")
     }
 
     private func deleteStop() {
@@ -1451,11 +1458,8 @@ struct StopDetailView: View {
 
     private var infoRowViews: [AnyView] {
         var rows: [AnyView] = []
-        // Time 行只放时间（标签=值，语义对齐）；日期是「哪天」的上下文 → 放头部副标题（见 stopDateSubtitle），
-        // 不塞进「Time」行造成「时间标签显日期」的错配。统一靠「日期的处理方式」一致、而非强求同槽位。
-        if stop.plannedStartMinutes >= 0 {
-            rows.append(AnyView(LabeledDetailRow(icon: "clock", labelKey: "itinerary.transport.field.time", value: timeRangeLabel)))
-        }
+        // 「行程时间」（日期 + 时间）已移到头部副标题（schedule 属性，见 stopScheduleSubtitle）；
+        // 此卡只放**地点固有信息**：地址 + 电话——schedule 与 place-info 分离（B1，north-star §1/§9）。
         // 地址（去到这里要用的定位）排在费用之前——费用属财务、现场执行时不是首要信息。
         if stop.hasCoordinate && !stop.address.isEmpty {
             rows.append(AnyView(CopyableDetailRow(icon: "mappin.and.ellipse", labelKey: "itinerary.lodging.field.address", value: stop.address)))
