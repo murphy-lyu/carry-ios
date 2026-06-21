@@ -1,6 +1,11 @@
 # 行程时区系统化（Itinerary Time Zones）
 
-**Status:** Phase 1 ✅ Shipped（commit `88382eb`）· Phase 2 ✅ Shipped（Day 头部时区小标）· Phase 3 ⏸ 待设计确认
+**Status:** Phase 1 ✅ · Phase 2 ✅ · Phase 3 ✅（兜底切换器 + 航班详情两端时区，commit `fba1fd3`/`9be773e`，编译绿、待 UI 验收）
+
+> **Phase 3 + 详情卡（2026-06-21 续）**
+> - **兜底时区切换器**：时间选择器(`ItineraryTimePickerSheet`)底部加安静的「时区」行——**仅多时区行程 / 自动推导失败时**出现，默认显推导出的时区，点开进可搜索的 `TimeZonePickerSheet`(顶部「自动(按地点)」可复位)。已接交通两端 + 住宿；**地点(stop)暂未接**(地点时区从搜索可靠捕获、override 最不需要，留作小后续)。
+> - **航班详情卡两端时区**：仅「两端跨时区」的交通在出发/到达时刻下显各自 `GMT±N`——消除「PVG 时刻 vs CDG 时刻不同区」的歧义(详情里唯一真有歧义处；普通活动不显)。
+> - 文案 `itinerary.timezone.{field,auto,picker.title,search}` × 9 语言已补。
 **提出:** 2026-06-21（对应长期 TODO「全 App 时区未系统化」）
 
 > **实现进度（2026-06-21 夜）**
