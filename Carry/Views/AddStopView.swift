@@ -192,13 +192,16 @@ final class StopSearchCompleter: NSObject, ObservableObject, MKLocalSearchComple
         guard let response = try? await MKLocalSearch(request: request).start() else { return nil }
         let item = response.mapItems.first
         let coord = item?.placemark.coordinate
+        // 中国大陆境内地理时区（新疆/西藏的 Asia/Urumqi 等）归一到北京时间——当地航班/酒店都按北京时间，
+        // 避免纯国内行程被误判为跨时区（见 TimeZoneCanonicalizer）。境外时区不受影响。
+        let rawZone = item?.timeZone?.identifier ?? item?.placemark.timeZone?.identifier ?? ""
         return ResolvedPlace(
             name: completion.title,
             latitude: coord?.latitude ?? 0,
             longitude: coord?.longitude ?? 0,
             address: item?.placemark.title ?? completion.subtitle,
             phone: item?.phoneNumber ?? "",
-            timeZoneId: item?.timeZone?.identifier ?? item?.placemark.timeZone?.identifier ?? ""
+            timeZoneId: TimeZoneCanonicalizer.canonical(rawZone)
         )
     }
 }

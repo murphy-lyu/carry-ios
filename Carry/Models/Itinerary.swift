@@ -728,6 +728,21 @@ extension TripBundle {
     }
 }
 
+/// 时区归一化：中国大陆全国统一民用「北京时间」（GMT+8）。
+/// MapKit / 按坐标查时区时，新疆/西藏等地理上属 UTC+6，可能给出 `Asia/Urumqi`、`Asia/Kashgar` 等——
+/// 但当地航班/酒店/营业时间一律按北京时间，对旅行规划而言相关时区就是北京时间。故把这些大陆境内别名
+/// 统一归到 `Asia/Shanghai`，避免纯国内行程（如重庆→伊宁）被误判为「跨时区」而显示无意义的时区标签。
+/// 只动**中国大陆境内**别名；港澳（独立法域）与一切境外时区不受影响。
+enum TimeZoneCanonicalizer {
+    private static let mainlandChinaAliases: Set<String> = [
+        "Asia/Urumqi", "Asia/Kashgar", "Asia/Harbin", "Asia/Chongqing", "Asia/Chungking",
+    ]
+    /// 归一后的 IANA 时区 id；非大陆别名原样返回（空串也原样返回）。
+    static func canonical(_ id: String) -> String {
+        mainlandChinaAliases.contains(id) ? "Asia/Shanghai" : id
+    }
+}
+
 extension ItineraryStop {
     /// 该地点的有效时区（自身缺失则回退行程主时区）。
     func effectiveTimeZoneId(trip: TripBundle?) -> String {

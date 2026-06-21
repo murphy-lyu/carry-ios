@@ -670,7 +670,7 @@ final class DataBackupManager {
                     fromPhotos: bs.fromPhotos ?? false
                 )
                 stop.phone = bs.phone ?? ""
-                stop.timeZoneId = bs.timeZoneId ?? ""
+                stop.timeZoneId = TimeZoneCanonicalizer.canonical(bs.timeZoneId ?? "")   // 大陆境内别名归北京时间
                 stop.id = bs.id
                 stop.day = day
                 context.insert(stop)
@@ -697,11 +697,11 @@ final class DataBackupManager {
                     carrier: bg.carrier, number: bg.number,
                     fromName: bg.fromName, fromCode: bg.fromCode,
                     fromLatitude: bg.fromLatitude, fromLongitude: bg.fromLongitude,
-                    fromTimeZoneId: bg.fromTimeZoneId, fromTerminal: bg.fromTerminal,
+                    fromTimeZoneId: TimeZoneCanonicalizer.canonical(bg.fromTimeZoneId), fromTerminal: bg.fromTerminal,
                     fromAddress: bg.fromAddress ?? "",
                     toName: bg.toName, toCode: bg.toCode,
                     toLatitude: bg.toLatitude, toLongitude: bg.toLongitude,
-                    toTimeZoneId: bg.toTimeZoneId, toTerminal: bg.toTerminal,
+                    toTimeZoneId: TimeZoneCanonicalizer.canonical(bg.toTimeZoneId), toTerminal: bg.toTerminal,
                     toAddress: bg.toAddress ?? "",
                     departDayOrder: bg.departDayOrder, departLocalMinutes: bg.departLocalMinutes,
                     arriveDayOrder: bg.arriveDayOrder, arriveLocalMinutes: bg.arriveLocalMinutes,
@@ -742,7 +742,7 @@ final class DataBackupManager {
             )
             stay.id = bl.id
             stay.remindersMuted = bl.remindersMuted ?? false
-            stay.timeZoneId = bl.timeZoneId ?? ""
+            stay.timeZoneId = TimeZoneCanonicalizer.canonical(bl.timeZoneId ?? "")   // 大陆境内别名归北京时间
             stay.bundle = trip
             context.insert(stay)
             for a in makeAttachments(bl.attachments, into: context) { a.stay = stay }
