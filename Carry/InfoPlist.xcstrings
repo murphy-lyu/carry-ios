@@ -78,55 +78,55 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Carry fügt deine Reisen und eine Pack-Erinnerung zu deinem Kalender hinzu, damit du keine Abreise verpasst."
+            "value" : "Carry fügt deine Reisen und Pack-Erinnerungen zu deinem Kalender hinzu und kann deine vorhandenen Termine neben deinem Reiseplan anzeigen. Diese Daten bleiben auf deinem Gerät."
           }
         },
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Carry adds your trips and a pack reminder to your calendar so you never miss a departure."
+            "value" : "Carry adds your trips and packing reminders to your calendar, and can show your existing events alongside your itinerary. This data stays on your device."
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Carry añade tus viajes y un recordatorio para hacer la maleta a tu calendario para que nunca pierdas una salida."
+            "value" : "Carry añade tus viajes y recordatorios de equipaje a tu calendario y puede mostrar tus eventos existentes junto a tu itinerario. Estos datos permanecen en tu dispositivo."
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Carry ajoute vos voyages et un rappel de bagages à votre calendrier pour ne jamais manquer un départ."
+            "value" : "Carry ajoute vos voyages et rappels de bagages à votre calendrier et peut afficher vos événements existants à côté de votre itinéraire. Ces données restent sur votre appareil."
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "出発を見逃さないよう、旅行と荷造りのリマインダーをカレンダーに追加する。"
+            "value" : "旅行と荷造りのリマインダーをカレンダーに追加し、既存の予定を旅程の横に表示することもできます。これらのデータは端末内に保持されます。"
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "출발을 놓치지 않도록 여행과 짐 싸기 알림을 캘린더에 추가합니다."
+            "value" : "여행과 짐 싸기 알림을 캘린더에 추가하고, 기존 일정을 여정 옆에 함께 표시할 수 있습니다. 이 데이터는 기기에 남습니다."
           }
         },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "O Carry adiciona suas viagens e um lembrete de arrumar a mala ao seu calendário para você nunca perder uma partida."
+            "value" : "O Carry adiciona suas viagens e lembretes de bagagem ao seu calendário e pode mostrar seus eventos existentes ao lado do seu itinerário. Esses dados permanecem no seu dispositivo."
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "启程会将你的行程和打包提醒添加到日历，让你不错过任何一次出发。"
+            "value" : "启程把你的行程和打包提醒写入日历，并可将你已有的日历事件叠加显示在行程旁。相关数据仅保留在你的设备上。"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "啟程會將你的行程和打包提醒加入行事曆，讓你不錯過任何一次出發。"
+            "value" : "啟程把你的行程和打包提醒寫入行事曆，並可將你既有的行事曆活動疊加顯示在行程旁。相關資料僅保留在你的裝置上。"
           }
         }
       }
@@ -239,13 +239,13 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "启程在本机读取您的经期记录，以便在行程可能赶上经期时提醒您携带相关物品。这些数据仅保留在您的设备上，绝不会上传。"
+            "value" : "启程在本机读取你的经期记录，以便在行程可能赶上经期时提醒你携带相关物品。这些数据仅保留在你的设备上，绝不会上传。"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "啟程在本機讀取您的生理期記錄，以便在行程可能遇上生理期時提醒您攜帶相關物品。這些資料僅保留在您的裝置上，絕不會上傳。"
+            "value" : "啟程在本機讀取你的生理期記錄，以便在行程可能遇上生理期時提醒你攜帶相關物品。這些資料僅保留在你的裝置上，絕不會上傳。"
           }
         }
       }
@@ -299,13 +299,13 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "启程使用您的位置在旅行地图上显示您的当前位置。"
+            "value" : "启程使用你的位置在旅行地图上显示你的当前位置。"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "啟程使用您的位置在旅行地圖上顯示您目前的位置。"
+            "value" : "啟程使用你的位置在旅行地圖上顯示你目前的位置。"
           }
         }
       }

@@ -145,11 +145,11 @@ extension ReminderPreferences {
         get { int(packProgressOffsetKey, default: 1) }
         set { UserDefaults.standard.set(newValue, forKey: packProgressOffsetKey) }
     }
-    /// 打包提醒**独立时间**（自午夜分钟）。默认 1200=20:00——打包发生在出发前一晚，
+    /// 打包提醒**独立时间**（自午夜分钟）。默认 1260=21:00——打包发生在出发前一晚，
     /// 与出发提醒（清晨倒计时）刻意分开。
     static let packMinutesKey = "carry.notif.pack_minutes"
     static var packReminderMinutes: Int {
-        get { int(packMinutesKey, default: 1200) }
+        get { int(packMinutesKey, default: 1260) }
         set { UserDefaults.standard.set(newValue, forKey: packMinutesKey) }
     }
 
@@ -173,29 +173,25 @@ extension ReminderPreferences {
         get { bool(carRentalEnabledKey, default: false) }  // 默认关
         set { UserDefaults.standard.set(newValue, forKey: carRentalEnabledKey) }
     }
-    /// 还车前多少分钟提醒；可多条。默认 [180]=3 小时（同日，正文「今天 X 还车」才成立）。
+    /// 还车前多少分钟提醒；可多条。默认 [60]=1 小时（同日，正文「今天 X 还车」才成立）。
     static var carRentalLeadsMinutes: [Int] {
-        get { intList(carRentalLeadsKey, default: [180]) }
+        get { intList(carRentalLeadsKey, default: [60]) }
         set { setIntList(carRentalLeadsKey, newValue) }
     }
 
-    // MARK: 住宿提醒（B，默认关）——入住当天时刻 + 退房前提前量
+    // MARK: 住宿提醒（C 类，行程日锚，默认关）——退房当天清晨固定时刻（只退房、入住不提醒）
+    // 退房本质是「当天 deadline 前撤离」、人已在房间，不是「提前赶去」的交通型事件——故用
+    // 清晨唤醒锚（同出发提醒/每日摘要），而非提前量倒计时。
     static let lodgingEnabledKey = "carry.notif.lodging_enabled"
-    static let lodgingCheckInMinKey = "carry.notif.lodging_checkin_min"
-    static let lodgingCheckOutLeadKey = "carry.notif.lodging_checkout_lead_min"
+    static let lodgingCheckOutMinKey = "carry.notif.lodging_checkout_min"
     static var lodgingEnabled: Bool {
         get { bool(lodgingEnabledKey, default: false) }
         set { UserDefaults.standard.set(newValue, forKey: lodgingEnabledKey) }
     }
-    /// 入住当天提醒时刻（自午夜分钟）。默认 540=09:00。
-    static var lodgingCheckInMinutes: Int {
-        get { int(lodgingCheckInMinKey, default: 540) }
-        set { UserDefaults.standard.set(newValue, forKey: lodgingCheckInMinKey) }
-    }
-    /// 退房前提前量（分钟）。默认 180=3 小时（同日，正文「今天退房」才成立）。
-    static var lodgingCheckOutLeadMinutes: Int {
-        get { int(lodgingCheckOutLeadKey, default: 180) }
-        set { UserDefaults.standard.set(newValue, forKey: lodgingCheckOutLeadKey) }
+    /// 退房当天提醒时刻（自午夜分钟）。默认 540=09:00。
+    static var lodgingCheckOutMinutes: Int {
+        get { int(lodgingCheckOutMinKey, default: 540) }
+        set { UserDefaults.standard.set(newValue, forKey: lodgingCheckOutMinKey) }
     }
 
     // MARK: 每日行程摘要（C，默认关）
@@ -205,9 +201,9 @@ extension ReminderPreferences {
         get { bool(dailySummaryEnabledKey, default: false) }
         set { UserDefaults.standard.set(newValue, forKey: dailySummaryEnabledKey) }
     }
-    /// 每个行程日的推送时刻（自午夜分钟）。默认 480=08:00。
+    /// 每个行程日的推送时刻（自午夜分钟）。默认 540=09:00。
     static var dailySummaryMinutes: Int {
-        get { int(dailySummaryMinKey, default: 480) }
+        get { int(dailySummaryMinKey, default: 540) }
         set { UserDefaults.standard.set(newValue, forKey: dailySummaryMinKey) }
     }
 }

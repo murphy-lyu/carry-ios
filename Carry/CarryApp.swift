@@ -70,6 +70,14 @@ struct CarryApp: App {
                     // 注册通知委托，让打包提醒点击后直接跳到对应行程
                     notificationDelegate.router = router
                     UNUserNotificationCenter.current().delegate = notificationDelegate
+                    // 注：冷启动的通知重排放在 TripStore.init 的 Task 里（fetchTrips 之后、trips 已加载时），
+                    // 不在此处——否则 trips 还空就重排会把已排通知全删（spec: notification-budget.md）。
+                }
+                .onReceive(NotificationCenter.default.publisher(
+                    for: UIApplication.willEnterForegroundNotification)
+                ) { _ in
+                    // 回前台滚动补位（此时 trips 早已加载；冷启动由 TripStore.init 覆盖、不在此重复）。
+                    store.refreshNotifications()
                 }
                 .onOpenURL { url in
                     // 同行者发来的行程文件（.carrytrip）：读摘要 → 交给 ContentView 弹确认导入。

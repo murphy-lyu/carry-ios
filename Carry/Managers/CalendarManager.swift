@@ -270,6 +270,21 @@ final class CalendarManager {
         }
     }
 
+    /// 删除 Carry 写入的**全部**日历事件（用于「抹掉所有数据」，spec: erase-all-data.md）。
+    /// 直接移除整个 Carry 日历容器、连带其所有事件一次清掉，并清空 addedIds；按标题查找、不创建
+    /// （避免无日历时被 find-or-create 反而新建）。无权限 / 无该日历 → 仅清 addedIds。
+    func removeAllCarryEvents() {
+        saveAddedIds([])
+        guard hasAccess,
+              let cal = store.calendars(for: .event).first(where: { $0.title == Self.calendarTitle })
+        else { return }
+        do {
+            try store.removeCalendar(cal, commit: true)
+        } catch {
+            CarryLogger.shared.log(.calendarSaveFailed, context: "removeAll: \(error.localizedDescription)")
+        }
+    }
+
     /// 更新某行程在 Carry 日历里的事件（先删除旧的，再按当前数据重写）。
     /// 仅在 `calendar_sync_enabled` 且行程未删除时调用；内部不再检查开关，调用方负责。
     func updateTrip(_ trip: TripBundle) {

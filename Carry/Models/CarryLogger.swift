@@ -51,6 +51,7 @@ final class CarryLogger {
         case backupWriteFailed      = "backup_write_failed"
         case backupSafetyCopyCreated = "backup_safety_copy_created"
         case backupCorrupted        = "backup_corrupted"
+        case allDataErased          = "all_data_erased"
         // 从 Tripsy 导入（spec: tripsy-import.md）
         case tripsyImportStarted    = "tripsy_import_started"
         case tripsyImportSucceeded  = "tripsy_import_succeeded"

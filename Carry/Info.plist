@@ -18,7 +18,9 @@
 	<key>NSCameraUsageDescription</key>
 	<string>Carry uses the camera so you can photograph documents — like a rental contract or hotel confirmation — and attach them to your trip. Photos are stored only on your device.</string>
 	<key>NSCalendarsFullAccessUsageDescription</key>
-	<string>Carry adds your trips and a pack reminder to your calendar so you never miss a departure.</string>
+	<string>Carry adds your trips and packing reminders to your calendar, and can show your existing events alongside your itinerary. This data stays on your device.</string>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>Carry uses your location to show your current position on the travel map.</string>
 	<key>NSHealthShareUsageDescription</key>
 	<string>Carry reads your Cycle Tracking on-device to remind you to pack period essentials when a trip may overlap your period. This data never leaves your device.</string>
 	<key>NSSupportsLiveActivities</key>

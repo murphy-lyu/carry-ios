@@ -86,6 +86,14 @@ struct AboutView: View {
                     }
                 }
 
+                // 海外地点检索服务商署名：Mapbox ToS 与 OpenStreetMap（Geoapify 数据源）ODbL 均要求标注。
+                moduleCard(title: "about.providers") {
+                    VStack(spacing: 0) {
+                        socialRow(label: "Mapbox", handle: "© Mapbox", url: "https://www.mapbox.com/about/maps/")
+                        socialRow(label: "OpenStreetMap", handle: "© OpenStreetMap", url: "https://www.openstreetmap.org/copyright")
+                    }
+                }
+
                 VStack(spacing: 12) {
                     HStack(spacing: 6) {
                         Text("about.madeWith")

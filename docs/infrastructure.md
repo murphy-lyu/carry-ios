@@ -28,6 +28,7 @@
 - 设/换 secret：`npx wrangler secret put <NAME>`（值等提示符出现再粘）。
 - **云控开关 `OVERSEAS_POLICY`**：`all`（默认，都开）/ `cn_only`（仅大陆 storefront）/ `off`（全关）。改 `wrangler.toml` 后 `deploy`；或后台 Settings→Variables 即时改（但下次 deploy 会被 wrangler.toml 覆盖，记得同步）。
 - **云控开关 `SEARCH_PROVIDER`**：`auto`（默认，Mapbox 主 + Geoapify 自动降级，主源**硬失败**才切）/ `mapbox`（仅主）/ `geoapify`（仅备）。Mapbox 出问题（额度/故障）时改这里即切到 Geoapify，零发版救老用户。suggest 结果 id 带 `mb:`/`ga:` 前缀，`/retrieve` 据此路由回正确来源；Geoapify 把 retrieve 所需数据塞进 id（base64url），离线解析、不二次请求。
+  - ⚠️ **接入 Mapbox / Geoapify 之外的新服务商时，必须同步更新隐私政策的服务商名单**（carry-legal `privacy/zh.html` + `privacy/index.html` 第 5 节「地点检索」段，现列举「Mapbox 或 Geoapify」）——否则会出现「实际把检索词发给了未披露的第三方」的合规失真。这是「列举式披露」的唯一维护点。
 
 ## 3. 第三方服务
 
