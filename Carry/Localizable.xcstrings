@@ -53463,55 +53463,55 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Reisen werden zu einem Kalender namens „Carry“ hinzugefügt. Falls sie nicht erscheinen, aktiviere „Carry“ in der Kalenderliste der Kalender-App."
+            "value" : "Reisen kommen in einen Kalender namens „Carry“. Erscheinen sie nicht, aktiviere „Carry“ in der Kalender-App."
           }
         },
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Trips are added to a calendar named \"Carry.\" If they don’t appear, open the Calendar app and enable \"Carry\" in your calendar list."
+            "value" : "Trips go to a calendar named \"Carry.\" If they don’t appear, enable \"Carry\" in the Calendar app."
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Los viajes se añaden a un calendario llamado «Carry». Si no aparecen, activa «Carry» en la lista de calendarios de la app Calendario."
+            "value" : "Los viajes van a un calendario llamado «Carry». Si no aparecen, activa «Carry» en la app Calendario."
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Les voyages sont ajoutés à un calendrier nommé « Carry ». S’ils n’apparaissent pas, activez « Carry » dans la liste des calendriers de l’app Calendrier."
+            "value" : "Les voyages vont dans un calendrier nommé « Carry ». S’ils n’apparaissent pas, activez « Carry » dans l’app Calendrier."
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "旅行は「Carry」という名前のカレンダーに追加されます。表示されない場合は、カレンダーAppのカレンダー一覧で「Carry」をオンにしてください。"
+            "value" : "旅行は「Carry」カレンダーに追加されます。表示されない場合は、カレンダーAppで「Carry」をオンにしてください。"
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "여행은 \"Carry\" 캘린더에 추가돼요. 표시되지 않으면 캘린더 앱의 캘린더 목록에서 \"Carry\"를 켜 주세요."
+            "value" : "여행은 \"Carry\" 캘린더에 추가돼요. 표시되지 않으면 캘린더 앱에서 \"Carry\"를 켜 주세요."
           }
         },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "As viagens são adicionadas a um calendário chamado \"Carry\". Se não aparecerem, ative \"Carry\" na lista de calendários do app Calendário."
+            "value" : "As viagens vão para um calendário chamado \"Carry\". Se não aparecerem, ative \"Carry\" no app Calendário."
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "行程会添加到名为「Carry」的日历。若未显示，请在「日历」App 的日历列表中勾选「Carry」。"
+            "value" : "行程会加入名为「Carry」的日历。若未显示，请在「日历」App 中勾选「Carry」。"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "行程會加入名為「Carry」的日曆。若未顯示，請在「日曆」App 的日曆列表中勾選「Carry」。"
+            "value" : "行程會加入名為「Carry」的日曆。若未顯示，請在「日曆」App 中勾選「Carry」。"
           }
         }
       }
