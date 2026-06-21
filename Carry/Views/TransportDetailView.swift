@@ -32,6 +32,8 @@ struct TransportDetailView: View {
     @EnvironmentObject var store: TripStore
     @Environment(\.dismiss) private var dismiss
     @State private var editing = false
+    /// IATA 码 → 本地化机场名，详情出现时经 `.task` 后台按需解析（解析前回落存的原文）。
+    @State private var airportNames: [String: String] = [:]
     @AppStorage("distance_unit") private var distanceUnitRaw = DistanceUnit.automatic.rawValue
     private var distanceUnit: DistanceUnit { DistanceUnit(rawValue: distanceUnitRaw) ?? .automatic }
 
@@ -113,9 +115,29 @@ struct TransportDetailView: View {
     }
 
     /// 机场名按界面语言显示：码命中机场目录则用本地化名，否则回落存的原文（非机场地点/未收录机场不受影响）。
-    /// 同步取自 `AirportCatalog`（单一数据源、启动已预热）→ 首帧即正确、无异步刷新闪烁。
+    /// 名字经 `.task` 在**后台按需**解析（见 `resolveAirportNames`）：详情出现才加载机场库、且不卡主线程；
+    /// 解析前先显存的原文、解析后刷新（首次开某航班详情时机场名那行有一瞬「英→中」，次要、可接受——
+    /// 换来「不用航班的用户零开销」，松解记录见 spec: itinerary-flight-name-localization.md）。
     private func localizedAirportName(code: String, fallback: String) -> String {
-        AirportCatalog.airport(forIATA: code)?.displayName ?? fallback
+        let key = code.trimmingCharacters(in: .whitespaces).uppercased()
+        if !key.isEmpty, let name = airportNames[key] { return name }
+        return fallback
+    }
+
+    /// 在**后台线程**按码解析起讫机场的本地化名（`Task.detached` 把 1.6M 机场库的懒加载/解码放离主线程，
+    /// 不卡 UI），解析完回主线程写 `@State`。仅当存了 IATA 码。
+    private func resolveAirportNames() async {
+        let codes = [segment.fromCode, segment.toCode]
+        let resolved = await Task.detached { () -> [String: String] in
+            var m: [String: String] = [:]
+            for code in codes {
+                let key = code.trimmingCharacters(in: .whitespaces).uppercased()
+                guard !key.isEmpty, m[key] == nil, let a = AirportCatalog.airport(forIATA: key) else { continue }
+                m[key] = a.displayName
+            }
+            return m
+        }.value
+        airportNames = resolved
     }
 
     /// 航站楼显示：仅航班、且值以数字开头时加「T」前缀（2 → T2，国际通用航站楼记法）。
@@ -150,6 +172,7 @@ struct TransportDetailView: View {
         .sheet(isPresented: $editing) {
             TransportEditView(tripId: tripId, segmentId: segment.id)
         }
+        .task(id: segment.id) { await resolveAirportNames() }
     }
 
     private var header: some View {

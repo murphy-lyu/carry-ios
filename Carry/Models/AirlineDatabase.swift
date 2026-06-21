@@ -60,9 +60,6 @@ nonisolated enum AirlineDatabase {
         }
     }()
 
-    /// 启动时后台预热：强制解码进内存，避免首个航班行渲染时的一次性小解码（225K，~ms 级）。
-    static func preload() { _ = byIATA }
-
     /// 按 IATA 航司码（2 位，大小写不敏感）查航司，无则 nil。
     static func airline(forIATA code: String) -> Airline? {
         let key = code.trimmingCharacters(in: .whitespaces).uppercased()

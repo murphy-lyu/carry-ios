@@ -62,9 +62,10 @@ nonisolated enum AirportLocale {
 }
 
 /// 机场**不可变参考数据**的单一来源：`airports.json`（~1.6 MB）经 `static let` 一次性、线程安全懒加载。
-/// `all` 供搜索遍历、`byIATA` 供「码已知」O(1) 同步取名。搜索（`AirportDatabase` actor，后台扫表）与
-/// 显示（详情按码同步取本地化名）**共用这一份**。1.6 MB 解码较重 → 启动 `preload()` 后台预热，避免首次
-/// 访问卡主线程、并消除详情页机场名的异步刷新闪烁。spec: itinerary-flight-name-localization.md。
+/// `all` 供搜索遍历、`byIATA` 供「码已知」O(1) 取名。搜索（`AirportDatabase` actor，后台扫表）与显示
+/// （详情按码取本地化名）**共用这一份**。**按需加载**——不预热：只在用户真触发（开航班详情 / 机场搜索）
+/// 时才解码，不用航班的用户零开销；详情侧用 `Task.detached` 让 1.6 MB 解码落在后台、不卡主线程
+/// （代价：首次开某航班详情时机场名那行一瞬刷新，次要可接受）。spec: itinerary-flight-name-localization.md。
 nonisolated enum AirportCatalog {
     private static let logger = Logger(subsystem: "com.carry.app", category: "AirportCatalog")
 
@@ -85,15 +86,14 @@ nonisolated enum AirportCatalog {
         all.compactMap { $0.iata.isEmpty ? nil : ($0.iata.uppercased(), $0) },
         uniquingKeysWith: { a, _ in a })
 
-    /// O(1) 精确按 IATA 码取机场（**同步**）——显示已保存航段时按码解析本地化机场名（`Airport.displayName`）。
+    /// O(1) 精确按 IATA 码取机场——显示已保存航段时按码解析本地化机场名（`Airport.displayName`）。
+    /// **按需加载**：首次访问才解码 1.6 MB（懒加载 `byIATA`/`all`）；只在用户真打开航班详情时触发，
+    /// 不用航班的用户零开销。详情用 `Task.detached` 调它把解码放后台、不卡主线程（spec 见 flight-name-localization）。
     static func airport(forIATA code: String) -> Airport? {
         let key = code.trimmingCharacters(in: .whitespaces).uppercased()
         guard !key.isEmpty else { return nil }
         return byIATA[key]
     }
-
-    /// 启动时后台预热：强制把 1.6 MB 库解码进内存，让后续搜索/显示同步直取、零卡顿、零闪。
-    static func preload() { _ = byIATA }
 }
 
 /// 全球机场检索引擎。actor：模糊检索是逐键扫全表（CPU 重），放后台执行器、不卡主线程打字。

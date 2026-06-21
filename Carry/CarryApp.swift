@@ -52,13 +52,6 @@ struct CarryApp: App {
         // App-wide UIKit tint so system-presented UI (confirmationDialogs, alerts, context
         // menus) uses the single accent too — SwiftUI's `.tint()` doesn't reach these.
         UIWindow.appearance().tintColor = CarryAccent.uiColor
-        // 在最早时机（App 构造）后台预热机场/航司目录（1.6M/225K 解码），让行程页/详情/地图同步取本地化名、
-        // 零卡顿零闪——比 view onAppear 更早，进一步缩小「内容早于预热出现 → 首次同步访问在主线程解码」的
-        // 窗口（spec: itinerary-flight-name-localization.md）。
-        Task.detached(priority: .userInitiated) {
-            AirportCatalog.preload()
-            AirlineDatabase.preload()
-        }
     }
 
     var body: some Scene {

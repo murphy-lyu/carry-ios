@@ -379,13 +379,12 @@ struct ItineraryMapView: View {
                     .stroke(color.opacity(dimmed ? 0.3 : 0.9),
                             style: StrokeStyle(lineWidth: 2.5, lineCap: .round, dash: [2, 7]))
                 // 起讫两端各放一个小端点标记（mode 图标），让弧线两头有落点、不悬空。
-                // 注解标题（机场名）按界面语言显示：码命中机场目录则本地化，否则存的原文。
-                Annotation(AirportCatalog.airport(forIATA: seg.fromCode)?.displayName ?? seg.fromName,
-                           coordinate: seg.fromCoordinate!) {
+                // 标题用存的站名原文（仅 a11y/callout 次要标签）——不在此按码查机场库，避免地图一渲染就
+                // 强制加载 1.6M 机场库；机场名本地化只在按需打开的航班详情里做。
+                Annotation(seg.fromName, coordinate: seg.fromCoordinate!) {
                     transportEndpointMarker(mode: seg.mode, color: color, dimmed: dimmed)
                 }
-                Annotation(AirportCatalog.airport(forIATA: seg.toCode)?.displayName ?? seg.toName,
-                           coordinate: seg.toCoordinate!) {
+                Annotation(seg.toName, coordinate: seg.toCoordinate!) {
                     transportEndpointMarker(mode: seg.mode, color: color, dimmed: dimmed)
                 }
             }
