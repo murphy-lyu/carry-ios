@@ -22,6 +22,8 @@ extension TripBookStats {
             var flightMinutes = 0
             var aircraft: [String] = []
             var airports: [String] = []
+            var flights: [FlightLeg] = []             // 最远一程：逐航段里程/时长/路线
+            var stopCats: [StopCategory: Int] = [:]   // 在地足迹：地点按 StopCategory 计数
             for day in t.safeItineraryDays {
                 for seg in (day.segments ?? []) where seg.mode == .flight {
                     flightMeters += seg.distanceMeters
@@ -33,7 +35,11 @@ extension TripBookStats {
                         let c = code.trimmingCharacters(in: .whitespaces).uppercased()
                         if !c.isEmpty { airports.append(c) }
                     }
+                    flights.append(FlightLeg(meters: seg.distanceMeters,
+                                             minutes: seg.durationMinutes,
+                                             route: flightRouteLabel(seg)))
                 }
+                for stop in (day.stops ?? []) { stopCats[stop.category, default: 0] += 1 }
             }
             let nights = t.safeLodgingStays.reduce(0) { $0 + max(0, $1.nights) }
 
@@ -47,13 +53,29 @@ extension TripBookStats {
                 departureYear: year,
                 packedItems: t.packedCount,
                 totalItems: t.totalCount,
+                name: t.name,
+                stopCategoryCounts: stopCats,
                 flightDistanceMeters: flightMeters,
                 flightDurationMinutes: flightMinutes,
                 aircraftTypes: aircraft,
                 airportCodes: airports,
-                lodgingNights: nights
+                lodgingNights: nights,
+                flights: flights
             )
         }
         return compute(inputs: inputs)
+    }
+
+    /// 航段路线标注：码优先（"PVG → LAX"，紧凑、与机场卡一致），码空退站名；两端任一空 → ""（UI 不展示路线）。
+    private static func flightRouteLabel(_ seg: TransportSegment) -> String {
+        func endpoint(_ code: String, _ name: String) -> String {
+            let c = code.trimmingCharacters(in: .whitespaces).uppercased()
+            if !c.isEmpty { return c }
+            return name.trimmingCharacters(in: .whitespaces)
+        }
+        let from = endpoint(seg.fromCode, seg.fromName)
+        let to = endpoint(seg.toCode, seg.toName)
+        guard !from.isEmpty, !to.isEmpty else { return "" }
+        return "\(from) → \(to)"
     }
 }

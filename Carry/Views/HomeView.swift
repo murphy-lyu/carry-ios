@@ -1011,6 +1011,9 @@ struct HomeView: View {
                     // 出行习惯段。
                     if stats.domesticCount + stats.internationalCount > 0 { tripBookScopeCard(stats) }
                     if stats.seasonCounts.values.reduce(0, +) > 0 { tripBookSeasonsCard(stats) }
+                    // 在地足迹（去过多少景点/餐厅/购物）：与花费同为「行程数据沉淀」，紧贴费用卡收尾——
+                    // 「你体验了什么 → 花了多少」。仅有行程规划的 trip 有数，无则隐藏。
+                    if !stats.footprintTallies.isEmpty { tripBookFootprintCard(stats) }
                     // 费用压轴：前面都是出行习惯/统计，花费性质特殊（用户记账数据），单独置于最后。
                     // 对汇率管理器的观察收在 ExchangeRateScope 这一层子视图（花费卡的真正消费者），
                     // 不上抬到根 HomeView——根是首页 UIKit FX sheet（含底栏）的宿主，在根层观察会令其
@@ -1062,19 +1065,42 @@ struct HomeView: View {
 
     // MARK: 花费卡（spec: itinerary-cost-tracking.md）
 
-    /// 「总花费」聚合卡：大号总额 + 比例带（单一烟蓝三档深浅）+ 交通/住宿/地点三类目 + 查看全部。
+    /// 「总花费」聚合卡：大号总额 + 比例带（单一烟蓝 rank 深浅）+ 按 7 类细分类目（仅非零）+ 查看全部。
     private func tripBookSpendCard(_ s: TripSpendStats) -> some View {
         let total = s.overall.total
+        let legend = spendLegend(s.overall)   // (类别, 金额, 单烟蓝透明度)，按额降序
         return tripBookCard("tripbook.spend.title", systemImage: "creditcard") {
             VStack(alignment: .leading, spacing: 14) {
                 Text(spendTotalText(total, approximate: s.approximate, code: s.homeCode))
                     .font(.system(size: 32, weight: .bold, design: .rounded))
                     .foregroundStyle(.primary)
-                if total > 0 { spendBar(s.overall) }
+                if total > 0 { spendBar(legend) }
                 VStack(spacing: 0) {
-                    spendLegendRow("tripbook.spend.transport", amount: s.overall.transport, opacity: 1.0, code: s.homeCode)
-                    spendLegendRow("tripbook.spend.lodging", amount: s.overall.lodging, opacity: 0.55, code: s.homeCode)
-                    spendLegendRow("tripbook.spend.places", amount: s.overall.places, opacity: 0.28, code: s.homeCode)
+                    ForEach(legend, id: \.category) { item in
+                        spendLegendRow(spendCategoryName(item.category), amount: item.amount,
+                                       opacity: item.opacity, code: s.homeCode)
+                    }
+                }
+                // 「最高一趟」小料行（镜像机型「mostly」texture 行）：仅 ≥2 趟有花费时出，
+                // 把藏在「查看全部」里的「按行程」维度抬到卡面，并作其引子。中性措辞、不渲染超支。
+                if s.perTrip.count >= 2, let top = s.perTrip.first {
+                    Divider()
+                    HStack(spacing: 6) {
+                        Image(systemName: "arrow.up.circle")
+                            .font(.footnote)
+                            .foregroundStyle(.secondary)
+                        Text(String(format: NSLocalizedString("tripbook.spend.top_trip", comment: ""),
+                                    top.name))
+                            .font(.footnote)
+                            .foregroundStyle(.secondary)
+                            .lineLimit(1)
+                            .truncationMode(.tail)
+                        Spacer(minLength: 8)
+                        Text(spendTotalText(top.breakdown.total, approximate: s.approximate, code: s.homeCode))
+                            .font(.system(.footnote, design: .rounded).weight(.medium))
+                            .foregroundStyle(.secondary)
+                            .layoutPriority(1)
+                    }
                 }
                 if !s.perTrip.isEmpty {
                     Button { showSpendDetail = true } label: {
@@ -1102,15 +1128,30 @@ struct HomeView: View {
         (approximate ? "≈ " : "") + CurrencyCatalog.format(amount, code: code)
     }
 
-    /// 比例带：单一烟蓝三档深浅（交通 100% / 住宿 55% / 地点 28%），跳过 0 段，整条 capsule 收边。
-    private func spendBar(_ b: TripSpendBreakdown) -> some View {
-        let total = max(b.total, 0.0001)
-        let parts: [(Double, Double)] = [(b.transport, 1.0), (b.lodging, 0.55), (b.places, 0.28)].filter { $0.0 > 0 }
+    /// 类别名（复用单行程花费页同一套 `tripspend.cat.*`，跨行程/单行程口径一致、零新增文案）。
+    private func spendCategoryName(_ c: SpendCategory) -> String {
+        NSLocalizedString("tripspend.cat.\(c.rawValue)", comment: "")
+    }
+
+    /// 非零类目按额降序 + 单烟蓝 rank 透明度（额大色深 1.0 → 额小色浅 0.28）；bar 与图例同序同色，
+    /// 维持 Trip Book 单一强调色纪律（不引入单行程页的多彩配色）。
+    private func spendLegend(_ b: TripSpendBreakdown) -> [(category: SpendCategory, amount: Double, opacity: Double)] {
+        let items = b.sortedNonZero
+        let n = items.count
+        return items.enumerated().map { i, it in
+            let opacity = n <= 1 ? 1.0 : 1.0 - Double(i) * (0.72 / Double(n - 1))
+            return (category: it.category, amount: it.amount, opacity: opacity)
+        }
+    }
+
+    /// 比例带：单一烟蓝、各段按 `spendLegend` 的额降序与透明度，跳过 0 段，整条 capsule 收边。
+    private func spendBar(_ legend: [(category: SpendCategory, amount: Double, opacity: Double)]) -> some View {
+        let total = max(legend.reduce(0) { $0 + $1.amount }, 0.0001)
         return GeometryReader { geo in
             HStack(spacing: 2) {
-                ForEach(Array(parts.enumerated()), id: \.offset) { _, part in
-                    CarryAccent.color.opacity(part.1)
-                        .frame(width: max(2, geo.size.width * part.0 / total))
+                ForEach(legend, id: \.category) { part in
+                    CarryAccent.color.opacity(part.opacity)
+                        .frame(width: max(2, geo.size.width * part.amount / total))
                 }
             }
         }
@@ -1118,10 +1159,10 @@ struct HomeView: View {
         .clipShape(Capsule())
     }
 
-    private func spendLegendRow(_ labelKey: LocalizedStringKey, amount: Double, opacity: Double, code: String) -> some View {
+    private func spendLegendRow(_ label: String, amount: Double, opacity: Double, code: String) -> some View {
         HStack(spacing: 10) {
             Circle().fill(CarryAccent.color.opacity(opacity)).frame(width: 8, height: 8)
-            Text(labelKey).font(.subheadline).foregroundStyle(.secondary)
+            Text(label).font(.subheadline).foregroundStyle(.secondary)
             Spacer()
             Text(CurrencyCatalog.format(amount, code: code))
                 .font(.system(.subheadline, design: .rounded).weight(.medium))
@@ -1136,9 +1177,9 @@ struct HomeView: View {
             List {
                 ForEach(s.perTrip) { row in
                     Section(header: Text(row.name)) {
-                        if row.breakdown.transport > 0 { spendDetailLine("tripbook.spend.transport", row.breakdown.transport, s.homeCode) }
-                        if row.breakdown.lodging > 0 { spendDetailLine("tripbook.spend.lodging", row.breakdown.lodging, s.homeCode) }
-                        if row.breakdown.places > 0 { spendDetailLine("tripbook.spend.places", row.breakdown.places, s.homeCode) }
+                        ForEach(row.breakdown.sortedNonZero, id: \.category) { item in
+                            spendDetailLine(spendCategoryName(item.category), item.amount, s.homeCode)
+                        }
                         HStack {
                             Text("tripbook.spend.trip_total")
                                 .font(.subheadline.weight(.semibold))
@@ -1161,9 +1202,9 @@ struct HomeView: View {
         }
     }
 
-    private func spendDetailLine(_ key: LocalizedStringKey, _ amount: Double, _ code: String) -> some View {
+    private func spendDetailLine(_ label: String, _ amount: Double, _ code: String) -> some View {
         HStack {
-            Text(key).font(.subheadline).foregroundStyle(.secondary)
+            Text(label).font(.subheadline).foregroundStyle(.secondary)
             Spacer()
             Text(CurrencyCatalog.format(amount, code: code))
                 .font(.system(.subheadline, design: .rounded))
@@ -1200,6 +1241,17 @@ struct HomeView: View {
                     tripBookBigStat(s.totalDays, "tripbook.days")
                 }
                 .padding(.top, 2)
+                // 小料行（镜像飞行卡「mostly」texture）：最长一趟 / 最频繁年份。各自有数据才出，无则不占位。
+                if s.tripCount >= 2, let name = s.longestTripName, !name.isEmpty, s.longestTripDays >= 2 {
+                    tripBookHeroFact("hourglass",
+                        String(format: NSLocalizedString("tripbook.longest_trip", comment: ""),
+                               name, Int64(s.longestTripDays)))
+                }
+                if s.busiestYearCount >= 2, let year = s.busiestYear {
+                    tripBookHeroFact("calendar",
+                        String(format: NSLocalizedString("tripbook.busiest_year", comment: ""),
+                               Int64(year), Int64(s.busiestYearCount)))
+                }
             }
             .padding(.vertical, 22)
             .padding(.horizontal, 16)
@@ -1208,6 +1260,44 @@ struct HomeView: View {
         .frame(maxWidth: .infinity)
         .carryHeroCardBackground(cornerRadius: 24)
         .clipShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
+    }
+
+    /// 概览卡的小料行（icon + 单行 footnote），与飞行卡「mostly」texture 同款。
+    private func tripBookHeroFact(_ systemImage: String, _ text: String) -> some View {
+        HStack(spacing: 6) {
+            Image(systemName: systemImage)
+                .font(.caption)
+                .foregroundStyle(.secondary)
+            Text(text)
+                .font(.footnote)
+                .foregroundStyle(.secondary)
+                .lineLimit(1)
+                .truncationMode(.tail)
+        }
+    }
+
+    /// 「在地足迹」卡：各 StopCategory 累计地点数（景点/餐饮/活动/购物/其他），降序、N× 计数。
+    /// 仅覆盖加了行程规划的 trip，无则整块隐藏（同航班/花费卡）。spec 🟡→🟢 前提反转见 trip-book.md。
+    private func tripBookFootprintCard(_ s: TripBookStats) -> some View {
+        tripBookCard("tripbook.footprint.title", systemImage: "mappin.and.ellipse") {
+            VStack(spacing: 10) {
+                ForEach(s.footprintTallies, id: \.category) { tally in
+                    HStack(spacing: 10) {
+                        Image(systemName: tally.category.symbolName)
+                            .font(.footnote)
+                            .foregroundStyle(CarryAccent.color)
+                            .frame(width: 22)
+                        Text(tally.category.titleKey)
+                            .font(.subheadline)
+                            .foregroundStyle(.secondary)
+                        Spacer()
+                        Text(verbatim: "\(tally.count)×")
+                            .font(.system(.subheadline, design: .rounded).weight(.semibold))
+                            .foregroundStyle(.secondary)
+                    }
+                }
+            }
+        }
     }
 
     /// 到访国家国旗排（重叠圆形徽章，最多 8 枚 + 余量）。
@@ -1383,6 +1473,20 @@ struct HomeView: View {
                 Divider().frame(height: 36)
                 tripBookBigStatText(duration, "tripbook.flight.duration")
             }
+            // 最远一程（距离 + 时长合一，标杆航班一行交代）：仅 ≥2 段有距离的航班时出（=1 段时等于累计距离、冗余）。
+            if let text = longestFlightText(s) {
+                Divider()
+                HStack(spacing: 6) {
+                    Image(systemName: "airplane.departure")
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
+                    Text(text)
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
+                        .lineLimit(1)
+                        .truncationMode(.tail)
+                }
+            }
             if let summary = aircraftSummaryText(s) {
                 Divider()
                 HStack(spacing: 6) {
@@ -1395,6 +1499,20 @@ struct HomeView: View {
                 }
             }
         }
+    }
+
+    /// 「最远一程」文案：路线 · 距离 [· 时长]。≥2 段有距离的航班 + 有路线标注才出；缺时长则只显距离。
+    private func longestFlightText(_ s: TripBookStats) -> String? {
+        guard s.flightLegCount >= 2,
+              let route = s.longestFlightRoute, !route.isEmpty,
+              s.longestFlightMeters > 0 else { return nil }
+        let dist = CarryDistanceFormat.string(meters: s.longestFlightMeters, unit: distanceUnit)
+        if s.longestFlightMinutes > 0 {
+            return String(format: NSLocalizedString("tripbook.longest_flight", comment: ""),
+                          route, dist, tripBookDurationText(s.longestFlightMinutes))
+        }
+        return String(format: NSLocalizedString("tripbook.longest_flight_nodur", comment: ""),
+                      route, dist)
     }
 
     /// 「常经停机场」卡：按 IATA 码计数降序（镜像「最常去国家」），码作烟蓝胶囊 chip。

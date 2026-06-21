@@ -27,6 +27,10 @@ struct TripStatInput {
     var departureYear: Int? = nil
     var packedItems: Int = 0
     var totalItems: Int = 0
+    /// 行程名（「最长一趟」展示用；可空）。
+    var name: String = ""
+    /// 各 StopCategory 的地点数（仅 ItineraryStop，不含交通段 / 住宿）；空 = 该行程无行程规划。
+    var stopCategoryCounts: [StopCategory: Int] = [:]
 
     // 航班统计（仅 flight 段；航班号查询/手填回填，缺则 0/空）。spec 前提反转见 trip-book.md。
     var flightDistanceMeters: Double = 0   // Σ 大圆里程（米）
@@ -35,6 +39,21 @@ struct TripStatInput {
     var airportCodes: [String] = []        // flight 段 from/to IATA 码（非空、已大写）
     /// 累计住宿晚数（Σ stay.nights）；住宿改「入住日 + 退房日」后可派生。
     var lodgingNights: Int = 0
+    /// 各 flight 段（用于「最远一程」）：每段大圆里程 + 时长 + 起讫标注（码优先、退名称，适配器算好）。
+    var flights: [FlightLeg] = []
+}
+
+/// 单个航段的精简快照（「最远一程」标杆航班用）。
+struct FlightLeg: Equatable {
+    var meters: Double
+    var minutes: Int
+    var route: String   // "PVG → LAX"；码优先、码空退名称、两端任一空则为 ""（UI 不展示路线）
+}
+
+/// 「StopCategory → 地点数」计数项（在地足迹卡）。
+struct StopCategoryTally: Equatable {
+    let category: StopCategory
+    let count: Int
 }
 
 struct CountryTally: Equatable {
@@ -57,6 +76,14 @@ struct TripBookStats: Equatable {
     var countryTallies: [CountryTally] = []
     /// 最早一次（有日期）行程的年份，用于「自 X 起旅行」。
     var firstTravelYear: Int? = nil
+    /// 最长一趟（按 spanDays）的名称与天数；无行程时 days=0 / name=nil。
+    var longestTripName: String? = nil
+    var longestTripDays: Int = 0
+    /// 出行最频繁的年份及其行程数（同数取较近年份）；无有日期行程时 nil。
+    var busiestYear: Int? = nil
+    var busiestYearCount: Int = 0
+    /// 在地足迹：各「在地体验」类别（景点/餐饮/活动/购物/其他）累计地点数，降序。空 = 无行程数据 → UI 整块隐藏。
+    var footprintTallies: [StopCategoryTally] = []
     var continentCounts: [Continent: Int] = [:]
     var domesticCount: Int = 0
     var internationalCount: Int = 0
@@ -71,6 +98,12 @@ struct TripBookStats: Equatable {
     var aircraftTallies: [LabelTally] = []   // 机型 → 航段次，降序
     var airportTallies: [LabelTally] = []    // IATA 码 → 经停次，降序
     var totalNights: Int = 0
+    /// 最远一程（按大圆里程）的路线 / 里程 / 时长；时长可为 0（缺则 UI 只显距离）。
+    var longestFlightRoute: String? = nil
+    var longestFlightMeters: Double = 0
+    var longestFlightMinutes: Int = 0
+    /// 有距离的航段数（决定「最远一程」是否出：≥2 才有意义，=1 时它就等于累计距离、冗余）。
+    var flightLegCount: Int = 0
 
     var visitedContinentCount: Int { continentCounts.keys.count }
     var packingCompletion: Double { totalItems > 0 ? Double(packedItems) / Double(totalItems) : 0 }
@@ -93,6 +126,10 @@ struct TripBookStats: Equatable {
         var visited = Set<String>()
         var aircraftCounts: [String: Int] = [:]     // 机型 → 航段次
         var airportCounts: [String: Int] = [:]      // IATA 码 → 经停次
+        var yearCounts: [Int: Int] = [:]            // 出发年份 → 行程数（最频繁年份）
+        var stopCatCounts: [StopCategory: Int] = [:] // StopCategory → 地点数（在地足迹）
+        var longestFlight: FlightLeg? = nil         // 最远一程（按里程）
+        var flightLegCount = 0                       // 有距离的航段数
 
         for t in inputs {
             // 行程册 = 旅行「回顾」：所有统计只算**已发生**的行程（已出发 + 进行中），
@@ -106,7 +143,16 @@ struct TripBookStats: Equatable {
 
             if let y = t.departureYear {
                 s.firstTravelYear = min(s.firstTravelYear ?? y, y)
+                yearCounts[y, default: 0] += 1
             }
+
+            // 最长一趟（按天数）：同天数保留先遇到的（稳定）。
+            if t.days > s.longestTripDays {
+                s.longestTripDays = t.days
+                s.longestTripName = t.name
+            }
+            // 在地足迹：累计各 StopCategory 地点数。
+            for (cat, n) in t.stopCategoryCounts { stopCatCounts[cat, default: 0] += n }
 
             // 国内/国际：基准 = 本国；任一目的地不在本国即国际；无码 = 未知。
             let codes = t.countryCodes.filter { !$0.isEmpty }.map { $0.uppercased() }
@@ -139,6 +185,11 @@ struct TripBookStats: Equatable {
             s.totalNights += t.lodgingNights
             for a in t.aircraftTypes { aircraftCounts[a, default: 0] += 1 }
             for code in t.airportCodes { airportCounts[code, default: 0] += 1 }
+            // 最远一程：只在有里程的航段里比（无距离的不参与，也不计入决定是否展示的计数）。
+            for leg in t.flights where leg.meters > 0 {
+                flightLegCount += 1
+                if leg.meters > (longestFlight?.meters ?? 0) { longestFlight = leg }
+            }
         }
 
         s.visitedCountryCount = visited.count
@@ -154,6 +205,26 @@ struct TripBookStats: Equatable {
         }
         s.aircraftTallies = sortTally(aircraftCounts)
         s.airportTallies = sortTally(airportCounts)
+        s.flightLegCount = flightLegCount
+        if let lf = longestFlight {
+            s.longestFlightRoute = lf.route
+            s.longestFlightMeters = lf.meters
+            s.longestFlightMinutes = lf.minutes
+        }
+
+        // 最频繁年份：行程数最多的年份，同数取较近（年份大）的。
+        if let top = yearCounts.max(by: { $0.value != $1.value ? $0.value < $1.value : $0.key < $1.key }) {
+            s.busiestYear = top.key
+            s.busiestYearCount = top.value
+        }
+        // 在地足迹：仅「在地体验」类别（住宿有独立 Stays 卡、交通段是「边」不计），按数降序、同数按声明序。
+        let footprintCats: Set<StopCategory> = [.sightseeing, .food, .activity, .shopping, .other]
+        let catOrder = Dictionary(uniqueKeysWithValues: StopCategory.allCases.enumerated().map { ($1, $0) })
+        s.footprintTallies = stopCatCounts
+            .filter { footprintCats.contains($0.key) && $0.value > 0 }
+            .map { StopCategoryTally(category: $0.key, count: $0.value) }
+            .sorted { $0.count != $1.count ? $0.count > $1.count
+                                           : (catOrder[$0.category] ?? 0) < (catOrder[$1.category] ?? 0) }
         return s
     }
 

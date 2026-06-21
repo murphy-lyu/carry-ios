@@ -40,6 +40,9 @@ struct SpendItem: Identifiable, Hashable {
     let kind: SpendEntityKind
     let name: String             // 实体名（可空 → UI 回退显类别名）
     let category: SpendCategory
+    /// 交通段的**具体方式**（航班/火车/巴士/渡轮/租车）——决定逐笔行图标；非交通项为 nil。
+    /// 类别都归「交通」（同色），但图标按真实方式取，避免租车/火车都显示成飞机。
+    let mode: TransportMode?
     let amount: Double           // 原币种金额
     let currencyCode: String
     let homeAmount: Double?      // 本位币折算（nil = 缺汇率）
@@ -77,14 +80,14 @@ struct TripSpendDetail {
         var approximate = false
         var unconverted = 0
 
-        func append(id: UUID, kind: SpendEntityKind, name: String,
-                    category: SpendCategory, entity: CostBearing, dayOrder: Int) {
+        func append(id: UUID, kind: SpendEntityKind, name: String, category: SpendCategory,
+                    mode: TransportMode? = nil, entity: CostBearing, dayOrder: Int) {
             let homeVal = CostResolver.homeValue(snapshot: entity.costHomeAmount,
                                                  amount: entity.costAmount,
                                                  code: entity.costCurrencyCode, convert: convert)
             if homeVal == nil { unconverted += 1 }
             else if entity.costCurrencyCode.uppercased() != home { approximate = true }
-            items.append(SpendItem(id: id, kind: kind, name: name, category: category,
+            items.append(SpendItem(id: id, kind: kind, name: name, category: category, mode: mode,
                                    amount: entity.costAmount, currencyCode: entity.costCurrencyCode,
                                    homeAmount: homeVal, dayOrder: dayOrder))
         }
@@ -97,7 +100,7 @@ struct TripSpendDetail {
             }
             for seg in day.sortedSegments where seg.hasCost {
                 append(id: seg.id, kind: .transport, name: transportName(seg),
-                       category: .transport, entity: seg, dayOrder: d)
+                       category: .transport, mode: seg.mode, entity: seg, dayOrder: d)
             }
         }
         for stay in trip.safeLodgingStays where stay.hasCost {

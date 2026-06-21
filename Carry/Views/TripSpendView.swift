@@ -320,7 +320,8 @@ struct TripSpendView: View {
             editTarget = EditTarget(id: "\(item.kind)-\(item.id)", entityId: item.id, kind: item.kind)
         } label: {
             HStack(spacing: 12) {
-                Image(systemName: item.category.symbolName)
+                // 交通项按**具体方式**取图标（航班/火车/租车…），非交通用类别图标——避免租车/火车显示成飞机。
+                Image(systemName: item.mode?.symbolName ?? item.category.symbolName)
                     .font(.system(size: 14)).foregroundStyle(item.category.color)
                     .frame(width: 22)
                 Text(item.name.isEmpty ? NSLocalizedString("tripspend.cat.\(item.category.rawValue)", comment: "") : item.name)

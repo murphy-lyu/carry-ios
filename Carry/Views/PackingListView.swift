@@ -214,14 +214,6 @@ struct PackingListView: View {
                                 Label("itinerary.reorder.menu", systemImage: "arrow.up.arrow.down")
                             }
                         }
-                        // 行程花费：总额 + 分布 + 逐笔清单（spec: itinerary-trip-spend.md）。
-                        if detailTab == .itinerary {
-                            Button {
-                                showSpend = true
-                            } label: {
-                                Label("tripspend.menu", systemImage: "chart.pie")
-                            }
-                        }
                         // 共享「行程级操作」（两个 tab 通用、顺序一致）：编辑行程 → 添加背景图。
                         // 通知配置已统一收进 设置 → 行程提醒（Settings 唯一真相源，spec: notification-center.md），
                         // 故此处不再有「行程提醒」入口；逐航班/住宿静音在各自详情页就近放。
@@ -250,6 +242,15 @@ struct PackingListView: View {
                                 showPhotoImport = true
                             } label: {
                                 Label("phototrip.entry.label", systemImage: "photo.badge.plus")
+                            }
+                        }
+                        // 行程花费（复盘/回看）：总额 + 分布 + 逐笔清单（spec: itinerary-trip-spend.md）。
+                        // 位于「改这趟行程」与「复制/分享/导出」之间——编辑完→回看→再分享，语义顺。
+                        if detailTab == .itinerary {
+                            Button {
+                                showSpend = true
+                            } label: {
+                                Label("tripspend.menu", systemImage: "chart.pie")
                             }
                         }
                         // 复制整个行程 → 记下副本 id 让首页扫光高亮 → 返回首页根看到新副本（放「分享行程」上方）。
