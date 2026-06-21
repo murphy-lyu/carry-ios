@@ -10,17 +10,95 @@ import SwiftUI
 import MapKit
 import Combine
 
-// MARK: - Search completer
+// MARK: - 统一地点检索（高德 + 海外 Mapbox 双源 · spec: itinerary-overseas-poi-search.md）
 
-/// 包装 MKLocalSearchCompleter，把补全结果发布给 SwiftUI。
+/// 搜索候选——统一两源:MapKit/高德(国内) 与 海外 places Worker(Mapbox)。
+struct PlaceSuggestion: Identifiable {
+    let id: String
+    let title: String
+    let subtitle: String
+    let kind: Kind
+    enum Kind {
+        case mapkit(MKLocalSearchCompletion)   // 选中走 MKLocalSearch 解析
+        case overseas(mapboxId: String)        // 选中走 places Worker /retrieve
+    }
+}
+
+/// 解析后的地点(两源殊途同归 → 同一下游入库/回填)。
+struct ResolvedPlace {
+    let name: String
+    let latitude: Double
+    let longitude: Double
+    let address: String
+    let phone: String
+    let timeZoneId: String
+}
+
+/// 海外检索代理配置(places Worker)。token 从 gitignore 的 Secrets.plist 读(同航班范式)。
+enum PlacesSearchConfig {
+    static let baseURL = "https://places.nevestudio.app"
+    static let appToken: String = {
+        guard let url = Bundle.main.url(forResource: "Secrets", withExtension: "plist"),
+              let dict = NSDictionary(contentsOf: url),
+              let t = dict["PlacesProxyAppToken"] as? String else { return "" }
+        return t
+    }()
+    static var isConfigured: Bool { !appToken.isEmpty }
+}
+
+/// 海外地点检索(经 places Worker:Mapbox 代理 + 缓存 + 翻译 + 坐标转时区 + 只回境外)。
+enum OverseasPlaceSource {
+    static func suggest(query: String, proximity: String, session: String, storefront: String) async -> [PlaceSuggestion] {
+        guard PlacesSearchConfig.isConfigured, !query.isEmpty,
+              var comps = URLComponents(string: PlacesSearchConfig.baseURL + "/suggest") else { return [] }
+        comps.queryItems = [.init(name: "q", value: query), .init(name: "session", value: session),
+                            .init(name: "storefront", value: storefront)]
+        if !proximity.isEmpty { comps.queryItems?.append(.init(name: "proximity", value: proximity)) }
+        guard let url = comps.url else { return [] }
+        var req = URLRequest(url: url); req.timeoutInterval = 12
+        req.setValue(PlacesSearchConfig.appToken, forHTTPHeaderField: "X-App-Token")
+        guard let (data, resp) = try? await URLSession.shared.data(for: req),
+              let http = resp as? HTTPURLResponse, http.statusCode == 200,
+              let decoded = try? JSONDecoder().decode(SuggestResponse.self, from: data) else { return [] }
+        return decoded.suggestions.map {
+            PlaceSuggestion(id: "ov:\($0.id)", title: $0.name, subtitle: $0.secondary ?? "", kind: .overseas(mapboxId: $0.id))
+        }
+    }
+
+    static func retrieve(mapboxId: String, session: String, storefront: String) async -> ResolvedPlace? {
+        guard PlacesSearchConfig.isConfigured,
+              var comps = URLComponents(string: PlacesSearchConfig.baseURL + "/retrieve") else { return nil }
+        comps.queryItems = [.init(name: "id", value: mapboxId), .init(name: "session", value: session),
+                            .init(name: "storefront", value: storefront)]
+        guard let url = comps.url else { return nil }
+        var req = URLRequest(url: url); req.timeoutInterval = 12
+        req.setValue(PlacesSearchConfig.appToken, forHTTPHeaderField: "X-App-Token")
+        guard let (data, resp) = try? await URLSession.shared.data(for: req),
+              let http = resp as? HTTPURLResponse, http.statusCode == 200,
+              let decoded = try? JSONDecoder().decode(RetrieveResponse.self, from: data) else { return nil }
+        let p = decoded.place
+        return ResolvedPlace(name: p.name, latitude: p.latitude, longitude: p.longitude,
+                             address: p.address, phone: p.phone ?? "", timeZoneId: p.timeZoneId ?? "")
+    }
+
+    private struct SuggestResponse: Decodable { let suggestions: [Item]; struct Item: Decodable { let id: String; let name: String; let secondary: String? } }
+    private struct RetrieveResponse: Decodable { let place: Place; struct Place: Decodable { let name: String; let latitude: Double; let longitude: Double; let address: String; let phone: String?; let timeZoneId: String? } }
+}
+
+/// 统一补全器:MapKit/高德(国内) + 海外 Mapbox(经 Worker),合并发布;选中按来源分流解析。
 @MainActor
 final class StopSearchCompleter: NSObject, ObservableObject, MKLocalSearchCompleterDelegate {
     @Published var query: String = "" {
-        didSet { completer.queryFragment = query }
+        didSet { completer.queryFragment = query; scheduleOverseas() }
     }
-    @Published var results: [MKLocalSearchCompletion] = []
+    @Published var results: [PlaceSuggestion] = []
 
     private let completer = MKLocalSearchCompleter()
+    private var mapkitResults: [PlaceSuggestion] = []
+    private var overseasResults: [PlaceSuggestion] = []
+    private var proximity = ""                 // "lon,lat"
+    private let session = UUID().uuidString    // 一次搜索会话(Mapbox session 计费)
+    private var overseasTask: Task<Void, Never>?
 
     override init() {
         super.init()
@@ -28,22 +106,83 @@ final class StopSearchCompleter: NSObject, ObservableObject, MKLocalSearchComple
         completer.resultTypes = [.pointOfInterest, .address]
     }
 
-    /// 用行程目的地坐标做区域偏置，让搜索结果更贴近目的地。
+    /// 用行程目的地坐标做区域偏置(MapKit) + 海外 proximity。
     func biasRegion(toLatitude lat: Double, longitude lon: Double) {
         guard lat != 0 || lon != 0 else { return }
         completer.region = MKCoordinateRegion(
             center: CLLocationCoordinate2D(latitude: lat, longitude: lon),
             span: MKCoordinateSpan(latitudeDelta: 1.5, longitudeDelta: 1.5)
         )
+        proximity = "\(lon),\(lat)"
     }
 
     nonisolated func completerDidUpdateResults(_ completer: MKLocalSearchCompleter) {
         let items = completer.results
-        Task { @MainActor in self.results = items }
+        Task { @MainActor in
+            self.mapkitResults = items.map {
+                PlaceSuggestion(id: "mk:\($0.title)|\($0.subtitle)", title: $0.title, subtitle: $0.subtitle, kind: .mapkit($0))
+            }
+            self.merge()
+        }
     }
 
     nonisolated func completer(_ completer: MKLocalSearchCompleter, didFailWithError error: Error) {
-        Task { @MainActor in self.results = [] }
+        Task { @MainActor in self.mapkitResults = []; self.merge() }
+    }
+
+    /// 海外补全:debounce 300ms(省 Mapbox 调用),≥2 字符才触发。
+    private func scheduleOverseas() {
+        overseasTask?.cancel()
+        let q = query.trimmingCharacters(in: .whitespaces)
+        guard q.count >= 2 else { overseasResults = []; merge(); return }
+        let storefront = isChinaStorefront ? "CHN" : "INTL"
+        let prox = proximity, sess = session
+        overseasTask = Task { [weak self] in
+            try? await Task.sleep(nanoseconds: 300_000_000)
+            guard !Task.isCancelled else { return }
+            let r = await OverseasPlaceSource.suggest(query: q, proximity: prox, session: sess, storefront: storefront)
+            guard !Task.isCancelled else { return }
+            await MainActor.run {
+                guard let self else { return }
+                self.overseasResults = r
+                self.merge()
+            }
+        }
+    }
+
+    /// 合并:国内(高德)在前 + 海外(Mapbox),按 title+subtitle 粗去重(两源覆盖区基本不重叠)。
+    private func merge() {
+        var seen = Set<String>()
+        var out: [PlaceSuggestion] = []
+        for s in mapkitResults + overseasResults {
+            let k = (s.title + "|" + s.subtitle).lowercased()
+            if seen.insert(k).inserted { out.append(s) }
+        }
+        results = out
+    }
+
+    /// 选中后解析为最终地点(两源分流);两边都产出名称/坐标/地址/电话/时区。
+    func resolve(_ s: PlaceSuggestion) async -> ResolvedPlace? {
+        let storefront = isChinaStorefront ? "CHN" : "INTL"
+        switch s.kind {
+        case .mapkit(let completion): return await Self.resolveMapKit(completion)
+        case .overseas(let mapboxId): return await OverseasPlaceSource.retrieve(mapboxId: mapboxId, session: session, storefront: storefront)
+        }
+    }
+
+    private static func resolveMapKit(_ completion: MKLocalSearchCompletion) async -> ResolvedPlace? {
+        let request = MKLocalSearch.Request(completion: completion)
+        guard let response = try? await MKLocalSearch(request: request).start() else { return nil }
+        let item = response.mapItems.first
+        let coord = item?.placemark.coordinate
+        return ResolvedPlace(
+            name: completion.title,
+            latitude: coord?.latitude ?? 0,
+            longitude: coord?.longitude ?? 0,
+            address: item?.placemark.title ?? completion.subtitle,
+            phone: item?.phoneNumber ?? "",
+            timeZoneId: item?.timeZone?.identifier ?? item?.placemark.timeZone?.identifier ?? ""
+        )
     }
 }
 
@@ -86,7 +225,7 @@ struct AddStopView: View {
                             }
                         }
                     }
-                    ForEach(completer.results, id: \.self) { result in
+                    ForEach(completer.results) { result in
                         Button {
                             resolveAndAdd(result)
                         } label: {
@@ -178,46 +317,28 @@ struct AddStopView: View {
     }
 
     /// 解析补全项的真实坐标后入库。解析失败则退回无坐标停靠点（仍保留名字）。
-    private func resolveAndAdd(_ completion: MKLocalSearchCompletion) {
+    private func resolveAndAdd(_ suggestion: PlaceSuggestion) {
         isResolving = true
-        let request = MKLocalSearch.Request(completion: completion)
-        MKLocalSearch(request: request).start { response, _ in
-            Task { @MainActor in
-                isResolving = false
-                let item = response?.mapItems.first
-                let coord = item?.placemark.coordinate
-                let address = item?.placemark.title ?? completion.subtitle
-                let phone = item?.phoneNumber ?? ""   // MapKit POI 自带电话（餐厅/景点多有），顺手带出
-                // 用 MKMapItem.timeZone（搜索结果可靠带它；placemark.timeZone 常为 nil）。spec: itinerary-timezone.md。
-                let tzId = item?.timeZone?.identifier ?? item?.placemark.timeZone?.identifier ?? ""
-                if let relocateStopId {
-                    // relocate：地点整体换了 → 名称/坐标/地址/电话/时区一并更新（类别保持不变）。
-                    store.updateItineraryStop(
-                        tripId: tripId,
-                        stopId: relocateStopId,
-                        name: completion.title,
-                        latitude: coord?.latitude ?? 0,
-                        longitude: coord?.longitude ?? 0,
-                        address: address,
-                        phone: phone,
-                        timeZoneId: tzId
-                    )
-                    onRelocated?(completion.title)
-                } else {
-                    store.addItineraryStop(
-                        tripId: tripId,
-                        dayId: dayId,
-                        name: completion.title,
-                        latitude: coord?.latitude ?? 0,
-                        longitude: coord?.longitude ?? 0,
-                        address: address,
-                        category: category,
-                        phone: phone,
-                        timeZoneId: tzId
-                    )
-                }
-                dismiss()
+        Task {
+            let r = await completer.resolve(suggestion)   // 国内走 MapKit、海外走 Worker;两源同构返回
+            isResolving = false
+            guard let r else { return }
+            if let relocateStopId {
+                // relocate：地点整体换了 → 名称/坐标/地址/电话/时区一并更新（类别保持不变）。
+                store.updateItineraryStop(
+                    tripId: tripId, stopId: relocateStopId,
+                    name: r.name, latitude: r.latitude, longitude: r.longitude,
+                    address: r.address, phone: r.phone, timeZoneId: r.timeZoneId
+                )
+                onRelocated?(r.name)
+            } else {
+                store.addItineraryStop(
+                    tripId: tripId, dayId: dayId,
+                    name: r.name, latitude: r.latitude, longitude: r.longitude,
+                    address: r.address, category: category, phone: r.phone, timeZoneId: r.timeZoneId
+                )
             }
+            dismiss()
         }
     }
 

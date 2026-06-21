@@ -26,7 +26,7 @@ struct ItineraryPlaceSearchSheet: View {
     var body: some View {
         NavigationStack {
             List {
-                ForEach(completer.results, id: \.self) { result in
+                ForEach(completer.results) { result in
                     Button {
                         resolve(result)
                     } label: {
@@ -69,23 +69,14 @@ struct ItineraryPlaceSearchSheet: View {
         }
     }
 
-    private func resolve(_ completion: MKLocalSearchCompletion) {
+    private func resolve(_ suggestion: PlaceSuggestion) {
         isResolving = true
-        let request = MKLocalSearch.Request(completion: completion)
-        MKLocalSearch(request: request).start { response, _ in
-            Task { @MainActor in
-                isResolving = false
-                let item = response?.mapItems.first
-                let coord = item?.placemark.coordinate
-                let address = item?.placemark.title ?? completion.subtitle
-                // MapKit POI 自带电话（酒店/租车点等多有），顺手带出供「行程中联系」。
-                let phone = item?.phoneNumber ?? ""
-                // 顺手捕获该地点的 IANA 时区，供行程时区系统化用（spec: itinerary-timezone.md）。
-                // 用 `MKMapItem.timeZone`——本地搜索结果可靠带它；`CLPlacemark.timeZone` 常为 nil（实测）。
-                let tzId = item?.timeZone?.identifier ?? item?.placemark.timeZone?.identifier ?? ""
-                onSelect(completion.title, coord?.latitude ?? 0, coord?.longitude ?? 0, address, phone, tzId)
-                dismiss()
-            }
+        Task {
+            let r = await completer.resolve(suggestion)   // 国内走 MapKit、海外走 Worker;两源同构
+            isResolving = false
+            guard let r else { dismiss(); return }
+            onSelect(r.name, r.latitude, r.longitude, r.address, r.phone, r.timeZoneId)
+            dismiss()
         }
     }
 }
