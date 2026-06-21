@@ -16,16 +16,16 @@
         },
         {
           "id": "apple-watch",
-          "title": "Apple Watch 支持",
+          "title": "Apple Watch 版",
           "titleEn": "Apple Watch app",
-          "titleZhHant": "Apple Watch 支援",
+          "titleZhHant": "Apple Watch 版",
           "status": "planned"
         },
         {
           "id": "mac-app",
-          "title": "Mac 支持",
+          "title": "Mac 版",
           "titleEn": "Mac app",
-          "titleZhHant": "Mac 支援",
+          "titleZhHant": "Mac 版",
           "status": "planned"
         }
       ]
@@ -38,16 +38,16 @@
       "items": [
         {
           "id": "trip-planning",
-          "title": "行程规划与路线",
-          "titleEn": "Trip planning & routes",
-          "titleZhHant": "行程規劃與路線",
+          "title": "行程规划：按天安排地点与路线",
+          "titleEn": "Trip planning: places & routes by day",
+          "titleZhHant": "行程規劃：按日安排地點與路線",
           "status": "done"
         },
         {
           "id": "flights",
-          "title": "航班（含航班号自动填）",
-          "titleEn": "Flights (auto-fill by number)",
-          "titleZhHant": "航班（含航班號自動填）",
+          "title": "添加航班 · 航班号自动填全程",
+          "titleEn": "Add flights — auto-filled by flight number",
+          "titleZhHant": "新增航班 · 航班號自動帶入全程",
           "status": "done"
         },
         {
@@ -59,44 +59,44 @@
         },
         {
           "id": "trip-book",
-          "title": "Trip Book·行程花费",
-          "titleEn": "Trip Book (spending)",
-          "titleZhHant": "Trip Book·行程花費",
+          "title": "旅行花费记账与统计",
+          "titleEn": "Trip spending & stats",
+          "titleZhHant": "旅行花費記帳與統計",
           "status": "done"
         },
         {
           "id": "itinerary-export",
-          "title": "导出行程单 PDF",
-          "titleEn": "Export itinerary (PDF)",
-          "titleZhHant": "匯出行程單 PDF",
+          "title": "导出行程单 PDF（可用于签证/通关）",
+          "titleEn": "Export itinerary PDF (for visas)",
+          "titleZhHant": "匯出行程單 PDF（可用於簽證/通關）",
           "status": "done"
         },
         {
           "id": "smart-suggestions",
-          "title": "智能推荐清单",
-          "titleEn": "Smart suggestions",
-          "titleZhHant": "智能推薦清單",
+          "title": "按场景智能推荐打包清单",
+          "titleEn": "Smart packing lists by trip type",
+          "titleZhHant": "依情境智慧推薦打包清單",
           "status": "done"
         },
         {
           "id": "photo-trip",
-          "title": "用照片还原行程",
-          "titleEn": "Rebuild trip from photos",
-          "titleZhHant": "用相片還原行程",
+          "title": "用旅行照片自动生成行程",
+          "titleEn": "Build a trip from your photos",
+          "titleZhHant": "用旅行相片自動生成行程",
           "status": "done"
         },
         {
           "id": "overseas-search",
-          "title": "海外地点检索",
-          "titleEn": "Overseas place search",
-          "titleZhHant": "海外地點檢索",
+          "title": "全球地点搜索",
+          "titleEn": "Worldwide place search",
+          "titleZhHant": "全球地點搜尋",
           "status": "done"
         },
         {
           "id": "trip-reminders",
-          "title": "行程提醒中心",
-          "titleEn": "Trip reminders",
-          "titleZhHant": "行程提醒中心",
+          "title": "行程提醒（出发 · 航班 · 退房）",
+          "titleEn": "Trip reminders (departure, flights, checkout)",
+          "titleZhHant": "行程提醒（出發 · 航班 · 退房）",
           "status": "done"
         },
         {
@@ -129,9 +129,9 @@
         },
         {
           "id": "destination-info",
-          "title": "目的地实用信息（充电插头、电压、货币）",
+          "title": "目的地实用信息（充电插头 · 电压 · 货币）",
           "titleEn": "Destination info (plugs, voltage, currency)",
-          "titleZhHant": "目的地實用資訊（充電插頭、電壓、貨幣）",
+          "titleZhHant": "目的地實用資訊（充電插頭 · 電壓 · 貨幣）",
           "status": "done"
         },
         {
@@ -143,37 +143,37 @@
         },
         {
           "id": "icloud-sync",
-          "title": "iCloud 同步",
-          "titleEn": "iCloud sync",
-          "titleZhHant": "iCloud 同步",
+          "title": "iCloud 多设备同步",
+          "titleEn": "iCloud sync across devices",
+          "titleZhHant": "iCloud 多裝置同步",
           "status": "done"
         },
         {
           "id": "attachments",
-          "title": "行程附件（文件·照片·链接）",
-          "titleEn": "Trip attachments",
-          "titleZhHant": "行程附件（檔案·相片·連結）",
+          "title": "行程附件（订单 · 证件 · 照片）",
+          "titleEn": "Trip attachments (bookings, documents, photos)",
+          "titleZhHant": "行程附件（訂單 · 證件 · 相片）",
           "status": "done"
         },
         {
           "id": "calendar-sync",
-          "title": "日历同步",
-          "titleEn": "Calendar sync",
-          "titleZhHant": "行事曆同步",
+          "title": "同步到系统日历",
+          "titleEn": "Sync to your calendar",
+          "titleZhHant": "同步到系統行事曆",
           "status": "done"
         },
         {
           "id": "share-list",
-          "title": "分享清单",
-          "titleEn": "Share packing list",
-          "titleZhHant": "分享清單",
+          "title": "分享打包清单",
+          "titleEn": "Share your packing list",
+          "titleZhHant": "分享打包清單",
           "status": "done"
         },
         {
           "id": "quick-actions",
-          "title": "主屏快捷操作",
+          "title": "主屏长按快捷操作",
           "titleEn": "Home Screen quick actions",
-          "titleZhHant": "主畫面快速操作",
+          "titleZhHant": "主畫面長按快速操作",
           "status": "done"
         },
         {
@@ -185,51 +185,51 @@
         },
         {
           "id": "packing-reminder",
-          "title": "打包提醒",
+          "title": "打包提醒通知",
           "titleEn": "Packing reminders",
-          "titleZhHant": "打包提醒",
+          "titleZhHant": "打包提醒通知",
           "status": "done"
         },
         {
           "id": "trip-background",
-          "title": "行程背景图",
-          "titleEn": "Trip background photo",
-          "titleZhHant": "行程背景圖",
+          "title": "自定义行程封面图",
+          "titleEn": "Custom trip cover photo",
+          "titleZhHant": "自訂行程封面圖",
           "status": "done"
         },
         {
           "id": "worth-considering",
-          "title": "小确幸",
-          "titleEn": "Little Joys",
-          "titleZhHant": "小確幸",
+          "title": "小确幸 · 贴心提醒",
+          "titleEn": "Little Joys — thoughtful nudges",
+          "titleZhHant": "小確幸 · 貼心提醒",
           "status": "done"
         },
         {
           "id": "custom-section",
-          "title": "自定义分类",
-          "titleEn": "Custom sections",
-          "titleZhHant": "自定義分類",
+          "title": "自定义清单分类",
+          "titleEn": "Custom list categories",
+          "titleZhHant": "自訂清單分類",
           "status": "done"
         },
         {
           "id": "sorting",
           "title": "物品与分类排序",
-          "titleEn": "Item & section sorting",
+          "titleEn": "Reorder items & categories",
           "titleZhHant": "物品與分類排序",
           "status": "done"
         },
         {
           "id": "item-quantity",
-          "title": "物品数量",
-          "titleEn": "Item quantity",
-          "titleZhHant": "物品數量",
+          "title": "物品数量设置",
+          "titleEn": "Item quantities",
+          "titleZhHant": "物品數量設定",
           "status": "done"
         },
         {
           "id": "trip-duplicate",
-          "title": "复制行程",
-          "titleEn": "Trip duplication",
-          "titleZhHant": "複製行程",
+          "title": "一键复制行程",
+          "titleEn": "Duplicate a trip",
+          "titleZhHant": "一鍵複製行程",
           "status": "done"
         },
         {
@@ -241,9 +241,9 @@
         },
         {
           "id": "app-icons",
-          "title": "主题",
-          "titleEn": "Themes",
-          "titleZhHant": "主題",
+          "title": "多套 App 图标主题",
+          "titleEn": "App icon themes",
+          "titleZhHant": "多套 App 圖示主題",
           "status": "done"
         }
       ]
