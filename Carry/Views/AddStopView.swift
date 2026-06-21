@@ -188,7 +188,8 @@ struct AddStopView: View {
                 let coord = item?.placemark.coordinate
                 let address = item?.placemark.title ?? completion.subtitle
                 let phone = item?.phoneNumber ?? ""   // MapKit POI 自带电话（餐厅/景点多有），顺手带出
-                let tzId = item?.placemark.timeZone?.identifier ?? ""   // 顺手捕获地点时区（spec: itinerary-timezone.md）
+                // 用 MKMapItem.timeZone（搜索结果可靠带它；placemark.timeZone 常为 nil）。spec: itinerary-timezone.md。
+                let tzId = item?.timeZone?.identifier ?? item?.placemark.timeZone?.identifier ?? ""
                 if let relocateStopId {
                     // relocate：地点整体换了 → 名称/坐标/地址/电话/时区一并更新（类别保持不变）。
                     store.updateItineraryStop(

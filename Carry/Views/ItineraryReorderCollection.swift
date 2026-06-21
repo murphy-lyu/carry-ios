@@ -373,6 +373,21 @@ struct ItineraryReorderCollection: UIViewRepresentable {
                 self?.collectionView?.setNeedsLayout()
                 self?.collectionView?.layoutIfNeeded()
                 self?.updateBottomInsetForLastSectionPinning()
+                self?.refreshVisibleHeaders()
+            }
+        }
+
+        /// 重配可见 section 头部的内容——section id=天 UUID，加交通/地点等不改天身份，diffable 不会重配头部，
+        /// 导致依赖行程级状态的头部内容（如多时区的 GMT 小标）刷不出来。apply 后主动重设一遍。
+        private func refreshVisibleHeaders() {
+            guard let collectionView, let dataSource else { return }
+            let sectionIDs = dataSource.snapshot().sectionIdentifiers
+            for indexPath in collectionView.indexPathsForVisibleSupplementaryElements(ofKind: headerKind) {
+                guard indexPath.section < sectionIDs.count,
+                      let model = parent.sections.first(where: { $0.id == sectionIDs[indexPath.section] }),
+                      let header = collectionView.supplementaryView(forElementKind: headerKind, at: indexPath) as? UICollectionViewCell
+                else { continue }
+                header.contentConfiguration = UIHostingConfiguration { self.parent.headerContent(model) }
             }
         }
 

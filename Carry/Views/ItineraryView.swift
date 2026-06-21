@@ -811,7 +811,9 @@ struct ItineraryView: View {
     /// 单时区行程或缺时区信息返回 nil（spec: itinerary-timezone.md D1/D2）。
     private func dayZoneLabel(_ day: ItineraryDay) -> String? {
         guard let bundle, bundle.isMultiTimeZone else { return nil }
-        guard let tz = TimeZone(identifier: day.representativeTimeZoneId(trip: bundle)) else { return nil }
+        // carry-forward：空白天继承「上一次落地后所在的时区」（飞抵后即在目的地），而非回退出发地。
+        let tzId = bundle.displayTimeZoneIds()[day.sortOrder] ?? bundle.primaryTimeZoneId
+        guard let tz = TimeZone(identifier: tzId) else { return nil }
         let base = Calendar.current.startOfDay(for: bundle.departureDate)
         let date = Calendar.current.date(byAdding: .day, value: day.sortOrder, to: base) ?? base
         return gmtOffsetLabel(tz.secondsFromGMT(for: date))

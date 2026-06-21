@@ -708,6 +708,21 @@ extension TripBundle {
 
     /// 行程是否跨 ≥2 个时区——决定 UI 是否显示时区提示（spec D1/D2）。
     var isMultiTimeZone: Bool { Set(activityTimeZoneIds).count >= 2 }
+
+    /// 每天用于「显示」的时区（`[dayOrder: tzId]`）——carry-forward：
+    /// 有活动的天按当天所在地；**空白天继承「上一次落地后所在的时区」**（飞抵巴黎后的空白天显示巴黎时区，
+    /// 而非回退出发地）。spec: itinerary-timezone.md D3。
+    func displayTimeZoneIds() -> [Int: String] {
+        var result: [Int: String] = [:]
+        var current = primaryTimeZoneId   // 起点 ≈ 出发地
+        for day in safeItineraryDays.sorted(by: { $0.sortOrder < $1.sortOrder }) {
+            let own = day.ownTimeZoneId
+            result[day.sortOrder] = own ?? current
+            if let arr = day.endArrivalTimeZoneId { current = arr }   // 当天有交通落地 → 之后所在地顺延到到达区
+            else if let own { current = own }                         // 否则以当天所在地更新
+        }
+        return result
+    }
 }
 
 extension ItineraryStop {
@@ -731,5 +746,17 @@ extension ItineraryDay {
         if let z = sortedStops.compactMap({ $0.timeZoneId.isEmpty ? nil : $0.timeZoneId }).first { return z }
         if let z = sortedSegments.compactMap({ $0.fromTimeZoneId.isEmpty ? nil : $0.fromTimeZoneId }).first { return z }
         return trip.primaryTimeZoneId
+    }
+
+    /// 当天「所在地时区」：地点/住宿优先 → 否则交通段出发区；都没有则 nil（空白天）。
+    var ownTimeZoneId: String? {
+        if let z = sortedStops.compactMap({ $0.timeZoneId.isEmpty ? nil : $0.timeZoneId }).first { return z }
+        if let z = sortedSegments.compactMap({ $0.fromTimeZoneId.isEmpty ? nil : $0.fromTimeZoneId }).first { return z }
+        return nil
+    }
+
+    /// 当天最后一段交通的到达时区——用于把「所在地」顺延到之后的空白天（飞抵后即在目的地）；无则 nil。
+    var endArrivalTimeZoneId: String? {
+        sortedSegments.compactMap { $0.toTimeZoneId.isEmpty ? nil : $0.toTimeZoneId }.last
     }
 }

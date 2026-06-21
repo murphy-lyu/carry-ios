@@ -80,8 +80,9 @@ struct ItineraryPlaceSearchSheet: View {
                 let address = item?.placemark.title ?? completion.subtitle
                 // MapKit POI 自带电话（酒店/租车点等多有），顺手带出供「行程中联系」。
                 let phone = item?.phoneNumber ?? ""
-                // 顺手捕获该地点的 IANA 时区（placemark 自带），供行程时区系统化用（spec: itinerary-timezone.md）。
-                let tzId = item?.placemark.timeZone?.identifier ?? ""
+                // 顺手捕获该地点的 IANA 时区，供行程时区系统化用（spec: itinerary-timezone.md）。
+                // 用 `MKMapItem.timeZone`——本地搜索结果可靠带它；`CLPlacemark.timeZone` 常为 nil（实测）。
+                let tzId = item?.timeZone?.identifier ?? item?.placemark.timeZone?.identifier ?? ""
                 onSelect(completion.title, coord?.latitude ?? 0, coord?.longitude ?? 0, address, phone, tzId)
                 dismiss()
             }
