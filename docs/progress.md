@@ -5,12 +5,13 @@
 
 ## 上次改动摘要（行程时区系统化 Phase 1+2 · spec: itinerary-timezone.md · 2026-06-21 夜）
 
-> 跨多文件大改 + SwiftData 轻量迁移（加可选字段，未上线故无需 schema 版本）。**编译绿**（主 app + Widget）。**已提交未 push**（`88382eb` Phase 1 / `67cd49e` Phase 2），等用户早上验收后再 push。模拟器冒烟测试被 CoreSimulator 服务偶发 `-308` 挡住（环境问题、非代码），视觉验收交用户。
+> 跨多文件大改 + SwiftData 轻量迁移（加可选字段，未上线故无需 schema 版本）。**编译绿**（主 app + Widget）。**已提交未 push**（`88382eb` Phase 1 / `67cd49e` Phase 2 / `ef37140` 实测修复）。**模拟器实测通过**（用户授权后跑 iOS 26.5）：建上海→巴黎行程（The Bund + AF111 PVG→CDG），Day 头 Jun 21 显 GMT+8、Jun 22+ 顺延 GMT+2 ✓。
+> **实测修了 3 个 bug**（`ef37140`）：① 捕获——MapKit 本地搜索的 `CLPlacemark.timeZone` 几乎总 nil，改用 `MKMapItem.timeZone`；② 刷新——collection section id=天，加航班不重配头部 → 小标加完不显（要退出再进），改为 apply 后重配可见头部；③ 空白天 carry-forward——空白天继承「上次落地后所在时区」（飞抵巴黎后的空白天显巴黎，非回退出发地）。
 - **🔴 修真 bug（Phase 1）**：原来地点/住宿时间是「裸的当地分钟数、无时区」，通知里 `tzId:""` → 按**设备时区**算 → 跨时区行程下退房/每日提醒**错点触发**（如人在上海、巴黎退房提醒按上海时间响）。
 - **🟢 Phase 1 正确性**：`ItineraryStop`/`LodgingStay` 加 `timeZoneId`（地点搜索从 `placemark.timeZone` 自动捕获；航班已有机场时区）；`TripBundle.primaryTimeZoneId/isMultiTimeZone` + 各活动 `effectiveTimeZoneId` 兜底；通知（lodging/daily/无区 transport）改用「活动自身时区 → 行程主时区 → 设备」并传给 trigger。全链路同步：备份/还原、分享文件、复制行程、TripStore setter。
 - **🟢 Phase 2 多时区显示**（方案比原 spec 更克制）：多时区行程时**每个 Day 头部**显示该天时区小标 `GMT±N`（按当天日期算偏移、含夏令时）；单时区零显示。换区基本跨天发生、当天跨区的航班已 `A→B` 自解释，故按天标比逐条贴更清晰、改动面更小。
 - **⏸ Phase 3 暂缓**：可编辑兜底时区切换器——Carry 现状**无**可见切换器（用户最初截图是 Tripsy 非 Carry，已在 spec 更正），自动捕获已覆盖常见场景；新增可编辑 picker 是设计敏感点，待用户过眼 Phase 1+2 后定。
-- **待办**：① 用户真机验收（建跨时区行程：上海→巴黎，看 Day 头时区小标 + 退房提醒时刻）；② push；③ Phase 3 设计确认；④ 可选：详情卡内时间旁加时区小注（主时间轴已由 Day 头覆盖）。
+- **待办**：① push（用户定）；② Phase 3 设计确认（兜底切换器，Carry 现无可见切换器）；③ 可选：详情卡内时间旁加时区小注（主时间轴已由 Day 头覆盖）；④ 退房提醒跨时区真机扫一眼（逻辑已修，低风险）。
 
 ## 上次改动摘要（航班名本地化：机场/航司名按界面语言显示 · spec: itinerary-flight-name-localization.md · 2026-06-21）
 
