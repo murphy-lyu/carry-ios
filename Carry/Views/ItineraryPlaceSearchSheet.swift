@@ -66,6 +66,7 @@ struct ItineraryPlaceSearchSheet: View {
                 // 聚焦推迟到下一帧：sheet 呈现更新周期内同步设 @FocusState 会触发 AttributeGraph 崩溃。
                 DispatchQueue.main.async { searchFocused = true }
             }
+            .onDisappear { completer.tearDown() }   // 取消在途海外请求 + 停 MapKit 补全
         }
     }
 
@@ -74,7 +75,11 @@ struct ItineraryPlaceSearchSheet: View {
         Task {
             let r = await completer.resolve(suggestion)   // 国内走 MapKit、海外走 Worker;两源同构
             isResolving = false
-            guard let r else { dismiss(); return }
+            guard let r else {
+                // 解析失败 → 仍回传用户选中的名字（无坐标/地址/时区），不让点击无声丢失。
+                onSelect(suggestion.title, 0, 0, "", "", "")
+                dismiss(); return
+            }
             onSelect(r.name, r.latitude, r.longitude, r.address, r.phone, r.timeZoneId)
             dismiss()
         }

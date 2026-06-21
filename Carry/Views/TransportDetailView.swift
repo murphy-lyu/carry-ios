@@ -62,13 +62,22 @@ struct TransportDetailView: View {
             && segment.fromTimeZoneId != segment.toTimeZoneId
     }
 
-    /// IANA → "GMT+8" / "GMT−3:30"（按当前日期算偏移；标签用途，跨夏令时边界外都准）。
-    private func gmtZoneLabel(_ tzId: String) -> String? {
+    /// IANA → "GMT+8" / "GMT−3:30"。**按航段实际发生日期算偏移**（含夏令时）：夏天规划冬天的航班，
+    /// 伦敦应显 GMT+0 而非按「今天」的 GMT+1。日期由 `eventDate(dayOrder:)` 给出。
+    private func gmtZoneLabel(_ tzId: String, on date: Date) -> String? {
         guard !tzId.isEmpty, let tz = TimeZone(identifier: tzId) else { return nil }
-        let secs = tz.secondsFromGMT(for: Date())
+        let secs = tz.secondsFromGMT(for: date)
         let sign = secs < 0 ? "−" : "+"
         let mins = abs(secs) / 60, h = mins / 60, m = mins % 60
         return m == 0 ? "GMT\(sign)\(h)" : String(format: "GMT%@%d:%02d", sign, h, m)
+    }
+
+    /// 航段某端的绝对日期（行程出发日 + 该端 dayOrder 天）——用于按当天算时区偏移（夏令时）。
+    /// 取不到行程/无日期行程时回落「今天」（dateless 无真实日程，偏移本就无确切意义）。
+    private func eventDate(dayOrder: Int) -> Date {
+        let base = store.bundle(for: tripId)?.departureDate ?? Date()
+        let start = Calendar.current.startOfDay(for: base)
+        return Calendar.current.date(byAdding: .day, value: dayOrder, to: start) ?? start
     }
 
     /// 由端点字段拼出 RoutePoint；无地点也无时间 → nil（该端点不渲染）。
@@ -103,7 +112,7 @@ struct TransportDetailView: View {
                    code: segment.fromCode,
                    minutes: segment.departLocalMinutes, dayOffset: 0,
                    terminal: terminalDisplay(segment.fromTerminal), address: segment.fromAddress,
-                   zone: crossesTimeZone ? gmtZoneLabel(segment.fromTimeZoneId) : nil)
+                   zone: crossesTimeZone ? gmtZoneLabel(segment.fromTimeZoneId, on: eventDate(dayOrder: segment.departDayOrder)) : nil)
     }
     private var arrivalPoint: RoutePoint? {
         routePoint(name: localizedAirportName(code: segment.toCode, fallback: segment.toName),
@@ -111,7 +120,7 @@ struct TransportDetailView: View {
                    minutes: segment.arriveLocalMinutes,
                    dayOffset: segment.arriveDayOrder - segment.departDayOrder,
                    terminal: terminalDisplay(segment.toTerminal), address: segment.toAddress,
-                   zone: crossesTimeZone ? gmtZoneLabel(segment.toTimeZoneId) : nil)
+                   zone: crossesTimeZone ? gmtZoneLabel(segment.toTimeZoneId, on: eventDate(dayOrder: segment.arriveDayOrder)) : nil)
     }
 
     /// 机场名按界面语言显示：码命中机场目录则用本地化名，否则回落存的原文（非机场地点/未收录机场不受影响）。

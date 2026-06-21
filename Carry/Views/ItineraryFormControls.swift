@@ -150,7 +150,9 @@ enum TimeZoneDisplay {
         return last.replacingOccurrences(of: "_", with: " ")
     }
 
-    /// "GMT+8" / "GMT−3:30"（按当前日期算偏移）。
+    /// "GMT+8" / "GMT−3:30"（默认按「当前」算偏移）。仅用于时区**选择器/选择行**这类通用 UI——
+    /// 不绑某个具体事件日期，故用「当前」即可；按事件日期算偏移（夏令时）的是详情卡，见
+    /// `TransportDetailView.gmtZoneLabel(_:on:)` 与 `ItineraryView.dayZoneLabel`。
     static func gmt(_ id: String, now: Date = Date()) -> String? {
         guard !id.isEmpty, let tz = TimeZone(identifier: id) else { return nil }
         let secs = tz.secondsFromGMT(for: now)

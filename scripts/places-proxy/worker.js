@@ -4,23 +4,30 @@
 //   地点（MapKit/高德在大陆搜不到境外 POI）。App 始终只调本 Worker；本 Worker 是「控制面」。
 //
 // 关键设计：
-//   - 藏 MAPBOX_TOKEN（secret，不进 App/git）。
+//   - 藏 MAPBOX_TOKEN / GEOAPIFY_KEY（secret，不进 App/git）。
+//   - **多源 + 自动降级**：SEARCH_PROVIDER = mapbox | geoapify | auto（默认 auto：Mapbox 主、
+//     Geoapify 备，主源硬失败才降级）。换源只改云控变量、App 不动（Worker 是咽喉，防单点）。
 //   - **只服务境外**：过滤掉 country ∈ {CN,HK,MO} 的结果——中国境内一律由高德出（合规红线）。
+//     红线两道防线：country code（alpha-2/3）+ 坐标 IANA 时区落在境内（沪/乌/港/澳）也挡（见 complianceCheck，
+//     用时区而非粗 bbox：精准且堵 ga: id 伪造 cc 的漏洞）。
 //   - 坐标 → IANA 时区（tz-lookup，离线），随 /retrieve 返回 → 海外地点也带时区（喂时区功能）。
 //   - 运控策略 OVERSEAS_POLICY = all | cn_only | off（Cloudflare 后台即时改、零发版）。
-//   - app-token 门槛 + 缓存，控成本/防盗刷（同航班 Worker 范式）。
+//   - app-token 门槛（常量时间比较）+ 缓存，控成本/防盗刷（同航班 Worker 范式）。
+//   - suggest 结果 id 带 provider 前缀（mb:/ga:），/retrieve 据此路由回正确来源。
 //
 // 请求：
-//   GET /suggest?q=&session=&proximity=lon,lat&language=&storefront=
-//   GET /retrieve?id=&session=&storefront=
+//   GET /suggest?q=&session=&proximity=lon,lat&storefront=   （结果一律 language=en，见下）
+//   GET /retrieve?id=&session=&storefront=                   （id 带 mb:/ga: 前缀，路由回来源 provider）
 //   header 可选 X-App-Token
 
 import tzlookup from "tz-lookup";
 
 const MAPBOX = "https://api.mapbox.com/search/searchbox/v1";
-const CN_CODES = new Set(["cn", "hk", "mo"]);   // 中国大陆 + 港澳：交给高德，不走 Mapbox
+const CN_CODES = new Set(["cn", "hk", "mo"]);        // 中国大陆 + 港澳（ISO alpha-2）：交给高德，不走 Mapbox
+const CN_CODES3 = new Set(["chn", "hkg", "mac"]);    // 同上 alpha-3（Mapbox 字段命名随版本而异，两套都认）
 const SUGGEST_TTL = 600;     // 自动补全缓存 10 分钟
 const RETRIEVE_TTL = 86400;  // 选中结果缓存 1 天
+const MAX_QUERY_LEN = 200;   // query 长度上限：截断超长输入，防刷 Azure/Mapbox 成本
 
 export default {
   async fetch(request, env) {
@@ -33,17 +40,28 @@ export default {
       const { success } = await env.RATE_LIMITER.limit({ key: ip });
       if (!success) return json({ error: "rate_limited" }, 429);
     }
-    // app-token 门槛。
-    if (env.APP_TOKEN && request.headers.get("X-App-Token") !== env.APP_TOKEN) {
+    // app-token 门槛（常量时间比较：避免逐字节短路带来的计时旁路，防慢速爆破 token）。
+    if (env.APP_TOKEN && !safeEqual(request.headers.get("X-App-Token") || "", env.APP_TOKEN)) {
       return json({ error: "unauthorized" }, 401);
     }
-    if (!env.MAPBOX_TOKEN) return json({ error: "server_misconfigured" }, 500);
+    // 不在这里全局强求 MAPBOX_TOKEN：纯 geoapify 模式（Mapbox 挂了切备源）不需要它。
+    //   各 provider 函数各自检查自己的 token（mapboxSuggest 抛错 → auto 模式自动降级到 Geoapify）。
 
     // 运控策略：off 全关；cn_only 仅大陆 storefront；all 都开。
+    // 注意：storefront 由 App 端按真实 StoreKit storefront 注入，理论上客户端可伪造 → 它只是
+    //   「是否提供海外搜索」的成本/运控开关，**不是合规边界**。真正的合规红线（境内一律走高德）
+    //   由下面 handleSuggest/handleRetrieve 里**无条件**的 CN 过滤保证，与 storefront/policy 无关。
+    //   不用 request.cf.country 反查 storefront：旅行 App 用户常人在境外但 storefront=CHN，反查会误杀真实用户。
     const policy = (env.OVERSEAS_POLICY || "all").toLowerCase();
     const storefront = (url.searchParams.get("storefront") || request.headers.get("X-Storefront") || "").toUpperCase();
-    if (policy === "off") return json({ suggestions: [], disabled: true });
-    if (policy === "cn_only" && storefront !== "CHN") return json({ suggestions: [], disabled: true });
+    const disabled = policy === "off" || (policy === "cn_only" && storefront !== "CHN");
+    if (disabled) {
+      // 按 path 返回对应空形状：/retrieve 客户端解码的是 {place}，给 {disabled:true}（无 place → 优雅回退 nil，
+      //   不会把 suggest 的形状塞给 retrieve 调用方而坏掉选择流程）。
+      return url.pathname === "/retrieve"
+        ? json({ disabled: true })
+        : json({ suggestions: [], disabled: true });
+    }
 
     try {
       if (url.pathname === "/suggest") return await handleSuggest(url, env);
@@ -55,95 +73,253 @@ export default {
   },
 };
 
+// 选哪个源：mapbox（仅主）| geoapify（仅备）| auto（默认：Mapbox 主、Geoapify 自动降级）。
+// 降级仅在主源**硬失败**（异常/非 200）时发生；主源「正常返回空」不算失败、不降级（那是真没结果）。
+function providerPlan(env) {
+  const p = (env.SEARCH_PROVIDER || "auto").toLowerCase();
+  if (p === "mapbox") return { primary: "mapbox", fallback: null };
+  if (p === "geoapify") return { primary: "geoapify", fallback: null };
+  return { primary: "mapbox", fallback: env.GEOAPIFY_KEY ? "geoapify" : null };
+}
+
 async function handleSuggest(url, env) {
-  const q = (url.searchParams.get("q") || "").trim();
+  let q = (url.searchParams.get("q") || "").trim();
   if (!q) return json({ suggestions: [] });
-  const session = url.searchParams.get("session") || "carry";
-  // 一律用英文查 Mapbox:实测 language=zh 会把 POI 排序带歪（偏行政区划,Tokyo Tower→「东京都」)。
-  // 海外地点显示英文/当地名,对旅行者更实用、也是通行做法。中文 query 已由翻译层转英文(见下)。
-  const language = "en";
-  const proximity = url.searchParams.get("proximity") || "";   // "lon,lat"
+  if (q.length > MAX_QUERY_LEN) q = q.slice(0, MAX_QUERY_LEN);   // 截断超长 query（防滥用/控成本）
+  const session = url.searchParams.get("session") || "carry";   // 仅 Mapbox 用（按 session 计费）
+  const proximity = url.searchParams.get("proximity") || "";    // "lon,lat"
+  const plan = providerPlan(env);
 
   const cache = caches.default;
-  const cacheKey = new Request(`https://carry-places-cache/suggest?q=${encodeURIComponent(q)}&l=${language}&p=${proximity}`);
+  // 缓存键含 provider：Mapbox / Geoapify 的 id 体系不同，不能串用。
+  const cacheKey = new Request(`https://carry-places-cache/suggest?q=${encodeURIComponent(q)}&prov=${plan.primary}&p=${proximity}`);
   const cached = await cache.match(cacheKey);
   if (cached) return cached;
 
-  // 中文/日文/韩文 query → 先翻成英文再查 Mapbox（其海外 POI 基本无中文别名索引,
-  // 「卢浮宫」直接查会空)。翻译走 DeepL、结果缓存,失败优雅回退原 query。显示仍按 language 本地化。
-  const mapboxQ = hasCJK(q) ? ((await translateToEnglish(q, env)) || q) : q;
+  // 中日韩 query → 先翻成英文再查（海外 POI 基本无中文别名索引,「卢浮宫」直接查会空)。两源都吃英文 query。
+  // 翻译走 Azure、结果缓存,失败优雅回退原 query。一律用 language=en：实测 zh 会把排序带歪（偏行政区划）。
+  const queryEn = hasCJK(q) ? ((await translateToEnglish(q, env)) || q) : q;
 
+  // 主源硬失败才降级到备源；备源也失败 → 抛给上层（502）。
+  let suggestions, usedFallback = false;
+  try {
+    suggestions = await suggestVia(plan.primary, queryEn, { proximity, session, env });
+  } catch (e) {
+    if (!plan.fallback) throw e;
+    usedFallback = true;
+    suggestions = await suggestVia(plan.fallback, queryEn, { proximity, session, env });
+  }
+  // 降级结果**不缓存**：否则主源短暂抖动后，会拿备源结果顶满 10 分钟 TTL（主源恢复了还在吐备源）。
+  return usedFallback
+    ? json({ suggestions })
+    : json({ suggestions }, 200, SUGGEST_TTL, cacheKey, cache);
+}
+
+// 按 provider 取补全结果（统一返回 [{id, name, secondary}]，id 带 provider 前缀供 /retrieve 路由）。硬失败抛错以触发降级。
+async function suggestVia(provider, q, opts) {
+  if (provider === "geoapify") return geoapifySuggest(q, opts);
+  return mapboxSuggest(q, opts);
+}
+
+async function mapboxSuggest(q, { proximity, session, env }) {
+  if (!env.MAPBOX_TOKEN) throw new Error("mapbox_no_token");
   const up = new URL(`${MAPBOX}/suggest`);
-  up.searchParams.set("q", mapboxQ);
+  up.searchParams.set("q", q);
   up.searchParams.set("access_token", env.MAPBOX_TOKEN);
   up.searchParams.set("session_token", session);
-  up.searchParams.set("language", language);
+  up.searchParams.set("language", "en");
   up.searchParams.set("limit", "8");
   up.searchParams.set("types", "poi,address,place,locality,neighborhood");
   if (proximity) up.searchParams.set("proximity", proximity);
 
   const resp = await fetch(up.toString(), { headers: { accept: "application/json" } });
-  if (!resp.ok) return json({ error: "upstream_error", status: resp.status }, 502);
+  if (!resp.ok) throw new Error("mapbox_suggest_" + resp.status);   // 抛错 → 触发降级
   const data = await resp.json().catch(() => null);
   const list = Array.isArray(data?.suggestions) ? data.suggestions : [];
-
-  // 过滤中国境内（已知 country 时）；返回精简结构。
-  const suggestions = list
-    .filter((s) => {
-      const cc = s?.context?.country?.country_code?.toLowerCase();
-      return !(cc && CN_CODES.has(cc));
-    })
+  // 过滤中国境内（已知 country 时）。suggest 拿不到坐标，只能按 country code 挡；漏网的境内点由 /retrieve 时区判定兜底。
+  return list
+    .filter((s) => !isChinaCountry(countryCodeOf(s)))
     .map((s) => ({
-      id: s.mapbox_id,
+      id: "mb:" + s.mapbox_id,
       name: s.name || "",
       secondary: s.place_formatted || s.full_address || "",
     }))
-    .filter((s) => s.id && s.name);
+    .filter((s) => s.id !== "mb:undefined" && s.name);
+}
 
-  return json({ suggestions }, 200, SUGGEST_TTL, cacheKey, cache);
+// Geoapify 自动补全：单次调用即带坐标 → 把名称/地址/坐标/国家码塞进 id（base64url），
+//   /retrieve 时离线解出、本地算时区，不再二次请求 Geoapify（更省额度、更稳）。
+async function geoapifySuggest(q, { proximity, env }) {
+  if (!env.GEOAPIFY_KEY) throw new Error("geoapify_no_key");
+  const up = new URL("https://api.geoapify.com/v1/geocode/autocomplete");
+  up.searchParams.set("text", q);
+  up.searchParams.set("apiKey", env.GEOAPIFY_KEY);
+  up.searchParams.set("lang", "en");
+  up.searchParams.set("limit", "8");
+  up.searchParams.set("format", "geojson");
+  if (proximity) {
+    const [lon, lat] = proximity.split(",");
+    if (lon && lat) up.searchParams.set("bias", `proximity:${lon},${lat}`);
+  }
+  const resp = await fetch(up.toString(), { headers: { accept: "application/json" } });
+  if (!resp.ok) throw new Error("geoapify_suggest_" + resp.status);   // 抛错 → 触发降级（或上层 502）
+  const data = await resp.json().catch(() => null);
+  const feats = Array.isArray(data?.features) ? data.features : [];
+  return feats
+    .map((f) => {
+      const p = f.properties || {};
+      const coords = f.geometry?.coordinates || [];
+      const lon = Number(coords[0] ?? p.lon);
+      const lat = Number(coords[1] ?? p.lat);
+      const cc = (p.country_code || "").toLowerCase();
+      const name = p.name || p.address_line1 || p.formatted || "";
+      const secondary = p.address_line2 || (p.name ? p.formatted : "") || "";
+      return { name, secondary, lon, lat, cc, formatted: p.formatted || "" };
+    })
+    .filter((r) => {
+      if (!r.name || !Number.isFinite(r.lat) || !Number.isFinite(r.lon)) return false;
+      if (isChinaCountry(r.cc)) return false;
+      if (isChinaTimeZone(zoneOf(r.lat, r.lon))) return false;   // 坐标时区在境内 → 不展示（合规；cc 缺失也挡）
+      return true;
+    })
+    .map((r) => ({
+      id: "ga:" + b64urlEncode(JSON.stringify({ n: r.name, a: r.secondary || r.formatted, lat: r.lat, lon: r.lon, cc: r.cc })),
+      name: r.name,
+      secondary: r.secondary,
+    }));
 }
 
 async function handleRetrieve(url, env) {
-  const id = (url.searchParams.get("id") || "").trim();
-  if (!id) return json({ error: "bad_request" }, 400);
+  const rawId = (url.searchParams.get("id") || "").trim();
+  if (!rawId) return json({ error: "bad_request" }, 400);
   const session = url.searchParams.get("session") || "carry";
 
   const cache = caches.default;
-  const cacheKey = new Request(`https://carry-places-cache/retrieve?id=${encodeURIComponent(id)}`);
+  const cacheKey = new Request(`https://carry-places-cache/retrieve?id=${encodeURIComponent(rawId)}`);
   const cached = await cache.match(cacheKey);
   if (cached) return cached;
 
+  // 按 id 前缀路由到来源 provider（前缀由 suggest 写入）；无前缀的旧式 id 默认按 Mapbox。
+  let place;
+  if (rawId.startsWith("ga:")) {
+    place = geoapifyRetrievePlace(rawId.slice(3));
+  } else {
+    const mbId = rawId.startsWith("mb:") ? rawId.slice(3) : rawId;
+    place = await mapboxRetrievePlace(mbId, session, env);
+  }
+  if (place.error) return json({ error: place.error }, place.status || 404);
+  return json({ place: place.value }, 200, RETRIEVE_TTL, cacheKey, cache);
+}
+
+async function mapboxRetrievePlace(id, session, env) {
+  if (!env.MAPBOX_TOKEN) return { error: "server_misconfigured", status: 500 };
   const up = new URL(`${MAPBOX}/retrieve/${encodeURIComponent(id)}`);
   up.searchParams.set("access_token", env.MAPBOX_TOKEN);
   up.searchParams.set("session_token", session);
 
   const resp = await fetch(up.toString(), { headers: { accept: "application/json" } });
-  if (!resp.ok) return json({ error: "upstream_error", status: resp.status }, 502);
+  if (!resp.ok) return { error: "upstream_error", status: 502 };
   const data = await resp.json().catch(() => null);
   const f = data?.features?.[0];
-  if (!f) return json({ error: "not_found" }, 404);
+  if (!f) return { error: "not_found", status: 404 };
 
   const coords = f.geometry?.coordinates || [];
   const lon = Number(coords[0]);
   const lat = Number(coords[1]);
   const p = f.properties || {};
-  const cc = p?.context?.country?.country_code?.toLowerCase();
-  // 兜底再挡一道中国境内（合规）。
-  if (cc && CN_CODES.has(cc)) return json({ error: "domestic_excluded" }, 404);
-  if (!Number.isFinite(lat) || !Number.isFinite(lon)) return json({ error: "no_coords" }, 404);
-
-  let timeZoneId = "";
-  try { timeZoneId = tzlookup(lat, lon) || ""; } catch (_) { timeZoneId = ""; }
-
-  const place = {
-    name: p.name || "",
-    latitude: lat,
-    longitude: lon,
-    address: p.full_address || p.place_formatted || "",
-    phone: p.metadata?.phone || "",
-    timeZoneId,
+  const check = complianceCheck(lat, lon, countryCodeOf(p));
+  if (check.error) return check;
+  return {
+    value: {
+      name: p.name || "",
+      latitude: lat,
+      longitude: lon,
+      address: p.full_address || p.place_formatted || "",
+      phone: p.metadata?.phone || "",
+      timeZoneId: check.timeZoneId,
+    },
   };
-  return json({ place }, 200, RETRIEVE_TTL, cacheKey, cache);
+}
+
+// Geoapify 离线解析：id 里已含名称/地址/坐标/国家码，本地解出 + 算时区，零二次请求。
+function geoapifyRetrievePlace(token) {
+  let obj;
+  try { obj = JSON.parse(b64urlDecode(token)); } catch (_) { return { error: "bad_id", status: 404 }; }
+  const lat = Number(obj.lat);
+  const lon = Number(obj.lon);
+  // 注意：cc 来自客户端可控的 id，故 complianceCheck 不只信 cc，还按坐标时区判定（堵伪造）。
+  const check = complianceCheck(lat, lon, (obj.cc || "").toLowerCase());
+  if (check.error) return check;
+  return {
+    value: {
+      name: obj.n || "",
+      latitude: lat,
+      longitude: lon,
+      address: obj.a || "",
+      phone: "",
+      timeZoneId: check.timeZoneId,
+    },
+  };
+}
+
+// 合规红线（境内一律走高德）+ 坐标有效性，两源共用。顺带把时区算出来回传（避免重复 tz-lookup）。
+//   返回 { error, status }（应拦截）或 { timeZoneId }（放行）。三道：
+//   ① 无效坐标挡；② country code 命中 CN/HK/MO 挡；
+//   ③ **不信任可伪造的 cc**——坐标的 IANA 时区落在中国境内（沪/乌鲁木齐/港/澳）也挡。
+//   ③ 用时区而非粗 bbox：精准（首尔→Asia/Seoul 放行、台北→Asia/Taipei 放行、北京→Asia/Shanghai 挡，
+//   哪怕 ga: id 把 cc 伪造成 jp），既堵 ga: id 伪造漏洞、又不误杀矩形内的境外旅行目的地。
+function complianceCheck(lat, lon, cc) {
+  if (!Number.isFinite(lat) || !Number.isFinite(lon)) return { error: "no_coords", status: 404 };
+  if (isChinaCountry(cc)) return { error: "domestic_excluded", status: 404 };
+  const timeZoneId = zoneOf(lat, lon);
+  if (isChinaTimeZone(timeZoneId)) return { error: "domestic_excluded", status: 404 };
+  return { timeZoneId };
+}
+
+// 中国大陆 + 港澳的 IANA 时区（含历史别名）——境内地理判定，比 country code 可信（坐标无法伪造其所在时区）。
+const CN_TIMEZONES = new Set([
+  "Asia/Shanghai", "Asia/Urumqi", "Asia/Hong_Kong", "Asia/Macau",
+  "Asia/Harbin", "Asia/Chongqing", "Asia/Chungking", "Asia/Kashgar",   // 历史别名（多已 link 到沪/乌鲁木齐）
+]);
+function isChinaTimeZone(tz) {
+  return !!tz && CN_TIMEZONES.has(tz);
+}
+
+function zoneOf(lat, lon) {
+  try { return tzlookup(lat, lon) || ""; } catch (_) { return ""; }
+}
+
+// 常量时间字符串比较（基于运行时 crypto.subtle.timingSafeEqual，要求等长 buffer）。
+function safeEqual(a, b) {
+  const enc = new TextEncoder();
+  const ab = enc.encode(a), bb = enc.encode(b);
+  if (ab.byteLength !== bb.byteLength) return false;   // 长度差异本就会泄露，属可接受
+  return crypto.subtle.timingSafeEqual(ab, bb);
+}
+
+// 从 Mapbox 结果对象提取 country code（兼容多种字段命名：context.country 下 alpha-2 / alpha-3，及顶层备用字段）。
+function countryCodeOf(obj) {
+  const c = obj?.context?.country;
+  return (c?.country_code || c?.country_code_alpha_3 || obj?.country_code || "").toLowerCase();
+}
+
+// country code 是否属中国大陆 / 港澳（alpha-2 或 alpha-3）。
+function isChinaCountry(cc) {
+  return !!cc && (CN_CODES.has(cc) || CN_CODES3.has(cc));
+}
+
+// base64url 编/解码（Geoapify 把 retrieve 所需数据塞进 id，避免二次请求）。走 TextEncoder/Decoder 兼容非 ASCII（重音地址等）。
+function b64urlEncode(str) {
+  const bytes = new TextEncoder().encode(str);
+  let bin = "";
+  for (const b of bytes) bin += String.fromCharCode(b);
+  return btoa(bin).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+}
+function b64urlDecode(b64) {
+  const bin = atob(b64.replace(/-/g, "+").replace(/_/g, "/"));
+  const bytes = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+  return new TextDecoder().decode(bytes);
 }
 
 // 含中日韩文字（CJK 表意 + 假名 + 谚文）→ 视为需翻译。
@@ -156,8 +332,11 @@ async function translateToEnglish(text, env) {
   if (!env.AZURE_TRANSLATOR_KEY) return null;
   const cache = caches.default;
   const ck = new Request(`https://carry-places-cache/tr?q=${encodeURIComponent(text)}`);
-  const hit = await cache.match(ck);
-  if (hit) { try { return (await hit.json()).t; } catch (_) { /* fallthrough */ } }
+  // cache.match/json 抖动也不该让整条 suggest 502 → 兜底回退（caller 用原文 query 继续）。
+  try {
+    const hit = await cache.match(ck);
+    if (hit) { try { return (await hit.json()).t; } catch (_) { /* fallthrough */ } }
+  } catch (_) { /* 缓存读失败：忽略，继续走在线翻译 */ }
 
   const region = env.AZURE_TRANSLATOR_REGION || "eastasia";
   let resp;

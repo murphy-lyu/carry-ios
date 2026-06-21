@@ -97,7 +97,7 @@ final class StopSearchCompleter: NSObject, ObservableObject, MKLocalSearchComple
     private var mapkitResults: [PlaceSuggestion] = []
     private var overseasResults: [PlaceSuggestion] = []
     private var proximity = ""                 // "lon,lat"
-    private let session = UUID().uuidString    // 一次搜索会话(Mapbox session 计费)
+    private var session = UUID().uuidString    // Mapbox Search Box 会话（按 session 计费：N×suggest + 1×retrieve = 1 次搜索；retrieve 后轮换）
     private var overseasTask: Task<Void, Never>?
 
     override init() {
@@ -117,6 +117,8 @@ final class StopSearchCompleter: NSObject, ObservableObject, MKLocalSearchComple
     }
 
     nonisolated func completerDidUpdateResults(_ completer: MKLocalSearchCompleter) {
+        // MKLocalSearchCompleter 内部串行：设新 queryFragment 会取消上一次、只回最新片段的结果，
+        //   故 MapKit 这一路无需额外的乱序守卫（乱序风险只在独立 URLSession 的海外路，见 scheduleOverseas）。
         let items = completer.results
         Task { @MainActor in
             self.mapkitResults = items.map {
@@ -144,6 +146,9 @@ final class StopSearchCompleter: NSObject, ObservableObject, MKLocalSearchComple
             guard !Task.isCancelled else { return }
             await MainActor.run {
                 guard let self else { return }
+                // 防乱序覆盖：仅当结果对应的 query 仍是当前输入时才写回（旧 query 的慢响应直接丢弃，
+                //   不让 "tok" 的迟到结果盖掉 "toky"）。Task.isCancelled 只是协作标志、不保证不写，故这里再校验一道。
+                guard q == self.query.trimmingCharacters(in: .whitespaces) else { return }
                 self.overseasResults = r
                 self.merge()
             }
@@ -166,8 +171,20 @@ final class StopSearchCompleter: NSObject, ObservableObject, MKLocalSearchComple
         let storefront = isChinaStorefront ? "CHN" : "INTL"
         switch s.kind {
         case .mapkit(let completion): return await Self.resolveMapKit(completion)
-        case .overseas(let mapboxId): return await OverseasPlaceSource.retrieve(mapboxId: mapboxId, session: session, storefront: storefront)
+        case .overseas(let mapboxId):
+            let sess = session
+            let result = await OverseasPlaceSource.retrieve(mapboxId: mapboxId, session: sess, storefront: storefront)
+            // retrieve 终结本次 Mapbox 计费会话 → 轮换 session，下次搜索另起新会话；
+            //   否则 retrieve 之后的 suggest 会脱离会话被逐条计费（发票上才看得到的隐性漏钱）。
+            session = UUID().uuidString
+            return result
         }
+    }
+
+    /// sheet 关闭时调用：取消在途海外请求、停掉 MapKit 补全，避免回调写入已销毁视图的状态（配合防乱序）。
+    func tearDown() {
+        overseasTask?.cancel()
+        completer.cancel()
     }
 
     private static func resolveMapKit(_ completion: MKLocalSearchCompletion) async -> ResolvedPlace? {
@@ -269,6 +286,7 @@ struct AddStopView: View {
                 // AttributeGraph「setting value during update」硬崩溃；且延后设置程序化聚焦更可靠。
                 DispatchQueue.main.async { searchFocused = true }
             }
+            .onDisappear { completer.tearDown() }   // 取消在途海外请求 + 停 MapKit 补全
         }
     }
 
@@ -322,7 +340,11 @@ struct AddStopView: View {
         Task {
             let r = await completer.resolve(suggestion)   // 国内走 MapKit、海外走 Worker;两源同构返回
             isResolving = false
-            guard let r else { return }
+            guard let r else {
+                // 解析失败（网络/上游/无坐标）→ 退回无坐标停靠点、保留用户选中的名字，不让点击石沉大海。
+                addFallbackStop(named: suggestion.title)
+                return
+            }
             if let relocateStopId {
                 // relocate：地点整体换了 → 名称/坐标/地址/电话/时区一并更新（类别保持不变）。
                 store.updateItineraryStop(
@@ -340,6 +362,20 @@ struct AddStopView: View {
             }
             dismiss()
         }
+    }
+
+    /// 解析失败时的回退：用给定名字落一个无坐标停靠点（relocate 则改名清坐标），与「手动添加」同构。
+    private func addFallbackStop(named rawName: String) {
+        let name = rawName.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !name.isEmpty else { dismiss(); return }
+        if let relocateStopId {
+            store.updateItineraryStop(tripId: tripId, stopId: relocateStopId,
+                                      name: name, latitude: 0, longitude: 0, address: "", phone: "")
+            onRelocated?(name)
+        } else {
+            store.addItineraryStop(tripId: tripId, dayId: dayId, name: name, category: category)
+        }
+        dismiss()
     }
 
     private func addManualStop() {
