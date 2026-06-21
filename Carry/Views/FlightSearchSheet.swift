@@ -402,11 +402,7 @@ struct FlightSearchSheet: View {
     private func numberChanged() {
         if status != .idle { status = .idle; result = nil }
         guard let parts = parsedFlight else { recognized = nil; return }
-        let code = parts.airline
-        Task {
-            let a = await AirlineDatabase.shared.airline(forIATA: code)
-            await MainActor.run { if parsedFlight?.airline == code { recognized = a } }
-        }
+        recognized = AirlineDatabase.airline(forIATA: parts.airline)  // 同步单一数据源，无需 Task/await
     }
 
     private func runQuery() {

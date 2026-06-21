@@ -986,7 +986,7 @@ private struct TransportTimelineRow: View {
         let baseFont = Font.system(.body, design: .rounded)
         let number = segment.number.trimmingCharacters(in: .whitespaces)
         // 航司名按界面语言显示：航班从航班号解析本地化航司名，非航班/未识别则用存的承运方原文。
-        let carrier = FlightNameCache.displayCarrier(for: segment)
+        let carrier = segment.displayCarrier
         if number.isEmpty {
             let main = carrier.isEmpty ? NSLocalizedString(segment.mode.localizationKey, comment: "") : carrier
             return Text(main).font(baseFont.weight(.semibold)).foregroundStyle(.primary)

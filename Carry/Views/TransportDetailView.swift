@@ -43,7 +43,7 @@ struct TransportDetailView: View {
     private var titleText: String {
         let number = segment.number.trimmingCharacters(in: .whitespaces)
         if !number.isEmpty { return number }
-        let carrier = FlightNameCache.displayCarrier(for: segment)
+        let carrier = segment.displayCarrier
         return carrier.isEmpty ? NSLocalizedString(segment.mode.localizationKey, comment: "") : carrier
     }
 
@@ -173,7 +173,7 @@ struct TransportDetailView: View {
             // 航班/火车等：标题已是班次号 → 承运方放副标题（航司全名两行）；标题已是承运方时不重复。
             // 航司名按界面语言显示（航班从航班号解析本地化航司名，否则存的承运方原文）。
             let number = segment.number.trimmingCharacters(in: .whitespaces)
-            let carrier = FlightNameCache.displayCarrier(for: segment)
+            let carrier = segment.displayCarrier
             return (!number.isEmpty && !carrier.isEmpty) ? carrier : nil
         }
     }

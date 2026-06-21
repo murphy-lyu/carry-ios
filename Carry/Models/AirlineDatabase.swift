@@ -31,39 +31,41 @@ struct Airline: Decodable, Identifiable, Hashable, Sendable {
     }
 }
 
-/// 全球航司查询。actor 隔离状态：JSON 在首次查询时于后台执行器懒加载、解码，不阻塞主线程。
-/// 表小（~986 条），全量驻内存并建 IATA 索引，按航班号前缀 O(1) 命中。
-actor AirlineDatabase {
-    static let shared = AirlineDatabase()
-
-    private var byIATA: [String: Airline] = [:]
-    private var loaded = false
+/// 全球航司目录。**不可变参考数据 → 无需 actor 隔离**：`airlines.json`（~225 KB，~986 条）经
+/// `static let` 一次性、线程安全地懒加载进 IATA 索引，之后随处**同步** O(1) 读取（首次访问触发解码，
+/// 表小、耗时可忽略）。搜索（识别航司）与显示（按界面语言查名，时间轴行 / 详情 / 搜索卡）共用**这一份**，
+/// 不重复加载。`displayName` 按调用时 locale 取名，故缓存一份即可随界面语言变化。
+/// 单一数据源说明见 spec: itinerary-flight-name-localization.md。
+enum AirlineDatabase {
     private static let logger = Logger(subsystem: "com.carry.app", category: "AirlineDatabase")
 
-    private init() {}
-
-    private func ensureLoaded() {
-        guard !loaded else { return }
+    /// IATA 码 → 航司，一次性懒加载。是 bundle 内资源、有效构建必有，故（理论上不会发生的）读失败回落空表。
+    private static let byIATA: [String: Airline] = {
         guard let url = Bundle.main.url(forResource: "airlines", withExtension: "json") else {
-            Self.logger.error("airlines.json missing from bundle")
-            return  // 不置 loaded：万一失败也不永久失能，下次查询可重试。
+            logger.error("airlines.json missing from bundle")
+            return [:]
         }
         do {
-            let data = try Data(contentsOf: url)
-            let list = try JSONDecoder().decode([Airline].self, from: data)
-            byIATA = Dictionary(list.map { ($0.iata, $0) }, uniquingKeysWith: { a, _ in a })
-            loaded = true  // 仅解码成功后置位：失败时下次重试，避免整生命周期静默返回空。
+            let list = try JSONDecoder().decode([Airline].self, from: Data(contentsOf: url))
+            return Dictionary(list.map { ($0.iata, $0) }, uniquingKeysWith: { a, _ in a })
         } catch {
-            Self.logger.error("airlines.json decode failed: \(error.localizedDescription, privacy: .public)")
+            logger.error("airlines.json decode failed: \(error.localizedDescription, privacy: .public)")
+            return [:]
         }
-    }
+    }()
 
     /// 按 IATA 航司码（2 位，大小写不敏感）查航司，无则 nil。
-    func airline(forIATA code: String) -> Airline? {
-        ensureLoaded()
+    static func airline(forIATA code: String) -> Airline? {
         let key = code.trimmingCharacters(in: .whitespaces).uppercased()
         guard key.count == 2 else { return nil }
         return byIATA[key]
+    }
+
+    /// 航班号 → 本地化航司名（"MU5801" → 中国东方航空 / 按界面语言），号解析不出航司则 nil。
+    /// **仅航班用**——调用方须 gate 在 `.flight`（火车号 "G403" 会被 `split` 误拆成航司 "G4"）。
+    static func airlineName(forFlightNumber number: String) -> String? {
+        guard let parts = FlightNumberParser.split(number) else { return nil }
+        return byIATA[parts.airline]?.displayName  // split 已返回大写前缀，与 iata 键一致
     }
 }
 
