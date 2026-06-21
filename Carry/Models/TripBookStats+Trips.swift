@@ -53,7 +53,6 @@ extension TripBookStats {
                 departureYear: year,
                 packedItems: t.packedCount,
                 totalItems: t.totalCount,
-                name: t.name,
                 stopCategoryCounts: stopCats,
                 flightDistanceMeters: flightMeters,
                 flightDurationMinutes: flightMinutes,

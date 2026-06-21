@@ -1241,17 +1241,6 @@ struct HomeView: View {
                     tripBookBigStat(s.totalDays, "tripbook.days")
                 }
                 .padding(.top, 2)
-                // 小料行（镜像飞行卡「mostly」texture）：最长一趟 / 最频繁年份。各自有数据才出，无则不占位。
-                if s.tripCount >= 2, let name = s.longestTripName, !name.isEmpty, s.longestTripDays >= 2 {
-                    tripBookHeroFact("hourglass",
-                        String(format: NSLocalizedString("tripbook.longest_trip", comment: ""),
-                               name, Int64(s.longestTripDays)))
-                }
-                if s.busiestYearCount >= 2, let year = s.busiestYear {
-                    tripBookHeroFact("calendar",
-                        String(format: NSLocalizedString("tripbook.busiest_year", comment: ""),
-                               Int64(year), Int64(s.busiestYearCount)))
-                }
             }
             .padding(.vertical, 22)
             .padding(.horizontal, 16)
@@ -1260,20 +1249,6 @@ struct HomeView: View {
         .frame(maxWidth: .infinity)
         .carryHeroCardBackground(cornerRadius: 24)
         .clipShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
-    }
-
-    /// 概览卡的小料行（icon + 单行 footnote），与飞行卡「mostly」texture 同款。
-    private func tripBookHeroFact(_ systemImage: String, _ text: String) -> some View {
-        HStack(spacing: 6) {
-            Image(systemName: systemImage)
-                .font(.caption)
-                .foregroundStyle(.secondary)
-            Text(text)
-                .font(.footnote)
-                .foregroundStyle(.secondary)
-                .lineLimit(1)
-                .truncationMode(.tail)
-        }
     }
 
     /// 「在地足迹」卡：各 StopCategory 累计地点数（景点/餐饮/活动/购物/其他），降序、N× 计数。

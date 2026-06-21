@@ -63135,64 +63135,6 @@
         }
       }
     },
-    "tripbook.busiest_year" : {
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Aktivstes Jahr · %1$lld (%2$lld Reisen)"
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Busiest year · %1$lld (%2$lld trips)"
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Año con más viajes · %1$lld (%2$lld viajes)"
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Année la plus active · %1$lld (%2$lld voyages)"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "最も旅した年 · %1$lld年（%2$lld回）"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "가장 많이 여행한 해 · %1$lld년 (%2$lld회)"
-          }
-        },
-        "pt-BR" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Ano mais movimentado · %1$lld (%2$lld viagens)"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "最频繁的一年 · %1$lld（%2$lld 趟）"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "最頻繁的一年 · %1$lld（%2$lld 趟）"
-          }
-        }
-      }
-    },
     "tripbook.continent.africa" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -64307,64 +64249,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "最遠的一程 · %1$@ · %2$@"
-          }
-        }
-      }
-    },
-    "tripbook.longest_trip" : {
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Längste Reise · %1$@ · %2$lld Tage"
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Longest trip · %1$@ · %2$lld days"
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Viaje más largo · %1$@ · %2$lld días"
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Plus long voyage · %1$@ · %2$lld jours"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "最長の旅 · %1$@ · %2$lld日"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "가장 긴 여행 · %1$@ · %2$lld일"
-          }
-        },
-        "pt-BR" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Viagem mais longa · %1$@ · %2$lld dias"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "最长一趟 · %1$@ · %2$lld 天"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "最長的一趟 · %1$@ · %2$lld 天"
           }
         }
       }
