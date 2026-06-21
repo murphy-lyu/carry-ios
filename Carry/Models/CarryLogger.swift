@@ -35,6 +35,10 @@ final class CarryLogger {
         case surpriseItemAdded      = "surprise_item_added"
         case surpriseItemDismissed  = "surprise_item_dismissed"
         case sceneCardDismissed     = "scene_card_dismissed"
+        // 天气感知打包建议（spec: weather-aware-packing.md）
+        case weatherNudgeShown      = "weather_nudge_shown"
+        case weatherNudgeAccepted   = "weather_nudge_accepted"
+        case weatherNudgeDismissed  = "weather_nudge_dismissed"
         // 提醒
         case reminderAdded          = "reminder_added"
         case reminderDeleted        = "reminder_deleted"
