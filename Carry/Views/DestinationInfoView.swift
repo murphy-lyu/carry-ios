@@ -287,10 +287,23 @@ struct DestinationInfoView: View {
         let baseTemp = 16 + (index * 2)
         return (0..<7).compactMap { offset in
             guard let date = calendar.date(byAdding: .day, value: offset, to: tripStart) else { return nil }
+            let symbol = symbols[offset % symbols.count]
+            let high = Double(baseTemp + offset)
+            let category: WeatherCategory = {
+                if symbol.contains("bolt") { return .storm }
+                if symbol.contains("rain") { return .rain }
+                if symbol.contains("wind") { return .wind }
+                if symbol.contains("sun.max") { return .clear }
+                return .cloudy
+            }()
             return DayWeatherInfo(
                 date: date,
-                symbolName: symbols[offset % symbols.count],
-                highTemp: "\(baseTemp + offset)°"
+                symbolName: symbol,
+                highTemp: "\(baseTemp + offset)°",
+                highC: high,
+                lowC: high - 6,
+                precipChance: (category == .rain || category == .storm) ? 0.8 : 0.1,
+                category: category
             )
         }
     }
