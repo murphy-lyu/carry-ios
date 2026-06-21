@@ -39,6 +39,9 @@ final class CarryLogger {
         case weatherNudgeShown      = "weather_nudge_shown"
         case weatherNudgeAccepted   = "weather_nudge_accepted"
         case weatherNudgeDismissed  = "weather_nudge_dismissed"
+        // 天气预警通知（spec: weather-aware-packing.md, Part 2）
+        case weatherAlertScheduled  = "weather_alert_scheduled"
+        case weatherAlertFired      = "weather_alert_fired"
         // 提醒
         case reminderAdded          = "reminder_added"
         case reminderDeleted        = "reminder_deleted"

@@ -842,6 +842,12 @@ final class TripStore: ObservableObject {
     /// 任何会影响通知的变更（建/改/删行程、增删交通/住宿、改设置、打包进度、回前台）都走这里。
     func refreshNotifications() {
         NotificationManager.reschedule(trips: trips)
+        // 天气预警（spec: weather-aware-packing.md, Part 2）：异步评估即将出发行程的天气，
+        // 结论落 WeatherAlertStore 后回主线程再排一次（节流：cache 新鲜的行程跳过）。
+        WeatherAlertEvaluator.refresh(trips: trips) { [weak self] in
+            guard let self else { return }
+            NotificationManager.reschedule(trips: self.trips)
+        }
     }
 
     /// 打包状态变化 → 仅在「打包进度提醒」开启时重排（默认关 → 零额外开销，spec: notification-center.md）。

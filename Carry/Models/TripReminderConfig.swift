@@ -133,6 +133,13 @@ extension ReminderPreferences {
         set { UserDefaults.standard.set(newValue, forKey: departureEnabledKey) }
     }
 
+    // MARK: 天气提醒（spec: weather-aware-packing.md, Part 2；默认开——例外驱动、平时几乎不响）
+    static let weatherAlertsEnabledKey = "carry.notif.weather_alerts_enabled"
+    static var weatherAlertsEnabled: Bool {
+        get { bool(weatherAlertsEnabledKey, default: true) }
+        set { UserDefaults.standard.set(newValue, forKey: weatherAlertsEnabledKey) }
+    }
+
     // MARK: 打包进度提醒（A，仅未打完才发「还剩 N 件」）
     static let packProgressEnabledKey = "carry.notif.pack_progress_enabled"
     static let packProgressOffsetKey = "carry.notif.pack_progress_offset_days"

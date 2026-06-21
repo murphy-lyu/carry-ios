@@ -61,8 +61,45 @@ enum NotificationManager {
             collectTransport(trip, now: now, into: &candidates)
             collectLodging(trip, now: now, into: &candidates)
             collectDailySummary(trip, now: now, into: &candidates)
+            collectWeatherAlerts(trip, now: now, into: &candidates)
         }
         commit(candidates: candidates)
+    }
+
+    /// 天气预警（spec: weather-aware-packing.md, Part 2）。结论由 WeatherAlertEvaluator 异步写入
+    /// WeatherAlertStore，这里同步读取 → 进 64 候选集（确定性 id，不被差集误删）。出发前 1 天 18:00
+    /// 提醒（设备本地时区，回扣打包）；天气时效性强，已过则当下兜底。
+    private static func collectWeatherAlerts(_ trip: TripBundle, now: Date, into out: inout [Candidate]) {
+        guard ReminderPreferences.weatherAlertsEnabled else { return }
+        guard trip.departureDate >= Calendar.current.startOfDay(for: now) else { return }
+        guard let payload = WeatherAlertStore.payload(for: trip.id),
+              now.timeIntervalSince(payload.fetchedAt) < 24 * 3600 else { return }   // 结论太旧不发
+        let cfg = TripReminderConfig(daysBeforeDeparture: 1, hour: 18, minute: 0)
+        guard let fireDate = cfg.fireDate(relativeTo: trip.departureDate) else { return }
+        let dest = trip.destinationCity.isEmpty ? trip.name : trip.destinationCity
+        let (title, body) = weatherAlertContent(kind: payload.kind, destination: dest, official: payload.officialSummary)
+        makeCandidate(fireDate, id: "\(tripPrefix)\(trip.id.uuidString).weather",
+                      title: title, body: body, allowImminentFallback: true, now: now, tz: .current, into: &out)
+    }
+
+    private static func weatherAlertContent(kind: WeatherAlertPayload.Kind, destination: String, official: String?) -> (String, String) {
+        let titleKey: String
+        switch kind {
+        case .severe: titleKey = "notif.weather.title.severe"
+        case .snow:   titleKey = "notif.weather.title.snow"
+        case .heat:   titleKey = "notif.weather.title.heat"
+        case .cold:   titleKey = "notif.weather.title.cold"
+        case .rain:   titleKey = "notif.weather.title.rain"
+        }
+        let title = NSLocalizedString(titleKey, comment: "")
+        // 官方预警有摘要（权威）→ 用摘要；阈值类 → 本地化「回扣打包」文案 + 目的地。
+        let body: String
+        if let official, !official.isEmpty {
+            body = official
+        } else {
+            body = String(format: NSLocalizedString("notif.weather.body", comment: ""), destination)
+        }
+        return (title, body)
     }
 
     /// 全局预算提交（spec: notification-budget.md）。竞态规避：通知 id 确定性、`add()` 同 id 替换；删除集 =
