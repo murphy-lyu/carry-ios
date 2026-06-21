@@ -106,6 +106,15 @@ final class WeatherManager: ObservableObject {
                                longitude: Double,
                                tripStartDate: Date,
                                tripEndDate: Date) async {
+#if DEBUG
+        // DEBUG「模拟天气」开关：喂 mock 到 weatherByDestination（单一真源）——展示卡、打包贴士卡、
+        // 信号判断都吃同一份，便于在模拟器验证天气功能（无需真机/真实预报）。
+        if UserDefaults.standard.bool(forKey: "debug_mock_weather_enabled") {
+            weatherByDestination[destinationIndex] = Self.debugMockDays(
+                index: destinationIndex, tripStart: tripStartDate, tripEnd: tripEndDate)
+            return
+        }
+#endif
         let todayString = Self.dateFormatter.string(from: Date())
         let key = CacheKey(lat: latitude, lon: longitude, dateString: todayString)
 
@@ -162,6 +171,29 @@ final class WeatherManager: ObservableObject {
             }
         }
     }
+
+#if DEBUG
+    /// DEBUG 模拟天气：含雨天（便于触发天气贴士卡 / rain 信号），覆盖行程窗口。
+    static func debugMockDays(index: Int, tripStart: Date, tripEnd: Date) -> [DayWeatherInfo] {
+        let cal = Calendar.current
+        let start = max(tripStart, Date())
+        let span = (cal.dateComponents([.day], from: cal.startOfDay(for: start), to: tripEnd).day ?? 0) + 1
+        let count = min(7, max(1, span))
+        return (0..<count).compactMap { offset in
+            guard let date = cal.date(byAdding: .day, value: offset, to: start) else { return nil }
+            let isRain = offset % 3 == 1
+            let high = 18.0 + Double(index)
+            return DayWeatherInfo(
+                date: date,
+                symbolName: isRain ? "cloud.rain.fill" : "cloud.sun.fill",
+                highTemp: "\(Int(high))°",
+                highC: high, lowC: high - 6,
+                precipChance: isRain ? 0.8 : 0.1,
+                category: isRain ? .rain : .cloudy
+            )
+        }
+    }
+#endif
 
     /// WeatherKit `WeatherCondition` → 粗分类。只区分打包信号关心的几类，其余归 `.other`。
     private static func category(for condition: WeatherCondition) -> WeatherCategory {
