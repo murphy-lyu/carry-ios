@@ -55,9 +55,10 @@ enum WeatherAlertEvaluator {
                     }
                 }
             }
+            let didChange = changed   // 绑不可变，避免闭包捕获可变变量（Swift 6 并发安全）
             await MainActor.run {
                 isEvaluating = false
-                if changed { onUpdated() }
+                if didChange { onUpdated() }
             }
         }
     }
