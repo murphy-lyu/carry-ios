@@ -1,0 +1,18 @@
+name = "carry-places"
+main = "worker.js"
+compatibility_date = "2024-11-01"
+
+# 运控策略：all（都开）| cn_only（仅大陆 storefront）| off（全关）。
+# 成本若 Cover 不住，在 Cloudflare 后台或这里改后重新 deploy，即时生效、App 不用发版。
+[vars]
+OVERSEAS_POLICY = "all"
+
+# 自定义域名（国内可达 + 规避 GFW）。部署后在 Cloudflare 后台给该 Worker 绑 places.nevestudio.app，
+# 或用下方 routes（需域名已托管在本账号）。二选一即可。
+# routes = [{ pattern = "places.nevestudio.app", custom_domain = true }]
+
+# 秘密（不写这里、不进 git）——用命令设：
+#   wrangler secret put MAPBOX_TOKEN     # 粘贴 carry-places-worker 的 token
+#   wrangler secret put APP_TOKEN        # 与 App 内嵌的 X-App-Token 对应（可选但建议）
+#
+# 可选限流绑定（按需在后台加 Rate Limiting binding 名为 RATE_LIMITER）。

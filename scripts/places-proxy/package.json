@@ -1,0 +1,12 @@
+{
+  "name": "carry-places",
+  "private": true,
+  "version": "1.0.0",
+  "description": "Carry overseas POI search proxy (Mapbox Search Box + tz-lookup) on Cloudflare Workers",
+  "dependencies": {
+    "tz-lookup": "^6.1.25"
+  },
+  "devDependencies": {
+    "wrangler": "^3.90.0"
+  }
+}
