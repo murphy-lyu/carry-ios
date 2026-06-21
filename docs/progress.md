@@ -3,6 +3,21 @@
 ## 最后更新
 2026-06-21
 
+## 上次改动摘要（通知默认/退房模型/竞态+64配额 · 权限&法务审计 · 抹掉所有数据 · 数据二级页 · Roadmap 重梳 · 2026-06-21 深夜）
+
+> 单会话、纯我的工作。**编译绿**。**已 push 到 origin/main**（本批已提交部分 + carry-legal）。⚠️ **有两处我的工作未提交**（见末尾），因与并行 Tripsy 会话在同文件原子混合、切不开。
+
+**已提交并 push（origin/main 至 `e73f0c5`）：**
+1. **通知**：默认时间调整（每日 09:00 / 打包 21:00 / 还车·退房 1h）；**退房提醒从「提前量」改「当天清晨固定时刻」C 锚**（早退房 clamp、文案带退房时刻）；🔴 **修重排竞态**（原 cancel→add 顺序会删掉刚排的通知）→ 改**全局 64 预算调度** `NotificationManager.reschedule(trips:)`（值类型候选主线程构建、回调里「前缀匹配−选中集」差删 + 近端优先取 budget）；冷启动（`TripStore.init` Task 内、fetchTrips 后）+ 回前台滚动补位。spec: `notification-budget.md`。提交 `ce5a8c3`。
+2. **权限&法务审计**：`NSLocationWhenInUseUsageDescription` 从 pbxproj 迁入 Info.plist；中文 usage 文案统一「你」；日历文案补「读取叠加」；About 增 Mapbox/OpenStreetMap 署名。**carry-legal 已 push**：隐私政策补**日历披露** + PIPL 第14条修「零传输」自相矛盾（据实披露航班/境外检索跨境）；用户协议**重定位为「旅行助手」** + 修「不依赖网络」失真；境外检索服务商改列「Mapbox 或 Geoapify」防漂移。release-checklist 记了 ASC 待办。
+3. **抹掉所有数据**（spec: `erase-all-data.md`，**仅模型层已提交**）：`TripStore.eraseAllData` 覆盖全副作用（cancelAll 通知 / endAll Live Activity / `CalendarManager.removeAllCarryEvents` / 背景图·附件 deleteOrphans / SwiftData / `DataBackupManager.clearBackup` / widget），新 `allDataErased` 埋点。**UI 在 SettingsView（未提交，见末尾）**。
+4. **Roadmap 重梳并 push**（`roadmap.json` 真源 + 内嵌默认同序）：「行程规划」从即将推出→已上线并拆 9 亮点；**已上线按卖点价值排序（30 条）**；即将推出 = 航班实时动态(进行中)/Apple Watch 版/Mac 版；**全部标题改大白话**（3 语言地道）。iCloud 同步按用户决定**留在已上线**——但代码未真接 CloudKit，**上线前必须补**。
+
+**🔴 未提交（我的，等并行 Tripsy 会话提交后再隔离补上）：**
+- `Carry/Views/SettingsView.swift`：抹除 UI + 「数据与备份」二级页 `dataManagementPage`（`.dataManagement` 路由）+ 撤销窗口（9s、倒计时环 TimelineView 帧驱动、`.disabled(eraseUndoVisible)` 锁操作、`.onDisappear`/进后台即中止）。**与并行 Tripsy 导入在同一原子 diff hunk、无法 `git apply` 分离**。
+- `CLAUDE.md`：我加的两条约定（本地通知调度闭环、读全量数据再做副作用），与并行的海外检索/时区段共处。
+- **新会话 TODO**：① 待并行会话提交后，把这两处走隔离 index 干净补提；② 上线前把 iCloud CloudKit 真正接上（roadmap/隐私政策已对外标已上线/承诺）。
+
 ## 上次改动摘要（Trip Book 花费体系：7 类细分 + 按方式拆 + 时间轴 View all；浅色卡片 elevation；列表卡统一规则 · 2026-06-21）
 
 > 单会话、纯 Trip Book / 花费模块；5 个隔离-index commit（`e42b4e8`/`9a4eaf7`/`e8247cd`/`ba444bd`/`86d8950`），与并行通知会话不重叠、未碰其文件。全程编译绿；**未 push**（用户在另一会话统一 push）；UI 验收交用户（含用增强备份 `carry_backup_augmented.json` 在模拟器验过 >10 国家/机场的 View all）。

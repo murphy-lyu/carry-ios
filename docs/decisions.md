@@ -1,5 +1,29 @@
 # 决策日志
 
+## 2026-06-21 深夜 抹掉所有数据 + 数据二级页 · 权限&法务审计 · Roadmap 重梳
+
+### 抹掉所有数据：本地一键重置，不做「删除账户」（spec: erase-all-data.md）
+原因：Carry 本地优先、无账号、零服务器存储——这本身满足 GDPR/PIPL 实质（靠「不收集」而非「收集后给你删」）；Apple 5.1.1(v) 删号只约束「支持注册」的 App，不触发。做 Flighty 式「删除账户」会误导（暗示我们存了你的数据）。
+决策：① `TripStore.eraseAllData()` = 等同删 App 重装的内容部分，**覆盖全部副作用存储**（通知/Live Activity/日历/背景图·附件沙盒/SwiftData/备份文件/widget），漏一处即留孤儿；**不重置 App 偏好**（外观/单位/图标/通知默认时间——属配置非用户数据）。② 备份文件最后清（`save→fetchTrips` 会写空备份，clearBackup 放最后连空的也删）。
+**撤销窗口（防后悔缓冲）**：确认后**不立即删**，延迟 `eraseUndoWindow`（默认 9s，VoiceOver 下 20s=WCAG Timing Adjustable，开始时快照不跳变）→ 底部吐司带**倒计时环**（`TimelineView(.animation)` 帧驱动按真实流逝时间算进度，**不靠 withAnimation**——刚插入视图的 withAnimation 会瞬跳/不触发，踩过）+ 递减秒数（不显 0，归零=删除=退场）+「撤销」（品牌强调色逃生口）。**离开页面 / 进后台即中止**（`onDisappear` + `scenePhase==.background`）：撤销逃生口绑在页面，若任由全局 Task 跑完=「撤销没了、删除照常」两头落空 → 一律朝「不删」方向。窗口期 `.disabled(eraseUndoVisible)` 锁备份卡 + 抹除卡，杜绝「导入后又被抹除」冲突 + 双吐司叠压。
+吐司视觉（撤销环）：3pt 环描边、中性描边不勾红边（红圈像「输入框报错」廉价）、抹除卡用 `Color(.systemRed)` 低透明度淡红底（红收进有边界容器、说明文字用灰不施压）。用标准 `.alert`（始终带 Cancel）非 `.confirmationDialog`（regular 宽度渲染成 popover、取消被隐成点外部）。
+
+### 数据相关功能收进二级页「数据与备份」
+原因：导出/导入/本地备份/抹除低频，「抹掉所有数据」尤其不该裸露在一级菜单。
+决策：一级「管理」分区单行入口「数据与备份」→ push 二级 `dataManagementPage`（复用 `SettingsView` 实例方法返回的 destination，直接复用根的 state/helper，**无需抽独立 struct/迁移状态**；fileImporter + toast 须挂在该二级页、不能留根页被 push 出的页盖住）。「备份」分组 + 抹除独立成卡 + 红字脚注（学 Flighty「点击前告知后果」，但红集中动作区、说明留灰）。
+
+### 权限 & 法务全面审计（纯合规）
+- **隐私政策补「日历」披露**（原完全没提，唯一硬伤）：写入行程/提醒 + 「日历叠加」读取所选日历，均设备本地零传输。PIPL 第14条修「零传输」自相矛盾——据实披露航班查询 + 境外地点检索（跨境）发送的**不关联身份**查询参数。
+- **用户协议重定位**：从「旅行打包清单应用」→「旅行助手应用（行程规划 + 打包）」，并修失真的「不依赖网络连接」（航班/检索/天气/地图为可选联网）。
+- **境外检索服务商列举式披露**「Mapbox 或 Geoapify」（非泛指、非单具名）：云控 `SEARCH_PROVIDER` 会切换，列两个候选既不漂移又如实点名接收方；infrastructure.md 加「换服务商须同步隐私政策名单」提示。
+- 定位 usage 从 pbxproj build setting **迁入 Info.plist** 单点维护；中文 usage 文案统一第二人称「你」；日历 usage 补「读取叠加」。**相册无需授权**（纯 PHPicker、不碰 PHAsset）——最佳实践非缺失。**开源致谢页不需要**（SPM 依赖=0、纯第一方+Apple 框架）。WeatherKit 归属已在天气视图按 Apple 要求做了。
+
+### Roadmap：已上线按卖点价值排序 + 标题大白话 + iCloud 留已上线
+- 「行程规划」从即将推出→已上线，**拆成 9 个亮点**；已上线 30 条**按卖点价值排序**（差异化新身份→打包智能→iOS 系统级→目的地实用→同步分享→打磨），非时间序——这是 marketing showcase。
+- **标题全部改大白话**（用户视角「这是干啥」，非 dev feature-name；3 语言地道）；状态只靠圆点不显文字。
+- **iCloud 同步留在「已上线」**（产品决定，避免上线时再改 roadmap）——但代码未真接 CloudKit，**上线前必须补**。
+- 真源 `roadmap.json` + 内嵌默认必须同序同字段；改完用 GitHub API 验 main（避开 raw/config 5min 缓存）；线上生效需 push（Worker 回源 main）。
+
 ## 2026-06-21 海外检索多源加固 + 时区归一（本会话 review + 加固；详见 docs/infrastructure.md）
 
 ### 海外检索多源抽象 + Geoapify 备份源 + `SEARCH_PROVIDER` 云控自动降级
