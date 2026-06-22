@@ -433,9 +433,17 @@ struct SettingsView: View {
             case .success(let urls):
                 guard let url = urls.first else { return }
                 // Tripsy 暗门判定：文件名匹配 `tripsy*.zip`（Tripsy 默认导出名如「Tripsy Backup.zip」）。
-                // 其它一切（.json，或非 Tripsy 命名的 .zip）都走 Carry 自家还原。
+                // 仅 Carry 备份(.json) 与 Tripsy 导出(`tripsy*.zip`)受支持；其它（如随手选的别的 .zip）
+                // 既非备份也非 Tripsy → 明确提示「不支持的文件」，不当成损坏的 Carry 备份去解析（那会误导）。
                 let name = url.lastPathComponent.lowercased()
-                let isTripsy = name.hasPrefix("tripsy") && name.hasSuffix(".zip")
+                let ext = url.pathExtension.lowercased()
+                let isTripsy = ext == "zip" && name.hasPrefix("tripsy")
+                let isCarryBackup = ext == "json"
+                guard isTripsy || isCarryBackup else {
+                    showToast(NSLocalizedString("settings.data.restore.error.unsupported", comment: ""))
+                    CarryLogger.shared.log(.backupRestoreFailed, context: "reason=unsupported_file ext=\(ext)")
+                    return
+                }
                 // Read within the security scope before it expires
                 let accessing = url.startAccessingSecurityScopedResource()
                 defer { if accessing { url.stopAccessingSecurityScopedResource() } }

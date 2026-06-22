@@ -60236,6 +60236,65 @@
         }
       }
     },
+    "settings.data.restore.error.unsupported" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Diese Datei ist kein Carry-Backup. Wähle ein aus Carry exportiertes Backup."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "This file isn’t a Carry backup. Choose a backup you exported from Carry."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Este archivo no es una copia de seguridad de Carry. Elige una que hayas exportado desde Carry."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ce fichier n’est pas une sauvegarde Carry. Choisis-en une exportée depuis Carry."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "これは Carry のバックアップではありません。Carry から書き出したものを選んでください。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Carry 백업 파일이 아니에요. Carry에서 내보낸 백업을 선택해 주세요."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Este arquivo não é um backup do Carry. Escolha um que você exportou do Carry."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "这不是 Carry 的备份文件。请选择你从 Carry 导出的备份。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "這不是 Carry 的備份檔案。請選擇你從 Carry 匯出的備份。"
+          }
+        }
+      }
+    },
     "settings.data.restore.error.version" : {
       "localizations" : {
         "de" : {
