@@ -482,6 +482,17 @@ struct HomeView: View {
                 .presentationDragIndicator(.visible)
                 .background(PresenterRecedeEffect())
         }
+        // 深链（通知/Widget/快捷指令）唤起行程时，关掉所有根级 sheet——否则被 push 的行程详情会被
+        // 这些盖在导航栈之上的 sheet 挡住（用户停在某个 sheet 时按 Home 退出、收到通知再点进来即触发）。
+        // 信号来自 ContentView.handlePendingTripId（spec: app-navigation-framework.md）。
+        .onChange(of: router.rootModalDismissalRequest) { _, _ in
+            showSettings = false
+            showSearch = false
+            showTripBook = false
+            showSpendDetail = false
+            showAllCountries = false
+            showAllAirports = false
+        }
         // 空态：Sheet 是固定缩放浮卡（不折叠、无 snap 回调驱动 mapCityOpacity），
         // 故把它视同折叠态 = 1，让地图样式/定位按钮显示可点、城市点行为一致。
         // 退出空态恢复 0，之后由 sheet 的 snap 回调接管。

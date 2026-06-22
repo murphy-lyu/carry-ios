@@ -21,6 +21,11 @@ final class NavigationRouter: ObservableObject {
     @Published var showMapFullscreen = false
     @Published var pendingTripId: UUID? = nil
 
+    /// 深链（通知/Widget/快捷指令）唤起行程时递增。行程详情是 push 进根 NavigationStack 的，而
+    /// 根级 modal（Settings/Search/Trip Book…）盖在栈之上、push 不会自动关它 → 详情被挡住看不到。
+    /// HomeView 观察此信号、关掉自己那几个根级 sheet，让被 push 的详情真正露出来。
+    @Published var rootModalDismissalRequest = 0
+
     // 同行者发来的 .carrytrip 文件（点开后由 CarryApp.onOpenURL 读取摘要写入），
     // ContentView 观察它弹出「导入行程」确认。
     @Published var pendingSharedTrip: DataBackupManager.SharedTripSummary? = nil
@@ -236,6 +241,15 @@ struct ContentView: View {
 
     private func handlePendingTripId(_ tripId: UUID?) {
         guard let tripId else { return }
+        // 深链必须把行程顶到最前——即使此刻有 modal 盖在根导航栈上（用户停在 Settings/创建/分享导入…
+        // 时按 Home 退出、收到通知再点进来）。只 push 底层栈，sheet 会留在上面挡住详情。故先拆掉所有
+        // 「path 重置也带不走」的 modal：ContentView 级（创建 / 分享导入 / Mac 设置）直接置空，
+        // HomeView 级（Settings/Search/Trip Book…）经 rootModalDismissalRequest 信号自行关闭。
+        // 行程详情页（PackingListView）内的 sheet 不必管——重置 path 会连页带 sheet 一起卸载。
+        router.showCreation = false
+        router.pendingSharedTrip = nil
+        showSettingsOnMac = false
+        router.rootModalDismissalRequest &+= 1
         router.path = NavigationPath()
         router.path.append(tripId)
         router.pendingTripId = nil
