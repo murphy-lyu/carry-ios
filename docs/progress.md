@@ -1,7 +1,27 @@
 # 项目进度
 
 ## 最后更新
-2026-06-22
+2026-06-23
+
+## 上次改动摘要（计数文案复数化全清扫 + 全目录未翻译键审计补全 · 2026-06-23）
+
+> 单会话、纯本地化（i18n）工作。**编译绿**（主 app + Widget）。复数清扫走隔离 index 提交进 main（`75516bf`/`240c2da`/`ed99979`）；全目录翻译在独立 worktree 完成、再以隔离方式合入 main（`ed2aa1e`）。全程与并行 weather/notification 会话物理隔离、互不卷入（确认其 weather keys 叠在我的翻译之上、无覆盖）。**均未 push**（push 由用户定）。验收交用户（切设备语言看物品库/设置/空状态/Widget + count=1 语法）。
+
+**一、计数文案复数化（根因解：xcstrings substitution variations，非手动 `.one`）**
+- 触发：首页「My Trip Book」pill `home.tripbook.subtitle`（`%lld trips · %lld countries`）count=1 显 `1 trips · 1 countries`。根因＝全 App 计数文案一律扁平 `%lld`、从未用复数变体。
+- 全 App 扫 + 修：约 **25 个 inline 计数 key** 转复数变体（en/de/es/fr/pt-BR 分 one/other，含动词/形容词/分词一致如 `1 stop awaits` vs `2 stops await`、es `1 registrado` vs `2 registrados`；中日韩无复数、保持扁平）。涵盖行程卡 days、打包/物品 items、住宿 nights、通知 stops/things/days、提醒 days/weeks、日历批量 trips、数据导入/恢复 trips、Trip Book 花费、照片行程 places、Tripsy 导入、Widget 进度/件数。
+- 调用点：普通 `String(format:)` → `String.localizedStringWithFormat`（让复数按 locale 选 one/other）；已带 `locale:`/`localizedStringWithFormat` 的不动。
+- 拆历史欠债：删 SettingsView 手动 `count==1 ? ".one" : ...` 三处分支 + 两个 `.one` 键（restore.success 第二调用点漏判 `.one` 是真 bug，一并修）。
+- 验证可达性避免「修非 bug」：`widget.countdown.days_left`/`departure.days`（调用点 0/1 已特判、天数恒 ≥2）、`notif.2days/3days`（硬编码）、`tripbook.aircraft.many`（gate ≥2）、`Day %d`/年份/缩写单位/纯数字比例——均确认安全、不动。
+- 详情页「My Trip Book」无此问题（大数字+独立标签统计块范式，不需语法一致）。
+
+**二、全目录未翻译键审计补全**
+- 信号＝`state==needs_review` 或缺语言。审计两个目录共 **257 个 key** 有未翻译语言（221 needs_review + 23 缺语言 + zh-Hans 缺 26 / zh-Hant 缺 30 + widget 3）。
+- 分类处理：26 个专有名词/品牌/纯格式键（Mapbox/OpenStreetMap/`%lld`/`–`/emoji/URL）设为源值；231 个真实文案（38 UI 键 + 整个物品库 + 场景/行程类型标签 + 惊喜长文案）逐一翻译（派 3 并行子代理产出、我统一机械校验 zh 全角/残留英文后应用，1371 值/229 key）；删 2 死键（`Add %lld items`、被英文键取代的中文孤儿 note）。
+- 质量：繁简非转换（复合维生素/複合維生素、暖手宝/暖暖包、驱蚊液/防蚊液、连衣裙/洋裝、酒店/飯店…）、中文全角、德语名词大写、法语标点空格、日语常体、韩语해요体。
+- **复核：两个目录 0 needs_review / 0 missing。** xcstrings diff 偏大（~6400 行）＝250 key 各补 6–8 语言 + 脚本展开多行格式（非全文件 reflow，44k 行只动 ~15%；Xcode 下次构建可能重排回紧凑、一次无害格式化 diff）。
+
+**新会话 TODO**：① push（用户定）；② 设备级验收（切 de/es/fr/ja/ko/pt/繁中 看物品库·设置·空状态·Widget + count=1 语法）；③ 注意 xcstrings 与并行 weather 会话同改、提交务必隔离 index。
 
 ## 上次改动摘要（目的地国家码「输入即解析」+ 城市模式 + 本地化检索 · 2026-06-22）
 
