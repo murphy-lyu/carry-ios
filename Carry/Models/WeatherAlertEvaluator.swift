@@ -38,10 +38,16 @@ enum WeatherAlertEvaluator {
         guard !snaps.isEmpty else { return }
 
         isEvaluating = true
+#if DEBUG
+        let bypassThrottle = debugForcedKind != nil   // 强制模拟时跳过 6h 节流，使每次切换都立即重评
+#else
+        let bypassThrottle = false
+#endif
         Task.detached {
             var changed = false
             for s in snaps {
-                if let p = WeatherAlertStore.payload(for: s.id),
+                if !bypassThrottle,
+                   let p = WeatherAlertStore.payload(for: s.id),
                    Date().timeIntervalSince(p.fetchedAt) < 6 * 3600 { continue }   // 节流
                 let payload = await evaluate(s)
                 let before = WeatherAlertStore.payload(for: s.id)
@@ -67,8 +73,23 @@ enum WeatherAlertEvaluator {
         let id: UUID; let lat: Double; let lon: Double; let start: Date; let end: Date
     }
 
+#if DEBUG
+    /// Developer Options「Simulate weather alert」强制结论。会话级（TripStore.init 启动时清掉 key、不跨启动持久化）。
+    /// nil = 不强制、走真实 WeatherKit。
+    nonisolated static var debugForcedKind: WeatherAlertPayload.Kind? {
+        guard let raw = UserDefaults.standard.string(forKey: "debugForceWeatherAlertKind"), raw != "none"
+        else { return nil }
+        return WeatherAlertPayload.Kind(rawValue: raw)
+    }
+#endif
+
     /// 拉一个行程目的地的天气，按门槛判断是否产生预警载荷。失败/无事 → nil。
     nonisolated private static func evaluate(_ s: Snapshot) async -> WeatherAlertPayload? {
+#if DEBUG
+        // Developer Options「Simulate weather alert」：强制结论、跳过 WeatherKit，
+        // 但其余链路（store 写入 → reschedule → collectWeatherAlerts → 通知）全走真的，便于模拟器端到端验证。
+        if let forced = debugForcedKind { return WeatherAlertPayload(kind: forced, fetchedAt: Date()) }
+#endif
         do {
             let weather = try await WeatherFetchCache.shared.weather(lat: s.lat, lon: s.lon)
             // 1) 官方 severe / extreme 预警优先（用本地化文案推送，不直接塞可能是外语的官方摘要）

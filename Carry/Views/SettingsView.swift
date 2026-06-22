@@ -1559,6 +1559,32 @@ private struct DeveloperModeView: View {
                 .listRowSeparator(.hidden)
             }
 
+            Section("Weather Alert") {
+                Picker(selection: Binding(
+                    get: { UserDefaults.standard.string(forKey: "debugForceWeatherAlertKind") ?? "none" },
+                    set: { newValue in
+                        UserDefaults.standard.set(newValue, forKey: "debugForceWeatherAlertKind")
+                        UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                        store.refreshNotifications()   // 立即跑真实链路：evaluate→store→reschedule→通知
+                    }
+                )) {
+                    Text("Off (real WeatherKit)").tag("none")
+                    Text("Severe").tag("severe")
+                    Text("Snow").tag("snow")
+                    Text("Heat").tag("heat")
+                    Text("Cold").tag("cold")
+                    Text("Rain").tag("rain")
+                } label: {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Simulate weather alert")
+                        Text("强制预警结论、跳过 WeatherKit；需有「出发≤10天且有坐标」的行程。出发明天的行程会在约 60s 内弹通知。本次会话有效")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+                }
+                .tint(CarryAccent.color)
+            }
+
             Section("settings.developer.reset_group") {
                 actionRow(title: "settings.debug.reset_support_tone") {
                     coffeeStore.debugResetSupportCount()

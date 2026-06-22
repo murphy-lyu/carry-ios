@@ -213,6 +213,10 @@ final class TripStore: ObservableObject {
         // UserDefaults → 重装也不好（已踩坑）。预览是一次性操作，本就不该跨启动留存。
         self.isHomeEmptyStateMockEnabled = false
         defaults.removeObject(forKey: Self.homeEmptyStateMockKey)
+#if DEBUG
+        // 「Simulate weather alert」同为 DEBUG 模拟开关，仅本次会话有效——每次启动清掉，避免误留后每次冷启动强制预警。
+        defaults.removeObject(forKey: "debugForceWeatherAlertKind")
+#endif
         Task { @MainActor in
             fetchTrips()
             reconcileBackgroundFiles()
