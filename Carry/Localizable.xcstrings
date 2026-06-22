@@ -33123,13 +33123,13 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Dark"
+            "value" : "深色"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Dark"
+            "value" : "深色"
           }
         }
       }
@@ -33713,13 +33713,13 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Light"
+            "value" : "浅色"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Light"
+            "value" : "淺色"
           }
         }
       }
@@ -33831,13 +33831,13 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Orange"
+            "value" : "橙色"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Orange"
+            "value" : "橙色"
           }
         }
       }
@@ -34067,13 +34067,13 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Pride"
+            "value" : "彩虹"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Pride"
+            "value" : "彩虹"
           }
         }
       }
