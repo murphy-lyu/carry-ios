@@ -1577,7 +1577,7 @@ private struct DeveloperModeView: View {
                 } label: {
                     VStack(alignment: .leading, spacing: 2) {
                         Text("Simulate weather alert")
-                        Text("强制预警结论、跳过 WeatherKit；需有「出发≤10天且有坐标」的行程。出发明天的行程会在约 60s 内弹通知。本次会话有效")
+                        Text("强制预警结论、跳过 WeatherKit；需有「出发≤10天且有坐标」的行程。通知点为出发前1天18:00（已过18:00则约60s内弹）。本次会话有效")
                             .font(.caption)
                             .foregroundStyle(.secondary)
                     }

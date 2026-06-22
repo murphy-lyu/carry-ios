@@ -120,7 +120,7 @@
 **Part 1 · 打包建议** — `mock_group` 里的 **「模拟天气预览」** 开关（`debug_mock_weather_enabled`）：往 `weatherByDestination` 灌假预报，喂展示天气卡 + 打包 nudge 卡。验：开后进有目的地行程 → 天气贴士卡出现、点即加、可 dismiss。
 
 **Part 2 · 天气预警** — `Weather Alert` 段的 **「Simulate weather alert」** 选择器（`debugForceWeatherAlertKind`）：强制 `WeatherAlertEvaluator.evaluate` 返回选定 kind，**跳过 WeatherKit + 6h 节流**，其余全真（写 `WeatherAlertStore` → `reschedule` → `collectWeatherAlerts` → 通知文案 → 点击埋点）。
-- 前置：建一个**出发 ≤10 天、且有坐标（选过具体目的地）** 的行程；通知权限已授予、设置里「天气预警」开关为开（默认开）。想立刻看通知 → 出发日设**明天**（「出发前1天18:00」已过 → 走 `allowImminentFallback` 约 60s 后弹）。
+- 前置：建一个**出发 ≤10 天、且有坐标（选过具体目的地）** 的行程；通知权限已授予、设置里「天气预警」开关为开（默认开）。通知点固定为「出发前 1 天 18:00」：出发日设**明天** → 排在**今天 18:00**；若测试时**已过 18:00**，则走 `allowImminentFallback` 在**约 60s 内**弹（想立刻看就在 18:00 之后测）。
 - 步骤：选 `Severe`/`Snow`/`Heat`/`Cold`/`Rain`（切换即重排）→ 切后台等约 60s → 验通知弹出、标题随 kind 变、正文带目的地；点通知应打开对应行程并记 `weatherAlertFired`。切回 `Off` 恢复真实 WeatherKit。
 - 会话级：两个开关都**仅本次启动有效**，冷启动自动清（`TripStore.init` 清 key），遵守「DEBUG 模拟开关绝不跨启动持久化」。
 
