@@ -429,22 +429,31 @@ struct ItineraryView: View {
     /// 交通段，按 day.timeline 的共享 sortOrder）。leg / addStop / optimize 由 collection 自行插入/追加。
     private var daySections: [ItineraryDaySection] {
         return days.map { day in
-            // 日历事件叠加行：成簇置于当天顶部（行程之前），全天在前、定时按时间。
-            // v1 不与定时停靠点逐条交错（避免重走 timeline 的 carry-forward 时间合并、保持简单）。
-            let overlayRows: [ItineraryRowID] = (overlayEventsByDay[day.sortOrder] ?? [])
+            // 日历事件叠加行（spec: itinerary-calendar-overlay.md 增补 2026-06-22）：
+            // 全天事件无时刻 → 钉当天顶部（背景信息 band）；定时事件 → 交给 timelineRowIDs 按各自时刻插入主脊，
+            // 让这一天按时序读（时间轴的核心承诺），而非把所有日历事件不分时刻全钉顶部。
+            let allDayRows: [ItineraryRowID] = (overlayEventsByDay[day.sortOrder] ?? [])
+                .filter { $0.isAllDay }
                 .map { .calendarEvent(id: $0.id, day: day.sortOrder) }
             // 住宿不再是顶部常驻条——已按当天角色（入住/出发/过夜/退房）注入主脊，见 timelineRowIDs。
             return ItineraryDaySection(
                 id: day.id,
-                entries: overlayRows + timelineRowIDs(for: day)
+                entries: allDayRows + timelineRowIDs(for: day, timedCalendar: timedCalendarRows(day))
             )
         }
+    }
+
+    /// 当天「定时」日历事件（非全天）→ (id, 起始分钟)，供 timelineRowIDs 按时刻插入主脊。
+    private func timedCalendarRows(_ day: ItineraryDay) -> [(id: String, minutes: Int)] {
+        (overlayEventsByDay[day.sortOrder] ?? [])
+            .filter { !$0.isAllDay }
+            .map { (id: $0.id, minutes: $0.startMinutes) }
     }
 
     /// 当天「在主脊上」的行序列（停靠点 + 交通段，按 day.timeline 共享 sortOrder/时间）。
     /// **租车段拆成两条事件**：取车落在 timeline 给的取车时间位；还车按还车时间注入本天（其还车日可能 ≠ 出发日）。
     /// 是 daySections 的时间轴部分，也供首/末端点判定（连续脊的两端清线）。spec: itinerary-car-rental.md。
-    private func timelineRowIDs(for day: ItineraryDay) -> [ItineraryRowID] {
+    private func timelineRowIDs(for day: ItineraryDay, timedCalendar: [(id: String, minutes: Int)] = []) -> [ItineraryRowID] {
         let carRentals = days.flatMap { $0.sortedSegments }.filter { $0.mode == .carRental }
         var timed: [(row: ItineraryRowID, minutes: Int)] = []
         var carry = -1
@@ -488,15 +497,33 @@ struct ItineraryView: View {
                 overnights.append(.lodging(stay: stay.id, day: day.sortOrder, role: .overnight))
             }
         }
+        // 定时日历事件按各自时刻插入主脊（spec: itinerary-calendar-overlay.md 增补 2026-06-22）：
+        // 时间轴承诺按时序读 → 定时事件落到它的时间位、不再全钉顶部；全天事件无时刻、仍钉顶（见 daySections）。
+        for ev in timedCalendar {
+            var idx = timed.count
+            if ev.minutes >= 0, let found = timed.firstIndex(where: { $0.minutes >= 0 && $0.minutes > ev.minutes }) { idx = found }
+            timed.insert((.calendarEvent(id: ev.id, day: day.sortOrder), ev.minutes), at: idx)
+        }
         return departs + timed.map(\.row) + overnights
     }
 
-    /// 主脊连续性：脊上首项不画上半线、末项不画下半线（中间各项两端皆画 → 与相邻行无缝相接）。
-    private func isFirstOnRail(_ rowID: ItineraryRowID, in day: ItineraryDay) -> Bool {
-        timelineRowIDs(for: day).first == rowID
+    private func isCalendarRow(_ rowID: ItineraryRowID) -> Bool {
+        if case .calendarEvent = rowID { return true }
+        return false
     }
-    private func isLastOnRail(_ rowID: ItineraryRowID, in day: ItineraryDay) -> Bool {
-        timelineRowIDs(for: day).last == rowID
+
+    /// 主脊连续性（邻接判定）：脊上首项不画上半线、末项不画下半线；相邻为日历事件时也断线——
+    /// 定时日历事件按时序落在主脊它的位置，但脊在它处**自然断开**（它是「来自你的日历」的外部叠加项、
+    /// 不属于你规划的路线）。规划行之间仍两端皆画 → 与相邻规划行无缝相接。
+    private func showsTopLine(_ rowID: ItineraryRowID, in day: ItineraryDay) -> Bool {
+        let order = timelineRowIDs(for: day, timedCalendar: timedCalendarRows(day))
+        guard let i = order.firstIndex(of: rowID), i > 0 else { return false }
+        return !isCalendarRow(order[i - 1])
+    }
+    private func showsBottomLine(_ rowID: ItineraryRowID, in day: ItineraryDay) -> Bool {
+        let order = timelineRowIDs(for: day, timedCalendar: timedCalendarRows(day))
+        guard let i = order.firstIndex(of: rowID), i < order.count - 1 else { return false }
+        return !isCalendarRow(order[i + 1])
     }
 
     // MARK: 行内容（由 collection 闭包承载）
@@ -512,8 +539,8 @@ struct ItineraryView: View {
             } else {
             TimelineStopRow(
                 stop: stop,
-                showTopLine: !isFirstOnRail(.stop(stopID), in: day),
-                showBottomLine: !isLastOnRail(.stop(stopID), in: day),
+                showTopLine: showsTopLine(.stop(stopID), in: day),
+                showBottomLine: showsBottomLine(.stop(stopID), in: day),
                 dayColor: ItineraryDayPalette.color(forDayIndex: day.sortOrder)
             )
             .padding(.horizontal, 16)
@@ -586,8 +613,8 @@ struct ItineraryView: View {
             TransportTimelineRow(
                 segment: seg,
                 dayColor: ItineraryDayPalette.color(forDayIndex: day.sortOrder),
-                showTopLine: !isFirstOnRail(.transport(segmentID), in: day),
-                showBottomLine: !isLastOnRail(.transport(segmentID), in: day)
+                showTopLine: showsTopLine(.transport(segmentID), in: day),
+                showBottomLine: showsBottomLine(.transport(segmentID), in: day)
             )
                 .padding(.horizontal, 16)
                 .contentShape(Rectangle())
@@ -605,8 +632,8 @@ struct ItineraryView: View {
             CarRentalEventRow(
                 segment: seg, pickup: pickup,
                 dayColor: ItineraryDayPalette.color(forDayIndex: dayOrder),
-                showTopLine: !isFirstOnRail(rowID, in: day),
-                showBottomLine: !isLastOnRail(rowID, in: day)
+                showTopLine: showsTopLine(rowID, in: day),
+                showBottomLine: showsBottomLine(rowID, in: day)
             )
                 .padding(.horizontal, 16)
                 .contentShape(Rectangle())
@@ -625,8 +652,8 @@ struct ItineraryView: View {
             let rowID = ItineraryRowID.lodging(stay: stayID, day: dayOrder, role: role)
             LodgingBannerRow(stay: stay, role: role,
                              dayColor: ItineraryDayPalette.color(forDayIndex: dayOrder),
-                             showTopLine: !isFirstOnRail(rowID, in: day),
-                             showBottomLine: !isLastOnRail(rowID, in: day))
+                             showTopLine: showsTopLine(rowID, in: day),
+                             showBottomLine: showsBottomLine(rowID, in: day))
                 .padding(.horizontal, 16)
                 .contentShape(Rectangle())
                 .onTapGesture { activeSheet = .lodgingDetail(stay, dayOrder: dayOrder) }
@@ -1276,6 +1303,7 @@ private struct CalendarEventRow: View {
     var body: some View {
         HStack(spacing: railSpacing) {
             // 日历色细竖条（替代停靠点的 marker 圆）：标识来源、落在 rail 列、与上下图标同心对齐。
+            // 定时事件按时序落在主脊它的位置，但脊在它处自然断开（外部叠加项、不接规划脊）。
             Capsule()
                 .fill(event.tint)
                 .frame(width: 3, height: 15)
