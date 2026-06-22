@@ -124,6 +124,18 @@
 - 步骤：选 `Severe`/`Snow`/`Heat`/`Cold`/`Rain`（切换即重排）→ 切后台等约 60s → 验通知弹出、标题随 kind 变、正文带目的地；点通知应打开对应行程并记 `weatherAlertFired`。切回 `Off` 恢复真实 WeatherKit。
 - 会话级：两个开关都**仅本次启动有效**，冷启动自动清（`TripStore.init` 清 key），遵守「DEBUG 模拟开关绝不跨启动持久化」。
 
+## 实机验收清单（上线前 · 真机必验 · TODO）
+
+> **背景**：模拟器 WeatherKit 不可用（日志见 `api_error weatherkit dest=0`），所以 2026-06-22 本功能只在模拟器用上面两个 DEBUG 钩子验过**链路逻辑**（强制 severe → 排期 `weather_alert_scheduled` → 弹出 → 点击 `weather_alert_fired`，cache 正确写入）。**真实天气数据驱动的表现 + 真机通知，只能真机验**，以下待办：
+
+- [ ] **真实 WeatherKit 能拉到预报**：真机 + 真实即将出发行程（有坐标）→ 不再 `api_error`，`weatherByDestination` 有真实数据。
+- [ ] **Part 1 打包建议卡（真实天气）**：目的地那几天真有显著天气（雨/雪/热/冷）时，打包页天气贴士卡出现、点即加、可 dismiss；**预期之内不重复**（已 winter/tropical 的不再单独提 cold/snow）。
+- [ ] **Part 2 天气预警（真实，非强制）**：把 `Simulate weather alert` 调回 `Off`，真实极端天气（或临近出发实测）按门槛产生通知；普通天气**不**推送。
+- [ ] **真机通知点击跳转**：锁屏点天气预警通知 → 落到对应行程打包页；**含本会话修复的边缘路径**——停在某 sheet（Settings/搜索/Trip Book…）→ 按 Home → 收到通知点进来 → 应正确落到行程详情（不被 sheet 挡住）。
+- [ ] **阈值校准（唯一尾部调参）**：nudge 高温32℃/低温5℃/降水60%、alert 高温35℃/低温−5℃/雪/≥2天≥70%——按真机真实预报表现微调。
+
+> 已在模拟器验收通过、无需真机复验的：天气预警**链路逻辑**（含 64 预算、确定性 id、点击埋点）、**深链跳转拆 modal 修复**（提交 `7eccc8a`，模拟器已复现 + 验证）。
+
 ## 产品决策（PM/UX 已定 · ADA 标准）
 
 1. **呈现 = 「天气贴士卡」，放打包页、紧贴 DestinationInfo 天气卡下方**（接在现有 `destinationInfoContent` 插槽内、DestinationInfoView 之后）。不塞进横滚天气卡的 chip——会挤、违背 ADA 呼吸感。卡复用 Surprise Item 的视觉语言（一致、用户已熟），但用**真实预报背书**（点名具体天气，体现"为你看过"）。天气卡保持纯信息、行动层独立成卡，职责清晰。
