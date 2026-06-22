@@ -113,6 +113,17 @@
 - [ ] 多目的地各自判定。
 - [ ] 64 预算下天气提醒与既有提醒共存、不挤掉近期项。
 
+## 模拟器验收（DEBUG 钩子）
+
+真实 WeatherKit 要等极端天气才触发，没法稳定验。两个 DEBUG 钩子（仅 `#if DEBUG`，都在 **设置 → Developer Options**）让两部分都能在模拟器端到端验，且**下游链路全走真的**（不是假数据糊弄）。
+
+**Part 1 · 打包建议** — `mock_group` 里的 **「模拟天气预览」** 开关（`debug_mock_weather_enabled`）：往 `weatherByDestination` 灌假预报，喂展示天气卡 + 打包 nudge 卡。验：开后进有目的地行程 → 天气贴士卡出现、点即加、可 dismiss。
+
+**Part 2 · 天气预警** — `Weather Alert` 段的 **「Simulate weather alert」** 选择器（`debugForceWeatherAlertKind`）：强制 `WeatherAlertEvaluator.evaluate` 返回选定 kind，**跳过 WeatherKit + 6h 节流**，其余全真（写 `WeatherAlertStore` → `reschedule` → `collectWeatherAlerts` → 通知文案 → 点击埋点）。
+- 前置：建一个**出发 ≤10 天、且有坐标（选过具体目的地）** 的行程；通知权限已授予、设置里「天气预警」开关为开（默认开）。想立刻看通知 → 出发日设**明天**（「出发前1天18:00」已过 → 走 `allowImminentFallback` 约 60s 后弹）。
+- 步骤：选 `Severe`/`Snow`/`Heat`/`Cold`/`Rain`（切换即重排）→ 切后台等约 60s → 验通知弹出、标题随 kind 变、正文带目的地；点通知应打开对应行程并记 `weatherAlertFired`。切回 `Off` 恢复真实 WeatherKit。
+- 会话级：两个开关都**仅本次启动有效**，冷启动自动清（`TripStore.init` 清 key），遵守「DEBUG 模拟开关绝不跨启动持久化」。
+
 ## 产品决策（PM/UX 已定 · ADA 标准）
 
 1. **呈现 = 「天气贴士卡」，放打包页、紧贴 DestinationInfo 天气卡下方**（接在现有 `destinationInfoContent` 插槽内、DestinationInfoView 之后）。不塞进横滚天气卡的 chip——会挤、违背 ADA 呼吸感。卡复用 Surprise Item 的视觉语言（一致、用户已熟），但用**真实预报背书**（点名具体天气，体现"为你看过"）。天气卡保持纯信息、行动层独立成卡，职责清晰。
