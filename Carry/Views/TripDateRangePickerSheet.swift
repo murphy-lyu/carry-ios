@@ -115,8 +115,7 @@ struct TripDateRangePickerSheet: View {
     // MARK: - Summary strip
 
     private var summaryStrip: some View {
-        // 间距收到 12（原 16）：给「x天x晚」胶囊腾出横向空间，真机长语言/大字号下也能单行原大小放下。
-        HStack(spacing: 12) {
+        HStack(spacing: 16) {
             VStack(alignment: .leading, spacing: 3) {
                 Text("Departure")
                     .font(.system(.caption, design: .rounded).weight(.semibold))
@@ -138,14 +137,13 @@ struct TripDateRangePickerSheet: View {
             Spacer()
 
             if nightsCount > 0 {
-                // 「A 天 B 晚」：天 = 含两端实际天数（晚数+1，与 TripBundle.spanDays 同口径），晚 = 晚数。
-                // 位置化占位符让各语言自排语序（日/韩为「N 泊 M 日」，先晚后天）。
-                Text(String(format: NSLocalizedString("date.days_nights", comment: "Trip span: N days M nights"),
-                            Int64(nightsCount + 1), Int64(nightsCount)))
+                // 只显「天数」（天 = 含两端实际天数 = 晚数+1，与 TripBundle.spanDays 同口径）：短，单行原大小放得下，
+                // 真机窄屏/大字号也不截断（原「x天x晚」太长会被截）。chip 在同一行右侧出现/消失只影响横向、不改行高、不跳。
+                Text(String(format: NSLocalizedString("date.days_only", comment: "Trip span in days"),
+                            Int64(nightsCount + 1)))
                     .font(.system(.caption, design: .rounded).weight(.semibold))
                     .foregroundStyle(.secondary.opacity(0.90))
-                    .lineLimit(1)                      // 强制单行：长语言/大字号下也不换行成两行（→ 高度恒为单行，不撑高头部、不跳动）
-                    .minimumScaleFactor(0.85)          // 空间紧时轻微缩小文字，不截断、不挤坏日期块
+                    .lineLimit(1)
                     .padding(.horizontal, 10)
                     .padding(.vertical, 5)
                     .background(Color.primary.opacity(0.05))
