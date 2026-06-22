@@ -177,7 +177,7 @@ private struct PackingProgressRow: View {
                         .font(.system(size: 12, weight: .medium, design: .rounded))
                         .foregroundStyle(.green)
                 } else {
-                    Text(String(format: String(localized: "widget.liveactivity.progress"), packed, total))
+                    Text(String.localizedStringWithFormat(String(localized: "widget.liveactivity.progress"), packed, total))
                         .font(.system(size: 12, weight: .medium, design: .rounded))
                         .foregroundStyle(.secondary)
                 }

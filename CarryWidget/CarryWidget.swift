@@ -73,7 +73,7 @@ private func countdownText(for date: Date) -> String {
 }
 
 private func progressText(_ trip: WidgetTrip) -> String {
-    String(format: NSLocalizedString("widget.progress.packed", comment: ""), trip.packedCount, trip.totalCount)
+    String.localizedStringWithFormat(NSLocalizedString("widget.progress.packed", comment: ""), trip.packedCount, trip.totalCount)
 }
 
 // MARK: - Widget appearance configuration

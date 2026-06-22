@@ -138,7 +138,7 @@ struct TripSpendView: View {
         let days = max(1, trip?.spanDays ?? 1)
         let daily = CurrencyCatalog.format(d.total / Double(days), code: d.homeCode)
         // 措辞规避复数：英文「N recorded · ¥X/day」、中文「N 笔 · 日均 ¥X」。
-        return String(format: NSLocalizedString("tripspend.meta", comment: ""), d.recordedCount, daily)
+        return String.localizedStringWithFormat(NSLocalizedString("tripspend.meta", comment: ""), d.recordedCount, daily)
     }
 
     // MARK: 类别比例带（始终为类别口径的格式塔，独立于维度）
@@ -365,7 +365,7 @@ struct TripSpendView: View {
                             CurrencyCatalog.localizedName(for: d.homeCode)))
             }
             if d.unconvertedCount > 0 {
-                Text(String(format: NSLocalizedString("tripspend.foot.unconverted", comment: ""), d.unconvertedCount))
+                Text(String.localizedStringWithFormat(NSLocalizedString("tripspend.foot.unconverted", comment: ""), d.unconvertedCount))
             }
         }
         .font(.system(.caption2, design: .rounded))
