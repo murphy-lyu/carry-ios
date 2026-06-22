@@ -405,8 +405,12 @@ struct ItineraryView: View {
         switch anchor {
         case .day(let order):
             return days.first { $0.sortOrder == order }?.id
-        case .segment(let segId):
-            return days.first { $0.sortedSegments.contains { $0.id == segId } }?.id
+        case .segment(let segId, let isReturn):
+            // 用事件天（去程 departDayOrder / 还车 arriveDayOrder），而非段的归属天——
+            // 多日租车的还车提醒才会落到「还车那天」而非取车天。
+            guard let seg = days.flatMap({ $0.sortedSegments }).first(where: { $0.id == segId }) else { return nil }
+            let order = isReturn ? seg.arriveDayOrder : seg.departDayOrder
+            return days.first { $0.sortOrder == order }?.id
         case .lodging(let stayId):
             guard let stay = bundle?.safeLodgingStays.first(where: { $0.id == stayId }) else { return nil }
             return days.first { $0.sortOrder == stay.checkOutDayOrder }?.id

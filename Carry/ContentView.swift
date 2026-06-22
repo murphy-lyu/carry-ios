@@ -22,9 +22,9 @@ enum TripDetailFace: Equatable { case packing, itinerary }
 
 /// 行程脸内的锚点：跳转后定位到对应「天」并滚动到位。
 enum TripDeepLinkAnchor: Equatable {
-    case day(Int)         // dayOrder
-    case segment(UUID)    // 交通段 id → 其所在天
-    case lodging(UUID)    // 住宿 id → 退房天
+    case day(Int)                          // dayOrder
+    case segment(id: UUID, isReturn: Bool) // 去程→departDayOrder 天；还车(dropoff)→arriveDayOrder 天
+    case lodging(UUID)                      // 住宿 id → 退房天
 }
 
 /// 通知/Widget/URL/快捷指令唤起某行程时的富目标（spec: notification-deeplink-routing.md）。

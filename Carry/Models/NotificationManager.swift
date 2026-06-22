@@ -468,7 +468,11 @@ enum NotificationManager {
         case "depart", "pack", "weather":
             return TripDeepLink(tripId: tripId, face: .packing)
         case "transport":
-            let anchor = comps.count >= 3 ? UUID(uuidString: comps[2]).map(TripDeepLinkAnchor.segment) : nil
+            // id: transport.{segId}.{depart|dropoff}.{lead}；还车(dropoff)锚到 arriveDayOrder 天。
+            let isReturn = comps.count >= 4 && comps[3] == "dropoff"
+            let anchor = comps.count >= 3
+                ? UUID(uuidString: comps[2]).map { TripDeepLinkAnchor.segment(id: $0, isReturn: isReturn) }
+                : nil
             return TripDeepLink(tripId: tripId, face: .itinerary, anchor: anchor)
         case "lodging":
             let anchor = comps.count >= 3 ? UUID(uuidString: comps[2]).map(TripDeepLinkAnchor.lodging) : nil
