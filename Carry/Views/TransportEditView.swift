@@ -251,6 +251,14 @@ struct TransportEditView: View {
     /// 座位：租车无座位号 → 隐藏。
     private var showsSeat: Bool { mode != .carRental }
 
+    /// 舱位等级的展示文案：未设 → 「未设」；已设 → 该等级本地化名（供 Cabin 行自定义 Menu label 用）。
+    private var cabinDisplayText: String {
+        guard let c = CabinClass(rawValue: cabinClass) else {
+            return NSLocalizedString("cabin.unset", comment: "")
+        }
+        return NSLocalizedString(c.localizationKey, comment: "")
+    }
+
     // MARK: Sections
 
     /// 标题承载类型（类型已在「+」菜单选定，页内不再用一行重复展示/可改）：「添加航班」/「编辑租车」…
@@ -300,27 +308,33 @@ struct TransportEditView: View {
                 carRentalEndpoint(isFrom: isFrom, name: name, dayOrder: dayOrder,
                                   hasTime: hasTime, time: time)
             } else {
-                // 非租车（航班/火车/巴士/渡轮/其他）：保持现状（地点 + 代码 + 航站楼 + 日期时间行）。
-                // 航班的「整段路线 hero 可编辑」留待后续单独做。
+                // 非租车（航班/火车/巴士/渡轮/其他）：地点 + 代码 + 航站楼 + 日期时间行。
+                // 地点行与租车同款（.plain 去掉 Form 默认蓝染——名称黑、图标灰；mappin size 15 / frame 22 对齐）。
                 Button {
                     activeSheet = .search(isFrom: isFrom)
                 } label: {
-                    HStack {
+                    HStack(spacing: 12) {
                         Image(systemName: "mappin.and.ellipse")
+                            .font(.system(size: 15))
                             .foregroundStyle(.secondary)
+                            .frame(width: 22)
                         (name.isEmpty ? Text(stationLabel(isFrom: isFrom)) : Text(name))
+                            .font(.body)
                             .foregroundStyle(name.isEmpty ? .secondary : .primary)
-                        Spacer()
+                            .multilineTextAlignment(.leading)
+                        Spacer(minLength: 8)
                         Image(systemName: "magnifyingglass")
                             .font(.footnote)
                             .foregroundStyle(.tertiary)
                     }
                 }
+                .buttonStyle(.plain)
                 // 常驻标签（标签左·值右，同「机型」行）——避免填了值后 placeholder 标签消失、剩裸值「HGH」「3」看不懂。
                 if showsCode {
                     LabeledContent {
-                        // 机场/站代码（IATA）= 字母+数字（大小写随用户输入、不强制）。
-                        TextField("", text: code.filteringInput(ItineraryInputFilter.alphanumeric))
+                        // 机场/站代码（IATA）= 字母+数字（大小写随用户输入、不强制）。占位 ABC 示「3 位码」。
+                        TextField("itinerary.transport.field.code.placeholder",
+                                  text: code.filteringInput(ItineraryInputFilter.alphanumeric))
                             .multilineTextAlignment(.trailing)
                             .autocorrectionDisabled()
                             .textInputAutocapitalization(.characters)
@@ -330,8 +344,9 @@ struct TransportEditView: View {
                 }
                 if showsTerminal {
                     LabeledContent {
-                        // 航站楼/站台 = 字母+数字（如 T2 / B / 2，大小写随用户输入、不强制）。
-                        TextField("", text: terminal.filteringInput(ItineraryInputFilter.alphanumeric))
+                        // 航站楼/站台 = 字母+数字（如 T2 / B / 2）。占位 2 示「输个航站楼/站台」（terminal+platform 通用）。
+                        TextField("itinerary.transport.field.terminal_only.placeholder",
+                                  text: terminal.filteringInput(ItineraryInputFilter.alphanumeric))
                             .multilineTextAlignment(.trailing)
                     } label: {
                         Text(terminalLabel)
@@ -460,25 +475,34 @@ struct TransportEditView: View {
             // 座位 / 确认号：常驻标签（填了值如「3B」「ABC123」也看得懂；空态标签即提示）。
             if showsSeat {
                 LabeledContent {
-                    // 座位 = 字母+数字（如 32A，大小写随用户输入、不强制）。
-                    TextField("", text: $seat.filteringInput(ItineraryInputFilter.alphanumeric))
+                    // 座位 = 字母+数字（如 32A，大小写随用户输入、不强制）。占位 32A 示格式。
+                    TextField("itinerary.transport.field.seat.placeholder",
+                              text: $seat.filteringInput(ItineraryInputFilter.alphanumeric))
                         .multilineTextAlignment(.trailing)
                 } label: {
                     Text("itinerary.transport.field.seat")
                 }
             }
-            // 舱位等级（仅航班）：受控词表用原生 .menu Picker（标题留 LabeledContent 外、值在右），
-            // 纯手动——航班查询不返回舱位。空 = 未填。
+            // 舱位等级（仅航班）：受控词表。用「Menu { Picker } + 自定义 label」（与日期 chip 同款已验证模式），
+            // 而非原生 .menu Picker——后者在 Form 行里固有高度偏大、破坏 More 表行高一致。自定义 label = 普通
+            // HStack（值 + chevron），高度与 TextField 齐；值色与其它行一致（未设=灰、设了=黑）。纯手动，空=未填。
             if mode == .flight {
                 LabeledContent {
-                    Picker("", selection: $cabinClass) {
-                        Text("cabin.unset").tag("")
-                        ForEach(CabinClass.allCases) { c in
-                            Text(LocalizedStringKey(c.localizationKey)).tag(c.rawValue)
+                    Menu {
+                        Picker(selection: $cabinClass) {
+                            Text("cabin.unset").tag("")
+                            ForEach(CabinClass.allCases) { c in
+                                Text(LocalizedStringKey(c.localizationKey)).tag(c.rawValue)
+                            }
+                        } label: { EmptyView() }
+                    } label: {
+                        HStack(spacing: 4) {
+                            Text(cabinDisplayText)
+                            Image(systemName: "chevron.up.chevron.down")
+                                .font(.system(size: 11, weight: .semibold))
                         }
+                        .foregroundStyle(cabinClass.isEmpty ? Color.secondary : Color.primary)
                     }
-                    .labelsHidden()
-                    .pickerStyle(.menu)
                 } label: {
                     Text("itinerary.flight.field.cabin")
                 }
@@ -497,7 +521,8 @@ struct TransportEditView: View {
             // 存接口原值，详情页展示时再经 aircraftModelDisplay 剥品牌前缀。
             if mode == .flight {
                 LabeledContent {
-                    TextField("", text: $aircraftType).multilineTextAlignment(.trailing)
+                    TextField("itinerary.flight.field.aircraft.placeholder", text: $aircraftType)
+                        .multilineTextAlignment(.trailing)
                 } label: {
                     Text("itinerary.flight.field.aircraft")
                 }
@@ -654,6 +679,15 @@ struct TransportEditView: View {
             let order = days.first(where: { $0.id == dayId })?.sortOrder ?? 0
             departDayOrder = order
             arriveDayOrder = order
+            // 新建租车的智能默认：取车=行程首日、还车=行程末日（租车多覆盖整段行程），
+            // 时间都默认 17:00（常见取/还车点；用户可改）。其它交通无此默认（沿用落到目标天、不预设时刻）。
+            if mode == .carRental {
+                let orders = days.map(\.sortOrder)
+                departDayOrder = orders.min() ?? 0
+                arriveDayOrder = orders.max() ?? departDayOrder
+                departTime = dateFromMinutes(17 * 60); hasDepartTime = true
+                arriveTime = dateFromMinutes(17 * 60); hasArriveTime = true
+            }
             // 航班搜索预填：把结果映射进表单（航司/机场/起降时刻/航站楼/机型）；空字段留用户补。
             if let prefill { applyFlightResult(prefill) }
         }
