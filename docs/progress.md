@@ -3,6 +3,19 @@
 ## 最后更新
 2026-06-22
 
+## 上次改动摘要（目的地国家码「输入即解析」+ 城市模式 + 本地化检索 · 2026-06-22）
+
+> 本会话工作（先开 worktree 实现 resolve-at-input，合回 main 后续在主仓库续做）。**编译绿**、Worker 已部署（3 次）、线上穷尽验证过。提交走隔离 index、只含本会话文件。**已 push 到 origin/main（至 `8218ac5`）**。设备级验收（IME 选词、国内点亮、端到端）交用户真机。spec: `destination-country-resolve-at-input.md`。
+
+**根问题**：地图点亮到访国家依赖 `trip.countryCode`，原本只由 `destinationCity` **自由文本反查**（600 行城市表 + CLGeocoder）——语言相关、有歧义、永不完整（日文假名/韩文/欧洲本地名落表外）。
+
+1. **resolve-at-input（`16f73c0`）**：目的地字段从纯文本升级为「文本 + 自动补全」（复用 `StopSearchCompleter` 双源）。选中建议 → 捕获该结果**权威 ISO 国家码 + 坐标**，建行程直接写入、跳过文本反查。Worker `/retrieve` 透传 `country`（Mapbox `isoCountryCode` / Geoapify `cc`）；`ResolvedPlace.countryCode`；`TripInfo`/`createTrip` 接受预解析码；`TripInfoView` 加 IME 安全的建议列表（兄弟视图、预编辑态不改 TextField）。打字不选/历史行程仍走文本兜底 + `geocodeMissingTrips` 自愈。
+2. **城市模式（`7e1309e`）**：目的地是「城市」字段，原复用 POI 检索 + 无 proximity → 首条常是同名错国家 POI（Tokyo→新加坡店、首尔→巴黎韩餐馆）。Worker `/suggest` 加 `kinds=place`：Mapbox `types=country,region,district,place,locality`（去 poi/address）、Geoapify `type=city`；缓存键含 kinds 分桶。仅目的地字段传，AddStop 的 POI 检索不变。
+3. **本地化检索（`eecd0db`）**：city-mode 在 `language=en` 下伤欧洲本地异名（München→瑞士、Roma→Romania、Lisboa→哥伦比亚、Wien→空）。App 把 UI 语言传给 Worker（`lang=`），place 模式用作 Mapbox/Geoapify 检索语言 → München+de→慕尼黑·德国。POI 模式仍 en。
+4. **CJK 干净标签（`8218ac5`）**：CJK query 已翻英文，却用 `language=ja/ko` 检索会拿回 Mapbox 冗余全层级名（東京→「日本東京都東京都」）。改为「city-mode + 非 CJK」才取 UI 语言，CJK 保持 en → 東京→`Tokyo`、서울→`Seoul` 干净。拉丁异名仍按 UI 语言。
+
+**验收（线上已验）**：9 语言输入海外城市均解析到正确城市 + 正确 ISO 码、建议文字干净。**新会话/真机 TODO**：① 中文输入法选词不丢字；② 国内目的地走 MapKit/高德 `isoCountryCode` 点亮；③ 端到端选中→建行程→点亮。
+
 ## 上次改动摘要（天气预警 DEBUG 验证钩子 + 深链跳转拆 modal · 2026-06-22）
 
 > 另一并行会话同时在改行程详情/编辑（见下一块）。本块为本会话工作，提交走隔离 index、只含本会话文件。**编译绿、模拟器验收通过**。未 push（用户验收后自行 push）。
