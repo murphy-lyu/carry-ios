@@ -237,6 +237,9 @@ async function mapboxRetrievePlace(id, session, env) {
       address: p.full_address || p.place_formatted || "",
       phone: p.metadata?.phone || "",
       timeZoneId: check.timeZoneId,
+      // 权威 ISO 国家码（alpha-2，大写）：客户端选中即写入 trip.countryCode 点亮地图，
+      // 免去事后从自由文本反解析（语言相关、有歧义）。countryCodeOf 优先取 alpha-2。
+      country: (countryCodeOf(p) || "").toUpperCase(),
     },
   };
 }
@@ -258,6 +261,9 @@ function geoapifyRetrievePlace(token) {
       address: obj.a || "",
       phone: "",
       timeZoneId: check.timeZoneId,
+      // 同 Mapbox 路径：回传权威 ISO 国家码（alpha-2，大写）供客户端直接点亮地图。
+      // obj.cc 为 Geoapify country_code（alpha-2）；合规校验已用其小写形判境内。
+      country: (obj.cc || "").toUpperCase(),
     },
   };
 }

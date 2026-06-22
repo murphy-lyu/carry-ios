@@ -432,9 +432,20 @@ final class TripStore: ObservableObject {
             sections: []
         )
         bundle.reminderConfigs = ReminderPreferences.defaultConfigs
+        // 「输入即解析」路径：用户从检索建议里选定了主目的地 → 已带权威 ISO 国家码 + 坐标，
+        // 在落库前直接写入（随 commit 的 save 一并持久化），跳过文本反解析。地图点亮语言无关、即时。
+        let hasResolved = !(info.resolvedCountryCode ?? "").isEmpty
+        if hasResolved {
+            bundle.countryCode = info.resolvedCountryCode ?? ""
+            bundle.latitude    = info.resolvedLatitude ?? 0
+            bundle.longitude   = info.resolvedLongitude ?? 0
+        }
         setDraftTrip(bundle)
         commitDraftTrip()
-        if !info.destinationCity.isEmpty {
+        // 仅在「未结构化解析」时回退文本反解析（语言相关、有歧义的逆向映射）。
+        // 已结构化解析的主目的地不再调 updateCountryCode（否则会用文本码覆盖权威码）；
+        // 多城市的其余城市由 geocodeMissingTrips 的 missingExtras 分支自愈补全。
+        if !hasResolved, !info.destinationCity.isEmpty {
             updateCountryCode(for: bundle.id, city: info.destinationCity)
         }
         return bundle.id

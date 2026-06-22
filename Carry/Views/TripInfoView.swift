@@ -20,6 +20,13 @@ struct TripInfoView: View {
     @State private var hasDates = true
     /// 防快速双击重复建行程（一击即建、无中间步，必须自守）。
     @State private var isCreating = false
+    /// 目的地「输入即解析」：复用统一检索补全器（国内 MapKit/高德、海外 places Worker），
+    /// 选中建议即捕获权威 ISO 国家码 + 坐标，建行程时直接点亮地图、免文本反解析。
+    @StateObject private var destinationCompleter = StopSearchCompleter()
+    /// 已选定的结构化主目的地（含 countryCode/坐标）。用户改动文本与其不一致即作废、回退文本路径。
+    @State private var resolvedPrimary: ResolvedPlace?
+    /// 选中建议后解析坐标/国家码的在途态（海外走网络），期间在列表上覆盖一个轻量指示。
+    @State private var isResolvingDestination = false
     @FocusState private var focusedField: FocusField?
     @EnvironmentObject var router: NavigationRouter
     @EnvironmentObject var store: TripStore
@@ -63,12 +70,17 @@ struct TripInfoView: View {
     }
 
     private var info: TripInfo {
-        TripInfo(
+        // 仅当已选结构化目的地、且当前文本仍等于所选显示名时，才携带权威码（防选后改字用了陈旧码）。
+        let resolved = (resolvedPrimary?.name == destinationCity) ? resolvedPrimary : nil
+        return TripInfo(
             name: tripName,
             destinationCity: destinationCity,
             departureDate: departureDate,
             returnDate: returnDate,
-            isDateless: !hasDates
+            isDateless: !hasDates,
+            resolvedCountryCode: resolved.flatMap { $0.countryCode.isEmpty ? nil : $0.countryCode },
+            resolvedLatitude: resolved.map(\.latitude),
+            resolvedLongitude: resolved.map(\.longitude)
         )
     }
 
@@ -96,8 +108,16 @@ struct TripInfoView: View {
                         stableField("e.g. Italy · Tuscany", text: $tripName, focus: .tripName)
                     }
 
-                    fieldGroup(label: "Destination City") {
-                        stableField("e.g. Florence", text: $destinationCity, focus: .destinationCity)
+                    VStack(alignment: .leading, spacing: 8) {
+                        fieldGroup(label: "Destination City") {
+                            stableField("e.g. Florence", text: $destinationCity, focus: .destinationCity)
+                        }
+                        // 建议列表是目的地字段的**兄弟视图**（不叠在 TextField 上、不在输入法预编辑态改写其文本/视图树），
+                        // 故中文选词不被打断（见 stableField 注释）。仅聚焦且未选定、有结果时显示。
+                        if showDestinationSuggestions {
+                            destinationSuggestionList
+                                .padding(.horizontal, 16)
+                        }
                     }
 
                     fieldGroup(label: "Dates") {
@@ -222,6 +242,17 @@ struct TripInfoView: View {
                 hasDates = true   // 选定日期 = 有日期行程
             }
         }
+        .onChange(of: destinationCity) { _, newValue in
+            // 选了 A 又改字（与所选显示名不一致）→ 作废结构化结果，回退自由文本（updateCountryCode 文本路径）。
+            if let picked = resolvedPrimary, newValue != picked.name {
+                resolvedPrimary = nil
+            }
+            // 选中态不再驱动检索（列表已收起，避免选完又弹回）；只读 text 喂补全器，绝不反向改写 TextField。
+            if resolvedPrimary == nil {
+                destinationCompleter.query = newValue
+            }
+        }
+        .onDisappear { destinationCompleter.tearDown() }   // 取消在途海外请求 + 停 MapKit 补全
         .onAppear {
             #if DEBUG
             let dep = departureDate.formatted(date: .abbreviated, time: .omitted)
@@ -291,6 +322,82 @@ struct TripInfoView: View {
                     )
             )
             .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+    }
+
+    /// 建议列表显示条件：目的地字段聚焦、尚未选定结构化结果、文本非空、且有候选。
+    /// 选定后（resolvedPrimary 非 nil）即收起，避免选完又弹回；失焦也收起。
+    private var showDestinationSuggestions: Bool {
+        focusedField == .destinationCity &&
+        resolvedPrimary == nil &&
+        !destinationCity.trimmingCharacters(in: .whitespaces).isEmpty &&
+        !destinationCompleter.results.isEmpty
+    }
+
+    /// 目的地候选列表（最多 5 条，匹配表单卡片观感）。行是 plain Button——与本页 Dates 按钮同构、
+    /// 不受根 ZStack 的 .simultaneousGesture 影响（那个问题只在 List 行内按钮出现，VStack 内 Button 正常）。
+    private var destinationSuggestionList: some View {
+        VStack(spacing: 0) {
+            ForEach(Array(destinationCompleter.results.prefix(5).enumerated()), id: \.element.id) { index, result in
+                if index > 0 {
+                    Divider().padding(.leading, 12)
+                }
+                Button {
+                    selectDestination(result)
+                } label: {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(result.title)
+                            .font(.subheadline)
+                            .foregroundStyle(.primary)
+                        if !result.subtitle.isEmpty {
+                            Text(result.subtitle)
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                        }
+                    }
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 10)
+                    .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+            }
+        }
+        .background(Color(UIColor.systemBackground).opacity(0.66))
+        .overlay(
+            RoundedRectangle(cornerRadius: 12, style: .continuous)
+                .strokeBorder(
+                    Color.primary.opacity(colorScheme == .dark ? 0.11 : 0.07),
+                    lineWidth: 1
+                )
+        )
+        .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+        .overlay {
+            if isResolvingDestination {
+                ZStack {
+                    Color(UIColor.systemBackground).opacity(0.5)
+                    ProgressView()
+                }
+                .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+            }
+        }
+        .disabled(isResolvingDestination)
+    }
+
+    /// 选中一条建议：解析其权威国家码 + 坐标并暂存。先写 resolvedPrimary 再写文本，
+    /// 让 onChange 看到「文本==所选名 且 已选定」→ 不再触发检索、列表收起。解析失败则保持自由文本不强改。
+    private func selectDestination(_ suggestion: PlaceSuggestion) {
+        isResolvingDestination = true
+        Task {
+            let resolved = await destinationCompleter.resolve(suggestion)
+            await MainActor.run {
+                isResolvingDestination = false
+                guard let resolved else { return }   // 网络/上游失败 → 维持用户已输入文本，走文本兜底路径
+                resolvedPrimary = resolved
+                destinationCity = resolved.name
+                destinationCompleter.results = []
+                hideKeyboard()                        // 选定即完成该字段、收键盘（非预编辑态，安全）
+            }
+        }
     }
 
     private func fieldGroup<Content: View>(

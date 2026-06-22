@@ -32,6 +32,10 @@ struct ResolvedPlace {
     let address: String
     let phone: String
     let timeZoneId: String
+    /// 权威 ISO 国家码（alpha-2，大写；可能为空）。MapKit 取 placemark.isoCountryCode、
+    /// 海外走 Worker 回传的 country。供「输入即解析」主目的地直接点亮地图，免文本反解析。
+    /// 默认空：现有 stop 入库流程不读此字段，不受影响。
+    var countryCode: String = ""
 }
 
 /// 海外检索代理配置(places Worker)。token 从 gitignore 的 Secrets.plist 读(同航班范式)。
@@ -78,11 +82,13 @@ enum OverseasPlaceSource {
               let decoded = try? JSONDecoder().decode(RetrieveResponse.self, from: data) else { return nil }
         let p = decoded.place
         return ResolvedPlace(name: p.name, latitude: p.latitude, longitude: p.longitude,
-                             address: p.address, phone: p.phone ?? "", timeZoneId: p.timeZoneId ?? "")
+                             address: p.address, phone: p.phone ?? "", timeZoneId: p.timeZoneId ?? "",
+                             countryCode: (p.country ?? "").uppercased())
     }
 
     private struct SuggestResponse: Decodable { let suggestions: [Item]; struct Item: Decodable { let id: String; let name: String; let secondary: String? } }
-    private struct RetrieveResponse: Decodable { let place: Place; struct Place: Decodable { let name: String; let latitude: Double; let longitude: Double; let address: String; let phone: String?; let timeZoneId: String? } }
+    // country 为后加字段：旧 Worker（未部署 country 透传）不返回 → 可选解码为 nil，向后兼容。
+    private struct RetrieveResponse: Decodable { let place: Place; struct Place: Decodable { let name: String; let latitude: Double; let longitude: Double; let address: String; let phone: String?; let timeZoneId: String?; let country: String? } }
 }
 
 /// 统一补全器:MapKit/高德(国内) + 海外 Mapbox(经 Worker),合并发布;选中按来源分流解析。
@@ -201,7 +207,9 @@ final class StopSearchCompleter: NSObject, ObservableObject, MKLocalSearchComple
             longitude: coord?.longitude ?? 0,
             address: item?.placemark.title ?? completion.subtitle,
             phone: item?.phoneNumber ?? "",
-            timeZoneId: TimeZoneCanonicalizer.canonical(rawZone)
+            timeZoneId: TimeZoneCanonicalizer.canonical(rawZone),
+            // MapKit 白拿的权威 ISO 国家码（alpha-2，大写）；境内高德源同样回传，供主目的地点亮。
+            countryCode: (item?.placemark.isoCountryCode ?? "").uppercased()
         )
     }
 }
