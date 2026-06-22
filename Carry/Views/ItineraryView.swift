@@ -759,12 +759,14 @@ struct ItineraryView: View {
         HStack(spacing: 12) {                                     // = TimelineStopRow.railSpacing
             Circle()
                 .fill(ItineraryDayPalette.color(forDayIndex: day.sortOrder))
-                .frame(width: 8, height: 8)
+                .frame(width: 10, height: 10)                    // 与 20pt 加粗日期头光学配重（仍是「点」非「盘」）
                 .frame(width: 30)                                // = railWidth，圆点居中落在标记列、压在 spine 上
             VStack(alignment: .leading, spacing: 2) {
                 HStack(alignment: .firstTextBaseline, spacing: 6) {
                     Text(dayDateLabel(day) ?? dayDisplayTitle(day))
-                        .font(.system(.headline, design: .rounded).weight(.semibold))
+                        // 比行标题（.body semibold 17）明显大一档、更重 → 日期头成为分节父级，
+                        // 不靠线/缩进。纯字号字重建立层级（north-star §2/§3）。
+                        .font(.system(.title3, design: .rounded).weight(.bold))
                     // 多时区行程：当天所在时区小标（如 GMT+1）；单时区不显（spec: itinerary-timezone.md D1/D2）。
                     if let zone = dayZoneLabel(day) {
                         Text(zone)
@@ -790,7 +792,7 @@ struct ItineraryView: View {
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(.horizontal, 16)
-        .padding(.top, 16)
+        .padding(.top, 22)                                       // 每天上方多一截留白 → 节奏上把「新的一天」断开
         // 首点上方原由「首点 cell 顶部占位」给的呼吸，已随连接段拆为独立 leg 而消失；
         // 在此用 header 底部留白补回（放 header 层、不动 stop cell，故不破坏左滑居中）。
         .padding(.bottom, 12)
