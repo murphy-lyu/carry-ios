@@ -173,7 +173,8 @@ struct ContentView: View {
         .onAppear { onAppearCommon() }
         .onChange(of: router.pendingTrip) { _, link in handlePendingTrip(link) }
         .onChange(of: scenePhase) { _, phase in onScenePhaseChange(phase) }
-        .onReceive(NotificationCenter.default.publisher(for: UserDefaults.didChangeNotification)) { _ in
+        .onReceive(NotificationCenter.default.publisher(for: UserDefaults.didChangeNotification)
+            .receive(on: DispatchQueue.main)) { _ in
             if didApplyStartupReset { handlePendingShortcut() }
         }
     }
@@ -226,7 +227,8 @@ struct ContentView: View {
         .onAppear { onAppearCommon() }
         .onChange(of: router.pendingTrip) { _, link in handlePendingTrip(link) }
         .onChange(of: scenePhase) { _, phase in onScenePhaseChange(phase) }
-        .onReceive(NotificationCenter.default.publisher(for: UserDefaults.didChangeNotification)) { _ in
+        .onReceive(NotificationCenter.default.publisher(for: UserDefaults.didChangeNotification)
+            .receive(on: DispatchQueue.main)) { _ in
             if didApplyStartupReset { handlePendingShortcut() }
         }
     }
