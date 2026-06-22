@@ -1701,16 +1701,8 @@ struct StopEditView: View {
                         }
                         .buttonStyle(.plain)
                     }
-                    // 电话：搜索地点时可自动回填，也可手填（餐厅/景点联系）。= 数字 + `+-() 空格`。
-                    // 「标签左·值右」（与 Type/Date 及交通编辑统一）——避免填值后只剩裸号、没有「Phone」标签。
-                    LabeledContent {
-                        TextField("itinerary.transport.field.phone.placeholder",
-                                  text: $phone.filteringInput(ItineraryInputFilter.phone))
-                            .multilineTextAlignment(.trailing)
-                            .keyboardType(.phonePad)
-                    } label: {
-                        Text("itinerary.transport.field.phone")
-                    }
+                    // 电话不在编辑态露出：它是搜索地点时从 map 自动回填的辅助信息（没人会手敲地点电话），
+                    // 详情页只读展示即可。phone 仍由搜索/换地点自动捕获、保存时原样带上（见 onRelocated / Save）。
                 } header: {
                     Text("itinerary.stop.edit.details_header")
                 }
@@ -1729,7 +1721,7 @@ struct StopEditView: View {
                             .padding(.top, 2)
                             .accessibilityHidden(true)
                         TextField(text: $note, axis: .vertical) { Text("itinerary.stop.edit.note") }
-                            .lineLimit(2...5)
+                            .lineLimit(1...4)   // 与航班/租车/住宿统一（最少 1 行，空态不撑高）
                     }
                 }
                 // 地点恒为既有实体（新地点经 AddStopView 搜索添加），owner 始终有 → 直接入库，无需缓冲。
