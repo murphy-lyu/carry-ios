@@ -102,7 +102,7 @@ async function handleSuggest(url, env) {
 
   const cache = caches.default;
   // 缓存键含 provider + kinds + lang：id 体系不同不能串用；城市/POI 结果不同须分桶；不同 UI 语言的本地化结果也不同。
-  const cacheKey = new Request(`https://carry-places-cache/suggest?q=${encodeURIComponent(q)}&prov=${plan.primary}&p=${proximity}&k=${placeMode ? "place" : ""}&l=${searchLang}`);
+  const cacheKey = new Request(`https://carry-places-cache/suggest?q=${encodeURIComponent(q)}&prov=${plan.primary}&p=${proximity}&k=${placeMode ? "place" : ""}&l=${encodeURIComponent(searchLang)}`);
   const cached = await cache.match(cacheKey);
   if (cached) return cached;
 
@@ -176,6 +176,10 @@ function geoapifyLangOf(ui) {
   return m[ui] || "en";
 }
 
+// 城市模式保留的 Geoapify result_type（行政地名层级）：对齐 Mapbox 的 country/region/district/place/locality，
+// 去掉 street/amenity/building/postcode/unknown 等非「目的地城市」结果。
+const GEOAPIFY_PLACE_TYPES = new Set(["country", "state", "county", "city", "district", "suburb"]);
+
 async function geoapifySuggest(q, { proximity, env, placeMode, uiLang }) {
   if (!env.GEOAPIFY_KEY) throw new Error("geoapify_no_key");
   const up = new URL("https://api.geoapify.com/v1/geocode/autocomplete");
@@ -183,11 +187,12 @@ async function geoapifySuggest(q, { proximity, env, placeMode, uiLang }) {
   up.searchParams.set("apiKey", env.GEOAPIFY_KEY);
   // 城市模式按 UI 语言（命中本地异名）；POI 模式保持 en。
   up.searchParams.set("lang", placeMode ? geoapifyLangOf(uiLang) : "en");
-  up.searchParams.set("limit", "8");
+  // 城市模式多取几条，给下面的 result_type 后过滤留余量（过滤掉街道/POI 后仍有足够城市候选）。
+  up.searchParams.set("limit", placeMode ? "12" : "8");
   up.searchParams.set("format", "geojson");
-  // 城市模式：Geoapify 仅支持单一 type，取 city（覆盖绝大多数目的地）。它只是 Mapbox 挂掉时的备源，
-  // 故「目的地是省/州/国」这种少数情形在备源路径下可能漏，属可接受的降级（主源 Mapbox 多类型已覆盖）。
-  if (placeMode) up.searchParams.set("type", "city");
+  // 城市模式**不**在查询端限 type：Geoapify 只支持单一 type，取 city 会丢「省/州/国」目的地。
+  // 改为按响应里每条的 result_type 后过滤行政地名（见 GEOAPIFY_PLACE_TYPES），既覆盖城市+省州+国、
+  // 又去掉街道/POI——比单一 type=city 更全更准。
   if (proximity) {
     const [lon, lat] = proximity.split(",");
     if (lon && lat) up.searchParams.set("bias", `proximity:${lon},${lat}`);
@@ -205,12 +210,13 @@ async function geoapifySuggest(q, { proximity, env, placeMode, uiLang }) {
       const cc = (p.country_code || "").toLowerCase();
       const name = p.name || p.address_line1 || p.formatted || "";
       const secondary = p.address_line2 || (p.name ? p.formatted : "") || "";
-      return { name, secondary, lon, lat, cc, formatted: p.formatted || "" };
+      return { name, secondary, lon, lat, cc, formatted: p.formatted || "", rt: p.result_type || "" };
     })
     .filter((r) => {
       if (!r.name || !Number.isFinite(r.lat) || !Number.isFinite(r.lon)) return false;
       if (isChinaCountry(r.cc)) return false;
       if (isChinaTimeZone(zoneOf(r.lat, r.lon))) return false;   // 坐标时区在境内 → 不展示（合规；cc 缺失也挡）
+      if (placeMode && !GEOAPIFY_PLACE_TYPES.has(r.rt)) return false;   // 城市模式只留行政地名，去街道/POI/邮编
       return true;
     })
     .map((r) => ({
