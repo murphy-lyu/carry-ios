@@ -551,13 +551,13 @@
                   "one" : {
                     "stringUnit" : {
                       "state" : "translated",
-                      "value" : "%arg emballé"
+                      "value" : "%arg rangé"
                     }
                   },
                   "other" : {
                     "stringUnit" : {
                       "state" : "translated",
-                      "value" : "%arg emballés"
+                      "value" : "%arg rangés"
                     }
                   }
                 }
@@ -568,7 +568,7 @@
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "%1$lld / %2$lld 整理済み"
+            "value" : "%1$lld / %2$lld 荷造り済み"
           }
         },
         "ko" : {
@@ -1727,7 +1727,7 @@
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "穴位腕帶"
+            "value" : "指壓手環"
           }
         }
       }
@@ -2257,7 +2257,7 @@
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "高原反應藥"
+            "value" : "高山症藥物"
           }
         }
       }
@@ -2652,7 +2652,7 @@
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Empacotar automaticamente"
+            "value" : "Arrumar automaticamente"
           }
         },
         "zh-Hans" : {
@@ -2664,7 +2664,7 @@
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "智能打包"
+            "value" : "智慧打包"
           }
         }
       }
@@ -3549,7 +3549,7 @@
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "沐浴露"
+            "value" : "沐浴乳"
           }
         }
       }
@@ -4310,7 +4310,7 @@
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "車載充電器"
+            "value" : "車用充電器"
           }
         }
       }
@@ -6489,7 +6489,7 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Datum"
+            "value" : "Reisedaten"
           }
         },
         "en" : {
@@ -7828,7 +7828,7 @@
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "連衣裙"
+            "value" : "洋裝"
           }
         }
       }
@@ -8028,7 +8028,7 @@
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Licencia de conducir"
+            "value" : "Permiso de conducir"
           }
         },
         "fr" : {
@@ -8943,7 +8943,7 @@
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "電子設備"
+            "value" : "電子產品"
           }
         }
       }
@@ -9857,7 +9857,7 @@
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "En-cas habituels de la maison"
+            "value" : "En-cas habituels de chez soi"
           }
         },
         "ja" : {
@@ -11131,7 +11131,7 @@
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Tenue de cérémonie"
+            "value" : "Tenue de soirée"
           }
         },
         "ja" : {
@@ -12740,7 +12740,7 @@
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "酒店預訂單"
+            "value" : "飯店訂房確認"
           }
         }
       }
@@ -15429,7 +15429,7 @@
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "複合維生素"
+            "value" : "綜合維他命"
           }
         }
       }
@@ -16951,7 +16951,7 @@
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "파우치 정리함"
+            "value" : "패킹 큐브"
           }
         },
         "pt-BR" : {
@@ -18142,7 +18142,7 @@
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "便攜藍牙音箱"
+            "value" : "可攜式藍牙喇叭"
           }
         }
       }
@@ -18260,7 +18260,7 @@
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "便攜充電寶"
+            "value" : "行動電源"
           }
         }
       }
@@ -18661,13 +18661,13 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "多孔插排"
+            "value" : "插线板"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "多孔插排"
+            "value" : "延長線"
           }
         }
       }
@@ -19433,7 +19433,7 @@
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "珊瑚友好防曬霜"
+            "value" : "友善珊瑚防曬乳"
           }
         }
       }
@@ -19492,7 +19492,7 @@
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "普通防曬霜會破壞珊瑚礁——在熱帶水域值得換一款"
+            "value" : "一般防曬乳會破壞珊瑚礁——在熱帶海域值得換一款"
           }
         }
       }
@@ -19562,7 +19562,7 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Zurück"
+            "value" : "Rückreise"
           }
         },
         "en" : {
@@ -20098,7 +20098,7 @@
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "マフラー"
+            "value" : "スカーフ"
           }
         },
         "ko" : {
@@ -21664,7 +21664,7 @@
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Tubo de buceo"
+            "value" : "Tubo de snorkel"
           }
         },
         "fr" : {
@@ -22390,7 +22390,7 @@
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "StoreKit not ready"
+            "value" : "StoreKit indisponível"
           }
         },
         "zh-Hans" : {
@@ -22632,7 +22632,7 @@
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "防曬霜"
+            "value" : "防曬乳"
           }
         }
       }
@@ -22691,7 +22691,7 @@
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "兒童防曬霜"
+            "value" : "兒童防曬乳"
           }
         }
       }
@@ -22956,7 +22956,7 @@
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Tenue de bain"
+            "value" : "Maillots de bain"
           }
         },
         "ja" : {
@@ -23493,7 +23493,7 @@
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "패킹 리스트와 모든 진행 상황이 영구적으로 삭제됩니다."
+            "value" : "준비물 목록과 모든 진행 상황이 영구적으로 삭제돼요."
           }
         },
         "pt-BR" : {
@@ -30631,7 +30631,7 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "例如 佛罗伦萨"
+            "value" : "例如：佛罗伦萨"
           }
         },
         "zh-Hant" : {
@@ -30690,13 +30690,13 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "例如 意大利·托斯卡纳"
+            "value" : "例如：意大利·托斯卡纳"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "例如 意大利·托斯卡納"
+            "value" : "例如 義大利·托斯卡納"
           }
         }
       }
@@ -31805,7 +31805,7 @@
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "添加一段行程，出發吧。"
+            "value" : "新增一段行程，出發吧。"
           }
         }
       }
@@ -47020,7 +47020,7 @@
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "在線查看完整版"
+            "value" : "線上查看完整版"
           }
         }
       }
@@ -56246,7 +56246,7 @@
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "應用名稱"
+            "value" : "應用程式名稱"
           }
         }
       }
@@ -56669,7 +56669,7 @@
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "%d개 여행이 캘린더에 추가됐습니다"
+            "value" : "여행 %d개가 캘린더에 추가됐어요"
           }
         },
         "pt-BR" : {
@@ -56956,7 +56956,7 @@
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "예정된 여행 %d개가 캘린더에 추가됩니다."
+            "value" : "예정된 여행 %d개가 캘린더에 추가돼요."
           }
         },
         "pt-BR" : {
@@ -59424,7 +59424,7 @@
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "%lld개의 여행이 병합되었습니다"
+            "value" : "여행 %lld개가 병합됐어요"
           }
         },
         "pt-BR" : {
@@ -60477,7 +60477,7 @@
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "%lld개의 여행이 복원되었습니다"
+            "value" : "여행 %lld개가 복원됐어요"
           }
         },
         "pt-BR" : {
@@ -71264,7 +71264,7 @@
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "환율이 없어 %lld건은 미포함되었습니다."
+            "value" : "환율이 없어 %lld건은 포함되지 않았어요."
           }
         },
         "pt-BR" : {
@@ -72964,7 +72964,7 @@
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Trópico / playa"
+            "value" : "Tropical / playa"
           }
         },
         "fr" : {
@@ -73381,7 +73381,7 @@
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "폭우 때 스마트폰, 카드, 티켓을 넣어두면 젖을까봐 걱정하는 불안이 크게 줄어듭니다"
+            "value" : "폭우 때 스마트폰, 카드, 티켓을 넣어두면 젖을까 봐 걱정하는 불안이 크게 줄어요"
           }
         },
         "pt-BR" : {
@@ -74036,7 +74036,7 @@
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Bate-volta urbano"
+            "value" : "Escapada urbana"
           }
         },
         "zh-Hans" : {
@@ -74284,7 +74284,7 @@
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "遠端辦公"
+            "value" : "遠端工作"
           }
         }
       }

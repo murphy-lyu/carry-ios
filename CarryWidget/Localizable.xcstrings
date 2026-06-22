@@ -1292,13 +1292,13 @@
                   "one" : {
                     "stringUnit" : {
                       "state" : "translated",
-                      "value" : "%arg article emballé"
+                      "value" : "%arg article rangé"
                     }
                   },
                   "other" : {
                     "stringUnit" : {
                       "state" : "translated",
-                      "value" : "%arg articles emballés"
+                      "value" : "%arg articles rangés"
                     }
                   }
                 }
@@ -1309,7 +1309,7 @@
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "%1$lld / %2$lld つ詰めました"
+            "value" : "%1$lld / %2$lld 荷造り済み"
           }
         },
         "ko" : {
@@ -1417,13 +1417,13 @@
                   "one" : {
                     "stringUnit" : {
                       "state" : "translated",
-                      "value" : "%arg emballé"
+                      "value" : "%arg rangé"
                     }
                   },
                   "other" : {
                     "stringUnit" : {
                       "state" : "translated",
-                      "value" : "%arg emballés"
+                      "value" : "%arg rangés"
                     }
                   }
                 }
@@ -1434,7 +1434,7 @@
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "%1$d / %2$d 個済み"
+            "value" : "%1$d / %2$d 荷造り済み"
           }
         },
         "ko" : {

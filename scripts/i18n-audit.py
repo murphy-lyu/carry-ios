@@ -90,6 +90,16 @@ def audit(path):
             if any(s != 'translated' for s in st):
                 errs.append((key, 'needs_review', l, (flat_value(lv) or '')[:50]))
                 continue
+            # 残缺 substitution（缺 argNum/formatSpecifier，或 top 未引用 %#@name@）——
+            # 会让 Xcode 报「format specifiers inconsistent」编译失败。本项目 CJK 保持 flat、
+            # 不应有 substitutions（机器复审误返复数形态时易误建）。
+            for sn, sd in lv.get('substitutions', {}).items():
+                if sd.get('argNum') is None or sd.get('formatSpecifier') is None:
+                    errs.append((key, 'broken-substitution', l, f'{sn}: missing argNum/formatSpecifier'))
+                elif f'%#@{sn}@' not in (lv.get('stringUnit', {}).get('value') or ''):
+                    errs.append((key, 'orphan-substitution', l, f'top value missing %#@{sn}@'))
+            if l in CJK and lv.get('substitutions'):
+                errs.append((key, 'cjk-has-substitution', l, '本项目 CJK 应保持 flat（无复数）'))
             val = flat_value(lv)
             if val is None:  # 复数变体键，无扁平值，跳过后续逐值检查
                 continue
