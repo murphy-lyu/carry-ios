@@ -1652,28 +1652,28 @@ struct StopEditView: View {
                     // 自定义 Menu 替代原生 Picker：菜单 Picker 的「收起选中值」由系统按自己的紧凑排版渲染、
                     // 无视选项里的自定义间距（故下拉松、收起挤，且 SwiftUI 不给改）。改用 Menu 后，收起值标签
                     // 由我们手搓 → 图标↔文字间距 100% 可控；下拉仍是系统菜单 Picker（用 Label、间距本就合适）。
-                    Menu {
-                        // 与「添加地点」一致：只列地点类别，剔除航班/火车/租车/邮轮（它们是交通段、走「+」交通入口）。
-                        Picker(selection: $category) {
-                            ForEach(StopCategory.placeSelectableCases, id: \.self) { cat in
-                                Label(cat.titleKey, systemImage: cat.symbolName).tag(cat)
-                            }
+                    // 类别 = LabeledContent + Menu（与航班 Cabin 同款结构）。标题「Type」放在 LabeledContent 的
+                    // label（Menu 外）、值（图标+名+chevron）放 Menu 的 label——关键：标题**不能**塞进 Menu 的 label，
+                    // 否则菜单展开瞬间 SwiftUI 会把它缩到不可见（已知 gotcha）；外置即不受影响。值用主色，不用 accent 蓝。
+                    LabeledContent {
+                        Menu {
+                            // 只列地点类别，剔除航班/火车/租车/邮轮（交通段走「+」交通入口）。
+                            Picker(selection: $category) {
+                                ForEach(StopCategory.placeSelectableCases, id: \.self) { cat in
+                                    Label(cat.titleKey, systemImage: cat.symbolName).tag(cat)
+                                }
+                            } label: { EmptyView() }
                         } label: {
-                            Text("itinerary.add_stop.category")
-                        }
-                    } label: {
-                        HStack {
-                            Text("itinerary.add_stop.category")
-                                .foregroundStyle(.primary)
-                            Spacer()
-                            HStack(spacing: 6) {                       // ← 收起值的呼吸感
+                            HStack(spacing: 6) {
                                 Image(systemName: category.symbolName)
                                 Text(category.titleKey)
                                 Image(systemName: "chevron.up.chevron.down")
-                                    .imageScale(.small)
+                                    .font(.system(size: 11, weight: .semibold))
                             }
-                            .foregroundStyle(CarryAccent.color)
+                            .foregroundStyle(.primary)
                         }
+                    } label: {
+                        Text("itinerary.add_stop.category")
                     }
                     // 日期 + 时间融合一行（统一租车 dateTimeChipsRow 范式）：标签「日期」左·日期chip+时间chip右。
                     // 多天行程日期 chip 可点选换天（= 把停靠点移到目标天、保留时刻）；时间为单一「开始时间」、可清除。
@@ -1696,14 +1696,21 @@ struct StopEditView: View {
                         Button { showTimeSheet = true } label: {
                             FormChip(text: hasTime ? itineraryTimeString(startTime)
                                                    : NSLocalizedString("itinerary.transport.field.time", comment: ""),
-                                     filled: hasTime)
+                                     filled: hasTime,
+                                     monospacedDigits: hasTime)
                         }
                         .buttonStyle(.plain)
                     }
                     // 电话：搜索地点时可自动回填，也可手填（餐厅/景点联系）。= 数字 + `+-() 空格`。
-                    TextField("itinerary.transport.field.phone",
-                              text: $phone.filteringInput(ItineraryInputFilter.phone))
-                        .keyboardType(.phonePad)
+                    // 「标签左·值右」（与 Type/Date 及交通编辑统一）——避免填值后只剩裸号、没有「Phone」标签。
+                    LabeledContent {
+                        TextField("itinerary.transport.field.phone.placeholder",
+                                  text: $phone.filteringInput(ItineraryInputFilter.phone))
+                            .multilineTextAlignment(.trailing)
+                            .keyboardType(.phonePad)
+                    } label: {
+                        Text("itinerary.transport.field.phone")
+                    }
                 } header: {
                     Text("itinerary.stop.edit.details_header")
                 }
@@ -1713,8 +1720,17 @@ struct StopEditView: View {
                     CostInputRow(amountText: $costAmountText, currencyCode: $costCurrencyCode)
                 }
                 Section {
-                    TextField(text: $note, axis: .vertical) { Text("itinerary.stop.edit.note") }
-                        .lineLimit(2...5)
+                    // 前导图标（详情 NoteDetailRow 同款 note.text）：与 Total cost / Attachments 统一为带图标的功能卡。
+                    HStack(alignment: .top, spacing: 12) {
+                        Image(systemName: "note.text")
+                            .font(.system(size: 15))
+                            .foregroundStyle(.secondary)
+                            .frame(width: 22)
+                            .padding(.top, 2)
+                            .accessibilityHidden(true)
+                        TextField(text: $note, axis: .vertical) { Text("itinerary.stop.edit.note") }
+                            .lineLimit(2...5)
+                    }
                 }
                 // 地点恒为既有实体（新地点经 AddStopView 搜索添加），owner 始终有 → 直接入库，无需缓冲。
                 AttachmentEditSection(
