@@ -17,20 +17,19 @@ private struct PickedBackgroundProvider: Identifiable {
 // MARK: - PackingListView
 
 /// 行程详情页的两张脸（spec: itinerary-route-planning.md）：打包清单 / 行程路线规划。
-private enum DetailTab: Hashable {
-    case packing
-    case itinerary
-}
+/// 类型定义已提升到 ContentView 的 `TripDetailFace`（与通知/深链路由共用，便于按语义选脸）。
 
-/// 每个行程「上次看的面」记忆（spec: app-navigation-framework.md）。
+/// 每个行程「上次看的面」记忆（spec: app-navigation-framework.md / notification-deeplink-routing.md）。
 /// 已有行程开在「记住的上次面」，仅在无记录时才默认行程规划——
 /// 不是「已有行程一律行程规划」（旧注释如此，与实际不符，易误导）。
-private enum TripDetailFaceStore {
+/// 非私有：通知/深链承接侧（`ContentView.handlePendingTrip`）跳转前按语义写入目标脸，使
+/// `PackingListView.init` 首帧即读到正确脸（无 push 中闪烁）。
+enum TripDetailFaceStore {
     private static func key(_ id: UUID) -> String { "trip_detail_face_\(id.uuidString)" }
-    static func load(tripId: UUID) -> DetailTab {
+    static func load(tripId: UUID) -> TripDetailFace {
         UserDefaults.standard.string(forKey: key(tripId)) == "packing" ? .packing : .itinerary
     }
-    static func save(_ face: DetailTab, tripId: UUID) {
+    static func save(_ face: TripDetailFace, tripId: UUID) {
         UserDefaults.standard.set(face == .packing ? "packing" : "itinerary", forKey: key(tripId))
     }
 }
@@ -47,7 +46,7 @@ struct PackingListView: View {
     /// 当前选中的面。初始面在 `init` 里就解析好，使**首帧即为正确的面**——
     /// 不再靠 onAppear 把默认 `.packing` 纠正过来（那会在打开「行程规划」行程时，
     /// 于 push 动画里先闪一下打包）。新建流程始终打包；已有行程开在记住的上次面。
-    @State private var detailTab: DetailTab
+    @State private var detailTab: TripDetailFace
 
     init(tripId: UUID, isNewTrip: Bool = false) {
         self.tripId = tripId
@@ -523,7 +522,7 @@ struct PackingListView: View {
         .bottomBarFade(Color(UIColor.systemBackground))
     }
 
-    private func faceSegment(_ face: DetailTab, title: LocalizedStringKey, icon: String) -> some View {
+    private func faceSegment(_ face: TripDetailFace, title: LocalizedStringKey, icon: String) -> some View {
         let selected = detailTab == face
         return Button {
             guard detailTab != face else { return }

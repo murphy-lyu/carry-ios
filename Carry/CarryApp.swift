@@ -94,8 +94,10 @@ struct CarryApp: App {
                     guard url.scheme == "carry",
                           let uuidString = url.pathComponents.dropFirst().first,
                           let id = UUID(uuidString: uuidString) else { return }
-                    // carry://trip/{uuid} 或 carry://packing/{uuid}
-                    router.pendingTripId = id
+                    // carry://trip/{uuid} 或 carry://packing/{uuid}。后者按语义落「打包」脸；
+                    // 前者（及 Widget）保持「上次看的脸」（face=nil）。spec: notification-deeplink-routing.md。
+                    let face: TripDetailFace? = url.host == "packing" ? .packing : nil
+                    router.pendingTrip = TripDeepLink(tripId: id, face: face)
                 }
                 .onReceive(NotificationCenter.default.publisher(
                     for: UIApplication.didReceiveMemoryWarningNotification)
@@ -218,14 +220,16 @@ final class PackReminderNotificationDelegate: NSObject, UNUserNotificationCenter
         withCompletionHandler completionHandler: @escaping () -> Void
     ) {
         let identifier = response.notification.request.identifier
-        if let tripId = NotificationManager.tripId(fromIdentifier: identifier) {
-            CarryLogger.shared.log(.notificationTapped, context: "tripId=\(tripId)")
+        if let link = NotificationManager.deepLink(fromIdentifier: identifier) {
+            CarryLogger.shared.log(.notificationTapped, context: "tripId=\(link.tripId)")
             // 天气预警点击单独记一笔（spec: weather-aware-packing.md, Part 2）
             if identifier.contains(".weather") {
-                CarryLogger.shared.log(.weatherAlertFired, context: "tripId=\(tripId)")
+                CarryLogger.shared.log(.weatherAlertFired, context: "tripId=\(link.tripId)")
             }
+            // 富目标承载「该落哪张脸 + 锚点」（spec: notification-deeplink-routing.md），
+            // 由 ContentView.handlePendingTrip 选脸 + 拆 modal + 滚到对应天。
             DispatchQueue.main.async { [weak self] in
-                self?.router?.pendingTripId = tripId
+                self?.router?.pendingTrip = link
             }
         }
         completionHandler()

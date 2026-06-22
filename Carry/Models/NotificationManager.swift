@@ -456,4 +456,29 @@ enum NotificationManager {
         return UUID(uuidString: uuidString)
     }
 
+    /// 把通知 identifier 解析成富深链目标（spec: notification-deeplink-routing.md）：按类别决定落
+    /// 「打包」还是「行程」脸，行程类再带锚点（段→所在天 / 住宿→退房天 / 每日→该天）。
+    /// **新增通知类别时必须同步此函数**（与 `collectXxx` 成对维护，否则新通知落点回退到「保持上次脸」）。
+    static func deepLink(fromIdentifier identifier: String) -> TripDeepLink? {
+        guard let tripId = tripId(fromIdentifier: identifier) else { return nil }
+        // dropFirst(prefix) 后形如 `{uuid}.{category}.…`；uuid 不含 '.'，按 '.' 切分即可。
+        let comps = identifier.dropFirst(tripPrefix.count).split(separator: ".").map(String.init)
+        guard comps.count >= 2 else { return TripDeepLink(tripId: tripId) }
+        switch comps[1] {
+        case "depart", "pack", "weather":
+            return TripDeepLink(tripId: tripId, face: .packing)
+        case "transport":
+            let anchor = comps.count >= 3 ? UUID(uuidString: comps[2]).map(TripDeepLinkAnchor.segment) : nil
+            return TripDeepLink(tripId: tripId, face: .itinerary, anchor: anchor)
+        case "lodging":
+            let anchor = comps.count >= 3 ? UUID(uuidString: comps[2]).map(TripDeepLinkAnchor.lodging) : nil
+            return TripDeepLink(tripId: tripId, face: .itinerary, anchor: anchor)
+        case "daily":
+            let anchor = comps.count >= 3 ? Int(comps[2]).map(TripDeepLinkAnchor.day) : nil
+            return TripDeepLink(tripId: tripId, face: .itinerary, anchor: anchor)
+        default:
+            return TripDeepLink(tripId: tripId)   // 未知类别：保持上次脸、无锚点（安全降级）
+        }
+    }
+
 }

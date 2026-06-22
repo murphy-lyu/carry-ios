@@ -14,12 +14,39 @@ enum CreationRoute: Hashable {
     case autoPackPicker(TripInfo, sceneKeys: [String])
 }
 
+// MARK: - Deep-link Target
+
+/// 行程详情页的两张脸（spec: notification-deeplink-routing.md / itinerary-route-planning.md）。
+/// 提升为共享类型，使通知/深链跳转能按语义选脸（`PackingListView` 与路由共用一套）。
+enum TripDetailFace: Equatable { case packing, itinerary }
+
+/// 行程脸内的锚点：跳转后定位到对应「天」并滚动到位。
+enum TripDeepLinkAnchor: Equatable {
+    case day(Int)         // dayOrder
+    case segment(UUID)    // 交通段 id → 其所在天
+    case lodging(UUID)    // 住宿 id → 退房天
+}
+
+/// 通知/Widget/URL/快捷指令唤起某行程时的富目标（spec: notification-deeplink-routing.md）。
+/// `face == nil` = 保持该行程「上次看的脸」（Widget / carry://trip / 快捷指令）。
+struct TripDeepLink: Equatable {
+    let tripId: UUID
+    var face: TripDetailFace? = nil
+    var anchor: TripDeepLinkAnchor? = nil
+}
+
 // MARK: - Navigation Router
 
 final class NavigationRouter: ObservableObject {
     @Published var path = NavigationPath()
     @Published var showMapFullscreen = false
-    @Published var pendingTripId: UUID? = nil
+
+    /// 待唤起的行程深链（通知/Widget/URL/快捷指令）。承接侧 `handlePendingTrip` 消费：
+    /// 选脸 + 拆 modal + 落 path + 写锚点。spec: notification-deeplink-routing.md。
+    @Published var pendingTrip: TripDeepLink? = nil
+
+    /// 行程脸待消费的锚点。ItineraryView 数据就绪后读取一次、定位到对应天，然后清空。
+    @Published var pendingItineraryAnchor: TripDeepLinkAnchor? = nil
 
     /// 深链（通知/Widget/快捷指令）唤起行程时递增。行程详情是 push 进根 NavigationStack 的，而
     /// 根级 modal（Settings/Search/Trip Book…）盖在栈之上、push 不会自动关它 → 详情被挡住看不到。
@@ -144,7 +171,7 @@ struct ContentView: View {
         .environmentObject(store)
         .environmentObject(router)
         .onAppear { onAppearCommon() }
-        .onChange(of: router.pendingTripId) { _, tripId in handlePendingTripId(tripId) }
+        .onChange(of: router.pendingTrip) { _, link in handlePendingTrip(link) }
         .onChange(of: scenePhase) { _, phase in onScenePhaseChange(phase) }
         .onReceive(NotificationCenter.default.publisher(for: UserDefaults.didChangeNotification)) { _ in
             if didApplyStartupReset { handlePendingShortcut() }
@@ -197,7 +224,7 @@ struct ContentView: View {
         .environmentObject(store)
         .environmentObject(router)
         .onAppear { onAppearCommon() }
-        .onChange(of: router.pendingTripId) { _, tripId in handlePendingTripId(tripId) }
+        .onChange(of: router.pendingTrip) { _, link in handlePendingTrip(link) }
         .onChange(of: scenePhase) { _, phase in onScenePhaseChange(phase) }
         .onReceive(NotificationCenter.default.publisher(for: UserDefaults.didChangeNotification)) { _ in
             if didApplyStartupReset { handlePendingShortcut() }
@@ -230,29 +257,34 @@ struct ContentView: View {
             didRefreshOnLaunch = true
             store.refresh()
         }
-        // 深链冷启动保护：CarryApp.onOpenURL 在 SplashView 阶段就可能把 pendingTripId
+        // 深链冷启动保护：CarryApp.onOpenURL 在 SplashView 阶段就可能把 pendingTrip
         // 设上（Widget/通知/Universal Link 冷启动），那时 ContentView 还没 mount，
-        // onChange(of: pendingTripId) 不会重放历史值——直接丢失。这里主动消费一次。
+        // onChange(of: pendingTrip) 不会重放历史值——直接丢失。这里主动消费一次。
         // 见 memory project_carry_deeplink_timing.md。
-        if let id = router.pendingTripId {
-            handlePendingTripId(id)
+        if let link = router.pendingTrip {
+            handlePendingTrip(link)
         }
     }
 
-    private func handlePendingTripId(_ tripId: UUID?) {
-        guard let tripId else { return }
-        // 深链必须把行程顶到最前——即使此刻有 modal 盖在根导航栈上（用户停在 Settings/创建/分享导入…
-        // 时按 Home 退出、收到通知再点进来）。只 push 底层栈，sheet 会留在上面挡住详情。故先拆掉所有
-        // 「path 重置也带不走」的 modal：ContentView 级（创建 / 分享导入 / Mac 设置）直接置空，
-        // HomeView 级（Settings/Search/Trip Book…）经 rootModalDismissalRequest 信号自行关闭。
-        // 行程详情页（PackingListView）内的 sheet 不必管——重置 path 会连页带 sheet 一起卸载。
+    /// 承接通知/Widget/URL/快捷指令的行程深链（spec: notification-deeplink-routing.md）：
+    /// ① 按语义选脸（无闪烁：跳转前写 TripDetailFaceStore，PackingListView.init 首帧即读到）；
+    /// ② 拆掉盖在根导航栈上的 modal；③ 落 path；④ 写锚点供 ItineraryView 滚到对应天。
+    private func handlePendingTrip(_ link: TripDeepLink?) {
+        guard let link else { return }
+        // ① 选脸（face==nil 表示保持上次脸——Widget / carry://trip / 快捷指令）。
+        if let face = link.face { TripDetailFaceStore.save(face, tripId: link.tripId) }
+        // ② 拆 modal：用户停在 Settings/创建/分享导入… 按 Home 退出、收到通知点进来时，
+        // 只 push 底层栈会被 sheet 挡住。ContentView 级直接置空，HomeView 级经信号自关。
         router.showCreation = false
         router.pendingSharedTrip = nil
         showSettingsOnMac = false
         router.rootModalDismissalRequest &+= 1
+        // ③ 落 path（行程详情页内的 sheet 随 path 重置一并卸载，无需单独处理）。
         router.path = NavigationPath()
-        router.path.append(tripId)
-        router.pendingTripId = nil
+        router.path.append(link.tripId)
+        // ④ 锚点交给 ItineraryView 就绪后消费（仅行程脸有锚点）。
+        router.pendingItineraryAnchor = link.anchor
+        router.pendingTrip = nil
     }
 
     private func onScenePhaseChange(_ phase: ScenePhase) {

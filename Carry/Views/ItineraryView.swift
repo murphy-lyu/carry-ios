@@ -74,6 +74,7 @@ struct ItineraryView: View {
     var isReordering: Binding<Bool> = .constant(false)
 
     @EnvironmentObject var store: TripStore
+    @EnvironmentObject var router: NavigationRouter
 
     /// 距离单位偏好（自动 / 公里 / 英里）；切换后段距/路程模块实时重渲染。
     @AppStorage("distance_unit") private var distanceUnitRaw = DistanceUnit.automatic.rawValue
@@ -193,11 +194,13 @@ struct ItineraryView: View {
         .onAppear {
             store.syncItineraryDays(tripId: tripId)   // 兜底：天对齐到行程天数（存量行程/新建首开）
             syncFocusedDaySelectionIfNeeded()
+            consumePendingItineraryAnchor()           // 深链锚点优先于默认聚焦首日
             navApps = MapNavigationService.availableApps()
             loadCalendarOverlay()
         }
         .onChange(of: days.map(\.id)) { _, _ in
             syncFocusedDaySelectionIfNeeded()
+            consumePendingItineraryAnchor()           // 冷启动 days 后到时再消费一次
         }
         .onChange(of: calendarOverlayEnabled) { _, _ in loadCalendarOverlay() }
         // 从系统日历/设置返回（改了开关或选中日历）→ 刷新叠加层。
@@ -387,6 +390,27 @@ struct ItineraryView: View {
             return
         }
         focusedDayId = days.first?.id
+    }
+
+    /// 消费深链锚点（spec: notification-deeplink-routing.md）：定位到对应天，`activeFocusedDayId`
+    /// 变化即驱动 collection 滚动 + 日历条居中。仅行程脸唤起、故只在此消费。days 未就绪（冷启动竞态）
+    /// 时不清空，待 days onChange 再来；解析不到（项已删等）则安全略过。消费后清空避免切别的行程重复触发。
+    private func consumePendingItineraryAnchor() {
+        guard let anchor = router.pendingItineraryAnchor, !days.isEmpty else { return }
+        if let dayId = resolveAnchorDayId(anchor) { focusedDayId = dayId }
+        router.pendingItineraryAnchor = nil
+    }
+
+    private func resolveAnchorDayId(_ anchor: TripDeepLinkAnchor) -> UUID? {
+        switch anchor {
+        case .day(let order):
+            return days.first { $0.sortOrder == order }?.id
+        case .segment(let segId):
+            return days.first { $0.sortedSegments.contains { $0.id == segId } }?.id
+        case .lodging(let stayId):
+            guard let stay = bundle?.safeLodgingStays.first(where: { $0.id == stayId }) else { return nil }
+            return days.first { $0.sortOrder == stay.checkOutDayOrder }?.id
+        }
     }
 
     private func dayDotCount(for entry: CalendarEntry) -> Int {
