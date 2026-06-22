@@ -171,7 +171,8 @@ struct ItineraryView: View {
             case .editTransport(let id):
                 TransportEditView(tripId: tripId, segmentId: id)
             case .addLodging(let order):
-                LodgingEditView(tripId: tripId, initialCheckInDayOrder: order)
+                // 「+」住宿走搜索优先（与添加地点/航班一致）：搜到选中即直接加，底部「手动添加」push 进表单。
+                LodgingSearchSheet(tripId: tripId, initialCheckInDayOrder: order)
             case .lodgingDetail(let stay, let dayOrder):
                 LodgingDetailView(
                     tripId: tripId,

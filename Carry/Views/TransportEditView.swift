@@ -281,6 +281,9 @@ struct TransportEditView: View {
                     .textInputAutocapitalization(.characters)
             }
             TextField(carrierLabel, text: $carrier)
+        } header: {
+            // 身份段以「实体名」作标题（与地点「Place」/住宿「住宿」同款处理）：按当前 mode 取——Flight/租车/火车…
+            Text(LocalizedStringKey(mode.localizationKey))
         }
     }
 

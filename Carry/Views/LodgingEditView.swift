@@ -17,6 +17,14 @@ struct LodgingEditView: View {
     var stayId: UUID? = nil
     /// 新增时的默认入住日（统一「+」入口按当前天传入）。
     var initialCheckInDayOrder: Int = 0
+    /// 是否自带 NavigationStack。独立呈现（编辑住宿）为 true；被 `LodgingSearchSheet` 的「手动添加」push 时为 false，
+    /// 复用其导航栈，避免嵌套栈。
+    var embedInOwnNavigationStack: Bool = true
+    /// 保存/删除完成回调。被 push 时由 `LodgingSearchSheet` 传入以关闭整张搜索 sheet；nil（独立呈现）则退回 dismiss()。
+    var onFinish: (() -> Void)? = nil
+    /// 搜索预填（来自 `LodgingSearchSheet` 选中的酒店）：新建时把名称/地址/坐标/电话/时区带进表单，
+    /// 用户只需补入住/退房日期——避免「选中即落 1 晚」的问题。nil = 手动添加（空表单）/编辑既有。
+    var prefill: ResolvedPlace? = nil
 
     @EnvironmentObject var store: TripStore
     @Environment(\.dismiss) private var dismiss
@@ -66,25 +74,38 @@ struct LodgingEditView: View {
     }
 
     var body: some View {
-        NavigationStack {
+        if embedInOwnNavigationStack {
+            NavigationStack { formContent }
+        } else {
+            formContent
+        }
+    }
+
+    private var formContent: some View {
             Form {
+                // 名称/地址段：与「地点编辑」同款——名称可直接编辑（输自定义名 / 搜索回填都行）、地址只读展示、
+                // 「Change location」重搜改地点。结构统一，且名称不再被 Form 默认蓝染（TextField 黑字、动作才蓝）。
                 Section {
+                    TextField(text: $name) { Text("itinerary.lodging.field.name") }
+                    if (latitude != 0 || longitude != 0), !address.isEmpty {
+                        HStack(spacing: 8) {
+                            Image(systemName: "mappin.and.ellipse")
+                                .foregroundStyle(.secondary)
+                            Text(address)
+                                .font(.subheadline)
+                                .foregroundStyle(.secondary)
+                        }
+                    }
                     Button {
                         searching = true
                     } label: {
-                        HStack {
-                            Image(systemName: "bed.double")
-                                .foregroundStyle(.secondary)
-                            (name.isEmpty ? Text("itinerary.lodging.field.name") : Text(name))
-                                .foregroundStyle(name.isEmpty ? .secondary : .primary)
-                            Spacer()
-                            Image(systemName: "magnifyingglass")
-                                .font(.footnote)
-                                .foregroundStyle(.tertiary)
-                        }
+                        Label((latitude != 0 || longitude != 0) ? "itinerary.stop.edit.relocate"
+                                                                 : "itinerary.stop.edit.set_location",
+                              systemImage: "mappin.circle")
                     }
-                    TextField("itinerary.lodging.field.address", text: $address, axis: .vertical)
-                        .lineLimit(1...3)
+                } header: {
+                    // 实体名作段标题（与地点编辑「Place/地点」同款处理：每个实体段以实体名分组）。复用类别文案，零新增本地化。
+                    Text("itinerary.category.lodging")
                 }
 
                 Section {
@@ -98,38 +119,43 @@ struct LodgingEditView: View {
                                     dayBinding: checkOutDayBinding,
                                     dayOptions: days.filter { $0.sortOrder > checkInDayOrder },
                                     has: hasCheckOutTime, time: checkOutTime) { timeSheet = .checkOut }
-                    // 由「入住日/退房日」派生的晚数（只读小行，多天行程才有意义）。
-                    if days.count > 1 {
-                        LabeledContent {
-                            Text(String(format: NSLocalizedString("itinerary.lodging.nights_value", comment: ""), nights))
-                                .foregroundStyle(.secondary)
-                        } label: {
-                            Text("itinerary.lodging.field.nights")
-                        }
-                    }
+                    // 晚数（Nights）不在编辑态展示：派生值（退房−入住），编辑时正设这两个日期、回显是噪声；
+                    // 详情里作辅助参考即可（与租车 Days 同处理）。内部 nights 仍由两日期派生、保存照常。
                 } header: {
                     Text("itinerary.lodging.section.stay")
                 }
 
+                // Booking code 归「More」段——与航班/租车编辑一致（确认号都在 More），且它是订单凭据、与入住日期关系不大。
+                // 标签左·值右 + ABC123 占位。电话不在编辑态露出（自动回填的辅助信息、详情只读）。
                 Section {
-                    // 确认号 = 字母+数字（不强制大写，部分订单号区分大小写）。
-                    TextField("itinerary.transport.field.confirmation",
-                              text: $confirmationCode.filteringInput(ItineraryInputFilter.alphanumeric))
-                        .autocorrectionDisabled()
-                    // 电话：搜酒店时可自动回填，也可手填（方便行程中联系）。= 数字 + `+-() 空格`。
-                    TextField("itinerary.transport.field.phone",
-                              text: $phone.filteringInput(ItineraryInputFilter.phone))
-                        .keyboardType(.phonePad)
+                    LabeledContent {
+                        TextField("itinerary.transport.field.confirmation.placeholder",
+                                  text: $confirmationCode.filteringInput(ItineraryInputFilter.alphanumeric))
+                            .multilineTextAlignment(.trailing)
+                            .autocorrectionDisabled()
+                    } label: {
+                        Text("itinerary.transport.field.confirmation")
+                    }
                 } header: {
                     Text("itinerary.transport.section.more")
                 }
+
                 // 固定顺序：费用 → 备注 → 附件，各自独立 Section。
                 Section {
                     CostInputRow(amountText: $costAmountText, currencyCode: $costCurrencyCode)
                 }
                 Section {
-                    TextField("itinerary.transport.field.note", text: $note, axis: .vertical)
-                        .lineLimit(1...4)
+                    // 前导图标（详情 NoteDetailRow 同款 note.text）：与 Total cost / Attachments 统一。
+                    HStack(alignment: .top, spacing: 12) {
+                        Image(systemName: "note.text")
+                            .font(.system(size: 15))
+                            .foregroundStyle(.secondary)
+                            .frame(width: 22)
+                            .padding(.top, 2)
+                            .accessibilityHidden(true)
+                        TextField("itinerary.transport.field.note", text: $note, axis: .vertical)
+                            .lineLimit(1...4)
+                    }
                 }
 
                 // 附件：既有住宿直接入库；新建缓冲到 pending、保存后 flush。呈现挂到 Form（见 .attachmentAddFlow）。
@@ -160,8 +186,11 @@ struct LodgingEditView: View {
                 nights = max(1, min(nights, lastDayOrder - newVal))
             }
             .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    Button("common.cancel") { dismiss() }
+                // 被 push 时（embed=false）系统返回按钮已提供「返回搜索」，不再叠加 Cancel。
+                if embedInOwnNavigationStack {
+                    ToolbarItem(placement: .cancellationAction) {
+                        Button("common.cancel") { dismiss() }
+                    }
                 }
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Save") { saveAndDismiss() }
@@ -179,8 +208,8 @@ struct LodgingEditView: View {
                     name = pickedName
                     latitude = lat
                     longitude = lon
-                    if address.isEmpty { address = pickedAddress }
-                    if phone.isEmpty { phone = pickedPhone }   // 自动回填，已填则不覆盖
+                    address = pickedAddress   // 地址只读、由搜索权威回填（换地点即更新，不再保留手改值）
+                    if phone.isEmpty { phone = pickedPhone }   // 自动回填，已填则不覆盖（电话仍捕获、详情展示）
                     if !pickedTZ.isEmpty { timeZoneId = pickedTZ }   // 换地址即更新时区（地址变了时区也该跟着变）
                 }
             }
@@ -198,7 +227,6 @@ struct LodgingEditView: View {
                 }
             }
             .onAppear(perform: loadIfNeeded)
-        }
     }
 
     // MARK: Helpers
@@ -230,7 +258,8 @@ struct LodgingEditView: View {
             Button(action: onTapTime) {
                 FormChip(text: has ? itineraryTimeString(time)
                                    : NSLocalizedString("itinerary.transport.field.time", comment: ""),
-                         filled: has)
+                         filled: has,
+                         monospacedDigits: has)
             }
             .buttonStyle(.plain)
         }
@@ -277,6 +306,18 @@ struct LodgingEditView: View {
             if stay.hasCost { costAmountText = CurrencyCatalog.amountText(stay.costAmount); costCurrencyCode = stay.costCurrencyCode }
         } else {
             checkInDayOrder = initialCheckInDayOrder
+            // 新建住宿默认时刻（国际通用）：入住 15:00（多数酒店下午入住）、退房 12:00（中午）。用户可改。
+            hasCheckInTime = true; checkInTime = dateFromMinutes(15 * 60)
+            hasCheckOutTime = true; checkOutTime = dateFromMinutes(12 * 60)
+            // 搜索预填：把选中酒店的名称/地址/坐标/电话/时区带进来；日期用上面默认，待用户补（多晚）。
+            if let prefill {
+                name = prefill.name
+                address = prefill.address
+                latitude = prefill.latitude
+                longitude = prefill.longitude
+                phone = prefill.phone
+                timeZoneId = prefill.timeZoneId
+            }
         }
     }
 
@@ -326,12 +367,150 @@ struct LodgingEditView: View {
                 }
             }
         }
-        dismiss()
+        finish()
+    }
+
+    /// 完成（保存/删除后）：被 push 时走 onFinish 关闭整张搜索 sheet；独立呈现退回 dismiss。
+    private func finish() {
+        if let onFinish { onFinish() } else { dismiss() }
     }
 
     private func deleteAndDismiss() {
         guard let stayId else { return }
         store.removeLodgingStay(tripId: tripId, stayId: stayId)
-        dismiss()
+        finish()
+    }
+}
+
+// MARK: - LodgingSearchSheet
+
+/// 住宿「搜索优先」添加流（spec: itinerary-transport-lodging.md）：与「添加地点」/「航班搜索」同款——
+/// 点「+」住宿先进搜索；搜到选中即**直接加进行程**（带默认入住 15:00 / 退房 12:00、入住=当前天、1 晚）；
+/// 底部常驻「搜不到酒店？手动添加」push 进空表单（复用本栈、不叠 sheet）。
+struct LodgingSearchSheet: View {
+    let tripId: UUID
+    let initialCheckInDayOrder: Int
+
+    @EnvironmentObject var store: TripStore
+    @Environment(\.dismiss) private var dismiss
+
+    @StateObject private var completer = StopSearchCompleter()
+    @State private var isResolving = false
+    @State private var route: Route?
+    @State private var resolvedPlace: ResolvedPlace?   // 选中并解析后的酒店，供预填表单读取（同航班 result 范式）
+    @FocusState private var searchFocused: Bool
+
+    private enum Route: Hashable { case prefilled, manual }
+
+    private var bundle: TripBundle? { store.bundle(for: tripId) }
+
+    var body: some View {
+        NavigationStack {
+            List {
+                Section {
+                    ForEach(completer.results) { result in
+                        Button {
+                            resolveAndProceed(result)
+                        } label: {
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text(result.title)
+                                    .foregroundStyle(.primary)
+                                if !result.subtitle.isEmpty {
+                                    Text(result.subtitle)
+                                        .font(.caption)
+                                        .foregroundStyle(.secondary)
+                                }
+                            }
+                        }
+                    }
+                } header: {
+                    if !completer.results.isEmpty { Text("itinerary.add_stop.results") }
+                }
+            }
+            .listStyle(.insetGrouped)
+            // 与 AddStopView 同：显式铺 grouped 底，消除 band 与列表区的接缝。
+            .scrollContentBackground(.hidden)
+            .background(Color(.systemGroupedBackground).ignoresSafeArea())
+            .safeAreaInset(edge: .top) { searchField }
+            .safeAreaInset(edge: .bottom) { manualFooter }
+            .disabled(isResolving)
+            .overlay { if isResolving { ProgressView() } }
+            .navigationTitle(Text("itinerary.lodging.add.title"))   // 「Add lodging / 添加住宿」（与添加地点的搜索窗口平行）
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("common.cancel") { dismiss() }
+                }
+            }
+            // 选中结果 → 预填表单（用户补日期）；手动添加 → 空表单。都 push（复用本搜索栈，不叠 sheet），
+            // 保存/取消后关闭整张搜索 sheet。
+            .navigationDestination(item: $route) { route in
+                switch route {
+                case .prefilled:
+                    LodgingEditView(tripId: tripId, initialCheckInDayOrder: initialCheckInDayOrder,
+                                    embedInOwnNavigationStack: false, onFinish: { dismiss() },
+                                    prefill: resolvedPlace)
+                case .manual:
+                    LodgingEditView(tripId: tripId, initialCheckInDayOrder: initialCheckInDayOrder,
+                                    embedInOwnNavigationStack: false, onFinish: { dismiss() })
+                }
+            }
+            .onAppear {
+                completer.biasRegion(toLatitude: bundle?.latitude ?? 0, longitude: bundle?.longitude ?? 0)
+                // 聚焦推迟到下一帧（在 sheet 呈现更新周期内同步设 @FocusState 会触发 AttributeGraph 崩溃）。
+                DispatchQueue.main.async { searchFocused = true }
+            }
+            .onDisappear { completer.tearDown() }   // 取消在途海外请求 + 停 MapKit 补全
+        }
+    }
+
+    /// 常驻搜索框（统一 CarrySearchField，.grouped 表面），固定在导航栏下方。
+    private var searchField: some View {
+        CarrySearchField(
+            text: $completer.query,
+            placeholder: "itinerary.lodging.search.placeholder",
+            focus: $searchFocused
+        )
+        .padding(.horizontal, 16)
+        .padding(.top, 8)
+        .padding(.bottom, 8)
+        .background(Color(.systemGroupedBackground))
+    }
+
+    /// 底部常驻·低权重手动兜底（搜不到的民宿/小店）：弱提示 secondary + 强调动作 accent，安静的逃生口。
+    private var manualFooter: some View {
+        VStack(spacing: 0) {
+            Divider()
+            Button {
+                searchFocused = false
+                route = .manual
+            } label: {
+                HStack(spacing: 5) {
+                    Text("itinerary.lodging.search.manual_hint")
+                        .foregroundStyle(.secondary)
+                    Text("itinerary.lodging.search.manual")
+                        .foregroundStyle(CarryAccent.color)
+                }
+                .font(.footnote)
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 14)
+            }
+            .buttonStyle(.plain)
+        }
+        .background(Color(.systemGroupedBackground))
+    }
+
+    /// 选中结果 → 解析坐标 → 带数据 push 进**预填表单**（用户补入住/退房日期，支持多晚）。
+    /// 解析失败也带名字进表单（无坐标），不让点击石沉大海。
+    private func resolveAndProceed(_ suggestion: PlaceSuggestion) {
+        isResolving = true
+        Task {
+            let r = await completer.resolve(suggestion)   // 国内走 MapKit、海外走 Worker
+            isResolving = false
+            resolvedPlace = r ?? ResolvedPlace(name: suggestion.title, latitude: 0, longitude: 0,
+                                               address: "", phone: "", timeZoneId: "")
+            searchFocused = false
+            route = .prefilled
+        }
     }
 }
