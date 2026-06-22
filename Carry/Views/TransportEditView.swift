@@ -121,7 +121,8 @@ struct TransportEditView: View {
                     pending: $pendingAttachments,
                     tripId: tripId,
                     request: $attachmentRequest)
-                if isEditing { deleteSection }
+                // 删除不在编辑态露出：详情弹层「···」菜单已有删除（走详情删、详情自身 dismiss，干净）；
+                // 编辑态本是改内容，放删除既冗余、又因「详情/编辑叠层」在编辑里删后露出悬空详情。
             }
             .attachmentAddFlow(tripId: tripId, owner: editingSegment.map { .segment($0.id) },
                                pending: $pendingAttachments, request: $attachmentRequest)
@@ -582,24 +583,6 @@ struct TransportEditView: View {
         }
     }
 
-    /// 删除按钮文案随类型走，与标题「编辑租车」呼应：「删除租车」「删除航班」…（"删除交通" 里"交通"是分类名、当宾语别扭）。
-    private var deleteTitle: String {
-        let typeName = NSLocalizedString(mode.localizationKey, comment: "")
-        let fmt = NSLocalizedString("itinerary.transport.delete.typed", comment: "")
-        return String(format: fmt, typeName)
-    }
-
-    private var deleteSection: some View {
-        Section {
-            Button(role: .destructive) {
-                deleteAndDismiss()
-            } label: {
-                Text(deleteTitle)
-                    .frame(maxWidth: .infinity, alignment: .center)
-            }
-        }
-    }
-
     // MARK: Helpers
 
     /// 至少要有「班次号」或「出发地名」才允许保存——避免落一条空段。
@@ -809,13 +792,6 @@ struct TransportEditView: View {
         costAmountText.trimmingCharacters(in: .whitespaces).isEmpty
             ? ""
             : (costCurrencyCode.isEmpty ? CurrencyCatalog.homeCurrencyCode : costCurrencyCode.uppercased())
-    }
-
-    private func deleteAndDismiss() {
-        guard let segmentId,
-              let day = days.first(where: { d in (d.segments ?? []).contains { $0.id == segmentId } }) else { return }
-        store.removeTransportSegment(tripId: tripId, dayId: day.id, segmentId: segmentId)
-        finish()
     }
 
     // MARK: 航班搜索结果 → 表单映射（spec: itinerary-flight-search-first.md）

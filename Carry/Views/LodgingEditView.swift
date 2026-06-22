@@ -165,17 +165,8 @@ struct LodgingEditView: View {
                     pending: $pendingAttachments,
                     tripId: tripId,
                     request: $attachmentRequest)
-
-                if isEditing {
-                    Section {
-                        Button(role: .destructive) {
-                            deleteAndDismiss()
-                        } label: {
-                            Text("itinerary.lodging.delete")
-                                .frame(maxWidth: .infinity, alignment: .center)
-                        }
-                    }
-                }
+                // 删除不在编辑态露出：详情弹层「···」菜单已有删除（干净，详情自身 dismiss）；编辑态放删除既冗余、
+                // 又因详情/编辑叠层在编辑里删后露出悬空详情。
             }
             .attachmentAddFlow(tripId: tripId, owner: editingStay.map { .lodging($0.id) },
                                pending: $pendingAttachments, request: $attachmentRequest)
@@ -374,18 +365,12 @@ struct LodgingEditView: View {
     private func finish() {
         if let onFinish { onFinish() } else { dismiss() }
     }
-
-    private func deleteAndDismiss() {
-        guard let stayId else { return }
-        store.removeLodgingStay(tripId: tripId, stayId: stayId)
-        finish()
-    }
 }
 
 // MARK: - LodgingSearchSheet
 
 /// 住宿「搜索优先」添加流（spec: itinerary-transport-lodging.md）：与「添加地点」/「航班搜索」同款——
-/// 点「+」住宿先进搜索；搜到选中即**直接加进行程**（带默认入住 15:00 / 退房 12:00、入住=当前天、1 晚）；
+/// 点「+」住宿先进搜索；搜到选中 → 解析坐标 → **push 进预填表单**（名称/地址带入，用户补入住/退房日期、可多晚）；
 /// 底部常驻「搜不到酒店？手动添加」push 进空表单（复用本栈、不叠 sheet）。
 struct LodgingSearchSheet: View {
     let tripId: UUID

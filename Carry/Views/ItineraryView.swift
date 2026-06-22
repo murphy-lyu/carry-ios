@@ -1732,16 +1732,8 @@ struct StopEditView: View {
                     pending: .constant([]),
                     tripId: tripId,
                     request: $attachmentRequest)
-                Section {
-                    Button(role: .destructive) {
-                        if let dayId = stop.day?.id {
-                            store.removeItineraryStop(tripId: tripId, dayId: dayId, stopId: stop.id)
-                        }
-                        dismiss()
-                    } label: {
-                        Label("itinerary.stop.edit.delete", systemImage: "trash")
-                    }
-                }
+                // 删除不在编辑态露出：详情弹层「···」菜单已有删除（干净，详情自身 dismiss）；编辑态放删除既冗余、
+                // 又因详情/编辑叠层在编辑里删后露出悬空详情。
             }
             .attachmentAddFlow(tripId: tripId, owner: .stop(stop.id), pending: .constant([]), request: $attachmentRequest)
             .navigationTitle(Text("itinerary.stop.edit.title"))

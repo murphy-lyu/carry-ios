@@ -390,9 +390,10 @@ struct NoteDetailRow: View {
 
 // MARK: - DetailActionFooter
 
-/// 详情页底部动作收尾（替代整宽 Edit 大色块）：克制「✎ 编辑」胶囊 + 下方安静红「移除」（带二次确认）。
+/// 详情页底部动作收尾（替代整宽 Edit 大色块）：克制「✎ 编辑」胶囊 + 「···」菜单里的安静红「移除」。
 /// 对标 Apple 日历事件详情底部（编辑 + 删除事件）——把动作降到配得上「编辑 + 移除」两动作的最轻 chrome：
-/// 编辑是主动作、贴合内容宽的烟蓝胶囊（不再满宽大块）；移除是低频破坏性动作、退作安静红字、确认后才执行。
+/// 编辑是主动作、贴合内容宽的烟蓝胶囊（不再满宽大块）；移除藏在 ··· 菜单里、本就需「开菜单 → 点红字」两步，
+/// 故**不再叠二次确认**（删单个实体低损失、可重加、菜单内不易误触）。
 struct DetailActionFooter: View {
     let onEdit: () -> Void
     let onDelete: () -> Void
@@ -400,8 +401,6 @@ struct DetailActionFooter: View {
     /// 标签复用现有 mute key（如 `notif.mute.transport` / `notif.mute.lodging`），零新增本地化。
     var reminderLabelKey: String? = nil
     var reminderOn: Binding<Bool>? = nil
-
-    @State private var confirmingDelete = false
 
     var body: some View {
         // 两个**分离**的悬浮毛玻璃元件（编辑胶囊 + 独立的 ··· 圆，中间留空）——明确是两个按钮，不是「一个胶囊切两半」。
@@ -431,7 +430,7 @@ struct DetailActionFooter: View {
             Menu {
                 // ··· 固定在底部 → 菜单恒向上展开；iOS 上展开时「声明越靠前 = 越靠近锚点（底部）」。
                 // 故「移除」声明在最前 → 落到菜单**最底部**（破坏性动作远离主操作、不易误触，对标 Tripsy）。
-                Button(role: .destructive) { confirmingDelete = true } label: {
+                Button(role: .destructive, action: onDelete) {
                     Label("common.remove", systemImage: "trash")
                 }
                 if let reminderOn, let reminderLabelKey {
@@ -453,10 +452,6 @@ struct DetailActionFooter: View {
                     .contentShape(Circle())
             }
             .accessibilityLabel(Text("common.more"))
-        }
-        .alert(Text("itinerary.detail.remove_confirm"), isPresented: $confirmingDelete) {
-            Button("common.cancel", role: .cancel) {}
-            Button("common.remove", role: .destructive, action: onDelete)
         }
     }
 }
