@@ -136,6 +136,11 @@ struct PackingListView: View {
         .onChange(of: detailTab) { _, newFace in
             if !isNewTrip { TripDetailFaceStore.save(newFace, tripId: tripId) }
         }
+        // 深链落到「当前已打开的行程」时切脸（spec: notification-deeplink-routing.md）：path [B]→[B]
+        // 不重建本页、init 不会重读脸，故由 pendingFaceApply 信号驱动。绑 tripId → 只认本行程。
+        // 全新挂载走 init 读 TripDetailFaceStore（首帧即对），onAppear 再消费一次顺便清信号、不抢首帧。
+        .onAppear { applyPendingFaceIfNeeded() }
+        .onChange(of: router.pendingFaceApply) { _, _ in applyPendingFaceIfNeeded() }
         .coordinateSpace(name: "packingRoot")
         .toolbarBackground(Color(UIColor.systemBackground), for: .navigationBar)
         .toolbarBackground(.visible, for: .navigationBar)
@@ -520,6 +525,14 @@ struct PackingListView: View {
         // systemBackground 且 .ignoresSafeArea(.bottom) 延到屏底，盖住了容器的 CarrySubtleBackground，
         // 故底部实际是 systemBackground（Dark 纯黑）。淡出到它才无缝；用 0.08 的 baseColor 会在纯黑上显灰雾。
         .bottomBarFade(Color(UIColor.systemBackground))
+    }
+
+    /// 消费深链切脸信号（仅认本行程，绑 tripId）。处理「深链落到当前已打开的行程」——此时 path 不重建、
+    /// init 不会重读脸。全新挂载时 init 已据 TripDetailFaceStore 定好首帧脸，这里再切到同值是无副作用的幂等。
+    private func applyPendingFaceIfNeeded() {
+        guard let pending = router.pendingFaceApply, pending.tripId == tripId else { return }
+        if detailTab != pending.face { detailTab = pending.face }
+        router.pendingFaceApply = nil
     }
 
     private func faceSegment(_ face: TripDetailFace, title: LocalizedStringKey, icon: String) -> some View {

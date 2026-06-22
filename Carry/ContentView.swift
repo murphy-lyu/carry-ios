@@ -35,6 +35,11 @@ struct TripDeepLink: Equatable {
     var anchor: TripDeepLinkAnchor? = nil
 }
 
+/// 给「已挂载且正是目标行程」的详情页用的信号（深链落到当前已打开的行程时，`path [B]→[B]`
+/// 不重建视图、init 不会重读脸/锚点）。绑 `tripId` → 只有目标行程的视图消费，避免串台。
+struct PendingFaceApply: Equatable { let tripId: UUID; let face: TripDetailFace }
+struct PendingItineraryAnchor: Equatable { let tripId: UUID; let anchor: TripDeepLinkAnchor }
+
 // MARK: - Navigation Router
 
 final class NavigationRouter: ObservableObject {
@@ -45,8 +50,11 @@ final class NavigationRouter: ObservableObject {
     /// 选脸 + 拆 modal + 落 path + 写锚点。spec: notification-deeplink-routing.md。
     @Published var pendingTrip: TripDeepLink? = nil
 
-    /// 行程脸待消费的锚点。ItineraryView 数据就绪后读取一次、定位到对应天，然后清空。
-    @Published var pendingItineraryAnchor: TripDeepLinkAnchor? = nil
+    /// 行程脸待消费的锚点（绑 tripId）。ItineraryView 数据就绪后读取一次、定位到对应天，然后清空。
+    @Published var pendingItineraryAnchor: PendingItineraryAnchor? = nil
+
+    /// 深链落到「当前已打开的行程」时的切脸信号（绑 tripId）。已挂载的 PackingListView 观察它切换 detailTab。
+    @Published var pendingFaceApply: PendingFaceApply? = nil
 
     /// 深链（通知/Widget/快捷指令）唤起行程时递增。行程详情是 push 进根 NavigationStack 的，而
     /// 根级 modal（Settings/Search/Trip Book…）盖在栈之上、push 不会自动关它 → 详情被挡住看不到。
@@ -273,8 +281,13 @@ struct ContentView: View {
     /// ② 拆掉盖在根导航栈上的 modal；③ 落 path；④ 写锚点供 ItineraryView 滚到对应天。
     private func handlePendingTrip(_ link: TripDeepLink?) {
         guard let link else { return }
-        // ① 选脸（face==nil 表示保持上次脸——Widget / carry://trip / 快捷指令）。
-        if let face = link.face { TripDetailFaceStore.save(face, tripId: link.tripId) }
+        // ① 选脸（face==nil 表示保持上次脸——Widget / carry://trip / 快捷指令）。两条路径都覆盖：
+        //    · 全新挂载 → 写 TripDetailFaceStore，PackingListView.init 首帧即对脸；
+        //    · 落到「当前已打开的行程」（path [B]→[B] 不重建）→ pendingFaceApply 让已挂载的页切脸。
+        if let face = link.face {
+            TripDetailFaceStore.save(face, tripId: link.tripId)
+            router.pendingFaceApply = PendingFaceApply(tripId: link.tripId, face: face)
+        }
         // ② 拆 modal：用户停在 Settings/创建/分享导入… 按 Home 退出、收到通知点进来时，
         // 只 push 底层栈会被 sheet 挡住。ContentView 级直接置空，HomeView 级经信号自关。
         router.showCreation = false
@@ -284,8 +297,8 @@ struct ContentView: View {
         // ③ 落 path（行程详情页内的 sheet 随 path 重置一并卸载，无需单独处理）。
         router.path = NavigationPath()
         router.path.append(link.tripId)
-        // ④ 锚点交给 ItineraryView 就绪后消费（仅行程脸有锚点）。
-        router.pendingItineraryAnchor = link.anchor
+        // ④ 锚点（绑 tripId）交给 ItineraryView 消费（仅行程脸有锚点）。
+        router.pendingItineraryAnchor = link.anchor.map { PendingItineraryAnchor(tripId: link.tripId, anchor: $0) }
         router.pendingTrip = nil
     }
 
