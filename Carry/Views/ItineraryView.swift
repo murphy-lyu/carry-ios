@@ -1177,30 +1177,43 @@ private struct LodgingBannerRow: View {
         HStack(alignment: .center, spacing: TimelineRail.spacing) {
             TimelineRail(icon: isEvent ? "bed.double.fill" : "bed.double",
                          dayColor: dayColor, showTopLine: showTopLine, showBottomLine: showBottomLine)
-            Text(titleText)
-                // 与地点/交通同字号（.body）→ 主脊节点视觉一致、不再矮一档；「酒店 vs 景点」的区分改靠
-                // 床图标 + 动词文案 + 字重（事件 semibold、锚点 medium 稍轻）承担，不靠缩小字号。
-                .font(.system(.body, design: .rounded).weight(isEvent ? .semibold : .medium))
-                .foregroundStyle(.primary)
-                .lineLimit(1)
-            Spacer(minLength: 8)
-            if let trailing = trailingText {
-                // 时间字段（入住/退房时刻）与地点/交通同列同色 secondary；非时间（晚数计数）退作 tertiary。
-                Text(trailing)
+            // 两行结构镜像 TimelineStopRow（地点）：行 1 = 酒店名 + 右侧时间，行 2 = 角色（入住/退房/出发/返回）。
+            // 让住宿在脊上读成与地点/交通同一种「两行行」，去掉原「角色·名」单行夹在两行之间的格格不入。
+            // 角色放第 2 行而非地址：同一次入住最多出现 4 次（入住/每日出发·返回/退房），地址重复是噪音，
+            // 角色才是各行唯一差异、也最有用。酒店名当锚（与地点名/航班号一致），长名独占一行不被前缀挤掉。
+            VStack(alignment: .leading, spacing: 2) {
+                HStack(alignment: .center, spacing: 6) {
+                    Text(displayName)
+                        // 事件（入住/退房）semibold + 实心床；锚点（出发/返回）medium + 空心床，更退后。
+                        .font(.system(.body, design: .rounded).weight(isEvent ? .semibold : .medium))
+                        .foregroundStyle(.primary)
+                        .lineLimit(1)
+                    if let trailing = trailingText {
+                        Spacer(minLength: 6)
+                        // 时间字段（入住/退房时刻）与地点/交通同色 secondary；非时间（晚数计数）退作 tertiary。
+                        Text(trailing)
+                            .font(.system(.caption, design: .rounded).weight(.medium))
+                            .foregroundStyle(trailingIsTime ? .secondary : .tertiary)
+                            .fixedSize()
+                    }
+                }
+                Text(roleLabel)
                     .font(.system(.caption, design: .rounded))
-                    .foregroundStyle(trailingIsTime ? .secondary : .tertiary)
+                    .foregroundStyle(.secondary)
+                    .lineLimit(1)
             }
+            .frame(maxWidth: .infinity, alignment: .leading)
         }
         .frame(height: TimelineRail.rowHeight)
     }
 
-    /// 入住/退房带事件词前缀；出发/过夜用动词框定「从…出发 / 回…过夜」（不编时间，纯位置锚点）。
-    private var titleText: String {
+    /// 角色标签（第 2 行）：入住/退房=事件词；出发/过夜=动词锚点（从…出发 / 回…过夜）。不含酒店名（名在第 1 行）。
+    private var roleLabel: String {
         switch role {
-        case .checkIn:   return NSLocalizedString("itinerary.lodging.event.checkin", comment: "") + " · " + displayName
-        case .checkout:  return NSLocalizedString("itinerary.lodging.event.checkout", comment: "") + " · " + displayName
-        case .depart:    return NSLocalizedString("itinerary.lodging.timeline.depart", comment: "") + " · " + displayName
-        case .overnight: return NSLocalizedString("itinerary.lodging.timeline.overnight", comment: "") + " · " + displayName
+        case .checkIn:   return NSLocalizedString("itinerary.lodging.event.checkin", comment: "")
+        case .checkout:  return NSLocalizedString("itinerary.lodging.event.checkout", comment: "")
+        case .depart:    return NSLocalizedString("itinerary.lodging.timeline.depart", comment: "")
+        case .overnight: return NSLocalizedString("itinerary.lodging.timeline.overnight", comment: "")
         }
     }
 
