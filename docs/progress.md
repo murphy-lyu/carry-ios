@@ -3,6 +3,13 @@
 ## 最后更新
 2026-06-22
 
+## 上次改动摘要（天气预警 DEBUG 验证钩子 + 深链跳转拆 modal · 2026-06-22）
+
+> 另一并行会话同时在改行程详情/编辑（见下一块）。本块为本会话工作，提交走隔离 index、只含本会话文件。**编译绿、模拟器验收通过**。未 push（用户验收后自行 push）。
+
+- **天气预警可验证性（Part 2）**：Developer Options 新增「Weather Alert」段的 `Simulate weather alert` 选择器（`debugForceWeatherAlertKind`，会话级、`TripStore.init` 启动清零）。强制 `WeatherAlertEvaluator.evaluate` 返回选定 kind、跳过 WeatherKit + 6h 节流，**下游链路全真**（写 store → reschedule → collectWeatherAlerts → 通知 → 点击埋点），端到端可在模拟器验。spec 补「模拟器验收」节。已读模拟器日志确认 `weather_alert_scheduled` + cache 写入 + `weather_alert_fired`。
+- **深链跳转被 modal 挡住（根因修复）**：通知/Widget/快捷指令唤起行程时只 push 根 NavigationStack，盖在栈上的根级 sheet（Settings/Search/Trip Book/创建/分享导入）不会被关 → 行程详情被挡住看不到（复现：停在某 sheet → 按 Home → 收到通知点进来）。修法：`NavigationRouter.rootModalDismissalRequest` 信号 + `handlePendingTripId` 跳转前清掉 ContentView 级 sheet、HomeView 观察信号关自己 6 个根级 sheet；详情页内 sheet 靠 path 重置自动卸载。提交 `7eccc8a`。
+
 ## 上次改动摘要（行程规划「详情 + 编辑」视觉大审查/重构：确立「编辑=详情的可编辑态」语言 · 2026-06-22）
 
 > 单会话、纯我的工作。**编译绿**。**全部已提交并 push 到 origin/main（至 `ea416cb`）**，工作区干净。每步均经用户截图验收后才提交。提交走隔离 index（防并行会话卷入），xcstrings 每次 key 级核验只含我的键。
