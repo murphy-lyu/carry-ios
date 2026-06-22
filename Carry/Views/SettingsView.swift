@@ -33,13 +33,12 @@ struct SettingsView: View {
 
     @State private var notificationStatus: UNAuthorizationStatus = .notDetermined
     @State private var showCoffeeSheet = false
-    // 文件导入种类——备份(.json) 与 Tripsy(.zip) 合用单个 fileImporter，避免多个 .fileImporter
-    // 相互抑制。nil = 未在导入。
-    private enum FileImportKind { case backup, tripsy }
-    @State private var fileImportKind: FileImportKind?
+    // 单一「Import Backup」入口，同时接受 Carry 备份(.json) 与 Tripsy 导出(.zip)；completion 按
+    // 文件名分流（Tripsy 暗门，UI 不提竞品名，spec: tripsy-import.md）。true = 正在选文件。
+    @State private var showBackupImporter = false
     @State private var showImportConfirmation = false
     @State private var pendingImportData: Data?
-    // 从 Tripsy 导入（spec: tripsy-import.md）
+    // 从 Tripsy 导入的预览会话（spec: tripsy-import.md）
     @State private var tripsyImportSession: TripsyImportSession?
     // 本位币（费用记录用，spec: itinerary-cost-tracking.md）；空 = 用设备 locale 默认。
     @AppStorage(ExchangeRateManager.preferredCurrencyDefaultsKey) private var preferredCurrencyRaw = ""
@@ -422,25 +421,21 @@ struct SettingsView: View {
         }
         // 注：导入结果 toast 与抹除撤销 toast 已移到二级页 dataManagementPage（动作都在那页发生；
         // 留在根页会被 push 出来的二级页盖住、看不见）。fileImporter 仍挂根页（模态呈现跨栈无碍）。
-        // 备份导入(.json) 与 Tripsy 导入(.zip) 合用单个 fileImporter——同一 view 挂多个
-        // .fileImporter 会相互抑制（同 .sheet 的坑），曾导致「Import Backup」点击无反应。
-        // 用 fileImportKind 选内容类型；completion 里按文件扩展名分流（不读 state，
-        // 避免 isPresented 复位的时序问题）。
+        // 单一「Import Backup」入口同时接受 .json（Carry 备份）与 .zip（Tripsy 导出）。completion 里按
+        // 文件名分流：名为 `Tripsy*.zip`（不区分大小写）→ Tripsy 暗门，否则走 Carry 自家还原。
+        // UI 不出现「Tripsy」字样，避免给竞品导流；这个口子留给 Tripsy 老用户/被问到时引导。
         .fileImporter(
-            isPresented: Binding(
-                get: { fileImportKind != nil },
-                set: { if !$0 { fileImportKind = nil } }
-            ),
-            allowedContentTypes: fileImportKind == .tripsy ? [.zip] : [.json],
+            isPresented: $showBackupImporter,
+            allowedContentTypes: [.json, .zip],
             allowsMultipleSelection: false
         ) { result in
-            // 捕获本次导入种类（completion 首行读，早于 isPresented 复位）——失败分支无 URL 可判别，
-            // 据此把埋点归到正确事件；成功分支仍按文件扩展名分流（更可靠）。
-            let wasTripsy = fileImportKind == .tripsy
             switch result {
             case .success(let urls):
                 guard let url = urls.first else { return }
-                let isTripsy = url.pathExtension.lowercased() == "zip"
+                // Tripsy 暗门判定：文件名匹配 `tripsy*.zip`（Tripsy 默认导出名如「Tripsy Backup.zip」）。
+                // 其它一切（.json，或非 Tripsy 命名的 .zip）都走 Carry 自家还原。
+                let name = url.lastPathComponent.lowercased()
+                let isTripsy = name.hasPrefix("tripsy") && name.hasSuffix(".zip")
                 // Read within the security scope before it expires
                 let accessing = url.startAccessingSecurityScopedResource()
                 defer { if accessing { url.stopAccessingSecurityScopedResource() } }
@@ -471,8 +466,9 @@ struct SettingsView: View {
                     showImportConfirmation = true
                 }
             case .failure(let error):
+                // 选择器失败时无 URL 可判别来源，统一归到备份还原失败（入口即「Import Backup」）。
                 showToast(error.localizedDescription)
-                CarryLogger.shared.log(wasTripsy ? .tripsyImportFailed : .backupRestoreFailed,
+                CarryLogger.shared.log(.backupRestoreFailed,
                     context: "reason=picker_failed error=\(error.localizedDescription)")
             }
         }
@@ -761,7 +757,7 @@ struct SettingsView: View {
                         shareBackupFile()
                     }
                     settingsRow(title: "settings.data.import") {
-                        fileImportKind = .backup
+                        showBackupImporter = true
                     }
                     settingsNavigationRow(
                         title: "settings.data.local_backup",
@@ -817,17 +813,6 @@ struct SettingsView: View {
                 } message: {
                     Text("settings.data.import.confirm.message")
                 }
-
-                // 迁移：从其他 App 一次性导入数据。独立成组——「Import from Tripsy」不是备份，
-                // 不应挂在「Backup」标题下（分类错误）。将来「从 X 导入」也归这里。
-                sectionHeader("settings.section.migrate")
-                settingsCard {
-                    settingsRow(title: "settings.data.import_tripsy") {
-                        fileImportKind = .tripsy
-                    }
-                }
-                .padding(.horizontal, 16)
-                .padding(.bottom, 18)
 
                 // 抹掉所有数据（本地一键重置）。独立卡片、红字破坏性行 + 原生二次确认；
                 // 与其余行同尺寸、无前导图标，保持克制一致。

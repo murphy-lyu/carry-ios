@@ -28,8 +28,9 @@ Tripsy 是 Carry 行程规划方向的主要参考产品，也是目标用户（
 
 1. **Tripsy 侧**：用户在 Tripsy「设置 → 导出全部数据」生成 zip（系统分享面板）。
 2. **进入 Carry 导入**：
-   - **一期（本 spec 范围）**：Carry 内主动入口——设置 → 数据与备份 → **「从 Tripsy 导入」**（独立于现有「导入备份」入口）→ `.fileImporter` 选 zip。用户需先把 Tripsy 导出的 zip 存到「文件」App。
-   - **二期**：系统分享面板接收——Tripsy 导出时直接分享给 Carry（注册 zip / Tripsy 导出 UTType），省去"存文件再翻找"。
+   - **当前（2026-06-23 调整）**：**入口藏进现有「Import Backup」，UI 不出现「Tripsy」字样**——避免在自家界面给竞品打广告/导流。设置 → 数据与备份 → **Import Backup** → `.fileImporter`（同时允许 `.json` 与 `.zip`）。completion 按**文件名**分流：`lastPathComponent` 小写后匹配 `tripsy*.zip`（Tripsy 默认导出名如「Tripsy Backup.zip」）→ 走 Tripsy 转换；否则（`.json`，或非 Tripsy 命名的 `.zip`）→ 走 Carry 自家还原。这个「暗门」留给 Tripsy 老用户/被问到时引导。
+     > 原「Migrate → Import from Tripsy」独立入口已移除（曾因「分类正确」独立成组，但显性提竞品名得不偿失）。
+   - **二期（可选）**：系统分享面板接收——Tripsy 导出时直接分享给 Carry（注册 zip / Tripsy 导出 UTType），省去"存文件再翻找"。
 3. **解析 + 预览**：Carry 解 zip、读 SQLite，弹**导入预览**：
    - "发现 N 个行程"，列出每个行程名 + 日期 + 「X 地点 · Y 交通 · Z 住宿」摘要。
    - 默认全选，可逐个取消勾选。
