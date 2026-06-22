@@ -202,6 +202,9 @@ struct ItineraryView: View {
             syncFocusedDaySelectionIfNeeded()
             consumePendingItineraryAnchor()           // 冷启动 days 后到时再消费一次
         }
+        .onChange(of: router.pendingItineraryAnchor) { _, _ in
+            consumePendingItineraryAnchor()           // 已挂载、且深链落到本行程时立即滚动（path [B]→[B] 不重建）
+        }
         .onChange(of: calendarOverlayEnabled) { _, _ in loadCalendarOverlay() }
         // 从系统日历/设置返回（改了开关或选中日历）→ 刷新叠加层。
         .onChange(of: scenePhase) { _, phase in
@@ -393,11 +396,13 @@ struct ItineraryView: View {
     }
 
     /// 消费深链锚点（spec: notification-deeplink-routing.md）：定位到对应天，`activeFocusedDayId`
-    /// 变化即驱动 collection 滚动 + 日历条居中。仅行程脸唤起、故只在此消费。days 未就绪（冷启动竞态）
-    /// 时不清空，待 days onChange 再来；解析不到（项已删等）则安全略过。消费后清空避免切别的行程重复触发。
+    /// 变化即驱动 collection 滚动 + 日历条居中。**仅消费属于本行程的锚点**（绑 tripId，防别的行程的
+    /// 锚点被这里误清）。days 未就绪（冷启动竞态）时不清空，待 days onChange 再来；解析不到（项已删等）
+    /// 则安全略过。消费后清空。三处触发：onAppear（全新挂载/切到行程脸）、days onChange（冷启动 days 后到）、
+    /// pendingItineraryAnchor onChange（已挂载且正是本行程时被设上 → 立即滚动）。
     private func consumePendingItineraryAnchor() {
-        guard let anchor = router.pendingItineraryAnchor, !days.isEmpty else { return }
-        if let dayId = resolveAnchorDayId(anchor) { focusedDayId = dayId }
+        guard let pending = router.pendingItineraryAnchor, pending.tripId == tripId, !days.isEmpty else { return }
+        if let dayId = resolveAnchorDayId(pending.anchor) { focusedDayId = dayId }
         router.pendingItineraryAnchor = nil
     }
 
@@ -1157,9 +1162,7 @@ private struct CarRentalEventRow: View {
             VStack(alignment: .leading, spacing: 2) {
                 // 主行：动作 + 公司（左）——— 时间（右对齐），与地点行「名称 ——— 时间」一致。
                 HStack(alignment: .center, spacing: 6) {
-                    Text(titleText)
-                        .font(.system(.body, design: .rounded).weight(.semibold))   // 与地点标题同字号（同级事件）
-                        .foregroundStyle(.primary)
+                    titleView
                         .lineLimit(1)
                     if let t = timeText {
                         Spacer(minLength: 6)
@@ -1187,10 +1190,18 @@ private struct CarRentalEventRow: View {
         NSLocalizedString(pickup ? "itinerary.transport.section.pickup" : "itinerary.transport.section.dropoff", comment: "")
     }
 
-    /// 主行：「取车 · 携程租车」；无公司名则只显动作。
-    private var titleText: String {
+    /// 主行：「取车」(深锚 .body semibold/primary) + 「· 公司」(浅灰退后 .subheadline regular/secondary)——
+    /// 与航班「班号 + 浅航司」同款两级层次，统一两条交通行第一行的「深锚 + 浅 provider」处理（公司是次要归属信息，退后）。
+    private var titleView: Text {
+        let action = Text(actionLabel)
+            .font(.system(.body, design: .rounded).weight(.semibold))
+            .foregroundStyle(.primary)
         let company = segment.carrier.trimmingCharacters(in: .whitespaces)
-        return company.isEmpty ? actionLabel : "\(actionLabel) · \(company)"
+        guard !company.isEmpty else { return action }
+        return action + Text(" · \(company)")
+            .font(.system(.subheadline, design: .rounded).weight(.regular))
+            .foregroundStyle(.secondary)
+            .baselineOffset(0.7)   // 小一档承运方上移半个 cap 差 → 视觉重心对齐（同航班行）
     }
 
     /// 右对齐时间（本端：取车=出发时刻 / 还车=到达时刻）。未设则不显。
@@ -1321,7 +1332,9 @@ private struct CalendarEventRow: View {
                 .font(.system(.caption, design: .rounded))
                 .foregroundStyle(.tertiary)
         }
-        .padding(.vertical, 7)
+        // 与规划行同高（含单行地点行也是 46）→ 时间轴垂直节奏统一，日历事件不再矮一档破坏 rhythm；
+        // 「来自日历、退后」靠浅字/细竖条/无图标承担，不靠行高变矮。
+        .frame(height: TimelineRail.rowHeight)
         .accessibilityElement(children: .combine)
     }
 
