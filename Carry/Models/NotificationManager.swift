@@ -383,7 +383,7 @@ enum NotificationManager {
             )
         default:
             return (
-                String(format: String(localized: "notif.ndays.title"), tripName, daysBeforeDeparture),
+                String.localizedStringWithFormat(String(localized: "notif.ndays.title"), tripName, daysBeforeDeparture),
                 String(localized: "notif.ndays.body")
             )
         }

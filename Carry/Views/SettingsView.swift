@@ -52,11 +52,8 @@ struct SettingsView: View {
         if count == 0 {
             return NSLocalizedString("settings.data.import.merge.none", comment: "")
         }
-        return String(
-            format: NSLocalizedString(
-                count == 1 ? "settings.data.import.merge.success.one" : "settings.data.import.merge.success",
-                comment: ""
-            ),
+        return String.localizedStringWithFormat(
+            NSLocalizedString("settings.data.import.merge.success", comment: ""),
             count
         )
     }
@@ -240,11 +237,8 @@ struct SettingsView: View {
     }
 
     private func restoreSuccessMessage(count: Int) -> String {
-        String(
-            format: NSLocalizedString(
-                count == 1 ? "settings.data.restore.success.one" : "settings.data.restore.success",
-                comment: ""
-            ),
+        String.localizedStringWithFormat(
+            NSLocalizedString("settings.data.restore.success", comment: ""),
             count
         )
     }
@@ -1171,9 +1165,8 @@ private struct DataRecoveryView: View {
     }
 
     private func showRecoveryToast(count: Int) {
-        let msg = count == 1
-            ? NSLocalizedString("settings.data.restore.success.one", comment: "")
-            : String(format: NSLocalizedString("settings.data.restore.success", comment: ""), count)
+        let msg = String.localizedStringWithFormat(
+            NSLocalizedString("settings.data.restore.success", comment: ""), count)
         showRecoveryToast(message: msg)
     }
 
@@ -1454,14 +1447,14 @@ private struct CalendarSettingsView: View {
             Button("settings.calendar.bulk.confirm") {
                 let written = CalendarManager.shared.addAllUpcoming(store.trips)
                 if written > 0 {
-                    showToast(String(format: NSLocalizedString("settings.calendar.bulk.added_toast", comment: ""), written))
+                    showToast(String.localizedStringWithFormat(NSLocalizedString("settings.calendar.bulk.added_toast", comment: ""), written))
                 } else {
                     showToast(NSLocalizedString("settings.calendar.bulk.failed_toast", comment: ""))
                 }
             }
             Button("Cancel", role: .cancel) {}
         } message: {
-            Text(String(format: NSLocalizedString("settings.calendar.bulk.message", comment: ""), pendingCount))
+            Text(String.localizedStringWithFormat(NSLocalizedString("settings.calendar.bulk.message", comment: ""), pendingCount))
         }
     }
 }

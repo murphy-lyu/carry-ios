@@ -139,7 +139,7 @@ struct TripDateRangePickerSheet: View {
             if nightsCount > 0 {
                 // 只显「天数」（天 = 含两端实际天数 = 晚数+1，与 TripBundle.spanDays 同口径）：短，单行原大小放得下，
                 // 真机窄屏/大字号也不截断（原「x天x晚」太长会被截）。chip 在同一行右侧出现/消失只影响横向、不改行高、不跳。
-                Text(String(format: NSLocalizedString("date.days_only", comment: "Trip span in days"),
+                Text(String.localizedStringWithFormat(NSLocalizedString("date.days_only", comment: "Trip span in days"),
                             Int64(nightsCount + 1)))
                     .font(.system(.caption, design: .rounded).weight(.semibold))
                     .foregroundStyle(.secondary.opacity(0.90))

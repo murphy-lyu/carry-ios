@@ -1209,7 +1209,7 @@ private struct LodgingBannerRow: View {
         switch role {
         case .checkIn:
             if stay.checkInMinutes >= 0 { return timeLabel(dayMinutes: stay.checkInMinutes) }
-            return String(format: NSLocalizedString("itinerary.lodging.nights_value", comment: ""), stay.nights)
+            return String.localizedStringWithFormat(NSLocalizedString("itinerary.lodging.nights_value", comment: ""), stay.nights)
         case .checkout:
             return stay.checkOutMinutes >= 0 ? timeLabel(dayMinutes: stay.checkOutMinutes) : nil
         case .depart, .overnight:

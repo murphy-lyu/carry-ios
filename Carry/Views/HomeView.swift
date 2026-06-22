@@ -914,7 +914,7 @@ struct HomeView: View {
                     Text("home.tripbook.title")
                         .font(.system(size: 16, weight: .semibold, design: .rounded))
                         .foregroundStyle(.primary)
-                    Text(String(format: NSLocalizedString("home.tripbook.subtitle", comment: "Trip Book subtitle: trip count · visited country count"), Int64(visitedTripsCount), Int64(visitedCountriesCount)))
+                    Text(String(format: NSLocalizedString("home.tripbook.subtitle", comment: "Trip Book subtitle: trip count · visited country count"), locale: Locale.current, Int64(visitedTripsCount), Int64(visitedCountriesCount)))
                         .font(.system(size: 12, weight: .medium, design: .rounded))
                         .foregroundStyle(.secondary)
                         .lineLimit(1)

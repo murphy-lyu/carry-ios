@@ -983,7 +983,7 @@ struct PackingListView: View {
         lines.append("")
         if !bundle.isDateless {
             // 「A 天 B 晚」：天 = 含两端实际天数(spanDays)、晚 = 晚数(days)；与日期选择器同口径。
-            let span = String(format: NSLocalizedString("date.days_nights", comment: "Trip span: N days M nights"),
+            let span = String.localizedStringWithFormat(NSLocalizedString("date.days_nights", comment: "Trip span: N days M nights"),
                               Int64(bundle.spanDays), Int64(bundle.days))
             lines.append("📅 \(bundle.localizedDateRange) · \(span)")
         }

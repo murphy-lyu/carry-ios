@@ -56,7 +56,7 @@ struct PhotoTripReviewView: View {
             HStack(spacing: 6) {
                 Text(String(format: NSLocalizedString("phototrip.day.title", comment: ""), day.dayOrder + 1))
                     .font(.system(.headline, design: .rounded))
-                Text(String(format: NSLocalizedString("phototrip.day.placecount", comment: ""), day.places.count))
+                Text(String.localizedStringWithFormat(NSLocalizedString("phototrip.day.placecount", comment: ""), day.places.count))
                     .font(.footnote).foregroundStyle(.secondary)
             }
             ForEach(Array(day.places.enumerated()), id: \.element.id) { placeIndex, place in

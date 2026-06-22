@@ -266,7 +266,7 @@ struct SuggestionPreviewView: View {
             Button { confirm() } label: {
                 Group {
                     if hasSelection {
-                        Text(String(format: NSLocalizedString("suggestions.add_items_count", comment: ""), selectedCount))
+                        Text(String.localizedStringWithFormat(NSLocalizedString("suggestions.add_items_count", comment: ""), selectedCount))
                     } else {
                         Text("suggestions.none_needed")
                     }

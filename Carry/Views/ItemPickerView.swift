@@ -1057,8 +1057,8 @@ struct ItemPickerView: View {
                         let names = localizedNames.joined(separator: "、")
                         let suffix = preview.count > 3 ? "…" : ""
                         Text(
-                            String(
-                                format: NSLocalizedString("itempicker.smart.preview.adding", comment: ""),
+                            String.localizedStringWithFormat(
+                                NSLocalizedString("itempicker.smart.preview.adding", comment: ""),
                                 preview.count,
                                 names,
                                 suffix
@@ -1201,8 +1201,8 @@ struct ItemPickerView: View {
                 let preview = newNames.prefix(3).joined(separator: "、")
                 let suffix = newNames.count > 3 ? "…" : ""
                 showToast(
-                    String(
-                        format: NSLocalizedString("itempicker.smart.toast.added", comment: ""),
+                    String.localizedStringWithFormat(
+                        NSLocalizedString("itempicker.smart.toast.added", comment: ""),
                         newNames.count,
                         preview,
                         suffix
@@ -1689,7 +1689,7 @@ struct ItemPickerView: View {
             guard !isConfirmingSelection else { return }
             isConfirmingSelection = true
             if totalAdded > 0 {
-                showToast(String(format: NSLocalizedString("itempicker.toast.added_count", comment: ""), totalAdded))
+                showToast(String.localizedStringWithFormat(NSLocalizedString("itempicker.toast.added_count", comment: ""), totalAdded))
             }
             Task { @MainActor in
                 try? await Task.sleep(for: .milliseconds(600))

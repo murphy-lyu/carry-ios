@@ -158,7 +158,7 @@ struct TripsyImportView: View {
         } label: {
             Text(count == 0
                  ? NSLocalizedString("tripsy_import.preview.action.none", comment: "")
-                 : String(format: NSLocalizedString("tripsy_import.preview.action", comment: ""), count))
+                 : String.localizedStringWithFormat(NSLocalizedString("tripsy_import.preview.action", comment: ""), count))
                 .font(.system(size: 17, weight: .semibold))
                 .foregroundStyle(.white)
                 .frame(maxWidth: .infinity)
