@@ -36,6 +36,13 @@
 
 **验收（线上已验）**：9 语言输入海外城市均解析到正确城市 + 正确 ISO 码、建议文字干净。**新会话/真机 TODO**：① 中文输入法选词不丢字；② 国内目的地走 MapKit/高德 `isoCountryCode` 点亮；③ 端到端选中→建行程→点亮。
 
+## 上次改动摘要（通知/深链承接路由：按语义选脸 + 锚点到天 · 2026-06-23）
+
+> 本块为本会话工作（与天气/深链同会话延续）。提交走隔离 index、只含本会话文件（`ItineraryView` 与并行会话的日历叠加层共存，仅切片提交本会话 3 个 hunk）。**编译绿 0 警告，待验收**。未 push。spec: `notification-deeplink-routing.md`。
+
+- **问题（2026-06-23 审查）**：6 类行程通知点开**全部**落 `PackingListView` 的「上次看的脸」，丢弃 id 里的 `segId`/`stayId`/`dayOrder` 锚点 → 打包类可能开在行程脸、行程类可能开在打包脸；有锚点也不定位到天。
+- **根因解（提交 `7be69f0`）**：裸 `UUID` 升级为富目标 `TripDeepLink(tripId + face + anchor)`（`TripDetailFace`/`TripDeepLinkAnchor` 提升为共享类型）。`NotificationManager.deepLink(fromIdentifier:)` 按类别映射脸+锚点（depart/pack/weather→打包；transport/lodging/daily→行程 + 段/住宿/天锚点）。`handlePendingTrip` 跳转前写 `TripDetailFaceStore`（首帧即对脸、无闪烁）+ 拆 modal + 落 path + 存锚点；`ItineraryView` 就绪后消费锚点设 `focusedDayId` 滚到对应天。`carry://packing/{id}` 同源修复。
+
 ## 上次改动摘要（天气预警 DEBUG 验证钩子 + 深链跳转拆 modal · 2026-06-22）
 
 > 另一并行会话同时在改行程详情/编辑（见下一块）。本块为本会话工作，提交走隔离 index、只含本会话文件。**编译绿、模拟器验收通过**。未 push（用户验收后自行 push）。
