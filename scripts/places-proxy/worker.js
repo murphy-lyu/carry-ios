@@ -91,30 +91,33 @@ async function handleSuggest(url, env) {
   // 目的地「城市模式」：只查行政地名（国家/地区/城市），不掺 POI/门牌——给「建行程·目的地」字段用，
   // 让「Tokyo→东京市」成首条、清掉同名餐厅噪音。缺省（AddStop 的地点检索）仍走全量 POI。
   const placeMode = (url.searchParams.get("kinds") || "").toLowerCase() === "place";
+  const cjk = hasCJK(q);
   // 城市模式下按用户 UI 语言做本地化检索：拉丁文本地异名（München/Roma/Lisboa/Wien）在 language=en 下
   // 匹配不到正确城市（撞同名小镇/落空）；用 language=<UI 语言> 让 Mapbox 按该语言索引命中城市本体。
-  // 仅 place 模式生效；POI 模式（AddStop）行为不变（仍 language=en）。空 → 回退 en。
-  const uiLang = placeMode ? (url.searchParams.get("lang") || "").trim() : "";
+  // 但 CJK query 已翻成英文（见下），用 en 检索拿到干净英文城市名——避免 Mapbox 对 ja/ko 回传冗余的全层级
+  // 本地名（如「日本東京都東京都」）。故 searchLang 只对「城市模式 + 非 CJK」取 UI 语言，其余一律 en。
+  // 仅 place 模式生效；POI 模式（AddStop）行为不变（仍 en）。
+  const searchLang = (placeMode && !cjk) ? (url.searchParams.get("lang") || "").trim() : "";
   const plan = providerPlan(env);
 
   const cache = caches.default;
   // 缓存键含 provider + kinds + lang：id 体系不同不能串用；城市/POI 结果不同须分桶；不同 UI 语言的本地化结果也不同。
-  const cacheKey = new Request(`https://carry-places-cache/suggest?q=${encodeURIComponent(q)}&prov=${plan.primary}&p=${proximity}&k=${placeMode ? "place" : ""}&l=${uiLang}`);
+  const cacheKey = new Request(`https://carry-places-cache/suggest?q=${encodeURIComponent(q)}&prov=${plan.primary}&p=${proximity}&k=${placeMode ? "place" : ""}&l=${searchLang}`);
   const cached = await cache.match(cacheKey);
   if (cached) return cached;
 
   // 中日韩 query → 先翻成英文再查（海外 POI 基本无中文别名索引,「卢浮宫」直接查会空)。两源都吃英文 query。
   // 翻译走 Azure、结果缓存,失败优雅回退原 query。一律用 language=en：实测 zh 会把排序带歪（偏行政区划）。
-  const queryEn = hasCJK(q) ? ((await translateToEnglish(q, env)) || q) : q;
+  const queryEn = cjk ? ((await translateToEnglish(q, env)) || q) : q;
 
   // 主源硬失败才降级到备源；备源也失败 → 抛给上层（502）。
   let suggestions, usedFallback = false;
   try {
-    suggestions = await suggestVia(plan.primary, queryEn, { proximity, session, env, placeMode, uiLang });
+    suggestions = await suggestVia(plan.primary, queryEn, { proximity, session, env, placeMode, uiLang: searchLang });
   } catch (e) {
     if (!plan.fallback) throw e;
     usedFallback = true;
-    suggestions = await suggestVia(plan.fallback, queryEn, { proximity, session, env, placeMode, uiLang });
+    suggestions = await suggestVia(plan.fallback, queryEn, { proximity, session, env, placeMode, uiLang: searchLang });
   }
   // 降级结果**不缓存**：否则主源短暂抖动后，会拿备源结果顶满 10 分钟 TTL（主源恢复了还在吐备源）。
   return usedFallback
