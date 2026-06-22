@@ -211,9 +211,12 @@ struct TripDateRangePickerSheet: View {
                         .padding(.horizontal, 20)
                     }
                 }
-                .padding(.top, 16)
                 .padding(.bottom, 40)
             }
+            // 顶部留白用 `.contentMargins`（而非 LazyVStack 的 .padding.top）：scrollTo(anchor:.top) 会把内容 padding
+            // 顶出视口、白白浪费；contentMargins 是 scroll 的内容内缩，scrollTo **尊重**它 → 锚定月份稳定落在顶边下方
+            // 一段距离（无论起始月是首个还是中段），月标题不再贴星期栏。根因：scroll 锚点对齐的是「内容内缩边」。
+            .contentMargins(.top, 20, for: .scrollContent)
             .onAppear {
                 let startMonth = calendar.date(
                     from: calendar.dateComponents([.year, .month], from: selectedStart)
