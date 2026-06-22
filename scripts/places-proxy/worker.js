@@ -91,11 +91,15 @@ async function handleSuggest(url, env) {
   // 目的地「城市模式」：只查行政地名（国家/地区/城市），不掺 POI/门牌——给「建行程·目的地」字段用，
   // 让「Tokyo→东京市」成首条、清掉同名餐厅噪音。缺省（AddStop 的地点检索）仍走全量 POI。
   const placeMode = (url.searchParams.get("kinds") || "").toLowerCase() === "place";
+  // 城市模式下按用户 UI 语言做本地化检索：拉丁文本地异名（München/Roma/Lisboa/Wien）在 language=en 下
+  // 匹配不到正确城市（撞同名小镇/落空）；用 language=<UI 语言> 让 Mapbox 按该语言索引命中城市本体。
+  // 仅 place 模式生效；POI 模式（AddStop）行为不变（仍 language=en）。空 → 回退 en。
+  const uiLang = placeMode ? (url.searchParams.get("lang") || "").trim() : "";
   const plan = providerPlan(env);
 
   const cache = caches.default;
-  // 缓存键含 provider + kinds：Mapbox / Geoapify 的 id 体系不同不能串用；城市模式与 POI 模式结果不同，也须分桶。
-  const cacheKey = new Request(`https://carry-places-cache/suggest?q=${encodeURIComponent(q)}&prov=${plan.primary}&p=${proximity}&k=${placeMode ? "place" : ""}`);
+  // 缓存键含 provider + kinds + lang：id 体系不同不能串用；城市/POI 结果不同须分桶；不同 UI 语言的本地化结果也不同。
+  const cacheKey = new Request(`https://carry-places-cache/suggest?q=${encodeURIComponent(q)}&prov=${plan.primary}&p=${proximity}&k=${placeMode ? "place" : ""}&l=${uiLang}`);
   const cached = await cache.match(cacheKey);
   if (cached) return cached;
 
@@ -106,11 +110,11 @@ async function handleSuggest(url, env) {
   // 主源硬失败才降级到备源；备源也失败 → 抛给上层（502）。
   let suggestions, usedFallback = false;
   try {
-    suggestions = await suggestVia(plan.primary, queryEn, { proximity, session, env, placeMode });
+    suggestions = await suggestVia(plan.primary, queryEn, { proximity, session, env, placeMode, uiLang });
   } catch (e) {
     if (!plan.fallback) throw e;
     usedFallback = true;
-    suggestions = await suggestVia(plan.fallback, queryEn, { proximity, session, env, placeMode });
+    suggestions = await suggestVia(plan.fallback, queryEn, { proximity, session, env, placeMode, uiLang });
   }
   // 降级结果**不缓存**：否则主源短暂抖动后，会拿备源结果顶满 10 分钟 TTL（主源恢复了还在吐备源）。
   return usedFallback
@@ -124,13 +128,21 @@ async function suggestVia(provider, q, opts) {
   return mapboxSuggest(q, opts);
 }
 
-async function mapboxSuggest(q, { proximity, session, env, placeMode }) {
+// UI 语言 → Mapbox language code（白名单，未知/空回退 en）。pt-BR→pt；中文区分简繁。
+function mapboxLangOf(ui) {
+  const m = { en: "en", de: "de", es: "es", fr: "fr", ja: "ja", ko: "ko",
+              "zh-Hans": "zh-Hans", "zh-Hant": "zh-Hant", "pt-BR": "pt", pt: "pt" };
+  return m[ui] || "en";
+}
+
+async function mapboxSuggest(q, { proximity, session, env, placeMode, uiLang }) {
   if (!env.MAPBOX_TOKEN) throw new Error("mapbox_no_token");
   const up = new URL(`${MAPBOX}/suggest`);
   up.searchParams.set("q", q);
   up.searchParams.set("access_token", env.MAPBOX_TOKEN);
   up.searchParams.set("session_token", session);
-  up.searchParams.set("language", "en");
+  // 城市模式按 UI 语言检索（命中本地异名城市）；POI 模式保持 en。
+  up.searchParams.set("language", placeMode ? mapboxLangOf(uiLang) : "en");
   up.searchParams.set("limit", "8");
   // 城市模式只留行政地名（place=城市/镇、locality=聚落、region=省州、district、country）；
   // 默认模式（地点检索）含 poi/address。
@@ -154,12 +166,20 @@ async function mapboxSuggest(q, { proximity, session, env, placeMode }) {
 
 // Geoapify 自动补全：单次调用即带坐标 → 把名称/地址/坐标/国家码塞进 id（base64url），
 //   /retrieve 时离线解出、本地算时区，不再二次请求 Geoapify（更省额度、更稳）。
-async function geoapifySuggest(q, { proximity, env, placeMode }) {
+// UI 语言 → Geoapify lang code（2 字母，中文统一 zh；未知/空回退 en）。
+function geoapifyLangOf(ui) {
+  const m = { en: "en", de: "de", es: "es", fr: "fr", ja: "ja", ko: "ko",
+              "zh-Hans": "zh", "zh-Hant": "zh", "pt-BR": "pt", pt: "pt" };
+  return m[ui] || "en";
+}
+
+async function geoapifySuggest(q, { proximity, env, placeMode, uiLang }) {
   if (!env.GEOAPIFY_KEY) throw new Error("geoapify_no_key");
   const up = new URL("https://api.geoapify.com/v1/geocode/autocomplete");
   up.searchParams.set("text", q);
   up.searchParams.set("apiKey", env.GEOAPIFY_KEY);
-  up.searchParams.set("lang", "en");
+  // 城市模式按 UI 语言（命中本地异名）；POI 模式保持 en。
+  up.searchParams.set("lang", placeMode ? geoapifyLangOf(uiLang) : "en");
   up.searchParams.set("limit", "8");
   up.searchParams.set("format", "geojson");
   // 城市模式：Geoapify 仅支持单一 type，取 city（覆盖绝大多数目的地）。它只是 Mapbox 挂掉时的备源，

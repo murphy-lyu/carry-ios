@@ -59,7 +59,12 @@ enum OverseasPlaceSource {
                             .init(name: "storefront", value: storefront)]
         if !proximity.isEmpty { comps.queryItems?.append(.init(name: "proximity", value: proximity)) }
         // 城市模式（建行程·目的地字段）：只查行政地名，让 Worker 切换 types。缺省走全量 POI。
-        if placeMode { comps.queryItems?.append(.init(name: "kinds", value: "place")) }
+        // 并把 UI 语言传给 Worker 做本地化检索——否则 München/Roma/Lisboa 等本地异名在 language=en 下匹配不到城市本体。
+        if placeMode {
+            comps.queryItems?.append(.init(name: "kinds", value: "place"))
+            let uiLang = Bundle.main.preferredLocalizations.first ?? "en"
+            comps.queryItems?.append(.init(name: "lang", value: uiLang))
+        }
         guard let url = comps.url else { return [] }
         var req = URLRequest(url: url); req.timeoutInterval = 12
         req.setValue(PlacesSearchConfig.appToken, forHTTPHeaderField: "X-App-Token")
