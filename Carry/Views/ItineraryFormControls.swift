@@ -10,18 +10,28 @@
 import SwiftUI
 
 /// 表单 chip：圆体短标签 + 胶囊底。filled=false（占位/未设）用次要色。
+/// monospacedDigits：时刻 chip 用等宽数字，与详情页时间列对齐（读写一致）。
 struct FormChip: View {
     let text: String
     var filled: Bool = true
+    var monospacedDigits: Bool = false
 
     var body: some View {
         Text(text)
             .font(.system(.subheadline, design: .rounded).weight(.medium))
+            .monospacedDigit(monospacedDigits)
             .foregroundStyle(filled ? Color.primary : Color.secondary)
             .padding(.horizontal, 12)
             .padding(.vertical, 7)
             .background(Color(.tertiarySystemFill))
             .clipShape(Capsule())
+    }
+}
+
+private extension Text {
+    /// 条件性等宽数字（true 才套 .monospacedDigit）。
+    @ViewBuilder func monospacedDigit(_ on: Bool) -> some View {
+        if on { self.monospacedDigit() } else { self }
     }
 }
 

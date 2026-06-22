@@ -41,6 +41,12 @@ struct CostInputRow: View {
 
     var body: some View {
         HStack(spacing: 12) {
+            // 前导图标（详情页 cost 行同款 creditcard）：与 Note / Attachments 一起，让单一用途「功能卡」统一带前导图标。
+            Image(systemName: "creditcard")
+                .font(.system(size: 15))
+                .foregroundStyle(.secondary)
+                .frame(width: 22)
+                .accessibilityHidden(true)
             Text("cost.field.total")
                 .font(.body)
                 .foregroundStyle(.primary)

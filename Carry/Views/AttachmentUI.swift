@@ -146,9 +146,9 @@ struct AttachmentEditSection: View {
                     Text("itinerary.attachment.add")
                 }
             }
-        } header: {
-            Text("itinerary.attachment.section")
         }
+        // 不带 Section 标题——与 Total cost / Note 一致（单一功能卡，回形针图标即说明，无需分组标题）。
+        // 「Pick-up / Drop-off / More」那类多字段分组才要标题。
     }
 
     private func delete(_ id: UUID) {

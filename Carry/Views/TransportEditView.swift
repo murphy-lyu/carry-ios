@@ -53,9 +53,9 @@ struct TransportEditView: View {
     @State private var toLongitude: Double = 0
     @State private var toTimeZoneId = ""
 
-    /// 租车专用：还车地点同取车（默认开，大多数租车原地还）。开 → 折叠还车「地点」，
-    /// 仅保留还车日期/时间；保存时把取车地点拷给还车端。spec: itinerary-car-rental.md。
-    @State private var sameReturnLocation = true
+    /// 租车专用：还车地点是否**镜像取车**（默认 true，大多数原地还）。无 UI——选/改取车时自动同步到还车；
+    /// 用户手动改还车地点即解绑（=false），此后取车再变不动还车。取/还模块完全对称、无 toggle。spec: itinerary-car-rental.md。
+    @State private var returnMirrorsPickup = true
 
     @State private var departDayOrder = 0
     @State private var hasDepartTime = false
@@ -169,9 +169,16 @@ struct TransportEditView: View {
                                 if !pickedTZ.isEmpty { fromTimeZoneId = pickedTZ }   // 捕获取车/出发点时区
                                 // 租车取车点电话自动回填（已填不覆盖）；非租车不收电话。
                                 if mode == .carRental, phone.isEmpty { phone = pickedPhone }
+                                // 还车镜像取车：未解绑时，取车地点自动同步到还车（含坐标/地址/时区）。
+                                if mode == .carRental, returnMirrorsPickup {
+                                    toName = name; toLatitude = lat; toLongitude = lon; toAddress = address
+                                    if !pickedTZ.isEmpty { toTimeZoneId = pickedTZ }
+                                }
                             } else {
                                 toName = name; toLatitude = lat; toLongitude = lon; toAddress = address
                                 if !pickedTZ.isEmpty { toTimeZoneId = pickedTZ }   // 捕获还车/到达点时区
+                                // 用户手动设了还车地点 → 解绑镜像，此后取车变更不再覆盖还车（异地还）。
+                                if mode == .carRental { returnMirrorsPickup = false }
                             }
                         }
                     }
@@ -283,17 +290,18 @@ struct TransportEditView: View {
         let time = Binding(get: { isFrom ? departTime : arriveTime },
                            set: { if isFrom { departTime = $0 } else { arriveTime = $0 } })
 
-        // 租车还车段：「还车地点同取车」开关（默认开 → 折叠地点行，仅留日期/时间）。
-        let isCarReturn = (mode == .carRental && !isFrom)
-        let showsLocationRow = !(isCarReturn && sameReturnLocation)
-
+        // 租车还车段：还车 = 与取车**完全对称**的地点模块（无 toggle）。还车地点默认镜像取车
+        // （选/改取车时自动同步），用户手动改还车即解绑——绝大多数为原地还，异地还少数手改即可。
         Section {
-            if isCarReturn {
-                Toggle("itinerary.transport.field.same_return_location",
-                       isOn: $sameReturnLocation.animation())
-            }
-            // 地点行：点开搜索取坐标；有名字显示名字，否则提示。
-            if showsLocationRow {
+            if mode == .carRental {
+                // 租车端点（取/还同构）：mappin + 地点（点开搜索）+ 正下方日期/时间 chips，整合成一块。
+                // 不显「Days/租期」——它是派生值（还−取日期），编辑态正在设这两个日期、回显冗余=噪声；
+                // 租期的价值在只读详情（一眼知租几天），编辑不需要（与 Tripsy 编辑态一致）。
+                carRentalEndpoint(isFrom: isFrom, name: name, dayOrder: dayOrder,
+                                  hasTime: hasTime, time: time)
+            } else {
+                // 非租车（航班/火车/巴士/渡轮/其他）：保持现状（地点 + 代码 + 航站楼 + 日期时间行）。
+                // 航班的「整段路线 hero 可编辑」留待后续单独做。
                 Button {
                     activeSheet = .search(isFrom: isFrom)
                 } label: {
@@ -308,47 +316,80 @@ struct TransportEditView: View {
                             .foregroundStyle(.tertiary)
                     }
                 }
-            }
-            // 常驻标签（标签左·值右，同「机型」行）——避免填了值后 placeholder 标签消失、剩裸值「HGH」「3」看不懂。
-            if showsCode {
-                LabeledContent {
-                    // 机场/站代码（IATA）= 字母+数字（大小写随用户输入、不强制）。
-                    TextField("", text: code.filteringInput(ItineraryInputFilter.alphanumeric))
-                        .multilineTextAlignment(.trailing)
-                        .autocorrectionDisabled()
-                        .textInputAutocapitalization(.characters)
-                } label: {
-                    Text("itinerary.transport.field.code")
+                // 常驻标签（标签左·值右，同「机型」行）——避免填了值后 placeholder 标签消失、剩裸值「HGH」「3」看不懂。
+                if showsCode {
+                    LabeledContent {
+                        // 机场/站代码（IATA）= 字母+数字（大小写随用户输入、不强制）。
+                        TextField("", text: code.filteringInput(ItineraryInputFilter.alphanumeric))
+                            .multilineTextAlignment(.trailing)
+                            .autocorrectionDisabled()
+                            .textInputAutocapitalization(.characters)
+                    } label: {
+                        Text("itinerary.transport.field.code")
+                    }
                 }
-            }
-            if showsTerminal {
-                LabeledContent {
-                    // 航站楼/站台 = 字母+数字（如 T2 / B / 2，大小写随用户输入、不强制）。
-                    TextField("", text: terminal.filteringInput(ItineraryInputFilter.alphanumeric))
-                        .multilineTextAlignment(.trailing)
-                } label: {
-                    Text(terminalLabel)
+                if showsTerminal {
+                    LabeledContent {
+                        // 航站楼/站台 = 字母+数字（如 T2 / B / 2，大小写随用户输入、不强制）。
+                        TextField("", text: terminal.filteringInput(ItineraryInputFilter.alphanumeric))
+                            .multilineTextAlignment(.trailing)
+                    } label: {
+                        Text(terminalLabel)
+                    }
                 }
-            }
-            // 日期 / 时间融合 chip（参考 Tripsy）：日期 chip 带行程天（点选换天）；
-            // 时间 chip 可选——点开在弹出选择器里设 / 清除，未设则显示占位「时间」。
-            // 选择器都在弹出层、chip 是普通行高 → 不撑高、不跳变、信息量小（取代原 day Picker 行 + 时间开关行）。
-            dateTimeChipsRow(isFrom: isFrom, dayOrder: dayOrder, hasTime: hasTime, time: time)
-            // 租车租期（派生、只读）：随取/还车日期实时更新，给用户「租了几天」的即时反馈（参考 Tripsy）。
-            if isCarReturn, rentalDurationDays >= 1 {
-                LabeledContent {
-                    Text("\(rentalDurationDays)")
-                } label: {
-                    Text(rentalDurationDays == 1 ? "itinerary.transport.field.days.one" : "itinerary.transport.field.days")
-                }
+                // 日期 / 时间融合 chip：日期 chip 带行程天（点选换天）；时间 chip 可选（弹出选择器设/清除）。
+                dateTimeChipsRow(isFrom: isFrom, dayOrder: dayOrder, hasTime: hasTime, time: time)
             }
         } header: {
             Text(sectionHeaderLabel(isFrom: isFrom))
         }
     }
 
-    /// 租车租期 = 还车日 − 取车日（与详情、住宿「晚数」同一口径，按天差）。
-    private var rentalDurationDays: Int { max(0, arriveDayOrder - departDayOrder) }
+    /// 租车端点整合块（取/还**完全对称**）：地点（通用 mappin + 点开搜索）+ 正下方日期/时间 chips
+    /// （缩进对齐地点文字下方）。编辑是功能性表单 → 地点行用通用 `mappin`（与航班等同款），语义化 marker 属详情。
+    /// 还车地点默认镜像取车（见搜索回调），故两端结构一致、无塌缩、无 toggle。
+    @ViewBuilder
+    private func carRentalEndpoint(isFrom: Bool, name: String,
+                                   dayOrder: Binding<Int>, hasTime: Binding<Bool>, time: Binding<Date>) -> some View {
+        // 「地址（在哪）」与「时间（何时）」是两类信息 → 用细分隔线 + 上下呼吸分成两层（地址在上、时间在下），
+        // 不再贴成一坨。分隔线缩进 34 对齐地点文字列（与详情卡分隔线同款），不加图标避免刻意。
+        VStack(alignment: .leading, spacing: 0) {
+            Button {
+                activeSheet = .search(isFrom: isFrom)
+            } label: {
+                HStack(spacing: 12) {
+                    Image(systemName: "mappin.and.ellipse")
+                        .font(.system(size: 15))
+                        .foregroundStyle(.secondary)
+                        .frame(width: 22)
+                    (name.isEmpty ? Text(stationLabel(isFrom: isFrom)) : Text(name))
+                        .font(.body)
+                        .foregroundStyle(name.isEmpty ? .secondary : .primary)
+                        .multilineTextAlignment(.leading)
+                    Spacer(minLength: 8)
+                    Image(systemName: "magnifyingglass")
+                        .font(.footnote)
+                        .foregroundStyle(.tertiary)
+                }
+            }
+            .buttonStyle(.plain)
+            .padding(.vertical, 6)
+
+            Divider().padding(.leading, 34)
+
+            // 时间行也图标领头（calendar=「何时」，与 mappin=「在哪」成对照）：补齐详情页「每行=图标+内容」节奏、
+            // 填掉左侧空列。图标与 mappin 同列对齐（frame 22 + 间距 12 → chips 落在 34、与分隔线起点齐）。
+            HStack(spacing: 12) {
+                Image(systemName: "calendar")
+                    .font(.system(size: 15))
+                    .foregroundStyle(.secondary)
+                    .frame(width: 22)
+                dayTimeChips(isFrom: isFrom, dayOrder: dayOrder, hasTime: hasTime, time: time)
+                Spacer(minLength: 0)
+            }
+            .padding(.vertical, 10)
+        }
+    }
 
     /// 正在编辑的交通段（附件挂载用，需已持久化）；新增态为 nil。
     private var editingSegment: TransportSegment? {
@@ -358,6 +399,7 @@ struct TransportEditView: View {
 
     // MARK: 日期 / 时间融合 chip（参考 Tripsy）
 
+    /// 带「日期」标签的整行（航班/火车等用）：标签左 · chips 右。
     @ViewBuilder
     private func dateTimeChipsRow(isFrom: Bool, dayOrder: Binding<Int>, hasTime: Binding<Bool>, time: Binding<Date>) -> some View {
         HStack(spacing: 8) {
@@ -365,9 +407,16 @@ struct TransportEditView: View {
             // 这里也保持一致，标签左对齐成同一列。用「日期」而非「时间」（避开时间 chip 未设的「时间」占位重名）。
             Text("itinerary.transport.field.date")
             Spacer()
-            // 日期 chip：多天行程可点选换天；单天行程仅作信息展示。
-            // 到达 chip 对「边」型交通（航班/火车…）在出发已落末日时多给「末日+1」，
-            // 让红眼返程能选「次日落地」（见 selectableDayOrders）。
+            dayTimeChips(isFrom: isFrom, dayOrder: dayOrder, hasTime: hasTime, time: time)
+        }
+    }
+
+    /// 日期 + 时间两枚 chip（裸 chips，不含标签/Spacer）——租车端点块与带标签整行共用，保证两处交互一致。
+    /// 日期 chip：多天行程可点选换天；单天仅展示。到达 chip 对「边」型交通在出发已落末日时多给「末日+1」
+    /// （红眼返程选「次日落地」，见 selectableDayOrders）。时间 chip：点开弹出选择器设/清除，未设显占位「时间」。
+    @ViewBuilder
+    private func dayTimeChips(isFrom: Bool, dayOrder: Binding<Int>, hasTime: Binding<Bool>, time: Binding<Date>) -> some View {
+        HStack(spacing: 8) {
             let dayOptions = selectableDayOrders(isFrom: isFrom)
             if dayOptions.count > 1 {
                 Menu {
@@ -382,11 +431,12 @@ struct TransportEditView: View {
             } else {
                 FormChip(text: dayLabel(dayOrder.wrappedValue))
             }
-            // 时间 chip：点开弹出时间选择器；未设显示占位「时间」。
+            // 时刻 chip 用等宽数字（filled 时），与详情页时间列对齐。
             Button { activeSheet = .time(isFrom: isFrom) } label: {
                 FormChip(text: hasTime.wrappedValue ? itineraryTimeString(time.wrappedValue)
                                                     : NSLocalizedString("itinerary.transport.field.time", comment: ""),
-                         filled: hasTime.wrappedValue)
+                         filled: hasTime.wrappedValue,
+                         monospacedDigits: hasTime.wrappedValue)
             }
             .buttonStyle(.plain)
         }
@@ -435,7 +485,9 @@ struct TransportEditView: View {
             }
             LabeledContent {
                 // 确认号 = 字母+数字（即时过滤空格/符号）。**不强制大写**——部分订单号区分大小写。
-                TextField("", text: $confirmationCode.filteringInput(ItineraryInputFilter.alphanumeric))
+                // 占位用中性 pattern 示例（ABC123）：右对齐浅灰，既示「可输入」又示格式。
+                TextField("itinerary.transport.field.confirmation.placeholder",
+                          text: $confirmationCode.filteringInput(ItineraryInputFilter.alphanumeric))
                     .multilineTextAlignment(.trailing)
                     .autocorrectionDisabled()
             } label: {
@@ -452,13 +504,15 @@ struct TransportEditView: View {
             }
             // 车型 / 车牌：仅租车显示（你拿到的那台具体的车），都非必填、空态标签即提示。
             if mode == .carRental {
+                // 占位均用中性 pattern 示例（右对齐浅灰）：示「可输入」+ 示格式，不锁某国格式。
                 LabeledContent {
-                    TextField("", text: $vehicleModel).multilineTextAlignment(.trailing)
+                    TextField("itinerary.transport.field.vehicle_model.placeholder", text: $vehicleModel)
+                        .multilineTextAlignment(.trailing)
                 } label: {
                     Text("itinerary.transport.field.vehicle_model")
                 }
                 LabeledContent {
-                    TextField("", text: $licensePlate)
+                    TextField("itinerary.transport.field.plate.placeholder", text: $licensePlate)
                         .multilineTextAlignment(.trailing)
                         .autocorrectionDisabled()
                         .textInputAutocapitalization(.characters)
@@ -467,7 +521,8 @@ struct TransportEditView: View {
                 }
                 // 电话：取车点搜索可自动回填，也可手填（方便行程中联系）。= 数字 + `+-() 空格`。
                 LabeledContent {
-                    TextField("", text: $phone.filteringInput(ItineraryInputFilter.phone))
+                    TextField("itinerary.transport.field.phone.placeholder",
+                              text: $phone.filteringInput(ItineraryInputFilter.phone))
                         .multilineTextAlignment(.trailing)
                         .keyboardType(.phonePad)
                 } label: {
@@ -485,8 +540,17 @@ struct TransportEditView: View {
     }
     private var noteSection: some View {
         Section {
-            TextField("itinerary.transport.field.note", text: $note, axis: .vertical)
-                .lineLimit(1...4)
+            // 前导图标（详情页 NoteDetailRow 同款 note.text）：与 Total cost / Attachments 统一为「带前导图标的功能卡」。
+            HStack(alignment: .top, spacing: 12) {
+                Image(systemName: "note.text")
+                    .font(.system(size: 15))
+                    .foregroundStyle(.secondary)
+                    .frame(width: 22)
+                    .padding(.top, 2)
+                    .accessibilityHidden(true)
+                TextField("itinerary.transport.field.note", text: $note, axis: .vertical)
+                    .lineLimit(1...4)
+            }
         }
     }
 
@@ -573,9 +637,10 @@ struct TransportEditView: View {
             // 机型剥品牌前缀展示（"Airbus A321" → "A321"），与详情页/Trip Book 一致；存的也归一为型号。
             aircraftType = aircraftModelDisplay(seg.aircraftType)
             cabinClass = seg.cabinClass
-            // 租车还车开关：无显式存储位，从数据派生——还车端空、或与取车端同名同坐标即「同取车」。
+            // 还车是否镜像取车：无显式存储位，从数据派生——还车端空、或与取车端同名同坐标即「仍镜像」；
+            // 异地还（还车与取车不同）→ 已解绑，编辑时改取车不动还车。
             if seg.mode == .carRental {
-                sameReturnLocation = seg.toName.isEmpty
+                returnMirrorsPickup = seg.toName.isEmpty
                     || (seg.toName == seg.fromName
                         && seg.toLatitude == seg.fromLatitude
                         && seg.toLongitude == seg.fromLongitude)
@@ -616,7 +681,8 @@ struct TransportEditView: View {
         // 时区：航班从机场库回填、其它交通从地点搜索捕获——都保留（spec: itinerary-timezone.md）。
         // 类型在创建时固定（改类型=删除重加），故无「切模式残留旧区」之虞。
         let savedFromTZ = fromTimeZoneId
-        let savedToTZ = toTimeZoneId
+        // 还车镜像取车时，时区也随取车端（维持「镜像⟺两端一致」）；解绑则用还车自身捕获的时区。
+        let savedToTZ = (mode == .carRental && returnMirrorsPickup) ? fromTimeZoneId : toTimeZoneId
         // 机型 / 舱位 / 航程 / 时长仅航班有意义。
         let savedAircraft = mode == .flight ? aircraftType : ""
         let savedCabin = mode == .flight ? cabinClass : ""
@@ -627,8 +693,9 @@ struct TransportEditView: View {
         let savedLicensePlate = mode == .carRental ? licensePlate : ""
         let savedPhone = mode == .carRental ? phone : ""
 
-        // 租车「还车地点同取车」：把取车地点拷给还车端，保证详情/地图/导出两端数据完整。
-        let returnSameAsPickup = mode == .carRental && sameReturnLocation
+        // 租车还车镜像取车：仍镜像时把取车地点存给还车端（保证两端数据完整 + 维持「镜像⟺to==from」不变式，
+        // UI 已实时同步、此处是兜底）；已解绑（异地还）则存还车自身。
+        let returnSameAsPickup = mode == .carRental && returnMirrorsPickup
         let savedToName = returnSameAsPickup ? fromName : toName
         let savedToLat = returnSameAsPickup ? fromLatitude : toLatitude
         let savedToLon = returnSameAsPickup ? fromLongitude : toLongitude
