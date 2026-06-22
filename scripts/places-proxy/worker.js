@@ -88,11 +88,14 @@ async function handleSuggest(url, env) {
   if (q.length > MAX_QUERY_LEN) q = q.slice(0, MAX_QUERY_LEN);   // 截断超长 query（防滥用/控成本）
   const session = url.searchParams.get("session") || "carry";   // 仅 Mapbox 用（按 session 计费）
   const proximity = url.searchParams.get("proximity") || "";    // "lon,lat"
+  // 目的地「城市模式」：只查行政地名（国家/地区/城市），不掺 POI/门牌——给「建行程·目的地」字段用，
+  // 让「Tokyo→东京市」成首条、清掉同名餐厅噪音。缺省（AddStop 的地点检索）仍走全量 POI。
+  const placeMode = (url.searchParams.get("kinds") || "").toLowerCase() === "place";
   const plan = providerPlan(env);
 
   const cache = caches.default;
-  // 缓存键含 provider：Mapbox / Geoapify 的 id 体系不同，不能串用。
-  const cacheKey = new Request(`https://carry-places-cache/suggest?q=${encodeURIComponent(q)}&prov=${plan.primary}&p=${proximity}`);
+  // 缓存键含 provider + kinds：Mapbox / Geoapify 的 id 体系不同不能串用；城市模式与 POI 模式结果不同，也须分桶。
+  const cacheKey = new Request(`https://carry-places-cache/suggest?q=${encodeURIComponent(q)}&prov=${plan.primary}&p=${proximity}&k=${placeMode ? "place" : ""}`);
   const cached = await cache.match(cacheKey);
   if (cached) return cached;
 
@@ -103,11 +106,11 @@ async function handleSuggest(url, env) {
   // 主源硬失败才降级到备源；备源也失败 → 抛给上层（502）。
   let suggestions, usedFallback = false;
   try {
-    suggestions = await suggestVia(plan.primary, queryEn, { proximity, session, env });
+    suggestions = await suggestVia(plan.primary, queryEn, { proximity, session, env, placeMode });
   } catch (e) {
     if (!plan.fallback) throw e;
     usedFallback = true;
-    suggestions = await suggestVia(plan.fallback, queryEn, { proximity, session, env });
+    suggestions = await suggestVia(plan.fallback, queryEn, { proximity, session, env, placeMode });
   }
   // 降级结果**不缓存**：否则主源短暂抖动后，会拿备源结果顶满 10 分钟 TTL（主源恢复了还在吐备源）。
   return usedFallback
@@ -121,7 +124,7 @@ async function suggestVia(provider, q, opts) {
   return mapboxSuggest(q, opts);
 }
 
-async function mapboxSuggest(q, { proximity, session, env }) {
+async function mapboxSuggest(q, { proximity, session, env, placeMode }) {
   if (!env.MAPBOX_TOKEN) throw new Error("mapbox_no_token");
   const up = new URL(`${MAPBOX}/suggest`);
   up.searchParams.set("q", q);
@@ -129,7 +132,9 @@ async function mapboxSuggest(q, { proximity, session, env }) {
   up.searchParams.set("session_token", session);
   up.searchParams.set("language", "en");
   up.searchParams.set("limit", "8");
-  up.searchParams.set("types", "poi,address,place,locality,neighborhood");
+  // 城市模式只留行政地名（place=城市/镇、locality=聚落、region=省州、district、country）；
+  // 默认模式（地点检索）含 poi/address。
+  up.searchParams.set("types", placeMode ? "country,region,district,place,locality" : "poi,address,place,locality,neighborhood");
   if (proximity) up.searchParams.set("proximity", proximity);
 
   const resp = await fetch(up.toString(), { headers: { accept: "application/json" } });
@@ -149,7 +154,7 @@ async function mapboxSuggest(q, { proximity, session, env }) {
 
 // Geoapify 自动补全：单次调用即带坐标 → 把名称/地址/坐标/国家码塞进 id（base64url），
 //   /retrieve 时离线解出、本地算时区，不再二次请求 Geoapify（更省额度、更稳）。
-async function geoapifySuggest(q, { proximity, env }) {
+async function geoapifySuggest(q, { proximity, env, placeMode }) {
   if (!env.GEOAPIFY_KEY) throw new Error("geoapify_no_key");
   const up = new URL("https://api.geoapify.com/v1/geocode/autocomplete");
   up.searchParams.set("text", q);
@@ -157,6 +162,9 @@ async function geoapifySuggest(q, { proximity, env }) {
   up.searchParams.set("lang", "en");
   up.searchParams.set("limit", "8");
   up.searchParams.set("format", "geojson");
+  // 城市模式：Geoapify 仅支持单一 type，取 city（覆盖绝大多数目的地）。它只是 Mapbox 挂掉时的备源，
+  // 故「目的地是省/州/国」这种少数情形在备源路径下可能漏，属可接受的降级（主源 Mapbox 多类型已覆盖）。
+  if (placeMode) up.searchParams.set("type", "city");
   if (proximity) {
     const [lon, lat] = proximity.split(",");
     if (lon && lat) up.searchParams.set("bias", `proximity:${lon},${lat}`);

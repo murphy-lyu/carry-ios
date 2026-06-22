@@ -52,12 +52,14 @@ enum PlacesSearchConfig {
 
 /// 海外地点检索(经 places Worker:Mapbox 代理 + 缓存 + 翻译 + 坐标转时区 + 只回境外)。
 enum OverseasPlaceSource {
-    static func suggest(query: String, proximity: String, session: String, storefront: String) async -> [PlaceSuggestion] {
+    static func suggest(query: String, proximity: String, session: String, storefront: String, placeMode: Bool = false) async -> [PlaceSuggestion] {
         guard PlacesSearchConfig.isConfigured, !query.isEmpty,
               var comps = URLComponents(string: PlacesSearchConfig.baseURL + "/suggest") else { return [] }
         comps.queryItems = [.init(name: "q", value: query), .init(name: "session", value: session),
                             .init(name: "storefront", value: storefront)]
         if !proximity.isEmpty { comps.queryItems?.append(.init(name: "proximity", value: proximity)) }
+        // 城市模式（建行程·目的地字段）：只查行政地名，让 Worker 切换 types。缺省走全量 POI。
+        if placeMode { comps.queryItems?.append(.init(name: "kinds", value: "place")) }
         guard let url = comps.url else { return [] }
         var req = URLRequest(url: url); req.timeoutInterval = 12
         req.setValue(PlacesSearchConfig.appToken, forHTTPHeaderField: "X-App-Token")
@@ -98,6 +100,13 @@ final class StopSearchCompleter: NSObject, ObservableObject, MKLocalSearchComple
         didSet { completer.queryFragment = query; scheduleOverseas() }
     }
     @Published var results: [PlaceSuggestion] = []
+
+    /// 城市模式：给「建行程·目的地」字段用——只补全行政地名（国家/地区/城市），不掺 POI。
+    /// 切 MapKit `resultTypes`（去 .pointOfInterest）+ 让海外路传 `kinds=place` 给 Worker。
+    /// 默认 false（AddStop 的地点检索仍要 POI）。
+    var placeMode = false {
+        didSet { completer.resultTypes = placeMode ? [.address] : [.pointOfInterest, .address] }
+    }
 
     private let completer = MKLocalSearchCompleter()
     private var mapkitResults: [PlaceSuggestion] = []
@@ -144,11 +153,11 @@ final class StopSearchCompleter: NSObject, ObservableObject, MKLocalSearchComple
         let q = query.trimmingCharacters(in: .whitespaces)
         guard q.count >= 2 else { overseasResults = []; merge(); return }
         let storefront = isChinaStorefront ? "CHN" : "INTL"
-        let prox = proximity, sess = session
+        let prox = proximity, sess = session, pm = placeMode
         overseasTask = Task { [weak self] in
             try? await Task.sleep(nanoseconds: 300_000_000)
             guard !Task.isCancelled else { return }
-            let r = await OverseasPlaceSource.suggest(query: q, proximity: prox, session: sess, storefront: storefront)
+            let r = await OverseasPlaceSource.suggest(query: q, proximity: prox, session: sess, storefront: storefront, placeMode: pm)
             guard !Task.isCancelled else { return }
             await MainActor.run {
                 guard let self else { return }

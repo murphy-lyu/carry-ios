@@ -254,6 +254,9 @@ struct TripInfoView: View {
         }
         .onDisappear { destinationCompleter.tearDown() }   // 取消在途海外请求 + 停 MapKit 补全
         .onAppear {
+            // 目的地字段走「城市模式」：只补全国家/地区/城市，让「Tokyo→东京市」成首条、不掺同名 POI。
+            // 建行程时尚无目的地坐标可做 proximity 偏置，故靠 types 过滤拿到正确的城市本体。
+            destinationCompleter.placeMode = true
             #if DEBUG
             let dep = departureDate.formatted(date: .abbreviated, time: .omitted)
             let ret = returnDate.formatted(date: .abbreviated, time: .omitted)
