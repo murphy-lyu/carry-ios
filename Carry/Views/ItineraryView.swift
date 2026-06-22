@@ -273,6 +273,8 @@ struct ItineraryView: View {
                 addStopContent: { AnyView(addStopRow($0)) },
                 headerContent: { AnyView(dayHeaderRow($0)) },
                 onDelete: { deleteStop($0) },
+                onDeleteTransport: { deleteTransport($0) },
+                onDeleteLodging: { deleteLodging($0) },
                 onArrange: { store.applyItineraryArrangement(tripId: tripId, dayOrders: $0) },
                 onReorderBegan: { },
                 onFocusDay: { focusedDayId = $0 }
@@ -878,6 +880,17 @@ struct ItineraryView: View {
     private func deleteStop(_ stopID: UUID) {
         guard let day = days.first(where: { ($0.stops ?? []).contains { $0.id == stopID } }) else { return }
         store.removeItineraryStop(tripId: tripId, dayId: day.id, stopId: stopID)
+    }
+
+    /// 左滑删除交通段（航班/火车/巴士/渡轮/租车）：按 segmentID 找其所属天后删整段。
+    private func deleteTransport(_ segmentID: UUID) {
+        guard let day = days.first(where: { ($0.segments ?? []).contains { $0.id == segmentID } }) else { return }
+        store.removeTransportSegment(tripId: tripId, dayId: day.id, segmentId: segmentID)
+    }
+
+    /// 左滑删除住宿：按 stayID 删整段（住宿归 TripBundle、不绑单天）。
+    private func deleteLodging(_ stayID: UUID) {
+        store.removeLodgingStay(tripId: tripId, stayId: stayID)
     }
 }
 

@@ -81,7 +81,12 @@ struct ItineraryReorderCollection: UIViewRepresentable {
     let calendarEventContent: (String, Int) -> AnyView
     let addStopContent: (UUID) -> AnyView
     let headerContent: (ItineraryDaySection) -> AnyView
+    /// 左滑删除：地点（按 stopID）。
     let onDelete: (UUID) -> Void
+    /// 左滑删除：交通段（航班/火车/巴士/渡轮/租车，按 segmentID——租车两行任删一条都删整段）。
+    let onDeleteTransport: (UUID) -> Void
+    /// 左滑删除：住宿（按 stayID——跨多天任一行删除即删整段）。
+    let onDeleteLodging: (UUID) -> Void
     /// 松手提交：落定后每天的完整 stopID 顺序（跨天则改归属）。
     let onArrange: ([(dayID: UUID, stopIDs: [UUID])]) -> Void
     /// 拖拽开始（触感准备 / 上层可借此收键盘等）。
@@ -530,10 +535,22 @@ struct ItineraryReorderCollection: UIViewRepresentable {
         // MARK: Swipe
 
         func trailingSwipe(at indexPath: IndexPath) -> UISwipeActionsConfiguration? {
-            guard let rowID = dataSource.itemIdentifier(for: indexPath),
-                  case .stop(let id) = rowID else { return nil }
+            guard let rowID = dataSource.itemIdentifier(for: indexPath) else { return nil }
+            // 可删的用户实体行才有左滑：地点 / 交通(航班·火车·巴士·渡轮) / 租车 / 住宿。
+            // 日历事件(系统只读)、连接线(leg/lodgingLeg)、占位行(emptyDayDrop/addStop) 不可删 → 无左滑。
+            switch rowID {
+            case .stop, .transport, .carRental, .lodging: break
+            default: return nil
+            }
             let delete = UIContextualAction(style: .normal, title: nil) { [weak self] _, _, completion in
-                self?.parent.onDelete(id)
+                guard let self else { completion(false); return }
+                switch rowID {
+                case .stop(let id):              self.parent.onDelete(id)
+                case .transport(let id):         self.parent.onDeleteTransport(id)
+                case .carRental(let seg, _, _):  self.parent.onDeleteTransport(seg)   // 取/还任一行 → 删整段
+                case .lodging(let stay, _, _):   self.parent.onDeleteLodging(stay)    // 跨天任一行 → 删整段
+                default: break
+                }
                 completion(true)
             }
             delete.image = UIImage(systemName: "trash")
