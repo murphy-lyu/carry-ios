@@ -326,17 +326,16 @@ struct CarryWidgetEntryView: View {
     }
 
     /// 事件标题文本：checkin/checkout 前缀本地化（用户数据拼在后），其余直接用用户数据。
-    @ViewBuilder
-    private func eventTitle(_ ev: WidgetEvent) -> some View {
+    /// 单一 Text（verbatim 组合「已本地化标签 · 用户数据」）：避免 `Text + Text`（iOS 26 弃用）
+    /// 与「插值字面量被抽成本地化键」两个坑，且整串作为一体截断更自然。
+    private func eventTitle(_ ev: WidgetEvent) -> Text {
         switch ev.kind {
-        case "checkin":
-            if ev.primary.isEmpty { Text("widget.companion.checkin") }
-            else { Text("widget.companion.checkin") + Text(verbatim: " · \(ev.primary)") }
-        case "checkout":
-            if ev.primary.isEmpty { Text("widget.companion.checkout") }
-            else { Text("widget.companion.checkout") + Text(verbatim: " · \(ev.primary)") }
+        case "checkin", "checkout":
+            let label = NSLocalizedString(
+                ev.kind == "checkin" ? "widget.companion.checkin" : "widget.companion.checkout", comment: "")
+            return ev.primary.isEmpty ? Text(label) : Text(verbatim: "\(label) · \(ev.primary)")
         default:
-            Text(ev.primary.isEmpty ? ev.secondary : ev.primary)
+            return Text(ev.primary.isEmpty ? ev.secondary : ev.primary)
         }
     }
 

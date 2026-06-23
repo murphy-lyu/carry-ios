@@ -154,7 +154,7 @@ struct OpenNearestTripIntent: AppIntent {
     @MainActor
     func perform() async throws -> some IntentResult {
         if let target = QuickActionTarget.resolveFromStore() {
-            CarryLogger.shared.log(.siriShortcutExecuted, context: "action=open_nearest_trip face=\(target.faceRaw)")
+            CarryLogger.shared.log(.siriShortcutExecuted, context: "action=open_nearest_trip face=\(target.faceRaw ?? "last")")
             UserDefaults.standard.setShortcutOpenTrip(target.tripId, face: target.faceRaw, dayOrder: target.dayOrder)
         } else {
             CarryLogger.shared.log(.siriShortcutExecuted, context: "action=open_nearest_trip fallback=create")
