@@ -214,7 +214,7 @@ struct TransportEditView: View {
         case .flight:               return "itinerary.transport.field.airline"
         case .train, .bus, .ferry:  return "itinerary.transport.field.operator"
         case .carRental:            return "itinerary.transport.field.company"
-        case .other:                return "itinerary.transport.field.carrier"
+        case .other:                return "itinerary.transport.field.operator"   // 与地面/水路统一用 Operator（不再叫 Carrier）
         }
     }
 
@@ -224,8 +224,15 @@ struct TransportEditView: View {
         switch mode {
         case .flight: return "itinerary.transport.field.flight_number"
         case .train, .bus, .ferry: return "itinerary.transport.field.transport_number"
-        default:      return "itinerary.transport.field.number"
+        case .other:  return "itinerary.transport.field.line_or_number"   // 其他交通：线路/班次/编号皆可，通用文案
+        default:      return "itinerary.transport.field.number"           // 租车（不显示）兜底
         }
+    }
+
+    /// 身份段标题：各 mode 用实体名（Flight/Train…）；「其他交通」用通用「交通方式」，
+    /// 不用 mode 选择器里的「Other」当段标题（那里 Other 对、做段标题不通用）。
+    private var identitySectionHeaderKey: LocalizedStringKey {
+        mode == .other ? "itinerary.transport.section.transport" : LocalizedStringKey(mode.localizationKey)
     }
 
     /// 线路/车次名（火车/巴士/渡轮顶部）：仅这三类显示。
@@ -310,10 +317,15 @@ struct TransportEditView: View {
         Section {
             // 航班号/车次领衔（旅客主认它），承运方在下——与详情标题同序。租车等无班次号则仅显承运方。
             if showsNumber {
-                // 班次号 = 字母+数字（即时过滤其余，大小写随用户输入、不强制）。承运方是自由文本（可中文），不限。
-                TextField(numberLabel, text: $number.filteringInput(ItineraryInputFilter.alphanumeric))
-                    .autocorrectionDisabled()
-                    .textInputAutocapitalization(.characters)
+                if mode == .other {
+                    // 其他交通：标识符可为线路名/中文/任意（如「地铁2号线」）→ 自由文本，不过滤、不强制大写。
+                    TextField(numberLabel, text: $number)
+                } else {
+                    // 航班号/车次 = 字母+数字（即时过滤其余，大小写随用户输入、不强制）。
+                    TextField(numberLabel, text: $number.filteringInput(ItineraryInputFilter.alphanumeric))
+                        .autocorrectionDisabled()
+                        .textInputAutocapitalization(.characters)
+                }
             }
             TextField(carrierLabel, text: $carrier)
             // 线路/车次名（火车/巴士/渡轮）：自由文本，如「京沪高铁」/ Eurostar。
@@ -321,8 +333,9 @@ struct TransportEditView: View {
                 TextField("itinerary.transport.field.route_name", text: $routeName)
             }
         } header: {
-            // 身份段以「实体名」作标题（与地点「Place」/住宿「住宿」同款处理）：按当前 mode 取——Flight/租车/火车…
-            Text(LocalizedStringKey(mode.localizationKey))
+            // 身份段以「实体名」作标题（与地点「Place」/住宿「住宿」同款处理）：Flight/租车/火车…；
+            // 「其他交通」用通用「交通方式」（见 identitySectionHeaderKey）。
+            Text(identitySectionHeaderKey)
         }
     }
 
