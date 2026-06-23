@@ -96,7 +96,7 @@ ZStack（全窗口）
 - GlobeView：3D 地球视图（MapKit Annotation pin 点亮到访国家，不绘制多边形边界）
 - 首页底部 Sheet：`CarryBottomSheetFX`——`UIViewControllerRepresentable` 桥接的 UIKit 自定义 sheet。两侧/底部缩放视觉，纯 Core Animation 驱动（吸附用 `UIViewPropertyAnimator`，无 CADisplayLink）；内容固定尺寸 + transform 缩放 + 运动期 `shouldRasterize`，嵌套 cornerRadius 层做上下异半径圆角。HomeView 直接调用,无变体开关（无缩放 fallback 与 `SheetFeatureFlag` 已于 2026-06-07 退役删除）。**首页底栏（搜索/行程册/创建 FAB）自 2026-06-14 经 `bottomBar:` 闭包托管进本控制器**（`installBottomBar`，钉 `view` 底），与卡片由同一 animator 同步缩放（见 playbook §19）。触碰此模块**必读** `docs/home-sheet-debug-playbook.md`（手势/吸附/滚动锁的踩坑史与纪律）。
 - RoadmapView：产品路线图（支持远程 JSON 更新）
-- LiveActivityManager：`@MainActor` 单例，管理打包进度 Live Activity 生命周期（start / update / end / endIfDeparted）
+- LiveActivityManager：`@MainActor` 单例，管理**两类** Live Activity 生命周期。① 打包进度（`PackingActivityAttributes`）：start / update / end / endIfDeparted。② 出行日「下一程」交通（`TransportActivityAttributes`，spec: widget-transit-live-activity.md）：`startTransitIfNeeded(trips:)`（A 自动起，冷启动 + 回前台扫所有行程取最临近一程）/ `startTransit`·`userStopTransit`（B 详情页显式起停）/ `endTransitIfArrived` / `endTransit`。`endAll()` 同时清两类；关单个开关用 `endAllPacking()` / `endTransit()` 不误伤另一类。用户显式停过的段记 `liveActivityTransitDismissed`、A 跳过。schedule-based（`Text(timerInterval:)` 自走，`pushType:nil`），未接实时航班动态
 - **机场数据库（`Models/AirportDatabase.swift`，actor；spec: `itinerary-airport-search.md`）**：航班机场选点专用的**内置离线机场库**。`Bundle` 内 `Carry/Resources/airports.json`（~4100 个有定期航班的机场，OurAirports 列表 + OpenFlights IANA 时区 + Wikidata 9 语言机场名/城市别名；IATA 未命中用 ICAO 兜底抓取）。actor 首次检索时懒加载解码、不阻塞主线程；`search()` 按 IATA/ICAO/英文名·城市/各语言名匹配，全球无区域过滤。`Airport.id = iata`（数据生成脚本硬断言唯一非空）。UI 走 `Views/AirportSearchSheet.swift`，仅 `TransportEditView` 航班模式接入（回填 IATA/坐标/IANA 时区）；其它交通方式仍走通用地图 POI（`ItineraryPlaceSearchSheet`）。数据重建脚本 `scripts/airports/`；数据许可 OpenFlights ODbL 已在 `AboutView`「数据来源」卡署名。
 - **添加航班「搜索优先」（spec: `itinerary-flight-search-first.md`）**：两段式。**第 1 段** `Views/FlightSearchSheet.swift`（新）——渐进式单框：输航班号→即时识别航司→竖排日期列表（本行程的天 + 系统日历，**点日期即触发查询**）→结果确认卡→点卡 push 进**预填**的 `TransportEditView`（`prefill:` + `embedInOwnNavigationStack:false` + `onFinish`，复用同一 NavigationStack、避免嵌套栈）；底部常驻「手动输入」兜底。**第 2 段** = 既有 `TransportEditView`（含日期/时间融合 chip）。航司识别走 **`Models/AirlineDatabase.swift`**（actor，`Carry/Resources/airlines.json` ~986 航司，OpenFlights `airlines.dat` + Wikidata 多语言名，英文名也优先 Wikidata；脚本 `scripts/airlines/`）+ `FlightNumberParser`（拆「航司前缀+班次」）。查询经 `Models/FlightLookupService.swift` → 自家 Cloudflare Worker（`scripts/flight-proxy/worker.js`，藏上游 key + 服务端缓存 + APP_TOKEN 门槛 + Rate Limiting 绑定）。**密钥纪律**：`FlightLookupConfig.appToken` 不硬编码，从 gitignore 的 `Carry/Resources/Secrets.plist` 读取（见 CLAUDE.md 密钥约定）。
 
@@ -112,11 +112,13 @@ ZStack（全窗口）
 
 ## Widget Extension（CarryWidgetExtension）
 - 独立 target，bundle ID `com.murphy.carry.CarryWidget`
-- `CarryWidgetBundle`：注册 `CarryWidgetLiveActivity`（Live Activity 配置）
-- `CarryWidgetLiveActivity`：锁屏卡片（LockScreenView）+ 灵动岛（展开/紧凑/最小态）
-- `CarryWidget/Localizable.xcstrings`：widget 专属本地化（9 种语言）
+- `CarryWidgetBundle`：注册 `CarryWidget`（桌面组件）+ `CarryWidgetLiveActivity`（打包 LA）+ `CarryTransitLiveActivity`（交通 LA）
+- **`CarryWidget`（桌面组件，spec: widget-trip-companion.md）**：`.systemSmall`/`.systemMedium`，**随旅行相位自适应**——出发前=倒计时+打包进度（现状）；旅行中=`Day N/M` + 下一件事倒计时 + 今晚住哪/退房。数据从 App Group（`group.com.murphy.carry` → `carry_widget_trips`）解码 `WidgetTrip`（镜像主 App 的 `WidgetTripSnapshot`）。相位/当前天/下一件事在 Widget 侧按 `entry.date` 推导（事件绝对时刻由 App 预算好），timeline 在「每个未来事件 + 每日午夜」放 entry → 跨天自走、App 不开也对。外观选择器（Automatic/Light/Dark）见 `WidgetColorSchemeOverride`
+- `CarryWidgetLiveActivity`：打包进度。锁屏卡片（LockScreenView）+ 灵动岛（展开/紧凑/最小态）
+- `CarryTransitLiveActivity`：出行日「下一程」。锁屏卡片（FROM→TO + `Text(timerInterval:)` 倒计时 + 航站楼/座位）+ 灵动岛三态；相位（起飞前/途中/已抵达）渲染时按 `Date()` 判定
+- `CarryWidget/Localizable.xcstrings`：widget 专属本地化（9 种语言）。⚠️ 纯数据/分隔符用 `Text(verbatim:)`，避免 `Text("\(a) → \(b)")` 被 Xcode 抽成本地化键
 
-## SharedSources
-- `SharedSources/PackingActivityAttributes.swift`：ActivityKit 共享类型，通过 pbxproj 同时编译进 Carry 和 CarryWidgetExtension 两个 target
-- `ActivityAttributes`：只含 `tripId`（静态标识符）
-- `ContentState`：packedItems / totalItems / isCompleted / tripName / destinationCity / departureDate（全部动态，支持实时更新）
+## SharedSources（pbxproj 同时编译进 Carry 与 CarryWidgetExtension 两 target）
+- `SharedSources/PackingActivityAttributes.swift`：打包 LA 共享类型。`ActivityAttributes` 只含 `tripId`；`ContentState` = packedItems / totalItems / isCompleted / tripName / destinationCity / departureDate
+- `SharedSources/TransportActivityAttributes.swift`：交通 LA 共享类型（spec: widget-transit-live-activity.md）。`ActivityAttributes` = tripId + segmentId；`ContentState` = modeRaw / carrierAndNumber / from·to 码·名 / departureDate / arrivalDate（绝对时刻，App 按两端时区算）/ fromTerminal / seat + 预留 `liveStatus`/`gate`/`actualDepartureDate`（未来航班动态，填充即用、不改结构）
+- **桌面组件 snapshot 不走 SharedSources**：`WidgetTripSnapshot`（`TripStore.swift`）与 `WidgetTrip`（`CarryWidget.swift`）是**字段一致的双份镜像**、靠同一 JSON 通信（加字段两处同步改、Widget 侧可选）

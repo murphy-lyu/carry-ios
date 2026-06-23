@@ -22,7 +22,7 @@
 
 ## 上次改动摘要（Widget 表达行程规划：旅行伴侣桌面组件 + 出行日「下一程」Live Activity · 2026-06-23）
 
-> 单会话、纯我的工作。先评估「行程规划如何在 Widget 体现」→ 写两份 spec（确认后）→ 逐个实现。**两份均编译绿（主 app + Widget Extension）**。**未 push**。UI/真机验收交用户。spec: `widget-trip-companion.md` / `widget-transit-live-activity.md`。
+> 单会话、纯我的工作。先评估「行程规划如何在 Widget 体现」→ 写两份 spec（确认后）→ 逐个实现 + 两轮 QA。**两份均编译绿（主 app + Widget Extension）、i18n [E]=0**。✅ **已隔离 index 提交并 push 到 origin/main（`0d46898`）**——与并行「train/bus/ferry / transport type」会话物理隔离、只含本会话 16 文件，零卷入；并行会话 rebuild 主 xcstrings 冲掉的我 4 个 key 已补回。UI/真机验收交用户。spec: `widget-trip-companion.md` / `widget-transit-live-activity.md`。
 
 **背景**：Widget 原只表达「打包」（出发前几天的事），而更核心的行程规划（航班/住宿/地点/交通/时区…）从未上 Widget。评估用「可瞄+当下相关+省一次打开」三判据筛出两个真场景：旅行中「今日陪伴」、出行日「下一程」。明确排除整条时间轴/地图/花费/酒店地址等（过不了判据）。
 
@@ -50,9 +50,9 @@
 **第二轮根因复扫（更严视角，已修，复编绿、[E]=0）**：
 7. 🔴 真 UX 根因 bug：A+B 冲突——用户在详情页**显式停掉**某程追踪后，A 回前台会自动把它重新起起来、覆盖用户意图。根因解：`LiveActivityManager` 记「用户已停段」集合（`liveActivityTransitDismissed`，UserDefaults），A 跳过 dismissed 段；再次显式起（B）即解除；`startTransitIfNeeded` 按现存段剪枝防累积。B「停」改走新 `userStopTransit(segmentId:)`。
 8. 🟢 质量：`absoluteDate` 公式原有 3 份拷贝 → TripStore 那份指向单一真源 `TransportSegment.itineraryAbsoluteDate`（NotificationManager 既有份属已上线、不动）；`widgetEvents` 跳过无名定时地点（退化数据不入「下一件事」）。
-⚠️ 工作区另有 `DataBackupManager.swift`/`TransportEditView.swift` 被改（**非本会话**，疑并行会话/linter）——提交时须走隔离 index、勿卷入。
+**收尾（已完成）**：✅ 提交+push（`0d46898`，隔离 index）；✅ 并行会话冲掉的 4 个主 xcstrings key 补回；✅ 验收待办写入 Apple Note「Carry · Widget 验收待办」；✅ 顺手清掉并行会话遗留在暂存区的一个 stale 反向 hunk（`TransportEditView.swift`，工作区彻底干净、零代码改动）。
 
-**新会话 TODO**：① push（用户定）；② **Spec A 设备验收**（调某行程出发日到昨天看旅行中态：Day N/M·下一件事倒计时·今晚住哪；出发前无回归；明暗/多语言）；③ **Spec B 真机验收**（LA 模拟器受限）：建今/明起飞航班→开 App(A)/点详情按钮(B)→锁屏+灵动岛下一程倒计时、跨时区起降无错点、到达后自动消失、删行程/抹数据清理、与打包 LA 并存观感；④ 主开关默认开是产品默认值、若觉激进可改默认关。
+**新会话 TODO（仅剩验收，交用户）**：① **Spec A 设备验收**（调某行程出发日到昨天看旅行中态：Day N/M·下一件事倒计时·今晚住哪；出发前无回归；明暗/多语言）；② **Spec B 真机验收**（LA 模拟器受限）：建今/明起飞航班→开 App(A)/点详情按钮(B)→锁屏+灵动岛下一程倒计时、跨时区起降无错点、到达后自动消失、删行程/抹数据清理、与打包 LA 并存观感、**显式「停」后回前台不被自动重起**；③ 主开关「锁屏实时活动→出行日下一程」默认开，觉激进可改默认关（产品默认值，非 bug）；④（未来）接航班实时动态 API 时填充 `TransportActivityAttributes` 的 `liveStatus/gate` 并 `update`，不改结构。
 
 ## 上次改动摘要（计数文案复数化全清扫 + 全目录未翻译键审计补全 · 2026-06-23）
 

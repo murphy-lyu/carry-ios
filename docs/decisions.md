@@ -1,5 +1,27 @@
 # 决策日志
 
+## 2026-06-23 Widget 表达行程规划：相位自适应桌面组件 + 出行日 Live Activity（spec: widget-trip-companion.md / widget-transit-live-activity.md）
+
+### 评估框架：Widget 提炼「此刻的下一步」，不展示「整个计划」
+背景：Widget（桌面组件 + Live Activity）此前只表达「打包」（出发前几天的事），而更核心的行程规划从未上 Widget。
+决策：用三判据筛 Widget 价值——**可瞄（一眼看完）+ 当下相关（此刻有意义且随时间变）+ 省一次打开（看完不必进 App）**，Live Activity 再叠「有明确进行中+会结束的事件」。结论：行程规划真正配上 Widget 的不是「展示整张时间轴」，而是「替用户从计划里挑出当下唯一要紧的那条」——契合 Carry 克制气质。**明确排除**整条每日时间轴 / 地图 / 花费 / 酒店地址·确认号 Widget（过不了三判据，纯为做而做）。筛出两个真场景：旅行中「今日陪伴」、出行日「下一程」。
+
+### A. 旅行伴侣桌面组件：随旅行相位自适应（出发前 / 旅行中），且 Widget 自给自足
+- **相位模型**：出发前=倒计时+打包（现状不动）；旅行中=`Day N/M` + 下一件事倒计时 + 今晚住哪/退房。已结束自然落出（选片只取 `returnDate ≥ today`）。**仅有日期行程进旅行中相位**（无日期行程无「今天第几天」概念）。
+- **关键决策：Widget 不依赖「用户每天打开 App」**。旅行中用户可能整天不开 App，但 Widget 必须仍显示正确的「今天」。故 snapshot 带**整段行程事件**（每个事件预先按各活动时区算好**绝对 Date**），Widget 在渲染时按 `Date()` 自行推导「今天 Day 几、下一件事」，并用 timeline entries（每事件 + 每午夜）跨天推进。绝不「只写今天事件、靠 App 被打开刷新」（脆弱、会显示昨天）。
+- 刷新走既有 `didEnterBackground` 生命周期漏斗（编行程→离开 App→看 Widget 即覆盖），**不在十几处 mutation 散加调用 + reloadAllTimelines**（更克制）。snapshot 新字段全可选 → 旧版 JSON 解码退化为出发前相位、不崩（向后兼容铁律）。
+
+### B. 出行日「下一程」Live Activity：A+B 起停、schedule-based、实时就绪
+- **起停 = A+B**（产品决策，用户拍板）：A 自动起（冷启动 + 回前台扫所有行程，为 [出发前 24h, 到达+1h] 内最临近一程起 LA）；B 显式（交通详情页「在锁屏追踪此程」）。理由：A 覆盖「出行日体感最佳」主场景，B 给用户掌控感。
+- **主开关默认开**（与打包 LA 默认关相反）：出行日是 LA 最高价值场景，默认关=「功能存在但没人看见」（类比之前翻译占位的教训）。代价是默认会自动占用锁屏——给了全局 opt-out（设置页主开关）+ 自动起避开「用户显式停过的段」。
+- **本轮只做按时刻表倒计时，不接实时航班动态**（延误/登机口=Roadmap 独立项）。`TransportActivityAttributes` 预留 `liveStatus/gate/actualDepartureDate`，将来接 API 只填充+`update`、不改结构。**文案刻意不暗示在追踪实时航班**（只显「计划 09:00 起飞 · 倒计时」），避免用户误以为延误会自动反映。
+- **显式「停」必须被尊重**（QA 抓出的根因）：用户停掉后 A 不得自动重起 → 记「用户已停段」集合（`liveActivityTransitDismissed`），A 跳过、再次显式起即解除、按现存段剪枝防累积。
+- 倒计时用系统原生 `Text(timerInterval:)`（自走、无需频繁 update、本地 `pushType:nil`）；相位（起飞前/途中/已抵达）渲染时按 `Date()` 判定。
+
+### 工程结构决策
+- **两类 LA 独立**：打包（`PackingActivityAttributes`）与交通（`TransportActivityAttributes`）不同类型、ActivityKit 上可并存、相位接力（打包出发前 / 交通出行日）。`endAll()` 拆为「`endAllPacking()`（关打包开关用）+ `endTransit()`」——**关一个开关绝不误杀另一类 LA**（QA 抓出的真 bug）。
+- **i18n 陷阱（写入 CLAUDE.md 已知错误模式）**：`Text("\(a) → \(b)")` 这类**插值字面量**被 SwiftUI 当 `LocalizedStringKey`，Xcode 构建自动抽成本地化键（`%@ → %@`），污染 catalog。纯数据/分隔符一律 `Text(verbatim:)`。
+
 ## 2026-06-23 本地化系统性缺陷 post-mortem + 复数变体规范 + 审计脚本
 
 ### 现象
