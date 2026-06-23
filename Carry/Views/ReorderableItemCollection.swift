@@ -57,6 +57,8 @@ struct ReorderableItemCollection: UIViewRepresentable {
     let onReorder: (UUID, [UUID]) -> Void
     /// 拖拽开始：上层借此提交在编辑的行 + 触感准备。
     let onReorderBegan: () -> Void
+    /// 滚动方向 → 是否隐藏底部「行程/打包」切换器（下滑隐藏让位、上滑/近顶显示）。与行程列表同一套，spec: 3+2。
+    var onScrollHideChange: (Bool) -> Void = { _ in }
 
     // list 配置 headerMode=.supplementary 时，布局请求的 header kind 即此标准值，
     // 注册与 dequeue 必须用它，否则 _createPreparedSupplementaryView 断言崩溃。
@@ -132,6 +134,9 @@ struct ReorderableItemCollection: UIViewRepresentable {
         private var lastHapticIndexPath: IndexPath?
         /// 长按手势引用——auto-scroll 期间用它的实时位置在 scrollViewDidScroll 里重夹断。
         private weak var longPressRecognizer: UILongPressGestureRecognizer?
+        /// 底部切换器隐藏状态（滚动方向驱动，与行程列表同一套）：只在翻转时回调上层、避免每帧抖动。
+        private var lastScrollHideY: CGFloat = 0
+        private var switcherHidden = false
 
         init(_ parent: ReorderableItemCollection) {
             self.parent = parent
@@ -343,12 +348,37 @@ struct ReorderableItemCollection: UIViewRepresentable {
         /// auto-scroll 期间手势不发 .changed，但这里会持续触发：用长按手势的实时位置重夹断，
         /// 使被拖行在自动滚动时也不越出本 section（夹到非边缘位置后 auto-scroll 自然停下）。
         func scrollViewDidScroll(_ scrollView: UIScrollView) {
-            guard let from = movingFromSection,
-                  let collectionView,
-                  let recognizer = longPressRecognizer else { return }
-            let clamped = clampLocationToSection(recognizer.location(in: collectionView),
-                                                 section: from, in: collectionView)
-            collectionView.updateInteractiveMovementTargetPosition(clamped)
+            if let from = movingFromSection,
+               let collectionView,
+               let recognizer = longPressRecognizer {
+                let clamped = clampLocationToSection(recognizer.location(in: collectionView),
+                                                     section: from, in: collectionView)
+                collectionView.updateInteractiveMovementTargetPosition(clamped)
+                return
+            }
+            updateSwitcherHide(scrollView)
+        }
+
+        /// 滚动方向 → 底部切换器隐藏/显示（与行程列表 `ItineraryReorderCollection` 同一套）：近顶恒显示；
+        /// 下滑超阈值隐藏、上滑超阈值显示；只在翻转时回调上层、带滞回，不每帧回调。
+        private func updateSwitcherHide(_ scrollView: UIScrollView) {
+            let y = scrollView.contentOffset.y
+            let topY = -scrollView.adjustedContentInset.top
+            let dy = y - lastScrollHideY
+            lastScrollHideY = y
+            let next: Bool
+            if y <= topY + 8 {
+                next = false
+            } else if dy > 6 {
+                next = true
+            } else if dy < -6 {
+                next = false
+            } else {
+                return
+            }
+            guard next != switcherHidden else { return }
+            switcherHidden = next
+            parent.onScrollHideChange(next)
         }
 
         /// 把目标位置的 Y 夹在起点 section 内，使拖拽不越出本 section。

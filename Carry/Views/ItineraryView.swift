@@ -72,6 +72,8 @@ struct ItineraryView: View {
     let tripId: UUID
     /// 「地点排序」模式（由容器 PackingListView 的菜单/工具栏驱动）：压缩行 + 拖拽手柄 + 锁 tap。
     var isReordering: Binding<Bool> = .constant(false)
+    /// 列表滚动方向 → 容器据此收起/展开底部切换器（下滑沉浸、上滑/近顶显示）。spec: 出发后专注列表（3+2）。
+    var onScrollHide: (Bool) -> Void = { _ in }
 
     @EnvironmentObject var store: TripStore
     @EnvironmentObject var router: NavigationRouter
@@ -283,7 +285,8 @@ struct ItineraryView: View {
                 onDeleteLodging: { deleteLodging($0) },
                 onArrange: { store.applyItineraryArrangement(tripId: tripId, dayOrders: $0) },
                 onReorderBegan: { },
-                onFocusDay: { focusedDayId = $0 }
+                onFocusDay: { focusedDayId = $0 },
+                onScrollHideChange: onScrollHide
             )
             // Day header 依赖行程级日期态（isDateless / departureDate）算标签，而这状态不在
             // collection 的 diffable 快照里 → section id 不变时旧 header 不会重配（转有/无日期后
@@ -392,7 +395,22 @@ struct ItineraryView: View {
         if let focusedDayId, days.contains(where: { $0.id == focusedDayId }) {
             return
         }
-        focusedDayId = days.first?.id
+        focusedDayId = defaultFocusedDayId()
+    }
+
+    /// 默认聚焦天：行程**进行中**（今天落在区间内）→ 今天那一天（出发后打开即定位到今天、专注当下）；
+    /// 否则（未出发 / 已结束 / 无日期）→ 首日。spec: 进行中行程默认落 Itinerary@今天（3+2）。
+    private func defaultFocusedDayId() -> UUID? {
+        if let bundle, !bundle.isDateless {
+            let cal = Calendar.current
+            let start = cal.startOfDay(for: bundle.departureDate)
+            let todayOffset = cal.dateComponents([.day], from: start, to: cal.startOfDay(for: Date())).day ?? -1
+            if todayOffset >= 0, todayOffset < days.count,
+               let today = days.first(where: { $0.sortOrder == todayOffset }) {
+                return today.id
+            }
+        }
+        return days.first?.id
     }
 
     /// 消费深链锚点（spec: notification-deeplink-routing.md）：定位到对应天，`activeFocusedDayId`

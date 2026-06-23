@@ -3,6 +3,10 @@
 ## 最后更新
 2026-06-23
 
+## 待跟进 · 行程列表「切换器随滚动收起」动画细节（2026-06-23 夜）
+- **现状 OK**：行程详情底部「行程/打包」切换器随滚动收起/露出（下滑 6pt 收、上滑 6pt 开、近顶恒显、spring 0.3 bounce 0.2），已复用到打包清单（`ItineraryReorderCollection` + `ReorderableItemCollection` 同一套 `onScrollHideChange` → `PackingListView.switcherHidden`）。用户初验「效果很不错」。
+- **待办**：用户会**多用后再回看动画细节**（阈值灵敏度 / 收起展开顺滑度 / 内容回填的跳动感）。届时按真机手感微调上面几个数值（阈值在两个 collection 的 `updateSwitcherHide`，动画在 `PackingListView` 两处 `onScrollHide`/`onChange` 的 `withAnimation`）。当前不动。
+
 ## 上次改动摘要（计数文案复数化全清扫 + 全目录未翻译键审计补全 · 2026-06-23）
 
 > 单会话、纯本地化（i18n）工作。**编译绿**（主 app + Widget）。复数清扫走隔离 index 提交进 main（`75516bf`/`240c2da`/`ed99979`）；全目录翻译在独立 worktree 完成、再以隔离方式合入 main（`ed2aa1e`）。全程与并行 weather/notification 会话物理隔离、互不卷入（确认其 weather keys 叠在我的翻译之上、无覆盖）。**均未 push**（push 由用户定）。验收交用户（切设备语言看物品库/设置/空状态/Widget + count=1 语法）。

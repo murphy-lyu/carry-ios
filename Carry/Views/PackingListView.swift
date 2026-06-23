@@ -5,6 +5,7 @@
 
 import SwiftUI
 import UIKit
+import SwiftData
 
 /// Identifiable wrapper so a freshly-picked photo (its item provider) can drive the reposition
 /// `.sheet(item:)`. The image is loaded INSIDE the reposition sheet (so iCloud downloads show a
@@ -51,7 +52,29 @@ struct PackingListView: View {
     init(tripId: UUID, isNewTrip: Bool = false) {
         self.tripId = tripId
         self.isNewTrip = isNewTrip
-        _detailTab = State(initialValue: isNewTrip ? .packing : TripDetailFaceStore.load(tripId: tripId))
+        _detailTab = State(initialValue: Self.initialFace(tripId: tripId, isNewTrip: isNewTrip))
+    }
+
+    /// 初始面（首帧即正确，无 push 中闪面）：新建→打包；**进行中行程→行程列表**（出发后焦点在当下行程，
+    /// 打包清单退二线但仍一抬手可达）；否则→记住的上次面。进行中判定需行程日期，而 init 拿不到
+    /// `@EnvironmentObject store` → 用 `CarryApp.container` 同步按 id 读一条（只读、单条、push 时一次，
+    /// 开销可忽略）。spec: 出发后专注行程列表（3+2）。
+    private static func initialFace(tripId: UUID, isNewTrip: Bool) -> TripDetailFace {
+        if isNewTrip { return .packing }
+        if isTripOngoing(tripId: tripId) { return .itinerary }
+        return TripDetailFaceStore.load(tripId: tripId)
+    }
+
+    private static func isTripOngoing(tripId: UUID) -> Bool {
+        var desc = FetchDescriptor<TripBundle>(predicate: #Predicate { $0.id == tripId })
+        desc.fetchLimit = 1
+        let ctx = ModelContext(CarryApp.container)
+        guard let bundle = (try? ctx.fetch(desc))?.first, !bundle.isDateless else { return false }
+        let cal = Calendar.current
+        let start = cal.startOfDay(for: bundle.departureDate)
+        guard let end = cal.date(byAdding: .day, value: max(bundle.days, 1), to: start) else { return false }
+        let today = cal.startOfDay(for: Date())
+        return today >= start && today < end   // [出发日, 出发日+天数) → 进行中
     }
 
     @StateObject private var weatherManager = WeatherManager()
@@ -69,6 +92,8 @@ struct PackingListView: View {
     @State private var showExportItinerary = false
     /// 行程「地点排序」模式：菜单进入、工具栏 …↔完成、隐藏底部切换器，传给 ItineraryView 驱动压缩行拖拽。
     @State private var isReorderingItinerary = false
+    /// 底部「行程/打包」切换器是否随滚动收起（下滑读列表→收起腾空间，上滑/近顶→露出）。行程脸 + 打包脸滚动均驱动。spec: 3+2。
+    @State private var switcherHidden = false
     @State private var isSaved = false
     @State private var showConfetti = false
     @State private var showCompletionBanner = false
@@ -119,7 +144,10 @@ struct PackingListView: View {
                 case .packing:
                     packingContent
                 case .itinerary:
-                    ItineraryView(tripId: tripId, isReordering: $isReorderingItinerary)
+                    ItineraryView(tripId: tripId, isReordering: $isReorderingItinerary,
+                                  onScrollHide: { hidden in
+                                      withAnimation(.spring(duration: 0.3, bounce: 0.2)) { switcherHidden = hidden }
+                                  })
                 }
             }
         }
@@ -129,12 +157,16 @@ struct PackingListView: View {
                 EmptyView()
             } else if isNewTrip {
                 saveTripButton
-            } else {
+            } else if !switcherHidden {
+                // 下滑读行程列表时收起（让位、腾空间），上滑/近顶回来。始终可达，不剥夺打包入口。spec: 3+2。
                 bottomFaceSwitch
+                    .transition(.move(edge: .bottom).combined(with: .opacity))
             }
         }
         .onChange(of: detailTab) { _, newFace in
             if !isNewTrip { TripDetailFaceStore.save(newFace, tripId: tripId) }
+            // 切换脸时切换器先恒显示（新脸从顶部读起、先露出，下滑再收）。
+            withAnimation(.spring(duration: 0.3, bounce: 0.2)) { switcherHidden = false }
         }
         // 深链落到「当前已打开的行程」时切脸（spec: notification-deeplink-routing.md）：path [B]→[B]
         // 不重建本页、init 不会重读脸，故由 pendingFaceApply 信号驱动。绑 tripId → 只认本行程。
@@ -715,6 +747,9 @@ struct PackingListView: View {
             onReorderBegan: {
                 // 起拖前提交在编辑的行；起拖触感由 collection 的 liftHaptic 负责。
                 if let id = editingItemId { commitEdit(itemId: id) }
+            },
+            onScrollHideChange: { hidden in
+                withAnimation(.spring(duration: 0.3, bounce: 0.2)) { switcherHidden = hidden }
             }
         )
         .ignoresSafeArea(.container, edges: .bottom)

@@ -93,6 +93,9 @@ struct ItineraryReorderCollection: UIViewRepresentable {
     let onReorderBegan: () -> Void
     /// 用户手动滚动列表 → 当前吸顶的那天（反向联动：回写上方日历选中态）。
     let onFocusDay: (UUID) -> Void
+    /// 滚动方向 → 是否隐藏底部「行程/打包」切换器：下滑读列表→隐藏让位、上滑/近顶→显示（iOS 原生工具栏套路）。
+    /// 始终可达（上滑即回），不剥夺打包入口。spec: 出发后专注行程列表（3+2）。
+    var onScrollHideChange: (Bool) -> Void = { _ in }
 
     private static let headerKind = UICollectionView.elementKindSectionHeader
 
@@ -172,6 +175,9 @@ struct ItineraryReorderCollection: UIViewRepresentable {
         private var isProgrammaticScroll = false
 
         private var isDragging = false
+        /// 底部切换器隐藏状态（滚动方向驱动）：上次 offset + 当前隐藏态，只在翻转时回调上层，避免每帧抖动。
+        private var lastScrollHideY: CGFloat = 0
+        private var switcherHidden = false
         private let liftHaptic = UIImpactFeedbackGenerator(style: .medium)
         private let stepHaptic = UISelectionFeedbackGenerator()
         private var lastHapticIndexPath: IndexPath?
@@ -487,6 +493,30 @@ struct ItineraryReorderCollection: UIViewRepresentable {
             // 整体重算（daySections 逐天重建 timeline + 地图重建全部标注），长行程下快速滚动会
             // 连续触发几十轮整页重建 → 卡顿。改为「滚动停下时回写一次」（见下方两个 end 回调），
             // 滚动过程零 body 重算、纯 UIKit 列表滚动，丝滑且与行程长度无关。
+            updateSwitcherHide(scrollView)
+        }
+
+        /// 滚动方向 → 底部切换器隐藏/显示：近顶恒显示；下滑超阈值隐藏、上滑超阈值显示。只在翻转时回调上层
+        /// （驱动 SwiftUI 带动画收起/展开 safeAreaInset，腾出列表空间），不每帧回调。程序滚动期间不参与。
+        private func updateSwitcherHide(_ scrollView: UIScrollView) {
+            guard !isProgrammaticScroll else { return }
+            let y = scrollView.contentOffset.y
+            let topY = -scrollView.adjustedContentInset.top
+            let dy = y - lastScrollHideY
+            lastScrollHideY = y
+            let next: Bool
+            if y <= topY + 8 {
+                next = false                 // 近顶：恒显示（避免顶部抖动）
+            } else if dy > 6 {
+                next = true                  // 下滑：隐藏让位
+            } else if dy < -6 {
+                next = false                 // 上滑：显示
+            } else {
+                return                       // 微动不翻转，留滞回
+            }
+            guard next != switcherHidden else { return }
+            switcherHidden = next
+            parent.onScrollHideChange(next)
         }
 
         /// 用户中途抓住列表 → 视为手动滚动，立即解除程序滚动屏蔽，让反向联动接管。
