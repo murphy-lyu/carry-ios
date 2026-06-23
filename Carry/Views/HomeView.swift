@@ -835,7 +835,11 @@ struct HomeView: View {
     }
 
     private var homeTopBar: some View {
-        HStack(alignment: .center) {
+        // 齿轮随 Sheet 收起渐隐、展开渐显（与地图控件浮层同源、方向相反）。
+        // 空态是固定缩放浮卡、mapCityOpacity 恒为 1，直接绑会隐藏齿轮 → 空态进不了设置，
+        // 故空态强制常显。无需显式 .animation：mapCityOpacity 的写入点已在 withAnimation(.easeOut) 内。
+        let gearOpacity = isEffectivelyEmpty ? 1.0 : (1.0 - mapCityOpacity)
+        return HStack(alignment: .center) {
             Text("home.title")
                 .font(.system(size: 30, weight: .bold, design: .rounded))
                 .foregroundStyle(.primary)
@@ -861,6 +865,8 @@ struct HomeView: View {
             }
             .buttonStyle(PressableScaleButtonStyle(scale: 0.94, pressedBrightness: -0.02, pressedOpacity: 0.95))
             .accessibilityLabel(Text("Settings"))
+            .opacity(gearOpacity)
+            .allowsHitTesting(gearOpacity > 0.05)   // 渐隐到几近不可见即不可点，避免点到收起态背后的元素
         }
     }
 
