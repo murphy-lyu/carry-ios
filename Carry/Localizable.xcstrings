@@ -60183,55 +60183,55 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Diese Datei ist kein Carry-Backup. Wähle ein aus Carry exportiertes Backup."
+            "value" : "Datei nicht erkannt – wähle ein Carry-Backup."
           }
         },
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "This file isn’t a Carry backup. Choose a backup you exported from Carry."
+            "value" : "Can’t read this file — pick a Carry backup."
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Este archivo no es una copia de seguridad de Carry. Elige una que hayas exportado desde Carry."
+            "value" : "Archivo no reconocido. Elige un backup de Carry."
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Ce fichier n’est pas une sauvegarde Carry. Choisis-en une exportée depuis Carry."
+            "value" : "Fichier non reconnu — choisis une sauvegarde Carry."
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "これは Carry のバックアップではありません。Carry から書き出したものを選んでください。"
+            "value" : "読み込めないファイルです。Carry のバックアップを選んでください。"
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Carry 백업 파일이 아니에요. Carry에서 내보낸 백업을 선택해 주세요."
+            "value" : "읽을 수 없는 파일이에요. Carry 백업을 선택해 주세요."
           }
         },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Este arquivo não é um backup do Carry. Escolha um que você exportou do Carry."
+            "value" : "Arquivo não reconhecido. Escolha um backup do Carry."
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "这不是 Carry 的备份文件。请选择你从 Carry 导出的备份。"
+            "value" : "无法识别此文件，请选择 Carry 备份。"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "這不是 Carry 的備份檔案。請選擇你從 Carry 匯出的備份。"
+            "value" : "無法辨識此檔案，請選擇 Carry 備份。"
           }
         }
       }
