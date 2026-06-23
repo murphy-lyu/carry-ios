@@ -108,6 +108,7 @@ struct BackupTransportSegment: Codable, Sendable {
     // 机型 + 航程(米) + 时长(分)（spec: itinerary-flight-lookup.md）；可选 + 默认 nil：兼容旧备份。
     var aircraftType: String? = nil
     var cabinClass: String? = nil      // 舱位等级（可选 + 默认 nil：兼容旧备份）
+    var eticketNumber: String? = nil   // 电子客票号（航班）；可选 + 默认 nil：兼容旧备份
     var distanceMeters: Double? = nil
     var durationMinutes: Int? = nil
     // 租车专属：车型 + 车牌（spec: itinerary-car-rental.md）；可选 + 默认 nil：兼容旧备份。
@@ -273,7 +274,7 @@ final class DataBackupManager {
                 arriveDayOrder: s.arriveDayOrder, arriveLocalMinutes: s.arriveLocalMinutes,
                 seat: s.seat, confirmationCode: s.confirmationCode, note: s.note, sortOrder: s.sortOrder,
                 costAmount: s.costAmount, costCurrencyCode: s.costCurrencyCode, costHomeAmount: s.costHomeAmount,
-                aircraftType: s.aircraftType, cabinClass: s.cabinClass, distanceMeters: s.distanceMeters, durationMinutes: s.durationMinutes,
+                aircraftType: s.aircraftType, cabinClass: s.cabinClass, eticketNumber: s.eticketNumber, distanceMeters: s.distanceMeters, durationMinutes: s.durationMinutes,
                 vehicleModel: s.vehicleModel, licensePlate: s.licensePlate,
                 fromAddress: s.fromAddress, toAddress: s.toAddress,
                 phone: s.phone,
@@ -721,6 +722,7 @@ final class DataBackupManager {
                     departDayOrder: bg.departDayOrder, departLocalMinutes: bg.departLocalMinutes,
                     arriveDayOrder: bg.arriveDayOrder, arriveLocalMinutes: bg.arriveLocalMinutes,
                     seat: bg.seat, confirmationCode: bg.confirmationCode,
+                    eticketNumber: bg.eticketNumber ?? "",
                     note: bg.note, aircraftType: bg.aircraftType ?? "", cabinClass: bg.cabinClass ?? "",
                     distanceMeters: bg.distanceMeters ?? 0, durationMinutes: bg.durationMinutes ?? 0,
                     vehicleModel: bg.vehicleModel ?? "", licensePlate: bg.licensePlate ?? "",

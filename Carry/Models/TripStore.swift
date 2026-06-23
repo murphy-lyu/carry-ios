@@ -718,6 +718,7 @@ final class TripStore: ObservableObject {
                     departDayOrder: seg.departDayOrder, departLocalMinutes: seg.departLocalMinutes,
                     arriveDayOrder: seg.arriveDayOrder, arriveLocalMinutes: seg.arriveLocalMinutes,
                     seat: seg.seat, confirmationCode: seg.confirmationCode,
+                    eticketNumber: seg.eticketNumber,
                     note: seg.note, aircraftType: seg.aircraftType, cabinClass: seg.cabinClass,
                     distanceMeters: seg.distanceMeters, durationMinutes: seg.durationMinutes,
                     vehicleModel: seg.vehicleModel, licensePlate: seg.licensePlate,
@@ -1424,6 +1425,7 @@ final class TripStore: ObservableObject {
         arriveLocalMinutes: Int = -1,
         seat: String = "",
         confirmationCode: String = "",
+        eticketNumber: String = "",
         note: String = "",
         aircraftType: String = "",
         cabinClass: String = "",
@@ -1464,6 +1466,7 @@ final class TripStore: ObservableObject {
             arriveLocalMinutes: arriveLocalMinutes,
             seat: seat,
             confirmationCode: confirmationCode,
+            eticketNumber: eticketNumber,
             note: note,
             aircraftType: aircraftType,
             cabinClass: cabinClass,
@@ -1510,6 +1513,7 @@ final class TripStore: ObservableObject {
         arriveLocalMinutes: Int? = nil,
         seat: String? = nil,
         confirmationCode: String? = nil,
+        eticketNumber: String? = nil,
         note: String? = nil,
         aircraftType: String? = nil,
         cabinClass: String? = nil,
@@ -1544,6 +1548,7 @@ final class TripStore: ObservableObject {
         if let arriveLocalMinutes { seg.arriveLocalMinutes = arriveLocalMinutes }
         if let seat { seg.seat = seat }
         if let confirmationCode { seg.confirmationCode = confirmationCode }
+        if let eticketNumber { seg.eticketNumber = eticketNumber }
         if let note { seg.note = note }
         if let aircraftType { seg.aircraftType = aircraftType }
         if let cabinClass { seg.cabinClass = cabinClass }

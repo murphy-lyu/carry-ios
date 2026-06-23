@@ -472,6 +472,10 @@ struct TransportDetailView: View {
         if !segment.confirmationCode.isEmpty {
             rows.append(AnyView(CopyableDetailRow(icon: "ticket", labelKey: "itinerary.transport.field.confirmation", value: segment.confirmationCode)))
         }
+        // 电子客票号：仅航班、可长按复制（退改/报销/部分值机要它）。与确认号并列、紧随其后。
+        if segment.mode == .flight, !segment.eticketNumber.isEmpty {
+            rows.append(AnyView(CopyableDetailRow(icon: "doc.text", labelKey: "itinerary.flight.field.eticket", value: segment.eticketNumber)))
+        }
         // 租车专属：你拿到的那台车（车型 → 车牌，从泛到具体）；车牌可点按复制（停车/违章常要）。
         if !segment.vehicleModel.isEmpty {
             rows.append(AnyView(LabeledDetailRow(icon: "car.fill", labelKey: "itinerary.transport.field.vehicle_model", value: segment.vehicleModel)))

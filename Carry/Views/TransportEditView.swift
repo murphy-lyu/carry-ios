@@ -66,6 +66,7 @@ struct TransportEditView: View {
 
     @State private var seat = ""
     @State private var confirmationCode = ""
+    @State private var eticketNumber = ""
     @State private var note = ""
     @State private var aircraftType = ""
     @State private var cabinClass = ""   // CabinClass.rawValue，空 = 未填
@@ -521,6 +522,18 @@ struct TransportEditView: View {
             } label: {
                 Text("itinerary.transport.field.confirmation")
             }
+            // 电子客票号：仅航班（13 位数字，与确认号/PNR 不同——标识已出票客票，退改/报销/部分值机用）。
+            // 数字为主、即时过滤分隔符（781-… 的连字符会被剥成纯数字、属规范存法）；占位用中性示例。
+            if mode == .flight {
+                LabeledContent {
+                    TextField("itinerary.flight.field.eticket.placeholder",
+                              text: $eticketNumber.filteringInput(ItineraryInputFilter.alphanumeric))
+                        .multilineTextAlignment(.trailing)
+                        .autocorrectionDisabled()
+                } label: {
+                    Text("itinerary.flight.field.eticket")
+                }
+            }
             // 机型：可编辑（航班搜索预填后可改、手动添加可填）。常驻于「更多」，顶部只留航班号/承运方。
             // 存接口原值，详情页展示时再经 aircraftModelDisplay 剥品牌前缀。
             if mode == .flight {
@@ -644,7 +657,7 @@ struct TransportEditView: View {
             departDayOrder = seg.departDayOrder; arriveDayOrder = seg.arriveDayOrder
             if seg.departLocalMinutes >= 0 { hasDepartTime = true; departTime = dateFromMinutes(seg.departLocalMinutes) }
             if seg.arriveLocalMinutes >= 0 { hasArriveTime = true; arriveTime = dateFromMinutes(seg.arriveLocalMinutes) }
-            seat = seg.seat; confirmationCode = seg.confirmationCode; note = seg.note
+            seat = seg.seat; confirmationCode = seg.confirmationCode; eticketNumber = seg.eticketNumber; note = seg.note
             // 机型剥品牌前缀展示（"Airbus A321" → "A321"），与详情页/Trip Book 一致；存的也归一为型号。
             aircraftType = aircraftModelDisplay(seg.aircraftType)
             cabinClass = seg.cabinClass
@@ -706,6 +719,7 @@ struct TransportEditView: View {
         // 机型 / 舱位 / 航程 / 时长仅航班有意义。
         let savedAircraft = mode == .flight ? aircraftType : ""
         let savedCabin = mode == .flight ? cabinClass : ""
+        let savedEticket = mode == .flight ? eticketNumber : ""   // 电子客票号仅航班
         let savedDistance = mode == .flight ? distanceMeters : 0
         let savedDuration = mode == .flight ? durationMinutes : 0
         // 车型 / 车牌 / 电话仅租车有意义；切到其它模式一并清空，避免残留。
@@ -738,7 +752,7 @@ struct TransportEditView: View {
                 toAddress: savedToAddressFinal,
                 departDayOrder: departDayOrder, departLocalMinutes: departMinutes,
                 arriveDayOrder: safeArriveDay, arriveLocalMinutes: arriveMinutes,
-                seat: savedSeat, confirmationCode: confirmationCode, note: note,
+                seat: savedSeat, confirmationCode: confirmationCode, eticketNumber: savedEticket, note: note,
                 aircraftType: savedAircraft, cabinClass: savedCabin, distanceMeters: savedDistance, durationMinutes: savedDuration,
                 vehicleModel: savedVehicleModel, licensePlate: savedLicensePlate, phone: savedPhone
             )
@@ -758,7 +772,7 @@ struct TransportEditView: View {
                 toAddress: savedToAddressFinal,
                 departDayOrder: departDayOrder, departLocalMinutes: departMinutes,
                 arriveDayOrder: safeArriveDay, arriveLocalMinutes: arriveMinutes,
-                seat: savedSeat, confirmationCode: confirmationCode, note: note,
+                seat: savedSeat, confirmationCode: confirmationCode, eticketNumber: savedEticket, note: note,
                 aircraftType: savedAircraft, cabinClass: savedCabin, distanceMeters: savedDistance, durationMinutes: savedDuration,
                 vehicleModel: savedVehicleModel, licensePlate: savedLicensePlate, phone: savedPhone
             ) {

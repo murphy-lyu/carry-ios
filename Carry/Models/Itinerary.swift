@@ -449,6 +449,9 @@ final class TransportSegment: CostBearing {
     // 选填实用信息
     var seat: String = ""
     var confirmationCode: String = ""
+    /// 电子客票号（13 位数字，如 781-2345678901）：与 confirmationCode(预订定位码/PNR) 不同——前者标识「已出票客票」、
+    /// 退改/报销/部分航司值机用。仅航班有意义、纯手填（航班查询不返回）。空 = 未填。
+    var eticketNumber: String = ""
     var note: String = ""
     /// 机型（如 "A320" / "Boeing 787 Dreamliner"）；航班号查询可自动回填，可空（spec: itinerary-flight-lookup.md）。
     var aircraftType: String = ""
@@ -508,6 +511,7 @@ final class TransportSegment: CostBearing {
         arriveLocalMinutes: Int = -1,
         seat: String = "",
         confirmationCode: String = "",
+        eticketNumber: String = "",
         note: String = "",
         aircraftType: String = "",
         cabinClass: String = "",
@@ -545,6 +549,7 @@ final class TransportSegment: CostBearing {
         self.arriveLocalMinutes = arriveLocalMinutes
         self.seat = seat
         self.confirmationCode = confirmationCode
+        self.eticketNumber = eticketNumber
         self.note = note
         self.aircraftType = aircraftType
         self.cabinClass = cabinClass
