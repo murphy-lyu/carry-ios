@@ -283,8 +283,8 @@ struct TransportEditView: View {
         return isFrom ? "itinerary.transport.section.depart" : "itinerary.transport.section.arrive"
     }
 
-    /// 座位：租车无座位号 → 隐藏。
-    private var showsSeat: Bool { mode != .carRental }
+    /// 座位：租车无座位号 → 隐藏；「其它交通」(出租/地铁/接送多无座位号) → 也隐藏，避免误导。
+    private var showsSeat: Bool { mode != .carRental && mode != .other }
 
     /// 舱位等级的展示文案：未设 → 「未设」；已设 → 该等级本地化名（供 Cabin 行自定义 Menu label 用）。
     private var cabinDisplayText: String {
