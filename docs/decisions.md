@@ -1,5 +1,13 @@
 # 决策日志
 
+## 2026-06-23 不做「Shortcuts 画廊」（Tripsy 式预制快捷指令陈列页）
+
+**背景**：Tripsy 在设置一级菜单加了「Shortcuts」页，陈列一组预制 Apple Shortcuts（General：存 URL / 到地点·两地·酒店的路线 / 某天加照片 / 存位置；ChatGPT：从 URL·文本提取地点 / 旅行建议 / 批量搜存 / Trip Digest / 收据记账 / 问行程任何事 / 找季节）。用户问要不要跟。
+
+**决策：不做。** 理由：① 这是 Tripsy「大而全规划器」定位的长尾功能，与 Carry 克制、聚焦气质相反；维护成本高（每个 shortcut 需逐个编写/测试/9 语言本地化/跨 iOS 维护 + 托管安装），易沦为设置里没人用的入口。② **ChatGPT 区尤其明确不做**——把 OpenAI 品牌区塞进「Made with love / 慢生活」App 是很重的品牌 + 依赖决策，「问我的行程任何事」本质就是「打开 App 看」，非 Carry。③ 系统入口的主场景已由 **Widget（瞄一眼）+ Quick Actions（跳一下）** 覆盖，画廊是边际收益递减。
+
+**留口（将来若做，落点不是画廊而是 Intent）**：补 1–2 个**参数化 App Intent**（首推「到酒店 / 下一站的路线」——旅行中高频、on-brand、基于已有住宿/地点坐标、不碰 AI），它本身就让 Siri/Shortcuts 变有用；画廊页留到这些落地且确实被用之后，再作为「可发现性」的可选包装，而非先搭空架子。区分清楚：**真正的能力在 App Intent 的丰富度，不在那个陈列页**。
+
 ## 2026-06-23 Widget 表达行程规划：相位自适应桌面组件 + 出行日 Live Activity（spec: widget-trip-companion.md / widget-transit-live-activity.md）
 
 ### 评估框架：Widget 提炼「此刻的下一步」，不展示「整个计划」
