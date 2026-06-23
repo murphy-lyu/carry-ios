@@ -604,10 +604,15 @@ struct TransportEditView: View {
         } label: { Text("itinerary.transport.field.coach") }
     }
 
-    // 席别（火车/巴士）：自由文本，各国席别名差异大、不做固定 picker。占位 First class。
+    // 席别（火车/巴士）：自由文本，各国席别名差异大、不做固定 picker。
+    // 占位按模式给地道示例——火车「First class」（一等座）、巴士「Executive/Ejecutivo」（大巴等级，非航空「头等舱」）。
+    private var seatClassPlaceholderKey: LocalizedStringKey {
+        mode == .bus ? "itinerary.transport.field.seat_class.bus.placeholder"
+                     : "itinerary.transport.field.seat_class.placeholder"
+    }
     @ViewBuilder private var seatClassRow: some View {
         LabeledContent {
-            TextField("itinerary.transport.field.seat_class.placeholder", text: $seatClass)
+            TextField(seatClassPlaceholderKey, text: $seatClass)
                 .multilineTextAlignment(.trailing)
         } label: { Text("itinerary.transport.field.seat_class") }
     }

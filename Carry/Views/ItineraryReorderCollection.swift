@@ -377,6 +377,12 @@ struct ItineraryReorderCollection: UIViewRepresentable {
                 rows.append(.addStop(section.id))
                 snapshot.appendItems(rows, toSection: section.id)
             }
+            // 连线（rail）随邻居拓扑变：节点 cell 的上/下连线、首尾、leg 由「邻居/位置」算出。diff 只重渲染
+            // 身份变化的 item（增删/移动），身份不变但邻居变了的 cell（如删交通后下一节点变首项）会留旧连线
+            // → 悬空线头，需返回重进才正常。故对「本次仍存在」的 item 显式 reconfigure，按新拓扑重算连线。
+            let previousItems = Set(dataSource.snapshot().itemIdentifiers)
+            let persisting = snapshot.itemIdentifiers.filter { previousItems.contains($0) }
+            if !persisting.isEmpty { snapshot.reconfigureItems(persisting) }
             dataSource.apply(snapshot, animatingDifferences: animated)
             collectionView?.setNeedsLayout()
             collectionView?.layoutIfNeeded()
