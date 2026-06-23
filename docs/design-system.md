@@ -387,7 +387,9 @@ Apple 原生风格，极简、克制、优雅。
 - 住宿床图标**染当天色**（接 `ItineraryDayPalette`），与停靠点/交通的**实心彩圆**成「两档」（2026-06-18 由三档收敛，见 §交通连接行）：**实心彩圆 = 离散事件**（停靠点 + 交通，统一 28pt）、**裸图标 = 跨度**（住宿，最轻）。**原则：层级靠字重/配色/marker 形态区分，不靠会破坏对齐的盒子**（借 Tripsy「用颜色」而非「用盒子」）。
 
 ### 时间轴行一律两行，副行同款 caption（2026-06-22）
-脊上所有「行程节点行」（地点 / 航班·交通 / 租车 / 住宿）统一**两行结构**：第 1 行加粗锚（`.body` rounded semibold，锚点类用 medium）+ 右对齐时间（`.caption` rounded medium secondary）；第 2 行**一律 `caption · rounded · regular · secondary`**（无 weight）。`TimelineRail.rowHeight = 46` 容两行。**住宿原为单行（`角色·酒店名`），夹在两行行里矮一档、格格不入 → 补成两行**（`LodgingBannerRow`）。
+脊上所有「行程节点行」（地点 / 航班·交通 / 租车 / 住宿）统一**两行结构**：第 1 行加粗锚（`.body` rounded semibold，锚点类用 medium）+ 右对齐时间（`.caption` rounded medium secondary）；第 2 行**一律 `caption · rounded · regular · secondary`**（无 weight）。**住宿原为单行（`角色·酒店名`），夹在两行行里矮一档、格格不入 → 补成两行**（`LodgingBannerRow`）。
+- **行高 `TimelineRail.rowHeight = 52`（2026-06-23 由 46 上调）**：两行行变多后 46 太挤（无 leg 相邻行「上行副行↔下行标题」仅 ~6–8pt，且 Carry 刻意无分隔线、全靠留白分行）→ 52 让圆心距到 24pt、行间留白 ~12–13（对标 Apple 带副标题行、又保 Carry 紧凑）。**单一真源**，所有行 + 日历事件统一跟随；圆点 28 不变、`halfLine = (rowHeight−28)/2` 自适应、连续脊不断。
+- **距离段 `ItineraryLegConnector.legGap = 18`（由 24 下调）= rowHeight 上调的精确补偿**：rowHeight 46→52 使 halfLine 9→12，leg 上下各多接 3pt 线 → 距离标签变飘、leg 圆心距 42→48。legGap 减 6 抵消，leg 圆心距回到 42（改前 OK 值）。**净效果**：无 leg 行松到舒服(24)、leg 行不回归(42)、leg 仍清楚比无 leg 大一档（表「这里有路程」）。
 - **第 2 行放什么 = 看「那条信息在各行间是否变化、是否有用」，按内容定槽，不强求同槽**（[[carry-unify-in-service-of-beauty]]：统一 treatment、非统一 slot）：
   - **住宿**：行 1 = 酒店名（强身份、当锚，与地点名/航班号一致；长名独占一行不被前缀挤掉）；行 2 = **角色**（Check in / Check out / Depart / Return）。**砍掉地址**——同一次入住最多出现 4 次（入住/每日出发·返回/退房）**同址，地址重复是噪音**；角色才是各行唯一差异、最有用。事件（入住/退房）semibold + 实心床；锚点（出发/返回）medium + 空心床，保持更退后。
   - **租车**：行 1 = `角色 · 公司`（Pick-up · 携程租车）；行 2 = **取/还车地点**。**保留地点**——取车 ≠ 还车，**地点会变、是端点最 actionable 的信息**，必须显示；角色只能与（短）公司名挤行 1。**不照搬住宿版式**：硬改成「公司名当锚 + 角色副行」会①丢地点（2 行装不下 公司+角色+地点）②把最没意义的「下单渠道」抬成锚并重复两次 → 以统一牺牲清晰，违原则。

@@ -984,7 +984,9 @@ private struct ItineraryLegConnector: View {
     let railColor: Color
     private let railWidth: CGFloat = 30        // = TimelineStopRow.railWidth
     private let railSpacing: CGFloat = 12       // = TimelineStopRow.railSpacing
-    private let legGap: CGFloat = 24            // = 原 TimelineStopRow.legGap
+    // 18（原 24）：rowHeight 46→52 使两侧 halfLine 9→12，leg 上下各多接 3pt 线 → 距离标签上下变长、圆心距
+    // 由 42 涨到 48 显飘。legGap 减 6 精确抵消，leg 圆心距回到改前的 42（原本就 OK），无 leg 行的舒服间距保留。
+    private let legGap: CGFloat = 18
 
     var body: some View {
         // 距离【夹在 Timeline 竖线里】：竖线在数字处被数字的背景切断、数字落在上下两段线中间、居中压在
@@ -1020,7 +1022,10 @@ private struct TimelineRail: View {
 
     static let width: CGFloat = 30
     static let spacing: CGFloat = 12
-    static let rowHeight: CGFloat = 46
+    // 52（原 46）：今晚多数行变成两行（住宿/地点带址/交通带航线/日历），两行内容塞进 46 后「上行副行↔下行标题」
+    // 仅剩 ~6–8pt，Carry 又刻意无分隔线靠留白分行 → 显紧。提到 52，行内呼吸 + 行间留白回到 ~12–13pt（对标
+    // Apple 带副标题行）。单一真源：所有行 + 日历事件统一跟随；圆点 28 不变、半线随高自适应、连续脊不断。
+    static let rowHeight: CGFloat = 52
     private let circleSize: CGFloat = 28
     private var halfLine: CGFloat { (Self.rowHeight - circleSize) / 2 }
     private var railColor: Color { dayColor.opacity(0.25) }
