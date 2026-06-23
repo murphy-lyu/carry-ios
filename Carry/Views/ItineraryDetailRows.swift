@@ -162,14 +162,18 @@ struct DetailSheetHeader: View {
             .frame(width: 40, height: 40)
             .accessibilityHidden(true)
             VStack(alignment: .leading, spacing: 2) {
+                // 标题/副标题可选取复制：长按 → 系统原生「拷贝」菜单（用户自己点）。承载标题里的身份字段
+                // （航班号 / 酒店名 / 地点名 / 活动名 / 租车公司）的复制，与字段行「长按即复制」是两种复制形式。
                 Text(title)
                     .font(titleFont)
                     .foregroundStyle(.primary)
+                    .textSelection(.enabled)
                     .background(heightReader($titleHeight))   // 量标题实际高（含折行）
                 if let subtitle, hasSubtitle {
                     Text(subtitle)
                         .font(.system(.subheadline, design: .rounded))
                         .foregroundStyle(.secondary)
+                        .textSelection(.enabled)
                 }
             }
             .frame(maxWidth: .infinity, alignment: .leading)
@@ -256,73 +260,91 @@ struct LabeledDetailRow: View {
     }
 }
 
-/// 带标签 + 点按拨号的信息行（电话）。点击直接拨打（tel:），方便行程中联系。
+/// 长按即复制：复制 + 轻震 + 居中「已复制」Toast + VoiceOver「拷贝」自定义动作（长按对旁白不可达，靠它兜底）。
+/// 详情卡内所有「可复制值」统一用它——值字段长按复制，轻点留给本职操作（拨号 / 打开链接 / 无）。
+private struct LongPressCopy: ViewModifier {
+    let value: String
+    @Environment(\.carryCopyToast) private var showToast
+    private func copy() {
+        guard !value.isEmpty else { return }
+        UIPasteboard.general.string = value
+        UIImpactFeedbackGenerator(style: .light).impactOccurred()
+        // 复用既有通用「Copied/已复制」（其值本就是通用复制成功，非「地址已复制」）。
+        showToast(NSLocalizedString("itinerary.stop.detail.address_copied", comment: ""))
+    }
+    func body(content: Content) -> some View {
+        content
+            .onLongPressGesture { copy() }
+            .accessibilityAction(named: Text("itinerary.detail.copy_action")) { copy() }
+    }
+}
+
+extension View {
+    /// 给任意「承载可复制文本」的视图加「长按复制」。见 `LongPressCopy`。
+    func longPressCopy(_ value: String) -> some View { modifier(LongPressCopy(value: value)) }
+}
+
+/// 带标签 + 点按拨号的信息行（电话）。**轻点拨号**（tel:）、**长按复制号码**（粘到聊天/通讯录）。
 struct CallableDetailRow: View {
     let labelKey: String
     let phone: String
 
     @Environment(\.openURL) private var openURL
 
+    private func call() {
+        let digits = phone.filter { $0.isNumber || $0 == "+" }
+        if !digits.isEmpty, let url = URL(string: "tel://\(digits)") { openURL(url) }
+    }
+
     var body: some View {
-        Button {
-            let digits = phone.filter { $0.isNumber || $0 == "+" }
-            if !digits.isEmpty, let url = URL(string: "tel://\(digits)") { openURL(url) }
-        } label: {
-            HStack(alignment: .center, spacing: 12) {
-                Image(systemName: "phone")
-                    .font(.system(size: 15)).foregroundStyle(.secondary).frame(width: 22)
-                    .accessibilityHidden(true)
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(LocalizedStringKey(labelKey))
-                        .font(.system(.caption, design: .rounded)).foregroundStyle(.secondary)
-                    // 电话值用烟蓝 = 「可点拨号」的信号（对标 Apple/Tripsy 链接色），替代尾部拨号图标。
-                    Text(phone)
-                        .font(.system(.subheadline, design: .rounded)).foregroundStyle(CarryAccent.color)
-                }
-                .frame(maxWidth: .infinity, alignment: .leading)
+        HStack(alignment: .center, spacing: 12) {
+            Image(systemName: "phone")
+                .font(.system(size: 15)).foregroundStyle(.secondary).frame(width: 22)
+                .accessibilityHidden(true)
+            VStack(alignment: .leading, spacing: 2) {
+                Text(LocalizedStringKey(labelKey))
+                    .font(.system(.caption, design: .rounded)).foregroundStyle(.secondary)
+                // 电话值用烟蓝 = 「可点拨号」的信号（对标 Apple/Tripsy 链接色），替代尾部拨号图标。
+                Text(phone)
+                    .font(.system(.subheadline, design: .rounded)).foregroundStyle(CarryAccent.color)
             }
-            .padding(.vertical, 11)
-            .contentShape(Rectangle())
+            .frame(maxWidth: .infinity, alignment: .leading)
         }
-        .buttonStyle(.plain)
-        .accessibilityLabel(Text(phone))
+        .padding(.vertical, 11)
+        .contentShape(Rectangle())
+        .onTapGesture { call() }
+        .accessibilityElement(children: .combine)
+        .accessibilityAddTraits(.isButton)
+        .accessibilityAction { call() }   // 旁白默认激活 = 拨号
+        .longPressCopy(phone)             // 旁白「拷贝」动作 = 复制号码
     }
 }
 
-/// 带标签 + 点按复制的信息行（地址、确认号等高频复制值）。触感 + 「已复制」反馈。
+/// 带标签 + **长按复制**的信息行（地址、确认号、车牌等高频复制值）。轻点不动作（留给本职/避免滚动误触）；
+/// 长按 → 复制 + 触感 + 居中「已复制」Toast。
 struct CopyableDetailRow: View {
     let icon: String
     let labelKey: String
     let value: String
 
-    /// 复制反馈走骨架的居中 Toast（替代尾部图标 + 行内「已复制」），卡片更干净。
-    @Environment(\.carryCopyToast) private var showToast
-
     var body: some View {
-        Button {
-            UIPasteboard.general.string = value
-            UIImpactFeedbackGenerator(style: .light).impactOccurred()
-            showToast(NSLocalizedString("itinerary.stop.detail.address_copied", comment: ""))
-        } label: {
-            // 整行轻点即复制；不再有尾部复制图标——「可复制」靠交互 + Toast 表达，卡片回归纯信息。
-            HStack(alignment: .center, spacing: 12) {
-                Image(systemName: icon)
-                    .font(.system(size: 15)).foregroundStyle(.secondary).frame(width: 22)
-                    .accessibilityHidden(true)
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(LocalizedStringKey(labelKey))
-                        .font(.system(.caption, design: .rounded)).foregroundStyle(.secondary)
-                    Text(value)
-                        .font(.system(.subheadline, design: .rounded)).foregroundStyle(.primary)
-                }
-                .frame(maxWidth: .infinity, alignment: .leading)
+        // 不再有尾部复制图标——「可复制」靠长按交互 + Toast 表达，卡片回归纯信息。
+        HStack(alignment: .center, spacing: 12) {
+            Image(systemName: icon)
+                .font(.system(size: 15)).foregroundStyle(.secondary).frame(width: 22)
+                .accessibilityHidden(true)
+            VStack(alignment: .leading, spacing: 2) {
+                Text(LocalizedStringKey(labelKey))
+                    .font(.system(.caption, design: .rounded)).foregroundStyle(.secondary)
+                Text(value)
+                    .font(.system(.subheadline, design: .rounded)).foregroundStyle(.primary)
             }
-            .padding(.vertical, 11)
-            .contentShape(Rectangle())
+            .frame(maxWidth: .infinity, alignment: .leading)
         }
-        .buttonStyle(.plain)
-        .accessibilityLabel(Text(value))
-        .accessibilityHint(Text("itinerary.stop.detail.copy_hint"))
+        .padding(.vertical, 11)
+        .contentShape(Rectangle())
+        .accessibilityElement(children: .combine)
+        .longPressCopy(value)
     }
 }
 
@@ -342,28 +364,28 @@ struct LinkDetailRow: View {
     }
 
     var body: some View {
-        Button {
-            if let resolvedURL { openURL(resolvedURL) }
-        } label: {
-            HStack(alignment: .center, spacing: 12) {
-                Image(systemName: "link")
-                    .font(.system(size: 15)).foregroundStyle(.secondary).frame(width: 22)
-                    .accessibilityHidden(true)
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(LocalizedStringKey(labelKey))
-                        .font(.system(.caption, design: .rounded)).foregroundStyle(.secondary)
-                    // 中段截断：长链接保留首尾（域名 + 末段），比尾部截断更可读。
-                    Text(urlString)
-                        .font(.system(.subheadline, design: .rounded)).foregroundStyle(CarryAccent.color)
-                        .lineLimit(1).truncationMode(.middle)
-                }
-                .frame(maxWidth: .infinity, alignment: .leading)
+        // 轻点打开链接、长按复制 URL（粘到别处/分享）。
+        HStack(alignment: .center, spacing: 12) {
+            Image(systemName: "link")
+                .font(.system(size: 15)).foregroundStyle(.secondary).frame(width: 22)
+                .accessibilityHidden(true)
+            VStack(alignment: .leading, spacing: 2) {
+                Text(LocalizedStringKey(labelKey))
+                    .font(.system(.caption, design: .rounded)).foregroundStyle(.secondary)
+                // 中段截断：长链接保留首尾（域名 + 末段），比尾部截断更可读。
+                Text(urlString)
+                    .font(.system(.subheadline, design: .rounded)).foregroundStyle(CarryAccent.color)
+                    .lineLimit(1).truncationMode(.middle)
             }
-            .padding(.vertical, 11)
-            .contentShape(Rectangle())
+            .frame(maxWidth: .infinity, alignment: .leading)
         }
-        .buttonStyle(.plain)
-        .accessibilityLabel(Text(urlString))
+        .padding(.vertical, 11)
+        .contentShape(Rectangle())
+        .onTapGesture { if let resolvedURL { openURL(resolvedURL) } }
+        .accessibilityElement(children: .combine)
+        .accessibilityAddTraits(.isButton)
+        .accessibilityAction { if let resolvedURL { openURL(resolvedURL) } }   // 旁白默认激活 = 打开
+        .longPressCopy(urlString)                                             // 旁白「拷贝」动作 = 复制链接
     }
 }
 

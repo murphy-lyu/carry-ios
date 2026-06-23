@@ -66,11 +66,11 @@ struct CalendarEventDetailView: View {
 
     private var infoCardRows: [AnyView] {
         var rows: [AnyView] = []
-        // 地点：系统事件的 location 是自由文本（常是多行地址），复用地点详情的 Address 标签、纯展示。
+        // 地点：系统事件的 location 是自由文本（常是多行地址）→ 长按可复制（粘到地图/发司机），与地点/住宿地址一致。
         if !event.location.isEmpty {
-            rows.append(AnyView(LabeledDetailRow(icon: "mappin.and.ellipse",
-                                                 labelKey: "itinerary.lodging.field.address",
-                                                 value: event.location)))
+            rows.append(AnyView(CopyableDetailRow(icon: "mappin.and.ellipse",
+                                                  labelKey: "itinerary.lodging.field.address",
+                                                  value: event.location)))
         }
         if !event.notes.isEmpty {
             rows.append(AnyView(NoteDetailRow(text: event.notes)))

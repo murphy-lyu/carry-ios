@@ -396,7 +396,7 @@ struct TransportDetailView: View {
                         .foregroundStyle(.secondary)
                         .lineLimit(1)
                 }
-                // 详细地址：出门最实用，放在名称下方，最多两行。
+                // 详细地址：出门最实用，放在名称下方，最多两行。长按可复制（粘到地图/发司机；租车取还车尤其需要）。
                 if let addr = p.address {
                     Text(addr)
                         .font(.system(.footnote, design: .rounded))
@@ -404,6 +404,8 @@ struct TransportDetailView: View {
                         .lineLimit(2)
                         .fixedSize(horizontal: false, vertical: true)
                         .padding(.top, 1)
+                        .contentShape(Rectangle())
+                        .longPressCopy(addr)
                 }
             }
             Spacer(minLength: 8)
