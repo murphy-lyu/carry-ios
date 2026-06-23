@@ -258,9 +258,13 @@ struct ItineraryView: View {
     }
 
     private var dayList: some View {
-        VStack(spacing: 8) {
+        // spacing 0 + 逐元素显式间距：地图↔日历条仍 8（地图 .bottom padding），日历条↔列表收紧——
+        // 原 8(VStack)+22(日期头 top)+6(单元格底余白)≈36 对「选日 picker→当天内容头」偏松（二者语义相连），
+        // 去掉那 8 → 仅 22+6≈28，更连贯；地图↔日历条不受影响（无副作用）。
+        VStack(spacing: 0) {
             ItineraryMapView(tripId: tripId, focusedDayId: activeFocusedDayId,
                              suppressEmptyInvite: isDatelessEmpty)
+                .padding(.bottom, 8)
             if isDatelessEmpty {
                 Spacer(minLength: 0)
                 datelessEmptyState
