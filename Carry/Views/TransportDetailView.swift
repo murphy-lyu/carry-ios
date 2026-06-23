@@ -458,7 +458,42 @@ struct TransportDetailView: View {
         if !rows.isEmpty { DetailRowGroup(rows: rows) }
     }
 
+    private var isGroundOrSea: Bool {
+        segment.mode == .train || segment.mode == .bus || segment.mode == .ferry
+    }
+
+    /// 火车/巴士/渡轮的信息行（与编辑 More 同序：Route name → Reservation → Coach(火) → Seat → Seat class(火/巴) → Type）。
+    private var groundSeaRows: [AnyView] {
+        var rows: [AnyView] = []
+        if !segment.routeName.isEmpty {
+            rows.append(AnyView(LabeledDetailRow(icon: "signpost.right", labelKey: "itinerary.transport.field.route_name", value: segment.routeName)))
+        }
+        if !segment.confirmationCode.isEmpty {
+            rows.append(AnyView(CopyableDetailRow(icon: "ticket", labelKey: "itinerary.transport.field.reservation", value: segment.confirmationCode)))
+        }
+        if segment.mode == .train, !segment.coachNumber.isEmpty {
+            rows.append(AnyView(LabeledDetailRow(icon: "train.side.middle.car", labelKey: "itinerary.transport.field.coach", value: segment.coachNumber)))
+        }
+        if !segment.seat.isEmpty {
+            rows.append(AnyView(LabeledDetailRow(icon: "chair", labelKey: "itinerary.transport.field.seat", value: segment.seat)))
+        }
+        if (segment.mode == .train || segment.mode == .bus), !segment.seatClass.isEmpty {
+            rows.append(AnyView(LabeledDetailRow(icon: "rosette", labelKey: "itinerary.transport.field.seat_class", value: segment.seatClass)))
+        }
+        if !segment.serviceType.isEmpty {
+            let key: String
+            switch segment.mode {
+            case .bus:   key = "itinerary.transport.field.bus_type"
+            case .ferry: key = "itinerary.transport.field.ferry_type"
+            default:     key = "itinerary.transport.field.train_type"
+            }
+            rows.append(AnyView(LabeledDetailRow(icon: "tag", labelKey: key, value: segment.serviceType)))
+        }
+        return rows
+    }
+
     private var detailRows: [AnyView] {
+        if isGroundOrSea { return groundSeaRows }
         var rows: [AnyView] = []
         // 随身要用的凭据（座位 / 确认号）：登机/检票时最先要找的，优先级高于描述性规格。
         if !segment.seat.isEmpty {

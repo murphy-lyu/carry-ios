@@ -452,6 +452,11 @@ final class TransportSegment: CostBearing {
     /// 电子客票号（13 位数字，如 781-2345678901）：与 confirmationCode(预订定位码/PNR) 不同——前者标识「已出票客票」、
     /// 退改/报销/部分航司值机用。仅航班有意义、纯手填（航班查询不返回）。空 = 未填。
     var eticketNumber: String = ""
+    /// 地面/水路交通选填（火车/巴士/渡轮，spec: itinerary-ground-transport-fields.md）；空 = 未填、各 mode 显隐见 UI。
+    var routeName: String = ""     // 线路/车次名（如「京沪高铁」/ Eurostar）；火/巴/渡。
+    var coachNumber: String = ""   // 车厢号（仅火车，如 08）。
+    var seatClass: String = ""     // 席别/座位等级，自由文本（火/巴，如 First class）；航班用 cabinClass、渡轮不展示。
+    var serviceType: String = ""   // 服务类型（火=Train type·Intercity、巴=Bus type、渡=Ferry type）；火/巴/渡。
     var note: String = ""
     /// 机型（如 "A320" / "Boeing 787 Dreamliner"）；航班号查询可自动回填，可空（spec: itinerary-flight-lookup.md）。
     var aircraftType: String = ""
@@ -512,6 +517,10 @@ final class TransportSegment: CostBearing {
         seat: String = "",
         confirmationCode: String = "",
         eticketNumber: String = "",
+        routeName: String = "",
+        coachNumber: String = "",
+        seatClass: String = "",
+        serviceType: String = "",
         note: String = "",
         aircraftType: String = "",
         cabinClass: String = "",
@@ -550,6 +559,10 @@ final class TransportSegment: CostBearing {
         self.seat = seat
         self.confirmationCode = confirmationCode
         self.eticketNumber = eticketNumber
+        self.routeName = routeName
+        self.coachNumber = coachNumber
+        self.seatClass = seatClass
+        self.serviceType = serviceType
         self.note = note
         self.aircraftType = aircraftType
         self.cabinClass = cabinClass
@@ -760,6 +773,31 @@ extension LodgingStay {
     func effectiveTimeZoneId(trip: TripBundle?) -> String {
         if !timeZoneId.isEmpty { return timeZoneId }
         return trip?.primaryTimeZoneId ?? TimeZone.current.identifier
+    }
+}
+
+extension TransportSegment {
+    /// 出发绝对时刻（按出发地时区，缺失回退设备时区）；未设出发时间 → nil。
+    /// 与 `NotificationManager.absoluteDate` 同算法：年月日按行程布局推、时分按目标时区落。
+    func absoluteDeparture(tripDeparture: Date) -> Date? {
+        Self.itineraryAbsoluteDate(tripDeparture: tripDeparture, dayOrder: departDayOrder,
+                                   minutes: departLocalMinutes, tzId: fromTimeZoneId)
+    }
+    /// 到达绝对时刻（按到达地时区）；未设到达时间 → nil。
+    func absoluteArrival(tripDeparture: Date) -> Date? {
+        Self.itineraryAbsoluteDate(tripDeparture: tripDeparture, dayOrder: arriveDayOrder,
+                                   minutes: arriveLocalMinutes, tzId: toTimeZoneId)
+    }
+    static func itineraryAbsoluteDate(tripDeparture: Date, dayOrder: Int, minutes: Int, tzId: String) -> Date? {
+        guard minutes >= 0 else { return nil }
+        let tz = TimeZone(identifier: tzId) ?? .current
+        guard let dayDate = Calendar.current.date(byAdding: .day, value: dayOrder, to: tripDeparture) else { return nil }
+        var comps = Calendar.current.dateComponents([.year, .month, .day], from: dayDate)
+        comps.hour = minutes / 60
+        comps.minute = minutes % 60
+        comps.timeZone = tz
+        var cal = Calendar(identifier: .gregorian); cal.timeZone = tz
+        return cal.date(from: comps)
     }
 }
 

@@ -109,6 +109,11 @@ struct BackupTransportSegment: Codable, Sendable {
     var aircraftType: String? = nil
     var cabinClass: String? = nil      // 舱位等级（可选 + 默认 nil：兼容旧备份）
     var eticketNumber: String? = nil   // 电子客票号（航班）；可选 + 默认 nil：兼容旧备份
+    // 地面/水路交通选填（火车/巴士/渡轮）；均可选 + 默认 nil：兼容旧备份。
+    var routeName: String? = nil
+    var coachNumber: String? = nil
+    var seatClass: String? = nil
+    var serviceType: String? = nil
     var distanceMeters: Double? = nil
     var durationMinutes: Int? = nil
     // 租车专属：车型 + 车牌（spec: itinerary-car-rental.md）；可选 + 默认 nil：兼容旧备份。
@@ -274,7 +279,9 @@ final class DataBackupManager {
                 arriveDayOrder: s.arriveDayOrder, arriveLocalMinutes: s.arriveLocalMinutes,
                 seat: s.seat, confirmationCode: s.confirmationCode, note: s.note, sortOrder: s.sortOrder,
                 costAmount: s.costAmount, costCurrencyCode: s.costCurrencyCode, costHomeAmount: s.costHomeAmount,
-                aircraftType: s.aircraftType, cabinClass: s.cabinClass, eticketNumber: s.eticketNumber, distanceMeters: s.distanceMeters, durationMinutes: s.durationMinutes,
+                aircraftType: s.aircraftType, cabinClass: s.cabinClass, eticketNumber: s.eticketNumber,
+                routeName: s.routeName, coachNumber: s.coachNumber, seatClass: s.seatClass, serviceType: s.serviceType,
+                distanceMeters: s.distanceMeters, durationMinutes: s.durationMinutes,
                 vehicleModel: s.vehicleModel, licensePlate: s.licensePlate,
                 fromAddress: s.fromAddress, toAddress: s.toAddress,
                 phone: s.phone,
@@ -723,6 +730,8 @@ final class DataBackupManager {
                     arriveDayOrder: bg.arriveDayOrder, arriveLocalMinutes: bg.arriveLocalMinutes,
                     seat: bg.seat, confirmationCode: bg.confirmationCode,
                     eticketNumber: bg.eticketNumber ?? "",
+                    routeName: bg.routeName ?? "", coachNumber: bg.coachNumber ?? "",
+                    seatClass: bg.seatClass ?? "", serviceType: bg.serviceType ?? "",
                     note: bg.note, aircraftType: bg.aircraftType ?? "", cabinClass: bg.cabinClass ?? "",
                     distanceMeters: bg.distanceMeters ?? 0, durationMinutes: bg.durationMinutes ?? 0,
                     vehicleModel: bg.vehicleModel ?? "", licensePlate: bg.licensePlate ?? "",

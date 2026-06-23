@@ -67,6 +67,10 @@ struct TransportEditView: View {
     @State private var seat = ""
     @State private var confirmationCode = ""
     @State private var eticketNumber = ""
+    @State private var routeName = ""      // 火/巴/渡：线路名
+    @State private var coachNumber = ""    // 火车：车厢号
+    @State private var seatClass = ""      // 火/巴：席别
+    @State private var serviceType = ""    // 火/巴/渡：类型
     @State private var note = ""
     @State private var aircraftType = ""
     @State private var cabinClass = ""   // CabinClass.rawValue，空 = 未填
@@ -219,8 +223,39 @@ struct TransportEditView: View {
     private var numberLabel: LocalizedStringKey {
         switch mode {
         case .flight: return "itinerary.transport.field.flight_number"
-        case .train:  return "itinerary.transport.field.train_number"
+        case .train, .bus, .ferry: return "itinerary.transport.field.transport_number"
         default:      return "itinerary.transport.field.number"
+        }
+    }
+
+    /// 线路/车次名（火车/巴士/渡轮顶部）：仅这三类显示。
+    private var showsRouteName: Bool { mode == .train || mode == .bus || mode == .ferry }
+
+    /// 预订码标签：火车/巴士/渡轮 = Reservation code、其余（航班/租车/其他）= Booking code。
+    private var confirmationLabel: LocalizedStringKey {
+        showsRouteName ? "itinerary.transport.field.reservation" : "itinerary.transport.field.confirmation"
+    }
+
+    /// 席别（火车/巴士；渡轮通常无、航班用 Cabin）。
+    private var showsSeatClass: Bool { mode == .train || mode == .bus }
+    /// 车厢号（仅火车）。
+    private var showsCoach: Bool { mode == .train }
+    /// 服务类型（火=Train type / 巴=Bus type / 渡=Ferry type）。
+    private var showsServiceType: Bool { mode == .train || mode == .bus || mode == .ferry }
+    private var serviceTypeLabel: LocalizedStringKey {
+        switch mode {
+        case .train: return "itinerary.transport.field.train_type"
+        case .bus:   return "itinerary.transport.field.bus_type"
+        case .ferry: return "itinerary.transport.field.ferry_type"
+        default:     return "itinerary.transport.field.train_type"
+        }
+    }
+    private var serviceTypePlaceholder: LocalizedStringKey {
+        switch mode {
+        case .train: return "itinerary.transport.field.train_type.placeholder"
+        case .bus:   return "itinerary.transport.field.bus_type.placeholder"
+        case .ferry: return "itinerary.transport.field.ferry_type.placeholder"
+        default:     return "itinerary.transport.field.train_type.placeholder"
         }
     }
 
@@ -235,12 +270,10 @@ struct TransportEditView: View {
         }
     }
 
-    /// 代码（IATA / 车站代码）与航站楼/站台：仅航班、火车有意义。
-    private var showsCode: Bool { mode == .flight || mode == .train }
-    private var showsTerminal: Bool { mode == .flight || mode == .train }
-    private var terminalLabel: LocalizedStringKey {
-        mode == .train ? "itinerary.transport.field.platform" : "itinerary.transport.field.terminal_only"
-    }
+    /// 代码（IATA）与航站楼：**仅航班**。火车/巴士/渡轮去掉 Code/Platform（无标准站码、站台多临场才知）。
+    private var showsCode: Bool { mode == .flight }
+    private var showsTerminal: Bool { mode == .flight }
+    private var terminalLabel: LocalizedStringKey { "itinerary.transport.field.terminal_only" }
 
     /// 段头：租车=取车/还车，其余=出发/到达。
     private func sectionHeaderLabel(isFrom: Bool) -> LocalizedStringKey {
@@ -283,6 +316,10 @@ struct TransportEditView: View {
                     .textInputAutocapitalization(.characters)
             }
             TextField(carrierLabel, text: $carrier)
+            // 线路/车次名（火车/巴士/渡轮）：自由文本，如「京沪高铁」/ Eurostar。
+            if showsRouteName {
+                TextField("itinerary.transport.field.route_name", text: $routeName)
+            }
         } header: {
             // 身份段以「实体名」作标题（与地点「Place」/住宿「住宿」同款处理）：按当前 mode 取——Flight/租车/火车…
             Text(LocalizedStringKey(mode.localizationKey))
@@ -477,103 +514,134 @@ struct TransportEditView: View {
 
     private var moreSection: some View {
         Section {
-            // 座位 / 确认号：常驻标签（填了值如「3B」「ABC123」也看得懂；空态标签即提示）。
-            if showsSeat {
-                LabeledContent {
-                    // 座位 = 字母+数字（如 32A，大小写随用户输入、不强制）。占位 32A 示格式。
-                    TextField("itinerary.transport.field.seat.placeholder",
-                              text: $seat.filteringInput(ItineraryInputFilter.alphanumeric))
-                        .multilineTextAlignment(.trailing)
-                } label: {
-                    Text("itinerary.transport.field.seat")
-                }
-            }
-            // 舱位等级（仅航班）：受控词表。用「Menu { Picker } + 自定义 label」（与日期 chip 同款已验证模式），
-            // 而非原生 .menu Picker——后者在 Form 行里固有高度偏大、破坏 More 表行高一致。自定义 label = 普通
-            // HStack（值 + chevron），高度与 TextField 齐；值色与其它行一致（未设=灰、设了=黑）。纯手动，空=未填。
-            if mode == .flight {
-                LabeledContent {
-                    Menu {
-                        Picker(selection: $cabinClass) {
-                            Text("cabin.unset").tag("")
-                            ForEach(CabinClass.allCases) { c in
-                                Text(LocalizedStringKey(c.localizationKey)).tag(c.rawValue)
-                            }
-                        } label: { EmptyView() }
-                    } label: {
-                        HStack(spacing: 4) {
-                            Text(cabinDisplayText)
-                            Image(systemName: "chevron.up.chevron.down")
-                                .font(.system(size: 11, weight: .semibold))
-                        }
-                        .foregroundStyle(cabinClass.isEmpty ? Color.secondary : Color.primary)
-                    }
-                } label: {
-                    Text("itinerary.flight.field.cabin")
-                }
-            }
-            LabeledContent {
-                // 确认号 = 字母+数字（即时过滤空格/符号）。**不强制大写**——部分订单号区分大小写。
-                // 占位用中性 pattern 示例（ABC123）：右对齐浅灰，既示「可输入」又示格式。
-                TextField("itinerary.transport.field.confirmation.placeholder",
-                          text: $confirmationCode.filteringInput(ItineraryInputFilter.alphanumeric))
-                    .multilineTextAlignment(.trailing)
-                    .autocorrectionDisabled()
-            } label: {
-                Text("itinerary.transport.field.confirmation")
-            }
-            // 电子客票号：仅航班（13 位**纯数字**，与确认号/PNR 不同——标识已出票客票，退改/报销/部分值机用）。
-            // 用 `.numeric` 即时过滤（字母/全角/连字符/空格进不去，781-… 的连字符自动剥成纯数字、属规范存法）；占位用真实示例。
-            if mode == .flight {
-                LabeledContent {
-                    TextField("itinerary.flight.field.eticket.placeholder",
-                              text: $eticketNumber.filteringInput(ItineraryInputFilter.numeric))
-                        .multilineTextAlignment(.trailing)
-                        .autocorrectionDisabled()
-                } label: {
-                    Text("itinerary.flight.field.eticket")
-                }
-            }
-            // 机型：可编辑（航班搜索预填后可改、手动添加可填）。常驻于「更多」，顶部只留航班号/承运方。
-            // 存接口原值，详情页展示时再经 aircraftModelDisplay 剥品牌前缀。
-            if mode == .flight {
-                LabeledContent {
-                    TextField("itinerary.flight.field.aircraft.placeholder", text: $aircraftType)
-                        .multilineTextAlignment(.trailing)
-                } label: {
-                    Text("itinerary.flight.field.aircraft")
-                }
-            }
-            // 车型 / 车牌：仅租车显示（你拿到的那台具体的车），都非必填、空态标签即提示。
-            if mode == .carRental {
-                // 占位均用中性 pattern 示例（右对齐浅灰）：示「可输入」+ 示格式，不锁某国格式。
-                LabeledContent {
-                    TextField("itinerary.transport.field.vehicle_model.placeholder", text: $vehicleModel)
-                        .multilineTextAlignment(.trailing)
-                } label: {
-                    Text("itinerary.transport.field.vehicle_model")
-                }
-                LabeledContent {
-                    TextField("itinerary.transport.field.plate.placeholder", text: $licensePlate)
-                        .multilineTextAlignment(.trailing)
-                        .autocorrectionDisabled()
-                        .textInputAutocapitalization(.characters)
-                } label: {
-                    Text("itinerary.transport.field.plate")
-                }
-                // 电话：取车点搜索可自动回填，也可手填（方便行程中联系）。= 数字 + `+-() 空格`。
-                LabeledContent {
-                    TextField("itinerary.transport.field.phone.placeholder",
-                              text: $phone.filteringInput(ItineraryInputFilter.phone))
-                        .multilineTextAlignment(.trailing)
-                        .keyboardType(.phonePad)
-                } label: {
-                    Text("itinerary.transport.field.phone")
-                }
+            if showsRouteName {
+                // 火车/巴士/渡轮：Reservation → Coach(火) → Seat → Seat class(火/巴) → Type(火/巴/渡)
+                confirmationRow
+                if showsCoach { coachRow }
+                if showsSeat { seatRow }
+                if showsSeatClass { seatClassRow }
+                if showsServiceType { serviceTypeRow }
+            } else {
+                // 航班 / 租车 / 其他：保持原顺序
+                if showsSeat { seatRow }
+                if mode == .flight { cabinRow }
+                confirmationRow
+                if mode == .flight { eticketRow }
+                if mode == .flight { aircraftRow }
+                if mode == .carRental { vehicleRow; plateRow; phoneRow }
             }
         } header: {
             Text("itinerary.transport.section.more")
         }
+    }
+
+    // MARK: More 行（按 mode 在 moreSection 里组合；常驻标签、空态即提示）
+
+    @ViewBuilder private var seatRow: some View {
+        LabeledContent {
+            // 座位 = 字母+数字（如 11A）。占位示格式。
+            TextField("itinerary.transport.field.seat.placeholder",
+                      text: $seat.filteringInput(ItineraryInputFilter.alphanumeric))
+                .multilineTextAlignment(.trailing)
+        } label: { Text("itinerary.transport.field.seat") }
+    }
+
+    // 舱位等级（仅航班）：受控词表，Menu{Picker}+自定义 label（高度与 TextField 齐，不破坏 More 行高一致）。
+    @ViewBuilder private var cabinRow: some View {
+        LabeledContent {
+            Menu {
+                Picker(selection: $cabinClass) {
+                    Text("cabin.unset").tag("")
+                    ForEach(CabinClass.allCases) { c in
+                        Text(LocalizedStringKey(c.localizationKey)).tag(c.rawValue)
+                    }
+                } label: { EmptyView() }
+            } label: {
+                HStack(spacing: 4) {
+                    Text(cabinDisplayText)
+                    Image(systemName: "chevron.up.chevron.down")
+                        .font(.system(size: 11, weight: .semibold))
+                }
+                .foregroundStyle(cabinClass.isEmpty ? Color.secondary : Color.primary)
+            }
+        } label: { Text("itinerary.flight.field.cabin") }
+    }
+
+    // 预订码：标签按 mode 切（航班/租车=Booking code、火车/巴士/渡轮=Reservation code）。占位中性 ABC123。
+    @ViewBuilder private var confirmationRow: some View {
+        LabeledContent {
+            TextField("itinerary.transport.field.confirmation.placeholder",
+                      text: $confirmationCode.filteringInput(ItineraryInputFilter.alphanumeric))
+                .multilineTextAlignment(.trailing)
+                .autocorrectionDisabled()
+        } label: { Text(confirmationLabel) }
+    }
+
+    // 电子客票号（仅航班，纯数字）。
+    @ViewBuilder private var eticketRow: some View {
+        LabeledContent {
+            TextField("itinerary.flight.field.eticket.placeholder",
+                      text: $eticketNumber.filteringInput(ItineraryInputFilter.numeric))
+                .multilineTextAlignment(.trailing)
+                .autocorrectionDisabled()
+        } label: { Text("itinerary.flight.field.eticket") }
+    }
+
+    // 机型（仅航班）。
+    @ViewBuilder private var aircraftRow: some View {
+        LabeledContent {
+            TextField("itinerary.flight.field.aircraft.placeholder", text: $aircraftType)
+                .multilineTextAlignment(.trailing)
+        } label: { Text("itinerary.flight.field.aircraft") }
+    }
+
+    // 车厢号（仅火车，如 08）：字母+数字（多数纯数字，少数线路 coach 带字母）。
+    @ViewBuilder private var coachRow: some View {
+        LabeledContent {
+            TextField("itinerary.transport.field.coach.placeholder",
+                      text: $coachNumber.filteringInput(ItineraryInputFilter.alphanumeric))
+                .multilineTextAlignment(.trailing)
+        } label: { Text("itinerary.transport.field.coach") }
+    }
+
+    // 席别（火车/巴士）：自由文本，各国席别名差异大、不做固定 picker。占位 First class。
+    @ViewBuilder private var seatClassRow: some View {
+        LabeledContent {
+            TextField("itinerary.transport.field.seat_class.placeholder", text: $seatClass)
+                .multilineTextAlignment(.trailing)
+        } label: { Text("itinerary.transport.field.seat_class") }
+    }
+
+    // 类型（Train/Bus/Ferry type）：自由文本，标签+占位按 mode 切。
+    @ViewBuilder private var serviceTypeRow: some View {
+        LabeledContent {
+            TextField(serviceTypePlaceholder, text: $serviceType)
+                .multilineTextAlignment(.trailing)
+        } label: { Text(serviceTypeLabel) }
+    }
+
+    // 车型 / 车牌 / 电话（仅租车）。
+    @ViewBuilder private var vehicleRow: some View {
+        LabeledContent {
+            TextField("itinerary.transport.field.vehicle_model.placeholder", text: $vehicleModel)
+                .multilineTextAlignment(.trailing)
+        } label: { Text("itinerary.transport.field.vehicle_model") }
+    }
+    @ViewBuilder private var plateRow: some View {
+        LabeledContent {
+            TextField("itinerary.transport.field.plate.placeholder", text: $licensePlate)
+                .multilineTextAlignment(.trailing)
+                .autocorrectionDisabled()
+                .textInputAutocapitalization(.characters)
+        } label: { Text("itinerary.transport.field.plate") }
+    }
+    @ViewBuilder private var phoneRow: some View {
+        LabeledContent {
+            TextField("itinerary.transport.field.phone.placeholder",
+                      text: $phone.filteringInput(ItineraryInputFilter.phone))
+                .multilineTextAlignment(.trailing)
+                .keyboardType(.phonePad)
+        } label: { Text("itinerary.transport.field.phone") }
     }
 
     // 费用 / 备注 各自独立 Section、固定顺序（费用 → 备注 → 附件），不与类型字段混排。
@@ -658,6 +726,7 @@ struct TransportEditView: View {
             if seg.departLocalMinutes >= 0 { hasDepartTime = true; departTime = dateFromMinutes(seg.departLocalMinutes) }
             if seg.arriveLocalMinutes >= 0 { hasArriveTime = true; arriveTime = dateFromMinutes(seg.arriveLocalMinutes) }
             seat = seg.seat; confirmationCode = seg.confirmationCode; eticketNumber = seg.eticketNumber; note = seg.note
+            routeName = seg.routeName; coachNumber = seg.coachNumber; seatClass = seg.seatClass; serviceType = seg.serviceType
             // 机型剥品牌前缀展示（"Airbus A321" → "A321"），与详情页/Trip Book 一致；存的也归一为型号。
             aircraftType = aircraftModelDisplay(seg.aircraftType)
             cabinClass = seg.cabinClass
@@ -720,6 +789,11 @@ struct TransportEditView: View {
         let savedAircraft = mode == .flight ? aircraftType : ""
         let savedCabin = mode == .flight ? cabinClass : ""
         let savedEticket = mode == .flight ? eticketNumber : ""   // 电子客票号仅航班
+        // 地面/水路字段按 mode gate（切到不适用的 mode 时不串）：
+        let savedRouteName = showsRouteName ? routeName : ""       // 火/巴/渡
+        let savedCoach = showsCoach ? coachNumber : ""             // 仅火车
+        let savedSeatClass = showsSeatClass ? seatClass : ""       // 火/巴
+        let savedServiceType = showsServiceType ? serviceType : "" // 火/巴/渡
         let savedDistance = mode == .flight ? distanceMeters : 0
         let savedDuration = mode == .flight ? durationMinutes : 0
         // 车型 / 车牌 / 电话仅租车有意义；切到其它模式一并清空，避免残留。
@@ -752,7 +826,9 @@ struct TransportEditView: View {
                 toAddress: savedToAddressFinal,
                 departDayOrder: departDayOrder, departLocalMinutes: departMinutes,
                 arriveDayOrder: safeArriveDay, arriveLocalMinutes: arriveMinutes,
-                seat: savedSeat, confirmationCode: confirmationCode, eticketNumber: savedEticket, note: note,
+                seat: savedSeat, confirmationCode: confirmationCode, eticketNumber: savedEticket,
+                routeName: savedRouteName, coachNumber: savedCoach, seatClass: savedSeatClass, serviceType: savedServiceType,
+                note: note,
                 aircraftType: savedAircraft, cabinClass: savedCabin, distanceMeters: savedDistance, durationMinutes: savedDuration,
                 vehicleModel: savedVehicleModel, licensePlate: savedLicensePlate, phone: savedPhone
             )
@@ -772,7 +848,9 @@ struct TransportEditView: View {
                 toAddress: savedToAddressFinal,
                 departDayOrder: departDayOrder, departLocalMinutes: departMinutes,
                 arriveDayOrder: safeArriveDay, arriveLocalMinutes: arriveMinutes,
-                seat: savedSeat, confirmationCode: confirmationCode, eticketNumber: savedEticket, note: note,
+                seat: savedSeat, confirmationCode: confirmationCode, eticketNumber: savedEticket,
+                routeName: savedRouteName, coachNumber: savedCoach, seatClass: savedSeatClass, serviceType: savedServiceType,
+                note: note,
                 aircraftType: savedAircraft, cabinClass: savedCabin, distanceMeters: savedDistance, durationMinutes: savedDuration,
                 vehicleModel: savedVehicleModel, licensePlate: savedLicensePlate, phone: savedPhone
             ) {

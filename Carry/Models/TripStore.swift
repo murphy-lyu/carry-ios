@@ -719,6 +719,8 @@ final class TripStore: ObservableObject {
                     arriveDayOrder: seg.arriveDayOrder, arriveLocalMinutes: seg.arriveLocalMinutes,
                     seat: seg.seat, confirmationCode: seg.confirmationCode,
                     eticketNumber: seg.eticketNumber,
+                    routeName: seg.routeName, coachNumber: seg.coachNumber,
+                    seatClass: seg.seatClass, serviceType: seg.serviceType,
                     note: seg.note, aircraftType: seg.aircraftType, cabinClass: seg.cabinClass,
                     distanceMeters: seg.distanceMeters, durationMinutes: seg.durationMinutes,
                     vehicleModel: seg.vehicleModel, licensePlate: seg.licensePlate,
@@ -1426,6 +1428,10 @@ final class TripStore: ObservableObject {
         seat: String = "",
         confirmationCode: String = "",
         eticketNumber: String = "",
+        routeName: String = "",
+        coachNumber: String = "",
+        seatClass: String = "",
+        serviceType: String = "",
         note: String = "",
         aircraftType: String = "",
         cabinClass: String = "",
@@ -1467,6 +1473,10 @@ final class TripStore: ObservableObject {
             seat: seat,
             confirmationCode: confirmationCode,
             eticketNumber: eticketNumber,
+            routeName: routeName,
+            coachNumber: coachNumber,
+            seatClass: seatClass,
+            serviceType: serviceType,
             note: note,
             aircraftType: aircraftType,
             cabinClass: cabinClass,
@@ -1514,6 +1524,10 @@ final class TripStore: ObservableObject {
         seat: String? = nil,
         confirmationCode: String? = nil,
         eticketNumber: String? = nil,
+        routeName: String? = nil,
+        coachNumber: String? = nil,
+        seatClass: String? = nil,
+        serviceType: String? = nil,
         note: String? = nil,
         aircraftType: String? = nil,
         cabinClass: String? = nil,
@@ -1549,6 +1563,10 @@ final class TripStore: ObservableObject {
         if let seat { seg.seat = seat }
         if let confirmationCode { seg.confirmationCode = confirmationCode }
         if let eticketNumber { seg.eticketNumber = eticketNumber }
+        if let routeName { seg.routeName = routeName }
+        if let coachNumber { seg.coachNumber = coachNumber }
+        if let seatClass { seg.seatClass = seatClass }
+        if let serviceType { seg.serviceType = serviceType }
         if let note { seg.note = note }
         if let aircraftType { seg.aircraftType = aircraftType }
         if let cabinClass { seg.cabinClass = cabinClass }
