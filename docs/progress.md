@@ -79,7 +79,7 @@
 
 **记忆**：存了 `carry-unify-in-service-of-beauty`（美的前提下统一、不以统一牺牲美）。
 
-**新会话 TODO**：① 日期选择器 `.contentMargins` 20pt 待真机终验（觉得多/少改个数）；② 住宿名称段「Lodging」标题、其它交通(火车/巴士/渡轮)细节核查；③ **Dark Mode 终验**——**代码级审计已过（2026-06-23）**：行程列表/详情/编辑全用语义色 + 自适应 token（`ItineraryDayPalette` 含 light/dark 两套、`legibleInk` 按亮度选墨、`BottomBarGlass`/Toast/材质均自适应），无硬编码深色 bug；**仅剩真机视觉确认**（日历叠加行退后感、复制 Toast/底部玻璃对比、距离段切口无亮晕、provider 浅灰可读、深色 Form 占位、地图卡边缘）；④ 阶段 2 剩余编辑页打磨。
+**新会话 TODO**：① 日期选择器 `.contentMargins` 20pt 待真机终验（觉得多/少改个数）；② 住宿名称段「Lodging」标题、其它交通(火车/巴士/渡轮)细节核查；③ **Dark Mode 终验 ✅ 已过（2026-06-23，代码 + 真机关键屏）**：代码全用语义色 + 自适应 token（`ItineraryDayPalette` 含 light/dark 两套、`legibleInk` 按亮度选墨、`BottomBarGlass`/Toast/材质均自适应），无硬编码深色 bug；真机截图复核行程列表 / 航班详情(含 e-ticket) / 住宿详情 / 编辑住宿 / 复制 Toast 均干净（层级对、对比够、无发灰/亮晕）。**唯一未截到**：日历叠加行（该趟无 overlay 事件），代码自适应、低风险，下次带日历事件的深色屏顺带一扫即可；④ 阶段 2 剩余编辑页打磨。
 
 ## 上次改动摘要（通知默认/退房模型/竞态+64配额 · 权限&法务审计 · 抹掉所有数据 · 数据二级页 · Roadmap 重梳 · 2026-06-21 深夜）
 
