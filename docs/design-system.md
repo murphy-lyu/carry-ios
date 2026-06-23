@@ -245,7 +245,7 @@ Apple 原生风格，极简、克制、优雅。
 - **根级无 Tab Bar**：根=行程首页（足迹地球 + Sheet）。上文「Tab Bar 背景」token 现仅历史参考，根级已不再使用 TabView。
 - **设置入口**：首页 hero 右上 gear（圆形，`secondary` 色）→ 以 sheet 打开（带「完成」关闭）；空状态另置一枚 gear（零行程也可达）。
 - **创建 FAB**：右下悬浮，56pt 圆，`CarryAccent` 实心 + 白 `plus`，阴影 radius 10 / y 4，按压缩 0.92。
-- **底部胶囊切换（行程 ｜ 打包）**：居中悬浮于安全区底部；`.regularMaterial` 胶囊 + `primary.opacity(0.06)` 描边 + 阴影；选中段 `CarryAccent` 实心胶囊 + 白字、未选 `.secondary`；切换用 `.spring(duration:0.3, bounce:0.2)` + light 触感。
+- **底部胶囊切换（行程 ｜ 打包）**：居中悬浮于安全区底部；胶囊本体走 **`BottomBarGlass`（与首页底栏单一真源，见 §底栏悬浮玻璃）**——iOS 26 原生 Liquid Glass，否则 `ultraThinMaterial` + 叠白 + 白描边 + 阴影；选中段 `CarryAccent` 实心胶囊 + 白字、未选 `.secondary`；切换用 `.spring(duration:0.3, bounce:0.2)` + light 触感。**禁回 `regularMaterial` + 黑色叠层**——亮底上发灰显「脏」（2026-06-23 修正：原 regularMaterial 比首页 ultraThinMaterial 厚、且往黑里叠 0.02，故偏灰）。
 
 ### 行程规划组件（2026-06-12，feature 分支：itinerary-route-planning）
 
@@ -300,15 +300,20 @@ Apple 原生风格，极简、克制、优雅。
 
   - **② `bottomContentFade`** —— 用于**浮动元素**（玻璃胶囊栏 / 圆角浮卡，**不该被实心遮挡**），**叠在滚动内容上**（overlay）。在内容底部叠一段「透明→页面底色」渐变，内容向背景**消隐**、浮动元素**仍浮于其上、保通透**（**不**在其后垫整块实心）。**已落地**：首页底部 glass 胶囊栏、ItemPicker 智能预览圆角条。
 
-  - **③ `bottomBarFade`（2026-06-19 新增）** —— ②的「背景版」，用于浮动栏**坐在 `safeAreaInset(.bottom)` 里**的场景（如行程/打包切换器）。结构同 `BottomBarScrim`（`.padding(.top, fadeHeight)` + 背景 `ignoresSafeArea(.bottom)`），但填充由「实心」换成「透明→底端半透（`peakOpacity` 0.92）」的**通透**渐变——内容在栏后柔和消隐却**仍透出**，不被整块实心压短可视区。**配合磨砂胶囊**：浮动胶囊背景用 `.regularMaterial`（半透同时**模糊**背后内容，糊成柔光、不透出清晰字 → 「通透却不脏」，对齐 iOS 原生悬浮栏），单靠 `Color.opacity` 平涂只调暗不模糊、会让清晰文字穿透显脏。**已落地**：行程/打包切换器。
+  - **③ `bottomBarFade`（2026-06-19 新增）** —— ②的「背景版」，用于浮动栏**坐在 `safeAreaInset(.bottom)` 里**的场景（如行程/打包切换器）。结构同 `BottomBarScrim`（`.padding(.top, fadeHeight)` + 背景 `ignoresSafeArea(.bottom)`），但填充由「实心」换成「透明→底端半透（`peakOpacity` 0.92）」的**通透**渐变——内容在栏后柔和消隐却**仍透出**，不被整块实心压短可视区。**配合玻璃胶囊**：浮动胶囊本体用 **`BottomBarGlass`**（与首页底栏同一套：iOS 26 Liquid Glass / 否则 `ultraThinMaterial` + 叠白 + 白描边）——半透同时**模糊**背后内容、糊成柔光「通透却不脏」，单靠 `Color.opacity` 平涂只调暗不模糊、会让清晰文字穿透显脏。**已落地**：行程/打包切换器。
 
   - **⚠️ 目标色判据（2026-06-19 踩坑）：淡出/垫底色必须 == 该页底部「最上层不透明层」实际渲染色，不是页面根色。** 容易判反：行程详情根是 `CarrySubtleBackground`(暗底端 0.08)，但两个 tab 的内容层（ItineraryView / packingContent）都铺 `systemBackground`(纯黑) + `.ignoresSafeArea(.bottom)` **盖住了根** → 底部真实是纯黑；按"根"判而用 0.08 baseColor，就在纯黑上显**比背景亮的灰雾**（仅 Dark 可见，浅色 0.98 vs 1.0 近乎无差）。现已两面统一淡出 `systemBackground`。排查同类问题用**实测/截图看真实底色**，别静态读"根背景"。另：UIKit `CAGradientLayer.colors` 的 CGColor 不随 light/dark trait 自适应（`FXBottomFadeView` 深色停白），须 `registerForTraitChanges` 重设；SwiftUI `Color(动态UIColor)` 则自适应。
 
   - **选型**：① 不透明整宽 CTA 底栏 → `BottomBarScrim`（实底背书主操作）；② 浮动控件**叠在滚动内容上** → `bottomContentFade`（overlay 版）；③ 浮动控件**坐在 `safeAreaInset` 里** → `bottomBarFade`（背景版，通透）。垫实心会杀掉玻璃通透 → 浮动控件一律走 ②/③。
 
-  - **性能**：①②③ 的渐变都是纯 `LinearGradient` + `allowsHitTesting(false)`——**不用 `.mask`/`.blur`**，故不触发离屏渲染、不挡点击、开销极低。**例外**：浮动胶囊**本体**的 `.regularMaterial` 磨砂是有意为之（模糊背后内容、防穿透显脏），仅用在小面积的胶囊上、不铺整条底栏（别把整条 fade 退回 material）。
+  - **性能**：①②③ 的渐变都是纯 `LinearGradient` + `allowsHitTesting(false)`——**不用 `.mask`/`.blur`**，故不触发离屏渲染、不挡点击、开销极低。**例外**：浮动胶囊**本体**的玻璃（`BottomBarGlass`：Liquid Glass / `ultraThinMaterial`）是有意为之（模糊背后内容、防穿透显脏），仅用在小面积的胶囊上、不铺整条底栏（别把整条 fade 退回 material）。
 
   - 为何改「禁渐变」：原规则针对 `.regularMaterial` 在深背景上成**色带**——根因是「材质」非「渐变」。淡出到页面色的渐变无色带、且让内容优雅消隐（north-star §3），更近 Apple 浮动栏。仍**禁止**：材质/雾化层；`BottomBarScrim` 的实心区透出列表内容。
+
+### 底栏悬浮玻璃 `BottomBarGlass`（单一真源，2026-06-23）
+所有「悬浮在安全区底部的玻璃胶囊」——首页底栏（搜索/Trip Book/＋）、行程详情底部「行程｜打包」切换器——**共用同一个 `BottomBarGlass` ViewModifier**（`ViewModifiers.swift`，传 `shape`）。配方:**iOS 26 走原生 Liquid Glass** `.glassEffect(.regular.interactive(), in: shape)`；iOS 17–25 回退 `.ultraThinMaterial` + **叠白**（亮 0.20 / 暗 0.02，往白里提）+ **白描边**（亮 0.34 / 暗 0.18）+ 阴影。
+- **为什么发白而非发灰**:`ultraThinMaterial` 比 `regularMaterial` 通透、叠**白**而非叠黑 → 亮底上干净通透。**禁用 `regularMaterial` + 黑色叠层**（更厚 + 往暗压 = 亮底发灰显「脏」，行程切换器曾犯、2026-06-23 统一到本组件修正）。
+- **单一真源**:任何底栏胶囊改材质只改这一处;新增悬浮底栏胶囊一律 `.modifier(BottomBarGlass(shape:))`，不要自写 material。
 
 - 主按钮统一（Primary CTA）：
 - 背景必须实心不透明，禁用态同样实心（不可通过 opacity 降级）。

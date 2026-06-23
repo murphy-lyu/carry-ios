@@ -622,3 +622,27 @@ struct CarryConfirmationDialog: View {
         .transition(.opacity.combined(with: .scale(scale: 0.96, anchor: .center)))
     }
 }
+
+/// 底栏悬浮玻璃背景（首页底栏 + 行程规划底部「行程/打包」切换器共用，单一真源）：
+/// iOS 26 用原生 Liquid Glass；iOS 17–25 回退为 ultraThinMaterial 自定义玻璃面（通透发白、不发灰）。
+/// 用 `.ultraThinMaterial`（比 regularMaterial 更通透）+ 叠白（亮 0.20 / 暗 0.02）往白里提 + 白描边，
+/// 故「通透而不脏」；切勿改回 regularMaterial + 黑色叠层（会在亮底上发灰显脏）。
+struct BottomBarGlass<S: InsettableShape>: ViewModifier {
+    let shape: S
+    @Environment(\.colorScheme) private var colorScheme
+    func body(content: Content) -> some View {
+        if #available(iOS 26.0, *) {
+            content.glassEffect(.regular.interactive(), in: shape)
+        } else {
+            content
+                .background(
+                    shape
+                        .fill(.ultraThinMaterial)
+                        .overlay(shape.fill(Color.white.opacity(colorScheme == .dark ? 0.02 : 0.20)))
+                        .overlay(shape.strokeBorder(Color.white.opacity(colorScheme == .dark ? 0.18 : 0.34), lineWidth: 1))
+                        .shadow(color: Color.black.opacity(colorScheme == .dark ? 0.26 : 0.13), radius: 20, x: 0, y: 7)
+                )
+                .clipShape(shape)
+        }
+    }
+}

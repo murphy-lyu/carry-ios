@@ -989,27 +989,6 @@ struct HomeView: View {
         }
     }
 
-    /// 底栏玻璃背景：iOS 26 用原生 Liquid Glass（在 `GlassEffectContainer` 内可与相邻
-    /// 元素融合/吸附）；iOS 17–25 回退为 ultraThinMaterial 自定义玻璃面（无融合）。
-    private struct BottomBarGlass<S: InsettableShape>: ViewModifier {
-        let shape: S
-        @Environment(\.colorScheme) private var colorScheme
-        func body(content: Content) -> some View {
-            if #available(iOS 26.0, *) {
-                content.glassEffect(.regular.interactive(), in: shape)
-            } else {
-                content
-                    .background(
-                        shape
-                            .fill(.ultraThinMaterial)
-                            .overlay(shape.fill(Color.white.opacity(colorScheme == .dark ? 0.02 : 0.20)))
-                            .overlay(shape.strokeBorder(Color.white.opacity(colorScheme == .dark ? 0.18 : 0.34), lineWidth: 1))
-                            .shadow(color: Color.black.opacity(colorScheme == .dark ? 0.26 : 0.13), radius: 20, x: 0, y: 7)
-                    )
-                    .clipShape(shape)
-            }
-        }
-    }
 
     private var tripBookSheet: some View {
         let stats = TripBookStats.from(trips: store.trips)

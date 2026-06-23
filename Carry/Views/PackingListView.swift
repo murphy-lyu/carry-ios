@@ -546,25 +546,9 @@ struct PackingListView: View {
                 faceSegment(.packing, title: "detail.tab.packing", icon: "checklist")
             }
             .padding(6)
-            .background(
-                // 磨砂玻璃材质：半透的同时对背后内容做模糊，胶囊正后方的滚动内容被糊成柔光、
-                // 不再透出清晰文字（区别于平涂半透色——那只调暗、不模糊，文字会清晰穿透显脏）。
-                // 这是 iOS 原生悬浮栏「通透却不脏」的根（Tab Bar / 地图底部栏同理）。
-                RoundedRectangle(cornerRadius: 18, style: .continuous)
-                    .fill(.regularMaterial)
-                    // 叠一层极淡同色调，保留原有的明暗层次、避免纯材质在亮底图上发灰。
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 18, style: .continuous)
-                            .fill(colorScheme == .dark
-                                  ? Color.white.opacity(0.04)
-                                  : Color.black.opacity(0.02))
-                    )
-            )
-            .overlay(
-                RoundedRectangle(cornerRadius: 18, style: .continuous)
-                    .strokeBorder(Color.primary.opacity(colorScheme == .dark ? 0.08 : 0.06), lineWidth: 1)
-            )
-            .shadow(color: .black.opacity(colorScheme == .dark ? 0.18 : 0.08), radius: 14, x: 0, y: 5)
+            // 与首页底栏同一套玻璃（`BottomBarGlass`，单一真源）：iOS 26 原生 Liquid Glass，否则 ultraThinMaterial
+            // + 叠白 + 白描边 → 通透发白、不发灰。原先用 regularMaterial + 黑色叠层在亮底上显灰「脏」，已对齐首页。
+            .modifier(BottomBarGlass(shape: RoundedRectangle(cornerRadius: 18, style: .continuous)))
             .padding(.horizontal, 16)
         }
         .frame(maxWidth: .infinity)
