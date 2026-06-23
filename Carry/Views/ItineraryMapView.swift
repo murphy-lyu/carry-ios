@@ -354,7 +354,7 @@ struct ItineraryMapView: View {
     private func mapAnnotations(for days: [ItineraryDay], dimmed: Bool = false) -> some MapContent {
         ForEach(dayMapData(for: days)) { day in
             ForEach(day.stops, id: \.stop.id) { entry in
-                Annotation(entry.stop.name, coordinate: entry.stop.coordinate!) {
+                Annotation(entry.stop.displayName, coordinate: entry.stop.coordinate!) {
                     stopMarker(index: entry.localIndex + 1, color: day.color, dimmed: dimmed)
                 }
             }

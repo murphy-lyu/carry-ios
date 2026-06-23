@@ -27,7 +27,9 @@ struct PhotoTripReviewView: View {
 
     var body: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: 18) {
+            // LazyVStack：缩略图 UIImage(data:) 在 body 内同步解码，懒加载使只有可见天的照片才解码，
+            // 避免大批量导入进预览时一次性解码全部缩略图、首帧卡顿。
+            LazyVStack(alignment: .leading, spacing: 18) {
                 ForEach(Array(draft.days.enumerated()), id: \.element.id) { dayIndex, day in
                     daySection(dayIndex: dayIndex, day: day)
                 }
@@ -263,8 +265,16 @@ struct PhotoTripReviewView: View {
         place.name.isEmpty ? NSLocalizedString("phototrip.place.untitled", comment: "") : place.name
     }
 
+    // 静态复用：DateFormatter 初始化昂贵（locale/ICU 加载），逐 place 卡片新建会在大批量导入滚动时造成内存抖动。
+    private static let hourMinuteFormatter: DateFormatter = {
+        let f = DateFormatter(); f.dateFormat = "HH:mm"; return f
+    }()
+    private static let shotDateFormatter: DateFormatter = {
+        let f = DateFormatter(); f.locale = .current; f.setLocalizedDateFormatFromTemplate("Md"); return f
+    }()
+
     private func timeRange(_ place: PlaceDraft) -> String {
-        let f = DateFormatter(); f.dateFormat = "HH:mm"
+        let f = Self.hourMinuteFormatter
         let start = f.string(from: place.firstTime)
         if place.stayMinutes <= 0 { return start }
         return "\(start) – \(f.string(from: place.lastTime))"
@@ -272,10 +282,7 @@ struct PhotoTripReviewView: View {
 
     /// 越界照片的拍摄日（本地化短日期），让用户对照行程日期一眼看懂为什么没收进来。
     private func shotDate(_ date: Date) -> String {
-        let f = DateFormatter()
-        f.locale = .current
-        f.setLocalizedDateFormatFromTemplate("Md")
-        return f.string(from: date)
+        Self.shotDateFormatter.string(from: date)
     }
 
     // MARK: 草稿变更（值类型，直接改 @Binding）

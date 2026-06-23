@@ -16,7 +16,7 @@ import CoreLocation
 
 /// 草稿里的一张照片：相册引用 + EXIF 元数据 + 缩略图字节。
 /// coordinate 为 nil 表示无 GPS（截图等）→ 落在「待整理」。
-nonisolated struct PhotoDraft: Identifiable, Equatable {
+nonisolated struct PhotoDraft: Identifiable, Equatable, Sendable {
     let id: UUID
     let assetLocalIdentifier: String
     let timestamp: Date

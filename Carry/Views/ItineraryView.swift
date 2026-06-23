@@ -68,6 +68,22 @@ private enum ItinerarySheet: Identifiable {
 
 // MARK: - ItineraryView
 
+/// 时间轴「上/下半连线」的每行预算缓存。连线只取决于行在当天 timelineRowIDs 顺序里的相邻项，
+/// 而 daySections 构建时已算过该顺序——故在那里一次性算好每行 (top,bottom) 存入本表，
+/// 行内容闭包（stopRow/transportRow/…）O(1) 查表即可，取代原先「每个可见 cell 各重算整天
+/// timeline（内含扫全部天找租车段）」的 O(可见行 × 天²) 滚动开销。rowID 全局唯一，单表即可。
+/// 引用类型：跨 body 求值持有同一实例，UIKit 在两次 body 之间 dequeue cell 时读到的仍是最近一次的预算。
+private final class TimelineLineCache {
+    var connectivity: [ItineraryRowID: (top: Bool, bottom: Bool)] = [:]
+    // 行闭包 O(1) 查（取代每行 days.first(where:) 全表扫 + safe* 每访重排序）。daySections 一次性建表。
+    var stopByID: [UUID: ItineraryStop] = [:]
+    var dayByStopID: [UUID: ItineraryDay] = [:]
+    var segmentByID: [UUID: TransportSegment] = [:]
+    var dayBySegmentID: [UUID: ItineraryDay] = [:]
+    var dayByOrder: [Int: ItineraryDay] = [:]
+    var stayByID: [UUID: LodgingStay] = [:]
+}
+
 struct ItineraryView: View {
     let tripId: UUID
     /// 「地点排序」模式（由容器 PackingListView 的菜单/工具栏驱动）：压缩行 + 拖拽手柄 + 锁 tap。
@@ -94,6 +110,8 @@ struct ItineraryView: View {
     @Environment(\.scenePhase) private var scenePhase
     /// 按天序分桶的只读日历事件；视图层临时态，不持久化。
     @State private var overlayEventsByDay: [Int: [CalendarOverlayEvent]] = [:]
+    /// 时间轴连线预算（每行 top/bottom），daySections 构建时填、行闭包 O(1) 查（见 TimelineLineCache）。
+    @State private var lineCache = TimelineLineCache()
 
     private var bundle: TripBundle? { store.bundle(for: tripId) }
     private var days: [ItineraryDay] { bundle?.safeItineraryDays ?? [] }
@@ -460,7 +478,29 @@ struct ItineraryView: View {
     /// 每天的结构快照（供 collection diffable）。entries 顺序 = 覆盖本天的住宿条 → 时间轴（停靠点 +
     /// 交通段，按 day.timeline 的共享 sortOrder）。leg / addStop / optimize 由 collection 自行插入/追加。
     private var daySections: [ItineraryDaySection] {
-        return days.map { day in
+        // 跨天数据一次性求出（原先 timelineRowIDs 每天各扫一遍 = O(天²)，且 safe* 每访都重排）：
+        let allDays = days                                  // 一次排序，下文全用它（免 safeItineraryDays 反复重排）
+        let stays = bundle?.safeLodgingStays ?? []
+        // 行查找表：一次遍历建好，行闭包 O(1) 查（取代每行 days.first(where:)/flatMap 全表扫）。
+        var stopByID: [UUID: ItineraryStop] = [:]
+        var dayByStopID: [UUID: ItineraryDay] = [:]
+        var segmentByID: [UUID: TransportSegment] = [:]
+        var dayBySegmentID: [UUID: ItineraryDay] = [:]
+        var dayByOrder: [Int: ItineraryDay] = [:]
+        var allCarRentals: [TransportSegment] = []
+        for day in allDays {
+            dayByOrder[day.sortOrder] = day
+            for s in day.sortedStops { stopByID[s.id] = s; dayByStopID[s.id] = day }
+            for seg in day.sortedSegments {
+                segmentByID[seg.id] = seg
+                dayBySegmentID[seg.id] = day
+                if seg.mode == .carRental { allCarRentals.append(seg) }
+            }
+        }
+        let stayByID = Dictionary(stays.map { ($0.id, $0) }, uniquingKeysWith: { a, _ in a })
+
+        var connectivity: [ItineraryRowID: (top: Bool, bottom: Bool)] = [:]
+        let sections = allDays.map { day -> ItineraryDaySection in
             // 日历事件叠加行（spec: itinerary-calendar-overlay.md 增补 2026-06-22）：
             // 全天事件无时刻 → 钉当天顶部（背景信息 band）；定时事件 → 交给 timelineRowIDs 按各自时刻插入主脊，
             // 让这一天按时序读（时间轴的核心承诺），而非把所有日历事件不分时刻全钉顶部。
@@ -468,11 +508,24 @@ struct ItineraryView: View {
                 .filter { $0.isAllDay }
                 .map { .calendarEvent(id: $0.id, day: day.sortOrder) }
             // 住宿不再是顶部常驻条——已按当天角色（入住/出发/过夜/退房）注入主脊，见 timelineRowIDs。
-            return ItineraryDaySection(
-                id: day.id,
-                entries: allDayRows + timelineRowIDs(for: day, timedCalendar: timedCalendarRows(day))
-            )
+            let order = timelineRowIDs(for: day, timedCalendar: timedCalendarRows(day),
+                                       carRentals: allCarRentals, stays: stays)
+            // 连线预算（与原 showsTopLine/Bottom 同规则：相邻为非日历行则连）。一次算好、行闭包 O(1) 查。
+            for (i, rid) in order.enumerated() {
+                connectivity[rid] = (top: i > 0 && !isCalendarRow(order[i - 1]),
+                                     bottom: i < order.count - 1 && !isCalendarRow(order[i + 1]))
+            }
+            return ItineraryDaySection(id: day.id, entries: allDayRows + order)
         }
+        // 引用类型，仅更新内容、不触发视图失效。行闭包在本次 body 后由 UIKit dequeue 时读到的即此份。
+        lineCache.connectivity = connectivity
+        lineCache.stopByID = stopByID
+        lineCache.dayByStopID = dayByStopID
+        lineCache.segmentByID = segmentByID
+        lineCache.dayBySegmentID = dayBySegmentID
+        lineCache.dayByOrder = dayByOrder
+        lineCache.stayByID = stayByID
+        return sections
     }
 
     /// 当天「定时」日历事件（非全天）→ (id, 起始分钟)，供 timelineRowIDs 按时刻插入主脊。
@@ -485,8 +538,9 @@ struct ItineraryView: View {
     /// 当天「在主脊上」的行序列（停靠点 + 交通段，按 day.timeline 共享 sortOrder/时间）。
     /// **租车段拆成两条事件**：取车落在 timeline 给的取车时间位；还车按还车时间注入本天（其还车日可能 ≠ 出发日）。
     /// 是 daySections 的时间轴部分，也供首/末端点判定（连续脊的两端清线）。spec: itinerary-car-rental.md。
-    private func timelineRowIDs(for day: ItineraryDay, timedCalendar: [(id: String, minutes: Int)] = []) -> [ItineraryRowID] {
-        let carRentals = days.flatMap { $0.sortedSegments }.filter { $0.mode == .carRental }
+    private func timelineRowIDs(for day: ItineraryDay, timedCalendar: [(id: String, minutes: Int)] = [],
+                                carRentals: [TransportSegment]? = nil, stays: [LodgingStay]? = nil) -> [ItineraryRowID] {
+        let carRentals = carRentals ?? days.flatMap { $0.sortedSegments }.filter { $0.mode == .carRental }
         var timed: [(row: ItineraryRowID, minutes: Int)] = []
         var carry = -1
         for item in day.timeline {
@@ -512,7 +566,7 @@ struct ItineraryView: View {
         // 整中间日=出发（晨起，置首）+ 过夜（夜归，置末）。空中间日（无其它事项）只留「过夜」一条，避免两条相邻。
         var departs: [ItineraryRowID] = []   // 置首
         var overnights: [ItineraryRowID] = []// 置末
-        for stay in (bundle?.safeLodgingStays ?? [])
+        for stay in (stays ?? bundle?.safeLodgingStays ?? [])
             where stay.checkInDayOrder <= day.sortOrder && day.sortOrder <= stay.checkOutDayOrder {
             if day.sortOrder == stay.checkInDayOrder {
                 let m = stay.checkInMinutes
@@ -547,25 +601,20 @@ struct ItineraryView: View {
     /// 主脊连续性（邻接判定）：脊上首项不画上半线、末项不画下半线；相邻为日历事件时也断线——
     /// 定时日历事件按时序落在主脊它的位置，但脊在它处**自然断开**（它是「来自你的日历」的外部叠加项、
     /// 不属于你规划的路线）。规划行之间仍两端皆画 → 与相邻规划行无缝相接。
+    // 连线 = daySections 构建时已算好的预算，O(1) 查表（见 TimelineLineCache）。
+    // 取代原先每行各重算整天 timeline（O(可见行 × 天²)）的滚动开销。
     private func showsTopLine(_ rowID: ItineraryRowID, in day: ItineraryDay) -> Bool {
-        let order = timelineRowIDs(for: day, timedCalendar: timedCalendarRows(day))
-        guard let i = order.firstIndex(of: rowID), i > 0 else { return false }
-        return !isCalendarRow(order[i - 1])
+        lineCache.connectivity[rowID]?.top ?? false
     }
     private func showsBottomLine(_ rowID: ItineraryRowID, in day: ItineraryDay) -> Bool {
-        let order = timelineRowIDs(for: day, timedCalendar: timedCalendarRows(day))
-        guard let i = order.firstIndex(of: rowID), i < order.count - 1 else { return false }
-        return !isCalendarRow(order[i + 1])
+        lineCache.connectivity[rowID]?.bottom ?? false
     }
 
     // MARK: 行内容（由 collection 闭包承载）
 
     @ViewBuilder
     private func stopRow(_ stopID: UUID) -> some View {
-        if let day = days.first(where: { ($0.stops ?? []).contains { $0.id == stopID } }),
-           let index = day.sortedStops.firstIndex(where: { $0.id == stopID }) {
-            let dayStops = day.sortedStops
-            let stop = dayStops[index]
+        if let stop = lineCache.stopByID[stopID], let day = lineCache.dayByStopID[stopID] {
             if isReordering.wrappedValue {
                 reorderStopRow(stop, dayColor: ItineraryDayPalette.color(forDayIndex: day.sortOrder))
             } else {
@@ -593,7 +642,7 @@ struct ItineraryView: View {
                 .font(.system(size: 15, weight: .semibold))
                 .foregroundStyle(dayColor)
                 .frame(width: 22)
-            Text(stop.name)
+            Text(stop.displayName)
                 .font(.system(size: 16, weight: .medium))
                 .foregroundStyle(.primary)
                 .lineLimit(1)
@@ -611,21 +660,24 @@ struct ItineraryView: View {
     /// 连接段（连线 + 距离），独立成行夹在相邻停靠点之间。入参为下方停靠点 id。
     @ViewBuilder
     private func legRow(_ toStopID: UUID) -> some View {
-        if let day = days.first(where: { ($0.stops ?? []).contains { $0.id == toStopID } }),
-           let index = day.sortedStops.firstIndex(where: { $0.id == toStopID }), index > 0 {
-            ItineraryLegConnector(
-                distance: legLabel(stops: day.sortedStops, index: index),
-                railColor: ItineraryDayPalette.color(forDayIndex: day.sortOrder).opacity(0.25)
-            )
-            .padding(.horizontal, 16)
+        if let day = lineCache.dayByStopID[toStopID] {
+            let stops = day.sortedStops
+            let index = stops.firstIndex(where: { $0.id == toStopID }) ?? 0
+            if index > 0 {
+                ItineraryLegConnector(
+                    distance: legLabel(stops: stops, index: index),
+                    railColor: ItineraryDayPalette.color(forDayIndex: day.sortOrder).opacity(0.25)
+                )
+                .padding(.horizontal, 16)
+            }
         }
     }
 
     /// 住宿端点↔相邻地点的距离连接段（spec 增补 2026-06-20）。两端坐标算大圆距离；任一端无坐标 →
     /// 仍渲染连线段（distance nil），保持主脊连续。`departing` 不影响距离（对称），仅用于行 ID 唯一。
     private func lodgingLegRow(_ stayID: UUID, _ stopID: UUID, _ dayOrder: Int, _ departing: Bool) -> some View {
-        let stay = (bundle?.lodgingStays ?? []).first { $0.id == stayID }
-        let stop = days.flatMap { $0.sortedStops }.first { $0.id == stopID }
+        let stay = lineCache.stayByID[stayID]
+        let stop = lineCache.stopByID[stopID]
         let distance: String? = {
             guard let h = stay?.coordinate, let s = stop?.coordinate else { return nil }
             return CarryDistanceFormat.string(meters: RouteOptimizer.haversineMeters(h, s), unit: distanceUnit)
@@ -640,8 +692,7 @@ struct ItineraryView: View {
     /// 交通段连接行（边）：mode 图标落在 rail 列，详情列显示班次 + 起讫站/时间。点击编辑。
     @ViewBuilder
     private func transportRow(_ segmentID: UUID) -> some View {
-        if let day = days.first(where: { ($0.segments ?? []).contains { $0.id == segmentID } }),
-           let seg = day.sortedSegments.first(where: { $0.id == segmentID }) {
+        if let seg = lineCache.segmentByID[segmentID], let day = lineCache.dayBySegmentID[segmentID] {
             TransportTimelineRow(
                 segment: seg,
                 dayColor: ItineraryDayPalette.color(forDayIndex: day.sortOrder),
@@ -658,8 +709,7 @@ struct ItineraryView: View {
     /// spec: itinerary-car-rental.md（增补：租车两事件）。
     @ViewBuilder
     private func carRentalRow(_ segID: UUID, _ dayOrder: Int, _ pickup: Bool) -> some View {
-        if let seg = days.flatMap({ $0.sortedSegments }).first(where: { $0.id == segID }),
-           let day = days.first(where: { $0.sortOrder == dayOrder }) {
+        if let seg = lineCache.segmentByID[segID], let day = lineCache.dayByOrder[dayOrder] {
             let rowID = ItineraryRowID.carRental(segment: segID, day: dayOrder, pickup: pickup)
             CarRentalEventRow(
                 segment: seg, pickup: pickup,
@@ -679,8 +729,7 @@ struct ItineraryView: View {
     /// 与地点/交通同走 TimelineRail，按首/末项清线 → 主脊连续穿过。
     @ViewBuilder
     private func lodgingRow(_ stayID: UUID, _ dayOrder: Int, _ role: LodgingRole) -> some View {
-        if let stay = (bundle?.lodgingStays ?? []).first(where: { $0.id == stayID }),
-           let day = days.first(where: { $0.sortOrder == dayOrder }) {
+        if let stay = lineCache.stayByID[stayID], let day = lineCache.dayByOrder[dayOrder] {
             let rowID = ItineraryRowID.lodging(stay: stayID, day: dayOrder, role: role)
             LodgingBannerRow(stay: stay, role: role,
                              dayColor: ItineraryDayPalette.color(forDayIndex: dayOrder),
@@ -1420,7 +1469,7 @@ private struct TimelineStopRow: View {
                 // （对标日历/Flighty/Tripsy 的日程行）。用 .center 垂直居中：时间(caption)比名称(body)小，
                 // 若共享基线(.firstTextBaseline)，小字视觉中心会落在名称中心之下、看着偏下；居中才对齐。
                 HStack(alignment: .center, spacing: 6) {
-                    Text(stop.name)
+                    Text(stop.displayName)
                         .font(.system(.body, design: .rounded).weight(.semibold))   // 名称加粗 + 圆体，作为每行的视觉锚
                         .foregroundStyle(.primary)
                         .lineLimit(1)
@@ -1511,23 +1560,41 @@ struct StopDetailView: View {
 
     private struct ZoomedPhoto: Identifiable { let id = UUID(); let data: Data }
 
+    /// 缩略图异步解码：在后台 `UIImage(data:)` 解出后再上屏，避免主线程同步解码——打开详情时一条图条
+    /// 多张缩略图同步解码会丢帧（缩略图虽 ≤640px 仍累加）。每实例 `.task` 解一次、存 @State，重渲不重复解。
+    private struct AsyncThumbnail: View {
+        let data: Data
+        var size: CGFloat = 76
+        var cornerRadius: CGFloat = 10
+        @State private var image: UIImage?
+
+        var body: some View {
+            Group {
+                if let image {
+                    Image(uiImage: image).resizable().scaledToFill()
+                } else {
+                    Image(systemName: "photo").foregroundStyle(.tertiary)
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                        .background(Color(.tertiarySystemFill))
+                }
+            }
+            .frame(width: size, height: size)
+            .clipShape(RoundedRectangle(cornerRadius: cornerRadius, style: .continuous))
+            .task {
+                guard image == nil else { return }
+                let bytes = data
+                image = await Task.detached(priority: .userInitiated) { UIImage(data: bytes) }.value
+            }
+        }
+    }
+
     /// 该停靠点导入的照片（横向缩略图条，点击放大）。照片回溯生成的地点才有。
     private var photoStrip: some View {
         ScrollView(.horizontal, showsIndicators: false) {
             HStack(spacing: 8) {
                 ForEach(stop.sortedPhotos, id: \.id) { photo in
                     Button { zoomedPhoto = ZoomedPhoto(data: photo.thumbnailData) } label: {
-                        Group {
-                            if let image = UIImage(data: photo.thumbnailData) {
-                                Image(uiImage: image).resizable().scaledToFill()
-                            } else {
-                                Image(systemName: "photo").foregroundStyle(.tertiary)
-                                    .frame(maxWidth: .infinity, maxHeight: .infinity)
-                                    .background(Color(.tertiarySystemFill))
-                            }
-                        }
-                        .frame(width: 76, height: 76)
-                        .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+                        AsyncThumbnail(data: photo.thumbnailData, size: 76, cornerRadius: 10)
                     }
                     .buttonStyle(.plain)
                 }
@@ -1541,7 +1608,7 @@ struct StopDetailView: View {
         DetailSheetHeader(
             iconSystemName: stop.category.symbolName,
             iconTint: dayColor,
-            title: stop.name,
+            title: stop.displayName,
             subtitle: stopScheduleSubtitle,
             onClose: { dismiss() }
         )
@@ -1612,7 +1679,7 @@ struct StopDetailView: View {
     @ViewBuilder
     private var navModule: some View {
         if let coord = stop.coordinate, !navApps.isEmpty {
-            DirectionsModule(coordinate: coord, name: stop.name, navApps: navApps,
+            DirectionsModule(coordinate: coord, name: stop.displayName, navApps: navApps,
                              distanceToNext: distanceToNext, tint: dayColor)
         }
     }

@@ -213,6 +213,7 @@ struct PhotoTripImportView: View {
                 }
             }
             if Task.isCancelled { return }   // 用户中途退出 → 不再落状态
+            // 仅聚类（快）→ 立刻进预览，地名后台流式回填（不再卡在「100% 假死」等命名）。
             let d = await PhotoTripReconstructor.assemble(
                 photos: photos, tripId: tripId, departureDate: depart, returnDate: ret
             )
@@ -228,6 +229,26 @@ struct PhotoTripImportView: View {
                                            context: "days=\(d.days.count) places=\(d.placeCount) photos=\(d.totalPhotoCount)")
                 }
             }
+            guard !d.days.isEmpty else { return }
+            // 后台命名：逐个 resolve 即回填草稿（值类型 @State）→ 预览页真实地名实时浮现。
+            await PhotoTripReconstructor.geocodeNames(for: d) { placeID, name, address in
+                await MainActor.run { fillPlaceName(placeID: placeID, name: name, address: address) }
+            }
+        }
+    }
+
+    /// 后台地理编码回填：按地点 id 找草稿里的地点，**仅在用户未改过（名/址仍空）时**填入，
+    /// 不覆盖用户在预览页已做的改名/合并；地点已被删/合并致 id 不存在则跳过。
+    private func fillPlaceName(placeID: UUID, name: String, address: String) {
+        for di in draft.days.indices {
+            guard let pi = draft.days[di].places.firstIndex(where: { $0.id == placeID }) else { continue }
+            if draft.days[di].places[pi].name.isEmpty, !name.isEmpty {
+                draft.days[di].places[pi].name = name
+            }
+            if draft.days[di].places[pi].address.isEmpty, !address.isEmpty {
+                draft.days[di].places[pi].address = address
+            }
+            return
         }
     }
 

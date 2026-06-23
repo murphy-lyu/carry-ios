@@ -340,7 +340,7 @@ struct ItineraryReorderCollection: UIViewRepresentable {
                         snapshot.appendItems(stopRows, toSection: section.id)
                     }
                 }
-                dataSource.apply(snapshot, animatingDifferences: animated)
+                dataSource.apply(snapshot, animatingDifferences: shouldAnimate(animated, applying: snapshot))
                 collectionView?.setNeedsLayout()
                 collectionView?.layoutIfNeeded()
                 DispatchQueue.main.async { [weak self] in
@@ -383,7 +383,7 @@ struct ItineraryReorderCollection: UIViewRepresentable {
             let previousItems = Set(dataSource.snapshot().itemIdentifiers)
             let persisting = snapshot.itemIdentifiers.filter { previousItems.contains($0) }
             if !persisting.isEmpty { snapshot.reconfigureItems(persisting) }
-            dataSource.apply(snapshot, animatingDifferences: animated)
+            dataSource.apply(snapshot, animatingDifferences: shouldAnimate(animated, applying: snapshot))
             collectionView?.setNeedsLayout()
             collectionView?.layoutIfNeeded()
             DispatchQueue.main.async { [weak self] in
@@ -392,6 +392,17 @@ struct ItineraryReorderCollection: UIViewRepresentable {
                 self?.updateBottomInsetForLastSectionPinning()
                 self?.refreshVisibleHeaders()
             }
+        }
+
+        /// 是否对本次 apply 播放逐行差异动画。**批量结构变化**（如相册导入一次性插入大量地点）一律关动画：
+        /// 既消除「地点一个个蹦出来」的观感，又免去 UIKit 为数百行排布插入/移动动画的开销（长行程下尤甚）。
+        /// 小改动（单个增删）仍保留动画反馈。
+        private func shouldAnimate(_ requested: Bool, applying snapshot: NSDiffableDataSourceSnapshot<UUID, ItineraryRowID>) -> Bool {
+            guard requested, let dataSource else { return false }
+            let current = dataSource.snapshot()
+            if current.numberOfItems == 0 { return false }                       // 首次填充不播动画
+            if current.numberOfSections != snapshot.numberOfSections { return false }
+            return abs(snapshot.numberOfItems - current.numberOfItems) <= 12      // 超阈值＝批量 → 不播
         }
 
         /// 重配可见 section 头部的内容——section id=天 UUID，加交通/地点等不改天身份，diffable 不会重配头部，

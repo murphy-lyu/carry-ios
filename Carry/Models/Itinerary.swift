@@ -260,6 +260,13 @@ final class ItineraryStop: CostBearing {
         (photos ?? []).sorted { $0.sortOrder < $1.sortOrder }
     }
 
+    /// 展示用名称：空名兜底为本地化「未命名地点」。空名来源有二——① 照片回溯反向地理编码失败；
+    /// ② 地名后台流式回填未完成前用户即保存。**存储层保持真相（空），仅展示层兜底**（不把本地化词冻进 model）。
+    /// 复用既有 key `phototrip.place.untitled`（语义通用、9 语齐全）。
+    var displayName: String {
+        name.isEmpty ? NSLocalizedString("phototrip.place.untitled", comment: "") : name
+    }
+
     /// 未知 rawValue 兜底为 .other；写入时回落 rawValue。
     var category: StopCategory {
         get { StopCategory(rawValueOrOther: categoryRaw) }
