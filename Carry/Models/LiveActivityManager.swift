@@ -42,6 +42,38 @@ final class LiveActivityManager {
     /// 撞 ActivityKit 单 attribute 上限。
     private var isStarting: Bool = false
 
+    // MARK: - 交通 LA 状态（spec: widget-transit-live-activity.md）
+
+    /// 出行日「下一程」LA 的主开关 key。控制自动起（A）与显式起（B）。
+    static let transitEnabledKey = "liveActivityTransitEnabled"
+    /// 出发前多少小时内开始追踪「下一程」（自动起 A 的时间窗）。
+    static let transitWindowHours = 24
+    /// 到达后保留多久再结束（让「已抵达」态留片刻）。
+    static let arrivalGraceMinutes = 60
+
+    /// 主开关：未显式设置时默认 **开**（出行日是 Live Activity 最高价值场景）。
+    var isTransitEnabled: Bool {
+        UserDefaults.standard.object(forKey: Self.transitEnabledKey) as? Bool ?? true
+    }
+
+    /// 系统是否允许 Live Activity（授权且未在系统设置里关闭）。供视图层判断「点追踪是否真会起」，
+    /// 避免视图直接依赖 ActivityKit 的 `ActivityAuthorizationInfo`。
+    var systemActivitiesEnabled: Bool { ActivityAuthorizationInfo().areActivitiesEnabled }
+
+    /// 用户「显式停掉追踪」的交通段 id 集合（spec: widget-transit-live-activity.md）。
+    /// 根因：A 自动起若不避开用户刚停的段，回前台会把它重新起起来、覆盖用户意图。故记住被显式停过的段，
+    /// A 跳过它们；用户再次显式起（B）即解除。只存活跃段（在 `startTransitIfNeeded` 里按现存段剪枝、不无限增长）。
+    static let dismissedTransitKey = "liveActivityTransitDismissed"
+    private var dismissedTransitSegmentIds: Set<String> {
+        get { Set(UserDefaults.standard.stringArray(forKey: Self.dismissedTransitKey) ?? []) }
+        set { UserDefaults.standard.set(Array(newValue), forKey: Self.dismissedTransitKey) }
+    }
+
+    private var currentTransitActivity: Activity<TransportActivityAttributes>?
+    private var currentTransitSegmentId: UUID?
+    private var currentTransitTripId: UUID?
+    private var isStartingTransit: Bool = false
+
     // MARK: - 启动
 
     /// 若开关开启且条件满足，为指定行程启动 Live Activity。
@@ -148,8 +180,14 @@ final class LiveActivityManager {
         }
     }
 
-    /// 立即结束所有 Live Activity（关闭开关 / 行程删除时使用）。
+    /// 立即结束所有 Live Activity（抹掉数据 / 重置 / 删全部行程时使用）。打包 + 交通两类一并清。
     func endAll() {
+        endAllPacking()
+        endTransit()
+    }
+
+    /// 仅结束**打包** Live Activity（关闭「锁屏打包进度」开关时用——不可误伤交通 LA）。
+    func endAllPacking() {
         let snapshot = Array(Activity<PackingActivityAttributes>.activities)
         currentActivity = nil
         currentTripId = nil
@@ -158,6 +196,158 @@ final class LiveActivityManager {
                 await activity.end(nil, dismissalPolicy: .immediate)
             }
         }
+    }
+
+    // MARK: - 交通 LA：启动 / 结束（spec: widget-transit-live-activity.md）
+
+    /// A（自动起）：App 进前台 / 启动时扫所有行程，为「最临近的下一程」起 LA。
+    /// 候选条件：非无日期行程、交通段有出发时间、且「现在」落在 [出发前 transitWindowHours, 到达 + 宽限] 内
+    /// （即出发临近、或正在途中）。多段取出发最早（最当下）的一段。
+    func startTransitIfNeeded(trips: [TripBundle]) {
+        guard isTransitEnabled else { return }
+        guard ActivityAuthorizationInfo().areActivitiesEnabled else { return }
+        let now = Date()
+        let windowEnd = now.addingTimeInterval(Double(Self.transitWindowHours) * 3600)
+        // 剪枝：dismissed 只保留「当前仍存在的段」（防跨行程长期累积）。
+        let allSegmentIds = Set(trips.flatMap { $0.safeItineraryDays.flatMap { $0.sortedSegments.map(\.id.uuidString) } })
+        let dismissed = dismissedTransitSegmentIds.intersection(allSegmentIds)
+        if dismissed != dismissedTransitSegmentIds { dismissedTransitSegmentIds = dismissed }
+
+        var best: (trip: TripBundle, seg: TransportSegment, depart: Date)?
+        for trip in trips where !trip.isDateless {
+            // 粗筛：出发晚于时间窗末端 → 最早段（≥ departureDate）必都在窗外，跳过、不深扫。
+            // （过去侧不剪：返程日晚间可能仍有回程航班，靠内层 now ≤ graceEnd 逐段过滤。）
+            guard trip.departureDate <= windowEnd else { continue }
+            for day in trip.safeItineraryDays {
+                for seg in day.sortedSegments {
+                    guard !dismissed.contains(seg.id.uuidString) else { continue }   // 用户显式停过 → 不自动重起
+                    guard let dep = seg.absoluteDeparture(tripDeparture: trip.departureDate) else { continue }
+                    let arr = seg.absoluteArrival(tripDeparture: trip.departureDate) ?? dep
+                    let windowOpen = dep.addingTimeInterval(-Double(Self.transitWindowHours) * 3600)
+                    let graceEnd = arr.addingTimeInterval(Double(Self.arrivalGraceMinutes) * 60)
+                    guard now >= windowOpen, now <= graceEnd else { continue }
+                    if best == nil || dep < best!.depart { best = (trip, seg, dep) }
+                }
+            }
+        }
+        guard let best else { return }   // 无候选 → 在途结束交给 endTransitIfArrived
+        startTransit(for: best.seg, trip: best.trip)
+    }
+
+    /// A/B 共用启动器。B（显式）由详情页按钮调用，可在自动时间窗之外启动用户主动追踪的一程。
+    func startTransit(for segment: TransportSegment, trip: TripBundle) {
+        guard !isStartingTransit else { return }
+        guard isTransitEnabled else { return }
+        guard !trip.isDateless else { return }
+        guard ActivityAuthorizationInfo().areActivitiesEnabled else { return }
+        guard let dep = segment.absoluteDeparture(tripDeparture: trip.departureDate) else { return }
+        let arr = segment.absoluteArrival(tripDeparture: trip.departureDate) ?? dep
+
+        // 显式起 = 重新选入：清掉该段的「用户已停」标记（A 在调用前已跳过 dismissed，故这里只会被 B 触达）。
+        if dismissedTransitSegmentIds.contains(segment.id.uuidString) {
+            dismissedTransitSegmentIds.remove(segment.id.uuidString)
+        }
+
+        // 同一段已有活跃 Activity → 重连引用并 no-op（覆盖冷启动：系统持久化的 LA 仍在、但本进程
+        // currentTransit* 为 nil；不重连会被下面 terminate+recreate 造成闪烁）。
+        if let existing = Activity<TransportActivityAttributes>.activities.first(where: {
+            $0.attributes.segmentId == segment.id && $0.activityState == .active
+        }) {
+            currentTransitActivity = existing
+            currentTransitSegmentId = segment.id
+            currentTransitTripId = trip.id
+            return
+        }
+
+        let number = segment.number.trimmingCharacters(in: .whitespaces)
+        let carrier = segment.displayCarrier.trimmingCharacters(in: .whitespaces)
+        let label = number.isEmpty ? carrier : number
+        let state = TransportActivityAttributes.ContentState(
+            modeRaw: segment.mode.rawValue,
+            carrierAndNumber: label,
+            fromCode: segment.fromCode, toCode: segment.toCode,
+            fromName: segment.fromName, toName: segment.toName,
+            departureDate: dep, arrivalDate: arr,
+            fromTerminal: segment.fromTerminal, seat: segment.seat,
+            liveStatus: nil, gate: nil, actualDepartureDate: nil
+        )
+        let attributes = TransportActivityAttributes(tripId: trip.id, segmentId: segment.id)
+        let staleDate = arr.addingTimeInterval(Double(Self.arrivalGraceMinutes) * 60)
+
+        isStartingTransit = true
+        let segId = segment.id
+        let tripId = trip.id
+        Task { @MainActor in
+            defer { self.isStartingTransit = false }
+            await self.terminateAllTransitAndWait()
+            do {
+                let activity = try Activity.request(
+                    attributes: attributes,
+                    content: .init(state: state, staleDate: staleDate),
+                    pushType: nil
+                )
+                self.currentTransitActivity = activity
+                self.currentTransitSegmentId = segId
+                self.currentTransitTripId = tripId
+                CarryLogger.shared.log(.liveActivityStarted, context: "transit seg=\(segId)")
+            } catch {
+                CarryLogger.shared.log(.liveActivityStartFailed, context: "transit \(error.localizedDescription)")
+            }
+        }
+    }
+
+    /// 该段当前是否正被交通 LA 追踪（详情页按钮状态用）。
+    func isTrackingTransit(segmentId: UUID) -> Bool {
+        Activity<TransportActivityAttributes>.activities.contains {
+            $0.attributes.segmentId == segmentId && $0.activityState == .active
+        }
+    }
+
+    /// 用户在详情页**显式停掉**某段追踪（B）：记下「已停」让 A 不再自动重起，再结束该段 LA。
+    func userStopTransit(segmentId: UUID) {
+        dismissedTransitSegmentIds.insert(segmentId.uuidString)
+        endTransit(segmentId: segmentId)
+    }
+
+    /// 结束交通 LA（指定段 / 指定行程 / 全部交通）。
+    func endTransit(segmentId: UUID? = nil, tripId: UUID? = nil) {
+        let matches = Activity<TransportActivityAttributes>.activities.filter { a in
+            if let segmentId { return a.attributes.segmentId == segmentId }
+            if let tripId { return a.attributes.tripId == tripId }
+            return true
+        }
+        let clearsCurrent = (segmentId == nil && tripId == nil)
+            || (segmentId != nil && currentTransitSegmentId == segmentId)
+            || (tripId != nil && currentTransitTripId == tripId)
+        if clearsCurrent {
+            currentTransitActivity = nil
+            currentTransitSegmentId = nil
+            currentTransitTripId = nil
+        }
+        Task {
+            for a in matches { await a.end(nil, dismissalPolicy: .default) }
+            CarryLogger.shared.log(.liveActivityEnded, context: "transit")
+        }
+    }
+
+    /// App 回前台时调用：已抵达（过到达 + 宽限）的交通 LA 自动结束。
+    func endTransitIfArrived() {
+        let now = Date()
+        for a in Activity<TransportActivityAttributes>.activities where a.activityState == .active {
+            let graceEnd = a.content.state.arrivalDate.addingTimeInterval(Double(Self.arrivalGraceMinutes) * 60)
+            if now >= graceEnd {
+                let segId = a.attributes.segmentId
+                Task { await a.end(nil, dismissalPolicy: .default) }
+                if currentTransitSegmentId == segId {
+                    currentTransitActivity = nil; currentTransitSegmentId = nil; currentTransitTripId = nil
+                }
+            }
+        }
+    }
+
+    private func terminateAllTransitAndWait() async {
+        let snapshot = Array(Activity<TransportActivityAttributes>.activities)
+        for a in snapshot { await a.end(nil, dismissalPolicy: .immediate) }
     }
 
     // MARK: - 出发日检查

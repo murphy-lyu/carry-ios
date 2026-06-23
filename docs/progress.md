@@ -7,6 +7,40 @@
 - **现状 OK**：行程详情底部「行程/打包」切换器随滚动收起/露出（下滑 6pt 收、上滑 6pt 开、近顶恒显、spring 0.3 bounce 0.2），已复用到打包清单（`ItineraryReorderCollection` + `ReorderableItemCollection` 同一套 `onScrollHideChange` → `PackingListView.switcherHidden`）。用户初验「效果很不错」。
 - **待办**：用户会**多用后再回看动画细节**（阈值灵敏度 / 收起展开顺滑度 / 内容回填的跳动感）。届时按真机手感微调上面几个数值（阈值在两个 collection 的 `updateSwitcherHide`，动画在 `PackingListView` 两处 `onScrollHide`/`onChange` 的 `withAnimation`）。当前不动。
 
+## 上次改动摘要（Widget 表达行程规划：旅行伴侣桌面组件 + 出行日「下一程」Live Activity · 2026-06-23）
+
+> 单会话、纯我的工作。先评估「行程规划如何在 Widget 体现」→ 写两份 spec（确认后）→ 逐个实现。**两份均编译绿（主 app + Widget Extension）**。**未 push**。UI/真机验收交用户。spec: `widget-trip-companion.md` / `widget-transit-live-activity.md`。
+
+**背景**：Widget 原只表达「打包」（出发前几天的事），而更核心的行程规划（航班/住宿/地点/交通/时区…）从未上 Widget。评估用「可瞄+当下相关+省一次打开」三判据筛出两个真场景：旅行中「今日陪伴」、出行日「下一程」。明确排除整条时间轴/地图/花费/酒店地址等（过不了判据）。
+
+**一、旅行伴侣桌面组件（Spec A，已实现待验收）**
+- 桌面组件随**旅行相位**自适应：出发前=倒计时+打包（保持现状无回归）；**新增旅行中**=`Day N/M` + 下一件事倒计时 + 今晚住哪/退房。仅有日期行程进旅行中相位。
+- 数据：`WidgetTripSnapshot` 扩 `returnDate/isDateless/events/stays`（事件绝对时刻按各活动时区在 App 侧算好，复用 `absoluteDate`）；选片从「未来行程」改「未结束行程」（纳入进行中）。刷新走现有 `didEnterBackground` 漏斗（未散加 per-mutation 调用）；Widget 靠 timeline entries（每事件+每午夜）跨天自走、App 不开也对。新字段全可选→旧 JSON 退化出发前、不崩。
+- 修了自审 bug：`tonight` 文案 `%@` 占位却当无参标签渲染 → 改 `String(format:)` 单 Text。
+
+**二、出行日「下一程」Live Activity（Spec B，已实现待真机验收）**
+- 起停 **A+B**（用户拍板）：A 自动起（冷启动 `TripStore.init` Task + 回前台扫所有行程，为 [出发前 24h, 到达+1h] 内最临近一程起 LA）；B 显式（交通详情页「在锁屏追踪此程」按钮）。主开关 `liveActivityTransitEnabled` **默认开**，放「锁屏实时活动」设置页（原「锁屏打包进度」页泛化为两开关、入口标题改 `settings.liveactivity.title`）。
+- 新增共享模型 `TransportActivityAttributes`（SharedSources/，pbxproj 登记进两 target，预留 liveStatus/gate 给未来航班动态、不改结构）；`LiveActivityManager` 扩交通 LA 全生命周期（含并入 `endAll`、删行程/抹数据/关开关清理、并发锁复用）；新增 `TransportSegment.absoluteDeparture/Arrival`。
+- 锁屏+灵动岛三态（`CarryTransitLiveActivity`）：倒计时 `Text(timerInterval:)` 系统自走、相位（起飞前/途中/已抵达）渲染时按 `Date()` 判定。**schedule-based、本轮不接实时航班动态**（Roadmap 独立项），文案不暗示实时追踪。
+
+**本地化**：主 app +4 key、widget +7 key（A 的 day_of/tonight/checkin/checkout + B 的 until_departure/en_route/arrived），9 语言齐、`i18n-audit` [E]=0。
+
+**交付前自审 + 子代理 QA 一轮（已全修，复编绿、[E]=0）**：
+1. 🔴 真 bug：`endAll()` 改为结束打包+交通后，关「打包」开关会连交通 LA 一起杀 → 拆出 `endAllPacking()`，打包开关只调它。
+2. 🔴 真 bug：Widget LA 的 `Text("\(from) → \(to)")` / 首页 `Text(" · \(name)")` 是插值字面量 → Xcode 构建把 `%@ → %@`、` · %@` 误抽成本地化键（i18n [E]=16）→ 改 `Text(verbatim:)` + 删误抽键。
+3. 🟡 events `prefix(60)` 会截「最早 60 条」致长行程后段无下一件事 → 改「先丢过去事件(< today)再截 60」，恒保留当天及未来。
+4. 🟡 B 按钮 auth 关闭时会假显「追踪中」→ optimistic 前查 `systemActivitiesEnabled`。
+5. 🟡 冷启动系统残留交通 LA 会被 teardown+recreate 闪烁 → `startTransit` 命中已存在 Activity 时重连而非重建。
+6. 🟢 `startTransitIfNeeded` 加「出发晚于时间窗即跳过」粗筛（过去侧不剪，避免误杀返程日晚航班）；`widgetEvents` 仅 number 空时才取 displayCarrier（省航司库懒加载）。
+- 复核判为「非问题不改」：timerInterval 范围（传固定 now、分支保证有效）、returnDate 旧 snapshot 短窗退化（设计内兜底自愈）、时区回退设备时区（项目既有约定）。
+
+**第二轮根因复扫（更严视角，已修，复编绿、[E]=0）**：
+7. 🔴 真 UX 根因 bug：A+B 冲突——用户在详情页**显式停掉**某程追踪后，A 回前台会自动把它重新起起来、覆盖用户意图。根因解：`LiveActivityManager` 记「用户已停段」集合（`liveActivityTransitDismissed`，UserDefaults），A 跳过 dismissed 段；再次显式起（B）即解除；`startTransitIfNeeded` 按现存段剪枝防累积。B「停」改走新 `userStopTransit(segmentId:)`。
+8. 🟢 质量：`absoluteDate` 公式原有 3 份拷贝 → TripStore 那份指向单一真源 `TransportSegment.itineraryAbsoluteDate`（NotificationManager 既有份属已上线、不动）；`widgetEvents` 跳过无名定时地点（退化数据不入「下一件事」）。
+⚠️ 工作区另有 `DataBackupManager.swift`/`TransportEditView.swift` 被改（**非本会话**，疑并行会话/linter）——提交时须走隔离 index、勿卷入。
+
+**新会话 TODO**：① push（用户定）；② **Spec A 设备验收**（调某行程出发日到昨天看旅行中态：Day N/M·下一件事倒计时·今晚住哪；出发前无回归；明暗/多语言）；③ **Spec B 真机验收**（LA 模拟器受限）：建今/明起飞航班→开 App(A)/点详情按钮(B)→锁屏+灵动岛下一程倒计时、跨时区起降无错点、到达后自动消失、删行程/抹数据清理、与打包 LA 并存观感；④ 主开关默认开是产品默认值、若觉激进可改默认关。
+
 ## 上次改动摘要（计数文案复数化全清扫 + 全目录未翻译键审计补全 · 2026-06-23）
 
 > 单会话、纯本地化（i18n）工作。**编译绿**（主 app + Widget）。复数清扫走隔离 index 提交进 main（`75516bf`/`240c2da`/`ed99979`）；全目录翻译在独立 worktree 完成、再以隔离方式合入 main（`ed2aa1e`）。全程与并行 weather/notification 会话物理隔离、互不卷入（确认其 weather keys 叠在我的翻译之上、无覆盖）。**均未 push**（push 由用户定）。验收交用户（切设备语言看物品库/设置/空状态/Widget + count=1 语法）。

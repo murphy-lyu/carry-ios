@@ -120,7 +120,13 @@ struct CarryApp: App {
                     UserDefaults.standard.set(true, forKey: "carry_session_active")
                     // 出发日检查：若已到出发当天则结束 Live Activity
 #if !targetEnvironment(macCatalyst)
-                    Task { @MainActor in LiveActivityManager.shared.endIfDeparted() }
+                    Task { @MainActor in
+                        LiveActivityManager.shared.endIfDeparted()
+                        // 交通「下一程」LA（spec: widget-transit-live-activity.md）：已抵达则结束、
+                        // 再按当下扫一遍是否该为最临近的一程自动起（A）。
+                        LiveActivityManager.shared.endTransitIfArrived()
+                        LiveActivityManager.shared.startTransitIfNeeded(trips: store.trips)
+                    }
 #endif
                 }
                 .onReceive(NotificationCenter.default.publisher(

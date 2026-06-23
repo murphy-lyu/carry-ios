@@ -45670,55 +45670,55 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Bahnhof / Flughafen"
+            "value" : "Ort"
           }
         },
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Station / airport"
+            "value" : "Location"
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Estación / aeropuerto"
+            "value" : "Ubicación"
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Gare / aéroport"
+            "value" : "Lieu"
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "駅・空港"
+            "value" : "場所"
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "역 / 공항"
+            "value" : "위치"
           }
         },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Estação / aeroporto"
+            "value" : "Local"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "车站 / 机场"
+            "value" : "地点"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "車站 / 機場"
+            "value" : "地點"
           }
         }
       }
@@ -47669,6 +47669,124 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "取車"
+          }
+        }
+      }
+    },
+    "itinerary.transport.track.start" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Auf dem Sperrbildschirm verfolgen"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Track on Lock Screen"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Seguir en la pantalla bloqueada"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Suivre sur l’écran verrouillé"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ロック画面で追跡"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "잠금 화면에서 추적"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Acompanhar na tela bloqueada"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "在锁屏追踪此程"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "在鎖定畫面追蹤此程"
+          }
+        }
+      }
+    },
+    "itinerary.transport.track.tracking" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Wird auf dem Sperrbildschirm verfolgt"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tracking on Lock Screen"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Siguiendo en la pantalla bloqueada"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Suivi sur l’écran verrouillé"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ロック画面で追跡中"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "잠금 화면에서 추적 중"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Acompanhando na tela bloqueada"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "锁屏追踪中"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "鎖定畫面追蹤中"
           }
         }
       }
@@ -63054,6 +63172,124 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "即時動態"
+          }
+        }
+      }
+    },
+    "settings.liveactivity.title" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Live-Aktivitäten"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Live Activities"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Actividades en vivo"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Activités en direct"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ライブアクティビティ"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "라이브 액티비티"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Atividades ao vivo"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "实时活动"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "即時動態"
+          }
+        }
+      }
+    },
+    "settings.liveactivity.transit" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nächste Abreise"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Next departure"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Próxima salida"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Prochain départ"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "次の出発"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "다음 출발"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Próxima partida"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "出行日下一程"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "出行日下一程"
           }
         }
       }

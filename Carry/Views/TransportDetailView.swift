@@ -34,6 +34,8 @@ struct TransportDetailView: View {
     @State private var editing = false
     /// IATA 码 → 本地化机场名，详情出现时经 `.task` 后台按需解析（解析前回落存的原文）。
     @State private var airportNames: [String: String] = [:]
+    /// 「在锁屏追踪此程」当前是否激活（spec: widget-transit-live-activity.md，B 显式起停）。
+    @State private var isTrackingTransit = false
     @AppStorage("distance_unit") private var distanceUnitRaw = DistanceUnit.automatic.rawValue
     private var distanceUnit: DistanceUnit { DistanceUnit(rawValue: distanceUnitRaw) ?? .automatic }
 
@@ -184,6 +186,9 @@ struct TransportDetailView: View {
                 // 导航排在详情之后（与地点/景点/住宿统一：[实体信息] → 导航 → 费用 → 备注）。
                 detailsCard
                 directionsCard
+#if !targetEnvironment(macCatalyst)
+                trackCard
+#endif
                 costCard
                 noteCard
                 AttachmentDetailCard(attachments: segment.attachments ?? [])
@@ -195,8 +200,65 @@ struct TransportDetailView: View {
         .sheet(isPresented: $editing) {
             TransportEditView(tripId: tripId, segmentId: segment.id)
         }
-        .task(id: segment.id) { await resolveAirportNames() }
+        .task(id: segment.id) {
+            await resolveAirportNames()
+#if !targetEnvironment(macCatalyst)
+            isTrackingTransit = LiveActivityManager.shared.isTrackingTransit(segmentId: segment.id)
+#endif
+        }
     }
+
+#if !targetEnvironment(macCatalyst)
+    /// 「在锁屏追踪此程」（B，spec: widget-transit-live-activity.md）：仅交通主开关开、行程有日期、
+    /// 该段有出发时刻时出现。点按显式起/停一程的 Live Activity。
+    private var transitTrackable: Bool {
+        guard LiveActivityManager.shared.isTransitEnabled else { return false }
+        guard let bundle = store.bundle(for: tripId), !bundle.isDateless else { return false }
+        return segment.departLocalMinutes >= 0
+    }
+
+    @ViewBuilder
+    private var trackCard: some View {
+        if transitTrackable {
+            DetailRowGroup(rows: [AnyView(
+                Button {
+                    toggleTransitTracking()
+                } label: {
+                    HStack(spacing: 12) {
+                        Image(systemName: isTrackingTransit ? "lock.iphone" : "lock.iphone")
+                            .font(.body)
+                            .foregroundStyle(isTrackingTransit ? Color.accentColor : Color.secondary)
+                            .frame(width: 24)
+                        Text(isTrackingTransit
+                             ? "itinerary.transport.track.tracking"
+                             : "itinerary.transport.track.start")
+                            .foregroundStyle(.primary)
+                        Spacer()
+                        if isTrackingTransit {
+                            Image(systemName: "checkmark").foregroundStyle(.secondary)
+                        }
+                    }
+                    .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+            )])
+        }
+    }
+
+    private func toggleTransitTracking() {
+        guard let bundle = store.bundle(for: tripId) else { return }
+        if isTrackingTransit {
+            // 用户显式停 → 记「已停」，避免 A 回前台自动重起（覆盖用户意图）。
+            LiveActivityManager.shared.userStopTransit(segmentId: segment.id)
+            isTrackingTransit = false
+        } else {
+            LiveActivityManager.shared.startTransit(for: segment, trip: bundle)
+            // 仅在确实会启动时才乐观置位，避免系统未授权时按钮「撒谎」显示追踪中。
+            // 真实状态在 `.task` 重读 `isTrackingTransit(segmentId:)` 校正。
+            isTrackingTransit = LiveActivityManager.shared.systemActivitiesEnabled
+        }
+    }
+#endif
 
     private var header: some View {
         DetailSheetHeader(

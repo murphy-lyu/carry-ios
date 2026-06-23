@@ -224,6 +224,10 @@ final class TripStore: ObservableObject {
             // 冷启动滚动补位（spec: notification-budget.md）：必须在 fetchTrips 之后、trips 已加载时跑，
             // 否则空 trips → 候选为空 → commit 会把用户已排通知全当陈旧删掉。故放这里而非 App.onAppear。
             refreshNotifications()
+            // 交通「下一程」LA 自动起（A，spec: widget-transit-live-activity.md）：同样依赖 trips 已加载。
+#if !targetEnvironment(macCatalyst)
+            LiveActivityManager.shared.startTransitIfNeeded(trips: trips)
+#endif
         }
     }
 
@@ -612,7 +616,10 @@ final class TripStore: ObservableObject {
         guard let trip = trips.first(where: { $0.id == id }) else { return }
         NotificationManager.cancelReminders(forTripId: id)
 #if !targetEnvironment(macCatalyst)
-        Task { @MainActor in LiveActivityManager.shared.end(for: id) }
+        Task { @MainActor in
+            LiveActivityManager.shared.end(for: id)
+            LiveActivityManager.shared.endTransit(tripId: id)
+        }
 #endif
         // 同步清理日历事件，避免"删行程但日历残留"幽灵
         if UserDefaults.standard.bool(forKey: "calendar_sync_enabled") {
@@ -3077,6 +3084,23 @@ final class TripStore: ObservableObject {
 
 // MARK: - Home Screen Widget snapshot
 
+/// 行程规划「有时间的事件」的轻量镜像（spec: widget-trip-companion.md）。
+/// 绝对时刻 `date` 在 App 侧按活动各自时区算好；`kind` 是语义标签（Widget 据此取图标 + 组装本地化前缀），
+/// `primary`/`secondary` 是用户数据（航班号/酒店名/地点名 + 路线），UI 文案前缀由 Widget 侧本地化。
+struct WidgetEvent: Codable {
+    let date: Date
+    let kind: String        // "flight"/"train"/"bus"/"ferry"/"carRental"/"other"/"checkin"/"checkout"/StopCategory.rawValue
+    let primary: String     // 用户数据：航班号 / 酒店名 / 地点名 / 承运方；空则 Widget 回退到 kind 文案
+    let secondary: String   // 用户数据：「KMG → PEK」/ 取车点；空 = 不显
+}
+
+/// 住宿跨度的轻量镜像（spec: widget-trip-companion.md）。Widget 据此判定「今晚住哪 / 是否退房日」。
+struct WidgetStay: Codable {
+    let name: String
+    let checkInDayOrder: Int
+    let nights: Int         // checkOutDayOrder = checkInDayOrder + nights
+}
+
 /// Lightweight, SwiftData-free mirror of a trip, shared with CarryWidget via the
 /// App Group UserDefaults. The widget defines a field-identical struct and decodes
 /// the same JSON — no shared type / pbxproj change needed.
@@ -3091,6 +3115,11 @@ struct WidgetTripSnapshot: Codable {
     let departureDate: Date
     let packedCount: Int
     let totalCount: Int
+    // ── 旅行伴侣相位升级（spec: widget-trip-companion.md）──
+    let returnDate: Date        // = departureDate + days；用于「旅行中」相位判定与 Day N / M
+    let isDateless: Bool        // true → Widget 只走出发前相位（无「今天第几天」概念）
+    let events: [WidgetEvent]   // 整段行程「有时间的事件」，绝对 Date 已算好，按时间升序
+    let stays: [WidgetStay]     // 住宿跨度（判定「今晚住哪」）
 }
 
 extension TripStore {
@@ -3100,22 +3129,98 @@ extension TripStore {
     static let widgetAppGroup = "group.com.murphy.carry"
     static let widgetSnapshotKey = "carry_widget_trips"
 
-    /// Publishes the next up-to-3 upcoming trips to the widget and reloads timelines.
-    /// Called from CarryApp lifecycle hooks (launch / entering background).
+    /// 「当地墙上分钟数 + dayOrder + IANA 时区」→ 绝对 `Date`。
+    /// 与 `NotificationManager.absoluteDate` 同算法（年月日按行程布局推、时分按目标时区落）；
+    /// Widget 跑不了 SwiftData/时区逻辑，故事件绝对时刻一律在此算好再写进 snapshot。
+    private static func absoluteDate(tripDeparture: Date, dayOrder: Int, minutes: Int, tzId: String) -> Date? {
+        // 单一真源：复用 TransportSegment 的算法（地点/住宿同样「当地分钟数 + dayOrder + 时区 → 绝对时刻」）。
+        TransportSegment.itineraryAbsoluteDate(tripDeparture: tripDeparture, dayOrder: dayOrder, minutes: minutes, tzId: tzId)
+    }
+
+    /// 把一个行程的「有时间事件」展开为按时间升序的 `WidgetEvent`（绝对时刻、按各活动时区算）。
+    /// `since` 之前（过去）的事件丢弃——Widget 只展示当下/未来，过滤过去事件让后面的 60 上限永远先保留
+    /// 「当天及之后」，避免长行程后段因「截了最早 60 条」而拿不到下一件事。
+    private static func widgetEvents(for trip: TripBundle, since: Date) -> [WidgetEvent] {
+        var out: [(Date, WidgetEvent)] = []
+
+        // 地点：plannedStartMinutes
+        for day in trip.safeItineraryDays {
+            for stop in day.sortedStops where stop.plannedStartMinutes >= 0 {
+                // 跳过无名定时地点：Widget「下一件事」只有名字才有意义，空名是退化数据、不入列。
+                guard !stop.name.trimmingCharacters(in: .whitespaces).isEmpty else { continue }
+                guard let d = absoluteDate(tripDeparture: trip.departureDate, dayOrder: day.sortOrder,
+                                           minutes: stop.plannedStartMinutes,
+                                           tzId: stop.effectiveTimeZoneId(trip: trip)) else { continue }
+                out.append((d, WidgetEvent(date: d, kind: stop.category.rawValue,
+                                           primary: stop.name, secondary: "")))
+            }
+            // 交通段：departLocalMinutes（按出发地时区，回退行程主时区）
+            for seg in day.sortedSegments where seg.departLocalMinutes >= 0 {
+                let tz = seg.fromTimeZoneId.isEmpty ? trip.primaryTimeZoneId : seg.fromTimeZoneId
+                guard let d = absoluteDate(tripDeparture: trip.departureDate, dayOrder: seg.departDayOrder,
+                                           minutes: seg.departLocalMinutes, tzId: tz) else { continue }
+                // 优先航班号/车次（已存、零成本）；仅当为空才取 displayCarrier（可能触发航司库懒加载）。
+                let number = seg.number.trimmingCharacters(in: .whitespaces)
+                var primary = number
+                if primary.isEmpty { primary = seg.displayCarrier.trimmingCharacters(in: .whitespaces) }
+                if primary.isEmpty, seg.mode == .carRental { primary = seg.fromName }   // 租车取车点兜底
+                let a = seg.fromCode.isEmpty ? seg.fromName : seg.fromCode
+                let b = seg.toCode.isEmpty ? seg.toName : seg.toCode
+                let route = (!a.isEmpty && !b.isEmpty) ? "\(a) → \(b)" : ""
+                out.append((d, WidgetEvent(date: d, kind: seg.mode.rawValue,
+                                           primary: primary, secondary: route)))
+            }
+        }
+
+        // 住宿：入住 / 退房
+        for stay in trip.safeLodgingStays {
+            let tz = stay.effectiveTimeZoneId(trip: trip)
+            if stay.checkInMinutes >= 0,
+               let d = absoluteDate(tripDeparture: trip.departureDate, dayOrder: stay.checkInDayOrder,
+                                    minutes: stay.checkInMinutes, tzId: tz) {
+                out.append((d, WidgetEvent(date: d, kind: "checkin", primary: stay.name, secondary: "")))
+            }
+            if stay.checkOutMinutes >= 0,
+               let d = absoluteDate(tripDeparture: trip.departureDate, dayOrder: stay.checkOutDayOrder,
+                                    minutes: stay.checkOutMinutes, tzId: tz) {
+                out.append((d, WidgetEvent(date: d, kind: "checkout", primary: stay.name, secondary: "")))
+            }
+        }
+
+        // 丢过去事件（< since）→ 升序 → 上限 60。保证「当天及之后」永远先入选、不被早期事件挤掉。
+        return out.filter { $0.0 >= since }.sorted { $0.0 < $1.0 }.map { $0.1 }.prefix(60).map { $0 }
+    }
+
+    /// Publishes the up-to-3 most relevant **unfinished** trips (in-progress first, then
+    /// nearest upcoming) to the widget and reloads timelines. Called from CarryApp lifecycle
+    /// hooks (launch / background) and after itinerary/packing data changes.
     func writeWidgetSnapshot() {
-        let today = Calendar.current.startOfDay(for: Date())
-        let upcoming = trips
-            .filter { !$0.isDateless && $0.departureDate >= today }
+        let cal = Calendar.current
+        let today = cal.startOfDay(for: Date())
+        // 「未结束」= returnDate ≥ today（纳入进行中行程）；排除无日期；按出发日升序、上限 3。
+        let active = trips
+            .filter { trip in
+                guard !trip.isDateless else { return false }
+                let ret = cal.date(byAdding: .day, value: trip.days, to: trip.departureDate) ?? trip.departureDate
+                return cal.startOfDay(for: ret) >= today
+            }
             .sorted { $0.departureDate < $1.departureDate }
             .prefix(3)
-        let snapshots = upcoming.map {
-            WidgetTripSnapshot(
-                tripId: $0.id.uuidString,
-                name: $0.name,
-                destinationCity: $0.destinationCity,
-                departureDate: $0.departureDate,
-                packedCount: $0.packedCount,
-                totalCount: $0.totalCount
+        let snapshots = active.map { trip -> WidgetTripSnapshot in
+            let ret = cal.date(byAdding: .day, value: trip.days, to: trip.departureDate) ?? trip.departureDate
+            return WidgetTripSnapshot(
+                tripId: trip.id.uuidString,
+                name: trip.name,
+                destinationCity: trip.destinationCity,
+                departureDate: trip.departureDate,
+                packedCount: trip.packedCount,
+                totalCount: trip.totalCount,
+                returnDate: ret,
+                isDateless: trip.isDateless,
+                events: Self.widgetEvents(for: trip, since: today),
+                stays: trip.safeLodgingStays.map {
+                    WidgetStay(name: $0.name, checkInDayOrder: $0.checkInDayOrder, nights: max(1, $0.nights))
+                }
             )
         }
         guard let defaults = UserDefaults(suiteName: Self.widgetAppGroup) else { return }

@@ -358,7 +358,7 @@ struct SettingsView: View {
                                     route: .calendar
                                 )
 #if !targetEnvironment(macCatalyst)
-                                settingsNavigationRow(title: "settings.liveactivity.packing", route: .liveActivity)
+                                settingsNavigationRow(title: "settings.liveactivity.title", route: .liveActivity)
                                 settingsNavigationRow(title: "settings.widget.entry", route: .widgetGuide)
 #endif
                                 if CycleInference.isAvailable {

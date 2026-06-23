@@ -15,12 +15,33 @@ import UIKit
 private let widgetAppGroup = "group.com.murphy.carry"
 private let widgetSnapshotKey = "carry_widget_trips"
 
+/// 行程「有时间的事件」镜像（spec: widget-trip-companion.md）。绝对 `date` 由主 App 按活动时区算好；
+/// `kind` 语义标签（取图标 + 组装本地化前缀），`primary`/`secondary` 是用户数据。
+struct WidgetEvent: Codable {
+    let date: Date
+    let kind: String
+    let primary: String
+    let secondary: String
+}
+
+/// 住宿跨度镜像（spec: widget-trip-companion.md）。判定「今晚住哪」。
+struct WidgetStay: Codable {
+    let name: String
+    let checkInDayOrder: Int
+    let nights: Int
+}
+
+/// 旅行相位（spec: widget-trip-companion.md）。
+enum TripPhase { case preTrip, inTrip }
+
 /// Field-identical mirror of the main app's `WidgetTripSnapshot`, decoded from the
 /// JSON the app writes into the App Group UserDefaults.
 ///
 /// ⚠️ 升级兼容：未来给 `WidgetTripSnapshot` 加新字段时，**这里对应字段必须是可选或
 /// 自带默认值**，否则用户装了新版主 App（写入含新字段的 JSON）+ 未刷新的旧 Widget
-/// extension 进程会解码失败，Widget 显示空白/崩溃。当前字段均为 V1 原始字段。
+/// extension 进程会解码失败，Widget 显示空白/崩溃。
+/// 旅行伴侣相位字段（returnDate/isDateless/events/stays）一律**可选** → 解码旧 JSON（无这些键）
+/// 时退化为出发前相位，不崩不空白。
 struct WidgetTrip: Codable, Identifiable {
     let tripId: String
     let name: String
@@ -28,6 +49,11 @@ struct WidgetTrip: Codable, Identifiable {
     let departureDate: Date
     let packedCount: Int
     let totalCount: Int
+    // ── 旅行伴侣相位升级（spec: widget-trip-companion.md）；可选 = 向后兼容 ──
+    let returnDate: Date?
+    let isDateless: Bool?
+    let events: [WidgetEvent]?
+    let stays: [WidgetStay]?
 
     var id: String { tripId }
 
@@ -38,13 +64,76 @@ struct WidgetTrip: Codable, Identifiable {
     /// carry://trip/{uuid} — handled by CarryApp.onOpenURL.
     var deepLink: URL? { URL(string: "carry://trip/\(tripId)") }
 
+    var displayTitle: String { name.isEmpty ? destinationCity : name }
+
+    // MARK: 相位推导（asOf 取 entry.date，使「今天 / 下一件事」随 timeline 推进）
+
+    /// 含两端的日历天数（= returnDate − departureDate + 1）；无 returnDate 退化为 1。
+    var spanDays: Int {
+        guard let returnDate else { return 1 }
+        let cal = Calendar.current
+        let d = cal.dateComponents([.day],
+                                   from: cal.startOfDay(for: departureDate),
+                                   to: cal.startOfDay(for: returnDate)).day ?? 0
+        return max(1, d + 1)
+    }
+
+    func phase(asOf now: Date) -> TripPhase {
+        guard let returnDate, !(isDateless ?? false) else { return .preTrip }
+        let cal = Calendar.current
+        let today = cal.startOfDay(for: now)
+        guard today <= cal.startOfDay(for: returnDate) else { return .preTrip }   // 已结束（防御，选片已排除）
+        return today >= cal.startOfDay(for: departureDate) ? .inTrip : .preTrip
+    }
+
+    /// 0-based 当前天序号，clamp 到 [0, spanDays-1]。
+    func currentDayIndex(asOf now: Date) -> Int {
+        let cal = Calendar.current
+        let d = cal.dateComponents([.day],
+                                   from: cal.startOfDay(for: departureDate),
+                                   to: cal.startOfDay(for: now)).day ?? 0
+        return max(0, min(d, spanDays - 1))
+    }
+
+    /// 现在之后最近的一件事（绝对时刻比较，跨午夜也成立）。
+    func nextEvent(asOf now: Date) -> WidgetEvent? {
+        (events ?? []).first { $0.date > now }
+    }
+
+    /// 今晚住哪（住宿覆盖当前天：checkIn ≤ idx < checkIn+nights）。
+    func tonightStay(asOf now: Date) -> WidgetStay? {
+        let idx = currentDayIndex(asOf: now)
+        return (stays ?? []).first { idx >= $0.checkInDayOrder && idx < $0.checkInDayOrder + $0.nights }
+    }
+
     static let preview = WidgetTrip(
         tripId: "preview",
         name: "Tokyo",
         destinationCity: "Tokyo",
         departureDate: Calendar.current.date(byAdding: .day, value: 3, to: Date()) ?? Date(),
         packedCount: 8,
-        totalCount: 12
+        totalCount: 12,
+        returnDate: nil,
+        isDateless: false,
+        events: nil,
+        stays: nil
+    )
+
+    /// 旅行中预览（spec 验收/Xcode 预览用）。
+    static let previewInTrip = WidgetTrip(
+        tripId: "preview-in",
+        name: "Paris",
+        destinationCity: "Paris",
+        departureDate: Calendar.current.date(byAdding: .day, value: -2, to: Date()) ?? Date(),
+        packedCount: 12,
+        totalCount: 12,
+        returnDate: Calendar.current.date(byAdding: .day, value: 4, to: Date()) ?? Date(),
+        isDateless: false,
+        events: [
+            WidgetEvent(date: Calendar.current.date(byAdding: .hour, value: 3, to: Date()) ?? Date(),
+                        kind: "flight", primary: "AF111", secondary: "CDG → NRT"),
+        ],
+        stays: [WidgetStay(name: "Hôtel Le Meurice", checkInDayOrder: 0, nights: 6)]
     )
 }
 
@@ -158,14 +247,36 @@ struct CarryProvider: AppIntentTimelineProvider {
     }
 
     func timeline(for configuration: CarryWidgetIntent, in context: Context) async -> Timeline<CarryEntry> {
-        let entry = CarryEntry(date: Date(), trips: loadWidgetTrips(), appearance: configuration.appearance)
-        // Countdown changes daily — refresh at the next local midnight.
-        let nextMidnight = Calendar.current.nextDate(
-            after: Date(),
-            matching: DateComponents(hour: 0, minute: 0, second: 5),
-            matchingPolicy: .nextTime
-        ) ?? Date().addingTimeInterval(3600)
-        return Timeline(entries: [entry], policy: .after(nextMidnight))
+        let now = Date()
+        let trips = loadWidgetTrips()
+        let cal = Calendar.current
+
+        // 倒计时/相位按天变 → 至少每日午夜刷新；旅行中再在「每个未来事件时刻」补 entry，
+        // 使「下一件事 / Day N」在恰当时刻翻页（事件之间倒计时由 Text(style:.relative) 自走）。
+        let firstMidnight = cal.nextDate(after: now,
+                                         matching: DateComponents(hour: 0, minute: 0, second: 5),
+                                         matchingPolicy: .nextTime) ?? now.addingTimeInterval(3600)
+
+        var refDates: Set<Date> = [now]
+        if let primary = trips.first {
+            for ev in (primary.events ?? []) where ev.date > now { refDates.insert(ev.date) }
+        }
+        // 一串每日午夜（覆盖到主卡 returnDate 之后一天，无则 14 天兜底）。
+        let end = trips.first?.returnDate.flatMap { cal.date(byAdding: .day, value: 1, to: $0) }
+            ?? cal.date(byAdding: .day, value: 14, to: now) ?? now.addingTimeInterval(14 * 86400)
+        var m = firstMidnight
+        while m <= end {
+            refDates.insert(m)
+            guard let next = cal.date(byAdding: .day, value: 1, to: m) else { break }
+            m = next
+        }
+
+        // 上限 60 个 entry（WidgetKit 友好），按时间升序。
+        let dates = refDates.sorted().prefix(60)
+        let entries = dates.map { CarryEntry(date: $0, trips: trips, appearance: configuration.appearance) }
+        let policyEnd = entries.last.map { $0.date.addingTimeInterval(3600) } ?? firstMidnight
+        return Timeline(entries: entries.isEmpty ? [CarryEntry(date: now, trips: trips, appearance: configuration.appearance)] : entries,
+                        policy: .after(policyEnd))
     }
 }
 
@@ -178,9 +289,13 @@ struct CarryWidgetEntryView: View {
     var body: some View {
         Group {
             if let trip = entry.trips.first {
-                switch family {
-                case .systemMedium:
+                switch (family, trip.phase(asOf: entry.date)) {
+                case (.systemMedium, .inTrip):
+                    inTripMediumView(trip, now: entry.date)
+                case (.systemMedium, .preTrip):
                     mediumView(primary: trip, secondary: entry.trips.dropFirst().first)
+                case (_, .inTrip):
+                    inTripSmallView(trip, now: entry.date)
                 default:
                     smallView(trip)
                 }
@@ -189,6 +304,146 @@ struct CarryWidgetEntryView: View {
             }
         }
         .modifier(WidgetColorSchemeOverride(appearance: entry.appearance))
+    }
+
+    // MARK: In-trip helpers (spec: widget-trip-companion.md)
+
+    /// 事件 kind → SF Symbol。
+    private func icon(for kind: String) -> String {
+        switch kind {
+        case "flight":              return "airplane"
+        case "train":               return "tram.fill"
+        case "bus":                 return "bus"
+        case "ferry", "cruise":     return "ferry"
+        case "carRental":           return "car.fill"
+        case "checkin", "checkout", "lodging": return "bed.double.fill"
+        case "food":                return "fork.knife"
+        case "sightseeing":         return "camera.fill"
+        case "activity":            return "figure.walk"
+        case "shopping":            return "bag.fill"
+        default:                    return "mappin.circle.fill"
+        }
+    }
+
+    /// 事件标题文本：checkin/checkout 前缀本地化（用户数据拼在后），其余直接用用户数据。
+    @ViewBuilder
+    private func eventTitle(_ ev: WidgetEvent) -> some View {
+        switch ev.kind {
+        case "checkin":
+            if ev.primary.isEmpty { Text("widget.companion.checkin") }
+            else { Text("widget.companion.checkin") + Text(verbatim: " · \(ev.primary)") }
+        case "checkout":
+            if ev.primary.isEmpty { Text("widget.companion.checkout") }
+            else { Text("widget.companion.checkout") + Text(verbatim: " · \(ev.primary)") }
+        default:
+            Text(ev.primary.isEmpty ? ev.secondary : ev.primary)
+        }
+    }
+
+    /// "DAY N / M" 头部行。
+    private func dayHeader(_ trip: WidgetTrip, now: Date) -> some View {
+        let s = String.localizedStringWithFormat(
+            NSLocalizedString("widget.companion.day_of", comment: ""),
+            trip.currentDayIndex(asOf: now) + 1, trip.spanDays)
+        return HStack(spacing: 5) {
+            Image(systemName: "suitcase.fill").font(.caption)
+            Text(s)
+                .font(.system(.caption, design: .rounded).weight(.semibold))
+                .textCase(.uppercase)
+                .tracking(0.5)
+        }
+        .foregroundStyle(.secondary)
+    }
+
+    /// 今晚住哪行（"Tonight · 酒店名"，占位符由本地化字符串带）。
+    private func tonightRow(_ stay: WidgetStay) -> some View {
+        let s = String(format: NSLocalizedString("widget.companion.tonight", comment: ""), stay.name)
+        return HStack(spacing: 5) {
+            Image(systemName: "bed.double.fill").font(.caption2)
+            Text(s).lineLimit(1)
+        }
+        .font(.system(.caption2, design: .rounded))
+        .foregroundStyle(.secondary)
+    }
+
+    // MARK: In-trip Small
+
+    private func inTripSmallView(_ trip: WidgetTrip, now: Date) -> some View {
+        VStack(alignment: .leading, spacing: 4) {
+            dayHeader(trip, now: now)
+            Spacer(minLength: 6)
+            if let ev = trip.nextEvent(asOf: now) {
+                HStack(spacing: 5) {
+                    Image(systemName: icon(for: ev.kind)).font(.subheadline)
+                    eventTitle(ev)
+                        .font(.system(.title3, design: .rounded).weight(.bold))
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.7)
+                }
+                Text(ev.date, style: .relative)
+                    .font(.system(.subheadline, design: .rounded).weight(.medium))
+                    .foregroundStyle(.secondary)
+            } else {
+                Text(trip.displayTitle)
+                    .font(.system(.title2, design: .rounded).weight(.bold))
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.7)
+            }
+            Spacer(minLength: 0)
+            if let stay = trip.tonightStay(asOf: now) {
+                tonightRow(stay)
+            }
+        }
+        .widgetURL(trip.deepLink)
+    }
+
+    // MARK: In-trip Medium
+
+    private func inTripMediumView(_ trip: WidgetTrip, now: Date) -> some View {
+        let next = trip.nextEvent(asOf: now)
+        return VStack(alignment: .leading, spacing: 10) {
+            HStack(alignment: .top) {
+                VStack(alignment: .leading, spacing: 3) {
+                    dayHeader(trip, now: now)
+                    Text(trip.displayTitle)
+                        .font(.system(.title2, design: .rounded).weight(.bold))
+                        .lineLimit(1)
+                    if let ev = next {
+                        HStack(spacing: 5) {
+                            Image(systemName: icon(for: ev.kind)).font(.caption)
+                            eventTitle(ev).lineLimit(1)
+                        }
+                        .font(.system(.caption, design: .rounded).weight(.semibold))
+                        if !ev.secondary.isEmpty {
+                            Text(ev.secondary)
+                                .font(.system(.caption2, design: .rounded))
+                                .foregroundStyle(.secondary)
+                                .lineLimit(1)
+                        }
+                    }
+                }
+                Spacer()
+                if let ev = next {
+                    VStack(alignment: .trailing, spacing: 2) {
+                        Text(ev.date, style: .relative)
+                            .font(.system(.subheadline, design: .rounded).weight(.bold))
+                            .monospacedDigit()
+                            .lineLimit(1)
+                        Text(ev.date, style: .time)
+                            .font(.system(.caption2, design: .rounded))
+                            .foregroundStyle(.secondary)
+                    }
+                }
+            }
+
+            Spacer(minLength: 0)
+
+            if let stay = trip.tonightStay(asOf: now) {
+                Divider()
+                tonightRow(stay)
+            }
+        }
+        .widgetURL(trip.deepLink)
     }
 
     // MARK: Small
@@ -331,5 +586,13 @@ struct CarryWidget: Widget {
     CarryWidget()
 } timeline: {
     CarryEntry(date: .now, trips: [.preview])
+    CarryEntry(date: .now, trips: [.previewInTrip])
     CarryEntry(date: .now, trips: [])
+}
+
+#Preview(as: .systemMedium) {
+    CarryWidget()
+} timeline: {
+    CarryEntry(date: .now, trips: [.preview])
+    CarryEntry(date: .now, trips: [.previewInTrip])
 }

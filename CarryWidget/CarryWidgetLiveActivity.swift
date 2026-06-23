@@ -200,4 +200,180 @@ private func departureSummary(date: Date) -> String {
     default: return String(format: String(localized: "widget.liveactivity.departure.days"), days)
     }
 }
+
+// MARK: - 出行日「下一程」Live Activity（spec: widget-transit-live-activity.md）
+
+/// 交通段 mode → SF Symbol。
+private func transitIcon(_ modeRaw: String) -> String {
+    switch modeRaw {
+    case "flight":    return "airplane"
+    case "train":     return "tram.fill"
+    case "bus":       return "bus"
+    case "ferry":     return "ferry"
+    case "carRental": return "car.fill"
+    default:          return "arrow.right"
+    }
+}
+
+/// 当前相位（按 `Date()` 在渲染时判定）。
+private enum TransitPhase { case beforeDeparture, enRoute, arrived }
+private func transitPhase(_ s: TransportActivityAttributes.ContentState, now: Date) -> TransitPhase {
+    if now < s.departureDate { return .beforeDeparture }
+    if now < s.arrivalDate { return .enRoute }
+    return .arrived
+}
+
+struct CarryTransitLiveActivity: Widget {
+    var body: some WidgetConfiguration {
+        ActivityConfiguration(for: TransportActivityAttributes.self) { context in
+            TransitLockScreenView(state: context.state)
+                .activityBackgroundTint(.clear)
+        } dynamicIsland: { context in
+            let s = context.state
+            return DynamicIsland {
+                DynamicIslandExpandedRegion(.leading) {
+                    HStack(spacing: 6) {
+                        Image(systemName: transitIcon(s.modeRaw))
+                            .font(.system(size: 14, weight: .semibold))
+                        Text(s.carrierAndNumber.isEmpty ? s.fromLabel : s.carrierAndNumber)
+                            .font(.system(size: 14, weight: .semibold, design: .rounded))
+                            .lineLimit(1)
+                    }
+                    .foregroundStyle(.primary)
+                }
+                DynamicIslandExpandedRegion(.trailing) {
+                    Text(verbatim: "\(s.fromLabel) → \(s.toLabel)")
+                        .font(.system(size: 12, weight: .medium, design: .rounded))
+                        .foregroundStyle(.secondary)
+                        .lineLimit(1)
+                }
+                DynamicIslandExpandedRegion(.bottom) {
+                    transitCountdown(s, now: Date(), large: true)
+                        .padding(.horizontal, 4)
+                        .padding(.bottom, 2)
+                }
+            } compactLeading: {
+                Image(systemName: transitIcon(s.modeRaw))
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundStyle(.primary)
+            } compactTrailing: {
+                transitCompactTrailing(s, now: Date())
+            } minimal: {
+                Image(systemName: transitIcon(s.modeRaw))
+                    .font(.system(size: 12, weight: .semibold))
+                    .foregroundStyle(.primary)
+            }
+            .keylineTint(.primary)
+        }
+    }
+}
+
+/// 倒计时 + 状态说明（展开态 bottom / 锁屏复用）。
+@ViewBuilder
+private func transitCountdown(_ s: TransportActivityAttributes.ContentState, now: Date, large: Bool) -> some View {
+    let phase = transitPhase(s, now: now)
+    HStack(alignment: .firstTextBaseline) {
+        switch phase {
+        case .beforeDeparture:
+            Text(timerInterval: now...s.departureDate, countsDown: true)
+                .font(.system(size: large ? 22 : 15, weight: .bold, design: .rounded))
+                .monospacedDigit()
+            Text("widget.transit.until_departure")
+                .font(.system(size: 12, weight: .medium, design: .rounded))
+                .foregroundStyle(.secondary)
+        case .enRoute:
+            Text("widget.transit.en_route")
+                .font(.system(size: large ? 18 : 14, weight: .bold, design: .rounded))
+            Spacer(minLength: 4)
+            Text(timerInterval: now...s.arrivalDate, countsDown: true)
+                .font(.system(size: large ? 16 : 13, weight: .medium, design: .rounded))
+                .monospacedDigit()
+                .foregroundStyle(.secondary)
+        case .arrived:
+            Text("widget.transit.arrived")
+                .font(.system(size: large ? 18 : 14, weight: .bold, design: .rounded))
+                .foregroundStyle(.green)
+        }
+        if case .beforeDeparture = phase { Spacer(minLength: 4) }
+    }
+}
+
+/// 灵动岛紧凑 trailing：倒计时（出发前数到起飞，途中数到抵达）。
+@ViewBuilder
+private func transitCompactTrailing(_ s: TransportActivityAttributes.ContentState, now: Date) -> some View {
+    switch transitPhase(s, now: now) {
+    case .beforeDeparture:
+        Text(timerInterval: now...s.departureDate, countsDown: true)
+            .font(.system(size: 13, weight: .semibold, design: .rounded))
+            .monospacedDigit()
+            .frame(maxWidth: 56)
+    case .enRoute:
+        Text(timerInterval: now...s.arrivalDate, countsDown: true)
+            .font(.system(size: 13, weight: .semibold, design: .rounded))
+            .monospacedDigit()
+            .foregroundStyle(.secondary)
+            .frame(maxWidth: 56)
+    case .arrived:
+        Image(systemName: "checkmark.circle.fill")
+            .font(.system(size: 13, weight: .semibold))
+            .foregroundStyle(.green)
+    }
+}
+
+private struct TransitLockScreenView: View {
+    let state: TransportActivityAttributes.ContentState
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            // 标题行：mode 图标 + 班次 + 出发时刻
+            HStack {
+                Image(systemName: transitIcon(state.modeRaw))
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundStyle(.primary)
+                Text(state.carrierAndNumber.isEmpty
+                     ? "\(state.fromLabel) → \(state.toLabel)"
+                     : state.carrierAndNumber)
+                    .font(.system(size: 15, weight: .semibold, design: .rounded))
+                    .foregroundStyle(.primary)
+                    .lineLimit(1)
+                Spacer()
+                Text(state.departureDate, style: .time)
+                    .font(.system(size: 13, weight: .medium, design: .rounded))
+                    .foregroundStyle(.secondary)
+            }
+
+            // 路线：FROM → TO（大字）
+            HStack(spacing: 8) {
+                Text(state.fromLabel)
+                    .font(.system(size: 26, weight: .bold, design: .rounded))
+                    .lineLimit(1)
+                Image(systemName: "arrow.right")
+                    .font(.system(size: 15, weight: .semibold))
+                    .foregroundStyle(.secondary)
+                Text(state.toLabel)
+                    .font(.system(size: 26, weight: .bold, design: .rounded))
+                    .lineLimit(1)
+                Spacer()
+            }
+            .foregroundStyle(.primary)
+
+            // 倒计时 / 状态 + 航站楼·座位
+            transitCountdown(state, now: Date(), large: true)
+            if !state.fromTerminal.isEmpty || !state.seat.isEmpty {
+                HStack(spacing: 12) {
+                    if !state.fromTerminal.isEmpty {
+                        Label(state.fromTerminal, systemImage: "building.2")
+                    }
+                    if !state.seat.isEmpty {
+                        Label(state.seat, systemImage: "chair")
+                    }
+                }
+                .font(.system(size: 12, weight: .medium, design: .rounded))
+                .foregroundStyle(.secondary)
+            }
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 14)
+    }
+}
 #endif

@@ -12,6 +12,7 @@ struct CarryWidgetBundle: WidgetBundle {
         CarryWidget()
 #if canImport(ActivityKit)
         CarryWidgetLiveActivity()
+        CarryTransitLiveActivity()
 #endif
     }
 }
