@@ -251,6 +251,8 @@ enum ItineraryInputFilter {
     /// ASCII 字母 + 数字（航班/车次号、机场代码、航站楼、座位等）。
     /// `nonisolated`：纯函数、无 actor 状态，需可在 Binding setter 的 nonisolated 上下文（`.filter`）里调用。
     nonisolated static func alphanumeric(_ c: Character) -> Bool { c.isASCII && (c.isLetter || c.isNumber) }
+    /// 纯数字（仅 ASCII 0–9）：电子客票号等纯数字编号；剥全角/阿拉伯数字与分隔符。
+    nonisolated static func numeric(_ c: Character) -> Bool { c.isASCII && c.isNumber }
     /// 电话：数字 + `+ - ( ) 空格`（国际区号/分隔符）。
     nonisolated static func phone(_ c: Character) -> Bool { c.isNumber || "+-() ".contains(c) }
 }

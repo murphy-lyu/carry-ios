@@ -522,12 +522,12 @@ struct TransportEditView: View {
             } label: {
                 Text("itinerary.transport.field.confirmation")
             }
-            // 电子客票号：仅航班（13 位数字，与确认号/PNR 不同——标识已出票客票，退改/报销/部分值机用）。
-            // 数字为主、即时过滤分隔符（781-… 的连字符会被剥成纯数字、属规范存法）；占位用中性示例。
+            // 电子客票号：仅航班（13 位**纯数字**，与确认号/PNR 不同——标识已出票客票，退改/报销/部分值机用）。
+            // 用 `.numeric` 即时过滤（字母/全角/连字符/空格进不去，781-… 的连字符自动剥成纯数字、属规范存法）；占位用真实示例。
             if mode == .flight {
                 LabeledContent {
                     TextField("itinerary.flight.field.eticket.placeholder",
-                              text: $eticketNumber.filteringInput(ItineraryInputFilter.alphanumeric))
+                              text: $eticketNumber.filteringInput(ItineraryInputFilter.numeric))
                         .multilineTextAlignment(.trailing)
                         .autocorrectionDisabled()
                 } label: {
