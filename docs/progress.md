@@ -7,6 +7,19 @@
 - **现状 OK**：行程详情底部「行程/打包」切换器随滚动收起/露出（下滑 6pt 收、上滑 6pt 开、近顶恒显、spring 0.3 bounce 0.2），已复用到打包清单（`ItineraryReorderCollection` + `ReorderableItemCollection` 同一套 `onScrollHideChange` → `PackingListView.switcherHidden`）。用户初验「效果很不错」。
 - **待办**：用户会**多用后再回看动画细节**（阈值灵敏度 / 收起展开顺滑度 / 内容回填的跳动感）。届时按真机手感微调上面几个数值（阈值在两个 collection 的 `updateSwitcherHide`，动画在 `PackingListView` 两处 `onScrollHide`/`onChange` 的 `withAnimation`）。当前不动。
 
+## 上次改动摘要（行程详情/列表视觉收口 + 交通字段体系 · 2026-06-23 夜）
+
+> 一整场「行程规划 UI 扣到 ADA」+「地面/水路交通字段补全」。全部已提交 push（与并行 Widget 会话物理共用工作树、提交走隔离 index / 只取自己 hunk，互不卷入；中途并行一次整文件 `git add` 把我未提交的 `field.place` hunk 扫进了它的 commit `0d46898`——已在 main、功能无碍）。
+
+- **行程列表视觉**：日期头分级（`.title3` bold 20 + 当天色点 10 + 上方留白 22，不画横线）；行高 46→**52**、距离段 legGap 24→**18**（补偿行高对 leg 的副作用）；日历条↔日期头间距 36→**28**；住宿行单行→**两行**（名锚 + 角色副行）；日历叠加事件**按时序插入主脊、脊在其处断开**（A 方案，全天仍钉顶）；交通行 provider（航司/公司）统一**浅灰退后**。
+- **详情复制**：值字段**长按即复制 + Toast**（`longPressCopy`，手势统一长按）；标题栏 **`.textSelection`** 长按系统拷贝；电话/URL 长按复制、tap 保留拨号/打开。
+- **出发后专注**：进行中行程打开**落行程列表 + 滚到今天**；底部切换器**随滚动收起**（上滑/近顶/切脸回），行程+打包同一套；用稳定 `ScrollHideRelay` **解耦**（翻转只重排胶囊、不重渲地图/daySections）。
+- **底栏玻璃**：行程切换器与首页底栏统一到 `BottomBarGlass`（iOS26 Liquid Glass / 否则 ultraThinMaterial+叠白），去掉原 regularMaterial+黑叠层的「灰脏」。
+- **交通字段**：航班加 **E-ticket**（纯数字、真实占位、全闭环）；**火车/巴士/渡轮**整套字段（`routeName`/`coachNumber`/`seatClass`/`serviceType` 4 新 model 字段 + 按 mode 文案 Transport number / Reservation code / Train·Bus·Ferry type，去 Code/Platform）；**Add Other** 保留为通用兜底（地点改 `Location`、去 Seat）；**Cruise 决定不加**（多日复合体验、套不进交通段模型）。spec: `itinerary-ground-transport-fields.md`。
+- **Dark Mode 终验 ✅**（代码审计 + 真机关键屏）。
+
+**本场新待办**：① 切换器滚动收起动画细节真机多用后微调（见顶部「待跟进」块）；② **建议并行 transit 会话改用独立 worktree**（同工作树同改 `TransportEditView`/`TripStore`/xcstrings/`CLAUDE.md`，整文件 `git add` 互卷已发生）；③ 改 xcstrings 后**别再跑 xcodebuild**（会重写 catalog、清插值 glue key 非英译 + 给新 code 字符串造空 stub/重复）——正解：代码先 build 验证，再从 HEAD 重建 xcstrings + i18n-audit [E]=0、提交后不再 build（已写入 CLAUDE.md）。
+
 ## 上次改动摘要（Widget 表达行程规划：旅行伴侣桌面组件 + 出行日「下一程」Live Activity · 2026-06-23）
 
 > 单会话、纯我的工作。先评估「行程规划如何在 Widget 体现」→ 写两份 spec（确认后）→ 逐个实现。**两份均编译绿（主 app + Widget Extension）**。**未 push**。UI/真机验收交用户。spec: `widget-trip-companion.md` / `widget-transit-live-activity.md`。

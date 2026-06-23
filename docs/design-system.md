@@ -399,6 +399,9 @@ Apple 原生风格，极简、克制、优雅。
   - **住宿**：行 1 = 酒店名（强身份、当锚，与地点名/航班号一致；长名独占一行不被前缀挤掉）；行 2 = **角色**（Check in / Check out / Depart / Return）。**砍掉地址**——同一次入住最多出现 4 次（入住/每日出发·返回/退房）**同址，地址重复是噪音**；角色才是各行唯一差异、最有用。事件（入住/退房）semibold + 实心床；锚点（出发/返回）medium + 空心床，保持更退后。
   - **租车**：行 1 = `角色 · 公司`（Pick-up · 携程租车）；行 2 = **取/还车地点**。**保留地点**——取车 ≠ 还车，**地点会变、是端点最 actionable 的信息**，必须显示；角色只能与（短）公司名挤行 1。**不照搬住宿版式**：硬改成「公司名当锚 + 角色副行」会①丢地点（2 行装不下 公司+角色+地点）②把最没意义的「下单渠道」抬成锚并重复两次 → 以统一牺牲清晰，违原则。
 - **两条交通行（航班 / 租车）第 1 行统一「深锚 + 浅 provider」两级（2026-06-23）**：锚（航班号 / 取还车动作）= `.body` rounded **semibold + primary**；其后的 `· provider`（航司 / 租车公司）= `.subheadline` rounded **regular + secondary** + `baselineOffset 0.7`（小一档、上移半个 cap 差做视觉重心对齐）。provider 是**次于身份/动作的归属信息，必须退后**——原租车公司误用 primary 深色、与航班航司的浅灰不一致，已统一为浅灰。对标 Flighty / Apple Wallet（航班号大、航司名小一档且灰）。
+- **交通编辑/详情字段按 mode 裁剪（2026-06-23，详见 spec `itinerary-ground-transport-fields.md`）**：同一 `TransportSegment`，字段与文案随 mode 显隐——编号 `Transport number`(火/巴/渡)·`Flight number`(航班)；预订码 `Reservation code`(火/巴/渡)·`Booking code`(航班/租车)；类型 `Train/Bus/Ferry type`；Code/Platform **仅航班**；Seat 仅「有座位号」的类型（航班/火车/巴士/渡轮，租车与其它无）；火车专属 Coach（放 Seat 之上）；席别(火/巴) 自由文本。E-ticket(航班) 与确认号/PNR 是**两个概念**、并列。**其它(Other)** = 通用兜底（地点文案 `Location`、无 Seat）；**Cruise 不做交通类型**（多日复合体验、套不进 A→B 段模型）。
+
+> 原则：交通字段「按概念归属与该 mode 真实诉求裁剪」，不一刀切套航班；新增交通字段先判断它属于哪些 mode、是否与既有字段同概念。
 
 ### 日历事件叠加行
 - 视觉与行程数据**明确区分**：左侧一道该事件所属**日历色竖条** + 标题 + 时间/All-day，整体更轻（recessive）、**不挂 rail 圆 marker**（它来自「你的日历」，非「你规划的行程」）。点击弹 Carry 内只读浮层 `CalendarEventDetailView`，**不跳系统日历**（除导航必需外尽量不跳出 app）。**行高 = `TimelineRail.rowHeight`（46，与规划行/单行地点行一致）**：交错进脊后绝不矮一档破坏垂直节奏；「退后」靠浅字 + 细竖条 + 无图标承担，不靠行高变矮。

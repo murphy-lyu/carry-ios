@@ -191,6 +191,7 @@ Carry 在中国大陆 App Store 上架，涉及地理政治敏感内容时必须
 - **Live Activity 数据同步**：TripStore 中任何修改物品数量（add/remove/merge）、行程信息（name/destination/date）、打包状态的函数，必须调用 `LiveActivityManager.shared.update(for:)` 或 `end(for:)`。删除行程调用 `end`，其余调用 `update`。仅 iOS（`#if !targetEnvironment(macCatalyst)`）。
 - **本地通知调度闭环（单一入口 + 64 全局预算，spec: notification-budget.md）**：① 调度唯一入口是 `NotificationManager.reschedule(trips:)`（跨全部行程、卡 iOS 64 挂起上限的全局预算）；**禁止**在别处直接 `UNUserNotificationCenter.add` 排行程通知（绕过预算会被系统静默丢弃、且制造竞态）。TripStore 内一切影响通知的变更统一走 `refreshNotifications()`。② 新增一类通知：在 `reschedule` 里加对应 `collectXxx` 产出 `Candidate`（**主线程**读 `@Model`、回调只碰值类型），命名空间用独立 id 段（`carry.trip.{id}.<类别>…`）。③ 通知 id 必须**确定性**（同一事件每次重排 id 不变）——`commit` 靠「前缀匹配 − 本次选中集 = 待删」的差集保证竞态安全，id 漂移会破坏这个不变式。
 - **「读全量数据再做副作用」的启动逻辑必须挂在数据加载完成点之后，不能挂在与异步加载无序的生命周期钩子上**：`TripStore.init` 的 `fetchTrips()` 在 `Task { @MainActor }` 里**异步**执行——任何依赖 `store.trips` 已加载的启动副作用（如通知全局重排）若挂在 `App.onAppear` 等钩子上，会在 `trips` 仍空时跑、据空数据做出破坏性动作（实测：空候选 → 把已排通知全当陈旧删 → 每次冷启动清空）。正解：挂进 init 的 Task 内、`fetchTrips()` 之后；回前台等「数据早已就绪」的时机才用 `willEnterForeground` 之类钩子。自检：这段副作用读的全量数据，此刻真的加载完了吗？
+- **写 Apple Notes / 提醒事项 / 日历等本地 App 一律用 AppleScript（`osascript`），禁止用 computer-use 抢屏幕控制权（用户硬性要求）**：用户常并行跑多个 Claude Code 会话。computer-use 会把目标窗口提到前台、截图时隐藏其它未授权 App、抢焦点 → **直接打断其它会话与用户当前工作**。当用户说「把 xxx 记到我的 Apple Notes / Notes」（或提醒事项/日历等），用 `osascript -e 'tell application "Notes" to make new note with properties {name:"…", body:"…"}'` 这类**后台脚本**完成，零屏幕接管。仅当任务**本质上必须**操作原生 App 的可视 UI（无脚本/MCP/API 路径）时才考虑 computer-use，且先说明并征得同意。
 - **Widget Extension 文件约定**：`CarryWidget/` 下所有文件仅属于 CarryWidgetExtension target，不得与主 app target 混用；跨 target 共享的类型统一放 `SharedSources/`，通过 pbxproj `PBXSourcesBuildPhase` 显式加入两个 target
 - **Widget 本地化**：widget 使用 `CarryWidget/Localizable.xcstrings`，不共享主 app 的 xcstrings；新增 widget 文案必须同步补全 9 种语言
 - **埋点闭环**：在 `CarryLogger.Event` 新增 case 时，必须在同一次改动里补齐调用点，禁止"先定义后接线"——已定义却从未调用的 Event 是死代码，上线后无法回收数据。错误类 Event 新增后必须同步加入 `errorEvents` 集合。新增用户可触发的功能/交互（按钮、入口、分享等）应评估是否需要对应埋点
@@ -426,6 +427,7 @@ private let itemNameAliases: [String: String] = [
 - **`state: needs_review` 当成「已翻译」** → 那是 Xcode 把英文自动复制进各语言的占位，非翻译；只在 en/中文设备测就永远发现不了。判定见「🔴『翻译完成』的定义」，改完跑 `scripts/i18n-audit.py`。
 - **计数文案用扁平 `%lld` + 名词** → `count==1` 出 `1 trips`/`1 días`（罗曼语连形容词都要变格）。必须用 xcstrings 复数变体 + `String.localizedStringWithFormat`，见「🔴 计数文案必须用复数变体」。
 - **只在 en/中文设备验收** → 德/法/日/韩等的英文占位、漏译、半角标点全不可见。切目标语言设备抽验，或信 `scripts/i18n-audit.py` 的 [E]=0。
+- **改完 xcstrings 又跑了 `xcodebuild` → catalog 被构建重写**（2026-06-23 post-mortem，反复踩）：构建会 ① 把代码里新引用、但你刚手填了 9 语的 key 的非英译**清成空 stub + `needs_review`**（看似有值实为英文占位）；② 给插值 glue key（` · %@`、`%@ → %@` 这类纯标点拼接）的非英译**清掉**；③ 给新 code-referenced key 生成**重复空 stub** → 制造缺译/重复。正确工作流：**先只 build 代码**验证编译通过 → 再从 **HEAD 文本**重建 xcstrings（HEAD + 本次 key 改动，不经 Xcode）→ 跑 `i18n-audit.py` 确认 [E]=0 → **提交，且此后不再 build**。即「xcstrings 的最终态必须由人/脚本写定并直接提交，绝不能让一次 `xcodebuild` 跑在它和提交之间」。
 
 ## 文件索引
 - docs/design-north-star.md：设计最高标准（ADA 级评判框架，凌驾于 design-system.md）
