@@ -228,6 +228,8 @@ final class TripStore: ObservableObject {
 #if !targetEnvironment(macCatalyst)
             LiveActivityManager.shared.startTransitIfNeeded(trips: trips)
 #endif
+            // 相位感知 Quick Actions 中间槽（spec: quick-actions-phase-aware.md）：冷启动 trips 加载后刷一次。
+            CarryApp.refreshQuickActions(trips: trips)
         }
     }
 

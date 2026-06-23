@@ -324,7 +324,15 @@ struct ContentView: View {
     func handlePendingShortcut() {
         let defaults = UserDefaults.standard
         guard let action = defaults.string(forKey: "carry_shortcut_action") else { return }
+        // 先一次性读全部信号、立即清干净，再延迟执行——避免 0.35s 窗口内被二次调用（多入口/冷热启动）
+        // 串读或卡住（闭包只用下面捕获的局部值，不再回读 UserDefaults）。
+        let shortcutTripIdStr = defaults.string(forKey: "carry_shortcut_trip_id")
+        let shortcutFaceRaw = defaults.string(forKey: "carry_shortcut_face")
+        let shortcutDayOrder = defaults.object(forKey: "carry_shortcut_day") as? Int
         defaults.removeObject(forKey: "carry_shortcut_action")
+        defaults.removeObject(forKey: "carry_shortcut_trip_id")
+        defaults.removeObject(forKey: "carry_shortcut_face")
+        defaults.removeObject(forKey: "carry_shortcut_day")
 
         // ⚠️ asyncAfter 反模式（CLAUDE.md 点名），但此处保留：SplashView 淡出 + ContentView
         // 完全 attach + NavigationStack ready 三者的"就绪事件"在 SwiftUI 里没有可观察的钩子。
@@ -339,10 +347,12 @@ struct ContentView: View {
                 router.beginCreation()
                 #endif
             case "open_trip":
-                if let idStr = defaults.string(forKey: "carry_shortcut_trip_id"),
-                   let id = UUID(uuidString: idStr) {
-                    defaults.removeObject(forKey: "carry_shortcut_trip_id")
-                    router.path.append(id)
+                if let idStr = shortcutTripIdStr, let id = UUID(uuidString: idStr) {
+                    // 相位感知落点（spec: quick-actions-phase-aware.md）：走与通知/Widget 同源的 TripDeepLink，
+                    // 由 handlePendingTrip 选脸（行程/打包）+ 锚到当天，替代原「裸 append → 上次看的脸」。
+                    let face: TripDetailFace? = shortcutFaceRaw == "itinerary" ? .itinerary : (shortcutFaceRaw == "packing" ? .packing : nil)
+                    let anchor: TripDeepLinkAnchor? = shortcutDayOrder.map { .day($0) }
+                    router.pendingTrip = TripDeepLink(tripId: id, face: face, anchor: anchor)
                 }
             case "show_map":
                 router.path = NavigationPath()   // go to HomeView root

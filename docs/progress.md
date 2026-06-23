@@ -7,6 +7,19 @@
 - **现状 OK**：行程详情底部「行程/打包」切换器随滚动收起/露出（下滑 6pt 收、上滑 6pt 开、近顶恒显、spring 0.3 bounce 0.2），已复用到打包清单（`ItineraryReorderCollection` + `ReorderableItemCollection` 同一套 `onScrollHideChange` → `PackingListView.switcherHidden`）。用户初验「效果很不错」。
 - **待办**：用户会**多用后再回看动画细节**（阈值灵敏度 / 收起展开顺滑度 / 内容回填的跳动感）。届时按真机手感微调上面几个数值（阈值在两个 collection 的 `updateSwitcherHide`，动画在 `PackingListView` 两处 `onScrollHide`/`onChange` 的 `withAnimation`）。当前不动。
 
+## 上次改动摘要（Quick Actions 相位感知 + 数据驱动 · spec: quick-actions-phase-aware.md · 2026-06-23）
+
+> 单会话、纯我的工作。延续 Widget 的「行程规划如何上系统入口」评估，这轮做主屏长按 Quick Actions。**编译绿、i18n [E]=0**。**未提交未 push**。UI/真机验收交用户。
+
+- **背景/缺口**：原 3 个 Quick Action 全静态（New Trip / Nearest Trip / Footprint），Nearest Trip 落「上次看的脸」、不感知相位、无副标题；行程规划完全没上。
+- **改法（动态 + 相位感知）**：`QuickActionTarget.resolve(trips:)` 单一真源（`CarryShortcuts.swift`），相位三态——**today**（旅行中→行程脸 + 今天锚点，副标题 `城市 · Day N`）/ **upcoming**（最近即将出发→打包脸，副标题 `城市 · 明天 / 还有 N 天`）/ **recent**（无未来→回落最近过去、保持上次脸，保留旧 `findNearestTrip` 行为不回归）。中间槽据此**变脸**，仍 ≤4 槽（New Trip · 中间槽 · Footprint）。
+- **路由统一**：`handlePendingShortcut` 的 open_trip 从裸 `path.append(id)` 升级为构造 `TripDeepLink(face,anchor)` 走 `handlePendingTrip`（与通知/Widget 同源、无闪烁选脸 + 滚到当天），顺手修掉「落上次的脸」。Siri `OpenNearestTripIntent` 同源对齐。
+- **刷新时机**：`refreshQuickActions(trips:)` 挂 `TripStore.init` Task（冷启动 trips 已载）+ `didEnterBackground`；**不挂 onAppear**（trips 可能未载、会瞬时写空中间槽）。
+- **QA 两轮**：子代理对抗式审查 + 我逐条核验。修了 2 处真改进（① onAppear 竞态→移除该刷新点；② handlePendingShortcut 先同步读全 key 一次清、闭包用局部值，消除 0.35s 窗口串读）；其余 7 条核验为非问题（dayOrder 已被 returnDate 前置过滤、daysUntil 恒≥1、macCatalyst API 合法且原本无守卫等），不过度改。
+- **本地化**：+4 key（`quickaction.today.title` / `.subtitle.day` / `.subtitle.tomorrow` / `.subtitle.in_days`）×9 语言；删了不可达的 `.subtitle.today`（出发当天已归 today 相位）。
+- **第 4 槽「下一程」未做**（用户未要、与交通 LA 重叠，spec 标默认不做）。
+- **新会话 TODO**：① 提交 + push（用户定）；② UI/真机验收：出发前长按落打包脸 + 副标题「还有 N 天/明天」；旅行中落行程脸今天 + 「Day N」；无未来回落最近过去；冷启动跳转不丢；Siri 相位落点一致；切语言看副标题（count=1 显「明天」）。
+
 ## 上次改动摘要（行程详情/列表视觉收口 + 交通字段体系 · 2026-06-23 夜）
 
 > 一整场「行程规划 UI 扣到 ADA」+「地面/水路交通字段补全」。全部已提交 push（与并行 Widget 会话物理共用工作树、提交走隔离 index / 只取自己 hunk，互不卷入；中途并行一次整文件 `git add` 把我未提交的 `field.place` hunk 扫进了它的 commit `0d46898`——已在 main、功能无碍）。

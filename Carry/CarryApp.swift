@@ -63,7 +63,8 @@ struct CarryApp: App {
                 .onAppear {
                     CarryLogger.shared.log(.appLaunched)
                     CarryAppShortcuts.updateAppShortcutParameters()
-                    Self.installQuickActions()
+                    // Quick Actions 刷新交给「trips 必已加载」的两点：TripStore.init Task（冷启动）+ didEnterBackground。
+                    // 不在此处刷——onAppear 时 store.trips 可能仍空（init 异步加载），会瞬时写出无中间槽的版本。
                     store.writeWidgetSnapshot()
                     // 预热汇率：让费用录入时能就地捕获本位币快照（spec: itinerary-cost-tracking.md）
                     ExchangeRateManager.shared.fetchIfNeeded()
@@ -109,8 +110,9 @@ struct CarryApp: App {
                 ) { _ in
                     CarryLogger.shared.log(.appDidEnterBackground)
                     CarryLogger.shared.markSessionEnded()
-                    // Refresh the home-screen widget with the latest trip data.
+                    // Refresh the home-screen widget + phase-aware Quick Actions with the latest trip data.
                     store.writeWidgetSnapshot()
+                    Self.refreshQuickActions(trips: store.trips)
                 }
                 .onReceive(NotificationCenter.default.publisher(
                     for: UIApplication.willEnterForegroundNotification)
@@ -145,30 +147,65 @@ struct CarryApp: App {
     /// lower half of the screen (the common case — dock / lower rows) the menu opens upward and
     /// the list reads bottom-up. We therefore define the array in reverse (footprint → nearest →
     /// new trip) so it reads top-to-bottom as: New Trip · Nearest Trip · Footprint.
-    private static func installQuickActions() {
-        UIApplication.shared.shortcutItems = [
+    /// 相位感知 + 数据驱动的主屏 Quick Actions（spec: quick-actions-phase-aware.md）。
+    /// iOS 长按列表自底向上读，故数组按「footprint → 中间槽 → newTrip」排，显示为
+    /// 「New Trip · [中间槽] · Footprint」。中间槽随相位变脸（旅行中=今天的行程 / 出发前=Nearest Trip）+ 带数据副标题；
+    /// 无可展示行程时省略中间槽。挂在 App 生命周期 + 冷启动 trips 加载点刷新。
+    static func refreshQuickActions(trips: [TripBundle]) {
+        var items: [UIApplicationShortcutItem] = [
             UIApplicationShortcutItem(
                 type: CarryQuickAction.footprint,
                 localizedTitle: NSLocalizedString("Footprint", comment: "Quick action title"),
                 localizedSubtitle: nil,
                 icon: UIApplicationShortcutIcon(systemImageName: "globe.asia.australia"),
                 userInfo: nil
-            ),
-            UIApplicationShortcutItem(
-                type: CarryQuickAction.nearestTrip,
-                localizedTitle: NSLocalizedString("Nearest Trip", comment: "Quick action title"),
-                localizedSubtitle: nil,
-                icon: UIApplicationShortcutIcon(systemImageName: "suitcase"),
-                userInfo: nil
-            ),
-            UIApplicationShortcutItem(
-                type: CarryQuickAction.newTrip,
-                localizedTitle: NSLocalizedString("New Trip", comment: "Quick action title"),
-                localizedSubtitle: nil,
-                icon: UIApplicationShortcutIcon(systemImageName: "plus.circle"),
-                userInfo: nil
             )
         ]
+
+        if let target = QuickActionTarget.resolve(trips: trips) {
+            let title: String
+            let subtitle: String
+            let iconName: String
+            switch target.kind {
+            case .today:
+                title = NSLocalizedString("quickaction.today.title", comment: "")
+                subtitle = String.localizedStringWithFormat(
+                    NSLocalizedString("quickaction.subtitle.day", comment: ""), target.city, target.dayNumber)
+                iconName = "calendar"
+            case .upcoming:
+                title = NSLocalizedString("Nearest Trip", comment: "Quick action title")
+                // .upcoming 恒为「今天 < 出发日」→ daysUntil ≥ 1（出发当天已归 .today 相位）；故只分 明天 / N 天后。
+                if target.daysUntil == 1 {
+                    subtitle = String(format: NSLocalizedString("quickaction.subtitle.tomorrow", comment: ""), target.city)
+                } else {
+                    subtitle = String.localizedStringWithFormat(
+                        NSLocalizedString("quickaction.subtitle.in_days", comment: ""), target.city, target.daysUntil)
+                }
+                iconName = "suitcase"
+            case .recent:
+                // 回落最近过去行程（回看）：标题沿用 Nearest Trip，副标题仅城市（无倒计时）。
+                title = NSLocalizedString("Nearest Trip", comment: "Quick action title")
+                subtitle = target.city
+                iconName = "suitcase"
+            }
+            items.append(UIApplicationShortcutItem(
+                type: CarryQuickAction.nearestTrip,
+                localizedTitle: title,
+                localizedSubtitle: subtitle,
+                icon: UIApplicationShortcutIcon(systemImageName: iconName),
+                userInfo: nil
+            ))
+        }
+
+        items.append(UIApplicationShortcutItem(
+            type: CarryQuickAction.newTrip,
+            localizedTitle: NSLocalizedString("New Trip", comment: "Quick action title"),
+            localizedSubtitle: nil,
+            icon: UIApplicationShortcutIcon(systemImageName: "plus.circle"),
+            userInfo: nil
+        ))
+
+        UIApplication.shared.shortcutItems = items
     }
 }
 
