@@ -6,6 +6,7 @@
 import SwiftUI
 import UIKit
 import SwiftData
+import Combine
 
 /// Identifiable wrapper so a freshly-picked photo (its item provider) can drive the reposition
 /// `.sheet(item:)`. The image is loaded INSIDE the reposition sheet (so iCloud downloads show a
@@ -25,6 +26,22 @@ private struct PickedBackgroundProvider: Identifiable {
 /// 不是「已有行程一律行程规划」（旧注释如此，与实际不符，易误导）。
 /// 非私有：通知/深链承接侧（`ContentView.handlePendingTrip`）跳转前按语义写入目标脸，使
 /// `PackingListView.init` 首帧即读到正确脸（无 push 中闪烁）。
+/// 底部切换器「随滚动收起」的稳定中介（spec: 3+2 性能解耦）。容器以 `@StateObject` 持有它、订阅其变化重渲底部 inset；
+/// 子视图（ItineraryView）只持稳定引用、不订阅 → 滚动翻转时**不重渲子视图/地图/daySections**，开销仅一个胶囊重排。
+/// 动画集中在此（翻转走 spring），调用方只管报方向。
+final class ScrollHideRelay: ObservableObject {
+    @Published private(set) var hidden = false
+    func setHidden(_ v: Bool) {
+        guard v != hidden else { return }
+        withAnimation(.spring(duration: 0.3, bounce: 0.2)) { hidden = v }
+    }
+    /// 切脸时复位为显示（新脸从顶部读起、先露出）。
+    func reset() {
+        guard hidden else { return }
+        withAnimation(.spring(duration: 0.3, bounce: 0.2)) { hidden = false }
+    }
+}
+
 enum TripDetailFaceStore {
     private static func key(_ id: UUID) -> String { "trip_detail_face_\(id.uuidString)" }
     static func load(tripId: UUID) -> TripDetailFace {
@@ -92,8 +109,10 @@ struct PackingListView: View {
     @State private var showExportItinerary = false
     /// 行程「地点排序」模式：菜单进入、工具栏 …↔完成、隐藏底部切换器，传给 ItineraryView 驱动压缩行拖拽。
     @State private var isReorderingItinerary = false
-    /// 底部「行程/打包」切换器是否随滚动收起（下滑读列表→收起腾空间，上滑/近顶→露出）。行程脸 + 打包脸滚动均驱动。spec: 3+2。
-    @State private var switcherHidden = false
+    /// 底部「行程/打包」切换器随滚动收起（下滑读列表→收起腾空间，上滑/近顶→露出）。行程脸 + 打包脸滚动均驱动。spec: 3+2。
+    /// 用**引用型 relay**（非 @State + 闭包）承载:ItineraryView 只持稳定引用、不订阅 → 翻转不重渲它/地图/daySections，
+    /// 只重渲订阅了 relay 的本容器(底部 inset)。动画集中在 relay 方法里。
+    @StateObject private var scrollHideRelay = ScrollHideRelay()
     @State private var isSaved = false
     @State private var showConfetti = false
     @State private var showCompletionBanner = false
@@ -144,10 +163,9 @@ struct PackingListView: View {
                 case .packing:
                     packingContent
                 case .itinerary:
+                    // 传**稳定的 relay 引用**（非闭包）→ 切换器收起/展开只重渲底部 inset，绝不重渲 ItineraryView/地图/daySections。
                     ItineraryView(tripId: tripId, isReordering: $isReorderingItinerary,
-                                  onScrollHide: { hidden in
-                                      withAnimation(.spring(duration: 0.3, bounce: 0.2)) { switcherHidden = hidden }
-                                  })
+                                  scrollHideRelay: scrollHideRelay)
                 }
             }
         }
@@ -157,7 +175,7 @@ struct PackingListView: View {
                 EmptyView()
             } else if isNewTrip {
                 saveTripButton
-            } else if !switcherHidden {
+            } else if !scrollHideRelay.hidden {
                 // 下滑读行程列表时收起（让位、腾空间），上滑/近顶回来。始终可达，不剥夺打包入口。spec: 3+2。
                 bottomFaceSwitch
                     .transition(.move(edge: .bottom).combined(with: .opacity))
@@ -166,7 +184,7 @@ struct PackingListView: View {
         .onChange(of: detailTab) { _, newFace in
             if !isNewTrip { TripDetailFaceStore.save(newFace, tripId: tripId) }
             // 切换脸时切换器先恒显示（新脸从顶部读起、先露出，下滑再收）。
-            withAnimation(.spring(duration: 0.3, bounce: 0.2)) { switcherHidden = false }
+            scrollHideRelay.reset()
         }
         // 深链落到「当前已打开的行程」时切脸（spec: notification-deeplink-routing.md）：path [B]→[B]
         // 不重建本页、init 不会重读脸，故由 pendingFaceApply 信号驱动。绑 tripId → 只认本行程。
@@ -748,9 +766,7 @@ struct PackingListView: View {
                 // 起拖前提交在编辑的行；起拖触感由 collection 的 liftHaptic 负责。
                 if let id = editingItemId { commitEdit(itemId: id) }
             },
-            onScrollHideChange: { hidden in
-                withAnimation(.spring(duration: 0.3, bounce: 0.2)) { switcherHidden = hidden }
-            }
+            onScrollHideChange: { scrollHideRelay.setHidden($0) }
         )
         .ignoresSafeArea(.container, edges: .bottom)
         .safeAreaInset(edge: .top, spacing: 0) {

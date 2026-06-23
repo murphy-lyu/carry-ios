@@ -73,7 +73,8 @@ struct ItineraryView: View {
     /// 「地点排序」模式（由容器 PackingListView 的菜单/工具栏驱动）：压缩行 + 拖拽手柄 + 锁 tap。
     var isReordering: Binding<Bool> = .constant(false)
     /// 列表滚动方向 → 容器据此收起/展开底部切换器（下滑沉浸、上滑/近顶显示）。spec: 出发后专注列表（3+2）。
-    var onScrollHide: (Bool) -> Void = { _ in }
+    /// 用**稳定引用**（非闭包）承载：本视图只持有、不订阅 → 切换器翻转不会重渲本视图/地图/daySections（性能解耦）。
+    var scrollHideRelay: ScrollHideRelay? = nil
 
     @EnvironmentObject var store: TripStore
     @EnvironmentObject var router: NavigationRouter
@@ -286,7 +287,7 @@ struct ItineraryView: View {
                 onArrange: { store.applyItineraryArrangement(tripId: tripId, dayOrders: $0) },
                 onReorderBegan: { },
                 onFocusDay: { focusedDayId = $0 },
-                onScrollHideChange: onScrollHide
+                onScrollHideChange: { scrollHideRelay?.setHidden($0) }
             )
             // Day header 依赖行程级日期态（isDateless / departureDate）算标签，而这状态不在
             // collection 的 diffable 快照里 → section id 不变时旧 header 不会重配（转有/无日期后
