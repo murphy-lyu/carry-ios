@@ -3115,6 +3115,17 @@ struct WidgetPlanItem: Codable {
     let kind: String        // StopCategory.rawValue / TransportMode.rawValue → 图标
 }
 
+/// large 尺寸「接下来的行程」概览的统一条目（spec: widget-upcoming-large.md）。
+/// 含地点/交通/住宿入住退房，**有无时刻都收**，按 (dayOrder, order) 排；large 据此按天分组列出。
+struct WidgetAgendaItem: Codable {
+    let dayOrder: Int       // 第几天（0-based）→ Widget 按此分组
+    let order: Int          // 当天内排序键（时间轴 sortOrder；住宿退房置首、入住置尾）
+    let title: String       // 地点名 / 班次·承运方·路线 / 酒店名
+    let subtitle: String    // 地点（地址 / 路线 / 空）
+    let kind: String        // 取图标：StopCategory / TransportMode / "checkin" / "checkout"
+    let time: String        // 时钟标签「13:45」（跟随设备 12/24h）；空 = 无时刻
+}
+
 /// Lightweight, SwiftData-free mirror of a trip, shared with CarryWidget via the
 /// App Group UserDefaults. The widget defines a field-identical struct and decodes
 /// the same JSON — no shared type / pbxproj change needed.
@@ -3135,6 +3146,7 @@ struct WidgetTripSnapshot: Codable {
     let events: [WidgetEvent]   // 整段行程「有时间的事件」，绝对 Date 已算好，按时间升序
     let stays: [WidgetStay]     // 住宿跨度（判定「今晚住哪」）
     let plan: [WidgetPlanItem]  // 今天及之后的行程项（含无时刻）；无「下一件事」时显示「今天的地点」
+    let agenda: [WidgetAgendaItem]  // large 尺寸「接下来的行程」概览（按天分组，含地点/交通/住宿）
 }
 
 extension TripStore {
@@ -3234,6 +3246,52 @@ extension TripStore {
         return out.sorted { ($0.dayOrder, $0.order) < ($1.dayOrder, $1.order) }.prefix(60).map { $0 }
     }
 
+    /// large 尺寸「接下来的行程」概览（spec: widget-upcoming-large.md）：地点 + 交通 + 住宿入住/退房，
+    /// 有无时刻都收，带地点副标题 + 可选时钟标签，按 (天, 当天序) 排。`fromDayOrder` 截掉过去天。
+    private static func widgetAgenda(for trip: TripBundle, fromDayOrder: Int) -> [WidgetAgendaItem] {
+        var out: [WidgetAgendaItem] = []
+        func clock(_ m: Int) -> String { m >= 0 ? timeLabel(dayMinutes: m) : "" }
+        for day in trip.safeItineraryDays where day.sortOrder >= fromDayOrder {
+            for stop in day.sortedStops {
+                let name = stop.name.trimmingCharacters(in: .whitespaces)
+                guard !name.isEmpty else { continue }
+                out.append(WidgetAgendaItem(dayOrder: day.sortOrder, order: stop.sortOrder, title: name,
+                    subtitle: stop.address.trimmingCharacters(in: .whitespaces),
+                    kind: stop.category.rawValue, time: clock(stop.plannedStartMinutes)))
+            }
+            for seg in day.sortedSegments {
+                var title = seg.number.trimmingCharacters(in: .whitespaces)
+                if title.isEmpty { title = seg.displayCarrier.trimmingCharacters(in: .whitespaces) }
+                let a = seg.fromCode.isEmpty ? seg.fromName : seg.fromCode
+                let b = seg.toCode.isEmpty ? seg.toName : seg.toCode
+                var subtitle = (!a.isEmpty && !b.isEmpty) ? "\(a) → \(b)" : ""
+                if seg.mode == .carRental {                                   // 租车显地址、标题用公司
+                    if title.isEmpty { title = seg.fromName }
+                    if !seg.fromAddress.isEmpty { subtitle = seg.fromAddress }
+                }
+                if title.isEmpty { title = subtitle; subtitle = "" }
+                guard !title.isEmpty else { continue }
+                out.append(WidgetAgendaItem(dayOrder: seg.departDayOrder, order: seg.sortOrder, title: title,
+                    subtitle: subtitle, kind: seg.mode.rawValue, time: clock(seg.departLocalMinutes)))
+            }
+        }
+        // 住宿：退房置当天最前（order 极小）、入住置当天最后（order 极大）——符合「早退房 / 晚入住」直觉。
+        for stay in trip.safeLodgingStays {
+            let name = stay.name.trimmingCharacters(in: .whitespaces)
+            guard !name.isEmpty else { continue }
+            if stay.checkOutDayOrder >= fromDayOrder {
+                out.append(WidgetAgendaItem(dayOrder: stay.checkOutDayOrder, order: Int.min + 1, title: name,
+                    subtitle: "", kind: "checkout", time: clock(stay.checkOutMinutes)))
+            }
+            if stay.checkInDayOrder >= fromDayOrder {
+                out.append(WidgetAgendaItem(dayOrder: stay.checkInDayOrder, order: Int.max - 1, title: name,
+                    subtitle: stay.address.trimmingCharacters(in: .whitespaces),
+                    kind: "checkin", time: clock(stay.checkInMinutes)))
+            }
+        }
+        return out.sorted { ($0.dayOrder, $0.order) < ($1.dayOrder, $1.order) }.prefix(16).map { $0 }
+    }
+
     /// Publishes the up-to-3 most relevant **unfinished** trips (in-progress first, then
     /// nearest upcoming) to the widget and reloads timelines. Called from CarryApp lifecycle
     /// hooks (launch / background) and after itinerary/packing data changes.
@@ -3268,7 +3326,8 @@ extension TripStore {
                 stays: trip.safeLodgingStays.map {
                     WidgetStay(name: $0.name, checkInDayOrder: $0.checkInDayOrder, nights: max(1, $0.nights))
                 },
-                plan: Self.widgetPlan(for: trip, fromDayOrder: dayIdx)
+                plan: Self.widgetPlan(for: trip, fromDayOrder: dayIdx),
+                agenda: Self.widgetAgenda(for: trip, fromDayOrder: dayIdx)
             )
         }
         guard let defaults = UserDefaults(suiteName: Self.widgetAppGroup) else { return }

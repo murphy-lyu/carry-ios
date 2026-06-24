@@ -39,6 +39,16 @@ struct WidgetPlanItem: Codable {
     let kind: String
 }
 
+/// large 概览条目镜像（spec: widget-upcoming-large.md）。
+struct WidgetAgendaItem: Codable {
+    let dayOrder: Int
+    let order: Int
+    let title: String
+    let subtitle: String
+    let kind: String
+    let time: String
+}
+
 /// 旅行相位（spec: widget-trip-companion.md）。
 enum TripPhase { case preTrip, inTrip }
 
@@ -63,6 +73,7 @@ struct WidgetTrip: Codable, Identifiable {
     let events: [WidgetEvent]?
     let stays: [WidgetStay]?
     let plan: [WidgetPlanItem]?
+    let agenda: [WidgetAgendaItem]?
 
     var id: String { tripId }
 
@@ -121,6 +132,23 @@ struct WidgetTrip: Codable, Identifiable {
         return (plan ?? []).filter { $0.dayOrder == idx }.sorted { $0.order < $1.order }
     }
 
+    /// large 概览：从今天起的条目，按 (天, 当天序) 排（spec: widget-upcoming-large.md）。
+    func upcomingAgenda(asOf now: Date) -> [WidgetAgendaItem] {
+        let idx = currentDayIndex(asOf: now)
+        return (agenda ?? []).filter { $0.dayOrder >= idx }
+            .sorted { ($0.dayOrder, $0.order) < ($1.dayOrder, $1.order) }
+    }
+
+    /// 某天序的分组头文案：今天 / 明天 / 周N · M/D。
+    func agendaDayLabel(_ dayOrder: Int, asOf now: Date) -> String {
+        let cur = currentDayIndex(asOf: now)
+        if dayOrder == cur { return NSLocalizedString("widget.companion.today", comment: "") }
+        if dayOrder == cur + 1 { return NSLocalizedString("widget.countdown.tomorrow", comment: "") }
+        let cal = Calendar.current
+        let date = cal.date(byAdding: .day, value: dayOrder, to: cal.startOfDay(for: departureDate)) ?? departureDate
+        return date.formatted(.dateTime.weekday(.abbreviated).month(.abbreviated).day())
+    }
+
     static let preview = WidgetTrip(
         tripId: "preview",
         name: "Tokyo",
@@ -132,7 +160,8 @@ struct WidgetTrip: Codable, Identifiable {
         isDateless: false,
         events: nil,
         stays: nil,
-        plan: nil
+        plan: nil,
+        agenda: nil
     )
 
     /// 旅行中预览（spec 验收/Xcode 预览用）。
@@ -150,7 +179,12 @@ struct WidgetTrip: Codable, Identifiable {
                         kind: "flight", primary: "AF111", secondary: "CDG → NRT"),
         ],
         stays: [WidgetStay(name: "Hôtel Le Meurice", checkInDayOrder: 0, nights: 6)],
-        plan: nil
+        plan: nil,
+        agenda: [
+            WidgetAgendaItem(dayOrder: 2, order: 0, title: "AF111", subtitle: "CDG → NRT", kind: "flight", time: "13:45"),
+            WidgetAgendaItem(dayOrder: 2, order: 1, title: "Louvre", subtitle: "Rue de Rivoli", kind: "sightseeing", time: ""),
+            WidgetAgendaItem(dayOrder: 3, order: 0, title: "Versailles", subtitle: "", kind: "sightseeing", time: "10:00"),
+        ]
     )
 }
 
@@ -307,6 +341,10 @@ struct CarryWidgetEntryView: View {
         Group {
             if let trip = entry.trips.first {
                 switch (family, trip.phase(asOf: entry.date)) {
+                case (.systemLarge, .inTrip):
+                    largeAgendaView(trip, now: entry.date)
+                case (.systemLarge, .preTrip):
+                    largePreTripView(trip, now: entry.date)
                 case (.systemMedium, .inTrip):
                     inTripMediumView(trip, now: entry.date)
                 case (.systemMedium, .preTrip):
@@ -500,6 +538,127 @@ struct CarryWidgetEntryView: View {
         .widgetURL(trip.deepLink)
     }
 
+    // MARK: Large — 按天分组的「接下来的行程」概览（spec: widget-upcoming-large.md）
+
+    /// 一行渲染单元：天分组头（dayOrder 非空）或行程条目（item 非空）。
+    private struct AgendaRenderRow: Identifiable {
+        let id: String
+        let dayOrder: Int?
+        let item: WidgetAgendaItem?
+    }
+
+    /// 把按 (天,序) 排好的条目展开成「天头 + 条目」行序列，封顶 maxRows（large 是概览、非全量）。
+    private func agendaRenderRows(_ items: [WidgetAgendaItem], maxRows: Int) -> [AgendaRenderRow] {
+        var rows: [AgendaRenderRow] = []
+        var lastDay: Int? = nil
+        for (i, it) in items.enumerated() {
+            if it.dayOrder != lastDay {
+                rows.append(AgendaRenderRow(id: "h\(it.dayOrder)", dayOrder: it.dayOrder, item: nil))
+                lastDay = it.dayOrder
+            }
+            rows.append(AgendaRenderRow(id: "i\(i)", dayOrder: nil, item: it))
+            if rows.count >= maxRows { break }
+        }
+        return rows
+    }
+
+    @ViewBuilder
+    private func agendaItemRow(_ it: WidgetAgendaItem) -> some View {
+        HStack(spacing: 8) {
+            Image(systemName: icon(for: it.kind))
+                .font(.system(size: 13, weight: .semibold))
+                .foregroundStyle(.secondary)
+                .frame(width: 20)
+            VStack(alignment: .leading, spacing: 1) {
+                Text(it.title)
+                    .font(.system(.subheadline, design: .rounded).weight(.medium))
+                    .lineLimit(1)
+                if !it.subtitle.isEmpty {
+                    Text(it.subtitle)
+                        .font(.system(.caption2, design: .rounded))
+                        .foregroundStyle(.secondary)
+                        .lineLimit(1)
+                }
+            }
+            Spacer(minLength: 4)
+            if !it.time.isEmpty {
+                Text(it.time)
+                    .font(.system(.caption, design: .rounded).weight(.medium))
+                    .foregroundStyle(.secondary)
+                    .monospacedDigit()
+            }
+        }
+    }
+
+    private func largeAgendaView(_ trip: WidgetTrip, now: Date) -> some View {
+        let items = trip.upcomingAgenda(asOf: now)
+        let rows = agendaRenderRows(items, maxRows: 9)
+        return VStack(alignment: .leading, spacing: 7) {
+            HStack {
+                Text("widget.agenda.title")
+                    .font(.system(.headline, design: .rounded).weight(.bold))
+                Spacer()
+                dayHeader(trip, now: now)
+            }
+            if rows.isEmpty {
+                Spacer()
+                HStack {
+                    Spacer()
+                    Text("widget.agenda.empty")
+                        .font(.system(.subheadline, design: .rounded))
+                        .foregroundStyle(.secondary)
+                    Spacer()
+                }
+                Spacer()
+            } else {
+                ForEach(rows) { row in
+                    if let d = row.dayOrder {
+                        Text(trip.agendaDayLabel(d, asOf: now))
+                            .font(.system(.caption, design: .rounded).weight(.semibold))
+                            .textCase(.uppercase)
+                            .tracking(0.4)
+                            .foregroundStyle(.secondary)
+                            .padding(.top, 1)
+                    } else if let it = row.item {
+                        agendaItemRow(it)
+                    }
+                }
+                Spacer(minLength: 0)
+            }
+        }
+        .widgetURL(trip.deepLink)
+    }
+
+    /// 出发前 large：倒计时 + 打包进度 + 出发当天预览。
+    private func largePreTripView(_ trip: WidgetTrip, now: Date) -> some View {
+        let day1 = trip.upcomingAgenda(asOf: now).filter { $0.dayOrder == 0 }
+        return VStack(alignment: .leading, spacing: 8) {
+            widgetHeader
+            Text(trip.displayTitle)
+                .font(.system(.title2, design: .rounded).weight(.bold))
+                .lineLimit(1)
+            Text(countdownText(for: trip.departureDate))
+                .font(.system(.subheadline, design: .rounded).weight(.medium))
+                .foregroundStyle(.secondary)
+            ProgressView(value: trip.progress).tint(.primary)
+            HStack {
+                Text(progressText(trip))
+                Spacer()
+                Text("\(Int((trip.progress * 100).rounded()))%")
+            }
+            .font(.system(.caption2, design: .rounded))
+            .foregroundStyle(.secondary)
+            if !day1.isEmpty {
+                Divider().padding(.vertical, 2)
+                ForEach(Array(day1.prefix(4).enumerated()), id: \.offset) { _, it in
+                    agendaItemRow(it)
+                }
+            }
+            Spacer(minLength: 0)
+        }
+        .widgetURL(trip.deepLink)
+    }
+
     // MARK: Small
 
     private func smallView(_ trip: WidgetTrip) -> some View {
@@ -630,7 +789,7 @@ struct CarryWidget: Widget {
         }
         .configurationDisplayName("widget.display_name")
         .description("widget.description")
-        .supportedFamilies([.systemSmall, .systemMedium])
+        .supportedFamilies([.systemSmall, .systemMedium, .systemLarge])
     }
 }
 
@@ -649,4 +808,11 @@ struct CarryWidget: Widget {
 } timeline: {
     CarryEntry(date: .now, trips: [.preview])
     CarryEntry(date: .now, trips: [.previewInTrip])
+}
+
+#Preview(as: .systemLarge) {
+    CarryWidget()
+} timeline: {
+    CarryEntry(date: .now, trips: [.previewInTrip])
+    CarryEntry(date: .now, trips: [.preview])
 }
