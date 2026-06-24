@@ -3,6 +3,19 @@
 ## 最后更新
 2026-06-25
 
+## 上次改动摘要（行程「地点排序」拖拽自滚过于灵敏 · 根因＝吸顶 inset 污染边界 · 模拟器实测修复 · 2026-06-25 深夜）
+
+> 单会话、纯我的工作。用户睡前全权授权我自跑模拟器调试+验收。**编译绿**；**已提交 main**（`f36d514` 受控自滚 + `2b8d388` 边界根因修复）；**未 push**。设备级终验交用户明早。两个入口（行程列表长按拖拽 + 右上角「地点排序」）共用 `ItineraryReorderCollection`，同一修复一并覆盖。
+
+- **症状**：拖拽地点排序时，手指稍微上/下移一点，列表就狂滚冲过头，难精确落到目标插入点（「C 想插 E/F 间却插到 M/N」）。
+- **排查（可观测手段，避免盲调）**：
+  1. 一度误判「原生 `beginInteractiveMovement` 自滚压不住、需全自定义重写」——**根因是我第一次装包时 `find` 抓到了过期 DerivedData 旧包**（snap-back 之前的坏版本）。开了 worktree 准备重写，模拟器挂日志（`RDBG`）才发现 **f36d514 的「回正」方案其实有效**：`applyMine=1`、无任何原生自滚进来，滚动就是受控的 165pt/s。**重写不需要**，worktree 已删。
+  2. 但中部拖拽仍会触发自滚。再挂日志（`RDBG2`）抓到真根：`autoScrollVelocity` 用 `adjustedContentInset.bottom` 算底边，而该 inset 含**末段吸顶预留的 281pt 巨大底部 inset** → `bottomEdge = off+bounds−281` 被抬到屏幕中部 → 下方 60% 区域全成「越界」触发带。
+- **根因解（`2b8d388`）**：自滚边界（与 band-clamp）改用**可见视口 + `safeAreaInsets`**（~34pt），**绝不用** `adjustedContentInset`；再软化边缘速度 4→3 行/秒、触发带 72→48pt。
+- **模拟器实测（日志+截图）**：中部拖拽**零滚动**、精确重排；只有贴到真边缘才温和滚（~3 行/秒）；跨天拖拽 + 原生抬起观感不变。
+
+**机制要点（snap-back，保留在 f36d514）**：拖拽期拥有 contentOffset——自家 displayLink 按「行/秒」推进 `dragAnchorOffsetY`，`scrollViewDidScroll` 把任何非本类位移即时回正到该权威值，原生那一跳不被画出。**教训**：① 装模拟器包务必用确定的 `-derivedDataPath`，别 `find` 抓到旧包误判；② 自滚/落点的「边缘」永远以可见视口+安全区为准，别掺业务用的 contentInset。
+
 ## 上次改动摘要（Roadmap：「导出行程单」从已上线移回即将推出 + 升为进行中 · 2026-06-25）
 
 > 单会话、纯我的工作。只动 `Carry/Views/RoadmapView.swift`（`embeddedDefault`）+ 根目录 `roadmap.json`，两数据源同步。**已提交并 push 到 origin/main，GitHub API 核对线上生效**。

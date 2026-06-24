@@ -1,5 +1,21 @@
 # 决策日志
 
+## 2026-06-25 行程「地点排序」拖拽自滚：自定义受控滚动，不全自定义拖拽
+
+### 背景
+行程「地点排序」（及列表长按拖拽）用 UICollectionView 原生 `beginInteractiveMovementForItem`（跨 section=跨天拖拽靠它）。它自带的「拖到边缘自动滚动」每帧推进 20~40pt（≈1000+pt/s）、**无公开 API 关闭或调速** → 手指挪一点就狂滚冲过头，难精确落点。
+
+### 决策（两层，均不重写拖拽）
+1. **受控自滚替代原生自滚（snap-back，f36d514）**：拖拽期本类「拥有」contentOffset——自家 `CADisplayLink` 按「行/秒」（实测行高×常数封顶）推进权威值 `dragAnchorOffsetY`；`scrollViewDidScroll` 把任何**非本类**的位移（=原生自滚）即时回正到该值，原生那一跳从不被画出。净滚动只由本类受控推进。**验证**：模拟器日志显示拖拽全程 `applyMine=1`、无原生位移进来。
+2. **自滚边界用可见视口+安全区，不用 `adjustedContentInset`（2b8d388）**：真根是 `adjustedContentInset.bottom` 含**末段吸顶预留的 281pt 巨大底部 inset**，把「底边」抬到屏幕中部、令自滚在中段误触发。改用 `safeAreaInsets`（~34pt）→ 只有贴真边缘才滚，列表中部是「安静落点区」。
+
+### 否决「全自定义拖拽重写」
+一度准备弃用 `beginInteractiveMovement`、自己渲染快照跟手+自己重排（开了 worktree）。**否决原因**：当初判断「原生自滚压不住」是基于一个**过期 DerivedData 旧包**（`find` 误抓）——挂日志后证明 snap-back 其实有效，原生自滚已被回正压住。全重写是不必要的复杂度与风险（跨天/落点/抬起观感都要重做），按「改动有效性审计」原则撤销，保留最小必要集合（两层小改）。
+
+### 教训（已写入 progress.md）
+- **模拟器自跑务必用确定的 `-derivedDataPath`**，别 `find ~/Library/.../DerivedData` 抓包——极易拿到旧构建，据此误判根因、险些做无谓重写。
+- **拖拽自滚/落点的「边缘」永远以可见视口 + `safeAreaInsets` 为准**，绝不掺业务用途的 `contentInset`（吸顶/避让预留）——否则边界被悄悄抬进屏幕中部。
+
 ## 2026-06-24 下线「导出签证行程单」功能（删除而非隐藏）
 
 当前「导出行程单」（双语签证 PDF）与产品预期不一致，决定**下线重做**。在「藏入口保代码」与「直接删除」之间选**直接删除**，理由：① 功能完全自包含（3 个独占文件 `ExportItinerarySheet` / `ItineraryDocumentText` / `ItineraryPDFRenderer`，~456 行），不沾备份/CostBearing/schema/duplicate/Widget 任何「加字段同步 N 处」红线；② 既定要**重新设计**、不会原样复用，留着只有维护负担没有复用收益——尤其行程数据模型在持续演进，PDF 渲染器会静默腐烂；③ git 历史完整留底，重做时 `git show <删除提交>:路径` 即可调出参考，比让死代码烂在工作区强。删除范围：3 文件 + `PackingListView` 入口（按钮+sheet+state）+ `CarryLogger` 两个 event（`itineraryExported`/`itineraryExportFailed`，含 errorEvents 成员）+ 6 个 `itinerary.export.*` 文案 key。spec `itinerary-export-document.md` 保留作重做参考。**找回锚点：删除提交见本日 git log「Remove the visa itinerary PDF export feature」。**
