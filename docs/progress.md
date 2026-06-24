@@ -1,11 +1,25 @@
 # 项目进度
 
 ## 最后更新
-2026-06-23
+2026-06-24
 
 ## 待跟进 · 行程列表「切换器随滚动收起」动画细节（2026-06-23 夜）
 - **现状 OK**：行程详情底部「行程/打包」切换器随滚动收起/露出（下滑 6pt 收、上滑 6pt 开、近顶恒显、spring 0.3 bounce 0.2），已复用到打包清单（`ItineraryReorderCollection` + `ReorderableItemCollection` 同一套 `onScrollHideChange` → `PackingListView.switcherHidden`）。用户初验「效果很不错」。
 - **待办**：用户会**多用后再回看动画细节**（阈值灵敏度 / 收起展开顺滑度 / 内容回填的跳动感）。届时按真机手感微调上面几个数值（阈值在两个 collection 的 `updateSwitcherHide`，动画在 `PackingListView` 两处 `onScrollHide`/`onChange` 的 `withAnimation`）。当前不动。
+
+## 上次改动摘要（相册导入 + 长行程列表/地图性能根因优化 · 2026-06-24）
+
+> 多会话并行。本会话主改：相册导入链路 + 行程列表/地图性能。**编译绿、零警告**。真机/视觉验收交用户（真机当前被 Xcode DDI 个性化失败挡着，可先用模拟器）。
+
+- **相册导入提速（`30980d6`）**：`extract` 串行逐张 → 有界并发 TaskGroup（N≈核数封顶 6，内存仍有界）；`parseExifDate` 改每次新建 DateFormatter（并发解码下共享单例非线程安全）。
+- **地名不再阻塞进预览（`30980d6`）**：`assemble` 只聚类、立刻进预览；反向地理编码拆成后台 `geocodeNames` 流式回填（按地点 id，不覆盖用户改名）。消除原先「卡在 100% 等命名」的假死。
+- **导入回列表不再「逐个蹦」（`30980d6`）**：`ItineraryReorderCollection.applySnapshot` 批量结构变化（>12 项/段数变）不播逐行插入动画，小改动仍保留。
+- **160 天列表滚动卡顿根因（`30980d6`）**：`daySections` 构建时一次性算好①连线预算②行查找表（stop/day/segment/lodging by id），行闭包 O(1) 查，取代每个可见 cell 各重算整天 `timelineRowIDs`（内含扫全部天找租车）+ `safe*` 每访重排 = O(可见行×天²)。
+- **空名地点展示兜底（`30980d6`）**：`ItineraryStop.displayName` 空名退本地化「未命名地点」（复用 `phototrip.place.untitled`），覆盖列表/详情/地图/导航；存储层保持真相（空）。来源：地理编码失败（旧隐患）+ 流式命名未完成即保存（新）。
+- **详情页缩略图异步解码（`30980d6`）**：`AsyncThumbnail` 后台解 `UIImage(data:)` 再上屏，免主线程同步解码丢帧；预览页 `LazyVStack` 只解码可见天。
+- **#1 完成帧 + #2 长行程滚动（`2f22782`，并行会话）**：导入读完钉满 N/N 并短暂停留再进预览（修「停在 49/50 像漏一张」）；day header / add-stop 行也走 O(1) 缓存 + 静态 DateFormatter。
+- **#3 地图标注跳过空天（`43b202f` 合并）**：`mapAnnotations` 只为「有内容」的天建 MapContent，空天不再空跑一个 ForEach 身份（长行程焦点落空天 / 全屏全量时减负）。可证明行为等价。
+- **待跟进**：① 真机 Xcode DDI 个性化失败（部署侧、非代码，多为网络/重启/Developer Mode）；② 装上最新构建复测导入 #1/#2，若 #2 仍卡，下一个嫌疑＝自适应高度 SwiftUI cell + 200 section 估算高度在「跳末日后上滚」逐个回修（未动，需先确认再深挖、且那两文件并行会话在改）。
 
 ## 上次改动摘要（Quick Actions 相位感知 + 数据驱动 · spec: quick-actions-phase-aware.md · 2026-06-23）
 
