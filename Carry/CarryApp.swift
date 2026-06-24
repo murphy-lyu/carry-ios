@@ -63,9 +63,9 @@ struct CarryApp: App {
                 .onAppear {
                     CarryLogger.shared.log(.appLaunched)
                     CarryAppShortcuts.updateAppShortcutParameters()
-                    // Quick Actions 刷新交给「trips 必已加载」的两点：TripStore.init Task（冷启动）+ didEnterBackground。
-                    // 不在此处刷——onAppear 时 store.trips 可能仍空（init 异步加载），会瞬时写出无中间槽的版本。
-                    store.writeWidgetSnapshot()
+                    // Widget snapshot + Quick Actions 都交给「trips 必已加载」的两点：TripStore.init Task（冷启动）
+                    // + didEnterBackground。**绝不在 onAppear 写 snapshot**——此时 store.trips 可能仍空（init 异步
+                    // 加载），会写出空 snapshot 覆盖掉好的那份，Widget 变空白/只剩缓存旧渲染（已踩坑）。
                     // 预热汇率：让费用录入时能就地捕获本位币快照（spec: itinerary-cost-tracking.md）
                     ExchangeRateManager.shared.fetchIfNeeded()
                     // 注册通知委托，让打包提醒点击后直接跳到对应行程

@@ -230,6 +230,9 @@ final class TripStore: ObservableObject {
 #endif
             // 相位感知 Quick Actions 中间槽（spec: quick-actions-phase-aware.md）：冷启动 trips 加载后刷一次。
             CarryApp.refreshQuickActions(trips: trips)
+            // Widget snapshot：冷启动 trips 加载后写一次（spec: widget-trip-companion.md）。**必须在此、不能在
+            // App.onAppear**——onAppear 时 trips 可能仍空、会写空 snapshot 覆盖好的那份（Widget 变空白，已踩坑）。
+            writeWidgetSnapshot()
         }
     }
 
