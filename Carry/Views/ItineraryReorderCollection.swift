@@ -203,7 +203,30 @@ struct ItineraryReorderCollection: UIViewRepresentable {
         private var lastHapticIndexPath: IndexPath?
         private weak var longPressRecognizer: UILongPressGestureRecognizer?
 
+        // 自定义可控自动滚动（拖拽到上/下边缘时）：接管 UIKit 内置交互移动的自动滚动——后者速度/触发区
+        // 不可调、太猛，导致「一进边缘就狂滚冲过头」、难定位插入点。做法：喂给 UIKit 的目标位置夹在可视区
+        // 内边带，UIKit 因而不自滚；改由本 CADisplayLink 按「离边缘越近越快、二次曲线渐进、上限低」推进
+        // contentOffset。注：跟手输入循环（每帧依当前手指位置推进），非固定时长动画，不属「displayLink 做动画」反模式。
+        private var autoScrollLink: CADisplayLink?
+        private var autoScrollSpeed: CGFloat = 0          // 带符号 pt/s，负=上滚
+        private let autoScrollZone: CGFloat = 72          // 上/下触发带高度（也是目标夹断的内边距）
+        private let autoScrollMaxSpeed: CGFloat = 420     // 边缘处速度的绝对上限 pt/s（再快的行高也不超过它）
+        // 速度按「行/秒」而非「点/秒」封顶：用户真正感知的是「每秒掠过几个插入点（行）」。固定 pt/s 下，
+        // 压缩行（排序模式 ~44pt）比常规行（~88pt）每秒掠过的行数翻倍 → 同样手感却「冲过头」。改成
+        // 边缘速度 = 实测被拖行高 × 本常数（封顶 autoScrollMaxSpeed），两种行高自动统一到同一「插入点/秒」。
+        private let autoScrollRowsPerSec: CGFloat = 4     // 边缘处最多每秒掠过的行数
+        private let autoScrollFallbackRowHeight: CGFloat = 56  // 行高测不到时的保守缺省（绝不回落到 maxSpeed 快档）
+        private var draggedRowHeight: CGFloat = 0         // .began 时实测被拖 cell 高度，驱动上面的按行封顶
+        // 我在拖拽期间「拥有」的权威 contentOffset.y：displayLink 推进它；scrollViewDidScroll 把任何
+        // 偏离它的位移（=UIKit 内置自滚）回正到它。`reverting` 防回正写入再次触发 didScroll 的递归。
+        private var dragAnchorOffsetY: CGFloat = 0
+        private var revertingNativeScroll = false
+        // true 仅在本类自己写 contentOffset 的那一瞬：scrollViewDidScroll 据此区分「我的推进」与「原生自滚」。
+        private var applyingControlledScroll = false
+
         init(_ parent: ItineraryReorderCollection) { self.parent = parent }
+
+        deinit { autoScrollLink?.invalidate() }
 
         // MARK: Setup
 
@@ -496,13 +519,22 @@ struct ItineraryReorderCollection: UIViewRepresentable {
                 stepHaptic.prepare()
                 liftHaptic.prepare()
                 liftHaptic.impactOccurred()
+                // 实测被拖 cell 高度，给自动滚动按「行/秒」封顶（压缩/常规行手感一致）。
+                // 三级兜底：可见 cell → 布局属性 → 保守缺省；绝不让它为 0（=回落到 maxSpeed 快档）。
+                draggedRowHeight = collectionView.cellForItem(at: indexPath)?.bounds.height
+                    ?? collectionView.layoutAttributesForItem(at: indexPath)?.size.height
+                    ?? autoScrollFallbackRowHeight
                 if !collectionView.beginInteractiveMovementForItem(at: indexPath) {
                     isDragging = false
+                } else {
+                    // 我接管 contentOffset：以当前偏移为权威基线，自滚只由本类 displayLink 推进；
+                    // UIKit 内置交互移动自滚（不可关/不可调速）的任何写入，都会在 scrollViewDidScroll 里被回正。
+                    dragAnchorOffsetY = collectionView.contentOffset.y
                 }
             case .changed:
                 guard isDragging else { return }
-                // 不夹断：原始位置喂回去，UIKit 自然把被拖行带过 section 边界（跨天）。
-                collectionView.updateInteractiveMovementTargetPosition(location)
+                // 据手指与边缘距离驱动「按行/秒受控」的自滚（原生自滚由 scrollViewDidScroll 回正压住）。
+                updateDrag(rawLocation: location)
                 fireStepHapticIfCrossed(at: location, in: collectionView)
             case .ended:
                 guard isDragging else { return }
@@ -516,8 +548,85 @@ struct ItineraryReorderCollection: UIViewRepresentable {
         }
 
         private func endDrag() {
+            stopAutoScroll()
             isDragging = false
             lastHapticIndexPath = nil
+            draggedRowHeight = 0
+        }
+
+        // MARK: 受控自动滚动（取代 UIKit 内置的不可关/不可调速自滚）
+        //
+        // 背景：拖拽用 UIKit 原生 `beginInteractiveMovementForItem`，它自带的「拖到边缘自动滚动」每帧
+        // 推进 20~40pt（≈1000+pt/s）、无公开 API 关闭或调速，导致「手指挪一点点列表就冲过头」、难定位插入点。
+        // 试过 `updateInteractiveMovementTargetPosition` 夹内带、`isScrollEnabled=false` 都压不住（实测日志为证）。
+        // 方案：本类「拥有」拖拽期间的 contentOffset —— 自己的 displayLink 以「行/秒」受控推进 `dragAnchorOffsetY`，
+        // 而 scrollViewDidScroll 把任何非本类的位移（=原生自滚）即时回正到该权威值，于是原生那一跳从不被画出。
+
+        /// 拖拽中更新：把目标位置喂给 UIKit（驱动被拖 cell 跟随），并据手指与上下边缘距离设定受控滚动速度。
+        private func updateDrag(rawLocation raw: CGPoint) {
+            guard let cv = collectionView else { return }
+            cv.updateInteractiveMovementTargetPosition(clampedToBand(raw, in: cv))
+            autoScrollSpeed = autoScrollVelocity(forFinger: raw, in: cv)
+            if autoScrollSpeed == 0 { stopAutoScroll() } else { startAutoScrollIfNeeded() }
+        }
+
+        /// 目标 Y 夹到「距可视上/下边各 autoScrollZone」的内带：自滚期间被拖 cell 停在带内、内容从其下流过。
+        private func clampedToBand(_ p: CGPoint, in cv: UICollectionView) -> CGPoint {
+            let top = cv.contentOffset.y + cv.adjustedContentInset.top + autoScrollZone
+            let bottom = cv.contentOffset.y + cv.bounds.height - cv.adjustedContentInset.bottom - autoScrollZone
+            guard bottom > top else { return p }   // 可视区太矮，放弃夹断
+            return CGPoint(x: p.x, y: min(max(p.y, top), bottom))
+        }
+
+        /// 手指进入上/下触发带 → 带符号速度（二次曲线：带内边缘≈0、越近屏幕边越快，上限 autoScrollMaxSpeed）。
+        private func autoScrollVelocity(forFinger raw: CGPoint, in cv: UICollectionView) -> CGFloat {
+            let topEdge = cv.contentOffset.y + cv.adjustedContentInset.top
+            let bottomEdge = cv.contentOffset.y + cv.bounds.height - cv.adjustedContentInset.bottom
+            let dTop = raw.y - topEdge
+            let dBottom = bottomEdge - raw.y
+            // 边缘最大速度按行高封顶（行/秒 → 点/秒），再不超过绝对上限；行高测不到时退回绝对上限。
+            let cap = draggedRowHeight > 0
+                ? min(autoScrollMaxSpeed, draggedRowHeight * autoScrollRowsPerSec)
+                : autoScrollMaxSpeed
+            if dTop < autoScrollZone {
+                let t = max(0, min(1, (autoScrollZone - dTop) / autoScrollZone))
+                return -cap * t * t
+            }
+            if dBottom < autoScrollZone {
+                let t = max(0, min(1, (autoScrollZone - dBottom) / autoScrollZone))
+                return cap * t * t
+            }
+            return 0
+        }
+
+        private func startAutoScrollIfNeeded() {
+            guard autoScrollLink == nil else { return }
+            let link = CADisplayLink(target: self, selector: #selector(stepAutoScroll(_:)))
+            link.add(to: .main, forMode: .common)
+            autoScrollLink = link
+        }
+
+        private func stopAutoScroll() {
+            autoScrollLink?.invalidate()
+            autoScrollLink = nil
+            autoScrollSpeed = 0
+        }
+
+        @objc private func stepAutoScroll(_ link: CADisplayLink) {
+            guard isDragging, autoScrollSpeed != 0, let cv = collectionView else { stopAutoScroll(); return }
+            let dt = CGFloat(link.duration > 0 ? link.duration : 1.0 / 60)
+            let minY = -cv.adjustedContentInset.top
+            let maxY = max(minY, cv.contentSize.height - cv.bounds.height + cv.adjustedContentInset.bottom)
+            let newY = min(max(cv.contentOffset.y + autoScrollSpeed * dt, minY), maxY)
+            guard newY != cv.contentOffset.y else { stopAutoScroll(); return }   // 到顶/底，停
+            dragAnchorOffsetY = newY        // 先更新权威值，再写 offset（否则 didScroll 会把我自己的推进当原生回正）
+            applyingControlledScroll = true
+            cv.contentOffset.y = newY   // 触发 scrollViewDidScroll → 重夹目标，cell 贴住内带、内容从其下流过
+            applyingControlledScroll = false
+            if let recognizer = longPressRecognizer {   // 滚动后按新可视位置重算速度（停下也在此判定）
+                autoScrollSpeed = autoScrollVelocity(forFinger: recognizer.location(in: cv), in: cv)
+                if autoScrollSpeed == 0 { stopAutoScroll() }
+            }
         }
 
         private func fireStepHapticIfCrossed(at point: CGPoint, in collectionView: UICollectionView) {
@@ -531,7 +640,17 @@ struct ItineraryReorderCollection: UIViewRepresentable {
             // 重排拖拽中：auto-scroll 期间手势不发 .changed，用手势实时位置持续推进目标位置（不夹断）。
             if isDragging {
                 guard let collectionView, let recognizer = longPressRecognizer else { return }
-                collectionView.updateInteractiveMovementTargetPosition(recognizer.location(in: collectionView))
+                if revertingNativeScroll { return }
+                // 非本类引起的位移 = UIKit 内置交互移动自滚（无公开 API 可关/可调速，太猛）→ 即时回正到权威值。
+                // 同步发生在渲染前，故原生那一跳不会被画出来；净滚动只由本类 displayLink 以受控速度推进。
+                if !applyingControlledScroll && abs(collectionView.contentOffset.y - dragAnchorOffsetY) > 0.01 {
+                    revertingNativeScroll = true
+                    collectionView.contentOffset.y = dragAnchorOffsetY
+                    revertingNativeScroll = false
+                }
+                // 用当前手指位置重夹目标，cell 贴住内带。
+                collectionView.updateInteractiveMovementTargetPosition(
+                    clampedToBand(recognizer.location(in: collectionView), in: collectionView))
                 return
             }
             // 性能：**滚动途中不回写 focused 天**。回写会改上层 @State → 触发 ItineraryView.body
