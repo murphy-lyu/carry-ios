@@ -21,6 +21,8 @@ import UIKit
 /// 仅 `.stop` 参与重排；交通/住宿为固定行（spec: itinerary-transport-lodging.md）。
 nonisolated struct ItineraryDaySection: Hashable, Sendable {
     let id: UUID
+    /// 当天 sortOrder（0-based）——geoLeg 连线取当天色用。
+    var dayOrder: Int = 0
     let entries: [ItineraryRowID]
 }
 
@@ -36,9 +38,22 @@ nonisolated enum LodgingRole: Hashable, Sendable {
     case checkIn, depart, overnight, checkout
 }
 
+/// 距离连线的「连接点」（spec: itinerary-distance-legs.md）：解析成一个真实地点坐标。
+/// `.transport(_, arrival:)` 取交通段的 to 端(arrival=true)或 from 端(false)——且仅当该端有详细地址
+/// （机场无地址、自然排除）。地址门控在 ItineraryView 的 connEndpoint 闭包里做。
+nonisolated enum ConnEndpoint: Hashable, Sendable {
+    case stop(UUID)
+    case lodging(UUID)
+    case transport(UUID, arrival: Bool)
+}
+
 nonisolated enum ItineraryRowID: Hashable, Sendable {
     case stop(UUID)
     case leg(UUID)
+    /// 任意「真实地点」间的距离连接段（spec: itinerary-distance-legs.md）：from=上一行的离开点、
+    /// to=下一行的进入点。覆盖交通/租车端点参与的相邻；stop↔stop / stop↔lodging 仍走 `.leg`/`.lodgingLeg`。
+    /// (from,to,day) 在一天内唯一 → diffable id 唯一。
+    case geoLeg(from: ConnEndpoint, to: ConnEndpoint, day: Int)
     case transport(UUID)
     case lodging(stay: UUID, day: Int, role: LodgingRole)
     /// 住宿端点与相邻地点之间的距离连接段：`departing` 区分「酒店→地点」(true) 与「地点→酒店」(false)。
@@ -69,6 +84,11 @@ struct ItineraryReorderCollection: UIViewRepresentable {
     let stopContent: (UUID) -> AnyView
     /// 连接段内容（连线 + 距离），入参为下方停靠点 id。
     let legContent: (UUID) -> AnyView
+    /// 任意「真实地点」间的距离连线内容（spec: itinerary-distance-legs.md），入参为 (from, to, 当天天序)。
+    let geoLegContent: (ConnEndpoint, ConnEndpoint, Int) -> AnyView
+    /// 解析某行的连接点（asExit=true 取「离开点」、false 取「进入点」）+ 地址门控：交通端无详细地址 / 无坐标 → nil。
+    /// 模型在 ItineraryView 侧，故门控在闭包里做。两端都非 nil 时 applySnapshot 才插 geoLeg。
+    let connEndpoint: (ItineraryRowID, Bool) -> ConnEndpoint?
     /// 交通段内容（连接行：mode 图标 + 班次 + 起讫时间），入参为 segment id。
     let transportContent: (UUID) -> AnyView
     /// 住宿脊上节点内容，入参为 (lodging stay id, 当前天序, 当天角色)。
@@ -203,6 +223,8 @@ struct ItineraryReorderCollection: UIViewRepresentable {
                     cell.contentConfiguration = UIHostingConfiguration { self.parent.stopContent(id) }.margins(.all, 0)
                 case .leg(let toStopID):
                     cell.contentConfiguration = UIHostingConfiguration { self.parent.legContent(toStopID) }.margins(.all, 0)
+                case .geoLeg(let from, let to, let day):
+                    cell.contentConfiguration = UIHostingConfiguration { self.parent.geoLegContent(from, to, day) }.margins(.all, 0)
                 case .lodgingLeg(let stay, let stop, let day, let departing):
                     cell.contentConfiguration = UIHostingConfiguration { self.parent.lodgingLegContent(stay, stop, day, departing) }.margins(.all, 0)
                 case .transport(let id):
@@ -369,7 +391,13 @@ struct ItineraryReorderCollection: UIViewRepresentable {
                     case (.stop(let psid), .lodging(let stay, let day, _)):
                         rows.append(.lodgingLeg(stay: stay, stop: psid, day: day, departing: false)) // 地点→酒店
                     default:
-                        break
+                        // 其余相邻（交通/租车端点参与）：两端都是「有详细地址的真实落点」才插距离连线。
+                        // 机场端无地址 → connEndpoint 返 nil → 不插（spec: itinerary-distance-legs.md）。
+                        if let prev = previous,
+                           let from = parent.connEndpoint(prev, true),    // 上一行的「离开点」
+                           let to = parent.connEndpoint(entry, false) {    // 下一行的「进入点」
+                            rows.append(.geoLeg(from: from, to: to, day: section.dayOrder))
+                        }
                     }
                     rows.append(entry)
                     previous = entry

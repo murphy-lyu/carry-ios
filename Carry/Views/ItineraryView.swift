@@ -296,6 +296,8 @@ struct ItineraryView: View {
                 isReordering: isReordering.wrappedValue,
                 stopContent: { AnyView(stopRow($0)) },
                 legContent: { AnyView(legRow($0)) },
+                geoLegContent: { AnyView(geoLegRow($0, $1, $2)) },
+                connEndpoint: { connEndpoint(for: $0, asExit: $1) },
                 transportContent: { AnyView(transportRow($0)) },
                 lodgingContent: { AnyView(lodgingRow($0, $1, $2)) },
                 lodgingLegContent: { AnyView(lodgingLegRow($0, $1, $2, $3)) },
@@ -515,7 +517,7 @@ struct ItineraryView: View {
                 connectivity[rid] = (top: i > 0 && !isCalendarRow(order[i - 1]),
                                      bottom: i < order.count - 1 && !isCalendarRow(order[i + 1]))
             }
-            return ItineraryDaySection(id: day.id, entries: allDayRows + order)
+            return ItineraryDaySection(id: day.id, dayOrder: day.sortOrder, entries: allDayRows + order)
         }
         // 引用类型，仅更新内容、不触发视图失效。行闭包在本次 body 后由 UIKit dequeue 时读到的即此份。
         lineCache.connectivity = connectivity
@@ -681,6 +683,58 @@ struct ItineraryView: View {
         let distance: String? = {
             guard let h = stay?.coordinate, let s = stop?.coordinate else { return nil }
             return CarryDistanceFormat.string(meters: RouteOptimizer.haversineMeters(h, s), unit: distanceUnit)
+        }()
+        return ItineraryLegConnector(
+            distance: distance,
+            railColor: ItineraryDayPalette.color(forDayIndex: dayOrder).opacity(0.25)
+        )
+        .padding(.horizontal, 16)
+    }
+
+    // MARK: - 任意「真实地点」间的距离连线（spec: itinerary-distance-legs.md）
+
+    /// 解析某行的连接点 + 地址门控：地点/住宿要有坐标；交通端要「有详细地址 + 坐标」（机场无地址 → nil）。
+    /// `asExit` 仅对交通段(航班/火车/巴士/渡轮)有别：离开点=到达端(to)、进入点=出发端(from)；
+    /// 租车为单点（取车=from / 还车=to），不分离开/进入。
+    private func connEndpoint(for rowID: ItineraryRowID, asExit: Bool) -> ConnEndpoint? {
+        switch rowID {
+        case .stop(let id):
+            return (lineCache.stopByID[id]?.hasCoordinate ?? false) ? .stop(id) : nil
+        case .lodging(let stay, _, _):
+            return (lineCache.stayByID[stay]?.hasCoordinate ?? false) ? .lodging(stay) : nil
+        case .transport(let id):
+            return transportEndpoint(segID: id, arrival: asExit)        // exit→to / entry→from
+        case .carRental(let seg, _, let pickup):
+            return transportEndpoint(segID: seg, arrival: !pickup)       // 取车=from / 还车=to（单点）
+        default:
+            return nil   // 日历事件 / 连线 / 占位 不参与
+        }
+    }
+
+    /// 交通段某端的连接点：仅当该端有详细地址（机场为空 → 排除）且有坐标时才算真实落点。
+    private func transportEndpoint(segID: UUID, arrival: Bool) -> ConnEndpoint? {
+        guard let seg = lineCache.segmentByID[segID] else { return nil }
+        let address = arrival ? seg.toAddress : seg.fromAddress
+        let hasCoord = arrival ? seg.hasToCoordinate : seg.hasFromCoordinate
+        guard !address.trimmingCharacters(in: .whitespaces).isEmpty, hasCoord else { return nil }
+        return .transport(segID, arrival: arrival)
+    }
+
+    private func endpointCoordinate(_ ep: ConnEndpoint) -> CLLocationCoordinate2D? {
+        switch ep {
+        case .stop(let id):    return lineCache.stopByID[id]?.coordinate
+        case .lodging(let id): return lineCache.stayByID[id]?.coordinate
+        case .transport(let id, let arrival):
+            guard let seg = lineCache.segmentByID[id] else { return nil }
+            return arrival ? seg.toCoordinate : seg.fromCoordinate
+        }
+    }
+
+    /// 距离连线行：两端坐标算 haversine 直线（与既有 leg 同口径）；railColor 取当天色。
+    private func geoLegRow(_ from: ConnEndpoint, _ to: ConnEndpoint, _ dayOrder: Int) -> some View {
+        let distance: String? = {
+            guard let a = endpointCoordinate(from), let b = endpointCoordinate(to) else { return nil }
+            return CarryDistanceFormat.string(meters: RouteOptimizer.haversineMeters(a, b), unit: distanceUnit)
         }()
         return ItineraryLegConnector(
             distance: distance,
