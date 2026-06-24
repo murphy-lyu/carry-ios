@@ -70,7 +70,7 @@ private struct RoadmapPayload: Codable {
     var sections: [RoadmapSection]
 
     static let embeddedDefault = RoadmapPayload(
-        updatedAt: "2026-05-29",
+        updatedAt: "2026-06-25",
         banner: RoadmapL10n.text(
             en: "🎉 Now on the App Store · Actively shipping",
             zhHans: "🎉 已上线 App Store · 持续迭代中",
@@ -82,6 +82,7 @@ private struct RoadmapPayload: Codable {
                 title: RoadmapL10n.text(en: "Upcoming", zhHans: "即将推出", zhHant: "即將推出"),
                 items: [
                     RoadmapItem(id: "flight-status", title: RoadmapL10n.text(en: "Live flight status", zhHans: "航班实时动态", zhHant: "航班即時動態"), status: .inProgress, note: nil),
+                    RoadmapItem(id: "itinerary-export", title: RoadmapL10n.text(en: "Export as an itinerary PDF (for visas)", zhHans: "导出为行程单 PDF（可用于签证/通关）", zhHant: "匯出為行程單 PDF（可用於簽證/通關）"), status: .planned, note: nil),
                     RoadmapItem(id: "apple-watch", title: RoadmapL10n.text(en: "Apple Watch app", zhHans: "Apple Watch 版", zhHant: "Apple Watch 版"), status: .planned, note: nil),
                     RoadmapItem(id: "mac-app", title: RoadmapL10n.text(en: "Mac app", zhHans: "Mac 版", zhHant: "Mac 版"), status: .planned, note: nil)
                 ]
@@ -94,7 +95,6 @@ private struct RoadmapPayload: Codable {
                     RoadmapItem(id: "flights", title: RoadmapL10n.text(en: "Add flights — auto-filled by flight number", zhHans: "添加航班 · 航班号自动填全程", zhHant: "新增航班 · 航班號自動帶入全程"), status: .done, note: nil),
                     RoadmapItem(id: "lodging", title: RoadmapL10n.text(en: "Lodging & car rental", zhHans: "住宿与租车", zhHant: "住宿與租車"), status: .done, note: nil),
                     RoadmapItem(id: "trip-book", title: RoadmapL10n.text(en: "Trip spending & stats", zhHans: "旅行花费记账与统计", zhHant: "旅行花費記帳與統計"), status: .done, note: nil),
-                    RoadmapItem(id: "itinerary-export", title: RoadmapL10n.text(en: "Export itinerary PDF (for visas)", zhHans: "导出行程单 PDF（可用于签证/通关）", zhHant: "匯出行程單 PDF（可用於簽證/通關）"), status: .done, note: nil),
                     RoadmapItem(id: "smart-suggestions", title: RoadmapL10n.text(en: "Smart packing lists by trip type", zhHans: "按场景智能推荐打包清单", zhHant: "依情境智慧推薦打包清單"), status: .done, note: nil),
                     RoadmapItem(id: "photo-trip", title: RoadmapL10n.text(en: "Build a trip from your photos", zhHans: "用旅行照片自动生成行程", zhHant: "用旅行相片自動生成行程"), status: .done, note: nil),
                     RoadmapItem(id: "overseas-search", title: RoadmapL10n.text(en: "Worldwide place search", zhHans: "全球地点搜索", zhHant: "全球地點搜尋"), status: .done, note: nil),

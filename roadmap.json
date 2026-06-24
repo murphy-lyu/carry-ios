@@ -1,5 +1,5 @@
 {
-  "updatedAt": "2026-06-21",
+  "updatedAt": "2026-06-25",
   "sections": [
     {
       "id": "upcoming",
@@ -13,6 +13,13 @@
           "titleEn": "Live flight status",
           "titleZhHant": "航班即時動態",
           "status": "in_progress"
+        },
+        {
+          "id": "itinerary-export",
+          "title": "导出为行程单 PDF（可用于签证/通关）",
+          "titleEn": "Export as an itinerary PDF (for visas)",
+          "titleZhHant": "匯出為行程單 PDF（可用於簽證/通關）",
+          "status": "planned"
         },
         {
           "id": "apple-watch",
@@ -62,13 +69,6 @@
           "title": "旅行花费记账与统计",
           "titleEn": "Trip spending & stats",
           "titleZhHant": "旅行花費記帳與統計",
-          "status": "done"
-        },
-        {
-          "id": "itinerary-export",
-          "title": "导出行程单 PDF（可用于签证/通关）",
-          "titleEn": "Export itinerary PDF (for visas)",
-          "titleZhHant": "匯出行程單 PDF（可用於簽證/通關）",
           "status": "done"
         },
         {
