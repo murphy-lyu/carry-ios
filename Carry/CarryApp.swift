@@ -145,23 +145,31 @@ struct CarryApp: App {
     /// the SF Symbols from CarryAppShortcuts and titles come from Localizable.xcstrings.
     /// NOTE: iOS shows the FIRST array item closest to the app icon, so with the icon in the
     /// lower half of the screen (the common case — dock / lower rows) the menu opens upward and
-    /// the list reads bottom-up. We therefore define the array in reverse (footprint → nearest →
-    /// new trip) so it reads top-to-bottom as: New Trip · Nearest Trip · Footprint.
     /// 相位感知 + 数据驱动的主屏 Quick Actions（spec: quick-actions-phase-aware.md）。
-    /// iOS 长按列表自底向上读，故数组按「footprint → 中间槽 → newTrip」排，显示为
-    /// 「New Trip · [中间槽] · Footprint」。中间槽随相位变脸（旅行中=今天的行程 / 出发前=Nearest Trip）+ 带数据副标题；
-    /// 无可展示行程时省略中间槽。挂在 App 生命周期 + 冷启动 trips 加载点刷新。
+    /// iOS 长按列表**自底向上读**，故数组按「Trip Book → New Trip → 相位槽」排，显示为
+    /// 「〔相位槽〕· New Trip · My Trip Book」（相位槽最高频→置顶、回顾垫底）。
+    /// 相位槽随相位变脸（旅行中=今天的行程 / 出发前=Nearest Trip）+ 带数据副标题（行程名优先）；
+    /// 无可展示行程时省略相位槽。挂在 App 生命周期 + 冷启动 trips 加载点刷新。
     static func refreshQuickActions(trips: [TripBundle]) {
+        // 数组首 = 显示最底：My Trip Book（回顾）。
         var items: [UIApplicationShortcutItem] = [
             UIApplicationShortcutItem(
-                type: CarryQuickAction.footprint,
-                localizedTitle: NSLocalizedString("Footprint", comment: "Quick action title"),
+                type: CarryQuickAction.tripBook,
+                localizedTitle: NSLocalizedString("home.tripbook.title", comment: "Quick action title"),
                 localizedSubtitle: nil,
-                icon: UIApplicationShortcutIcon(systemImageName: "globe.asia.australia"),
+                icon: UIApplicationShortcutIcon(systemImageName: "book.closed"),
+                userInfo: nil
+            ),
+            UIApplicationShortcutItem(
+                type: CarryQuickAction.newTrip,
+                localizedTitle: NSLocalizedString("New Trip", comment: "Quick action title"),
+                localizedSubtitle: nil,
+                icon: UIApplicationShortcutIcon(systemImageName: "plus.circle"),
                 userInfo: nil
             )
         ]
 
+        // 数组末 = 显示最顶：相位槽（当前/最近的行程）。
         if let target = QuickActionTarget.resolve(trips: trips) {
             let title: String
             let subtitle: String
@@ -183,7 +191,7 @@ struct CarryApp: App {
                 }
                 iconName = "suitcase"
             case .recent:
-                // 回落最近过去行程（回看）：标题沿用 Nearest Trip，副标题仅城市（无倒计时）。
+                // 回落最近过去行程（回看）：标题沿用 Nearest Trip，副标题仅行程名（无倒计时）。
                 title = NSLocalizedString("Nearest Trip", comment: "Quick action title")
                 subtitle = target.city
                 iconName = "suitcase"
@@ -196,14 +204,6 @@ struct CarryApp: App {
                 userInfo: nil
             ))
         }
-
-        items.append(UIApplicationShortcutItem(
-            type: CarryQuickAction.newTrip,
-            localizedTitle: NSLocalizedString("New Trip", comment: "Quick action title"),
-            localizedSubtitle: nil,
-            icon: UIApplicationShortcutIcon(systemImageName: "plus.circle"),
-            userInfo: nil
-        ))
 
         UIApplication.shared.shortcutItems = items
     }

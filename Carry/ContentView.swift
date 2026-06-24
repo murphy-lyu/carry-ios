@@ -45,6 +45,8 @@ struct PendingItineraryAnchor: Equatable { let tripId: UUID; let anchor: TripDee
 final class NavigationRouter: ObservableObject {
     @Published var path = NavigationPath()
     @Published var showMapFullscreen = false
+    /// 长按 Quick Action「My Trip Book」请求打开行程册 sheet（HomeView 观察、消费后置回 false）。
+    @Published var showTripBookRequest = false
 
     /// 待唤起的行程深链（通知/Widget/URL/快捷指令）。承接侧 `handlePendingTrip` 消费：
     /// 选脸 + 拆 modal + 落 path + 写锚点。spec: notification-deeplink-routing.md。
@@ -357,6 +359,9 @@ struct ContentView: View {
             case "show_map":
                 router.path = NavigationPath()   // go to HomeView root
                 router.showMapFullscreen = true  // signal HomeView to collapse sheet
+            case "show_trip_book":
+                router.path = NavigationPath()       // 回首页根
+                router.showTripBookRequest = true    // signal HomeView 打开行程册 sheet
             default:
                 break
             }

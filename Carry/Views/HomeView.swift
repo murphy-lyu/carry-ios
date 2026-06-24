@@ -688,6 +688,11 @@ struct HomeView: View {
                 router.showMapFullscreen = false
                 collapseRequest = true  // SheetViewController.snap handles the animation
             }
+            .onChange(of: router.showTripBookRequest) { _, req in
+                guard req else { return }
+                router.showTripBookRequest = false
+                openTripBook()   // 长按 Quick Action「My Trip Book」→ 打开行程册 sheet
+            }
             .alert(
                 String(format: NSLocalizedString("Delete %@?", comment: ""), tripToDelete?.name ?? ""),
                 isPresented: $showDeleteConfirmation

@@ -28,9 +28,14 @@ private extension UserDefaults {
         set("create_trip", forKey: Self.shortcutActionKey)
     }
 
-    /// Store a "show footprint map" shortcut action.
+    /// Store a "show footprint map" shortcut action（Siri「Footprint」仍用此 → 全屏世界地图）。
     func setShortcutShowMap() {
         set("show_map", forKey: Self.shortcutActionKey)
+    }
+
+    /// Store an "open Trip Book" shortcut action（长按 Quick Action「My Trip Book」用 → 行程册 sheet）。
+    func setShortcutShowTripBook() {
+        set("show_trip_book", forKey: Self.shortcutActionKey)
     }
 }
 
@@ -43,7 +48,8 @@ private extension UserDefaults {
 enum CarryQuickAction {
     static let newTrip     = "com.murphy.carry.quickaction.new_trip"
     static let nearestTrip = "com.murphy.carry.quickaction.nearest_trip"
-    static let footprint   = "com.murphy.carry.quickaction.footprint"
+    /// 「My Trip Book」长按入口（原 Footprint→地图，现重指向行程册 sheet）。
+    static let tripBook    = "com.murphy.carry.quickaction.trip_book"
 
     /// Translates a tapped quick action into the shared UserDefaults action.
     /// Writing the key triggers `UserDefaults.didChangeNotification`, which
@@ -59,8 +65,8 @@ enum CarryQuickAction {
             } else {
                 defaults.setShortcutCreateTrip()
             }
-        case footprint:
-            defaults.setShortcutShowMap()
+        case tripBook:
+            defaults.setShortcutShowTripBook()
         default:
             break
         }
@@ -91,7 +97,8 @@ struct QuickActionTarget {
         let cal = Calendar.current
         let today = cal.startOfDay(for: Date())
         let dated = trips.filter { !$0.isDateless }
-        func city(_ t: TripBundle) -> String { t.destinationCity.isEmpty ? t.name : t.destinationCity }
+        // 副标题用「行程名」优先（与桌面 Widget 的 displayTitle 一致；行程名是用户自起、最 identifying），空才退目的地。
+        func city(_ t: TripBundle) -> String { t.name.isEmpty ? t.destinationCity : t.name }
 
         // 1. 未来/进行中（returnDate ≥ today，出发日升序取首个）。
         let upcomingOrActive = dated
