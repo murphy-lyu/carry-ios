@@ -1,7 +1,17 @@
 # 项目进度
 
 ## 最后更新
-2026-06-24
+2026-06-25
+
+## 上次改动摘要（Roadmap：「导出行程单」从已上线移回即将推出 + 升为进行中 · 2026-06-25）
+
+> 单会话、纯我的工作。只动 `Carry/Views/RoadmapView.swift`（`embeddedDefault`）+ 根目录 `roadmap.json`，两数据源同步。**已提交并 push 到 origin/main，GitHub API 核对线上生效**。
+
+- **背景**：并行会话已把「导出签证行程单」功能整个删除（`63535f8`，见下方与 decisions 2026-06-24），但 Roadmap 仍把它列在「已上线」。本会话把它移到「即将推出」并标规划/进行中，让路线图与实际一致。
+- **改动一（`8ae8cdd`）**：`itinerary-export` 从「已上线/Shipped」section 移到「即将推出/Upcoming」，状态 `done → planned`。文案 `导出行程单` → **`导出为行程单`**（en `Export as an itinerary PDF (for visas)`、繁中 `匯出為行程單…`）。`updatedAt` 两源都更到 2026-06-25。
+- **改动二（`c46b1e0`）**：按用户要求与 `flight-status` **调换顺序+状态** → `itinerary-export` 升「进行中(in_progress)」排第一，`flight-status` 降「规划中(planned)」排第二。即将推出现序：导出为行程单(进行中) · 航班实时动态(规划) · Apple Watch(规划) · Mac(规划)。
+- **排序参考（已与用户对齐）**：即将推出 section 规则＝**进行中在上、规划中在下；同状态内按「离上线远近」排**。
+- **纪律**：roadmap 双源铁律（remote 覆盖 local 覆盖 embedded），改 `roadmap.json` 必须 push 才对线上用户生效；用 GitHub API（非 raw CDN，避 5min 缓存）核对。push 首次撞 GFW SSL 抖动、重试即过。提交只 `git add` 这两个文件，未碰并行会话的 `ItineraryReorderCollection.swift`（geoLeg 在途）。
 
 ## 待跟进 · 行程列表「切换器随滚动收起」动画细节（2026-06-23 夜）
 - **现状 OK**：行程详情底部「行程/打包」切换器随滚动收起/露出（下滑 6pt 收、上滑 6pt 开、近顶恒显、spring 0.3 bounce 0.2），已复用到打包清单（`ItineraryReorderCollection` + `ReorderableItemCollection` 同一套 `onScrollHideChange` → `PackingListView.switcherHidden`）。用户初验「效果很不错」。
