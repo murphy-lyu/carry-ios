@@ -273,7 +273,7 @@ struct ItineraryMapView: View {
     /// 仅 ≥2 天有点时显示（单天无需筛选）。选中态 = 实心高亮，未选 = 常态。
     @ViewBuilder
     private var mapFilterBar: some View {
-        let daysWithStops = allDays.filter { $0.sortedStops.contains { $0.hasCoordinate } }
+        let daysWithStops = allDays.filter { ($0.stops ?? []).contains { $0.hasCoordinate } }
         if daysWithStops.count >= 2 {
             // 宽度自适应：天少时胶囊贴合内容、靠 overlay(.bottom) 天然居中（不再拉满整宽留空）；
             // 天多到一行放不下时，ViewThatFits 退回整宽可滚。
@@ -352,7 +352,10 @@ struct ItineraryMapView: View {
     /// `dimmed`：当天为空、把整趟作上下文淡化展示时为真（针/线退到背景，不抢当天的「空」）。
     @MapContentBuilder
     private func mapAnnotations(for days: [ItineraryDay], dimmed: Bool = false) -> some MapContent {
-        ForEach(dayMapData(for: days)) { day in
+        // 只为「真有内容」的天建标注——空天（无坐标地点、无路线）贡献零 MapContent，却照样让 MapKit
+        // diff 一个空 ForEach 身份。长行程焦点落在空天时（.context 态铺整趟）尤其浪费。行为等价、纯减负。
+        let mapData = dayMapData(for: days).filter { !$0.stops.isEmpty || $0.routeCoords.count >= 2 }
+        ForEach(mapData) { day in
             ForEach(day.stops, id: \.stop.id) { entry in
                 Annotation(entry.stop.displayName, coordinate: entry.stop.coordinate!) {
                     stopMarker(index: entry.localIndex + 1, color: day.color, dimmed: dimmed)
@@ -372,7 +375,9 @@ struct ItineraryMapView: View {
         }
         // 交通段（边）：起讫两端都有坐标才画**大圆弧虚线**（contourStyle: .geodesic），
         // 与市内步行/驾车的实线路程区分——一眼看出「这段是飞/跨城的」（spec: itinerary-transport-lodging.md）。
-        ForEach(days, id: \.id) { day in
+        // 同样只取「有带坐标交通段」的天（contains 用未排序 segments，避免每天空跑一次 sortedSegments 排序）。
+        let transportDays = days.filter { ($0.segments ?? []).contains { $0.hasRouteCoordinates } }
+        ForEach(transportDays, id: \.id) { day in
             let color = ItineraryDayPalette.color(forDayIndex: day.sortOrder)
             ForEach(day.sortedSegments.filter { $0.hasRouteCoordinates }, id: \.id) { seg in
                 MapPolyline(coordinates: [seg.fromCoordinate!, seg.toCoordinate!], contourStyle: .geodesic)
