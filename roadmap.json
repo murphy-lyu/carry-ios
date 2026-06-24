@@ -8,17 +8,17 @@
       "titleZhHant": "即將推出",
       "items": [
         {
-          "id": "flight-status",
-          "title": "航班实时动态",
-          "titleEn": "Live flight status",
-          "titleZhHant": "航班即時動態",
-          "status": "in_progress"
-        },
-        {
           "id": "itinerary-export",
           "title": "导出为行程单 PDF（可用于签证/通关）",
           "titleEn": "Export as an itinerary PDF (for visas)",
           "titleZhHant": "匯出為行程單 PDF（可用於簽證/通關）",
+          "status": "in_progress"
+        },
+        {
+          "id": "flight-status",
+          "title": "航班实时动态",
+          "titleEn": "Live flight status",
+          "titleZhHant": "航班即時動態",
           "status": "planned"
         },
         {

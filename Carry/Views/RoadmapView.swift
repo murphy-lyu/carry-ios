@@ -81,8 +81,8 @@ private struct RoadmapPayload: Codable {
                 id: "upcoming",
                 title: RoadmapL10n.text(en: "Upcoming", zhHans: "即将推出", zhHant: "即將推出"),
                 items: [
-                    RoadmapItem(id: "flight-status", title: RoadmapL10n.text(en: "Live flight status", zhHans: "航班实时动态", zhHant: "航班即時動態"), status: .inProgress, note: nil),
-                    RoadmapItem(id: "itinerary-export", title: RoadmapL10n.text(en: "Export as an itinerary PDF (for visas)", zhHans: "导出为行程单 PDF（可用于签证/通关）", zhHant: "匯出為行程單 PDF（可用於簽證/通關）"), status: .planned, note: nil),
+                    RoadmapItem(id: "itinerary-export", title: RoadmapL10n.text(en: "Export as an itinerary PDF (for visas)", zhHans: "导出为行程单 PDF（可用于签证/通关）", zhHant: "匯出為行程單 PDF（可用於簽證/通關）"), status: .inProgress, note: nil),
+                    RoadmapItem(id: "flight-status", title: RoadmapL10n.text(en: "Live flight status", zhHans: "航班实时动态", zhHant: "航班即時動態"), status: .planned, note: nil),
                     RoadmapItem(id: "apple-watch", title: RoadmapL10n.text(en: "Apple Watch app", zhHans: "Apple Watch 版", zhHant: "Apple Watch 版"), status: .planned, note: nil),
                     RoadmapItem(id: "mac-app", title: RoadmapL10n.text(en: "Mac app", zhHans: "Mac 版", zhHant: "Mac 版"), status: .planned, note: nil)
                 ]
