@@ -540,24 +540,33 @@ struct CarryWidgetEntryView: View {
 
     // MARK: Large — 按天分组的「接下来的行程」概览（spec: widget-upcoming-large.md）
 
-    /// 一行渲染单元：天分组头（dayOrder 非空）或行程条目（item 非空）。
+    /// 一行渲染单元：天分组头（dayOrder 非空）/ 行程条目（item 非空）/「+N 更多」尾行（moreCount 非空）。
     private struct AgendaRenderRow: Identifiable {
         let id: String
-        let dayOrder: Int?
-        let item: WidgetAgendaItem?
+        var dayOrder: Int? = nil
+        var item: WidgetAgendaItem? = nil
+        var moreCount: Int? = nil
     }
 
-    /// 把按 (天,序) 排好的条目展开成「天头 + 条目」行序列，封顶 maxRows（large 是概览、非全量）。
+    /// 把按 (天,序) 排好的条目展开成「天头 + 条目」行序列，封顶 maxRows（large 不滚动、是概览非全量）。
+    /// 因条目行常为两行（标题 + 地点），maxRows 取保守值防超高被裁；截断时补「+N 更多」尾行、不假装全量。
     private func agendaRenderRows(_ items: [WidgetAgendaItem], maxRows: Int) -> [AgendaRenderRow] {
         var rows: [AgendaRenderRow] = []
         var lastDay: Int? = nil
+        var shownItems = 0
         for (i, it) in items.enumerated() {
-            if it.dayOrder != lastDay {
-                rows.append(AgendaRenderRow(id: "h\(it.dayOrder)", dayOrder: it.dayOrder, item: nil))
+            let needsHeader = it.dayOrder != lastDay
+            // 预留：若加了天头 + 条目会超过 maxRows，则停（别只放孤零零的天头）。
+            if rows.count + (needsHeader ? 2 : 1) > maxRows { break }
+            if needsHeader {
+                rows.append(AgendaRenderRow(id: "h\(it.dayOrder)", dayOrder: it.dayOrder))
                 lastDay = it.dayOrder
             }
-            rows.append(AgendaRenderRow(id: "i\(i)", dayOrder: nil, item: it))
-            if rows.count >= maxRows { break }
+            rows.append(AgendaRenderRow(id: "i\(i)", item: it))
+            shownItems += 1
+        }
+        if shownItems < items.count {
+            rows.append(AgendaRenderRow(id: "more", moreCount: items.count - shownItems))
         }
         return rows
     }
@@ -592,7 +601,8 @@ struct CarryWidgetEntryView: View {
 
     private func largeAgendaView(_ trip: WidgetTrip, now: Date) -> some View {
         let items = trip.upcomingAgenda(asOf: now)
-        let rows = agendaRenderRows(items, maxRows: 9)
+        // 7 个渲染行：条目行多为两行（标题+地点），保守取值防 systemLarge（固定高、不滚动）超高被裁。
+        let rows = agendaRenderRows(items, maxRows: 7)
         return VStack(alignment: .leading, spacing: 7) {
             HStack {
                 Text("widget.agenda.title")
@@ -621,6 +631,12 @@ struct CarryWidgetEntryView: View {
                             .padding(.top, 1)
                     } else if let it = row.item {
                         agendaItemRow(it)
+                    } else if let more = row.moreCount {
+                        Text(String.localizedStringWithFormat(
+                            NSLocalizedString("widget.companion.plan_more", comment: ""), more))
+                            .font(.system(.caption, design: .rounded).weight(.medium))
+                            .foregroundStyle(.secondary)
+                            .padding(.top, 1)
                     }
                 }
                 Spacer(minLength: 0)
