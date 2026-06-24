@@ -38,8 +38,13 @@
 - **空名地点展示兜底（`30980d6`）**：`ItineraryStop.displayName` 空名退本地化「未命名地点」（复用 `phototrip.place.untitled`），覆盖列表/详情/地图/导航；存储层保持真相（空）。来源：地理编码失败（旧隐患）+ 流式命名未完成即保存（新）。
 - **详情页缩略图异步解码（`30980d6`）**：`AsyncThumbnail` 后台解 `UIImage(data:)` 再上屏，免主线程同步解码丢帧；预览页 `LazyVStack` 只解码可见天。
 - **#1 完成帧 + #2 长行程滚动（`2f22782`，并行会话）**：导入读完钉满 N/N 并短暂停留再进预览（修「停在 49/50 像漏一张」）；day header / add-stop 行也走 O(1) 缓存 + 静态 DateFormatter。
-- **#3 地图标注跳过空天（`43b202f` 合并）**：`mapAnnotations` 只为「有内容」的天建 MapContent，空天不再空跑一个 ForEach 身份（长行程焦点落空天 / 全屏全量时减负）。可证明行为等价。
-- **待跟进**：① 真机 Xcode DDI 个性化失败（部署侧、非代码，多为网络/重启/Developer Mode）；② 装上最新构建复测导入 #1/#2，若 #2 仍卡，下一个嫌疑＝自适应高度 SwiftUI cell + 200 section 估算高度在「跳末日后上滚」逐个回修（未动，需先确认再深挖、且那两文件并行会话在改）。
+- **#3 地图标注跳过空天（`43b202f` 合并）**：`mapAnnotations` 只为「有内容」的天建 MapContent，空天不再空跑一个 ForEach 身份（长行程焦点落空天 / 全屏全量时减负）。可证明行为等价。worktree/分支已清理。
+- **「导出签证行程单」下线删除（`63535f8`/`11b6bfa`/`3fd91f9`）**：与产品预期不符、待重做 → 删而非藏（自包含、git 留底，详见 decisions 2026-06-24）。删 3 文件（`ExportItinerarySheet`/`ItineraryDocumentText`/`ItineraryPDFRenderer`）+ `PackingListView` 入口 + `CarryLogger` 两 event（含 errorEvents）+ 6 个 `itinerary.export.*` 文案；同步改 architecture.md、删 CLAUDE.md 失效举例。spec `itinerary-export-document.md` 保留作重做参考。找回：`git show 63535f8^:<路径>`。
+
+### 🔔 下个会话待跟进（本会话上下文将满、移交）
+- **本会话所有改动已全部提交进 main**（性能 `30980d6` + 导出删除三连）；工作区唯一未提交的 `Carry/Views/ItineraryReorderCollection.swift` 是**并行会话的 geoLeg 在途改动、非本会话**，勿替它提交。main `ahead 3`，未 push（用户没要求 push）。
+- **验收清单已写进 Apple 提醒事项**（7 条 "Carry验收①~⑦"）：真机 DDI / 导入 49→50 / 地名流式浮现+不空白 / 读图提速 / 回列表不逐个蹦 / 长行程上滚顺滑 / 地图切天一致。真机当前被 **Xcode DDI 个性化失败**挡（部署侧、非代码：网络/重启/Developer Mode 关再开，或先用模拟器）。
+- **🔴 #2 长行程空列表上滚仍待真机确认**：已做的 O(1) 行/连线缓存（`30980d6`）+ header/addstop O(1)（`2f22782`）是否消除「逐条加载卡」**未经真机验证**。若仍卡 → 下一个根因嫌疑＝**自适应高度 SwiftUI cell（UIHostingConfiguration）+ 200 section 估算高度，在「默认跳末日 → 上滚」时逐 section 自测真高、内容偏移回修 thrash**。按性能纪律：先**控制组实验**（临时给 cell 固定高看是否变顺）确认根因，**别盲改**；且 `ItineraryView`/`ItineraryReorderCollection` 正被并行会话改（geoLeg），动前先看工作区。
 
 ## 上次改动摘要（Quick Actions 相位感知 + 数据驱动 · spec: quick-actions-phase-aware.md · 2026-06-23）
 
