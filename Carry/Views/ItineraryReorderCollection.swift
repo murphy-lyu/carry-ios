@@ -209,12 +209,12 @@ struct ItineraryReorderCollection: UIViewRepresentable {
         // contentOffset。注：跟手输入循环（每帧依当前手指位置推进），非固定时长动画，不属「displayLink 做动画」反模式。
         private var autoScrollLink: CADisplayLink?
         private var autoScrollSpeed: CGFloat = 0          // 带符号 pt/s，负=上滚
-        private let autoScrollZone: CGFloat = 72          // 上/下触发带高度（也是目标夹断的内边距）
+        private let autoScrollZone: CGFloat = 48          // 上/下触发带高度（也是目标夹断的内边距）
         private let autoScrollMaxSpeed: CGFloat = 420     // 边缘处速度的绝对上限 pt/s（再快的行高也不超过它）
         // 速度按「行/秒」而非「点/秒」封顶：用户真正感知的是「每秒掠过几个插入点（行）」。固定 pt/s 下，
         // 压缩行（排序模式 ~44pt）比常规行（~88pt）每秒掠过的行数翻倍 → 同样手感却「冲过头」。改成
         // 边缘速度 = 实测被拖行高 × 本常数（封顶 autoScrollMaxSpeed），两种行高自动统一到同一「插入点/秒」。
-        private let autoScrollRowsPerSec: CGFloat = 4     // 边缘处最多每秒掠过的行数
+        private let autoScrollRowsPerSec: CGFloat = 3     // 边缘处最多每秒掠过的行数
         private let autoScrollFallbackRowHeight: CGFloat = 56  // 行高测不到时的保守缺省（绝不回落到 maxSpeed 快档）
         private var draggedRowHeight: CGFloat = 0         // .began 时实测被拖 cell 高度，驱动上面的按行封顶
         // 我在拖拽期间「拥有」的权威 contentOffset.y：displayLink 推进它；scrollViewDidScroll 把任何
@@ -572,16 +572,18 @@ struct ItineraryReorderCollection: UIViewRepresentable {
 
         /// 目标 Y 夹到「距可视上/下边各 autoScrollZone」的内带：自滚期间被拖 cell 停在带内、内容从其下流过。
         private func clampedToBand(_ p: CGPoint, in cv: UICollectionView) -> CGPoint {
-            let top = cv.contentOffset.y + cv.adjustedContentInset.top + autoScrollZone
-            let bottom = cv.contentOffset.y + cv.bounds.height - cv.adjustedContentInset.bottom - autoScrollZone
+            let top = cv.contentOffset.y + cv.safeAreaInsets.top + autoScrollZone
+            let bottom = cv.contentOffset.y + cv.bounds.height - cv.safeAreaInsets.bottom - autoScrollZone
             guard bottom > top else { return p }   // 可视区太矮，放弃夹断
             return CGPoint(x: p.x, y: min(max(p.y, top), bottom))
         }
 
         /// 手指进入上/下触发带 → 带符号速度（二次曲线：带内边缘≈0、越近屏幕边越快，上限 autoScrollMaxSpeed）。
         private func autoScrollVelocity(forFinger raw: CGPoint, in cv: UICollectionView) -> CGFloat {
-            let topEdge = cv.contentOffset.y + cv.adjustedContentInset.top
-            let bottomEdge = cv.contentOffset.y + cv.bounds.height - cv.adjustedContentInset.bottom
+            // 边缘以「可见视口 + 真实安全区」为准，绝不用 adjustedContentInset.bottom——后者含末段吸顶预留的
+            // 巨大底部 inset（实测 281pt），会把「底边」抬到屏幕中部、令自滚在中段就误触发（=「过于灵敏」真根）。
+            let topEdge = cv.contentOffset.y + cv.safeAreaInsets.top
+            let bottomEdge = cv.contentOffset.y + cv.bounds.height - cv.safeAreaInsets.bottom
             let dTop = raw.y - topEdge
             let dBottom = bottomEdge - raw.y
             // 边缘最大速度按行高封顶（行/秒 → 点/秒），再不超过绝对上限；行高测不到时退回绝对上限。
