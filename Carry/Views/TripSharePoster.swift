@@ -145,7 +145,7 @@ struct TripSharePoster: View {
                                 .foregroundStyle(color)
                                 .frame(width: 24, height: 24)
                                 .background(Circle().fill(color.opacity(0.13)))
-                            Text(stop.name)
+                            Text(stop.displayName)
                                 .font(.system(size: 15, weight: .regular, design: .rounded))
                                 .foregroundStyle(.primary.opacity(0.9))
                                 .lineLimit(1)
@@ -413,7 +413,7 @@ enum TripShare {
                 title = String(format: NSLocalizedString("itinerary.day.title", comment: ""), day.sortOrder + 1)
             }
             lines.append(title)
-            for stop in stops { lines.append("· \(stop.name)") }
+            for stop in stops { lines.append("· \(stop.displayName)") }
             lines.append("")
         }
         lines.append("— Carry")

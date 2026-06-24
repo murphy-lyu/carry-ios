@@ -173,7 +173,7 @@ struct OptimizeRouteView: View {
                                 .foregroundStyle(.secondary)
                                 .frame(width: 20)
                             VStack(alignment: .leading, spacing: 2) {
-                                Text(stop.name)
+                                Text(stop.displayName)
                                     .font(.system(.subheadline, design: .rounded))
                                     .lineLimit(1)
                                 if stop.plannedStartMinutes >= 0 {
@@ -393,7 +393,7 @@ struct OptimizeRouteView: View {
             // 不用系统 Marker 气泡（两张地图两套针不一致）。
             ForEach(Array(optimizedStops.enumerated()), id: \.element.id) { index, stop in
                 if let coord = stop.coordinate {
-                    Annotation(stop.name, coordinate: coord) {
+                    Annotation(stop.displayName, coordinate: coord) {
                         optimizeMarker(index: index + 1)
                     }
                 }

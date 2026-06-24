@@ -95,7 +95,7 @@ struct TripSpendDetail {
         for day in trip.safeItineraryDays {
             let d = day.sortOrder
             for stop in (day.stops ?? []) where stop.hasCost {
-                append(id: stop.id, kind: .stop, name: stop.name,
+                append(id: stop.id, kind: .stop, name: stop.displayName,
                        category: SpendCategory.from(stopCategory: stop.category), entity: stop, dayOrder: d)
             }
             for seg in day.sortedSegments where seg.hasCost {
