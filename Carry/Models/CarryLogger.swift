@@ -158,9 +158,6 @@ final class CarryLogger {
         case transportRemoved       = "transport_removed"
         case lodgingAdded           = "lodging_added"
         case lodgingRemoved         = "lodging_removed"
-        // 签证行程单导出（spec: itinerary-export-document.md）
-        case itineraryExported      = "itinerary_exported"
-        case itineraryExportFailed  = "itinerary_export_failed"
 
         // 行程附件（spec: itinerary-attachments.md）
         case attachmentAdded        = "attachment_added"
@@ -208,7 +205,7 @@ final class CarryLogger {
         .destinationDecodeFailed, .coffeePurchaseFailed, .coffeeProductsFetchFailed,
         .calendarSaveFailed, .liveActivityStartFailed,
         .reminderScheduleFailed, .apiTimeout, .apiError,
-        .itineraryRouteCalcFailed, .itineraryImportFailed, .itineraryExportFailed,
+        .itineraryRouteCalcFailed, .itineraryImportFailed,
         .exchangeRateFetchFailed, .calendarOverlayAccessDenied,
         .photoImportFailed, .flightLookupFailed,
         .attachmentSaveFailed, .tripsyImportFailed,

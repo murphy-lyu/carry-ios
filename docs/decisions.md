@@ -1,5 +1,9 @@
 # 决策日志
 
+## 2026-06-24 下线「导出签证行程单」功能（删除而非隐藏）
+
+当前「导出行程单」（双语签证 PDF）与产品预期不一致，决定**下线重做**。在「藏入口保代码」与「直接删除」之间选**直接删除**，理由：① 功能完全自包含（3 个独占文件 `ExportItinerarySheet` / `ItineraryDocumentText` / `ItineraryPDFRenderer`，~456 行），不沾备份/CostBearing/schema/duplicate/Widget 任何「加字段同步 N 处」红线；② 既定要**重新设计**、不会原样复用，留着只有维护负担没有复用收益——尤其行程数据模型在持续演进，PDF 渲染器会静默腐烂；③ git 历史完整留底，重做时 `git show <删除提交>:路径` 即可调出参考，比让死代码烂在工作区强。删除范围：3 文件 + `PackingListView` 入口（按钮+sheet+state）+ `CarryLogger` 两个 event（`itineraryExported`/`itineraryExportFailed`，含 errorEvents 成员）+ 6 个 `itinerary.export.*` 文案 key。spec `itinerary-export-document.md` 保留作重做参考。**找回锚点：删除提交见本日 git log「Remove the visa itinerary PDF export feature」。**
+
 ## 2026-06-24 Widget large 概览 + 距离连线 + Quick Actions 精修 + 空写竞态教训
 
 ### large Widget =「按天分组」概览，不抄 Tripsy 的扁平时间流（spec: widget-upcoming-large.md）
