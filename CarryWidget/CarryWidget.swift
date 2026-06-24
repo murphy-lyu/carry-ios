@@ -31,6 +31,14 @@ struct WidgetStay: Codable {
     let nights: Int
 }
 
+/// 行程项镜像（含无时刻，spec: widget-trip-companion.md）。无「下一件事」时显示「今天的地点」。
+struct WidgetPlanItem: Codable {
+    let dayOrder: Int
+    let order: Int
+    let title: String
+    let kind: String
+}
+
 /// 旅行相位（spec: widget-trip-companion.md）。
 enum TripPhase { case preTrip, inTrip }
 
@@ -54,6 +62,7 @@ struct WidgetTrip: Codable, Identifiable {
     let isDateless: Bool?
     let events: [WidgetEvent]?
     let stays: [WidgetStay]?
+    let plan: [WidgetPlanItem]?
 
     var id: String { tripId }
 
@@ -106,6 +115,12 @@ struct WidgetTrip: Codable, Identifiable {
         return (stays ?? []).first { idx >= $0.checkInDayOrder && idx < $0.checkInDayOrder + $0.nights }
     }
 
+    /// 今天的行程项（按序），供「无带时刻的下一件事」时显示「今天的地点」。
+    func todayPlan(asOf now: Date) -> [WidgetPlanItem] {
+        let idx = currentDayIndex(asOf: now)
+        return (plan ?? []).filter { $0.dayOrder == idx }.sorted { $0.order < $1.order }
+    }
+
     static let preview = WidgetTrip(
         tripId: "preview",
         name: "Tokyo",
@@ -116,7 +131,8 @@ struct WidgetTrip: Codable, Identifiable {
         returnDate: nil,
         isDateless: false,
         events: nil,
-        stays: nil
+        stays: nil,
+        plan: nil
     )
 
     /// 旅行中预览（spec 验收/Xcode 预览用）。
@@ -133,7 +149,8 @@ struct WidgetTrip: Codable, Identifiable {
             WidgetEvent(date: Calendar.current.date(byAdding: .hour, value: 3, to: Date()) ?? Date(),
                         kind: "flight", primary: "AF111", secondary: "CDG → NRT"),
         ],
-        stays: [WidgetStay(name: "Hôtel Le Meurice", checkInDayOrder: 0, nights: 6)]
+        stays: [WidgetStay(name: "Hôtel Le Meurice", checkInDayOrder: 0, nights: 6)],
+        plan: nil
     )
 }
 
@@ -365,6 +382,17 @@ struct CarryWidgetEntryView: View {
         .foregroundStyle(.secondary)
     }
 
+    /// 「今天」/「今天 · 共 N 处」副标题（无时刻安排时替代倒计时行）。
+    private func todayCaption(_ trip: WidgetTrip, now: Date) -> some View {
+        let count = trip.todayPlan(asOf: now).count
+        let s = count > 1
+            ? String.localizedStringWithFormat(NSLocalizedString("widget.companion.today_count", comment: ""), count)
+            : NSLocalizedString("widget.companion.today", comment: "")
+        return Text(s)
+            .font(.system(.subheadline, design: .rounded).weight(.medium))
+            .foregroundStyle(.secondary)
+    }
+
     // MARK: In-trip Small
 
     private func inTripSmallView(_ trip: WidgetTrip, now: Date) -> some View {
@@ -382,6 +410,16 @@ struct CarryWidgetEntryView: View {
                 Text(ev.date, style: .relative)
                     .font(.system(.subheadline, design: .rounded).weight(.medium))
                     .foregroundStyle(.secondary)
+            } else if let first = trip.todayPlan(asOf: now).first {
+                // 无带时刻的下一件事 → 显示今天第一个安排（无倒计时）。
+                HStack(spacing: 5) {
+                    Image(systemName: icon(for: first.kind)).font(.subheadline)
+                    Text(first.title)
+                        .font(.system(.title3, design: .rounded).weight(.bold))
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.7)
+                }
+                todayCaption(trip, now: now)
             } else {
                 Text(trip.displayTitle)
                     .font(.system(.title2, design: .rounded).weight(.bold))
@@ -418,6 +456,23 @@ struct CarryWidgetEntryView: View {
                                 .font(.system(.caption2, design: .rounded))
                                 .foregroundStyle(.secondary)
                                 .lineLimit(1)
+                        }
+                    } else {
+                        // 无带时刻的下一件事 → 列出今天前几项安排（无倒计时）。
+                        let items = trip.todayPlan(asOf: now)
+                        ForEach(Array(items.prefix(3).enumerated()), id: \.offset) { _, it in
+                            HStack(spacing: 5) {
+                                Image(systemName: icon(for: it.kind)).font(.caption)
+                                Text(it.title).lineLimit(1)
+                            }
+                            .font(.system(.caption, design: .rounded).weight(.medium))
+                            .foregroundStyle(.secondary)
+                        }
+                        if items.count > 3 {
+                            Text(String.localizedStringWithFormat(
+                                NSLocalizedString("widget.companion.plan_more", comment: ""), items.count - 3))
+                                .font(.system(.caption2, design: .rounded))
+                                .foregroundStyle(.secondary)
                         }
                     }
                 }

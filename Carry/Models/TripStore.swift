@@ -3106,6 +3106,15 @@ struct WidgetStay: Codable {
     let nights: Int         // checkOutDayOrder = checkInDayOrder + nights
 }
 
+/// 行程项（地点/交通）的轻量镜像——**含无时刻项**（spec: widget-trip-companion.md）。
+/// 当天没有「带时刻的下一件事」时，Widget 用它显示「今天的地点」（无倒计时）。让「有行程规划就显示」成立。
+struct WidgetPlanItem: Codable {
+    let dayOrder: Int       // 第几天（0-based）
+    let order: Int          // 当天内顺序（地点/交通共享的 sortOrder 时间轴序）
+    let title: String       // 地点名 / 航班号·车次·承运方·路线
+    let kind: String        // StopCategory.rawValue / TransportMode.rawValue → 图标
+}
+
 /// Lightweight, SwiftData-free mirror of a trip, shared with CarryWidget via the
 /// App Group UserDefaults. The widget defines a field-identical struct and decodes
 /// the same JSON — no shared type / pbxproj change needed.
@@ -3125,6 +3134,7 @@ struct WidgetTripSnapshot: Codable {
     let isDateless: Bool        // true → Widget 只走出发前相位（无「今天第几天」概念）
     let events: [WidgetEvent]   // 整段行程「有时间的事件」，绝对 Date 已算好，按时间升序
     let stays: [WidgetStay]     // 住宿跨度（判定「今晚住哪」）
+    let plan: [WidgetPlanItem]  // 今天及之后的行程项（含无时刻）；无「下一件事」时显示「今天的地点」
 }
 
 extension TripStore {
@@ -3196,6 +3206,34 @@ extension TripStore {
         return out.filter { $0.0 >= since }.sorted { $0.0 < $1.0 }.map { $0.1 }.prefix(60).map { $0 }
     }
 
+    /// 「今天及之后」的行程项（地点 + 交通，**含无时刻**），按 (天, 当天序) 排。住宿不在内（走 stays）。
+    /// 供 Widget 在「当天无带时刻的下一件事」时显示「今天的地点」。`fromDayOrder` = 当前天序，截掉过去天。
+    private static func widgetPlan(for trip: TripBundle, fromDayOrder: Int) -> [WidgetPlanItem] {
+        var out: [WidgetPlanItem] = []
+        for day in trip.safeItineraryDays where day.sortOrder >= fromDayOrder {
+            for stop in day.sortedStops {
+                let name = stop.name.trimmingCharacters(in: .whitespaces)
+                guard !name.isEmpty else { continue }
+                out.append(WidgetPlanItem(dayOrder: day.sortOrder, order: stop.sortOrder,
+                                          title: name, kind: stop.category.rawValue))
+            }
+            for seg in day.sortedSegments {
+                var title = seg.number.trimmingCharacters(in: .whitespaces)
+                if title.isEmpty { title = seg.displayCarrier.trimmingCharacters(in: .whitespaces) }
+                if title.isEmpty, seg.mode == .carRental { title = seg.fromName }
+                if title.isEmpty {
+                    let a = seg.fromCode.isEmpty ? seg.fromName : seg.fromCode
+                    let b = seg.toCode.isEmpty ? seg.toName : seg.toCode
+                    title = (!a.isEmpty && !b.isEmpty) ? "\(a) → \(b)" : ""
+                }
+                guard !title.isEmpty else { continue }
+                out.append(WidgetPlanItem(dayOrder: seg.departDayOrder, order: seg.sortOrder,
+                                          title: title, kind: seg.mode.rawValue))
+            }
+        }
+        return out.sorted { ($0.dayOrder, $0.order) < ($1.dayOrder, $1.order) }.prefix(60).map { $0 }
+    }
+
     /// Publishes the up-to-3 most relevant **unfinished** trips (in-progress first, then
     /// nearest upcoming) to the widget and reloads timelines. Called from CarryApp lifecycle
     /// hooks (launch / background) and after itinerary/packing data changes.
@@ -3213,6 +3251,10 @@ extension TripStore {
             .prefix(3)
         let snapshots = active.map { trip -> WidgetTripSnapshot in
             let ret = cal.date(byAdding: .day, value: trip.days, to: trip.departureDate) ?? trip.departureDate
+            // 当前天序（clamp 到 [0, spanDays-1]）：plan 从今天起算、截掉过去天。
+            let span = max(1, trip.days + 1)
+            let dayIdx = max(0, min(cal.dateComponents([.day], from: cal.startOfDay(for: trip.departureDate),
+                                                       to: today).day ?? 0, span - 1))
             return WidgetTripSnapshot(
                 tripId: trip.id.uuidString,
                 name: trip.name,
@@ -3225,7 +3267,8 @@ extension TripStore {
                 events: Self.widgetEvents(for: trip, since: today),
                 stays: trip.safeLodgingStays.map {
                     WidgetStay(name: $0.name, checkInDayOrder: $0.checkInDayOrder, nights: max(1, $0.nights))
-                }
+                },
+                plan: Self.widgetPlan(for: trip, fromDayOrder: dayIdx)
             )
         }
         guard let defaults = UserDefaults(suiteName: Self.widgetAppGroup) else { return }
