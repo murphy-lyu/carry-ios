@@ -1,5 +1,21 @@
 # 决策日志
 
+## 2026-06-24 Widget large 概览 + 距离连线 + Quick Actions 精修 + 空写竞态教训
+
+### large Widget =「按天分组」概览，不抄 Tripsy 的扁平时间流（spec: widget-upcoming-large.md）
+large 尺寸填「概览」生态位（小/中只给下一件事）。**核心决策**：Tripsy 的「Next Activities」按**时间**扁平排（每项都有时刻），但 Carry 用户**常不填时间**——纯时间流在 Carry 真实数据下会空、别扭。故 Carry large 按**天分组 + 当天顺序**（今天/明天/周N），有时刻才显时刻。这适配 Carry 常态、是差异化而非模仿。数据走**附加式** `WidgetAgendaItem`（events/plan/stays 不动 → 小/中零回归）。QA：systemLarge 固定高不滚动、条目多两行，渲染行封顶 7 + 截断显「+N 更多」（防静默裁剪）。
+
+### 时间轴距离连线：判据是「有详细地址 = 真实落点」（spec: itinerary-distance-legs.md）
+任意相邻两个真实地点间显示距离；纯枢纽（机场航站楼）不显——因为有用的距离是「下机拿到车的地方→下一站」，非航站楼。判据用交通端 `address` 非空（机场地址为空、自然排除，**无需对航班特判**）；地点/住宿仍只看坐标（不加地址要求，否则地图点选/照片地点丢现有连线=回归）。纯叠加、不碰 rail 拓扑。
+
+### Quick Actions：行程名 / Trip Book / 顺序（spec: quick-actions-phase-aware.md）
+- 副标题用**行程名**（对齐 Widget displayTitle，行程名最 identifying），不用目的地城市。
+- 「我的足迹」长按 → 重指向 **My Trip Book**（行程册 sheet）并改名/换图标——Trip Book 是更全的「回顾」首选页；**世界地图与 Trip Book 是两个东西**（地图=点亮国家的 GlobeView、Trip Book=统计+国家旗帜+花费，不含那张地图），Siri 的「Footprint」仍指地图、各司其职。
+- 顺序 = **〔当前/最近行程〕· New Trip · My Trip Book**：长按首项最易点，旅行中「打开我的行程」最高频置顶，回顾垫底。
+
+### 🔴 教训：Widget snapshot / Quick Actions / 交通 LA —「读全量数据的启动副作用」绝不在 `App.onAppear` 写
+真机暴露：`writeWidgetSnapshot` 在 onAppear 调，但 `TripStore` 异步加载、此刻 `trips` 常为空 → **写空 snapshot 覆盖好的那份**，Widget 空白（读 App Group plist 实测 `trips=0` 坐实）。这与之前 Quick Actions/交通 LA 踩的是**同一个竞态**（CLAUDE.md「读全量数据再做副作用」铁律），widget snapshot 当时漏修。**统一根因解**：这类副作用一律挂 `TripStore.init` 的 Task（`fetchTrips` 之后、trips 已加载）+ 回前台/进后台钩子，**绝不挂 onAppear**。排查方法（记住）：直接读模拟器 `~/.../AppGroup/<uuid>/Library/Preferences/group.com.murphy.carry.plist` 的 `carry_widget_trips`，拿 snapshot 实际内容、不靠猜。
+
 ## 2026-06-23 不做「TripIt 账号导入器」（至少现阶段）
 
 **背景**：Tripsy 有「TripIt Importer」——OAuth 连 TripIt 账号 → 拉全部行程/活动转入。比我们已做的 Tripsy 导入器（一次性读导出 SQLite 文件、无账号无 OAuth）重一个量级。用户问要不要跟。

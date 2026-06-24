@@ -7,6 +7,26 @@
 - **现状 OK**：行程详情底部「行程/打包」切换器随滚动收起/露出（下滑 6pt 收、上滑 6pt 开、近顶恒显、spring 0.3 bounce 0.2），已复用到打包清单（`ItineraryReorderCollection` + `ReorderableItemCollection` 同一套 `onScrollHideChange` → `PackingListView.switcherHidden`）。用户初验「效果很不错」。
 - **待办**：用户会**多用后再回看动画细节**（阈值灵敏度 / 收起展开顺滑度 / 内容回填的跳动感）。届时按真机手感微调上面几个数值（阈值在两个 collection 的 `updateSwitcherHide`，动画在 `PackingListView` 两处 `onScrollHide`/`onChange` 的 `withAnimation`）。当前不动。
 
+## 上次改动摘要（Widget/Quick Actions 系统入口大批：距离连线 + 旅行伴侣修复 + large 概览 + Quick Actions 精修 · 2026-06-24）
+
+> 单会话、纯我的工作（与并行「相册导入/性能」会话物理隔离，全程隔离 index 只提自己文件）。**全部编译绿、i18n [E]=0、已提交并 push 到 origin/main**。UI/真机验收交用户。spec: `widget-trip-companion.md` / `widget-transit-live-activity.md` / `quick-actions-phase-aware.md` / `widget-upcoming-large.md` / `itinerary-distance-legs.md`。
+
+**一、时间轴：任意「真实地点」间显示距离（`ff740ef`，spec: itinerary-distance-legs.md）**
+- 新增 `.geoLeg(from:to:day:)` + `ConnEndpoint`，在 `applySnapshot` 给「交通/租车端点参与」的相邻插 haversine 距离连线；**地址门控**（交通端 `address` 非空才算真实落点，机场无地址自然排除——免特判）。stop↔stop / stop↔lodging 仍走原 `.leg`/`.lodgingLeg`，零回归。纯叠加、不碰 rail 拓扑（connectivity）。
+
+**二、旅行伴侣 Widget 真机暴露的两个 bug（`c789fab`/`7a4cd02`）**
+- 🔴 **空写竞态**：`writeWidgetSnapshot` 原在 `App.onAppear` 调，trips 常未异步加载完 → 写空 snapshot 覆盖好的那份，Widget 空白/旧缓存（读模拟器 App Group plist 实测确认 `trips=0`）。根因解：移出 onAppear、挪进 `TripStore.init` Task（fetchTrips 后）+ 保留 didEnterBackground。**与 Quick Actions/交通 LA 同款竞态、当时漏修**。
+- 🟢 **无时刻行程项也显示**：原「下一件事」只收有时刻项 → 没填时间的行程 Widget 啥都不显。加 `WidgetPlanItem`（含无时刻），当天无带时刻下一件事时显「今天的地点」（small 首项 / medium 前 3 + Today·N 处）。
+
+**三、large 尺寸「接下来的行程」概览（`3ce52ab`/`6d9b64d`，spec: widget-upcoming-large.md）**
+- `.systemLarge` 加入 supportedFamilies；新增 `WidgetAgendaItem`（地点+交通+住宿入住/退房，含无时刻 + 地点副标题 + 可选时刻），**按天分组**（今天/明天/周N）——差异化 Tripsy 的扁平时间流、适配 Carry「常不填时间」。相位自适应（旅行中=今天起清单 / 出发前=倒计时+打包+Day1 预览）。附加式（events/plan/stays 不动，小/中零回归）。
+- QA 修：systemLarge 固定高不滚动、条目多两行 → 渲染行封顶从 9 降到 **7** + 截断显「+N 更多」（防静默裁剪）。
+
+**四、Quick Actions 精修（`db21cdf`）**
+- 副标题 目的地 → **行程名**（对齐 Widget displayTitle）；「我的足迹」→ **My Trip Book**（重命名+书本图标，经 `router.showTripBookRequest` 开行程册 sheet；Siri Footprint 仍指地图）；顺序改为 **〔当前/最近行程〕· New Trip · My Trip Book**。
+
+**新会话 TODO（仅剩验收）**：① **真机验收**全套 Widget（小/中/大相位、距离连线、Quick Actions 顺序/标题/跳转）；真机当前被 Xcode DDI 挡着、可先模拟器。② large 在「进行中且 ≥8 项」行程上确认不裁剪 + 底部「+N 更多」。③（未来）目的地「今日实用信息」large（天气+货币+插头）= 独立第二个 large，需 WeatherKit 喂数据，留独立 spec。④（未来）交通 LA 接航班实时动态 API 填 `liveStatus/gate`。
+
 ## 上次改动摘要（相册导入 + 长行程列表/地图性能根因优化 · 2026-06-24）
 
 > 多会话并行。本会话主改：相册导入链路 + 行程列表/地图性能。**编译绿、零警告**。真机/视觉验收交用户（真机当前被 Xcode DDI 个性化失败挡着，可先用模拟器）。
