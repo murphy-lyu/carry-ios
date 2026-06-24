@@ -305,7 +305,7 @@ xcstrings 中有两类 key：
 - **结构化 key**（如 `itempicker.hero.title`、`packing.scene_card.subtitle`）：**必须**在 localizations 中包含 `"en"` 显式条目，否则英文设备显示的是 key 名本身
 
 ### 「按用户选定语言渲染」的固定文案：用代码字典，不进 xcstrings
-xcstrings 永远按**设备 locale** 取值。若某段固定文案要按**用户在界面里选定的语言**渲染（与设备 locale 无关），xcstrings 做不到——必须用**代码内语言字典**（如签证 PDF 导出的 `ItineraryDocumentText`，导出时选 EN/ZH 就渲染对应语言、日期也用对应 `Locale` 格式化）。判据：文案的语言由「设备设置」决定 → xcstrings；由「用户当前选择」决定 → 代码字典。用户输入的数据（地点名/酒店名等）始终原样、不翻译。
+xcstrings 永远按**设备 locale** 取值。若某段固定文案要按**用户在界面里选定的语言**渲染（与设备 locale 无关），xcstrings 做不到——必须用**代码内语言字典**。判据：文案的语言由「设备设置」决定 → xcstrings；由「用户当前选择」决定 → 代码字典。用户输入的数据（地点名/酒店名等）始终原样、不翻译。
 
 ### 新增文案：同步补全所有语言
 每次新增或修改面向用户的文案，必须在同一次改动中完成全部 9 种语言，不允许"先占位后补"：
