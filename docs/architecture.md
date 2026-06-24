@@ -40,7 +40,7 @@ ZStack（全窗口）
   - `LodgingStay`（跨度）：横跨 N 晚（`checkInDayOrder` + `nights`，`covers(dayOrder:)`），挂 `TripBundle.lodgingStays`（级联，不绑单天）。
   - `ItineraryDay.timeline`（`TimelineItem` 枚举）：stop + transport 合并的单一数据源——**停靠点保持手动 sortOrder，设了时间的交通段按时间「就位」插入**（详见 decisions 2026-06-15）。
   - 备份 `BackupTransportSegment/BackupLodgingStay`（可选字段，兼容旧备份）；`duplicateTrip` 深拷贝；`syncItineraryDays` 缩短天数时交通段同停靠点挪到保留天、住宿 dayOrder 夹回（防数据丢失）。
-  - **签证行程单导出**：`ItineraryPDFRenderer`（`UIGraphicsPDFRenderer` A4 分页）+ `ItineraryDocumentText`（文档固定文案 EN/ZH 代码字典，按所选语言渲染、不走设备 locale）+ `ExportItinerarySheet`（导出选项）；概览图复用 `TripShare.renderRouteMap`。spec: `itinerary-export-document.md`。
+  - 注：原「签证行程单导出」（PDF）已于 2026-06-24 下线（与产品预期不符、待重做），相关代码已删除、spec `itinerary-export-document.md` 保留作重做参考（见 decisions 2026-06-24）。
 - **费用记录（`CostBearing` 协议，spec: `itinerary-cost-tracking.md`）**：`ItineraryStop` / `TransportSegment` / `LodgingStay` 三实体 conform `CostBearing`，各加 `costAmount`（金额，原币种）+ `costCurrencyCode`（ISO 4217，空=未记录）+ `costHomeAmount`（录入时折算成本位币的快照，-1=未捕获→实时折算兜底）。**真相 = 金额 + 原币种**（永不丢），快照只为历史值稳定。加列属轻量迁移（无 SchemaV2）；备份 `Backup*` 三处加可选字段、`duplicateTrip` 深拷贝带上。写入统一经 `TripStore.setStopCost/setTransportCost/setLodgingCost`（单一漏斗 + 就地捕获快照）；改本位币 → `recomputeCostSnapshots()` 从原始金额重算（不变式：快照永远以当前本位币计）。
 - Scene / SceneItemMap：场景与物品映射（智能推荐基础）
 - ItemCatalog：物品目录（预置数据）
