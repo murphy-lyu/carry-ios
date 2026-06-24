@@ -77,6 +77,7 @@ private final class TimelineLineCache {
     var connectivity: [ItineraryRowID: (top: Bool, bottom: Bool)] = [:]
     // 行闭包 O(1) 查（取代每行 days.first(where:) 全表扫 + safe* 每访重排序）。daySections 一次性建表。
     var stopByID: [UUID: ItineraryStop] = [:]
+    var dayByID: [UUID: ItineraryDay] = [:]
     var dayByStopID: [UUID: ItineraryDay] = [:]
     var segmentByID: [UUID: TransportSegment] = [:]
     var dayBySegmentID: [UUID: ItineraryDay] = [:]
@@ -112,6 +113,15 @@ struct ItineraryView: View {
     @State private var overlayEventsByDay: [Int: [CalendarOverlayEvent]] = [:]
     /// 时间轴连线预算（每行 top/bottom），daySections 构建时填、行闭包 O(1) 查（见 TimelineLineCache）。
     @State private var lineCache = TimelineLineCache()
+
+    // 静态复用：`Date.formatted(.dateTime…)`（FormatStyle）逐次调用开销显著，长行程滚动时每个 day cell
+    // 各调一次 → 卡顿。改用一次配好的 DateFormatter（locale 模板按设备语言，切语言会重启 app）。
+    private static let dayHeaderDateFormatter: DateFormatter = {
+        let f = DateFormatter(); f.setLocalizedDateFormatFromTemplate("EEEMMMd"); return f
+    }()
+    private static let weekdayFormatter: DateFormatter = {
+        let f = DateFormatter(); f.setLocalizedDateFormatFromTemplate("EEE"); return f
+    }()
 
     private var bundle: TripBundle? { store.bundle(for: tripId) }
     private var days: [ItineraryDay] { bundle?.safeItineraryDays ?? [] }
@@ -381,7 +391,7 @@ struct ItineraryView: View {
 
         Button(action: action) {
             VStack(spacing: 2) {
-                Text(entry.date.formatted(.dateTime.weekday(.abbreviated)))
+                Text(Self.weekdayFormatter.string(from: entry.date))
                     .font(.system(size: 10, weight: .medium, design: .rounded))
                     // 非行程日用语义色 tertiaryLabel（明暗自适应、克制），明确「仅作整周上下文、不可操作」。
                     .foregroundStyle(isSelected ? CarryAccent.color : (isDimmed ? Color(.tertiaryLabel) : .secondary))
@@ -467,7 +477,7 @@ struct ItineraryView: View {
 
     private func dayDotCount(for entry: CalendarEntry) -> Int {
         guard let day = entry.day else { return 0 }
-        return min(3, max(0, day.sortedStops.count))
+        return min(3, (day.stops ?? []).count)   // 只要计数 → 不必排序
     }
 
     /// 圆点统一用「当天配色」（与 Day 头圆点 / 地图针 / 时间轴序号同色），表达「这天有安排 + 粗略数量」。
@@ -485,12 +495,14 @@ struct ItineraryView: View {
         let stays = bundle?.safeLodgingStays ?? []
         // 行查找表：一次遍历建好，行闭包 O(1) 查（取代每行 days.first(where:)/flatMap 全表扫）。
         var stopByID: [UUID: ItineraryStop] = [:]
+        var dayByID: [UUID: ItineraryDay] = [:]
         var dayByStopID: [UUID: ItineraryDay] = [:]
         var segmentByID: [UUID: TransportSegment] = [:]
         var dayBySegmentID: [UUID: ItineraryDay] = [:]
         var dayByOrder: [Int: ItineraryDay] = [:]
         var allCarRentals: [TransportSegment] = []
         for day in allDays {
+            dayByID[day.id] = day
             dayByOrder[day.sortOrder] = day
             for s in day.sortedStops { stopByID[s.id] = s; dayByStopID[s.id] = day }
             for seg in day.sortedSegments {
@@ -522,6 +534,7 @@ struct ItineraryView: View {
         // 引用类型，仅更新内容、不触发视图失效。行闭包在本次 body 后由 UIKit dequeue 时读到的即此份。
         lineCache.connectivity = connectivity
         lineCache.stopByID = stopByID
+        lineCache.dayByID = dayByID
         lineCache.dayByStopID = dayByStopID
         lineCache.segmentByID = segmentByID
         lineCache.dayBySegmentID = dayBySegmentID
@@ -842,7 +855,7 @@ struct ItineraryView: View {
     /// 统一「+ 添加」入口（spec: itinerary-transport-lodging.md）：菜单选类型 → 地点 / 航班 / 火车 / 住宿。
     /// 次级内联动作用 secondary 灰，与打包「添加物品」一致（避免每组一行 accent 蓝、喧宾夺主）。
     private func addStopRow(_ dayID: UUID) -> some View {
-        let order = days.first(where: { $0.id == dayID })?.sortOrder ?? 0
+        let order = lineCache.dayByID[dayID]?.sortOrder ?? 0
         return Menu {
             Button { activeSheet = .addStop(dayId: dayID) } label: {
                 Label("itinerary.kind.place", systemImage: "mappin")
@@ -932,7 +945,7 @@ struct ItineraryView: View {
 
     @ViewBuilder
     private func dayHeaderRow(_ section: ItineraryDaySection) -> some View {
-        if let day = days.first(where: { $0.id == section.id }) {
+        if let day = lineCache.dayByID[section.id] {
             dayHeader(day)
                 .frame(maxWidth: .infinity, alignment: .leading)
         }
@@ -1034,7 +1047,7 @@ struct ItineraryView: View {
         guard let bundle, !bundle.isDateless else { return nil }
         let base = Calendar.current.startOfDay(for: bundle.departureDate)
         let date = Calendar.current.date(byAdding: .day, value: day.sortOrder, to: base) ?? base
-        return date.formatted(.dateTime.weekday(.abbreviated).month(.abbreviated).day())
+        return Self.dayHeaderDateFormatter.string(from: date)
     }
 
     /// 与上一个停靠点的直线距离标签（即时本地，无网络）；任一端无坐标或首点返回 nil。

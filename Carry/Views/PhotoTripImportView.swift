@@ -213,6 +213,13 @@ struct PhotoTripImportView: View {
                 }
             }
             if Task.isCancelled { return }   // 用户中途退出 → 不再落状态
+            // 完成节拍：让「N/N 全部读取」这一帧真正显示出来再进预览。并发读图后，最后一张处理完会
+            // 瞬时进入预览——「50/50」与「进预览」的状态变更落在同一 runloop 被合帧，最后一张的计数
+            // 来不及渲染（用户看到停在 49/50、误以为漏了一张）。先确保计数=总数，再停留一个短暂可感节拍
+            // 展示完成态。这不是「等待另一异步过程结束」的硬延迟耦合，而是一段有意的完成确认展示。
+            await MainActor.run { processedCount = totalCount }
+            try? await Task.sleep(for: .milliseconds(450))
+            if Task.isCancelled { return }
             // 仅聚类（快）→ 立刻进预览，地名后台流式回填（不再卡在「100% 假死」等命名）。
             let d = await PhotoTripReconstructor.assemble(
                 photos: photos, tripId: tripId, departureDate: depart, returnDate: ret
