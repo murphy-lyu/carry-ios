@@ -5,6 +5,10 @@
 > - 数据刷新**未**在十几处 itinerary mutation 散加调用——现有 `CarryApp.didEnterBackground`（[CarryApp.swift:113](../Carry/CarryApp.swift:113)）+ `onAppear`（启动）已是天然漏斗，`writeWidgetSnapshot` 现读了 itinerary 数据，用户「编行程 → 离开 App → 看 Widget」即覆盖；Widget 自身靠 timeline entries 跨午夜/事件推进，无需 App 重开。比 spec 设想更克制、零冗余 reloadAllTimelines。
 > - 改动文件：[TripStore.swift](../Carry/Models/TripStore.swift)（snapshot 模型 + `widgetEvents` 展开 + `absoluteDate` + 选片改「未结束」）、[CarryWidget.swift](../CarryWidget/CarryWidget.swift)（镜像结构 + 相位推导 + 旅行中 Small/Medium + timeline 多 entry）、[CarryWidget/Localizable.xcstrings](../CarryWidget/Localizable.xcstrings)（4 key × 9 语言，i18n-audit [E]=0）。
 > - 修了一个自审 bug：`tonight` 文案带 `%@` 占位符却当无参标签渲染 → 改为 `String(format:)` 单 Text。
+>
+> **真机暴露并修复（2026-06-24）**：
+> - 🔴 **空写竞态（`c789fab`）**：`writeWidgetSnapshot` 原在 `App.onAppear` 调，但那时 `store.trips` 常未异步加载完 → 写出**空 snapshot 覆盖好的那份**，Widget 变空白/只剩缓存旧渲染（读模拟器 App Group plist 实测确认 `trips=0`）。**根因解**：与 Quick Actions / 交通 LA 同款——移出 onAppear、挪进 `TripStore.init` Task（`fetchTrips` 之后、trips 必已加载），保留 `didEnterBackground`；**绝不在 trips 加载前写 snapshot**。
+> - 🟢 **无时刻行程项也显示（`7a4cd02`）**：原「下一件事」只收**有时刻**的项（`plannedStartMinutes`/`departLocalMinutes` ≥ 0），故「排了地点但没填时间」的行程 Widget 啥都不显示。新增 `WidgetPlanItem`（含无时刻项，带 dayOrder/order/title/kind）进 snapshot；当天**无带时刻的下一件事**时，Widget 显示「今天的地点」（small 首项、medium 前 3 项 + `Today / 共 N 处` 副标题，无倒计时）。让「有行程规划就显示」真正成立。新增 widget key `today`/`today_count`/`plan_more`。
 
 > **（原始 Draft）** 确认后再编码。
 > 关联：`itinerary-route-planning.md`（时间轴/stop/segment 数据）、`itinerary-transport-lodging.md`（住宿/交通段）、`itinerary-timezone.md`（每活动时区 → 绝对时刻）、`dateless-planning-trips.md`（无日期行程边界）。
