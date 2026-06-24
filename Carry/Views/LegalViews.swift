@@ -9,9 +9,9 @@ import SwiftUI
 /// page when the user's preferred language is Chinese.
 private func legalURL(_ slug: String) -> URL {
     // 自营域名（Cloudflare Pages），国内可达——GitHub Pages（github.io）在中国大陆被
-    // GFW 干扰、无 VPN 打不开法务页，对大陆上架是合规 + 体验缺口。源文件仍在 carry-legal
-    // 仓库、照常 push，只是对外地址搬到本域名。
-    let base = "https://legal.nevestudio.app/\(slug)/"
+    // GFW 干扰、无 VPN 打不开法务页，对大陆上架是合规 + 体验缺口。源文件在 neve-web 仓库
+    // 的 legal/ 站点（Pages root=legal/，每 app 一文件夹），对外按 /<app>/<doc>/ 组织。
+    let base = "https://legal.nevestudio.app/carry/\(slug)/"
     let preferred = Locale.preferredLanguages.first ?? "en"
     if preferred.hasPrefix("zh") {
         // 用干净地址（无 .html）——Cloudflare Pages 会把 /xxx.html 308 跳到去 .html 的地址，

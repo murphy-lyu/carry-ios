@@ -200,7 +200,7 @@ Carry 在中国大陆 App Store 上架，涉及地理政治敏感内容时必须
 - **费用记录闭环（`CostBearing`，spec: `itinerary-cost-tracking.md`）**：费用真相永远是 `costAmount + costCurrencyCode`（用户实付原币种、永不丢），`costHomeAmount` 仅是本位币快照（派生、可重算）。新增「可记费用」的行程实体时，除 conform `CostBearing`（三字段），必须**同一次改动**同步四处，漏任一处即费用丢失 / Trip Book 漏算 / 改币种快照不更新：① `DataBackupManager` 备份/还原带上（可选字段、向后兼容）；② `duplicateTrip` 深拷贝带上；③ `TripSpendStats.compute` 聚合纳入；④ 写入经 `TripStore.setXCost` 单一漏斗（就地捕获快照），禁止在 View 里直接写 `@Model` 的 cost 字段（会绕过快照捕获）。本位币改动必走 `recomputeCostSnapshots()` 维持「快照永远以当前本位币计」的不变式。
 - **DEBUG 预览/模拟类开关绝不跨启动持久化**：一次性预览开关（如「模拟首页空态」）必须**每次启动无条件重置为关**（init 直接赋 false、不读存储值），可顺带清 UserDefaults key。原因：误开后值会存进 UserDefaults、每次启动都生效（如首页空屏），而 **Xcode 重装不清 UserDefaults** → 「重装也不好」、伪装成「app 坏了」，排查极耗时（已踩坑）。判据：调试用的「临时看一眼」开关 → session-only；真正的用户设置才持久化。
 - **密钥/口令绝不硬编码进源码（`carry-ios` 是公开仓库）**：任何 key / token / 口令——哪怕是低安全级的客户端门槛（如航班代理的 `appToken`）——都**不准**以字面量写在被 git 跟踪的源码里（公开仓库会被密钥扫描器秒扫）。做法：放 **gitignore 的 `Carry/Resources/Secrets.plist`**（随 bundle 打包、运行时读取、缺失降级空），新机/CI 按 `scripts/flight-proxy/README` 自建。真正的上游 API key **只在 Cloudflare Worker 的 secret 里**，永不进 App/git。半公开 token 的防线是「上游月额度上限 + Worker 限流 + 缓存」，不是「保密」；万一泄露走**轮换**（Worker secret + Secrets.plist 同步换新、旧值即作废），不必改写 git 历史。
-- **隐私政策需要更新就直接做、别挂起**：涉及新数据使用时，直接改 `carry-legal` 仓库（`~/Documents/Projects/carry-legal`，权限已具）`privacy/zh.html`+`index.html`（中英同步、PIPL 第 14 条不删）并 push，不要当待办挂着等确认（用户长期授权）。
+- **隐私政策需要更新就直接做、别挂起**：涉及新数据使用时，直接改 `neve-web` 仓库（工作室 Web 单仓，按站点分目录，原 `carry-legal`；本地 `~/Documents/Projects/carry-legal`，GitHub 重命名后按新名重新 clone；权限已具）`legal/carry/privacy/zh.html`+`legal/carry/privacy/index.html`（中英同步、PIPL 第 14 条不删）并 push，不要当待办挂着等确认（用户长期授权）。线上：legal 站点（Pages root=`legal/`）每 app 一文件夹，URL `legal.nevestudio.app/<app>/<doc>/[zh]`。
 
 ## 并行会话纪律（多会话同时改 Carry 时 · 每次必须遵守）
 

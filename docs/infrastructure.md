@@ -12,7 +12,8 @@
 | `flight.nevestudio.app` | 航班号查询代理 | Worker `carry-flight` |
 | `config.nevestudio.app` | App 远程配置（roadmap.json 代发） | Worker `carry-config` |
 | `places.nevestudio.app` | 海外地点检索代理 | Worker `carry-places` |
-| `legal.nevestudio.app` | 隐私/用户协议页 | Cloudflare Pages（接 `carry-legal` 仓库） |
+| `legal.nevestudio.app` | 法务站（每 app 一文件夹，URL `/<app>/<doc>/[zh]`） | Cloudflare Pages 项目（接 `neve-web` 仓库、**Root directory = `legal/`**；原 `carry-legal`） |
+| `nevestudio.app`（规划中） | 工作室官网/落地页 | 同 `neve-web` 仓库另开 Pages 项目、Root directory = `site/` |
 
 > 为什么要自营域名：`*.workers.dev` / `github.io` / `raw.githubusercontent.com` 在**中国大陆被 GFW 干扰**，无 VPN 不可达；自营域名（Cloudflare）国内可达。详见 [[carry-neve-studio-brand-and-flight-proxy]] 记忆。
 
@@ -28,7 +29,7 @@
 - 设/换 secret：`npx wrangler secret put <NAME>`（值等提示符出现再粘）。
 - **云控开关 `OVERSEAS_POLICY`**：`all`（默认，都开）/ `cn_only`（仅大陆 storefront）/ `off`（全关）。改 `wrangler.toml` 后 `deploy`；或后台 Settings→Variables 即时改（但下次 deploy 会被 wrangler.toml 覆盖，记得同步）。
 - **云控开关 `SEARCH_PROVIDER`**：`auto`（默认，Mapbox 主 + Geoapify 自动降级，主源**硬失败**才切）/ `mapbox`（仅主）/ `geoapify`（仅备）。Mapbox 出问题（额度/故障）时改这里即切到 Geoapify，零发版救老用户。suggest 结果 id 带 `mb:`/`ga:` 前缀，`/retrieve` 据此路由回正确来源；Geoapify 把 retrieve 所需数据塞进 id（base64url），离线解析、不二次请求。
-  - ⚠️ **接入 Mapbox / Geoapify 之外的新服务商时，必须同步更新隐私政策的服务商名单**（carry-legal `privacy/zh.html` + `privacy/index.html` 第 5 节「地点检索」段，现列举「Mapbox 或 Geoapify」）——否则会出现「实际把检索词发给了未披露的第三方」的合规失真。这是「列举式披露」的唯一维护点。
+  - ⚠️ **接入 Mapbox / Geoapify 之外的新服务商时，必须同步更新隐私政策的服务商名单**（neve-web `legal/carry/privacy/zh.html` + `legal/carry/privacy/index.html` 第 5 节「地点检索」段，现列举「Mapbox 或 Geoapify」）——否则会出现「实际把检索词发给了未披露的第三方」的合规失真。这是「列举式披露」的唯一维护点。
 
 ## 3. 第三方服务
 

@@ -65,7 +65,7 @@
 - [x] **权限文案全面复核**（2026-06-21）：系统弹窗文案统一第二人称「你」、定位声明从 pbxproj 迁入 Info.plist 单点维护；日历文案补「读取叠加显示」（实现既写入又读取所选日历，需 Full Access）；相册确认纯 PHPicker、不申请授权（隐私最佳实践）；通知/Live Activity 无需 usage description（核对无误）✅
 - [x] **隐私政策补日历披露**（2026-06-21）：Section 5 新增日历段（写入行程/提醒 + 「日历叠加」读取所选日历、均设备本地零传输）、标题加「日历」；PIPL 第 14 条同步——处理目的改「旅行助手」、撤回同意权加日历、跨境处理据实披露（境外地点检索关键词在境外处理、不关联身份、提供不使用即可避免的退路），消除原「零传输」与 Section 5 已披露的航班/境外检索传输之间的自相矛盾。中英同步 ✅
 - [x] **用户协议定位更新**（2026-06-21）：terms 从「旅行打包清单应用」改「旅行助手应用（行程规划 + 打包）」、并修正失真的「不依赖网络连接」表述（航班/检索/天气/地图为可选联网功能）。中英同步 ✅
-- [ ] ⏳ **ASC 隐私政策 / 用户协议 URL 指向自营域名**（待账号）：填 `https://legal.nevestudio.app/privacy/zh` 与 `…/terms/zh`（大陆可达；github.io 被 GFW 干扰）。carry-legal 内容已含日历披露 + 新定位
+- [ ] ⏳ **ASC 隐私政策 / 用户协议 URL 指向自营域名**（待账号）：填 `https://legal.nevestudio.app/carry/privacy/zh` 与 `…/carry/terms/zh`（大陆可达；github.io 被 GFW 干扰）。neve-web 仓库 `legal/` 站点，内容已含日历披露 + 新定位。注：URL 为每-app 结构 `/carry/...`（Pages root=`legal/`）
 
 ---
 
