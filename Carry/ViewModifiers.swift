@@ -4,6 +4,7 @@
 //
 
 import SwiftUI
+import UIKit
 
 /// 放进系统工具栏（`ToolbarItem`）的 sheet 关闭按钮。
 /// iOS 26+ 用原生 `Button(role: .close)`——系统提供单层 Liquid Glass 圆形 X
@@ -391,13 +392,22 @@ struct CarrySearchField<Trailing: View>: View {
             Image(systemName: "magnifyingglass")
                 .foregroundStyle(.secondary)
 
-            TextField(placeholder, text: $text)
-            .focused(focus)
-            .font(.body)
-            .tint(.primary)
-            .submitLabel(.search)
-            .autocorrectionDisabled()
-            .textInputAutocapitalization(.never)
+            // 输入法安全字段（替代原生 TextField）：修复微信输入法选词上屏后不触发搜索（见 IMESafeTextField）。
+            // 占位符由 SwiftUI overlay 渲染（空文本时显示），保持 placeholder 的 LocalizedStringKey 形参不变。
+            IMESafeTextField(
+                text: $text,
+                returnKeyType: .search,
+                isFocused: Binding(get: { focus.wrappedValue }, set: { focus.wrappedValue = $0 })
+            )
+            .frame(maxWidth: .infinity)
+            .overlay(alignment: .leading) {
+                if text.isEmpty {
+                    Text(placeholder)
+                        .font(.body)
+                        .foregroundStyle(.secondary)
+                        .allowsHitTesting(false)
+                }
+            }
 
             if !text.isEmpty {
                 Button {
@@ -440,6 +450,91 @@ extension CarrySearchField where Trailing == EmptyView {
             focus: focus,
             trailing: { EmptyView() }
         )
+    }
+}
+
+// MARK: - IMESafeTextField（输入法安全的文本输入）
+//
+// 为什么存在：SwiftUI 原生 `TextField` 在**第三方中文输入法（微信输入法等）选词上屏**那一刻，
+// 不可靠地把新值推进 binding——它依赖 UIKit 的 editing-changed 事件，而这些输入法的候选词「提交」路径
+// 常不触发它（系统拼音输入法会触发，故无此问题）。后果：「打字即检索/过滤」类字段在选词后**不触发**
+// 搜索，要再补一个字符才恢复。直接拥有一个 `UITextField`、监听 UIKit 层可靠的 `.editingChanged`
+// （选词上屏会触发），即可从根上绕开该缺陷。
+//
+// 仅用于「文字变化要实时驱动副作用（搜索/补全/过滤）」的字段；纯表单字段不需要（值在 Save/失焦时读、
+// binding 那时已追平，不受影响）。占位符由外层 SwiftUI 渲染（避免 LocalizedStringKey→String 解析）。
+struct IMESafeTextField: UIViewRepresentable {
+    @Binding var text: String
+    var font: UIFont = .preferredFont(forTextStyle: .body)
+    var returnKeyType: UIReturnKeyType = .default
+    /// 可选：与 SwiftUI `@FocusState` / `Bool` 焦点双向桥接（UIViewRepresentable 无法直接用 `.focused`）。
+    var isFocused: Binding<Bool>? = nil
+    var onSubmit: (() -> Void)? = nil
+
+    func makeUIView(context: Context) -> UITextField {
+        let tf = UITextField()
+        tf.delegate = context.coordinator
+        tf.addTarget(context.coordinator, action: #selector(Coordinator.editingChanged(_:)), for: .editingChanged)
+        tf.borderStyle = .none
+        tf.font = font
+        tf.adjustsFontForContentSizeCategory = true
+        tf.autocorrectionType = .no
+        tf.autocapitalizationType = .none
+        tf.returnKeyType = returnKeyType
+        tf.textColor = .label
+        tf.tintColor = .label                 // 对齐原 .tint(.primary)
+        tf.clearButtonMode = .never            // 清除按钮由外层 SwiftUI 提供
+        // 在 HStack/FlowLayout 里可被压缩、由外层 frame 决定宽度，不靠内在宽度抢空间。
+        tf.setContentHuggingPriority(.defaultLow, for: .horizontal)
+        tf.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
+        return tf
+    }
+
+    func updateUIView(_ tf: UITextField, context: Context) {
+        context.coordinator.parent = self      // 始终持有最新 binding，避免 Coordinator 用到陈旧闭包
+        if tf.text != text {
+            if text.isEmpty {
+                // 清空总是安全的，并主动结束可能存在的预编辑态（× 清除 / 选中后清空走这里）。
+                tf.text = ""
+                tf.unmarkText()
+            } else if tf.markedTextRange == nil {
+                // 关键：组字（marked text）期间绝不反写 text，否则会清掉输入法预编辑态。
+                tf.text = text
+            }
+        }
+        if let isFocused {
+            if isFocused.wrappedValue, !tf.isFirstResponder {
+                DispatchQueue.main.async { tf.becomeFirstResponder() }
+            } else if !isFocused.wrappedValue, tf.isFirstResponder {
+                DispatchQueue.main.async { tf.resignFirstResponder() }
+            }
+        }
+    }
+
+    func makeCoordinator() -> Coordinator { Coordinator(self) }
+
+    final class Coordinator: NSObject, UITextFieldDelegate {
+        var parent: IMESafeTextField
+        init(_ parent: IMESafeTextField) { self.parent = parent }
+
+        // UIKit 层的文字变化（含输入法选词上屏）都会触发——这正是 SwiftUI binding 漏掉的那一下。
+        @objc func editingChanged(_ tf: UITextField) {
+            let new = tf.text ?? ""
+            if parent.text != new { parent.text = new }
+        }
+        func textFieldDidBeginEditing(_ tf: UITextField) {
+            guard let f = parent.isFocused, !f.wrappedValue else { return }
+            DispatchQueue.main.async { f.wrappedValue = true }
+        }
+        func textFieldDidEndEditing(_ tf: UITextField) {
+            guard let f = parent.isFocused, f.wrappedValue else { return }
+            DispatchQueue.main.async { f.wrappedValue = false }
+        }
+        func textFieldShouldReturn(_ tf: UITextField) -> Bool {
+            parent.onSubmit?()
+            tf.resignFirstResponder()
+            return true
+        }
     }
 }
 

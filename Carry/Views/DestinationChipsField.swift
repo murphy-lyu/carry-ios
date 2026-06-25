@@ -58,18 +58,28 @@ struct DestinationChipsField: View {
                 chip(dest)
             }
             // 输入框始终是最后一个子视图（身份稳定、不随 chip 增删被增删 → 中文选词不丢字）。
-            TextField(placeholder, text: $text)
-                .font(.subheadline)
-                .tint(.primary)
-                .focused($inputFocused)
-                .textFieldStyle(.plain)
-                .submitLabel(.done)
-                .frame(minWidth: 110)
-                .frame(height: 30)
-                .onSubmit { commitFreeText() }
-                .onChange(of: inputFocused) { _, focused in
-                    if !focused { commitFreeText() }   // 失焦：把残留自由文本固化为 chip，不丢
+            // 用 IMESafeTextField（替代原生 TextField）：修复微信输入法选词上屏后 text binding 不更新、
+            // 进而不触发检索的缺陷（见 ViewModifiers.swift 的 IMESafeTextField）。focus 双向桥接到 @FocusState。
+            IMESafeTextField(
+                text: $text,
+                font: .preferredFont(forTextStyle: .subheadline),
+                returnKeyType: .done,
+                isFocused: Binding(get: { inputFocused }, set: { inputFocused = $0 }),
+                onSubmit: { commitFreeText() }
+            )
+            .frame(minWidth: 110)
+            .frame(height: 30)
+            .overlay(alignment: .leading) {
+                if text.isEmpty {
+                    Text(placeholder)
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                        .allowsHitTesting(false)
                 }
+            }
+            .onChange(of: inputFocused) { _, focused in
+                if !focused { commitFreeText() }   // 失焦：把残留自由文本固化为 chip，不丢
+            }
         }
         .padding(.horizontal, 10)
         .padding(.vertical, 7)
