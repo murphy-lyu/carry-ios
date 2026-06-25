@@ -67,12 +67,14 @@ struct TripSpendView: View {
 
     var body: some View {
         NavigationStack {
-            ScrollView {
+            Group {
                 if let d = detail, d.hasAnyCost {
-                    content(d)
+                    ScrollView { content(d) }
                 } else {
+                    // 空态：在整片可用区域内垂直+水平居中（无内容可滚，故不套 ScrollView，
+                    // 用 maxHeight:.infinity 撑满 + frame 默认居中对齐，而非停在顶部固定高度里）。
                     emptyState
-                        .frame(maxWidth: .infinity, minHeight: 360)
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
                 }
             }
             .background(Color(.systemGroupedBackground).ignoresSafeArea())
