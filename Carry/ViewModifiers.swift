@@ -308,6 +308,9 @@ struct CarryEmptyStatePrimaryButtonStyle: ButtonStyle {
 struct FlowLayout: Layout {
     var spacing: CGFloat = 8
     var lineSpacing: CGFloat = 8
+    /// 末项拉伸填满当前行剩余宽度（用于 chip 输入框：让 TextField 成大命中区、填满行尾）。
+    /// 默认 false → 行为与原 FlowLayout 完全一致（既有调用方零影响）。
+    var stretchLastSubview: Bool = false
 
     func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGSize {
         let maxWidth = proposal.width ?? 0
@@ -329,18 +332,26 @@ struct FlowLayout: Layout {
     }
 
     func placeSubviews(in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) {
+        let lastIndex = subviews.count - 1
         var x = bounds.minX
         var y = bounds.minY
         var rowHeight: CGFloat = 0
-        for subview in subviews {
+        for (index, subview) in subviews.enumerated() {
             let size = subview.sizeThatFits(.unspecified)
             if x + size.width > bounds.maxX && x > bounds.minX {
                 y += rowHeight + lineSpacing
                 x = bounds.minX
                 rowHeight = 0
             }
-            subview.place(at: CGPoint(x: x, y: y), proposal: .unspecified)
-            x += size.width + spacing
+            if stretchLastSubview && index == lastIndex {
+                let placeWidth = max(size.width, bounds.maxX - x)
+                subview.place(at: CGPoint(x: x, y: y), anchor: .topLeading,
+                              proposal: ProposedViewSize(width: placeWidth, height: size.height))
+                x += placeWidth + spacing
+            } else {
+                subview.place(at: CGPoint(x: x, y: y), proposal: .unspecified)
+                x += size.width + spacing
+            }
             rowHeight = max(rowHeight, size.height)
         }
     }

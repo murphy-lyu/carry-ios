@@ -14,6 +14,12 @@ struct EditTripView: View {
     @Environment(\.dismiss) private var dismiss
 
     @State private var info: TripInfo
+    /// 多目的地：从既有行程回填的有序 chip（首=主，其余=additionalDestinations）。
+    @State private var destinations: [ResolvedDestination] = []
+    /// 目的地输入框当前未提交文本。
+    @State private var destinationText: String = ""
+    /// 回填只做一次（onAppear），避免重渲染时覆盖用户编辑。
+    @State private var didBackfill = false
     @State private var isSaved = false
     @State private var showDatePicker = false
     @FocusState private var focusedField: FocusField?
@@ -21,7 +27,6 @@ struct EditTripView: View {
 
     private enum FocusField: Hashable {
         case tripName
-        case destinationCity
     }
 
     init(trip: TripBundle) {
@@ -36,9 +41,32 @@ struct EditTripView: View {
         ))
     }
 
+    /// 目的地是否已填（任一 chip 或残留输入文本）。
+    private var hasDestination: Bool {
+        !destinations.isEmpty || !destinationText.trimmingCharacters(in: .whitespaces).isEmpty
+    }
+
     private var canSave: Bool {
-        !info.name.trimmingCharacters(in: .whitespaces).isEmpty &&
-        !info.destinationCity.trimmingCharacters(in: .whitespaces).isEmpty
+        !info.name.trimmingCharacters(in: .whitespaces).isEmpty && hasDestination
+    }
+
+    /// chips 显示名 + 残留输入文本 → 与 splitCities 可逆的 destinationCity 字符串（` & ` 拼接、去重）。
+    private var composedDestinationCity: String {
+        var names = destinations.map(\.name)
+        let pending = destinationText.trimmingCharacters(in: .whitespacesAndNewlines)
+        if !pending.isEmpty { names.append(pending) }
+        var seen = Set<String>()
+        var unique: [String] = []
+        for name in names where seen.insert(name.lowercased()).inserted { unique.append(name) }
+        return unique.joined(separator: " & ")
+    }
+
+    /// 传给 updateTripInfo 的结构化数组：仅当全部 chip 已解析且无残留自由文本才给，否则回落文本路径。
+    private var structuredDestinations: [ResolvedDestination] {
+        let pending = !destinationText.trimmingCharacters(in: .whitespaces).isEmpty
+        guard !pending, !destinations.isEmpty,
+              destinations.allSatisfy({ $0.isResolved }) else { return [] }
+        return destinations
     }
 
     private func hideKeyboard() {
@@ -66,7 +94,11 @@ struct EditTripView: View {
                         }
 
                         fieldGroup(label: "Destination City") {
-                            stableField("e.g. Florence", text: $info.destinationCity, focus: .destinationCity)
+                            DestinationChipsField(
+                                destinations: $destinations,
+                                text: $destinationText,
+                                placeholder: "e.g. Florence"
+                            )
                         }
 
                         fieldGroup(label: "Dates") {
@@ -144,6 +176,12 @@ struct EditTripView: View {
             )
             .navigationTitle("")
             .navigationBarTitleDisplayMode(.inline)
+            .onAppear {
+                // 回填只做一次：把既有行程的目的地文本 + 已存结构化码重建成 chips。
+                guard !didBackfill else { return }
+                destinations = store.resolvedDestinations(forTripId: tripId)
+                didBackfill = true
+            }
             .sheet(isPresented: $showDatePicker) {
                 TripDateRangePickerSheet(
                     departure: info.departureDate,
@@ -166,7 +204,10 @@ struct EditTripView: View {
                     Button {
                         guard !isSaved else { return }
                         hideKeyboard()
-                        store.updateTripInfo(tripId: tripId, info: info)
+                        var out = info
+                        out.destinationCity = composedDestinationCity
+                        out.resolvedDestinations = structuredDestinations
+                        store.updateTripInfo(tripId: tripId, info: out)
                         CarryLogger.shared.log(.tripEditSaved)
                         UINotificationFeedbackGenerator().notificationOccurred(.success)
                         withAnimation(.easeInOut(duration: 0.2)) { isSaved = true }

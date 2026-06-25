@@ -446,23 +446,59 @@ final class TripStore: ObservableObject {
             sections: []
         )
         bundle.reminderConfigs = ReminderPreferences.defaultConfigs
-        // 「输入即解析」路径：用户从检索建议里选定了主目的地 → 已带权威 ISO 国家码 + 坐标，
+        // 「输入即解析」路径：用户从检索建议里逐个选定了目的地（含多目的地）→ 已带权威 ISO 国家码 + 坐标，
         // 在落库前直接写入（随 commit 的 save 一并持久化），跳过文本反解析。地图点亮语言无关、即时。
-        let hasResolved = !(info.resolvedCountryCode ?? "").isEmpty
-        if hasResolved {
-            bundle.countryCode = info.resolvedCountryCode ?? ""
-            bundle.latitude    = info.resolvedLatitude ?? 0
-            bundle.longitude   = info.resolvedLongitude ?? 0
-        }
+        let hasResolved = applyResolvedDestinations(info.resolvedDestinations, to: bundle)
         setDraftTrip(bundle)
         commitDraftTrip()
         // 仅在「未结构化解析」时回退文本反解析（语言相关、有歧义的逆向映射）。
-        // 已结构化解析的主目的地不再调 updateCountryCode（否则会用文本码覆盖权威码）；
-        // 多城市的其余城市由 geocodeMissingTrips 的 missingExtras 分支自愈补全。
+        // 已结构化解析的目的地不再调 updateCountryCode（否则会用文本码覆盖权威码）；
+        // 多城市的其余城市由结构化数组直接写入，无需 geocodeMissingTrips 兜底。
         if !hasResolved, !info.destinationCity.isEmpty {
             updateCountryCode(for: bundle.id, city: info.destinationCity)
         }
         return bundle.id
+    }
+
+    /// 把「输入即解析」的有序结构化目的地写入 bundle：首项 = 主目的地（countryCode/lat/lon），
+    /// 其余 → additionalDestinations。返回是否实际写入（首项已解析）→ 调用方据此决定是否还需文本兜底。
+    /// 仅当 TripInfo.resolvedDestinations 全部已解析时调用方才会填入（见 TripInfo 注释），
+    /// 故这里只取「首个已解析项」为主，理应即数组首项。
+    @discardableResult
+    private func applyResolvedDestinations(_ destinations: [ResolvedDestination], to bundle: TripBundle) -> Bool {
+        let resolved = destinations.filter { $0.isResolved }
+        guard let primary = resolved.first else { return false }
+        bundle.countryCode = primary.countryCode
+        bundle.latitude    = primary.latitude
+        bundle.longitude   = primary.longitude
+        bundle.additionalDestinations = resolved.dropFirst().map {
+            DestinationEntry(countryCode: $0.countryCode, latitude: $0.latitude, longitude: $0.longitude)
+        }
+        return true
+    }
+
+    /// 编辑页回填用：把既有行程的「目的地文本 + 已存结构化码」重建成有序 chip 数组。
+    /// 显示名取自 `destinationCity` 文本的 splitCities 分词（与写入时同规则、顺序一致），
+    /// 与坐标（主目的地 + additionalDestinations）按位配对；分词多于已存坐标的部分 → 未解析 chip（仅名字，
+    /// 保存时走文本兜底）。无可分词 token 但文本非空 → 单个未解析 chip。
+    func resolvedDestinations(forTripId tripId: UUID) -> [ResolvedDestination] {
+        guard let trip = trips.first(where: { $0.id == tripId }) else { return [] }
+        let names = splitCities(trip.destinationCity)
+        guard !names.isEmpty else {
+            let t = trip.destinationCity.trimmingCharacters(in: .whitespacesAndNewlines)
+            return t.isEmpty ? [] : [ResolvedDestination(name: t)]
+        }
+        var coords: [(code: String, lat: Double, lon: Double)] = [(trip.countryCode, trip.latitude, trip.longitude)]
+        coords.append(contentsOf: trip.additionalDestinations.map { ($0.countryCode, $0.latitude, $0.longitude) })
+        return names.enumerated().map { index, name in
+            if index < coords.count, !coords[index].code.isEmpty {
+                return ResolvedDestination(name: name,
+                                           countryCode: coords[index].code,
+                                           latitude: coords[index].lat,
+                                           longitude: coords[index].lon)
+            }
+            return ResolvedDestination(name: name)
+        }
     }
 
     private func fetchTrips() {
@@ -801,7 +837,10 @@ final class TripStore: ObservableObject {
         trip.departureDate = info.departureDate
         trip.days = info.isDateless ? 1 : info.durationDays
         trip.dateRange = info.isDateless ? "" : info.dateRangeDisplay
-        if cityChanged {
+        // 目的地：优先用「输入即解析」的结构化数组直接写入（语言无关、即时点亮）；
+        // 数组为空（自由文本 / 部分未解析）时退回原逻辑——城市变了就清旧坐标、留给下方文本反查兜底。
+        let appliedStructured = applyResolvedDestinations(info.resolvedDestinations, to: trip)
+        if !appliedStructured, cityChanged {
             // Clear stale coordinates immediately so the map doesn't show the old location
             trip.countryCode = ""
             trip.latitude = 0
@@ -820,7 +859,8 @@ final class TripStore: ObservableObject {
         if trip.remindersEnabled {
             refreshNotifications()
         }
-        if cityChanged && !info.destinationCity.isEmpty {
+        // 仅在未结构化解析时才走文本反查（结构化已写权威码，再 updateCountryCode 会用文本码覆盖）。
+        if !appliedStructured, cityChanged, !info.destinationCity.isEmpty {
             updateCountryCode(for: tripId, city: info.destinationCity)
         }
         // 同步更新日历事件：退回规划中（无日期）→ 删除；否则按当前数据重写。
