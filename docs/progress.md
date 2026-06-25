@@ -3,6 +3,23 @@
 ## 最后更新
 2026-06-25
 
+## 上次改动摘要（行程详情「锁屏追踪」逐段按钮下线 + 行程通知 4 个真 bug 根治 · 2026-06-25）
+
+> 单会话、纯我的工作（与并行「地点排序自滚 / FlightSearchSheet」会话物理隔离，全程隔离 index 只提自己文件、零卷入）。**编译绿（主 app + Widget）、i18n [E]=0**；**已提交 main**（`535d9d7` LA 下线 + `0488035` 通知修复），未 push。真机验收交用户。spec: `widget-transit-live-activity.md`。
+
+**一、交通详情「Track on Lock Screen」逐段按钮整段下线（`535d9d7`）**
+- 决策：交通 LA 改「**仅自动 A**」。每段「在锁屏追踪此程」按钮（B 路径）是过度设计——用户计划行程时不会去想锁屏 UI，iOS 锁屏「一划即删」已是原生单程退出。删 `trackCard`/`transitTrackable`/`toggleTransitTracking` + B 专用方法（`userStopTransit`/`isTrackingTransit`/`systemActivitiesEnabled`）+ 2 个 track xcstrings key。功能本体（自动起 A）不变。
+- **根因修「划掉又冒出来」**：持久化 `intendedTransitSegment`，A 运行前 `reconcileDismissedTransit` 对账——意图段已不在活跃 LA、又非我们主动结束 → 判用户划除（含 App 被杀期间划的）→ 记 dismissed、不再自动重起。不依赖在线监听，alive/被杀两种情形都正确。
+
+**二、行程通知 4 个真 bug（`0488035`）**
+- 🔴 **过期兜底成 now+60 → 矛盾 + 刷屏**：原 `makeCandidate` 把已过触发时刻的提醒改成「now+60 秒」重发。① 当天建当天出发行程 → offset 0「今天出发」+ offset 1（昨天）「明天见」同炸、自相矛盾；② now+60 是相对时间、每次重排（回前台/任何改动）反复武装 → 每分钟重发、点开还发。根因解：**整段移除过期兜底**（删 `useInterval` + interval 分支 + `allowImminentFallback`），过期即丢；装新版首次冷启动重排即把旧 now+60 残留当 stale 清掉（自愈）。
+- 🔴 **导入的行程仍发提醒**：同行者分享 / Tripsy 导入刻意把 `remindersEnabled` 设 false（不该向你推送），但 `reschedule`/`collectXxx` 根本不看它、冷启动/回前台无条件全局重排绕过 → 照发。修：`reschedule` 收口点 honor `remindersEnabled`。
+- 🟢 **冗余重排（性能）**：`restoreFromBackup`/`applyPostMergeSideEffects` 把全局 `refreshNotifications()` 放进 `for trip` 循环、按行程数跑 N 遍（含 N 次天气评估）→ 收敛为单次调用。
+- 🟢 **每日摘要内容陈旧**：`updateItineraryStop`（改名）/`reorderItineraryStops`（重排）漏触发重排 → 「第一个是 X」陈旧。各补一行守卫式 `rescheduleDailySummary`（默认关零成本）。
+- 🟢 **前台到点响声打断**：`willPresent` 由 `[.banner, .sound]` 改 `[.banner]`（用户选定：只横幅、不响声）。
+
+**新会话 TODO（仅剩验收）**：① 导入同行者行程 → 无任何提醒；② 6.25 建当天出发行程 → 不刷屏、无「明天见」；③ 追踪中交通段锁屏划掉 → 回 App 不自动冒回来（含杀 App 后划）。
+
 ## 上次改动摘要（行程「地点排序」拖拽自滚过于灵敏 · 根因＝吸顶 inset 污染边界 · 模拟器实测修复 · 2026-06-25 深夜）
 
 > 单会话、纯我的工作。用户睡前全权授权我自跑模拟器调试+验收。**编译绿**；**已提交 main**（`f36d514` 受控自滚 + `2b8d388` 边界根因修复）；**未 push**。设备级终验交用户明早。两个入口（行程列表长按拖拽 + 右上角「地点排序」）共用 `ItineraryReorderCollection`，同一修复一并覆盖。

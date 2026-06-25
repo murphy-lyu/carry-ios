@@ -1,14 +1,15 @@
 # Widget 出行日「下一程」Live Activity（Transit Live Activity）
 
-> **Status: ✅ Implemented（A+B）— 编译绿（主 app + Widget Extension），待真机验收。** 未 push。
+> **Status: ✅ Implemented（仅自动 A）— 编译绿（主 app + Widget Extension），待真机验收。** 已提交（隔离 index），未 push。
 > **实现要点**：
-> - 起停 = **A+B**（用户拍板）。A 自动起：冷启动（`TripStore.init` Task、`fetchTrips` 后）+ 回前台（`CarryApp.willEnterForeground`）扫所有行程，为「现在落在 [出发前 24h, 到达+1h] 内」最临近一程起 LA。B 显式：交通详情页「在锁屏追踪此程」按钮（`TransportDetailView.trackCard`）。
+> - 起停 = **仅自动 A**（B 显式按钮已移除，见下「起停机制」修订）。A 自动起：冷启动（`TripStore.init` Task、`fetchTrips` 后）+ 回前台（`CarryApp.willEnterForeground`）扫所有行程，为「现在落在 [出发前 24h, 到达+1h] 内」最临近一程起 LA。**用户的单程退出 = 在锁屏手动划除**（系统原生），靠对账尊重，不再有 App 内逐段按钮。
 > - 主开关 `liveActivityTransitEnabled`（**默认开**）放「锁屏实时活动」设置页（原「锁屏打包进度」页泛化为含两个开关；入口标题改 `settings.liveactivity.title`）。关闭即 `endTransit()` 清空。
+> - **「划掉又冒出来」根因修复**：持久化「意图展示段」`intendedTransitSegment`（UserDefaults）——A 每次起/重连 LA 即写入；任何**我们主动**结束（抵达/删行程/关开关/切下一程）即清。A 运行前 `reconcileDismissedTransit()` 对账：意图段已不在系统活跃 LA 里、又非我们主动结束 → 判定用户划除（含 App 被杀期间划的）→ 记入 `dismissedTransitSegmentIds`、A 跳过、不再自动重起。不依赖在划除瞬间在线监听，故 alive/被杀两种情形都正确。
 > - 新增共享模型 `SharedSources/TransportActivityAttributes.swift`（pbxproj 登记进两 target）；预留 `liveStatus`/`gate`/`actualDepartureDate` 给未来航班动态、不改结构。
 > - `LiveActivityManager` 扩交通 LA 全生命周期（start/endTransit/endTransitIfArrived/并入 endAll），复用并发锁范式；删行程 `endTransit(tripId:)`、抹数据/关开关一并清。
 > - 绝对起降时刻用新增 `TransportSegment.absoluteDeparture/Arrival`（Itinerary.swift，与 NotificationManager 同算法）。
 > - 锁屏 + 灵动岛三态（`CarryTransitLiveActivity`）：倒计时用 `Text(timerInterval:)` 系统自走；相位（起飞前/途中/已抵达）渲染时按 `Date()` 判定。**schedule-based，文案不暗示实时追踪**。
-> - 本地化：主 app +4 key（title/transit/track.start/track.tracking）、widget +3 key（until_departure/en_route/arrived），9 语言齐、i18n-audit [E]=0。
+> - 本地化：主 app +2 key（title/transit）、widget +3 key（until_departure/en_route/arrived），9 语言齐、i18n-audit [E]=0。（原 `track.start`/`track.tracking` 随 B 按钮移除已删。）
 
 > **（原始 Draft）** 本 spec 是「Widget 表达行程规划」的**第二步**，体量大于姊妹 spec、建议在其之后实现。
 > 关联：`itinerary-transport-lodging.md`（`TransportSegment` 模型）、`itinerary-timezone.md`（两端时区 → 绝对起降时刻）、`itinerary-flight-lookup.md`（航班查号回填 + 预留 `liveStatusData`）、`notification-budget.md` / `notification-center.md`（交通通知，避免重复打扰）、`notification-deeplink-routing.md`（点击深链到段）。
@@ -63,15 +64,15 @@ struct TransportActivityAttributes: ActivityAttributes {
 }
 ```
 
-## 起停机制（**主要产品决策点，需你拍板**）
+## 起停机制（已定稿：**仅自动 A**）
 
-iOS 不允许 App 在**后台**无 push 地启动 Live Activity。无 push infra（与打包 LA 同约束）下，候选方案：
+iOS 不允许 App 在**后台**无 push 地启动 Live Activity。无 push infra（与打包 LA 同约束）下：
 
-- **A（自动·前台）**：App 进前台 / 启动时，若存在「现在之后 ≤ `transitWindowHours`（如 24h）内出发的交通段」→ 自动起 LA。优点：零操作、最接近 Flighty 体感；缺点：用户当天若不开 App 就不会起（可接受——出行日几乎必开 App）。
-- **B（显式·按钮）**：交通段**详情页**加「在锁屏追踪此程」按钮，用户主动起。优点：可控、不意外占用锁屏；缺点：多一步、易被忽略。
-- **A + B（推荐）**：自动起为主（出行日体感好），详情页保留显式开关兜底（可手动起/停某程）。
+- **A（自动·前台）**：App 进前台 / 启动时，若存在「现在落在 [出发前 `transitWindowHours`（24h）, 到达+1h] 内的交通段」→ 自动为最临近一程起 LA。零操作、最接近 Flighty 体感；用户当天若不开 App 就不会起（可接受——出行日几乎必开 App）。
+- **单程退出 = 系统原生「锁屏划除」**：用户不想要某程的卡，直接在锁屏上划掉即可，由 `reconcileDismissedTransit` 记住、A 不再自动重起（见 Status 块「根因修复」）。
 
-> 这是 UX/产品决策（是否默认占用用户锁屏），交你定。工程上三者都可做。**倾向 A+B**：自动覆盖主场景、显式给掌控感。
+> **决策（2026-06-25）**：原 A+B 方案里的 B（每个交通详情页一个「在锁屏追踪此程」按钮）已**整段移除**。理由：① 逐段手动起停是过度设计——用户在计划行程时（出发前几天）根本不会去想锁屏 UI，逐趟/逐段预决策是「过早决策、低价值」；② iOS 锁屏「一划即删」已是系统原生的单程退出，无需 App 内再造开关；③ B 还拖着一整套 A/B 调和逻辑（`dismissedTransitSegmentIds` 原由按钮驱动），删 B 后这套逻辑简化为「对账驱动」。功能本体（自动起 A）不受影响。
+> **代价（已知、接受）**：划掉某程后，该程在本次出行窗口内不再自动出现、且**没有逐段「重新打开」入口**（那正是删掉的按钮）。符合「我划掉=这程别烦我」的克制语义；下一程是不同段、会照常出现。若未来要「重置所有划除」，可让总开关 off→on 兼带清空 `dismissedTransitSegmentIds`（当前未做）。
 
 **结束**：到达时刻 + buffer（如 1h）后自动 `end`；或下一程更近时滚动；或用户手动关。复用 `LiveActivityManager` 的并发保护范式（`isStarting` 锁 + `terminateAllAndWait`，避免撞 ActivityKit 上限）。
 
@@ -100,7 +101,8 @@ iOS 不允许 App 在**后台**无 push 地启动 Live Activity。无 push infra
 ## 验收
 
 编译绿（主 app + Widget Extension）后，**真机验收交用户**（Live Activity 在模拟器表现有限）。建议覆盖：
-1. 建一段「今天/明天起飞」的航班 → 开 App（方案 A）/ 点详情按钮（方案 B）→ 锁屏 + 灵动岛出现「下一程」，倒计时自走、起降时刻/航站楼正确。
+1. 建一段「今天/明天起飞」的航班 → 开 App（自动起 A）→ 锁屏 + 灵动岛出现「下一程」，倒计时自走、起降时刻/航站楼正确。
+   - **划除对账**：在锁屏手动划掉该卡 → 回 App / 回前台 → **不再自动冒回来**；杀掉 App 后再划、重开 App 同样不复现。
 2. 跨时区段（PVG→CDG）→ 起飞倒计时按出发地时区、到达按目的地时区，无错点。
 3. 起飞时刻过后 → 切「已起飞」；到达 + buffer 后自动消失。
 4. 多段行程 → LA 始终锚「最近未来段」，前一段结束滚动到下一段。
@@ -112,7 +114,7 @@ iOS 不允许 App 在**后台**无 push 地启动 Live Activity。无 push infra
 
 1. 新增 `TransportActivityAttributes`（SharedSources/，双 target）。
 2. 扩 `LiveActivityManager`：交通 LA 的 start/update/end/endAll + 并发锁复用；接 `eraseAllData`/删行程清理。
-3. 起停策略（按拍板的 A / B / A+B）+ 「最近未来段 + 绝对起降时刻」计算（App 侧按两端时区）。
+3. 起停策略（**仅自动 A** + `reconcileDismissedTransit` 尊重锁屏划除）+ 「最近未来段 + 绝对起降时刻」计算（App 侧按两端时区）。
 4. `CarryWidgetLiveActivity` 加 `TransportActivityAttributes` 的 `ActivityConfiguration`（锁屏 + 灵动岛三态）。
 5. 本地化 + i18n-audit + 编译 → 真机验收。
 6.（未来）接航班实时动态 API 时填充 `liveStatus`/`gate` 并 `update`，不改结构。
