@@ -169,12 +169,12 @@ struct TransportEditView: View {
                             placeholderKey: "itinerary.transport.search.placeholder",
                             biasLatitude: bundle?.latitude ?? 0,
                             biasLongitude: bundle?.longitude ?? 0
-                        ) { name, lat, lon, address, pickedPhone, pickedTZ in
+                        ) { name, lat, lon, address, _, pickedTZ in
                             if isFrom {
                                 fromName = name; fromLatitude = lat; fromLongitude = lon; fromAddress = address
                                 if !pickedTZ.isEmpty { fromTimeZoneId = pickedTZ }   // 捕获取车/出发点时区
-                                // 租车取车点电话自动回填（已填不覆盖）；非租车不收电话。
-                                if mode == .carRental, phone.isEmpty { phone = pickedPhone }
+                                // 电话不再从 POI 自动回填（搜到的常是携程客服热线等不可靠号码、且凭空冒出令人困惑）；
+                                // 租车电话改为纯手填、可选。
                                 // 还车镜像取车：未解绑时，取车地点自动同步到还车（含坐标/地址/时区）。
                                 if mode == .carRental, returnMirrorsPickup {
                                     toName = name; toLatitude = lat; toLongitude = lon; toAddress = address
