@@ -141,16 +141,27 @@ struct FlightSearchSheet: View {
         return Calendar.current.date(byAdding: .day, value: order, to: base)
     }
 
+    /// 内联日期上限：超出的天由「选择其他日期」日历承载，给结果卡片留展示空间。
+    private let maxInlineDates = 5
+
     /// 日期选项：有日期行程 = 本行程的天（比通用今天/明天更贴）；无日期行程 = 今天/明天。
-    /// 超长行程（>31 天）不铺几十行，只留「选择其他日期」日历。label = 星期全称（月/日由色卡承载）。
+    /// 内联最多 `maxInlineDates` 天，窗口锚到「建议当天」（点 + 的那天）：从它起向后取 N 天、
+    /// 尾部不足向前回填，确保建议当天始终在列；其余天走「选择其他日期」。label = 星期全称（月/日由色卡承载）。
     private var dateOptions: [DateOption] {
         let cal = Calendar.current
         if let bundle, !bundle.isDateless {
             let span = max(1, bundle.spanDays)
-            guard span <= 31 else { return [] }
             let base = cal.startOfDay(for: bundle.departureDate)
             let add = addDayDate
-            return (0..<span).compactMap { i in
+            // 建议当天相对行程首日的偏移（点「+」那天），夹到合法区间
+            let suggestedIdx: Int = {
+                guard let add else { return 0 }
+                let off = cal.dateComponents([.day], from: base, to: add).day ?? 0
+                return min(max(off, 0), span - 1)
+            }()
+            let end = min(span, suggestedIdx + maxInlineDates)
+            let start = max(0, end - maxInlineDates)
+            return (start..<end).compactMap { i in
                 guard let d = cal.date(byAdding: .day, value: i, to: base) else { return nil }
                 let isAdd = add.map { cal.isDate(d, inSameDayAs: $0) } ?? false
                 return DateOption(label: d.formatted(.dateTime.weekday(.wide)), date: d, isAddDay: isAdd)
@@ -211,7 +222,11 @@ struct FlightSearchSheet: View {
                 .foregroundStyle(.secondary)
                 .lineLimit(1)
                 .minimumScaleFactor(0.6)
-            Text(d.formatted(.dateTime.day()))
+            // 纯数字日号（不走 .day() 的 locale 格式）：CJK locale 的 .day() 会带「日/일」单位后缀，
+            // 让大号日号变成 3 个字形挤满 42pt 方块、失去呼吸感；方块本就按 2 位数字设计（见上）。
+            // 改用 Calendar 取日的纯数字 + verbatim 渲染（避免被当 LocalizedStringKey 抽取），
+            // 月份「6月」已承载语境，日号只需纯数字——对齐 Apple 日历色卡范式。9 种支持语言均用西文数字、零差异。
+            Text(verbatim: Calendar.current.component(.day, from: d).formatted())
                 .font(.system(.title3, design: .rounded).weight(.semibold))
                 .foregroundStyle(.primary)
                 .lineLimit(1)
