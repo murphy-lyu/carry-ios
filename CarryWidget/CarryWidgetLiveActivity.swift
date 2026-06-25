@@ -330,30 +330,39 @@ private struct TransitLockScreenView: View {
                 Image(systemName: transitIcon(state.modeRaw))
                     .font(.system(size: 14, weight: .semibold))
                     .foregroundStyle(.primary)
-                Text(state.carrierAndNumber.isEmpty
-                     ? "\(state.fromLabel) → \(state.toLabel)"
-                     : state.carrierAndNumber)
-                    .font(.system(size: 15, weight: .semibold, design: .rounded))
-                    .foregroundStyle(.primary)
-                    .lineLimit(1)
+                // 承运方/班次（如「携程租车」「CA1234」）。空则不显——路线已在下方竖排展示，避免重复。
+                if !state.carrierAndNumber.isEmpty {
+                    Text(state.carrierAndNumber)
+                        .font(.system(size: 15, weight: .semibold, design: .rounded))
+                        .foregroundStyle(.primary)
+                        .lineLimit(1)
+                }
                 Spacer()
                 Text(state.departureDate, style: .time)
                     .font(.system(size: 13, weight: .medium, design: .rounded))
                     .foregroundStyle(.secondary)
             }
 
-            // 路线：FROM → TO（大字）
-            HStack(spacing: 8) {
-                Text(state.fromLabel)
-                    .font(.system(size: 26, weight: .bold, design: .rounded))
-                    .lineLimit(1)
-                Image(systemName: "arrow.right")
-                    .font(.system(size: 15, weight: .semibold))
-                    .foregroundStyle(.secondary)
-                Text(state.toLabel)
-                    .font(.system(size: 26, weight: .bold, design: .rounded))
-                    .lineLimit(1)
-                Spacer()
+            // 路线：竖排，起点/终点各独占整行（原横排 `from → to` 两个 26pt 名字挤一行，长中文地名——
+            // 尤其租车取/还车点高度相似——会双双截成近乎相同的前缀、分不清两端）。竖排后每行拿到整宽、
+            // 极少截断；空心点=起点、实心点=终点，一眼看出方向（Apple 地图/Flighty 惯用法），不靠读完整名。
+            VStack(alignment: .leading, spacing: 6) {
+                HStack(spacing: 8) {
+                    Image(systemName: "circle")
+                        .font(.system(size: 9, weight: .bold))
+                        .foregroundStyle(.secondary)
+                    Text(state.fromLabel)
+                        .font(.system(size: 20, weight: .bold, design: .rounded))
+                        .lineLimit(1)
+                }
+                HStack(spacing: 8) {
+                    Image(systemName: "circle.fill")
+                        .font(.system(size: 9, weight: .bold))
+                        .foregroundStyle(.secondary)
+                    Text(state.toLabel)
+                        .font(.system(size: 20, weight: .bold, design: .rounded))
+                        .lineLimit(1)
+                }
             }
             .foregroundStyle(.primary)
 
