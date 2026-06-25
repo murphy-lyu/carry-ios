@@ -71703,13 +71703,13 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "景点门票"
+            "value" : "景点"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "景點門票"
+            "value" : "景點"
           }
         }
       }
