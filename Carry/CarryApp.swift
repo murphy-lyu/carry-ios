@@ -278,12 +278,12 @@ final class PackReminderNotificationDelegate: NSObject, UNUserNotificationCenter
         completionHandler()
     }
 
-    /// App 在前台时也展示 banner
+    /// App 在前台时仅展示横幅、不响声——用户正看着 App，声音多余且打断；横幅已足够告知。
     func userNotificationCenter(
         _ center: UNUserNotificationCenter,
         willPresent notification: UNNotification,
         withCompletionHandler completionHandler: @escaping (UNNotificationPresentationOptions) -> Void
     ) {
-        completionHandler([.banner, .sound])
+        completionHandler([.banner])
     }
 }

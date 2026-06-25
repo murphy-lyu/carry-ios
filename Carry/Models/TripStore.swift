@@ -380,8 +380,10 @@ final class TripStore: ObservableObject {
 #endif
         // 3. 刷 trips（也会刷自动备份）
         fetchTrips()
-        // 4. 按新数据重排提醒
-        for trip in trips where trip.remindersEnabled && !trip.isDateless {
+        // 4. 按新数据全局重排提醒。refreshNotifications 是全局的（一次覆盖所有行程），故只需调一次——
+        //    原先放进 for 循环按行程数 N 次重复跑整轮重排 + N 次天气评估，纯属浪费（结果幂等）。
+        //    remindersEnabled/isDateless 现已在 reschedule 内部 honor，这里仅用「是否有可排行程」决定要不要跑。
+        if trips.contains(where: { $0.remindersEnabled && !$0.isDateless }) {
             refreshNotifications()
         }
         // 5. 写一份新 widget snapshot
@@ -396,10 +398,9 @@ final class TripStore: ObservableObject {
     /// 只需：① 刷 trips → ② 给"本次新合并进来"的 trip 排提醒 → ③ 刷 widget snapshot。
     private func applyPostMergeSideEffects(previousTripIds: Set<UUID>) {
         fetchTrips()
-        // 只给"merge 后新出现"的 trip 排提醒；原有 trip 的提醒保持不动。
-        for trip in trips where !previousTripIds.contains(trip.id)
-                              && trip.remindersEnabled
-                              && !trip.isDateless {
+        // 有「新合并进来且可排」的行程才重排。refreshNotifications 全局幂等：已存在行程的提醒按相同确定性 id
+        // 原样重建、不受影响（故无需、也无法「只给新 trip 排」）。收敛为单次调用，避免按行程数 N 次重复跑。
+        if trips.contains(where: { !previousTripIds.contains($0.id) && $0.remindersEnabled && !$0.isDateless }) {
             refreshNotifications()
         }
         writeWidgetSnapshot()
@@ -1330,6 +1331,8 @@ final class TripStore: ObservableObject {
         if let phone { stop.phone = phone }
         if let timeZoneId { stop.timeZoneId = timeZoneId }
         save()
+        // 改名/改安排可能动到「当天第一个安排」→ 每日摘要内容（第一个是 X）需刷新（guard 内已判开关，关则零成本）。
+        rescheduleDailySummary(trip)
     }
 
     func removeItineraryStop(tripId: UUID, dayId: UUID, stopId: UUID) {
@@ -1361,6 +1364,8 @@ final class TripStore: ObservableObject {
         }
         save()
         CarryLogger.shared.log(.itineraryStopReordered)
+        // 重排改变「当天第一个安排」→ 每日摘要内容需刷新（guard 内已判开关，关则零成本）。
+        rescheduleDailySummary(trip)
     }
 
     /// 跨天/日内一次性应用「天→停靠点顺序」映射（spec: itinerary-route-planning.md，跨天拖拽）。

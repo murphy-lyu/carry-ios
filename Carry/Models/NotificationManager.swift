@@ -43,11 +43,10 @@ enum NotificationManager {
     /// 只用它（不碰 `@Model`，避免 off-main 访问）。
     private struct Candidate {
         let id: String
-        let fireDate: Date        // 排序与预算依据；60s 兜底用 now+60
+        let fireDate: Date        // 未来时刻；排序与预算依据。已过期的提醒不入候选（直接丢弃）
         let title: String
         let body: String
         let tz: TimeZone
-        let useInterval: Bool     // true = 已过期的出发提醒，用 60s interval 兜底触发
     }
 
     /// 通知中心总入口（spec: notification-center.md / notification-budget.md）：跨**所有行程**收集候选 →
@@ -55,7 +54,10 @@ enum NotificationManager {
     static func reschedule(trips: [TripBundle]) {
         let now = Date()
         var candidates: [Candidate] = []
-        for trip in trips where !trip.isDateless {   // 无日期行程无锚点，不产生候选
+        // 跳过：① 无日期行程（无锚点）；② remindersEnabled==false 的行程——同行者分享 / Tripsy 导入的行程
+        //    刻意把它设 false（导入别人的行程不该向你推送）。此处是唯一收口点：冷启动 / 回前台都经 reschedule，
+        //    必须在这里 honor 该标志，否则 TripStore 里的 per-trip 守卫会被无条件全局重排绕过（已踩坑）。
+        for trip in trips where !trip.isDateless && trip.remindersEnabled {
             collectDeparture(trip, now: now, into: &candidates)
             collectPackProgress(trip, now: now, into: &candidates)
             collectTransport(trip, now: now, into: &candidates)
@@ -79,7 +81,7 @@ enum NotificationManager {
         let dest = trip.destinationCity.isEmpty ? trip.name : trip.destinationCity
         let (title, body) = weatherAlertContent(kind: payload.kind, destination: dest)
         makeCandidate(fireDate, id: "\(tripPrefix)\(trip.id.uuidString).weather",
-                      title: title, body: body, allowImminentFallback: true, now: now, tz: .current, into: &out)
+                      title: title, body: body, now: now, tz: .current, into: &out)
     }
 
     private static func weatherAlertContent(kind: WeatherAlertPayload.Kind, destination: String) -> (String, String) {
@@ -119,21 +121,16 @@ enum NotificationManager {
         }
     }
 
-    /// 把一条候选写入系统（calendar trigger 在事件时区锁定防跨时区漂移；兜底用 interval）。
+    /// 把一条候选写入系统（calendar trigger 在事件时区锁定防跨时区漂移）。
     private static func add(_ c: Candidate) {
         let content = UNMutableNotificationContent()
         content.title = c.title
         content.body = c.body
         content.sound = .default
-        let trigger: UNNotificationTrigger
-        if c.useInterval {
-            trigger = UNTimeIntervalNotificationTrigger(timeInterval: max(1, c.fireDate.timeIntervalSinceNow), repeats: false)
-        } else {
-            var cal = Calendar(identifier: .gregorian); cal.timeZone = c.tz
-            var comps = cal.dateComponents([.year, .month, .day, .hour, .minute], from: c.fireDate)
-            comps.timeZone = c.tz
-            trigger = UNCalendarNotificationTrigger(dateMatching: comps, repeats: false)
-        }
+        var cal = Calendar(identifier: .gregorian); cal.timeZone = c.tz
+        var comps = cal.dateComponents([.year, .month, .day, .hour, .minute], from: c.fireDate)
+        comps.timeZone = c.tz
+        let trigger = UNCalendarNotificationTrigger(dateMatching: comps, repeats: false)
         let request = UNNotificationRequest(identifier: c.id, content: content, trigger: trigger)
         UNUserNotificationCenter.current().add(request) { error in
             if let error {
@@ -144,15 +141,13 @@ enum NotificationManager {
         }
     }
 
-    /// 构建一条候选：fireDate 未来 → calendar 触发；已过 + 允许兜底（出发提醒）→ now+60 interval；否则跳过。
+    /// 构建一条候选：仅当 fireDate 在未来才入候选；已过触发时刻的提醒一律**丢弃**。
+    /// （不再把过期提醒兜底成「now+60 秒」——那会让「错过的提前提醒」在你打开 App 时被复活、且每次重排重发，
+    /// 既制造「今天出发」「明天见」自相矛盾、又导致每分钟重复推送。错过即过、不补发。）
     private static func makeCandidate(_ fireDate: Date, id: String, title: String, body: String,
-                                      allowImminentFallback: Bool, now: Date, tz: TimeZone,
-                                      into out: inout [Candidate]) {
-        if fireDate > now {
-            out.append(Candidate(id: id, fireDate: fireDate, title: title, body: body, tz: tz, useInterval: false))
-        } else if allowImminentFallback {
-            out.append(Candidate(id: id, fireDate: now.addingTimeInterval(60), title: title, body: body, tz: tz, useInterval: true))
-        }
+                                      now: Date, tz: TimeZone, into out: inout [Candidate]) {
+        guard fireDate > now else { return }
+        out.append(Candidate(id: id, fireDate: fireDate, title: title, body: body, tz: tz))
     }
 
     // MARK: A 类——出发日锚
@@ -169,7 +164,7 @@ enum NotificationManager {
             let (title, body) = notificationContent(daysBeforeDeparture: offset, tripName: trip.name, destination: destination)
             // 出发倒计时按设备本地时区（在用户当下所在地的清晨提醒，非目的地时区）。
             makeCandidate(fireDate, id: "\(tripPrefix)\(trip.id.uuidString).depart.\(offset)",
-                          title: title, body: body, allowImminentFallback: true, now: now, tz: .current, into: &out)
+                          title: title, body: body, now: now, tz: .current, into: &out)
         }
     }
 
@@ -186,7 +181,7 @@ enum NotificationManager {
         let title = NSLocalizedString("notif.pack.title", comment: "")
         let body = String.localizedStringWithFormat(NSLocalizedString("notif.pack.body", comment: ""), remaining)
         makeCandidate(fireDate, id: "\(tripPrefix)\(trip.id.uuidString).pack",
-                      title: title, body: body, allowImminentFallback: false, now: now, tz: .current, into: &out)
+                      title: title, body: body, now: now, tz: .current, into: &out)
     }
 
     // MARK: B 类——事件时刻锚
@@ -216,7 +211,7 @@ enum NotificationManager {
             let fireDate = eventDate.addingTimeInterval(TimeInterval(-lead * 60))
             let (title, body) = transportContent(seg: seg, isReturn: isReturn, leadMinutes: lead)
             makeCandidate(fireDate, id: "\(tripPrefix)\(trip.id.uuidString).transport.\(seg.id.uuidString).\(role).\(lead)",
-                          title: title, body: body, allowImminentFallback: false, now: now, tz: tz, into: &out)
+                          title: title, body: body, now: now, tz: tz, into: &out)
         }
     }
 
@@ -234,7 +229,7 @@ enum NotificationManager {
             guard let fireDate = absoluteDate(tripDeparture: trip.departureDate, dayOrder: stay.checkOutDayOrder, minutes: fireMins, tzId: tzId) else { continue }
             let (t, b) = lodgingContent(stay: stay)
             makeCandidate(fireDate, id: "\(tripPrefix)\(trip.id.uuidString).lodging.\(stay.id.uuidString).out",
-                          title: t, body: b, allowImminentFallback: false, now: now, tz: tz, into: &out)
+                          title: t, body: b, now: now, tz: tz, into: &out)
         }
     }
 
@@ -258,7 +253,7 @@ enum NotificationManager {
                 ? String.localizedStringWithFormat(NSLocalizedString("notif.daily.body.noname", comment: ""), count)
                 : String.localizedStringWithFormat(NSLocalizedString("notif.daily.body", comment: ""), count, firstName)
             makeCandidate(fireDate, id: "\(tripPrefix)\(trip.id.uuidString).daily.\(day.sortOrder)",
-                          title: title, body: body, allowImminentFallback: false, now: now, tz: tz, into: &out)
+                          title: title, body: body, now: now, tz: tz, into: &out)
         }
     }
 
