@@ -28,11 +28,6 @@ private extension UserDefaults {
         set("create_trip", forKey: Self.shortcutActionKey)
     }
 
-    /// Store a "show footprint map" shortcut action（Siri「Footprint」仍用此 → 全屏世界地图）。
-    func setShortcutShowMap() {
-        set("show_map", forKey: Self.shortcutActionKey)
-    }
-
     /// Store an "open Trip Book" shortcut action（长按 Quick Action「My Trip Book」用 → 行程册 sheet）。
     func setShortcutShowTripBook() {
         set("show_trip_book", forKey: Self.shortcutActionKey)

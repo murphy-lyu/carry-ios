@@ -2024,16 +2024,6 @@ final class TripStore: ObservableObject {
     }
 
 
-    func dismissSceneCard(tripId: UUID) {
-        guard let trip = trips.first(where: { $0.id == tripId }) else { return }
-        trip.sceneCardDismissed = true
-        if !isSceneCardDismissedGlobally {
-            isSceneCardDismissedGlobally = true
-            defaults.set(true, forKey: Self.sceneCardDismissedGlobalKey)
-        }
-        save()
-    }
-
     func setSelectedSceneKeys(tripId: UUID, keys: [String]) {
         guard let trip = trips.first(where: { $0.id == tripId }) else { return }
         trip.selectedSceneKeys = keys
@@ -2131,48 +2121,6 @@ final class TripStore: ObservableObject {
         return item
     }
 
-    func copyMyItem(_ item: MyItem) {
-        let baseName = item.name.trimmingCharacters(in: .whitespacesAndNewlines)
-        let suffix = NSLocalizedString("trip.copy_suffix", comment: "")
-        let nextOrder = (myItems.map(\.sortOrder).max() ?? -1) + 1
-        let copy = MyItem(
-            name: baseName + suffix,
-            collectionName: normalizedCollectionName(item.collectionName),
-            category: item.category,
-            defaultQuantity: item.defaultQuantity,
-            quantityMode: item.quantityMode,
-            quantityIntervalDays: item.quantityIntervalDays,
-            sortOrder: nextOrder
-        )
-        context.insert(copy)
-        save()
-    }
-
-    func updateMyItem(
-        _ item: MyItem,
-        name: String,
-        category: String,
-        defaultQuantity: Int,
-        quantityMode: MyItemQuantityMode? = nil,
-        quantityIntervalDays: Int? = nil,
-        collectionName: String? = nil
-    ) {
-        item.name = name.trimmingCharacters(in: .whitespacesAndNewlines)
-        item.category = category
-        item.defaultQuantity = max(1, defaultQuantity)
-        if let quantityMode {
-            item.quantityMode = quantityMode
-        }
-        if let quantityIntervalDays {
-            item.quantityIntervalDays = max(1, quantityIntervalDays)
-        }
-        if let collectionName {
-            item.collectionName = normalizedCollectionName(collectionName)
-        }
-        item.updatedAt = Date()
-        save()
-    }
-
     func removeMyItem(id: UUID) {
         guard let item = myItems.first(where: { $0.id == id }) else { return }
         context.delete(item)
@@ -2222,60 +2170,6 @@ final class TripStore: ObservableObject {
             changed = true
         }
         if changed { save() }
-    }
-
-    func reorderMyItems(newOrder: [UUID]) {
-        let orderedItems = newOrder.compactMap { id in myItems.first(where: { $0.id == id }) }
-        let remainingItems = myItems
-            .filter { !newOrder.contains($0.id) }
-            .sorted { lhs, rhs in
-                if lhs.sortOrder != rhs.sortOrder { return lhs.sortOrder < rhs.sortOrder }
-                return lhs.createdAt < rhs.createdAt
-            }
-        let finalOrder = orderedItems + remainingItems
-        for (index, item) in finalOrder.enumerated() {
-            item.sortOrder = index
-        }
-        save()
-    }
-
-    func addMyItemsToTrip(tripId: UUID, items: [MyItem]) {
-        guard let trip = trips.first(where: { $0.id == tripId }) else { return }
-        var sectionsByTitle: [String: PackingSection] = Dictionary(
-            uniqueKeysWithValues: trip.safeSections.map { ($0.title, $0) }
-        )
-        var nextSectionOrder = (trip.safeSections.map(\.sortOrder).max() ?? -1) + 1
-
-        for source in items {
-            let sectionTitle = source.category.isEmpty ? "Essentials" : source.category
-            let section: PackingSection
-            if let existing = sectionsByTitle[sectionTitle] {
-                section = existing
-            } else {
-                section = PackingSection(title: sectionTitle, items: [], sortOrder: nextSectionOrder)
-                nextSectionOrder += 1
-                sectionsByTitle[sectionTitle] = section
-                context.insert(section)
-                if trip.sections == nil { trip.sections = [] }
-                trip.sections?.append(section)
-            }
-
-            let existingNames = Set((section.items ?? []).map { $0.name.lowercased() })
-            guard !existingNames.contains(source.name.lowercased()) else { continue }
-            let nextOrder = ((section.items ?? []).map(\.sortOrder).max() ?? -1) + 1
-            let item = PackingItem(
-                name: source.name,
-                quantity: source.defaultQuantity,
-                isAlert: false,
-                sortOrder: nextOrder
-            )
-            context.insert(item)
-            section.items?.append(item)
-        }
-        save()
-#if !targetEnvironment(macCatalyst)
-        Task { @MainActor in LiveActivityManager.shared.update(for: trip) }
-#endif
     }
 
     // MARK: - Queries

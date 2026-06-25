@@ -204,7 +204,7 @@ final class CarryLogger {
         .abnormalTermination, .geocodeFailed,
         .destinationDecodeFailed, .coffeePurchaseFailed, .coffeeProductsFetchFailed,
         .calendarSaveFailed, .liveActivityStartFailed,
-        .reminderScheduleFailed, .apiTimeout, .apiError,
+        .reminderScheduleFailed,
         .itineraryRouteCalcFailed, .itineraryImportFailed,
         .exchangeRateFetchFailed, .calendarOverlayAccessDenied,
         .photoImportFailed, .flightLookupFailed,

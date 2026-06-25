@@ -58,10 +58,6 @@ struct TripReminderConfig: Codable, Identifiable, Equatable {
         comps.minute = minute
         return calendar.date(from: comps)
     }
-
-    func isSameTrigger(as other: TripReminderConfig) -> Bool {
-        daysBeforeDeparture == other.daysBeforeDeparture && hour == other.hour && minute == other.minute
-    }
 }
 
 // MARK: - 全局默认提醒偏好（设置 →「通知」）

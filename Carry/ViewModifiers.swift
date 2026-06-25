@@ -239,14 +239,6 @@ extension View {
         carryCard(cornerRadius: cornerRadius)
     }
 
-    func carryPageBackground() -> some View {
-        background(CarryAtmosphereBackground())
-    }
-
-    func carrySubtlePageBackground() -> some View {
-        background(CarrySubtleBackground())
-    }
-
     /// 旧名 · 渐废（用 `carryHeroCard`）。现委托到 canonical。
     func carryHeroCardBackground(cornerRadius: CGFloat = CarryRadius.hero) -> some View {
         carryHeroCard(cornerRadius: cornerRadius)
@@ -654,78 +646,6 @@ extension View {
     /// 见 `BottomBarFade`。浮动栏的通透垫底（替代 `bottomBarScrim` 的实心兜底）。
     func bottomBarFade(_ color: Color, fadeHeight: CGFloat = 28, peakOpacity: Double = 0.92) -> some View {
         modifier(BottomBarFade(color: color, fadeHeight: fadeHeight, peakOpacity: peakOpacity))
-    }
-}
-
-// MARK: - CarryConfirmationDialog
-
-/// App-styled confirmation dialog — replaces system .alert where visual consistency matters.
-/// Shows a dimmed overlay with a card matching the Settings/card design language.
-struct CarryConfirmationDialog: View {
-    let title: LocalizedStringKey
-    let message: String
-    let confirmLabel: LocalizedStringKey
-    let onConfirm: () -> Void
-    let onCancel: () -> Void
-
-    @Environment(\.colorScheme) private var colorScheme
-
-    var body: some View {
-        ZStack {
-            Color.black.opacity(0.38)
-                .ignoresSafeArea()
-                .onTapGesture { onCancel() }
-
-            VStack(spacing: 22) {
-                VStack(spacing: 7) {
-                    Text(title)
-                        .font(.system(.body, design: .rounded).weight(.semibold))
-                        .multilineTextAlignment(.center)
-                    Text(message)
-                        .font(.subheadline)
-                        .foregroundStyle(.secondary)
-                        .multilineTextAlignment(.center)
-                        .fixedSize(horizontal: false, vertical: true)
-                }
-
-                VStack(spacing: 9) {
-                    Button(action: onConfirm) {
-                        Text(confirmLabel)
-                            .font(.system(.body, design: .rounded).weight(.semibold))
-                            .foregroundStyle(Color(.systemBackground))
-                            .frame(maxWidth: .infinity)
-                            .frame(height: 50)
-                            .background(
-                                RoundedRectangle(cornerRadius: 12, style: .continuous)
-                                    .fill(Color(.label))
-                            )
-                    }
-                    .buttonStyle(.plain)
-
-                    Button(action: onCancel) {
-                        Text("Cancel")
-                            .font(.system(.body, design: .rounded))
-                            .foregroundStyle(.secondary)
-                            .frame(maxWidth: .infinity)
-                            .frame(height: 44)
-                    }
-                    .buttonStyle(.plain)
-                }
-            }
-            .padding(24)
-            .background(
-                RoundedRectangle(cornerRadius: 24, style: .continuous)
-                    .fill(colorScheme == .dark
-                          ? Color(UIColor.secondarySystemGroupedBackground)
-                          : Color(UIColor.systemBackground))
-                    .shadow(
-                        color: .black.opacity(colorScheme == .dark ? 0.48 : 0.14),
-                        radius: 28, y: 10
-                    )
-            )
-            .padding(.horizontal, 28)
-        }
-        .transition(.opacity.combined(with: .scale(scale: 0.96, anchor: .center)))
     }
 }
 

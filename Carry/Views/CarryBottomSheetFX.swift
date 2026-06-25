@@ -802,13 +802,6 @@ final class FXSheetViewController: UIViewController {
         setContentRasterized(false)   // settled mid-position — restore live rendering
     }
 
-    private func finalizeGestureAndSnap(source: String, velocity: CGFloat, translation: CGFloat, rawOffset: CGFloat) {
-        let clamped = min(max(0, rawOffset), collapsedOffset)
-        let shouldCollapse = resolveSnap(velocity: velocity, translation: translation, clamped: clamped)
-        lastGestureSource = source
-        commitSnap(to: shouldCollapse ? collapsedOffset : 0, velocity: velocity, source: source)
-    }
-
     // MARK: Snap decision
 
     private func resolveSnap(velocity: CGFloat, translation: CGFloat,

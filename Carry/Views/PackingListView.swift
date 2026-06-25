@@ -2070,62 +2070,6 @@ struct ReorderSectionsView: View {
     }
 }
 
-// MARK: - My Items Collection Picker
-
-private struct MyItemsCollectionPickerView: View {
-    @Binding var selectedCollection: String
-    let collections: [String]
-    let onConfirm: () -> Void
-
-    @Environment(\.dismiss) private var dismiss
-
-    private var visibleCollections: [String] {
-        collections.isEmpty ? ["Default"] : collections
-    }
-
-    var body: some View {
-        Form {
-            Section {
-                ForEach(visibleCollections, id: \.self) { collection in
-                    Button {
-                        selectedCollection = collection
-                    } label: {
-                        HStack {
-                            Text(collection)
-                            if collection == "Default" {
-                                Text("Default collection")
-                                    .font(.caption2)
-                                    .foregroundStyle(.secondary)
-                            }
-                            Spacer()
-                            if selectedCollection == collection {
-                                Image(systemName: "checkmark")
-                                    .foregroundStyle(.primary)
-                            }
-                        }
-                    }
-                    .buttonStyle(.plain)
-                }
-            } footer: {
-                Text("Choose where this item should be saved.")
-            }
-        }
-        .navigationTitle("Save to Collection")
-        .navigationBarTitleDisplayMode(.inline)
-        .toolbar {
-            ToolbarItem(placement: .cancellationAction) {
-                Button("Cancel") { dismiss() }
-            }
-            ToolbarItem(placement: .confirmationAction) {
-                Button("Save") {
-                    onConfirm()
-                    dismiss()
-                }
-            }
-        }
-    }
-}
-
 // MARK: - InlineEditRow
 
 /// 正常模式下新增物品的内联编辑行。自带 @FocusState：cell 出现即聚焦（编辑行永远是

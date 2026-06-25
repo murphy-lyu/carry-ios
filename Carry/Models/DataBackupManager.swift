@@ -525,11 +525,6 @@ final class DataBackupManager {
     /// The file URL of the backup, usable for sharing via UIActivityViewController.
     var backupFileURL: URL? { backupURL }
 
-    func hasBackup() -> Bool {
-        guard let url = backupURL else { return false }
-        return FileManager.default.fileExists(atPath: url.path)
-    }
-
     /// 删除本地自动备份文件（用于「抹掉所有数据」——否则抹除后 restore 又把数据带回来，
     /// 与「被遗忘」矛盾。spec: erase-all-data.md）。文件不存在视为成功。
     func clearBackup() {

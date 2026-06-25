@@ -1311,23 +1311,6 @@ struct ItemPickerView: View {
         )
     }
 
-    private func categoryHeaderText(_ title: String) -> some View {
-        HStack {
-            Text(title)
-                .font(.system(.headline, design: .rounded))
-                .foregroundColor(.primary)
-            Spacer()
-        }
-        .padding(.horizontal, 16)
-        .frame(height: 52)
-        .background(Color(UIColor.systemBackground).opacity(0.86))
-        .overlay(alignment: .bottom) {
-            Rectangle()
-                .fill(Color.primary.opacity(0.025))
-                .frame(height: 1)
-        }
-    }
-
     private func myItemRow(_ item: MyItem) -> some View {
         let isAlreadyAdded = existingItemNames.contains(normalizedItemName(item.name))
         let isSelected = selectedMyItemIDs.contains(item.id)
@@ -1760,10 +1743,6 @@ struct ItemPickerView: View {
         return result
     }
 
-    private func selectedCurrentCount() -> Int {
-        sourceMode == .preset ? selectedItems.count : selectedMyItemIDs.count
-    }
-
     private func buildSections() -> [PackingSection] {
         var sectionIndex = 0
         var result: [PackingSection] = []
@@ -1785,14 +1764,6 @@ struct ItemPickerView: View {
             sectionIndex += 1
         }
         return result
-    }
-}
-
-private struct AutoPackFABButtonStyle: ButtonStyle {
-    func makeBody(configuration: Configuration) -> some View {
-        configuration.label
-            .scaleEffect(configuration.isPressed ? 0.96 : 1)
-            .animation(.easeInOut(duration: 0.12), value: configuration.isPressed)
     }
 }
 
