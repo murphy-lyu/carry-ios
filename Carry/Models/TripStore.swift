@@ -819,6 +819,18 @@ final class TripStore: ObservableObject {
             selectedSceneKeys: original.selectedSceneKeys,
             sections: newSections
         )
+        // 目的地解析结果直接深拷（主目的地码/坐标 + additionalDestinations 含 name）——否则副本地图不点亮、
+        // 不计入到访，且要靠 geocodeMissingTrips 事后文本反查自愈（丢失已存名字、有歧义）。
+        newBundle.countryCode = original.countryCode
+        newBundle.latitude = original.latitude
+        newBundle.longitude = original.longitude
+        newBundle.additionalDestinationsData = original.additionalDestinationsData
+        // 提醒偏好随行程走：不拷会回落默认（remindersEnabled=true）→ 把用户**关掉提醒的行程**复制后又开启并排期，
+        // 自定义提醒偏移也丢。dismiss 类用户决定（顺手考虑/场景卡）同理，不拷会让已忽略项在副本里重现。
+        newBundle.remindersEnabled = original.remindersEnabled
+        newBundle.reminderConfigData = original.reminderConfigData
+        newBundle.dismissedSurpriseNames = original.dismissedSurpriseNames
+        newBundle.sceneCardDismissed = original.sceneCardDismissed
         // 背景图深拷贝：每个条目的文件复制成独立新文件，副本拥有自己的字节（不与原行程共享
         // 文件名，否则删/换任一方都会误伤另一方）。无本地文件的条目（未来在线源）原样带过；
         // 复制失败的条目直接丢弃（副本退回 monogram 兜底），绝不残留共享引用。crop 等元数据保留。
