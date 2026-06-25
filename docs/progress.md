@@ -1,7 +1,22 @@
 # 项目进度
 
 ## 最后更新
-2026-06-25
+2026-06-26
+
+## 上次改动摘要（微信输入法选词不触发检索·根因修 + 花费空态居中 · 2026-06-26）
+
+> 单会话、纯我的工作（与并行「多目的地 chip / FlightSearchSheet」会话物理隔离，全程隔离 index 只提自己文件、零卷入）。**编译绿（主 app + Widget）**；**已提交 main**（`fe06845` 输入法 + `9f3d4d9` 花费空态），未 push。真机验收交用户（已记入 Apple 提醒事项「Carry验收·输入法①~④」）。
+
+**一、微信输入法选词上屏后不触发检索 —— 根因修（`fe06845`）**
+- **现象**：行程规划添加地点，用微信输入法打「cuihu」预编辑态能出结果，但选词「翠湖」上屏后**不触发搜索**，再补个空格又恢复；系统拼音输入法无此问题。
+- **根因（代码层面可断定）**：所有走 `StopSearchCompleter` 的搜索唯一触发是 `query`/`text` binding 变化，无旁路；而 SwiftUI 原生 `TextField` 依赖 UIKit 的 editing-changed 事件同步 binding，**微信等第三方输入法的「候选词提交」路径不触发它** → binding 停在选词前旧值 → didSet/onChange 不跑。「补空格即恢复」是决定性指纹（普通按键必触发 editing-changed、把输入框真实全文一次性灌进 binding）。判据可证伪：若 UIKit 层也不触发，则原生 UISearchBar 中文搜索全坏——但它们不坏，故是 SwiftUI 封装漏掉了这一下。
+- **解法（绕开 SwiftUI binding、用 UIKit 可靠信号）**：新增共享组件 `IMESafeTextField`（`ViewModifiers.swift`，`UIViewRepresentable` 包 `UITextField`）——听 UIKit `editingChanged`（选词上屏必触发）回灌 binding；`updateUIView` 组字（marked text）期间绝不反写、清空时 `unmarkText`；与 `@FocusState`/`Bool` 双向桥接；占位符由外层 SwiftUI overlay 渲染（保持 `placeholder: LocalizedStringKey` 形参不变 → 调用点零改）。
+- **范围**：① `CarrySearchField` 内部换用 → 一改覆盖 **6 个**字段（添加地点 / 地点搜索 sheet / 住宿 / 机场 / 首页行程搜索 / 物品库搜索）；② `DestinationChipsField`（目的地输入，创建/编辑共用）换用——其焦点编排较精细（选中后回焦、失焦固化 chip），改了焦点机制，**重点真机验**。③ 时区/货币的 `.searchable` 不动（系统组件难干净替换、输入多为拉丁字符、命中率低、纯本地过滤无 API 成本）。④ 纯表单框无需动（值在 Save/失焦时读、binding 已追平）。
+
+**二、行程花费空态居中（`9f3d4d9`）**
+- 空态原塞在 `ScrollView` 里且限 `minHeight: 360` → 在「顶部 360pt」内居中、偏上。改为：无花费时不套 `ScrollView`（无内容可滚），`emptyState` 用 `maxHeight: .infinity` 在整片可用区域垂直+水平居中；有花费时仍走 `ScrollView`。
+
+**新会话 TODO（仅剩验收）**：① 微信输入法：添加地点选词即触发（核心）+ 其余 5 个搜索框 + **目的地字段焦点编排**（键盘不掉/可续输/失焦固化）；② 花费空态居中肉眼验。详见 Apple 提醒事项。
 
 ## 上次改动摘要（行程详情「锁屏追踪」逐段按钮下线 + 行程通知 4 个真 bug 根治 · 2026-06-25）
 
