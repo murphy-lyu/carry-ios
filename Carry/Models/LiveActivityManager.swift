@@ -56,17 +56,24 @@ final class LiveActivityManager {
         UserDefaults.standard.object(forKey: Self.transitEnabledKey) as? Bool ?? true
     }
 
-    /// 系统是否允许 Live Activity（授权且未在系统设置里关闭）。供视图层判断「点追踪是否真会起」，
-    /// 避免视图直接依赖 ActivityKit 的 `ActivityAuthorizationInfo`。
-    var systemActivitiesEnabled: Bool { ActivityAuthorizationInfo().areActivitiesEnabled }
-
-    /// 用户「显式停掉追踪」的交通段 id 集合（spec: widget-transit-live-activity.md）。
-    /// 根因：A 自动起若不避开用户刚停的段，回前台会把它重新起起来、覆盖用户意图。故记住被显式停过的段，
-    /// A 跳过它们；用户再次显式起（B）即解除。只存活跃段（在 `startTransitIfNeeded` 里按现存段剪枝、不无限增长）。
+    /// 用户「划掉了自动出现的下一程卡」的交通段 id 集合（spec: widget-transit-live-activity.md）。
+    /// 根因：交通 LA 只剩自动起（A），用户对单程的唯一退出手段是**在锁屏上手动划除**；A 若不记住这个动作，
+    /// 回前台会把它重新起起来、覆盖用户意图（「划掉又冒出来」）。检测靠 `reconcileDismissedTransit`：
+    /// 我们记下「意图展示的段」，A 运行时若发现它已不在系统活跃 LA 里、又非我们主动结束 → 判定用户划掉、记此集合并跳过。
+    /// 只存活跃段（在 `startTransitIfNeeded` 里按现存段剪枝、不无限增长）。
     static let dismissedTransitKey = "liveActivityTransitDismissed"
     private var dismissedTransitSegmentIds: Set<String> {
         get { Set(UserDefaults.standard.stringArray(forKey: Self.dismissedTransitKey) ?? []) }
         set { UserDefaults.standard.set(Array(newValue), forKey: Self.dismissedTransitKey) }
+    }
+
+    /// 「我们当前意图展示的交通段」id（跨启动持久化）。startTransit 成功起/重连即写；任何**我们主动**结束
+    /// 该段即清。A 运行时对账：若它非空、但系统里已无对应活跃 LA → 只可能是用户在锁屏手动划除（含 App 被杀期间划的）
+    /// → 记入 dismissed、清空本值。这是「划掉又冒出来」的根因修复锚点。
+    static let intendedTransitKey = "liveActivityTransitIntended"
+    private var intendedTransitSegment: String? {
+        get { UserDefaults.standard.string(forKey: Self.intendedTransitKey) }
+        set { UserDefaults.standard.set(newValue, forKey: Self.intendedTransitKey) }
     }
 
     private var currentTransitActivity: Activity<TransportActivityAttributes>?
@@ -206,6 +213,7 @@ final class LiveActivityManager {
     func startTransitIfNeeded(trips: [TripBundle]) {
         guard isTransitEnabled else { return }
         guard ActivityAuthorizationInfo().areActivitiesEnabled else { return }
+        reconcileDismissedTransit()   // 先认领「用户划掉」的段，A 才不会把它重新起起来
         let now = Date()
         let windowEnd = now.addingTimeInterval(Double(Self.transitWindowHours) * 3600)
         // 剪枝：dismissed 只保留「当前仍存在的段」（防跨行程长期累积）。
@@ -243,11 +251,6 @@ final class LiveActivityManager {
         guard let dep = segment.absoluteDeparture(tripDeparture: trip.departureDate) else { return }
         let arr = segment.absoluteArrival(tripDeparture: trip.departureDate) ?? dep
 
-        // 显式起 = 重新选入：清掉该段的「用户已停」标记（A 在调用前已跳过 dismissed，故这里只会被 B 触达）。
-        if dismissedTransitSegmentIds.contains(segment.id.uuidString) {
-            dismissedTransitSegmentIds.remove(segment.id.uuidString)
-        }
-
         // 同一段已有活跃 Activity → 重连引用并 no-op（覆盖冷启动：系统持久化的 LA 仍在、但本进程
         // currentTransit* 为 nil；不重连会被下面 terminate+recreate 造成闪烁）。
         if let existing = Activity<TransportActivityAttributes>.activities.first(where: {
@@ -256,6 +259,7 @@ final class LiveActivityManager {
             currentTransitActivity = existing
             currentTransitSegmentId = segment.id
             currentTransitTripId = trip.id
+            intendedTransitSegment = segment.id.uuidString
             return
         }
 
@@ -289,6 +293,7 @@ final class LiveActivityManager {
                 self.currentTransitActivity = activity
                 self.currentTransitSegmentId = segId
                 self.currentTransitTripId = tripId
+                self.intendedTransitSegment = segId.uuidString
                 CarryLogger.shared.log(.liveActivityStarted, context: "transit seg=\(segId)")
             } catch {
                 CarryLogger.shared.log(.liveActivityStartFailed, context: "transit \(error.localizedDescription)")
@@ -296,20 +301,27 @@ final class LiveActivityManager {
         }
     }
 
-    /// 该段当前是否正被交通 LA 追踪（详情页按钮状态用）。
-    func isTrackingTransit(segmentId: UUID) -> Bool {
-        Activity<TransportActivityAttributes>.activities.contains {
-            $0.attributes.segmentId == segmentId && $0.activityState == .active
+    /// A 运行时对账「用户是否在锁屏划掉了自动出现的下一程卡」（含 App 被杀期间划除）。
+    /// 我们记下「意图展示的段」(`intendedTransitSegment`)；若它已不在系统活跃 LA 里、又非我们主动结束，
+    /// 只可能是用户手动划除 → 记入 dismissed 让 A 不再自动重起，并清空意图值与本进程残留引用。
+    /// （若该段已抵达、系统自然结束 LA，标记 dismissed 无害：抵达后已出 A 的时间窗，本就不会重起。）
+    private func reconcileDismissedTransit() {
+        guard let intended = intendedTransitSegment else { return }
+        let stillLive = Activity<TransportActivityAttributes>.activities.contains {
+            $0.attributes.segmentId.uuidString == intended && $0.activityState == .active
+        }
+        guard !stillLive else { return }
+        dismissedTransitSegmentIds.insert(intended)
+        intendedTransitSegment = nil
+        if currentTransitSegmentId?.uuidString == intended {
+            currentTransitActivity = nil
+            currentTransitSegmentId = nil
+            currentTransitTripId = nil
         }
     }
 
-    /// 用户在详情页**显式停掉**某段追踪（B）：记下「已停」让 A 不再自动重起，再结束该段 LA。
-    func userStopTransit(segmentId: UUID) {
-        dismissedTransitSegmentIds.insert(segmentId.uuidString)
-        endTransit(segmentId: segmentId)
-    }
-
-    /// 结束交通 LA（指定段 / 指定行程 / 全部交通）。
+    /// 结束交通 LA（指定段 / 指定行程 / 全部交通）。我们主动结束 → 同步清「意图段」，
+    /// 免得 `reconcileDismissedTransit` 把它误判成用户划除。
     func endTransit(segmentId: UUID? = nil, tripId: UUID? = nil) {
         let matches = Activity<TransportActivityAttributes>.activities.filter { a in
             if let segmentId { return a.attributes.segmentId == segmentId }
@@ -323,6 +335,10 @@ final class LiveActivityManager {
             currentTransitActivity = nil
             currentTransitSegmentId = nil
             currentTransitTripId = nil
+            intendedTransitSegment = nil
+        } else if let intended = intendedTransitSegment,
+                  matches.contains(where: { $0.attributes.segmentId.uuidString == intended }) {
+            intendedTransitSegment = nil
         }
         Task {
             for a in matches { await a.end(nil, dismissalPolicy: .default) }
@@ -338,6 +354,7 @@ final class LiveActivityManager {
             if now >= graceEnd {
                 let segId = a.attributes.segmentId
                 Task { await a.end(nil, dismissalPolicy: .default) }
+                if intendedTransitSegment == segId.uuidString { intendedTransitSegment = nil }
                 if currentTransitSegmentId == segId {
                     currentTransitActivity = nil; currentTransitSegmentId = nil; currentTransitTripId = nil
                 }
