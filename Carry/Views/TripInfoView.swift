@@ -221,10 +221,12 @@ struct TripInfoView: View {
         }
         // 有草稿时拦截下滑关闭，逼用户走「取消」→ 确认，避免手滑误删（空表单不拦，可直接下滑关）。
         .interactiveDismissDisabled(hasDraft)
-        .confirmationDialog(
+        // 二元「放弃草稿 + 取消」用 .alert（居中两按钮模态）而非 .confirmationDialog：
+        // 后者在 regular 宽度（iPad / Catalyst / 某些 iOS 26 上下文）会降级成锚到「取消」按钮的
+        // popover 气泡，且自动隐藏 .cancel 按钮（只剩一个），弹到页顶、不好操作。.alert 各平台一致。
+        .alert(
             LocalizedStringKey("tripinfo.discard.title"),
-            isPresented: $showDiscardConfirm,
-            titleVisibility: .visible
+            isPresented: $showDiscardConfirm
         ) {
             Button(LocalizedStringKey("tripinfo.discard.confirm"), role: .destructive) {
                 router.cancelCreation()
