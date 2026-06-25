@@ -55,25 +55,15 @@ struct TripInfoView: View {
         !tripName.trimmingCharacters(in: .whitespaces).isEmpty || hasDestination
     }
 
-    /// chips 显示名 + 残留输入文本 → 人类可读、与 splitCities 可逆的 destinationCity 字符串。
-    /// 用 ` & ` 拼接，大小写不敏感去重。仍是 Trip 卡片/通知/分享展示用的字符串真相。
-    private var composedDestinationCity: String {
-        var names = destinations.map(\.name)
-        let pending = destinationText.trimmingCharacters(in: .whitespacesAndNewlines)
-        if !pending.isEmpty { names.append(pending) }
-        var seen = Set<String>()
-        var unique: [String] = []
-        for name in names where seen.insert(name.lowercased()).inserted { unique.append(name) }
-        return unique.joined(separator: " & ")
+    /// 全部目的地（chips + 残留输入文本作一个未解析 chip），大小写不敏感去重、保持顺序。
+    /// 单一真源：destinationCity 文本与传给 store 的结构化数组都由它派生，保证一致。
+    private var allChips: [ResolvedDestination] {
+        DestinationComposer.allChips(destinations, pendingText: destinationText)
     }
 
-    /// 传给 createTrip 的结构化数组：**仅当全部 chip 已解析且无残留自由文本**才给，
-    /// 否则返回空 → 回落 destinationCity 文本路径（updateCountryCode 解析全部 token）。
-    private var structuredDestinations: [ResolvedDestination] {
-        let pending = !destinationText.trimmingCharacters(in: .whitespaces).isEmpty
-        guard !pending, !destinations.isEmpty,
-              destinations.allSatisfy({ $0.isResolved }) else { return [] }
-        return destinations
+    /// chips 显示名用 ` & ` 拼接 → Trip 卡片/通知/分享展示用的字符串真相（与 splitCities 可逆）。
+    private var composedDestinationCity: String {
+        allChips.map(\.name).joined(separator: " & ")
     }
 
     private var continueButtonBackground: Color {
@@ -94,7 +84,7 @@ struct TripInfoView: View {
             departureDate: departureDate,
             returnDate: returnDate,
             isDateless: !hasDates,
-            resolvedDestinations: structuredDestinations
+            resolvedDestinations: allChips
         )
     }
 

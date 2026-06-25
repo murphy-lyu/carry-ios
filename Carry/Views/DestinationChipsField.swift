@@ -192,25 +192,72 @@ struct DestinationChipsField: View {
         }
     }
 
-    /// 残留自由文本固化为「未解析 chip」（仅名字）——保存时由 splitCities + updateCountryCode 文本路径解析。
+    /// 残留自由文本固化为「未解析 chip」（仅名字，保存时由 writeDestinations 逐个解析）。
+    /// 按显式标点拆分（「东京, 大阪」→ 两个 chip；含 and 的地名保持整体）。
     private func commitFreeText() {
-        let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !trimmed.isEmpty else { return }
-        appendDestination(ResolvedDestination(name: trimmed))
+        let names = DestinationComposer.splitFreeText(text)
+        guard !names.isEmpty else { text = ""; completer.results = []; return }
+        for name in names {
+            appendDestination(ResolvedDestination(name: name))
+        }
         text = ""
         completer.results = []
     }
 
-    /// 追加目的地，按显示名大小写不敏感去重（避免「维也纳 & 维也纳」）。
+    /// 追加目的地，去重（见 DestinationComposer.isDuplicate：同名+同码才算重；
+    /// 两个同名不同国的城市可并存，San José CR 与 San José US 不互相吞）。
     private func appendDestination(_ dest: ResolvedDestination) {
-        guard !destinations.contains(where: {
-            $0.name.caseInsensitiveCompare(dest.name) == .orderedSame
-        }) else { return }
+        guard !DestinationComposer.isDuplicate(dest, in: destinations) else { return }
         destinations.append(dest)
     }
 
     /// 删除一个 chip；删首项时其后一项靠数组顺序自动晋升为主目的地，无需额外逻辑。
     private func removeChip(_ dest: ResolvedDestination) {
         destinations.removeAll { $0.id == dest.id }
+    }
+}
+
+// MARK: - DestinationComposer（chips 组装 + 去重的单一真源，创建/编辑两页共用）
+
+enum DestinationComposer {
+    /// 是否与已有 chip 重复：同名（大小写不敏感）**且**（同国家码，或任一未解析）。
+    /// 未解析项（自由文本、countryCode 空）与任何同名项视为重复 → 不重复堆叠；两个**已解析**的
+    /// 同名不同国城市（码不同、均非空）则保留为两条（罕见但合法）。
+    static func isDuplicate(_ candidate: ResolvedDestination, in existing: [ResolvedDestination]) -> Bool {
+        existing.contains { e in
+            e.name.caseInsensitiveCompare(candidate.name) == .orderedSame &&
+            (e.countryCode == candidate.countryCode || e.countryCode.isEmpty || candidate.countryCode.isEmpty)
+        }
+    }
+
+    /// 顺序去重（保留首个出现的——已解析 chip 天然在自由文本之前）。
+    static func dedup(_ chips: [ResolvedDestination]) -> [ResolvedDestination] {
+        var out: [ResolvedDestination] = []
+        for chip in chips where !isDuplicate(chip, in: out) { out.append(chip) }
+        return out
+    }
+
+    /// chips + 残留输入文本 → 去重后的有序列表。残留文本按**显式标点**拆成多个未解析 chip。
+    /// 创建/编辑两页都用它派生 destinationCity 文本与传给 store 的结构化数组，保证两者一致。
+    static func allChips(_ chips: [ResolvedDestination], pendingText: String) -> [ResolvedDestination] {
+        var result = chips
+        for name in splitFreeText(pendingText) {
+            result.append(ResolvedDestination(name: name))
+        }
+        return dedup(result)
+    }
+
+    /// 自由文本按**显式标点分隔符**（逗号/顿号/斜杠/加号/&）拆分，但**不**拆 " and "/" 和 "——
+    /// 标点是用户「多个目的地」的明确意图（粘贴「阿姆斯特丹、维也纳」→ 两个）；而含 and 的地名
+    /// （Bosnia and Herzegovina / Trinidad and Tobago）必须保持整体、不被误拆。
+    /// 选中检索建议得到的 chip 永远是单一地点、不走此拆分。
+    static func splitFreeText(_ text: String) -> [String] {
+        var tokens = [text]
+        for sep in [",", "，", "、", "/", "／", "&", "＆", "+", "＋"] {
+            tokens = tokens.flatMap { $0.components(separatedBy: sep) }
+        }
+        return tokens
+            .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+            .filter { $0.count >= 2 }
     }
 }

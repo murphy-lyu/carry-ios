@@ -20,6 +20,10 @@ struct DestinationEntry: Codable {
     let countryCode: String
     let latitude: Double
     let longitude: Double
+    /// 该目的地的显示名（用户所选/所输）。可选：旧 JSON 无此键 → 解码为 nil（向后兼容），
+    /// 编辑回填时退回 `splitCities` 文本反查。新写入一律带上，使回填无损（不再受文本拆分歧义影响，
+    /// 如「Trinidad and Tobago」被 splitCities 误拆）。
+    var name: String? = nil
 }
 
 // MARK: - TripBundle
@@ -446,50 +450,160 @@ final class TripStore: ObservableObject {
             sections: []
         )
         bundle.reminderConfigs = ReminderPreferences.defaultConfigs
-        // 「输入即解析」路径：用户从检索建议里逐个选定了目的地（含多目的地）→ 已带权威 ISO 国家码 + 坐标，
-        // 在落库前直接写入（随 commit 的 save 一并持久化），跳过文本反解析。地图点亮语言无关、即时。
-        let hasResolved = applyResolvedDestinations(info.resolvedDestinations, to: bundle)
         setDraftTrip(bundle)
         commitDraftTrip()
-        // 仅在「未结构化解析」时回退文本反解析（语言相关、有歧义的逆向映射）。
-        // 已结构化解析的目的地不再调 updateCountryCode（否则会用文本码覆盖权威码）；
-        // 多城市的其余城市由结构化数组直接写入，无需 geocodeMissingTrips 兜底。
-        if !hasResolved, !info.destinationCity.isEmpty {
+        // 目的地：有 chip（创建页一律传整组，含未解析的自由文本 chip）→ 走结构化写入
+        // （保留已选权威码 + 持久化名字 + 仅解析未解析项），跳过整段文本反查。
+        // 无 chip 但有文本（非 chip 调用方，如数据导入构造的 TripInfo）→ 文本反查兜底。
+        if !info.resolvedDestinations.isEmpty {
+            writeDestinations(info.resolvedDestinations, to: bundle.id)
+        } else if !info.destinationCity.isEmpty {
             updateCountryCode(for: bundle.id, city: info.destinationCity)
         }
         return bundle.id
     }
 
-    /// 把「输入即解析」的有序结构化目的地写入 bundle：首项 = 主目的地（countryCode/lat/lon），
-    /// 其余 → additionalDestinations。返回是否实际写入（首项已解析）→ 调用方据此决定是否还需文本兜底。
-    /// 仅当 TripInfo.resolvedDestinations 全部已解析时调用方才会填入（见 TripInfo 注释），
-    /// 故这里只取「首个已解析项」为主，理应即数组首项。
-    @discardableResult
-    private func applyResolvedDestinations(_ destinations: [ResolvedDestination], to bundle: TripBundle) -> Bool {
-        let resolved = destinations.filter { $0.isResolved }
-        guard let primary = resolved.first else { return false }
+    /// 写入一组**有序**目的地（首=主目的地 countryCode/lat/lon，其余 → additionalDestinations，顺序=chips 顺序）：
+    /// - **保留已解析 chip 的权威码**（用户从检索建议选定的 ISO/坐标，绝不被文本反查覆盖）；
+    /// - 未解析 chip 先查本地城市表（同步、即时），仍缺则异步 CLGeocoder 解析、按位回填；
+    /// - 每项持久化显示名（`DestinationEntry.name`），使编辑回填无损（不再依赖 splitCities 文本拆分）。
+    /// chips 为空 → 清空目的地。取代旧的「全或无 + 整段文本反查」（会丢弃用户已选的权威码、且对含分隔词
+    /// 的地名误拆）。
+    func writeDestinations(_ chips: [ResolvedDestination], to tripId: UUID) {
+        guard let bundle = bundle(for: tripId) else { return }
+        guard !chips.isEmpty else {
+            applyEntries([], to: bundle)
+            persist(caller: "writeDestinations_empty")
+            return
+        }
+        // 同步阶段：已解析项保留其码；未解析项先查本地表；仍缺则留占位、记下待异步 geocode。
+        var entries: [DestinationEntry] = []
+        var pending: [(index: Int, name: String)] = []
+        for (index, chip) in chips.enumerated() {
+            if chip.isResolved {
+                entries.append(DestinationEntry(countryCode: chip.countryCode, latitude: chip.latitude, longitude: chip.longitude, name: chip.name))
+            } else if let r = lookupCity(chip.name) {
+                entries.append(DestinationEntry(countryCode: r.code, latitude: r.lat, longitude: r.lon, name: chip.name))
+            } else {
+                entries.append(DestinationEntry(countryCode: "", latitude: 0, longitude: 0, name: chip.name))
+                pending.append((index, chip.name))
+            }
+        }
+        applyEntries(entries, to: bundle)
+        persist(caller: "writeDestinations")
+
+        guard !pending.isEmpty else { return }
+        // 异步阶段：只 geocode 本地表查不到的未解析项，按 index 回填进同一有序列表（不动已解析项）。
+        Task {
+            let geocoder = CLGeocoder()
+            var resolvedPending: [(index: Int, code: String, lat: Double, lon: Double)] = []
+            var geocodedCount = 0
+            for item in pending {
+                if geocodedCount > 0 { try? await Task.sleep(for: .milliseconds(400)) }
+                geocodedCount += 1
+                guard let placemark = try? await geocoder.geocodeAddressString(item.name).first else { continue }
+                let code = placemark.isoCountryCode ?? ""
+                if let loc = placemark.location, loc.coordinate.latitude != 0 {
+                    resolvedPending.append((item.index, code, loc.coordinate.latitude, loc.coordinate.longitude))
+                } else if !code.isEmpty, let centroid = GeocodingData.countryCentroid(for: code) {
+                    resolvedPending.append((item.index, code, centroid.lat, centroid.lon))
+                }
+            }
+            guard !resolvedPending.isEmpty else { return }
+            await MainActor.run {
+                guard let bundle = self.bundle(for: tripId) else { return }
+                // 防竞态：若用户在 geocode 期间又改了目的地（结构/名字变了），放弃本次回填、绝不用陈旧数据覆盖。
+                // 重建当前有序列表（primary + extras），仅回填「仍是当初那个未解析占位」（码空 + 名字一致）的槽位。
+                var current: [DestinationEntry] = [
+                    DestinationEntry(countryCode: bundle.countryCode, latitude: bundle.latitude,
+                                     longitude: bundle.longitude, name: entries.first?.name)
+                ] + bundle.additionalDestinations
+                guard current.count == entries.count else { return }   // 条目数变了 = 已被更新的编辑取代
+                var changed = false
+                for rp in resolvedPending where rp.index < current.count {
+                    let slot = current[rp.index]
+                    let nameMatches = (slot.name ?? "") == (entries[rp.index].name ?? "")
+                    guard slot.countryCode.isEmpty, nameMatches else { continue }
+                    current[rp.index] = DestinationEntry(countryCode: rp.code, latitude: rp.lat,
+                                                         longitude: rp.lon, name: slot.name)
+                    changed = true
+                }
+                guard changed else { return }
+                self.applyEntries(current, to: bundle)
+                self.persist(caller: "writeDestinations_async")
+            }
+        }
+    }
+
+    /// 把有序 DestinationEntry 列表写入 bundle：首=主，其余=additionalDestinations。空 → 清空。
+    private func applyEntries(_ entries: [DestinationEntry], to bundle: TripBundle) {
+        guard let primary = entries.first else {
+            bundle.countryCode = ""
+            bundle.latitude = 0
+            bundle.longitude = 0
+            bundle.additionalDestinations = []
+            return
+        }
         bundle.countryCode = primary.countryCode
         bundle.latitude    = primary.latitude
         bundle.longitude   = primary.longitude
-        bundle.additionalDestinations = resolved.dropFirst().map {
-            DestinationEntry(countryCode: $0.countryCode, latitude: $0.latitude, longitude: $0.longitude)
-        }
-        return true
+        bundle.additionalDestinations = Array(entries.dropFirst())
     }
 
-    /// 编辑页回填用：把既有行程的「目的地文本 + 已存结构化码」重建成有序 chip 数组。
-    /// 显示名取自 `destinationCity` 文本的 splitCities 分词（与写入时同规则、顺序一致），
-    /// 与坐标（主目的地 + additionalDestinations）按位配对；分词多于已存坐标的部分 → 未解析 chip（仅名字，
-    /// 保存时走文本兜底）。无可分词 token 但文本非空 → 单个未解析 chip。
+    private func persist(caller: String) {
+        do { try context.save() } catch {
+            CarryLogger.shared.log(.persistFailed, context: "caller=\(caller)")
+        }
+    }
+
+    /// 编辑页回填用：把既有行程重建成有序 chip 数组。**优先用已持久化的显示名**（无损，不受 splitCities
+    /// 文本拆分歧义影响）；旧行程（additionalDestinations 无 name）退回 splitCities 文本反查。
+    /// - 单目的地（无 extras）：直接用 destinationCity 整串作一个 chip——绝不 splitCities（避免把含分隔词的
+    ///   地名如「Bosnia and Herzegovina」误拆成两个）。
+    /// - 多目的地且 extras 都带 name：用各自 name；主目的地名 = destinationCity 去掉「& 各 extra 名」后缀
+    ///   （组装时用 " & " 拼接，故可逆）；后缀对不上（旧拼接符）则退回 splitCities 首段。
     func resolvedDestinations(forTripId tripId: UUID) -> [ResolvedDestination] {
         guard let trip = trips.first(where: { $0.id == tripId }) else { return [] }
-        let names = splitCities(trip.destinationCity)
+        let city = trip.destinationCity.trimmingCharacters(in: .whitespacesAndNewlines)
+        let extras = trip.additionalDestinations
+
+        // 单目的地：整串作一个 chip，不拆分。
+        if extras.isEmpty {
+            guard !city.isEmpty else { return [] }
+            return [ResolvedDestination(name: city,
+                                        countryCode: trip.countryCode,
+                                        latitude: trip.latitude,
+                                        longitude: trip.longitude)]
+        }
+
+        // 多目的地：优先用持久化的 extra 名字（无损）。
+        let extraNames = extras.map { $0.name }
+        if extraNames.allSatisfy({ ($0 ?? "").isEmpty == false }) {
+            let names = extraNames.map { $0! }
+            let suffix = " & " + names.joined(separator: " & ")
+            let primaryName: String
+            if city.hasSuffix(suffix) {
+                primaryName = String(city.dropLast(suffix.count)).trimmingCharacters(in: .whitespacesAndNewlines)
+            } else {
+                primaryName = splitCities(city).first ?? city
+            }
+            var chips = [ResolvedDestination(name: primaryName,
+                                             countryCode: trip.countryCode,
+                                             latitude: trip.latitude,
+                                             longitude: trip.longitude)]
+            for (name, e) in zip(names, extras) {
+                chips.append(ResolvedDestination(name: name, countryCode: e.countryCode, latitude: e.latitude, longitude: e.longitude))
+            }
+            return chips
+        }
+
+        // 旧行程兜底：splitCities 文本反查、与坐标按位配对。
+        let names = splitCities(city)
         guard !names.isEmpty else {
-            let t = trip.destinationCity.trimmingCharacters(in: .whitespacesAndNewlines)
-            return t.isEmpty ? [] : [ResolvedDestination(name: t)]
+            return city.isEmpty ? [] : [ResolvedDestination(name: city)]
         }
         var coords: [(code: String, lat: Double, lon: Double)] = [(trip.countryCode, trip.latitude, trip.longitude)]
-        coords.append(contentsOf: trip.additionalDestinations.map { ($0.countryCode, $0.latitude, $0.longitude) })
+        coords.append(contentsOf: extras.map { ($0.countryCode, $0.latitude, $0.longitude) })
         return names.enumerated().map { index, name in
             if index < coords.count, !coords[index].code.isEmpty {
                 return ResolvedDestination(name: name,
@@ -837,16 +951,6 @@ final class TripStore: ObservableObject {
         trip.departureDate = info.departureDate
         trip.days = info.isDateless ? 1 : info.durationDays
         trip.dateRange = info.isDateless ? "" : info.dateRangeDisplay
-        // 目的地：优先用「输入即解析」的结构化数组直接写入（语言无关、即时点亮）；
-        // 数组为空（自由文本 / 部分未解析）时退回原逻辑——城市变了就清旧坐标、留给下方文本反查兜底。
-        let appliedStructured = applyResolvedDestinations(info.resolvedDestinations, to: trip)
-        if !appliedStructured, cityChanged {
-            // Clear stale coordinates immediately so the map doesn't show the old location
-            trip.countryCode = ""
-            trip.latitude = 0
-            trip.longitude = 0
-            trip.additionalDestinations = []
-        }
         do {
             try context.save()
         } catch {
@@ -859,9 +963,21 @@ final class TripStore: ObservableObject {
         if trip.remindersEnabled {
             refreshNotifications()
         }
-        // 仅在未结构化解析时才走文本反查（结构化已写权威码，再 updateCountryCode 会用文本码覆盖）。
-        if !appliedStructured, cityChanged, !info.destinationCity.isEmpty {
-            updateCountryCode(for: tripId, city: info.destinationCity)
+        // 目的地码：有 chip（编辑页一律传整组）→ 结构化写入（保留已选权威码 + 持久化名字 + 仅解析未解析项），
+        // 不再整段文本反查（避免覆盖用户已选的权威码）。无 chip 但城市文本变了 → 清旧码 + 文本反查兜底。
+        if !info.resolvedDestinations.isEmpty {
+            writeDestinations(info.resolvedDestinations, to: tripId)
+        } else if cityChanged {
+            if let bundle = bundle(for: tripId) {
+                bundle.countryCode = ""
+                bundle.latitude = 0
+                bundle.longitude = 0
+                bundle.additionalDestinations = []
+                persist(caller: "updateTripInfo_clear")
+            }
+            if !info.destinationCity.isEmpty {
+                updateCountryCode(for: tripId, city: info.destinationCity)
+            }
         }
         // 同步更新日历事件：退回规划中（无日期）→ 删除；否则按当前数据重写。
         if UserDefaults.standard.bool(forKey: "calendar_sync_enabled") {

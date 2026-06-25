@@ -50,23 +50,14 @@ struct EditTripView: View {
         !info.name.trimmingCharacters(in: .whitespaces).isEmpty && hasDestination
     }
 
-    /// chips 显示名 + 残留输入文本 → 与 splitCities 可逆的 destinationCity 字符串（` & ` 拼接、去重）。
-    private var composedDestinationCity: String {
-        var names = destinations.map(\.name)
-        let pending = destinationText.trimmingCharacters(in: .whitespacesAndNewlines)
-        if !pending.isEmpty { names.append(pending) }
-        var seen = Set<String>()
-        var unique: [String] = []
-        for name in names where seen.insert(name.lowercased()).inserted { unique.append(name) }
-        return unique.joined(separator: " & ")
+    /// 全部目的地（chips + 残留输入文本作一个未解析 chip），去重、保持顺序——单一真源。
+    private var allChips: [ResolvedDestination] {
+        DestinationComposer.allChips(destinations, pendingText: destinationText)
     }
 
-    /// 传给 updateTripInfo 的结构化数组：仅当全部 chip 已解析且无残留自由文本才给，否则回落文本路径。
-    private var structuredDestinations: [ResolvedDestination] {
-        let pending = !destinationText.trimmingCharacters(in: .whitespaces).isEmpty
-        guard !pending, !destinations.isEmpty,
-              destinations.allSatisfy({ $0.isResolved }) else { return [] }
-        return destinations
+    /// chips 显示名用 ` & ` 拼接 → destinationCity 字符串真相（与 splitCities 可逆）。
+    private var composedDestinationCity: String {
+        allChips.map(\.name).joined(separator: " & ")
     }
 
     private func hideKeyboard() {
@@ -206,7 +197,7 @@ struct EditTripView: View {
                         hideKeyboard()
                         var out = info
                         out.destinationCity = composedDestinationCity
-                        out.resolvedDestinations = structuredDestinations
+                        out.resolvedDestinations = allChips
                         store.updateTripInfo(tripId: tripId, info: out)
                         CarryLogger.shared.log(.tripEditSaved)
                         UINotificationFeedbackGenerator().notificationOccurred(.success)

@@ -18,6 +18,25 @@ Created: 2026-06-25
   **全部已解析且无残留文本**才走结构化、跳过文本反查，否则回落 `updateCountryCode` 文本路径（全或无，避免半结构化半文本不一致）。
 - 无新增 localization key（复用 `e.g. Florence` 占位 + `common.remove` 无障碍标签）。
 
+## QA 加固（2026-06-26，多角度审查后）
+
+审查发现 3 个真问题（均窄边缘，正常选城路径无误），已根因修复：
+
+1. **回填无损（地名含分隔词不再误拆）**：`DestinationEntry` 加可选 `name`，结构化写入持久化每项显示名；
+   编辑回填 `resolvedDestinations(forTripId:)` 优先用存储名（单目的地用 destinationCity 整串、多目的地
+   用各 extra 名 + 主目的地由「去掉 & 后缀」反推），不再 splitCities 文本反查 → 「Bosnia and Herzegovina」
+   「Trinidad and Tobago」等含分隔词的地名作单一目的地选中后，编辑回填仍是一个 chip。旧行程（extra 无 name）
+   退回 splitCities 兜底。
+2. **保权威码（混合选+输不再丢已选码）**：新增 `writeDestinations(_:to:)` 取代「全或无 + 整段文本反查」——
+   逐 chip 处理：已解析项保留其权威 ISO/坐标（绝不被 CLGeocoder 文本反查覆盖、避免 Naples→Naples FL 误判），
+   未解析项先查本地表、缺则异步 geocode 按位回填（带防竞态守卫：期间用户又改目的地则放弃陈旧回填）。
+   `createTrip`/`updateTripInfo` 改调它。
+3. **去重按名+码**：`DestinationComposer.isDuplicate` = 同名且（同码或任一未解析）→ 自由文本/未解析项与同名项
+   视为重复（不堆叠），但两个**已解析**同名不同国城市（San José CR vs US）保留为两条。
+- 自由文本按**显式标点**（逗号/顿号/斜杠/&/+）拆多个 chip，**不**拆 " and "——粘贴「东京、大阪」→ 两个，
+  含 and 的地名保持整体（`DestinationComposer.splitFreeText`）。
+- 残留（罕见）：多目的地中某个名字本身含「& / 标点」时，旧行程（无存储名）回填仍可能歧义——新写入已带名、无此问题。
+
 关联：[[destination-country-resolve-at-input]]（resolve-at-input，已 Shipped）；本 spec 在其结构化选中基础上把「单目的地」扩成「多目的地」。
 
 ## 背景与根因
