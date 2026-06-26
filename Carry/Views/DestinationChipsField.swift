@@ -72,7 +72,9 @@ struct DestinationChipsField: View {
             .frame(minWidth: 110)
             .frame(height: 30)
             .overlay(alignment: .leading) {
-                if text.isEmpty {
+                // 仅在「整个字段为空」时显示提示：已有 chip 时不再显示 placeholder
+                // （否则它会跟在最后一个目的地 chip 旁、暗示字段为空，与已选目的地矛盾）。
+                if destinations.isEmpty && text.isEmpty {
                     Text(placeholder)
                         .font(.subheadline)
                         .foregroundStyle(.secondary)
