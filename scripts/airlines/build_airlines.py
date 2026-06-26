@@ -1,74 +1,132 @@
 #!/usr/bin/env python3
-# 从 OpenFlights airlines.dat 构建精简 airlines.json（IATA 二字码 → 航司名）。
-# 用途：添加航班时按航班号前缀即时识别航司（MU → China Eastern Airlines）。spec: itinerary-flight-search-first.md。
+# 重建 airlines.json（IATA 二字码 → 航司名 + 多语言名），权威源 = Wikidata 实体自身的 label。
+# spec: itinerary-flight-search-first.md / itinerary-flight-name-localization.md。
 #
-# 裁剪：active=="Y" 且有合法 2 位 IATA 码。
-# 名称策略：英文名也优先 Wikidata（OpenFlights 英文名过时，如 9C 在 OpenFlights 叫 "China SSS"，
-#   实际为 Spring Airlines / 春秋航空）；Wikidata 无 en 时回落 OpenFlights name。多语言名同机场库范式。
-import csv, json, os
+# 为什么是这套方案（2026-06-26 重写，根治旧版数据错误）：
+#   旧版从 OpenFlights airlines.dat 取列表、再按 IATA/ICAO 去 Wikidata「langlink」抓多语言名。
+#   两处都会错：① 同一 IATA 码历史上被多家航司复用（现役/前身/货运子公司/同名废航司），
+#   OpenFlights 的「取首个有 ICAO 的」启发式会选错正主（CA 选成 Dalian、BA 选成 BOAC、
+#   QR 选成 Paraense…）；② langlink 抓取会把译名关联到错的实体（~15% 条目译名指向别的航司）。
+#   ICAO 也并非唯一（前身/子公司共用同一 ICAO），按 ICAO 合并 label 会跨实体污染。
+#
+# 本版做法（唯一可靠口径）：
+#   1. 列出当前 airlines.json 里的 IATA 清单（沿用既有成员集，不擅自增删航司）。
+#   2. 对每个 IATA，查 Wikidata 所有持有该 P229 的航司实体，按「未注销优先 → 维基百科
+#      sitelinks 最多」选**正主单一实体**（sitelinks 强区分 Air China vs 前身/货运/同名小航司）。
+#   3. 取**该单一实体**的多语言 label（绝不跨实体合并 → 无污染）。
+#   4. zh-Hans/zh-Hant 槽无条件过 OpenCC 归一（simp 槽必简、trad 槽必繁），根治繁简泄漏。
+#   5. 英文名缺失时用拉丁语 label（de/es/fr/pt，航司专名通常不翻译）兜底，绝不回退旧错名。
+#   6. 清掉飞不进航班号解析的垃圾码（纯数字 / 非 ASCII）。
+#
+# 依赖：curl（直连 query.wikidata.org）、opencc（pip install opencc-python-reimplemented）。
+# 用法：python3 scripts/airlines/build_airlines.py  → 原地覆写 Carry/Resources/airlines.json。
+import json, subprocess, time, sys, os
+from collections import defaultdict
+from opencc import OpenCC
 
-# OpenFlights airlines.dat 字段：ID,Name,Alias,IATA,ICAO,Callsign,Country,Active
-rows = []
-with open("/tmp/airlines.dat", newline="", encoding="utf-8") as f:
-    for r in csv.reader(f):
-        if len(r) < 8:
-            continue
-        name, _alias, iata, icao, _call, _country, active = r[1], r[2], r[3].strip(), r[4].strip(), r[5], r[6], r[7].strip()
-        if active != "Y":
-            continue
-        iata = iata.upper()
-        # 合法 IATA 航司码 = 2 位字母数字（如 MU / 9C / U2）；排除占位符。
-        if len(iata) != 2 or iata in ("-", "\\N", "N/A") or not iata.isalnum():
-            continue
-        icao = "" if icao in ("", "\\N", "N/A") else icao.upper()
-        rows.append({"iata": iata, "icao": icao, "name": name.strip()})
+REPO = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+OUT = os.path.join(REPO, "Carry/Resources/airlines.json")
+UA = "CarryAirlineAudit/1.0 (murphy.lyu@hotmail.com)"
+LANGS = ["en", "zh-hans", "zh-hant", "zh", "zh-hk", "zh-tw", "de", "es", "fr", "ja", "ko", "pt-br", "pt"]
+LANG_FILTER = ",".join(f'"{l}"' for l in LANGS)
+t2s = OpenCC("t2s").convert
+s2t = OpenCC("s2t").convert
 
-# 同一 IATA 历史上可能被多家复用；保留首个有 ICAO 的活跃条目（OpenFlights 大致按 ID 排序，
-# 早注册的多为现役主航司），无 ICAO 的仅在该 IATA 尚无条目时占位。
-by_iata = {}
-for a in rows:
-    cur = by_iata.get(a["iata"])
-    if cur is None:
-        by_iata[a["iata"]] = a
-    elif not cur["icao"] and a["icao"]:
-        by_iata[a["iata"]] = a
 
-airlines = list(by_iata.values())
+def sparql(query):
+    for attempt in range(3):
+        out = subprocess.run(
+            ["curl", "-s", "--max-time", "120", "-G", "https://query.wikidata.org/sparql",
+             "--data-urlencode", f"query={query}",
+             "-H", "Accept: application/sparql-results+json", "-H", f"User-Agent: {UA}"],
+            capture_output=True, text=True).stdout
+        try:
+            return json.loads(out)["results"]["bindings"]
+        except Exception:
+            time.sleep(3)
+    raise RuntimeError("SPARQL failed after retries")
 
-# 并入 Wikidata 多语言名 nm（含 en）。en 命中则覆盖 OpenFlights name（更准更新）；
-# 其余语言 zh-Hans/zh-Hant/de/es/fr/ja/ko/pt-BR 进 nm，缺失显示回落英文。
-nm_with = 0
-try:
-    names = json.load(open("/tmp/airline_names.json", encoding="utf-8"))
-    for a in airlines:
-        m = names.get(a["iata"]) or (names.get(a["icao"]) if a["icao"] else None)
-        if not m:
-            continue
-        if m.get("en"):
-            a["name"] = m["en"]
-        nm = {k: v for k, v in m.items() if k != "en"}
-        if nm:
-            a["nm"] = nm
-            nm_with += 1
-    print(f"localized names merged: {nm_with}")
-except FileNotFoundError:
-    print("airline_names.json not found — skipping localized names (en from OpenFlights)")
 
-airlines.sort(key=lambda a: a["iata"])
+def valid_iata(code):
+    # 能被 FlightNumberParser 命中的前提：2 位 ASCII 字母数字，且至少含一个 ASCII 字母。
+    return len(code) == 2 and code.isascii() and code.isalnum() and any(c.isalpha() for c in code)
 
-# 不变式硬断言：iata 2 位字母数字、全局唯一（客户端 Airline.id = iata）。
-_iatas = [a["iata"] for a in airlines]
-assert all(len(i) == 2 and i.isalnum() for i in _iatas), "bad IATA airline code present"
-assert len(_iatas) == len(set(_iatas)), "duplicate IATA airline codes present"
-assert all(a["name"] for a in airlines), "airline with empty name present"
 
-out = "/Users/murphy/Documents/Projects/Carry/Carry/Resources/airlines.json"
-os.makedirs(os.path.dirname(out), exist_ok=True)
-with open(out, "w", encoding="utf-8") as f:
-    json.dump(airlines, f, ensure_ascii=False, separators=(",", ":"))
+def main():
+    current = json.load(open(OUT, encoding="utf-8"))
+    inventory = sorted({a["iata"] for a in current if valid_iata(a["iata"])})
+    cur_name = {a["iata"]: a["name"] for a in current}
+    print(f"inventory: {len(inventory)} IATA codes", file=sys.stderr)
 
-total = len(airlines)
-size_kb = os.path.getsize(out) / 1024
-print(f"airlines: {total}  with_localized: {nm_with}  size: {size_kb:.0f} KB")
-print("sample MU:", json.dumps(by_iata.get("MU", {}), ensure_ascii=False))
-print("sample 9C:", json.dumps(by_iata.get("9C", {}), ensure_ascii=False))
+    # 1) 所有 IATA 航司实体的元数据（iata / icao / sitelinks / 是否注销）。
+    meta = sparql("""SELECT ?a ?iata ?icao ?n (BOUND(?dis) AS ?dissolved) WHERE {
+      ?a wdt:P229 ?iata . ?a wikibase:sitelinks ?n .
+      OPTIONAL { ?a wdt:P230 ?icao } OPTIONAL { ?a wdt:P576 ?dis } }""")
+    cands = defaultdict(list)
+    for b in meta:
+        cands[b["iata"]["value"]].append({
+            "qid": b["a"]["value"].rsplit("/", 1)[-1],
+            "icao": b.get("icao", {}).get("value", ""),
+            "n": int(b["n"]["value"]),
+            "dissolved": b["dissolved"]["value"] == "true"})
+
+    # 2) 每个码选正主：未注销优先 → sitelinks 最多。
+    principal = {}
+    for iata in inventory:
+        cs = cands.get(iata)
+        if cs:
+            principal[iata] = max(cs, key=lambda r: (0 if r["dissolved"] else 1, r["n"]))
+    qids = sorted({p["qid"] for p in principal.values()})
+    print(f"principals resolved: {len(principal)} / {len(inventory)}", file=sys.stderr)
+
+    # 3) 取正主实体的多语言 label（逐实体，绝不跨实体合并）。
+    labels = defaultdict(dict)
+    B = 150
+    for i in range(0, len(qids), B):
+        values = " ".join(f"wd:{q}" for q in qids[i:i + B])
+        for b in sparql(f"SELECT ?a ?label WHERE {{ VALUES ?a {{ {values} }} "
+                        f"?a rdfs:label ?label . FILTER(LANG(?label) IN ({LANG_FILTER})) }}"):
+            labels[b["a"]["value"].rsplit("/", 1)[-1]][b["label"]["xml:lang"]] = b["label"]["value"]
+        print(f"  labels {min(i+B, len(qids))}/{len(qids)}", file=sys.stderr)
+        time.sleep(1)
+
+    # 4) 组装。
+    def build_nm(L):
+        zhs = L.get("zh-hans") or L.get("zh-hant") or L.get("zh-hk") or L.get("zh-tw") or L.get("zh")
+        zht = L.get("zh-hant") or L.get("zh-hk") or L.get("zh-tw") or L.get("zh-hans") or L.get("zh")
+        m = {"zh-Hans": t2s(zhs) if zhs else None,   # 无条件归一：simp 槽必简体
+             "zh-Hant": s2t(zht) if zht else None,    # trad 槽必繁体
+             "de": L.get("de"), "es": L.get("es"), "fr": L.get("fr"),
+             "ja": L.get("ja"), "ko": L.get("ko"), "pt-BR": L.get("pt-br") or L.get("pt")}
+        return {k: v for k, v in m.items() if v}
+
+    def en_name(L, fb):
+        if not L:
+            return fb
+        return L.get("en") or L.get("de") or L.get("es") or L.get("fr") or L.get("pt-br") or L.get("pt") or fb
+
+    out = []
+    for iata in inventory:
+        p = principal.get(iata)
+        L = labels.get(p["qid"]) if p else None
+        entry = {"iata": iata, "icao": (p["icao"] if p else ""), "name": en_name(L, cur_name[iata])}
+        if L:
+            nm = build_nm(L)
+            if nm:
+                entry["nm"] = nm
+        out.append(entry)
+    out.sort(key=lambda x: x["iata"])
+
+    # 不变式硬断言（同客户端 Airline.id = iata）。
+    ia = [x["iata"] for x in out]
+    assert all(len(i) == 2 and i.isalnum() for i in ia), "bad IATA code"
+    assert len(ia) == len(set(ia)), "duplicate IATA code"
+    assert all(x["name"] for x in out), "empty name"
+
+    with open(OUT, "w", encoding="utf-8") as f:
+        json.dump(out, f, ensure_ascii=False, separators=(",", ":"))
+    print(f"airlines: {len(out)}  size: {os.path.getsize(OUT)/1024:.0f} KB")
+
+
+if __name__ == "__main__":
+    main()
