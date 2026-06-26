@@ -109,7 +109,7 @@ struct ItemPickerView: View {
     @Environment(\.dismiss) private var dismiss
 
     @State private var searchText = ""
-    @FocusState private var isSearchFocused: Bool
+    @State private var isSearchFocused: Bool = false   // 普通 Bool：CarrySearchField 内部走 UITextField，焦点不能用 @FocusState（见 IMESafeTextField）
     @State private var sourceMode: SourceMode = .preset
     @State private var selectedItems: Set<PickerItemID> = []
     @State private var selectedMyItemIDs: Set<UUID> = []

@@ -44,7 +44,7 @@ struct AirportSearchSheet: View {
 
     @Environment(\.dismiss) private var dismiss
     @StateObject private var model = AirportSearchModel()
-    @FocusState private var searchFocused: Bool
+    @State private var searchFocused: Bool = false   // 普通 Bool：CarrySearchField 内部走 UITextField，焦点不能用 @FocusState（见 IMESafeTextField）
 
     var body: some View {
         NavigationStack {

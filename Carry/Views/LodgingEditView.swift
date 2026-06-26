@@ -383,7 +383,7 @@ struct LodgingSearchSheet: View {
     @State private var isResolving = false
     @State private var route: Route?
     @State private var resolvedPlace: ResolvedPlace?   // 选中并解析后的酒店，供预填表单读取（同航班 result 范式）
-    @FocusState private var searchFocused: Bool
+    @State private var searchFocused: Bool = false   // 普通 Bool：CarrySearchField 内部走 UITextField，焦点不能用 @FocusState（见 IMESafeTextField）
 
     private enum Route: Hashable { case prefilled, manual }
 

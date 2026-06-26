@@ -97,7 +97,7 @@ struct HomeView: View {
     @State private var showAllCountries = false
     @State private var showAllAirports = false
     @State private var searchText = ""
-    @FocusState private var searchFieldFocused: Bool
+    @State private var searchFieldFocused: Bool = false   // 普通 Bool：CarrySearchField 内部走 UITextField，焦点不能用 @FocusState（见 IMESafeTextField）
     /// 点搜索结果时暂存目标行程；在 sheet 真正 dismiss 完成后（onDismiss）再跳转，
     /// 避免在 sheet 关闭动画期间向根 router 压栈（事件驱动，非定时延迟）。
     @State private var pendingSearchTrip: UUID?

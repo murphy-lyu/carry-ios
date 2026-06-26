@@ -374,7 +374,11 @@ extension View {
 struct CarrySearchField<Trailing: View>: View {
     @Binding var text: String
     let placeholder: LocalizedStringKey
-    var focus: FocusState<Bool>.Binding
+    // 焦点真值用普通 Bool 绑定，**不能**用 @FocusState：本字段内部是 IMESafeTextField（UIViewRepresentable，
+    // 自持 UITextField 的 first responder、无法挂 .focused()）。@FocusState 一旦没有 .focused() 视图认领就会
+    // 被 SwiftUI 持续重置为 false，与 UITextField 的真实焦点打架 → 每次重渲染都误 resignFirstResponder（每敲一字
+    // 收键盘）。普通 @State Bool 无此重置语义，desired-state 双向同步即可。调用方对应改 @FocusState → @State。
+    var focus: Binding<Bool>
     @ViewBuilder var trailing: () -> Trailing
 
     @Environment(\.colorScheme) private var colorScheme
@@ -389,7 +393,7 @@ struct CarrySearchField<Trailing: View>: View {
             IMESafeTextField(
                 text: $text,
                 returnKeyType: .search,
-                isFocused: Binding(get: { focus.wrappedValue }, set: { focus.wrappedValue = $0 })
+                isFocused: focus
             )
             .frame(maxWidth: .infinity)
             .overlay(alignment: .leading) {
@@ -434,7 +438,7 @@ extension CarrySearchField where Trailing == EmptyView {
     init(
         text: Binding<String>,
         placeholder: LocalizedStringKey,
-        focus: FocusState<Bool>.Binding
+        focus: Binding<Bool>
     ) {
         self.init(
             text: text,

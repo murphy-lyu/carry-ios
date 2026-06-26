@@ -21,7 +21,9 @@ struct DestinationChipsField: View {
 
     @StateObject private var completer = StopSearchCompleter()
     @State private var isResolving = false
-    @FocusState private var inputFocused: Bool
+    // 普通 Bool：输入框是 IMESafeTextField（自持 UITextField first responder），焦点不能用 @FocusState
+    // （无 .focused() 认领会被 SwiftUI 持续重置为 false → 每敲一字误 resignFirstResponder 收键盘）。
+    @State private var inputFocused: Bool = false
     @Environment(\.colorScheme) private var colorScheme
 
     /// 建议列表显示条件：输入框聚焦、文本非空、有候选、且非解析在途。
@@ -64,7 +66,7 @@ struct DestinationChipsField: View {
                 text: $text,
                 font: .preferredFont(forTextStyle: .subheadline),
                 returnKeyType: .done,
-                isFocused: Binding(get: { inputFocused }, set: { inputFocused = $0 }),
+                isFocused: $inputFocused,
                 onSubmit: { commitFreeText() }
             )
             .frame(minWidth: 110)
