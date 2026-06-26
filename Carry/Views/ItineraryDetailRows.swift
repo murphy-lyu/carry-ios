@@ -419,10 +419,6 @@ struct NoteDetailRow: View {
 struct DetailActionFooter: View {
     let onEdit: () -> Void
     let onDelete: () -> Void
-    /// 可选「提醒此实体」开关：交通/住宿有（收进 ··· 菜单作 Toggle）；地点无 → 传 nil 不显此项。
-    /// 标签复用现有 mute key（如 `notif.mute.transport` / `notif.mute.lodging`），零新增本地化。
-    var reminderLabelKey: String? = nil
-    var reminderOn: Binding<Bool>? = nil
 
     var body: some View {
         // 两个**分离**的悬浮毛玻璃元件（编辑胶囊 + 独立的 ··· 圆，中间留空）——明确是两个按钮，不是「一个胶囊切两半」。
@@ -454,12 +450,6 @@ struct DetailActionFooter: View {
                 // 故「移除」声明在最前 → 落到菜单**最底部**（破坏性动作远离主操作、不易误触，对标 Tripsy）。
                 Button(role: .destructive, action: onDelete) {
                     Label("common.remove", systemImage: "trash")
-                }
-                if let reminderOn, let reminderLabelKey {
-                    Divider()
-                    Toggle(isOn: reminderOn) {
-                        Label(LocalizedStringKey(reminderLabelKey), systemImage: "bell")
-                    }
                 }
             } label: {
                 Image(systemName: "ellipsis")

@@ -56,10 +56,7 @@ struct LodgingDetailView: View {
                 AttachmentDetailCard(attachments: stay.attachments ?? [])
             }
         } footer: {
-            DetailActionFooter(onEdit: { editing = true }, onDelete: deleteStay,
-                               reminderLabelKey: "notif.mute.lodging",
-                               reminderOn: Binding(get: { !stay.remindersMuted },
-                                                   set: { store.setLodgingReminderMuted(tripId: tripId, stayId: stay.id, muted: !$0) }))
+            DetailActionFooter(onEdit: { editing = true }, onDelete: deleteStay)
         }
         .sheet(isPresented: $editing) {
             LodgingEditView(tripId: tripId, stayId: stay.id)

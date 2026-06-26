@@ -189,8 +189,7 @@ struct TransportDetailView: View {
                 AttachmentDetailCard(attachments: segment.attachments ?? [])
             }
         } footer: {
-            DetailActionFooter(onEdit: { editing = true }, onDelete: deleteSegment,
-                               reminderLabelKey: reminderMenuKey, reminderOn: reminderBinding)
+            DetailActionFooter(onEdit: { editing = true }, onDelete: deleteSegment)
         }
         .sheet(isPresented: $editing) {
             TransportEditView(tripId: tripId, segmentId: segment.id)
@@ -564,19 +563,6 @@ struct TransportDetailView: View {
         if !segment.note.isEmpty {
             DetailRowGroup(rows: [AnyView(NoteDetailRow(text: segment.note))])
         }
-    }
-
-    /// 「提醒此段」收进底部动作条的 ··· 菜单（替代原 muteCard 卡）：仅当此段有时刻（可能产生提醒）时才提供。
-    /// 开关「接收提醒」开=不静音；关=静音此段，不随全局规则提醒（spec: notification-center.md）。
-    private var reminderApplicable: Bool { segment.departLocalMinutes >= 0 || segment.arriveLocalMinutes >= 0 }
-    private var reminderMenuKey: String? {
-        guard reminderApplicable else { return nil }
-        return segment.mode == .carRental ? "notif.mute.carrental" : "notif.mute.transport"
-    }
-    private var reminderBinding: Binding<Bool>? {
-        guard reminderApplicable else { return nil }
-        return Binding(get: { !segment.remindersMuted },
-                       set: { store.setTransportReminderMuted(tripId: tripId, segmentId: segment.id, muted: !$0) })
     }
 
     // 底部动作（编辑 + 移除）已统一收到 `DetailActionFooter`。

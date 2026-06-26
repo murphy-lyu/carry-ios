@@ -1865,26 +1865,6 @@ final class TripStore: ObservableObject {
         refreshNotifications()
     }
 
-    /// 设/取消此交通段的通知静音（spec: notification-center.md）。即时生效 + 重排该行程。
-    func setTransportReminderMuted(tripId: UUID, segmentId: UUID, muted: Bool) {
-        guard let trip = trips.first(where: { $0.id == tripId }),
-              let seg = trip.safeItineraryDays.flatMap({ $0.segments ?? [] }).first(where: { $0.id == segmentId }) else { return }
-        seg.remindersMuted = muted
-        save()
-        CarryLogger.shared.log(.reminderMutedToggled, context: "kind=transport muted=\(muted)")
-        refreshNotifications()
-    }
-
-    /// 设/取消此住宿的通知静音。即时生效 + 重排该行程。
-    func setLodgingReminderMuted(tripId: UUID, stayId: UUID, muted: Bool) {
-        guard let trip = trips.first(where: { $0.id == tripId }),
-              let stay = (trip.lodgingStays ?? []).first(where: { $0.id == stayId }) else { return }
-        stay.remindersMuted = muted
-        save()
-        CarryLogger.shared.log(.reminderMutedToggled, context: "kind=lodging muted=\(muted)")
-        refreshNotifications()
-    }
-
     // MARK: - 费用记录（spec: itinerary-cost-tracking.md）
 
     /// 单一写入漏斗：写费用并就地捕获本位币快照。`currencyCode` 为空 = 清除费用。

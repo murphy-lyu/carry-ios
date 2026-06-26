@@ -188,7 +188,6 @@ enum NotificationManager {
 
     private static func collectTransport(_ trip: TripBundle, now: Date, into out: inout [Candidate]) {
         for seg in trip.safeItineraryDays.flatMap({ $0.sortedSegments }) {
-            guard !seg.remindersMuted else { continue }   // 逐段静音
             let isCar = seg.mode == .carRental
             guard (isCar ? ReminderPreferences.carRentalEnabled : ReminderPreferences.transportEnabled) else { continue }
             let leads = isCar ? ReminderPreferences.carRentalLeadsMinutes : ReminderPreferences.transportLeadsMinutes
@@ -218,7 +217,6 @@ enum NotificationManager {
     private static func collectLodging(_ trip: TripBundle, now: Date, into out: inout [Candidate]) {
         guard ReminderPreferences.lodgingEnabled else { return }
         for stay in trip.safeLodgingStays {
-            guard !stay.remindersMuted else { continue }   // 逐条静音
             // 只提醒「退房」（入住用户不会忘）。退房当天清晨固定时刻触发（晨间唤醒，非提前量倒计时）。
             // 用酒店所在地时区（缺失回退行程主时区）——修掉原 tzId:"" 按设备时区算、跨时区错点触发的 bug。
             let tzId = stay.effectiveTimeZoneId(trip: trip)

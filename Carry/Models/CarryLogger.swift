@@ -46,7 +46,6 @@ final class CarryLogger {
         case reminderAdded          = "reminder_added"
         case reminderDeleted        = "reminder_deleted"
         case reminderPermissionDenied = "reminder_permission_denied"
-        case reminderMutedToggled   = "reminder_muted_toggled"   // 逐事件静音（spec: notification-center.md）
         // 应用图标
         case iconSwitched           = "icon_switched"
         case iconSwitchFailed       = "icon_switch_failed"
