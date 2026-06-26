@@ -151,25 +151,12 @@ struct CarryApp: App {
     /// 相位槽随相位变脸（旅行中=今天的行程 / 出发前=Nearest Trip）+ 带数据副标题（行程名优先）；
     /// 无可展示行程时省略相位槽。挂在 App 生命周期 + 冷启动 trips 加载点刷新。
     static func refreshQuickActions(trips: [TripBundle]) {
-        // 数组首 = 显示最底：My Trip Book（回顾）。
-        var items: [UIApplicationShortcutItem] = [
-            UIApplicationShortcutItem(
-                type: CarryQuickAction.tripBook,
-                localizedTitle: NSLocalizedString("home.tripbook.title", comment: "Quick action title"),
-                localizedSubtitle: nil,
-                icon: UIApplicationShortcutIcon(systemImageName: "book.closed"),
-                userInfo: nil
-            ),
-            UIApplicationShortcutItem(
-                type: CarryQuickAction.newTrip,
-                localizedTitle: NSLocalizedString("New Trip", comment: "Quick action title"),
-                localizedSubtitle: nil,
-                icon: UIApplicationShortcutIcon(systemImageName: "plus.circle"),
-                userInfo: nil
-            )
-        ]
+        // 排序原则：iOS 把 `数组[0]` 固定贴着 App 图标（菜单朝远离图标方向展开），视觉上下会随图标在屏幕
+        // 上/下半区翻转、无法锁死。唯一恒定的是「数组[0] 永远离图标最近、最好按」。故把最该一步直达的
+        // 「当前/最近行程」放数组首位，其后 New Trip，最后 My Trip Book（回顾、最不紧急、离图标最远）。
+        var items: [UIApplicationShortcutItem] = []
 
-        // 数组末 = 显示最顶：相位槽（当前/最近的行程）。
+        // 数组[0] = 相位槽（当前/最近行程），永远最易点；没有任何行程时省略此格。
         if let target = QuickActionTarget.resolve(trips: trips) {
             let title: String
             let subtitle: String
@@ -204,6 +191,22 @@ struct CarryApp: App {
                 userInfo: nil
             ))
         }
+
+        // 静态项排相位槽之后：New Trip，最后 My Trip Book。
+        items.append(UIApplicationShortcutItem(
+            type: CarryQuickAction.newTrip,
+            localizedTitle: NSLocalizedString("New Trip", comment: "Quick action title"),
+            localizedSubtitle: nil,
+            icon: UIApplicationShortcutIcon(systemImageName: "plus.circle"),
+            userInfo: nil
+        ))
+        items.append(UIApplicationShortcutItem(
+            type: CarryQuickAction.tripBook,
+            localizedTitle: NSLocalizedString("home.tripbook.title", comment: "Quick action title"),
+            localizedSubtitle: nil,
+            icon: UIApplicationShortcutIcon(systemImageName: "book.closed"),
+            userInfo: nil
+        ))
 
         UIApplication.shared.shortcutItems = items
     }
