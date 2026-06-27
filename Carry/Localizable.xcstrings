@@ -58134,55 +58134,55 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Periodenbewusstes Packen"
+            "value" : "Hinweise für die Reise"
           }
         },
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Period-aware packing"
+            "value" : "Period travel tips"
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Equipaje según tu periodo"
+            "value" : "Consejos de viaje menstrual"
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Bagages selon vos règles"
+            "value" : "Conseils voyage cycle"
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "生理を考慮した持ち物"
+            "value" : "生理期間の旅行ヒント"
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "생리 기간 짐 챙기기"
+            "value" : "생리 여행 팁"
           }
         },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Mala ciente da menstruação"
+            "value" : "Dicas de viagem menstrual"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "经期打包提醒"
+            "value" : "经期随行提示"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "生理期打包提醒"
+            "value" : "經期隨行提示"
           }
         }
       }
