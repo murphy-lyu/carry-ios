@@ -390,9 +390,10 @@ struct LinkDetailRow: View {
     }
 }
 
-/// 备注行：图标 + 「备注」标签 + 可点击链接/电话的文本（UITextView dataDetector）。
+/// 备注行：图标 + 「备注」标签 + 可点击链接/电话的文本，长按整段复制（与其他可复制行一致）。
 struct NoteDetailRow: View {
     let text: String
+    @Environment(\.carryCopyToast) private var showToast
 
     var body: some View {
         HStack(alignment: .top, spacing: 12) {
@@ -403,44 +404,70 @@ struct NoteDetailRow: View {
             VStack(alignment: .leading, spacing: 2) {
                 Text("itinerary.transport.field.note")
                     .font(.system(.caption, design: .rounded)).foregroundStyle(.secondary)
-                LinkAwareText(text: text)
+                LinkAwareText(text: text, onLongPress: copyAll)
             }
             .frame(maxWidth: .infinity, alignment: .leading)
         }
         .padding(.vertical, 11)
+        // VoiceOver「拷贝」自定义动作（长按对旁白不可达，靠它兜底）。
+        .accessibilityAction(named: Text("itinerary.detail.copy_action")) { copyAll() }
+    }
+
+    private func copyAll() {
+        guard !text.isEmpty else { return }
+        UIPasteboard.general.string = text
+        UIImpactFeedbackGenerator(style: .light).impactOccurred()
+        showToast(NSLocalizedString("itinerary.stop.detail.address_copied", comment: ""))
     }
 }
 
-/// 可点击链接和电话号码的只读文本视图。
-/// UITextView + dataDetectorTypes 是 iOS 原生检测 URL/电话的可靠方案（Mail/Notes/Safari 同款）。
-/// 链接/电话自动着色为 tintColor（CarryAccent），其余文本保持 label 色。
+/// 可点击链接和电话号码的只读文本视图，支持长按全文复制回调。
+/// - isSelectable = false：避免 UIKit 系统选择菜单与 Toast 复制冲突；data detector 点击不依赖 isSelectable。
+/// - UILongPressGestureRecognizer：直接挂在 UITextView 上，SwiftUI .onLongPressGesture 无法穿透 UIKit 视图。
 private struct LinkAwareText: UIViewRepresentable {
     let text: String
+    var onLongPress: (() -> Void)? = nil
+
+    func makeCoordinator() -> Coordinator { Coordinator() }
 
     func makeUIView(context: Context) -> UITextView {
         let tv = UITextView()
         tv.isEditable = false
-        tv.isSelectable = true
+        tv.isSelectable = false   // 关闭选择：data detector 点击不受影响，长按由我们自己处理。
         tv.dataDetectorTypes = [.link, .phoneNumber]
         tv.backgroundColor = .clear
         tv.textContainerInset = .zero
         tv.textContainer.lineFragmentPadding = 0
         tv.setContentCompressionResistancePriority(.required, for: .vertical)
         tv.setContentHuggingPriority(.required, for: .vertical)
-        // 去掉 UITextView 默认的滚动（高度由 intrinsicContentSize 撑开，父 VStack 自然包裹）。
         tv.isScrollEnabled = false
+
+        let lp = UILongPressGestureRecognizer(target: context.coordinator,
+                                               action: #selector(Coordinator.handleLongPress(_:)))
+        tv.addGestureRecognizer(lp)
+        context.coordinator.textView = tv
         return tv
     }
 
     func updateUIView(_ tv: UITextView, context: Context) {
+        context.coordinator.onLongPress = onLongPress
         let uiFont = UIFont.preferredFont(forTextStyle: .subheadline)
         let attrs: [NSAttributedString.Key: Any] = [
             .font: uiFont,
             .foregroundColor: UIColor.label,
         ]
         tv.attributedText = NSAttributedString(string: text, attributes: attrs)
-        // tintColor 驱动链接/电话颜色（dataDetector 自动着色）。
         tv.tintColor = UIColor(CarryAccent.color)
+    }
+
+    class Coordinator: NSObject {
+        var onLongPress: (() -> Void)?
+        weak var textView: UITextView?
+
+        @objc func handleLongPress(_ gr: UILongPressGestureRecognizer) {
+            guard gr.state == .began else { return }
+            onLongPress?()
+        }
     }
 }
 
