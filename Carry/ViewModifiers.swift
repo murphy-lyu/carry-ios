@@ -466,9 +466,15 @@ struct IMESafeTextField: UIViewRepresentable {
     /// 可选：与 SwiftUI `@FocusState` / `Bool` 焦点双向桥接（UIViewRepresentable 无法直接用 `.focused`）。
     var isFocused: Binding<Bool>? = nil
     var onSubmit: (() -> Void)? = nil
+    /// 可选：输入框**为空时**按退格键触发（UIKit `deleteBackward` 文档钩子）。用于 token/chip 字段
+    /// 「空着按退格删除上一个 chip」的原生交互（如目的地多选）；普通字段不传、行为不变。
+    var onDeleteBackwardWhenEmpty: (() -> Void)? = nil
 
     func makeUIView(context: Context) -> UITextField {
-        let tf = UITextField()
+        let tf = BackspaceObservingTextField()
+        tf.onDeleteBackwardWhenEmpty = { [weak coordinator = context.coordinator] in
+            coordinator?.parent.onDeleteBackwardWhenEmpty?()
+        }
         tf.delegate = context.coordinator
         tf.addTarget(context.coordinator, action: #selector(Coordinator.editingChanged(_:)), for: .editingChanged)
         tf.borderStyle = .none
@@ -531,6 +537,19 @@ struct IMESafeTextField: UIViewRepresentable {
             tf.resignFirstResponder()
             return true
         }
+    }
+}
+
+/// `UITextField` 子类：重写 `deleteBackward()`（`UIKeyInput` 文档钩子，退格的唯一可靠入口——
+/// 字段为空时退格不产生字符变化，`shouldChangeCharactersIn` 不触发，故必须在此截获）。
+/// 仅当当前文本为空时回调，交由上层删除上一个 chip；非空时不回调，正常删字符。
+private final class BackspaceObservingTextField: UITextField {
+    var onDeleteBackwardWhenEmpty: (() -> Void)?
+
+    override func deleteBackward() {
+        let wasEmpty = (text ?? "").isEmpty
+        super.deleteBackward()
+        if wasEmpty { onDeleteBackwardWhenEmpty?() }
     }
 }
 

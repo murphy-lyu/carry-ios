@@ -67,7 +67,8 @@ struct DestinationChipsField: View {
                 font: .preferredFont(forTextStyle: .subheadline),
                 returnKeyType: .done,
                 isFocused: $inputFocused,
-                onSubmit: { commitFreeText() }
+                onSubmit: { commitFreeText() },
+                onDeleteBackwardWhenEmpty: { removeLastChip() }
             )
             .frame(minWidth: 110)
             .frame(height: 30)
@@ -228,6 +229,13 @@ struct DestinationChipsField: View {
     /// 删除一个 chip；删首项时其后一项靠数组顺序自动晋升为主目的地，无需额外逻辑。
     private func removeChip(_ dest: ResolvedDestination) {
         destinations.removeAll { $0.id == dest.id }
+    }
+
+    /// 输入框为空时按退格：删除最后一个 chip（iOS token field 标准交互，如邮件收件人栏）。
+    /// 仅在确有 chip 时动作——空字段空 chip 的退格无副作用。
+    private func removeLastChip() {
+        guard !destinations.isEmpty else { return }
+        destinations.removeLast()
     }
 }
 
