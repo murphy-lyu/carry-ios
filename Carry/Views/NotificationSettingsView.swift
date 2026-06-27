@@ -16,7 +16,7 @@ struct NotificationSettingsView: View {
     // 打包进度（A）
     @AppStorage(ReminderPreferences.packProgressEnabledKey) private var packEnabled = true
     @AppStorage(ReminderPreferences.packProgressOffsetKey) private var packOffsetDays = 1
-    @AppStorage(ReminderPreferences.packMinutesKey) private var packMinutes = 1260  // 21:00 独立时间
+    @AppStorage(ReminderPreferences.packMinutesKey) private var packMinutes = 1200  // 20:00 独立时间
     // 交通（B）
     @AppStorage(ReminderPreferences.transportEnabledKey) private var transportEnabled = true
     @AppStorage(ReminderPreferences.transportLeadsKey) private var transportLeadsRaw = "180"
