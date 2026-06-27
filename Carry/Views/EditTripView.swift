@@ -244,16 +244,29 @@ struct EditTripView: View {
         text: Binding<String>,
         focus: FocusField
     ) -> some View {
-        // 原生占位符（UITextField 自渲染）：有 marked text（输入法预编辑态）即隐藏，且不像
-        // 「if isEmpty 显隐 Text 叠层」那样在选词提交时增删视图树——后者会打断输入法提交，
-        // 导致中文（如微信输入法）选词后内容丢失、预编辑态与占位符叠加。样式与原叠层一致。
-        TextField(placeholder, text: text)
-            .font(.subheadline)
-            .tint(.primary)
-            .focused($focusedField, equals: focus)
-            .textFieldStyle(.plain)
+        // 用 IMESafeTextField（替代原生 TextField）：与目的地字段同款，修复微信等第三方输入法
+        // 选词上屏后 text binding 不更新的缺陷（见 ViewModifiers.swift 的 IMESafeTextField）。
+        // 占位符由 SwiftUI overlay 渲染、空文本时显示，颜色用 .secondary，与目的地/搜索框统一。
+        IMESafeTextField(
+            text: text,
+            font: .preferredFont(forTextStyle: .subheadline),
+            returnKeyType: .done,
+            isFocused: Binding(
+                get: { focusedField == focus },
+                set: { focusedField = $0 ? focus : nil }
+            )
+        )
             .frame(height: 44)
             .padding(.horizontal, 12)
+            .overlay(alignment: .leading) {
+                if text.wrappedValue.isEmpty {
+                    Text(placeholder)
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                        .padding(.horizontal, 12)
+                        .allowsHitTesting(false)
+                }
+            }
             .background(Color(UIColor.systemBackground).opacity(0.66))
             .overlay(
                 RoundedRectangle(cornerRadius: 12, style: .continuous)
