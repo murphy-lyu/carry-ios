@@ -578,7 +578,8 @@ struct ItineraryView: View {
         }
         // 住宿按当天角色注入主脊（spec 增补 2026-06-20）：入住日=入住（按入住时间就位、默认置末——
         // 当天玩完才回来 check in）；退房日=退房（按退房时间就位、默认置首——早上离店）；
-        // 整中间日=出发（晨起，置首）+ 过夜（夜归，置末）。空中间日（无其它事项）只留「过夜」一条，避免两条相邻。
+        // 中间日：当天有地点时才注入「出发（置首）」+「返回（置末）」，让用户看到酒店→首站和末站→酒店的距离；
+        // 当天一个地点也没有（纯休息日）则两者都不显——出发/返回失去距离锚点、单独出现只会让用户困惑。
         var departs: [ItineraryRowID] = []   // 置首
         var overnights: [ItineraryRowID] = []// 置末
         for stay in (stays ?? bundle?.safeLodgingStays ?? [])
@@ -593,8 +594,8 @@ struct ItineraryView: View {
                 var idx = 0
                 if m >= 0, let found = timed.firstIndex(where: { $0.minutes >= 0 && $0.minutes > m }) { idx = found }
                 timed.insert((.lodging(stay: stay.id, day: day.sortOrder, role: .checkout), m), at: idx)
-            } else {
-                if !timed.isEmpty { departs.append(.lodging(stay: stay.id, day: day.sortOrder, role: .depart)) }
+            } else if !timed.isEmpty {
+                departs.append(.lodging(stay: stay.id, day: day.sortOrder, role: .depart))
                 overnights.append(.lodging(stay: stay.id, day: day.sortOrder, role: .overnight))
             }
         }
