@@ -503,13 +503,12 @@ struct DetailActionFooter: View {
                 .foregroundStyle(CarryAccent.color)
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, 15)
-                .background {
-                    // 阴影直接投给 Capsule shape，天然胶囊形，不需要 compositingGroup 中转。
-                    // compositingGroup + shadow 的旧方案在 Menu/Button 收起动画瞬间会出现矩形残影（一帧不同步）。
-                    Capsule().fill(.thickMaterial)
-                        .shadow(color: Color.carryCardShadow, radius: 16, x: 0, y: 6)
-                }
+                // clipShape 在 SwiftUI 渲染树里建立新的渲染边界，shadow 从裁剪后的像素（胶囊形）计算，
+                // 得到胶囊形阴影。.fill(.thickMaterial) 方案中 shadow 从 CALayer 矩形 bounds 计算 → 方形阴影。
+                .background(.thickMaterial)
+                .clipShape(Capsule())
                 .overlay(Capsule().strokeBorder(Color.primary.opacity(0.07), lineWidth: 0.5))
+                .shadow(color: Color.carryCardShadow, radius: 16, x: 0, y: 6)
                 .contentShape(Capsule())
             }
             .buttonStyle(.plain)
@@ -539,11 +538,10 @@ struct DetailActionFooter: View {
                     .font(.system(size: 17, weight: .semibold))
                     .foregroundStyle(.secondary)
                     .frame(width: 52, height: 52)
-                    .background {
-                        Circle().fill(.thickMaterial)
-                            .shadow(color: Color.carryCardShadow, radius: 16, x: 0, y: 6)
-                    }
+                    .background(.thickMaterial)
+                    .clipShape(Circle())
                     .overlay(Circle().strokeBorder(Color.primary.opacity(0.07), lineWidth: 0.5))
+                    .shadow(color: Color.carryCardShadow, radius: 16, x: 0, y: 6)
                     .contentShape(Circle())
             }
             .accessibilityLabel(Text("common.more"))
