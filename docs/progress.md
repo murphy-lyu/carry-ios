@@ -3,6 +3,17 @@
 ## 最后更新
 2026-06-27
 
+## 上次改动摘要（Settings 多项默认值 + 文案优化 · 2026-06-27）
+
+> 单会话、无并行。**全部已提交并 push 到 origin/main**。无 UI 结构改动，均为默认值或文案调整。
+
+- **取消创建行程弹窗文案（`b7dca76`）**：确认弹窗保留（`hasDraft` 有草稿才触发，符合 Apple 新建表单范式）；两个按钮 9 语全部更新：`放弃更改 → 放弃行程`、`继续编辑 → 继续行程`（key: `tripinfo.discard.confirm` / `tripinfo.discard.keep`，仅 `TripInfoView` 使用，不影响编辑页）。
+- **打包提醒默认开（`b7dca76`）**：`packEnabled = false → true`。核心功能对齐出发/交通/天气提醒，一并默认开。
+- **退房提醒默认时间 9:00 → 11:00（`055e7df`）**：国际连锁酒店标准退房时间为 11:00，9:00 过早。`lodgingCheckOutMin = 540 → 660`。
+- **打包提醒默认时间 21:00 → 20:00（`debd235`）**：`packMinutes = 1260 → 1200`。
+- **打包 Live Activity 默认开（`37e2ec4`）**：灵动岛/锁屏打包进度是核心功能门面，与交通 LA 对齐同为默认开。`isEnabled = false → true`。
+- **「经期打包提醒」→「经期随行提示」（`b7fd073`）**：功能本质是行程与经期重叠时的场景推荐（非通知），「随行提示」更准确；9 语同步更新。
+
 ## 上次改动摘要（创建/编辑行程：placeholder 颜色统一 + 退格删 chip + 键盘焦点回归修 · 2026-06-27）
 
 > 单会话、无并行。**编译绿**；**已提交并 push 到 origin/main**（`2db4963` EditTripView placeholder + `616d28f` 焦点回归修 + `5e93a6a` TripInfoView placeholder + 退格删 chip）。**真机验收通过**。
