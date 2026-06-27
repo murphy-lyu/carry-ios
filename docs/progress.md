@@ -1,7 +1,26 @@
 # 项目进度
 
 ## 最后更新
-2026-06-26
+2026-06-27
+
+## 上次改动摘要（创建/编辑行程：placeholder 颜色统一 + 退格删 chip + 键盘焦点回归修 · 2026-06-27）
+
+> 单会话、无并行。**编译绿**；**已提交并 push 到 origin/main**（`2db4963` EditTripView placeholder + `616d28f` 焦点回归修 + `5e93a6a` TripInfoView placeholder + 退格删 chip）。**真机验收通过**。
+
+**一、行程名称 placeholder 颜色统一（`2db4963` / `5e93a6a`）**
+- **现象**：创建/编辑行程界面，「行程名称」placeholder 比「目的地城市」明显更暗，颜色不一致。
+- **根因**：创建页 `TripInfoView.stableField`（编辑页 `EditTripView.stableField` 同款）用裸原生 `TextField`，placeholder 由 iOS 系统以 `.placeholderText` 灰自渲染；目的地字段 `DestinationChipsField` 走 `IMESafeTextField` + SwiftUI overlay `.secondary`，两者颜色不同。
+- **修法**：两个 `stableField` 均改为 `IMESafeTextField` + `.secondary` overlay placeholder，与目的地/搜索框全 App 统一。
+- **注意**：创建页是 `TripInfoView`、编辑页是 `EditTripView`，两个文件各有独立的 `stableField`，须两处都改。
+
+**二、键盘每敲一字就收起（焦点回归，`616d28f`）**
+- **根因**：将 `stableField` 改为 `IMESafeTextField` 时，焦点 binding 错误地桥回了 `@FocusState`——而 `IMESafeTextField` 持有 `UITextField`、无法挂 `.focused()`，`@FocusState` 因无所有者被 SwiftUI 持续重置为 false → 每敲一字触发重渲染 → `updateUIView` 误调 `resignFirstResponder()` → 键盘收起，**所有输入法**均受影响。此为 commit `a24cd03` 记录过、已有正解的反模式。
+- **修法**：`TripInfoView` / `EditTripView` 的焦点改为普通 `@State Bool nameFieldFocused`（对齐 a24cd03），删除只含单 case 的 `FocusField` 枚举，`stableField` 去掉 `focus` 参数。
+- **全仓审计**：所有 4 个 `IMESafeTextField` 调用点 + 6 个 `CarrySearchField` 调用点均已确认使用 `@State Bool`；唯一剩余的 `@FocusState`（`ItemPickerView.renameFocused`）是原生 TextField + `.focused()`，正确用法。
+
+**三、目的地输入框：退格删除最后一个 chip（`5e93a6a`）**
+- **交互**：目的地输入框为空时按退格键 → 删除最后一个已选 chip（iOS token field 标准交互，同邮件收件人栏）。
+- **实现**：在 `ViewModifiers.swift` 新增 `BackspaceObservingTextField: UITextField` 子类，重写 `deleteBackward()`（UIKit 文档钩子，字段为空时退格不产生字符变化，`shouldChangeCharactersIn` 不触发，必须在此截获）；`IMESafeTextField` 增加可选 `onDeleteBackwardWhenEmpty` 回调；`DestinationChipsField` 接回调调用 `removeLastChip()`。
 
 ## 上次改动摘要（微信输入法选词不触发检索·根因修 + 花费空态居中 · 2026-06-26）
 
