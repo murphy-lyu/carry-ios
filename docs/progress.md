@@ -3,6 +3,18 @@
 ## 最后更新
 2026-06-27
 
+## 上次改动摘要（事件详情 ··· 菜单快速备注/费用入口 · 2026-06-27）
+
+> 单会话、无并行。**全部已提交并 push 到 origin/main**。spec: `specs/quick-note-cost-menu.md`
+
+- **QuickNoteSheet（`c012f86`）**：新建轻量备注编辑 sheet。medium/large detent，TextEditor 自动聚焦，dismiss 即保存（iOS Notes 范式，无 Cancel）。
+- **QuickCostSheet（`c012f86`）**：新建轻量费用录入 sheet。medium detent 固定，大数字显示 + numpad 自动弹出，货币选择胶囊复用现有 CurrencyPickerView，dismiss 即保存。
+- **DetailActionFooter 扩展（`c012f86`）**：加 `onNote`/`onCost` 可选回调和 `hasNote`/`hasCost` 状态参数。··· 菜单新增「添加备注」「记录费用」两项（位于「移除」之上）。nil 传参时菜单项不显示（CalendarEventDetailView 不受影响）。
+- **三处调用接入（`c012f86`）**：TransportDetailView / LodgingDetailView / StopDetailView（ItineraryView 内）均接入两个 sheet 和对应 store 调用。
+- **动态菜单文案（`3d53ac6`）**：已有内容时自动切换：`添加备注 → 编辑备注`、`记录费用 → 编辑费用`。9 语同步。
+- **长按方案决策**：调研确认 ItineraryReorderCollection 在常态下也挂有 UILongPressGestureRecognizer（0.4s），与 SwiftUI .contextMenu 长按会产生手势冲突，放弃长按入口。
+- **Tripsy 图标行方案决策**：裸图标行可见性好但可理解性差；Carry 维持现有 ··· 菜单方案，Edit 大胶囊保持主操作视觉重心不稀释。
+
 ## 上次改动摘要（Settings 多项默认值 + 文案优化 · 2026-06-27）
 
 > 单会话、无并行。**全部已提交并 push 到 origin/main**。无 UI 结构改动，均为默认值或文案调整。
