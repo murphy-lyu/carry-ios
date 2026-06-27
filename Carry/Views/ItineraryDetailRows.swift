@@ -503,11 +503,13 @@ struct DetailActionFooter: View {
                 .foregroundStyle(CarryAccent.color)
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, 15)
-                .background(.thickMaterial, in: Capsule())
+                .background {
+                    // 阴影直接投给 Capsule shape，天然胶囊形，不需要 compositingGroup 中转。
+                    // compositingGroup + shadow 的旧方案在 Menu/Button 收起动画瞬间会出现矩形残影（一帧不同步）。
+                    Capsule().fill(.thickMaterial)
+                        .shadow(color: Color.carryCardShadow, radius: 16, x: 0, y: 6)
+                }
                 .overlay(Capsule().strokeBorder(Color.primary.opacity(0.07), lineWidth: 0.5))
-                // compositingGroup 先把「毛玻璃 + 描边」拍平成一层，阴影才按胶囊真实轮廓投、不露方形残影。
-                .compositingGroup()
-                .shadow(color: Color.carryCardShadow, radius: 16, x: 0, y: 6)
                 .contentShape(Capsule())
             }
             .buttonStyle(.plain)
@@ -537,11 +539,11 @@ struct DetailActionFooter: View {
                     .font(.system(size: 17, weight: .semibold))
                     .foregroundStyle(.secondary)
                     .frame(width: 52, height: 52)
-                    .background(.thickMaterial, in: Circle())
+                    .background {
+                        Circle().fill(.thickMaterial)
+                            .shadow(color: Color.carryCardShadow, radius: 16, x: 0, y: 6)
+                    }
                     .overlay(Circle().strokeBorder(Color.primary.opacity(0.07), lineWidth: 0.5))
-                    // compositingGroup 拍平后阴影按圆形真实轮廓投，消除方形残影。
-                    .compositingGroup()
-                    .shadow(color: Color.carryCardShadow, radius: 16, x: 0, y: 6)
                     .contentShape(Circle())
             }
             .accessibilityLabel(Text("common.more"))
