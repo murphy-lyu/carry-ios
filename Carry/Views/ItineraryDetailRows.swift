@@ -423,6 +423,10 @@ struct DetailActionFooter: View {
     var onNote: (() -> Void)? = nil
     /// nil = 不在 ··· 菜单里显示此项。
     var onCost: (() -> Void)? = nil
+    /// 已有备注时菜单文案切为「编辑备注」。
+    var hasNote: Bool = false
+    /// 已有费用时菜单文案切为「编辑费用」。
+    var hasCost: Bool = false
 
     var body: some View {
         // 两个**分离**的悬浮毛玻璃元件（编辑胶囊 + 独立的 ··· 圆，中间留空）——明确是两个按钮，不是「一个胶囊切两半」。
@@ -456,12 +460,14 @@ struct DetailActionFooter: View {
                 }
                 if let onCost {
                     Button(action: onCost) {
-                        Label("itinerary.menu.record_cost", systemImage: "creditcard")
+                        Label(hasCost ? "itinerary.menu.edit_cost" : "itinerary.menu.record_cost",
+                              systemImage: "creditcard")
                     }
                 }
                 if let onNote {
                     Button(action: onNote) {
-                        Label("itinerary.menu.add_note", systemImage: "note.text")
+                        Label(hasNote ? "itinerary.menu.edit_note" : "itinerary.menu.add_note",
+                              systemImage: "note.text")
                     }
                 }
             } label: {

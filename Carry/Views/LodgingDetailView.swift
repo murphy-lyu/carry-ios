@@ -62,7 +62,9 @@ struct LodgingDetailView: View {
                 onEdit: { editing = true },
                 onDelete: deleteStay,
                 onNote: { showQuickNote = true },
-                onCost: { showQuickCost = true }
+                onCost: { showQuickCost = true },
+                hasNote: !stay.note.isEmpty,
+                hasCost: stay.hasCost
             )
         }
         .sheet(isPresented: $editing) {

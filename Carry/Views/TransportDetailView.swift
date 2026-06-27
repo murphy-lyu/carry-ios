@@ -195,7 +195,9 @@ struct TransportDetailView: View {
                 onEdit: { editing = true },
                 onDelete: deleteSegment,
                 onNote: { showQuickNote = true },
-                onCost: { showQuickCost = true }
+                onCost: { showQuickCost = true },
+                hasNote: !segment.note.isEmpty,
+                hasCost: segment.hasCost
             )
         }
         .sheet(isPresented: $editing) {

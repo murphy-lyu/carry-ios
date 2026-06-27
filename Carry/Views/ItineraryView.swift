@@ -1612,7 +1612,9 @@ struct StopDetailView: View {
                 onEdit: { editing = true },
                 onDelete: deleteStop,
                 onNote: { showQuickNote = true },
-                onCost: { showQuickCost = true }
+                onCost: { showQuickCost = true },
+                hasNote: !stop.note.isEmpty,
+                hasCost: stop.hasCost
             )
         }
         // 编辑钻入到详情之上：保存后回到详情（@Model 可观察、详情自动反映新值），再下滑关。
