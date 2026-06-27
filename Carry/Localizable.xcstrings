@@ -69900,55 +69900,55 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Änderungen verwerfen"
+            "value" : "Reise verwerfen"
           }
         },
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Discard Changes"
+            "value" : "Discard Trip"
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Descartar cambios"
+            "value" : "Descartar viaje"
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Abandonner les modifications"
+            "value" : "Abandonner le voyage"
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "変更を破棄"
+            "value" : "旅行を破棄"
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "변경 사항 삭제"
+            "value" : "여행 취소"
           }
         },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Descartar alterações"
+            "value" : "Descartar viagem"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "放弃更改"
+            "value" : "放弃行程"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "放棄變更"
+            "value" : "放棄行程"
           }
         }
       }
@@ -69959,55 +69959,55 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Weiter bearbeiten"
+            "value" : "Reise behalten"
           }
         },
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Keep Editing"
+            "value" : "Keep Trip"
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Seguir editando"
+            "value" : "Continuar viaje"
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Continuer la modification"
+            "value" : "Continuer le voyage"
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "編集を続ける"
+            "value" : "旅行を続ける"
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "계속 편집"
+            "value" : "여행 계속"
           }
         },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Continuar editando"
+            "value" : "Continuar viagem"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "继续编辑"
+            "value" : "继续行程"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "繼續編輯"
+            "value" : "繼續行程"
           }
         }
       }
