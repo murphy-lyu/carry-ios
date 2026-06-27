@@ -1459,6 +1459,9 @@ private struct CalendarEventRow: View {
 
     private let railWidth: CGFloat = 30
     private let railSpacing: CGFloat = 12
+    /// 全天事件是背景信息标注，不是规划行程——用更矮的行高退到信息条层级，避免与真正的行程行争视觉重量。
+    /// 定时日历事件插入时间轴（与行程行并排），保持标准行高。
+    private var rowHeight: CGFloat { event.isAllDay ? 30 : TimelineRail.rowHeight }
 
     var body: some View {
         HStack(spacing: railSpacing) {
@@ -1477,9 +1480,7 @@ private struct CalendarEventRow: View {
                 .font(.system(.caption, design: .rounded))
                 .foregroundStyle(.tertiary)
         }
-        // 与规划行同高（含单行地点行也是 46）→ 时间轴垂直节奏统一，日历事件不再矮一档破坏 rhythm；
-        // 「来自日历、退后」靠浅字/细竖条/无图标承担，不靠行高变矮。
-        .frame(height: TimelineRail.rowHeight)
+        .frame(height: rowHeight)
         .accessibilityElement(children: .combine)
     }
 
