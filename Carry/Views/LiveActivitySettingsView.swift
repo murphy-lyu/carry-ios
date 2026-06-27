@@ -2,7 +2,7 @@ import SwiftUI
 
 #if !targetEnvironment(macCatalyst)
 struct LiveActivitySettingsView: View {
-    @AppStorage(LiveActivityManager.enabledKey) private var isEnabled = false
+    @AppStorage(LiveActivityManager.enabledKey) private var isEnabled = true
     @AppStorage(LiveActivityManager.transitEnabledKey) private var isTransitEnabled = true
     @Environment(\.colorScheme) private var colorScheme
 
