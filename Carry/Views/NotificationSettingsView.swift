@@ -25,7 +25,7 @@ struct NotificationSettingsView: View {
     @AppStorage(ReminderPreferences.carRentalLeadsKey) private var carRentalLeadsRaw = "60"
     // 退房（C，默认关；只退房、入住不提醒；退房当天清晨固定时刻）
     @AppStorage(ReminderPreferences.lodgingEnabledKey) private var lodgingEnabled = false
-    @AppStorage(ReminderPreferences.lodgingCheckOutMinKey) private var lodgingCheckOutMin = 540
+    @AppStorage(ReminderPreferences.lodgingCheckOutMinKey) private var lodgingCheckOutMin = 660
     // 每日摘要（C，默认关）
     @AppStorage(ReminderPreferences.dailySummaryEnabledKey) private var dailyEnabled = false
     @AppStorage(ReminderPreferences.dailySummaryMinKey) private var dailyMinutes = 540
