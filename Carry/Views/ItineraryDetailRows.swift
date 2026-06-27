@@ -8,6 +8,7 @@
 //
 
 import SwiftUI
+import UIKit
 
 // MARK: - 复制 Toast（详情卡内「轻点复制」的居中反馈，由 DetailSheetScaffold 注入并渲染）
 
@@ -389,7 +390,7 @@ struct LinkDetailRow: View {
     }
 }
 
-/// 备注行：图标 + 「备注」标签 + 可展开/收起长文（`ExpandableText`，可长按选取复制）。
+/// 备注行：图标 + 「备注」标签 + 可点击链接/电话的文本（UITextView dataDetector）。
 struct NoteDetailRow: View {
     let text: String
 
@@ -402,11 +403,44 @@ struct NoteDetailRow: View {
             VStack(alignment: .leading, spacing: 2) {
                 Text("itinerary.transport.field.note")
                     .font(.system(.caption, design: .rounded)).foregroundStyle(.secondary)
-                ExpandableText(text: text, font: .system(.subheadline, design: .rounded), collapsedLineLimit: 6)
+                LinkAwareText(text: text)
             }
             .frame(maxWidth: .infinity, alignment: .leading)
         }
         .padding(.vertical, 11)
+    }
+}
+
+/// 可点击链接和电话号码的只读文本视图。
+/// UITextView + dataDetectorTypes 是 iOS 原生检测 URL/电话的可靠方案（Mail/Notes/Safari 同款）。
+/// 链接/电话自动着色为 tintColor（CarryAccent），其余文本保持 label 色。
+private struct LinkAwareText: UIViewRepresentable {
+    let text: String
+
+    func makeUIView(context: Context) -> UITextView {
+        let tv = UITextView()
+        tv.isEditable = false
+        tv.isSelectable = true
+        tv.dataDetectorTypes = [.link, .phoneNumber]
+        tv.backgroundColor = .clear
+        tv.textContainerInset = .zero
+        tv.textContainer.lineFragmentPadding = 0
+        tv.setContentCompressionResistancePriority(.required, for: .vertical)
+        tv.setContentHuggingPriority(.required, for: .vertical)
+        // 去掉 UITextView 默认的滚动（高度由 intrinsicContentSize 撑开，父 VStack 自然包裹）。
+        tv.isScrollEnabled = false
+        return tv
+    }
+
+    func updateUIView(_ tv: UITextView, context: Context) {
+        let uiFont = UIFont.preferredFont(forTextStyle: .subheadline)
+        let attrs: [NSAttributedString.Key: Any] = [
+            .font: uiFont,
+            .foregroundColor: UIColor.label,
+        ]
+        tv.attributedText = NSAttributedString(string: text, attributes: attrs)
+        // tintColor 驱动链接/电话颜色（dataDetector 自动着色）。
+        tv.tintColor = UIColor(CarryAccent.color)
     }
 }
 

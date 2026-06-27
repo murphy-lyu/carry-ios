@@ -2,17 +2,14 @@
 //  QuickCostSheet.swift
 //  Carry
 //
-//  ··· 菜单「记录费用」快捷入口的轻量 sheet。大金额显示 + numpad + 货币选择。
+//  ··· 菜单「记录费用」快捷入口的轻量 sheet。大金额显示 + numpad + 货币选择。完成保存，取消/下滑放弃。
 //
 
 import SwiftUI
 
 struct QuickCostSheet: View {
-    /// 现有金额（0 = 未记录）。
     let existingAmount: Double
-    /// 现有货币码（空 = 跟随本位币）。
     let existingCurrencyCode: String
-    /// 保存回调（amount=0 且 code="" → 清除）。
     let onSave: (Double, String) -> Void
 
     @Environment(\.dismiss) private var dismiss
@@ -21,6 +18,7 @@ struct QuickCostSheet: View {
     @State private var amountText: String = ""
     @State private var currencyCode: String = ""
     @State private var showCurrencyPicker = false
+    @State private var cancelled = false
     @FocusState private var numpadFocused: Bool
 
     private var homeCode: String {
@@ -31,7 +29,6 @@ struct QuickCostSheet: View {
         currencyCode.isEmpty ? homeCode : currencyCode.uppercased()
     }
 
-    /// 大数字显示串：有输入时带货币符号和千分位，空时显「0」。
     private var displayAmount: String {
         guard !amountText.isEmpty else { return "0" }
         let sym = CurrencyCatalog.symbol(for: effectiveCode)
@@ -44,7 +41,6 @@ struct QuickCostSheet: View {
             VStack(spacing: 0) {
                 Spacer()
 
-                // 大金额显示区
                 Text(displayAmount)
                     .font(.system(size: 52, weight: .semibold, design: .rounded))
                     .foregroundStyle(amountText.isEmpty ? .tertiary : .primary)
@@ -55,7 +51,6 @@ struct QuickCostSheet: View {
 
                 Spacer().frame(height: 28)
 
-                // 货币选择胶囊
                 Button {
                     showCurrencyPicker = true
                 } label: {
@@ -74,7 +69,6 @@ struct QuickCostSheet: View {
 
                 Spacer()
 
-                // 隐藏 TextField 仅用于调起 numpad
                 TextField("", text: $amountText)
                     .keyboardType(.decimalPad)
                     .focused($numpadFocused)
@@ -92,6 +86,12 @@ struct QuickCostSheet: View {
             .navigationTitle(Text("quickaction.cost.title"))
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button(LocalizedStringKey("common.cancel")) {
+                        cancelled = true
+                        dismiss()
+                    }
+                }
                 ToolbarItem(placement: .confirmationAction) {
                     Button(action: save) {
                         Text("quickaction.cost.done")
@@ -113,16 +113,20 @@ struct QuickCostSheet: View {
         .onAppear {
             amountText = existingAmount > 0 ? CurrencyCatalog.amountText(existingAmount) : ""
             currencyCode = existingCurrencyCode
-            // 延迟一帧再 focus，保证 sheet present 动画完成后键盘再弹出。
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) {
                 numpadFocused = true
             }
         }
-        .onDisappear { commitSave() }
+        .onDisappear {
+            guard !cancelled else { return }
+            commitSave()
+        }
     }
 
     private func save() {
         numpadFocused = false
+        commitSave()
+        cancelled = true
         dismiss()
     }
 
