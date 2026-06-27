@@ -544,6 +544,9 @@ struct DetailActionFooter: View {
                     .shadow(color: Color.carryCardShadow, radius: 16, x: 0, y: 6)
                     .contentShape(Circle())
             }
+            // Menu 控件的 press/highlight 交互动画作用在整个控件的矩形 bounds 上，收起时产生方形残影。
+            // clipShape 施加到 Menu 控件本身（不只是 label 内部），把交互 highlight 也裁成圆形。
+            .clipShape(Circle())
             .accessibilityLabel(Text("common.more"))
         }
     }
