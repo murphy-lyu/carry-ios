@@ -23,14 +23,14 @@ struct TripInfoView: View {
     @State private var hasDates = true
     /// 防快速双击重复建行程（一击即建、无中间步，必须自守）。
     @State private var isCreating = false
-    @FocusState private var focusedField: FocusField?
+    // 名称输入框（IMESafeTextField）焦点：必须用普通 @State Bool，不能用 @FocusState。
+    // IMESafeTextField 持有 UITextField、无法挂 .focused()，@FocusState 因无所有者会被 SwiftUI
+    // 持续重置为 false → 每敲一字 updateUIView 误 resignFirstResponder 收键盘（见 commit a24cd03）。
+    @State private var nameFieldFocused: Bool = false
     @EnvironmentObject var router: NavigationRouter
     @EnvironmentObject var store: TripStore
     @Environment(\.colorScheme) private var colorScheme
 
-    private enum FocusField: Hashable {
-        case tripName
-    }
 
     init(routeID: UUID? = nil) {
         self.routeID = routeID
@@ -89,7 +89,7 @@ struct TripInfoView: View {
     }
 
     private func hideKeyboard() {
-        focusedField = nil
+        nameFieldFocused = false
         UIApplication.shared.sendAction(
             #selector(UIResponder.resignFirstResponder),
             to: nil,
@@ -109,7 +109,7 @@ struct TripInfoView: View {
                     heroSection
 
                     fieldGroup(label: "Trip Name") {
-                        stableField("e.g. Italy · Tuscany", text: $tripName, focus: .tripName)
+                        stableField("e.g. Italy · Tuscany", text: $tripName)
                     }
 
                     fieldGroup(label: "Destination City") {
@@ -291,19 +291,29 @@ struct TripInfoView: View {
 
     private func stableField(
         _ placeholder: LocalizedStringKey,
-        text: Binding<String>,
-        focus: FocusField
+        text: Binding<String>
     ) -> some View {
-        // 原生占位符（UITextField 自渲染）：有 marked text（输入法预编辑态）即隐藏，且不像
-        // 「if isEmpty 显隐 Text 叠层」那样在选词提交时增删视图树——后者会打断输入法提交，
-        // 导致中文（如微信输入法）选词后内容丢失、预编辑态与占位符叠加。样式与原叠层一致。
-        TextField(placeholder, text: text)
-            .font(.subheadline)
-            .tint(.primary)
-            .focused($focusedField, equals: focus)
-            .textFieldStyle(.plain)
+        // 用 IMESafeTextField（替代原生 TextField）：与目的地字段同款，修复微信等第三方输入法
+        // 选词上屏后 text binding 不更新的缺陷（见 ViewModifiers.swift 的 IMESafeTextField）。
+        // 占位符由 SwiftUI overlay 渲染、空文本时显示，颜色用 .secondary，与目的地/搜索框统一。
+        // 焦点用普通 @State Bool（nameFieldFocused），不可用 @FocusState（见其声明处注释 / commit a24cd03）。
+        IMESafeTextField(
+            text: text,
+            font: .preferredFont(forTextStyle: .subheadline),
+            returnKeyType: .done,
+            isFocused: $nameFieldFocused
+        )
             .frame(height: 44)
             .padding(.horizontal, 12)
+            .overlay(alignment: .leading) {
+                if text.wrappedValue.isEmpty {
+                    Text(placeholder)
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                        .padding(.horizontal, 12)
+                        .allowsHitTesting(false)
+                }
+            }
             .background(Color(UIColor.systemBackground).opacity(0.66))
             .overlay(
                 RoundedRectangle(cornerRadius: 12, style: .continuous)

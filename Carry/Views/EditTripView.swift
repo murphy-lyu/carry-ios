@@ -22,12 +22,11 @@ struct EditTripView: View {
     @State private var didBackfill = false
     @State private var isSaved = false
     @State private var showDatePicker = false
-    @FocusState private var focusedField: FocusField?
+    // 名称输入框（IMESafeTextField）焦点：必须用普通 @State Bool，不能用 @FocusState。
+    // IMESafeTextField 持有 UITextField、无法挂 .focused()，@FocusState 因无所有者会被 SwiftUI
+    // 持续重置为 false → 每敲一字 updateUIView 误 resignFirstResponder 收键盘（见 commit a24cd03）。
+    @State private var nameFieldFocused: Bool = false
     @Environment(\.colorScheme) private var colorScheme
-
-    private enum FocusField: Hashable {
-        case tripName
-    }
 
     init(trip: TripBundle) {
         self.tripId = trip.id
@@ -61,7 +60,7 @@ struct EditTripView: View {
     }
 
     private func hideKeyboard() {
-        focusedField = nil
+        nameFieldFocused = false
         UIApplication.shared.sendAction(
             #selector(UIResponder.resignFirstResponder),
             to: nil,
@@ -81,7 +80,7 @@ struct EditTripView: View {
                         heroSection
 
                         fieldGroup(label: "Trip Name") {
-                            stableField("e.g. Italy · Tuscany", text: $info.name, focus: .tripName)
+                            stableField("e.g. Italy · Tuscany", text: $info.name)
                         }
 
                         fieldGroup(label: "Destination City") {
@@ -241,20 +240,17 @@ struct EditTripView: View {
 
     private func stableField(
         _ placeholder: LocalizedStringKey,
-        text: Binding<String>,
-        focus: FocusField
+        text: Binding<String>
     ) -> some View {
         // 用 IMESafeTextField（替代原生 TextField）：与目的地字段同款，修复微信等第三方输入法
         // 选词上屏后 text binding 不更新的缺陷（见 ViewModifiers.swift 的 IMESafeTextField）。
         // 占位符由 SwiftUI overlay 渲染、空文本时显示，颜色用 .secondary，与目的地/搜索框统一。
+        // 焦点用普通 @State Bool（nameFieldFocused），不可用 @FocusState（见其声明处注释 / commit a24cd03）。
         IMESafeTextField(
             text: text,
             font: .preferredFont(forTextStyle: .subheadline),
             returnKeyType: .done,
-            isFocused: Binding(
-                get: { focusedField == focus },
-                set: { focusedField = $0 ? focus : nil }
-            )
+            isFocused: $nameFieldFocused
         )
             .frame(height: 44)
             .padding(.horizontal, 12)
