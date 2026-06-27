@@ -1103,6 +1103,7 @@ struct HomeView: View {
                         Image(systemName: "arrow.up.circle")
                             .font(.footnote)
                             .foregroundStyle(.secondary)
+                            .frame(width: 16, alignment: .center)
                         Text(String(format: NSLocalizedString("tripbook.spend.top_trip", comment: ""),
                                     top.name))
                             .font(.footnote)
