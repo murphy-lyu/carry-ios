@@ -32,6 +32,8 @@ struct TransportDetailView: View {
     @EnvironmentObject var store: TripStore
     @Environment(\.dismiss) private var dismiss
     @State private var editing = false
+    @State private var showQuickNote = false
+    @State private var showQuickCost = false
     /// IATA 码 → 本地化机场名，详情出现时经 `.task` 后台按需解析（解析前回落存的原文）。
     @State private var airportNames: [String: String] = [:]
     @AppStorage("distance_unit") private var distanceUnitRaw = DistanceUnit.automatic.rawValue
@@ -189,10 +191,28 @@ struct TransportDetailView: View {
                 AttachmentDetailCard(attachments: segment.attachments ?? [])
             }
         } footer: {
-            DetailActionFooter(onEdit: { editing = true }, onDelete: deleteSegment)
+            DetailActionFooter(
+                onEdit: { editing = true },
+                onDelete: deleteSegment,
+                onNote: { showQuickNote = true },
+                onCost: { showQuickCost = true }
+            )
         }
         .sheet(isPresented: $editing) {
             TransportEditView(tripId: tripId, segmentId: segment.id)
+        }
+        .sheet(isPresented: $showQuickNote) {
+            QuickNoteSheet(existingNote: segment.note) { newNote in
+                store.updateTransportSegment(tripId: tripId, segmentId: segment.id, note: newNote)
+            }
+        }
+        .sheet(isPresented: $showQuickCost) {
+            QuickCostSheet(
+                existingAmount: segment.costAmount,
+                existingCurrencyCode: segment.costCurrencyCode
+            ) { amount, code in
+                store.setTransportCost(tripId: tripId, segmentId: segment.id, amount: amount, currencyCode: code)
+            }
         }
         .task(id: segment.id) {
             await resolveAirportNames()

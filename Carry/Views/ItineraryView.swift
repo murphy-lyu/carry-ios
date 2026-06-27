@@ -1589,6 +1589,8 @@ struct StopDetailView: View {
     @EnvironmentObject var store: TripStore
     @Environment(\.dismiss) private var dismiss
     @State private var editing = false
+    @State private var showQuickNote = false
+    @State private var showQuickCost = false
     @State private var zoomedPhoto: ZoomedPhoto?
 
     var body: some View {
@@ -1606,11 +1608,29 @@ struct StopDetailView: View {
                 AttachmentDetailCard(attachments: stop.attachments ?? [])
             }
         } footer: {
-            DetailActionFooter(onEdit: { editing = true }, onDelete: deleteStop)
+            DetailActionFooter(
+                onEdit: { editing = true },
+                onDelete: deleteStop,
+                onNote: { showQuickNote = true },
+                onCost: { showQuickCost = true }
+            )
         }
         // 编辑钻入到详情之上：保存后回到详情（@Model 可观察、详情自动反映新值），再下滑关。
         .sheet(isPresented: $editing) {
             StopEditView(tripId: tripId, stop: stop)
+        }
+        .sheet(isPresented: $showQuickNote) {
+            QuickNoteSheet(existingNote: stop.note) { newNote in
+                store.updateItineraryStop(tripId: tripId, stopId: stop.id, note: newNote)
+            }
+        }
+        .sheet(isPresented: $showQuickCost) {
+            QuickCostSheet(
+                existingAmount: stop.costAmount,
+                existingCurrencyCode: stop.costCurrencyCode
+            ) { amount, code in
+                store.setStopCost(tripId: tripId, stopId: stop.id, amount: amount, currencyCode: code)
+            }
         }
         // 点缩略图放大看（存的是约 640px 缩略图；零授权不取系统原图）。
         .fullScreenCover(item: $zoomedPhoto) { z in

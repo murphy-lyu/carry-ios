@@ -17,6 +17,8 @@ struct LodgingDetailView: View {
     @EnvironmentObject var store: TripStore
     @Environment(\.dismiss) private var dismiss
     @State private var editing = false
+    @State private var showQuickNote = false
+    @State private var showQuickCost = false
 
     private var displayName: String {
         stay.name.isEmpty ? NSLocalizedString("itinerary.category.lodging", comment: "") : stay.name
@@ -56,10 +58,28 @@ struct LodgingDetailView: View {
                 AttachmentDetailCard(attachments: stay.attachments ?? [])
             }
         } footer: {
-            DetailActionFooter(onEdit: { editing = true }, onDelete: deleteStay)
+            DetailActionFooter(
+                onEdit: { editing = true },
+                onDelete: deleteStay,
+                onNote: { showQuickNote = true },
+                onCost: { showQuickCost = true }
+            )
         }
         .sheet(isPresented: $editing) {
             LodgingEditView(tripId: tripId, stayId: stay.id)
+        }
+        .sheet(isPresented: $showQuickNote) {
+            QuickNoteSheet(existingNote: stay.note) { newNote in
+                store.updateLodgingStay(tripId: tripId, stayId: stay.id, note: newNote)
+            }
+        }
+        .sheet(isPresented: $showQuickCost) {
+            QuickCostSheet(
+                existingAmount: stay.costAmount,
+                existingCurrencyCode: stay.costCurrencyCode
+            ) { amount, code in
+                store.setLodgingCost(tripId: tripId, stayId: stay.id, amount: amount, currencyCode: code)
+            }
         }
     }
 

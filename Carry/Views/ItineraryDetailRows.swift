@@ -419,6 +419,10 @@ struct NoteDetailRow: View {
 struct DetailActionFooter: View {
     let onEdit: () -> Void
     let onDelete: () -> Void
+    /// nil = 不在 ··· 菜单里显示此项（CalendarEventDetailView 等不支持备注的场景传 nil）。
+    var onNote: (() -> Void)? = nil
+    /// nil = 不在 ··· 菜单里显示此项。
+    var onCost: (() -> Void)? = nil
 
     var body: some View {
         // 两个**分离**的悬浮毛玻璃元件（编辑胶囊 + 独立的 ··· 圆，中间留空）——明确是两个按钮，不是「一个胶囊切两半」。
@@ -444,12 +448,21 @@ struct DetailActionFooter: View {
             .buttonStyle(.plain)
             .accessibilityLabel(Text("itinerary.stop.detail.edit"))
 
-            // ··· = 独立玻璃圆（溢出菜单：提醒开关 + 移除），与编辑之间留空、是分开的两个按钮。
+            // ··· = 独立玻璃圆（溢出菜单）。菜单恒向上展开；iOS 声明越靠前 = 越靠近锚点（底部）。
+            // 顺序：移除（最前 = 最底，危险动作远离其它操作）；备注/费用居上（常用快捷）。
             Menu {
-                // ··· 固定在底部 → 菜单恒向上展开；iOS 上展开时「声明越靠前 = 越靠近锚点（底部）」。
-                // 故「移除」声明在最前 → 落到菜单**最底部**（破坏性动作远离主操作、不易误触，对标 Tripsy）。
                 Button(role: .destructive, action: onDelete) {
                     Label("common.remove", systemImage: "trash")
+                }
+                if let onCost {
+                    Button(action: onCost) {
+                        Label("itinerary.menu.record_cost", systemImage: "creditcard")
+                    }
+                }
+                if let onNote {
+                    Button(action: onNote) {
+                        Label("itinerary.menu.add_note", systemImage: "note.text")
+                    }
                 }
             } label: {
                 Image(systemName: "ellipsis")
