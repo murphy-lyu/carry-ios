@@ -519,6 +519,7 @@ struct DetailActionFooter: View {
                 Button(role: .destructive, action: onDelete) {
                     Label("common.remove", systemImage: "trash")
                 }
+                if onNote != nil || onCost != nil { Divider() }
                 if let onCost {
                     Button(action: onCost) {
                         Label(hasCost ? "itinerary.menu.edit_cost" : "itinerary.menu.record_cost",
