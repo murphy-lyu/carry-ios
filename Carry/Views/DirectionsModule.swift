@@ -43,6 +43,7 @@ struct DirectionsModule: View {
                 .padding(.vertical, 10)
             }
         }
+        .frame(maxWidth: .infinity)
         .padding(.horizontal, 16)
         .carryCard(cornerRadius: CarryRadius.card)
     }
