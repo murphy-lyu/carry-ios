@@ -57,7 +57,7 @@ enum StopCategory: String, Codable, CaseIterable {
     static let placeSelectableCases: [StopCategory] =
         [.sightseeing, .museum, .park, .beach,
          .restaurant, .cafe, .bar,
-         .shopping, .experience, .lodging, .other]
+         .shopping, .experience, .other]
 }
 
 // MARK: - ItineraryDay
