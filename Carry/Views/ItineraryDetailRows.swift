@@ -390,6 +390,9 @@ struct LinkDetailRow: View {
 struct NoteDetailRow: View {
     let text: String
     @Environment(\.carryCopyToast) private var showToast
+    @State private var webLink: WebLink? = nil
+
+    private struct WebLink: Identifiable { let id = UUID(); let url: URL }
 
     var body: some View {
         HStack(alignment: .top, spacing: 12) {
@@ -400,13 +403,15 @@ struct NoteDetailRow: View {
             VStack(alignment: .leading, spacing: 2) {
                 Text("itinerary.transport.field.note")
                     .font(.system(.caption, design: .rounded)).foregroundStyle(.secondary)
-                LinkAwareText(text: text, onLongPress: copyAll)
+                LinkAwareText(text: text, onLongPress: copyAll, onOpenURL: { webLink = WebLink(url: $0) })
             }
             .frame(maxWidth: .infinity, alignment: .leading)
         }
         .padding(.vertical, 11)
-        // VoiceOver「拷贝」自定义动作（长按对旁白不可达，靠它兜底）。
         .accessibilityAction(named: Text("itinerary.detail.copy_action")) { copyAll() }
+        .sheet(item: $webLink) { link in
+            SafariView(url: link.url).ignoresSafeArea()
+        }
     }
 
     private func copyAll() {
@@ -418,30 +423,33 @@ struct NoteDetailRow: View {
 }
 
 /// 可点击链接和电话号码的只读文本视图，支持长按全文复制回调。
-/// - isSelectable = false：避免 UIKit 系统选择菜单与 Toast 复制冲突；data detector 点击不依赖 isSelectable。
-/// - UILongPressGestureRecognizer：直接挂在 UITextView 上，SwiftUI .onLongPressGesture 无法穿透 UIKit 视图。
+/// - isSelectable = true：data detector 点击要求 isSelectable = true 才能响应触摸（Apple 文档要求）。
+/// - 系统长按选择菜单通过 UIEditMenuInteraction 拦截返回空 items 来屏蔽，不影响 data detector。
+/// - UILongPressGestureRecognizer：直接挂在 UITextView 上，抢在系统长按前（minimumPressDuration 更短）触发复制 Toast。
 private struct LinkAwareText: UIViewRepresentable {
     let text: String
     var onLongPress: (() -> Void)? = nil
+    var onOpenURL: ((URL) -> Void)? = nil   // 链接点击回调，由外层弹 SafariView。
 
     func makeCoordinator() -> Coordinator { Coordinator() }
 
     func makeUIView(context: Context) -> UITextView {
         let tv = UITextView()
         tv.isEditable = false
-        tv.isSelectable = false   // 关闭选择：data detector 点击不受影响，长按由我们自己处理。
+        tv.isSelectable = true    // data detector 点击需要 isSelectable = true。
         tv.dataDetectorTypes = [.link, .phoneNumber]
         tv.backgroundColor = .clear
         tv.textContainerInset = .zero
         tv.textContainer.lineFragmentPadding = 0
         tv.setContentCompressionResistancePriority(.required, for: .vertical)
         tv.setContentHuggingPriority(.required, for: .vertical)
-        // 水平方向不抵抗压缩：让父容器宽度约束 UITextView，而不是反过来被长文本撑宽 sheet。
         tv.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
         tv.isScrollEnabled = false
+        tv.delegate = context.coordinator
 
         let lp = UILongPressGestureRecognizer(target: context.coordinator,
                                                action: #selector(Coordinator.handleLongPress(_:)))
+        lp.minimumPressDuration = 0.4
         tv.addGestureRecognizer(lp)
         context.coordinator.textView = tv
         return tv
@@ -449,6 +457,7 @@ private struct LinkAwareText: UIViewRepresentable {
 
     func updateUIView(_ tv: UITextView, context: Context) {
         context.coordinator.onLongPress = onLongPress
+        context.coordinator.onOpenURL = onOpenURL
         let uiFont = UIFont.preferredFont(forTextStyle: .subheadline)
         let attrs: [NSAttributedString.Key: Any] = [
             .font: uiFont,
@@ -458,13 +467,43 @@ private struct LinkAwareText: UIViewRepresentable {
         tv.tintColor = UIColor(CarryAccent.color)
     }
 
-    class Coordinator: NSObject {
+    // isSelectable = true 时 UITextView 不再自动向 SwiftUI 报告正确的 intrinsic height，
+    // 必须显式实现 sizeThatFits 让 SwiftUI 按实际内容高度排版。
+    func sizeThatFits(_ proposal: ProposedViewSize, uiView tv: UITextView, context: Context) -> CGSize? {
+        let width = proposal.width ?? UIScreen.main.bounds.width
+        let size = tv.sizeThatFits(CGSize(width: width, height: .greatestFiniteMagnitude))
+        return CGSize(width: width, height: size.height)
+    }
+
+    class Coordinator: NSObject, UITextViewDelegate {
         var onLongPress: (() -> Void)?
+        var onOpenURL: ((URL) -> Void)?
         weak var textView: UITextView?
 
         @objc func handleLongPress(_ gr: UILongPressGestureRecognizer) {
             guard gr.state == .began else { return }
+            textView?.selectedRange = NSRange(location: 0, length: 0)
             onLongPress?()
+        }
+
+        // 链接拦截：http/https 走 SafariView（应用内），tel: 放行系统拨号，其余放行。
+        func textView(_ textView: UITextView,
+                      shouldInteractWith url: URL,
+                      in characterRange: NSRange,
+                      interaction: UITextItemInteraction) -> Bool {
+            guard interaction == .invokeDefaultAction else { return true }
+            if let scheme = url.scheme?.lowercased(), scheme == "http" || scheme == "https" {
+                onOpenURL?(url)
+                return false   // 拦截，不走系统 openURL。
+            }
+            return true        // tel: 等放行给系统处理。
+        }
+
+        // 屏蔽系统编辑菜单（Cut / Copy / Paste 等），返回空 items。
+        func textView(_ textView: UITextView,
+                      editMenuForTextIn range: NSRange,
+                      suggestedActions: [UIMenuElement]) -> UIMenu? {
+            UIMenu(children: [])
         }
     }
 }
