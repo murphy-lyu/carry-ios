@@ -142,8 +142,9 @@ struct WidgetTrip: Codable, Identifiable {
         let nowMinutes = (comps.hour ?? 0) * 60 + (comps.minute ?? 0)
         return (agenda ?? []).filter { item in
             guard item.dayOrder >= idx else { return false }
-            // 今天的有时刻条目：order = minutes * 2（偶数槽，< 24*60*2=2880），过了就过滤掉。
-            if item.dayOrder == idx, item.order < 24 * 60 * 2 {
+            // 今天的有时刻条目：order = minutes * 2（偶数槽，0…2878），过了就过滤掉。
+            // order < 0（退房 = -2）或 order >= 24*60*2（无时刻/入住）不做时刻过滤，直接保留。
+            if item.dayOrder == idx, item.order >= 0, item.order < 24 * 60 * 2 {
                 return item.order / 2 >= nowMinutes
             }
             return true
@@ -447,13 +448,16 @@ struct CarryWidgetEntryView: View {
 
     private func inTripSmallView(_ trip: WidgetTrip, now: Date) -> some View {
         VStack(alignment: .leading, spacing: 4) {
-            HStack {
+            HStack(alignment: .center) {
                 Text("widget.agenda.title")
-                    .font(.system(.headline, design: .rounded).weight(.bold))
+                    .font(.system(.caption, design: .rounded).weight(.semibold))
+                    .textCase(.uppercase)
+                    .tracking(0.4)
+                    .foregroundStyle(.secondary)
                 Spacer()
                 dayHeader(trip, now: now)
             }
-            Spacer(minLength: 4)
+            Spacer(minLength: 2)
             if let ev = trip.nextEvent(asOf: now) {
                 // 无图标：名称（flex 截断）+ 时间右对齐，与 Medium/Large 同一语言，省空间给名称。
                 HStack(alignment: .center, spacing: 4) {
@@ -489,27 +493,30 @@ struct CarryWidgetEntryView: View {
     // MARK: In-trip Medium — 复用 agenda 布局，maxSlots 更小
 
     private func inTripMediumView(_ trip: WidgetTrip, now: Date) -> some View {
-        agendaView(trip, now: now, maxSlots: 6)
+        VStack(alignment: .leading, spacing: 0) {
+            agendaView(trip, now: now, maxSlots: 6)
+            if let stay = trip.tonightStay(asOf: now) {
+                Divider().padding(.vertical, 4)
+                tonightRow(stay)
+            }
+        }
     }
 
     // MARK: Large — 按天分组的「接下来的行程」概览（spec: widget-upcoming-large.md）
 
-    /// 一行渲染单元：天分组头（dayOrder 非空）/ 行程条目（item 非空）/「+N 更多」尾行（moreCount 非空）。
+    /// 一行渲染单元：天分组头（dayOrder 非空）/ 行程条目（item 非空）。
     private struct AgendaRenderRow: Identifiable {
         let id: String
         var dayOrder: Int? = nil
         var item: WidgetAgendaItem? = nil
-        var moreCount: Int? = nil
     }
 
     /// 把按 (天,序) 排好的条目展开成「天头 + 条目」行序列，封顶 maxSlots 个视觉槽。
     /// 视觉槽计数：天头 = 1 slot；有副标题的条目 = 2 slots（标题行 + 副标题行）；无副标题 = 1 slot。
-    /// 截断时补「+N 更多」尾行；systemLarge 固定高不滚动，超槽会被系统静默裁剪。
     private func agendaRenderRows(_ items: [WidgetAgendaItem], maxSlots: Int) -> [AgendaRenderRow] {
         var rows: [AgendaRenderRow] = []
         var lastDay: Int? = nil
         var usedSlots = 0
-        var shownItems = 0
         for (i, it) in items.enumerated() {
             let needsHeader = it.dayOrder != lastDay
             let headerSlots = needsHeader ? 1 : 0
@@ -523,7 +530,6 @@ struct CarryWidgetEntryView: View {
             }
             rows.append(AgendaRenderRow(id: "i\(i)", item: it))
             usedSlots += itemSlots
-            shownItems += 1
         }
         return rows
     }
@@ -589,12 +595,6 @@ struct CarryWidgetEntryView: View {
                             .padding(.top, 1)
                     } else if let it = row.item {
                         agendaItemRow(it)
-                    } else if let more = row.moreCount {
-                        Text(String.localizedStringWithFormat(
-                            NSLocalizedString("widget.companion.plan_more", comment: ""), more))
-                            .font(.system(.caption, design: .rounded).weight(.medium))
-                            .foregroundStyle(.secondary)
-                            .padding(.top, 1)
                     }
                 }
                 Spacer(minLength: 0)

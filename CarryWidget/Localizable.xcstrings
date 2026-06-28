@@ -1337,55 +1337,55 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Erstelle eine Reise in Carry"
+            "value" : "Reise hinzufügen und packen"
           }
         },
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Create a trip in Carry to get started"
+            "value" : "Add a trip to start packing"
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Crea un viaje en Carry para empezar"
+            "value" : "Añade un viaje para empezar"
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Crée un voyage dans Carry pour commencer"
+            "value" : "Ajoutez un voyage pour commencer"
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Carry で旅行を作成してはじめましょう"
+            "value" : "旅行を追加して荷造りを始めましょう"
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Carry에서 여행을 만들어 시작해보세요"
+            "value" : "여행을 추가하고 짐을 싸보세요"
           }
         },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Crie uma viagem no Carry para começar"
+            "value" : "Adicione uma viagem para começar"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "在 Carry 中创建行程，即可在此看到它"
+            "value" : "添加行程开始打包"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "在 Carry 中建立行程，即可在此看到它"
+            "value" : "新增行程開始打包"
           }
         }
       }
@@ -1396,55 +1396,55 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Keine bevorstehenden Reisen"
+            "value" : "Noch keine Reisen"
           }
         },
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "No upcoming trips"
+            "value" : "No trips yet"
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "No hay viajes próximos"
+            "value" : "Aún no hay viajes"
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Aucun voyage à venir"
+            "value" : "Aucun voyage"
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "予定中の旅行はありません"
+            "value" : "まだ旅行がありません"
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "예정된 여행이 없어요"
+            "value" : "아직 여행이 없어요"
           }
         },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Nenhuma viagem próxima"
+            "value" : "Nenhuma viagem ainda"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "暂无即将出发的行程"
+            "value" : "还没有行程"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "暫無即將出發的行程"
+            "value" : "還沒有行程"
           }
         }
       }

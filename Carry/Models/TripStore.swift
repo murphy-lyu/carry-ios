@@ -3342,8 +3342,9 @@ extension TripStore {
                 }
                 if title.isEmpty { title = subtitle; subtitle = "" }
                 guard !title.isEmpty else { continue }
-                // 今天的有时刻交通段：已过就跳过。
-                if isToday, seg.departLocalMinutes >= 0, seg.departLocalMinutes < sinceMinutes { continue }
+                // 今天的有时刻交通段：已过就跳过（含出发日为今天但 departDayOrder 跨日的夜行段）。
+                let departIsToday = isToday || (seg.departDayOrder == fromDayOrder)
+                if departIsToday, seg.departLocalMinutes >= 0, seg.departLocalMinutes < sinceMinutes { continue }
                 out.append(WidgetAgendaItem(dayOrder: seg.departDayOrder,
                     order: sortKey(minutes: seg.departLocalMinutes, sortOrder: seg.sortOrder),
                     title: title,
