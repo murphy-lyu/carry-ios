@@ -70,6 +70,7 @@ struct ImportSharedTripSheet: View {
                         .font(.footnote)
                         .foregroundStyle(.secondary)
                         .multilineTextAlignment(.center)
+                        .fixedSize(horizontal: false, vertical: true)
                         .padding(.horizontal, 8)
                 }
             }
