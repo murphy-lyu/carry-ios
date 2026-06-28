@@ -521,16 +521,16 @@ struct DetailActionFooter: View {
                     Label("common.remove", systemImage: "trash")
                 }
                 if onNote != nil || onCost != nil { Divider() }
-                if let onCost {
-                    Button(action: onCost) {
-                        Label(hasCost ? "itinerary.menu.edit_cost" : "itinerary.menu.record_cost",
-                              systemImage: "creditcard")
-                    }
-                }
                 if let onNote {
                     Button(action: onNote) {
                         Label(hasNote ? "itinerary.menu.edit_note" : "itinerary.menu.add_note",
                               systemImage: "note.text")
+                    }
+                }
+                if let onCost {
+                    Button(action: onCost) {
+                        Label(hasCost ? "itinerary.menu.edit_cost" : "itinerary.menu.record_cost",
+                              systemImage: "creditcard")
                     }
                 }
             } label: {
