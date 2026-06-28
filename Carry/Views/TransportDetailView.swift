@@ -452,12 +452,17 @@ struct TransportDetailView: View {
                             }
                         }
                     }
-                    // 日期（周几·月·日）：时刻正下方、右对齐、安静灰——截图发同行人时自含「哪天取/还、哪天起/落」。
+                    // 日期（周几·月·日）：时刻正下方、右对齐——与时间数字右缘对齐（gutter 占位保持列宽一致）。
                     if let d = p.date {
-                        Text(d)
-                            .font(.system(.caption, design: .rounded))
-                            .foregroundStyle(.secondary)
-                            .fixedSize()
+                        HStack(spacing: 4) {
+                            Text(d)
+                                .font(.system(.caption, design: .rounded))
+                                .foregroundStyle(.secondary)
+                                .fixedSize()
+                            if crossDay {
+                                Color.clear.frame(width: 13)
+                            }
+                        }
                     }
                     // 跨时区时显该端时区（GMT±N）——消除「出发时刻 vs 到达时刻不在同一时区」的歧义
                     // （这是详情里唯一真有歧义、值得显时区的地方；spec: itinerary-timezone.md 详情卡决策）。
