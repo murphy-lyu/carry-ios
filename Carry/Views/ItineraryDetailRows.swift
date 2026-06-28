@@ -441,6 +441,8 @@ private struct LinkAwareText: UIViewRepresentable {
         tv.textContainer.lineFragmentPadding = 0
         tv.setContentCompressionResistancePriority(.required, for: .vertical)
         tv.setContentHuggingPriority(.required, for: .vertical)
+        // 水平方向不抵抗压缩：让父容器宽度约束 UITextView，而不是反过来被长文本撑宽 sheet。
+        tv.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
         tv.isScrollEnabled = false
 
         let lp = UILongPressGestureRecognizer(target: context.coordinator,
