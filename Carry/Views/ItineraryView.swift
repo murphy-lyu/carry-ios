@@ -50,7 +50,7 @@ private enum ItinerarySheet: Identifiable {
 
     var id: String {
         switch self {
-        case .addStop(let dayId, let cat): return "add-\(dayId)-\(cat.rawValue)"
+        case .addStop(let dayId, _): return "add-\(dayId)"
         case .stopDetail(let stop): return "detail-\(stop.id)"
         case .editStop(let stop): return "edit-\(stop.id)"
         case .optimize(let dayId): return "opt-\(dayId)"
@@ -856,20 +856,20 @@ struct ItineraryView: View {
 
     /// 统一「+ 添加」入口（spec: itinerary-transport-lodging.md）：菜单选类型 → 地点 / 航班 / 火车 / 住宿。
     /// 次级内联动作用 secondary 灰，与打包「添加物品」一致（避免每组一行 accent 蓝、喧宾夺主）。
+    private static let commonPlaces: [StopCategory] = [.sightseeing, .restaurant, .cafe]
+    private static let morePlaces: [StopCategory] = [.museum, .park, .beach, .shopping, .bar, .other]
+
     private func addStopRow(_ dayID: UUID) -> some View {
         let order = lineCache.dayByID[dayID]?.sortOrder ?? 0
-        // 地点：高频 3 类直列，低频 5 类收进「更多地点」子菜单。
-        let commonPlaces: [StopCategory] = [.sightseeing, .restaurant, .cafe]
-        let morePlaces: [StopCategory] = [.museum, .park, .beach, .shopping, .bar, .other]
         return Menu {
             Section("itinerary.add.section.place") {
-                ForEach(commonPlaces, id: \.self) { cat in
+                ForEach(Self.commonPlaces, id: \.self) { cat in
                     Button { activeSheet = .addStop(dayId: dayID, category: cat) } label: {
                         Label(cat.titleKey, systemImage: cat.symbolName)
                     }
                 }
                 Menu {
-                    ForEach(morePlaces, id: \.self) { cat in
+                    ForEach(Self.morePlaces, id: \.self) { cat in
                         Button { activeSheet = .addStop(dayId: dayID, category: cat) } label: {
                             Label(cat.titleKey, systemImage: cat.symbolName)
                         }

@@ -233,8 +233,6 @@ final class StopSearchCompleter: NSObject, ObservableObject, MKLocalSearchComple
 struct AddStopView: View {
     let tripId: UUID
     let dayId: UUID
-    /// 从 Menu 直接选类型进入时预填；默认景点。
-    var initialCategory: StopCategory = .sightseeing
     /// 行程目的地坐标，用于搜索区域偏置（可为 0/0）。
     var biasLatitude: Double = 0
     var biasLongitude: Double = 0
@@ -249,9 +247,21 @@ struct AddStopView: View {
     @Environment(\.dismiss) private var dismiss
 
     @StateObject private var completer = StopSearchCompleter()
-    @State private var category: StopCategory = .sightseeing
+    @State private var category: StopCategory
     @State private var isResolving = false
     @State private var searchFocused: Bool = false   // 普通 Bool：CarrySearchField 内部走 UITextField，焦点不能用 @FocusState（见 IMESafeTextField）
+
+    init(tripId: UUID, dayId: UUID, initialCategory: StopCategory = .sightseeing,
+         biasLatitude: Double = 0, biasLongitude: Double = 0,
+         relocateStopId: UUID? = nil, onRelocated: ((String) -> Void)? = nil) {
+        self.tripId = tripId
+        self.dayId = dayId
+        self.biasLatitude = biasLatitude
+        self.biasLongitude = biasLongitude
+        self.relocateStopId = relocateStopId
+        self.onRelocated = onRelocated
+        _category = State(initialValue: initialCategory)
+    }
 
     var body: some View {
         NavigationStack {
@@ -308,7 +318,6 @@ struct AddStopView: View {
                 }
             }
             .onAppear {
-                category = initialCategory
                 completer.biasRegion(toLatitude: biasLatitude, longitude: biasLongitude)
                 // 聚焦推迟到下一帧：在 sheet 呈现的更新周期内同步设置 @FocusState 会触发
                 // AttributeGraph「setting value during update」硬崩溃；且延后设置程序化聚焦更可靠。
