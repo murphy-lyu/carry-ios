@@ -26,7 +26,6 @@ enum StopCategory: String, Codable, CaseIterable {
     case cafe          // 咖啡馆 / 甜品
     case bar           // 酒吧 / 夜生活
     case shopping      // 购物
-    case experience    // 体验（演出/运动/游乐）
     // 住宿 + 交通（后勤骨架）
     case lodging       // 住宿
     case flight        // 航班（机场/飞机）
@@ -37,12 +36,12 @@ enum StopCategory: String, Codable, CaseIterable {
     case other         // 其他
 
     /// 解析存库字符串；未知值（旧数据/脏数据）一律退化为 .other，绝不崩。
-    /// 旧 rawValue 迁移：food → restaurant，activity → experience。
+    /// 旧 rawValue 迁移：food → restaurant，activity / experience → other。
     init(rawValueOrOther raw: String) {
         switch raw {
-        case "food":     self = .restaurant
-        case "activity": self = .experience
-        default:         self = StopCategory(rawValue: raw) ?? .other
+        case "food":                 self = .restaurant
+        case "activity", "experience": self = .other
+        default:                     self = StopCategory(rawValue: raw) ?? .other
         }
     }
 
@@ -57,7 +56,7 @@ enum StopCategory: String, Codable, CaseIterable {
     static let placeSelectableCases: [StopCategory] =
         [.sightseeing, .museum, .park, .beach,
          .restaurant, .cafe, .bar,
-         .shopping, .experience, .other]
+         .shopping, .other]
 }
 
 // MARK: - ItineraryDay

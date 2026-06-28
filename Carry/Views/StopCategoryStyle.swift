@@ -19,7 +19,6 @@ extension StopCategory {
         case .cafe:        return "cup.and.saucer"
         case .bar:         return "wineglass"
         case .shopping:    return "bag"
-        case .experience:  return "ferriswheel"
         case .lodging:     return "bed.double"
         case .flight:      return "airplane"
         case .train:       return "train.side.front.car"

@@ -14,7 +14,7 @@ import Foundation
 
 /// 花费分布的展示类别：由「实体类型 + StopCategory」归并而成。交通各 mode 合并为一类（细分在逐笔清单看）。
 enum SpendCategory: String, CaseIterable, Identifiable, Hashable {
-    case transport, lodging, restaurant, cafe, bar, sightseeing, museum, park, beach, shopping, experience, other
+    case transport, lodging, restaurant, cafe, bar, sightseeing, museum, park, beach, shopping, other
     var id: String { rawValue }
 
     /// 地点（ItineraryStop）的 StopCategory → 展示类别。
@@ -28,7 +28,6 @@ enum SpendCategory: String, CaseIterable, Identifiable, Hashable {
         case .park:        return .park
         case .beach:       return .beach
         case .shopping:    return .shopping
-        case .experience:  return .experience
         default:           return .other
         }
     }

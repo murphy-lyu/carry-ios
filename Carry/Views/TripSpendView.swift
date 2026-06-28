@@ -25,7 +25,6 @@ extension SpendCategory {
         case .park:        return .green
         case .beach:       return Color(red: 0.0, green: 0.7, blue: 0.8)  // 海蓝
         case .shopping:    return Color(red: 0.9, green: 0.4, blue: 0.5)  // 玫红
-        case .experience:  return .pink
         case .other:       return .gray
         }
     }
@@ -41,7 +40,6 @@ extension SpendCategory {
         case .park:        return "tree.fill"
         case .beach:       return "beach.umbrella.fill"
         case .shopping:    return "bag.fill"
-        case .experience:  return "ferriswheel"
         case .other:       return "mappin"
         }
     }

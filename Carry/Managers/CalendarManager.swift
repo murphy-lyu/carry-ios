@@ -511,7 +511,6 @@ final class CalendarManager {
         case .cafe:        return "☕"
         case .bar:         return "🍸"
         case .shopping:    return "🛍️"
-        case .experience:  return "🎡"
         case .lodging:     return "🏨"
         default:           return "📍"
         }
