@@ -32,7 +32,7 @@ struct SuggestionPreviewView: View {
 
     private var surpriseItemNames: Set<String> { Set(surpriseItems.map(\.name)) }
     private var chromeBackgroundColor: Color {
-        colorScheme == .dark ? Color(red: 0.08, green: 0.08, blue: 0.09) : Color(UIColor.systemBackground)
+        CarrySubtleBackground.baseColor
     }
     private var primaryButtonBackground: Color {
         hasSelection

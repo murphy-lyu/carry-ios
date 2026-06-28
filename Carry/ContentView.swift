@@ -162,9 +162,7 @@ struct ContentView: View {
             .frame(width: 360)
             .background(
                 RoundedRectangle(cornerRadius: 18, style: .continuous)
-                    .fill(colorScheme == .dark
-                        ? Color(red: 0.09, green: 0.09, blue: 0.10)
-                        : Color(UIColor.systemBackground))
+                    .fill(CarrySubtleBackground.baseColor)
             )
             .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
             .shadow(color: .black.opacity(colorScheme == .dark ? 0.45 : 0.18), radius: 32, x: 0, y: 8)

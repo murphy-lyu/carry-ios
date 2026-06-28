@@ -19,9 +19,7 @@ struct TripDateRangePickerSheet: View {
 
     /// 与 CarrySubtleBackground 渐变底色一致，让底部入口无缝融入、不撞色。
     private var footerBlendColor: Color {
-        colorScheme == .dark
-            ? Color(red: 0.08, green: 0.08, blue: 0.09)
-            : Color(red: 0.98, green: 0.98, blue: 0.97)
+        CarrySubtleBackground.baseColor
     }
 
     private let calendar = Calendar.current

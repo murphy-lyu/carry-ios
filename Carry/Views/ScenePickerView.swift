@@ -76,7 +76,7 @@ struct ScenePickerView: View {
     }
 
     private var footerBackgroundColor: Color {
-        colorScheme == .dark ? Color(red: 0.08, green: 0.08, blue: 0.09) : Color(UIColor.systemBackground)
+        CarrySubtleBackground.baseColor
     }
 
     private var primaryButtonBackground: Color {
