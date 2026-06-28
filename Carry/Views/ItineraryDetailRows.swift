@@ -576,8 +576,8 @@ struct DetailActionFooter: View {
                     .overlay(Circle().strokeBorder(Color.primary.opacity(0.07), lineWidth: 0.5))
                     .compositingGroup()
                     .shadow(color: Color.carryCardShadow, radius: 16, x: 0, y: 6)
-                    .contentShape(Circle())
             }
+            .clipShape(Circle())
             .accessibilityLabel(Text("common.more"))
         }
     }
