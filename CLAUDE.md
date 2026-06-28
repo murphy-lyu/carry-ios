@@ -431,6 +431,7 @@ private let itemNameAliases: [String: String] = [
 - **只在 en/中文设备验收** → 德/法/日/韩等的英文占位、漏译、半角标点全不可见。切目标语言设备抽验，或信 `scripts/i18n-audit.py` 的 [E]=0。
 - **`Text("...\(插值)...")` 字面量被当本地化键、构建时被 Xcode 自动抽进 catalog** → 形如 `Text("\(a) → \(b)")`、`Text(" · \(name)")` 的**字符串字面量带插值**会被 SwiftUI 解析成 `LocalizedStringKey`，Xcode 构建的 String Catalog 提取把 `%@ → %@`、` · %@` 写进 `.xcstrings`（污染、且报缺译 error）。**纯数据/分隔符（箭头、中点、码拼接）一律 `Text(verbatim:)`**；只有真正要本地化的文案才用裸字面量。判据：这段文字需要按语言变吗？不需要 → `verbatim`。（`Text(变量)` 取非本地化重载、不受影响；`Text(三元 ? "字面量" : 变量)` 因整体是 String 也走 verbatim。）改完跑 `i18n-audit`，发现误抽键就删并把源改 verbatim。
 - **改完 xcstrings 又跑了 `xcodebuild` → catalog 被构建重写**（2026-06-23 post-mortem，反复踩）：构建会 ① 把代码里新引用、但你刚手填了 9 语的 key 的非英译**清成空 stub + `needs_review`**（看似有值实为英文占位）；② 给插值 glue key（` · %@`、`%@ → %@` 这类纯标点拼接）的非英译**清掉**；③ 给新 code-referenced key 生成**重复空 stub** → 制造缺译/重复。正确工作流：**先只 build 代码**验证编译通过 → 再从 **HEAD 文本**重建 xcstrings（HEAD + 本次 key 改动，不经 Xcode）→ 跑 `i18n-audit.py` 确认 [E]=0 → **提交，且此后不再 build**。即「xcstrings 的最终态必须由人/脚本写定并直接提交，绝不能让一次 `xcodebuild` 跑在它和提交之间」。
+- **SwiftUI `Menu` label 内 shadow/clipShape 修不掉按钮区域残影 → 根因在 Menu 控件本身**（2026-06-28，踩了三次）：Menu 控件的 press/highlight 交互动画作用在**控件自身的矩形 bounds**，收起时 highlight 以矩形淡出，产生方形残影——与 label 内部的 shadow/material/clipShape 无关。修法：`.clipShape(目标形状)` 施加到 **`Menu` 控件本身**（不是 label 内部），把控件交互层裁成目标形状；菜单弹出层在独立 UIWindow、不受影响。**自查**：看到按钮收起后有形状残影 → 先确认是「渲染内容」还是「控件交互层」，不要在 shadow/material 上反复打转。
 
 ## 文件索引
 - docs/design-north-star.md：设计最高标准（ADA 级评判框架，凌驾于 design-system.md）

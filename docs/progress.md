@@ -1,7 +1,20 @@
 # 项目进度
 
 ## 最后更新
-2026-06-27
+2026-06-28
+
+## 上次改动摘要（细节打磨：残影修复 + 住宿行程逻辑 + 行程册对齐 + 全天事件紧凑 · 2026-06-28）
+
+> 单会话、无并行。**全部已提交并 push 到 origin/main**。
+
+- **长按复制备注（`b37c50a`）**：NoteDetailRow 长按全段复制 + haptic + Toast，与地址/确认号等可复制字段一致。实现用 `UILongPressGestureRecognizer` 直接挂在 UITextView（SwiftUI `.onLongPressGesture` 无法穿透 UIKit 视图）；`isSelectable=false` 避免系统选择菜单与 Toast 冲突（data detector 点击不受影响）。VoiceOver「拷贝」无障碍动作兜底。
+- **··· 菜单分割线（`95db1d5`）**：移除（红色危险操作）与备注/费用之间加 `Divider()`；仅在有 onNote 或 onCost 时才渲染分割线（CalendarEventDetailView 等 nil 场景不受影响）。
+- **住宿中间日「出发/返回」仅有地点时才显（`f3d7a88`）**：中间日无任何地点时，「出发（置首）」和「返回（置末）」都不渲染——它们的价值是显示酒店→首站/末站→酒店的距离，无地点即无锚点、孤零零出现只有困惑。旧逻辑「出发」已有 `!timed.isEmpty` 门控但「返回」无条件渲染，现两者合并进同一 `else if !timed.isEmpty` 分支。
+- **Trip Book 图标宽度对齐（`5daf87d`/`c9eb169`）**：飞行卡的「最远一程」(`airplane.departure`)、「最多机型」(`airplane.circle`)、费用卡的「最高一趟」(`arrow.up.circle`) 三行小料图标加 `.frame(width: 16, alignment: .center)`，不同 SF Symbol 内在宽度不同导致右侧文案无法左对齐，固定宽度后三行文案起点统一。
+- **全天日历事件行高压缩（`c6be981`）**：`CalendarEventRow` 全天事件行高从 52pt（同行程行）→ 30pt，退到「信息条」层级；定时日历事件（插入时间轴、与行程行并排）保持 52pt 不变。
+- **··· 按钮 menu 收起方形残影根因修（`2fab73c`/`4abc8b6`）**：三次迭代定位真根因——不是 shadow/material 渲染问题，而是 SwiftUI `Menu` 控件的 press/highlight 交互动画作用在自身矩形 bounds 上，收起时高亮以矩形淡出 → 方形残影。修法：在 `Menu` 控件本身加 `.clipShape(Circle())`（不只是 label 内部），把 Menu 的交互层裁成圆形；菜单弹出层在独立 window 不受影响。同时将 shadow 方案改为 `.background(.thickMaterial).clipShape(Circle()).shadow()` 顺序（shadow 从裁剪后像素计算）。
+- **git 代理配置（永久生效）**：系统代理 `127.0.0.1:6152`（Surge/Clash），curl 自动读系统代理但 git 不跟随 → `git push` 直连 443 超时。已设 `git config --global http/https.proxy http://127.0.0.1:6152`，此后所有仓库 push/pull 走代理。
+- **Ghostty 磁盘权限**：已将 Ghostty 加入「完全磁盘访问权限」，Claude Code bash 工具现可访问 `~/Documents`。
 
 ## 上次改动摘要（事件详情 ··· 菜单快速备注/费用入口 · 2026-06-27）
 
