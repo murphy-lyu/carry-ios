@@ -197,35 +197,309 @@ final class CalendarManager {
 
     private func writeEvents(for trip: TripBundle, to cal: EKCalendar) throws {
         let greg = Calendar.current
+        let tripUrl = URL(string: "carry://trip/\(trip.id.uuidString)")
 
-        // All-day trip event.
-        // startDate must be exact midnight; endDate is exclusive (3-day trip = +3 days).
+        // ── 1. 行程全天事件（现有逻辑保持不变）──
         let startComps = greg.dateComponents([.year, .month, .day], from: trip.departureDate)
         guard let dayStart = greg.date(from: startComps),
               let dayEnd   = greg.date(byAdding: .day, value: max(trip.days, 1), to: dayStart) else {
             throw CalendarError.dateNormalizationFailed
         }
-
-        #if DEBUG
-        print("[CalendarManager] '\(trip.name)' departureDate=\(trip.departureDate) → dayStart=\(dayStart) dayEnd=\(dayEnd)")
-        #endif
-
         let tripEvent = EKEvent(eventStore: store)
         tripEvent.title     = "✈️ \(trip.name)"
         tripEvent.isAllDay  = true
         tripEvent.startDate = dayStart
         tripEvent.endDate   = dayEnd
-        var notes: [String] = []
-        if !trip.destinationCity.isEmpty { notes.append(trip.destinationCity) }
-        if !trip.dateRange.isEmpty        { notes.append(trip.dateRange) }
-        if !notes.isEmpty { tripEvent.notes = notes.joined(separator: "\n") }
-        tripEvent.url      = URL(string: "carry://trip/\(trip.id.uuidString)")
+        var tripNotes: [String] = []
+        if !trip.destinationCity.isEmpty { tripNotes.append(trip.destinationCity) }
+        if !trip.dateRange.isEmpty        { tripNotes.append(trip.dateRange) }
+        if !tripNotes.isEmpty { tripEvent.notes = tripNotes.joined(separator: "\n") }
+        tripEvent.url      = tripUrl
         tripEvent.calendar = cal
         do {
-            try store.save(tripEvent, span: .thisEvent, commit: true)
+            try store.save(tripEvent, span: .thisEvent, commit: false)
         } catch {
-            CarryLogger.shared.log(.calendarSaveFailed, context: "tripEvent '\(trip.name)' dayStart=\(dayStart) dayEnd=\(dayEnd): \(error.localizedDescription)")
+            CarryLogger.shared.log(.calendarSaveFailed,
+                context: "tripEvent '\(trip.name)': \(error.localizedDescription)")
             throw error
+        }
+
+        // ── 2. 行程内事件：交通段 + 地点（按天遍历）──
+        var itineraryEventCount = 0
+        for day in trip.safeItineraryDays {
+            // 交通段
+            for seg in day.sortedSegments where seg.departLocalMinutes >= 0 {
+                if let ev = makeTransportEvent(seg: seg, trip: trip, cal: cal, url: tripUrl) {
+                    do {
+                        try store.save(ev, span: .thisEvent, commit: false)
+                        itineraryEventCount += 1
+                    } catch {
+                        CarryLogger.shared.log(.calendarItineraryEventFailed,
+                            context: "transport \(seg.modeRaw) id=\(seg.id): \(error.localizedDescription)")
+                    }
+                }
+            }
+            // 地点（仅有时间的）
+            for stop in day.sortedStops where stop.plannedStartMinutes >= 0 {
+                if let ev = makeStopEvent(stop: stop, day: day, trip: trip, cal: cal, url: tripUrl) {
+                    do {
+                        try store.save(ev, span: .thisEvent, commit: false)
+                        itineraryEventCount += 1
+                    } catch {
+                        CarryLogger.shared.log(.calendarItineraryEventFailed,
+                            context: "stop '\(stop.name)' id=\(stop.id): \(error.localizedDescription)")
+                    }
+                }
+            }
+        }
+
+        // ── 3. 住宿（全天跨度 + 可选入住/退房定时）──
+        for stay in trip.safeLodgingStays {
+            let eventsForStay = makeLodgingEvents(stay: stay, trip: trip, cal: cal, url: tripUrl)
+            for ev in eventsForStay {
+                do {
+                    try store.save(ev, span: .thisEvent, commit: false)
+                    itineraryEventCount += 1
+                } catch {
+                    CarryLogger.shared.log(.calendarItineraryEventFailed,
+                        context: "lodging '\(stay.name)' id=\(stay.id): \(error.localizedDescription)")
+                }
+            }
+        }
+
+        // 统一提交（减少 IO 次数）
+        try store.commit()
+
+        if itineraryEventCount > 0 {
+            CarryLogger.shared.log(.calendarItineraryEventsSaved,
+                context: "trip='\(trip.name)' count=\(itineraryEventCount)")
+        }
+    }
+
+    // MARK: - 交通段事件构建
+
+    private func makeTransportEvent(seg: TransportSegment, trip: TripBundle,
+                                    cal: EKCalendar, url: URL?) -> EKEvent? {
+        guard let startDate = seg.absoluteDeparture(tripDeparture: trip.departureDate) else { return nil }
+        let endDate = seg.absoluteArrival(tripDeparture: trip.departureDate)
+            ?? startDate.addingTimeInterval(3600)
+
+        let ev = EKEvent(eventStore: store)
+        ev.startDate = startDate
+        ev.endDate   = endDate
+        ev.isAllDay  = false
+        ev.timeZone  = TimeZone(identifier: seg.fromTimeZoneId.isEmpty
+            ? trip.primaryTimeZoneId : seg.fromTimeZoneId) ?? .current
+        ev.url       = url
+        ev.calendar  = cal
+
+        let mode = seg.mode
+        let emoji = Self.transportEmoji(mode)
+
+        // 标题
+        let fromShort = seg.fromCode.isEmpty ? seg.fromName : seg.fromCode
+        let toShort   = seg.toCode.isEmpty   ? seg.toName   : seg.toCode
+        let route     = [fromShort, toShort].filter { !$0.isEmpty }.joined(separator: "→")
+        if !seg.number.isEmpty {
+            ev.title = "\(emoji) \(seg.number)\(route.isEmpty ? "" : " \(route)")"
+        } else if !seg.carrier.isEmpty {
+            ev.title = "\(emoji) \(seg.carrier)\(route.isEmpty ? "" : " \(route)")"
+        } else {
+            ev.title = "\(emoji) \(route.isEmpty ? seg.fromName : route)"
+        }
+
+        // location
+        let loc = seg.fromAddress.isEmpty ? seg.fromName : seg.fromAddress
+        if !loc.isEmpty { ev.location = loc }
+
+        // notes
+        var lines: [String] = []
+        if !seg.carrier.isEmpty { lines.append(seg.carrier) }
+        let fullRoute = [seg.fromName, seg.toName].filter { !$0.isEmpty }.joined(separator: " → ")
+        if !fullRoute.isEmpty { lines.append(fullRoute) }
+        let terminals = [seg.fromTerminal, seg.toTerminal].filter { !$0.isEmpty }.joined(separator: " → ")
+        if !terminals.isEmpty { lines.append("Terminal: \(terminals)") }
+        // 航班专属
+        if mode == .flight {
+            if !seg.seat.isEmpty            { lines.append("Seat: \(seg.seat)") }
+            if !seg.cabinClass.isEmpty,
+               let cc = CabinClass(rawValue: seg.cabinClass) {
+                lines.append("Class: \(NSLocalizedString(cc.localizationKey, comment: ""))")
+            }
+            if !seg.eticketNumber.isEmpty   { lines.append("E-Ticket: \(seg.eticketNumber)") }
+            if !seg.aircraftType.isEmpty    { lines.append("Aircraft: \(seg.aircraftType)") }
+        }
+        // 地面/水路
+        if mode == .train || mode == .bus || mode == .ferry {
+            if !seg.routeName.isEmpty    { lines.append(seg.routeName) }
+            if !seg.coachNumber.isEmpty  { lines.append("Coach: \(seg.coachNumber)") }
+            if !seg.seat.isEmpty         { lines.append("Seat: \(seg.seat)") }
+            if !seg.seatClass.isEmpty    { lines.append("Class: \(seg.seatClass)") }
+            if !seg.serviceType.isEmpty  { lines.append("Service: \(seg.serviceType)") }
+        }
+        // 租车专属
+        if mode == .carRental {
+            if !seg.vehicleModel.isEmpty  { lines.append("Vehicle: \(seg.vehicleModel)") }
+            if !seg.licensePlate.isEmpty  { lines.append("Plate: \(seg.licensePlate)") }
+            if !seg.toName.isEmpty        { lines.append("Return: \(seg.toName)") }
+            if !seg.phone.isEmpty         { lines.append("Phone: \(seg.phone)") }
+        }
+        if !seg.confirmationCode.isEmpty { lines.append("Confirmation: \(seg.confirmationCode)") }
+        if !seg.note.isEmpty             { lines.append(seg.note) }
+        if !lines.isEmpty { ev.notes = lines.joined(separator: "\n") }
+
+        return ev
+    }
+
+    // MARK: - 地点事件构建
+
+    private func makeStopEvent(stop: ItineraryStop, day: ItineraryDay, trip: TripBundle,
+                                cal: EKCalendar, url: URL?) -> EKEvent? {
+        let tzId = stop.effectiveTimeZoneId(trip: trip)
+        guard let startDate = TransportSegment.itineraryAbsoluteDate(
+            tripDeparture: trip.departureDate,
+            dayOrder: day.sortOrder,
+            minutes: stop.plannedStartMinutes,
+            tzId: tzId) else { return nil }
+        let duration: TimeInterval = stop.stayMinutes > 0
+            ? TimeInterval(stop.stayMinutes * 60) : 3600
+        let endDate = startDate.addingTimeInterval(duration)
+
+        let ev = EKEvent(eventStore: store)
+        ev.startDate = startDate
+        ev.endDate   = endDate
+        ev.isAllDay  = false
+        ev.timeZone  = TimeZone(identifier: tzId) ?? .current
+        ev.url       = url
+        ev.calendar  = cal
+
+        let emoji = Self.stopEmoji(stop.category)
+        ev.title = "\(emoji) \(stop.name.isEmpty ? NSLocalizedString("phototrip.place.untitled", comment: "") : stop.name)"
+
+        if !stop.address.isEmpty { ev.location = stop.address }
+
+        var lines: [String] = []
+        if !stop.address.isEmpty { lines.append(stop.address) }
+        if !stop.phone.isEmpty   { lines.append("Phone: \(stop.phone)") }
+        if !stop.note.isEmpty    { lines.append(stop.note) }
+        if !lines.isEmpty { ev.notes = lines.joined(separator: "\n") }
+
+        return ev
+    }
+
+    // MARK: - 住宿事件构建
+
+    private func makeLodgingEvents(stay: LodgingStay, trip: TripBundle,
+                                   cal: EKCalendar, url: URL?) -> [EKEvent] {
+        var events: [EKEvent] = []
+        let greg = Calendar.current
+        let tzId = stay.effectiveTimeZoneId(trip: trip)
+
+        let notesLines: [String] = {
+            var ls: [String] = []
+            if stay.checkInMinutes >= 0 {
+                let timeStr = String(format: "%02d:%02d", stay.checkInMinutes / 60, stay.checkInMinutes % 60)
+                ls.append("Check-in: Day \(stay.checkInDayOrder + 1) \(timeStr)")
+            } else {
+                ls.append("Check-in: Day \(stay.checkInDayOrder + 1)")
+            }
+            if stay.checkOutMinutes >= 0 {
+                let timeStr = String(format: "%02d:%02d", stay.checkOutMinutes / 60, stay.checkOutMinutes % 60)
+                ls.append("Check-out: Day \(stay.checkOutDayOrder + 1) \(timeStr)")
+            } else {
+                ls.append("Check-out: Day \(stay.checkOutDayOrder + 1)")
+            }
+            if !stay.confirmationCode.isEmpty { ls.append("Confirmation: \(stay.confirmationCode)") }
+            if !stay.phone.isEmpty            { ls.append("Phone: \(stay.phone)") }
+            if !stay.note.isEmpty             { ls.append(stay.note) }
+            return ls
+        }()
+        let notesStr = notesLines.joined(separator: "\n")
+        let locationStr = stay.address.isEmpty ? stay.name : stay.address
+
+        // 全天跨度事件（入住日 → 退房日，exclusive）
+        let checkInDayComps = greg.dateComponents([.year, .month, .day],
+            from: greg.date(byAdding: .day, value: stay.checkInDayOrder, to: trip.departureDate) ?? trip.departureDate)
+        let checkOutDayComps = greg.dateComponents([.year, .month, .day],
+            from: greg.date(byAdding: .day, value: stay.checkOutDayOrder, to: trip.departureDate) ?? trip.departureDate)
+        if let checkInMidnight  = greg.date(from: checkInDayComps),
+           let checkOutMidnight = greg.date(from: checkOutDayComps) {
+            let allDay = EKEvent(eventStore: store)
+            allDay.title     = "🏨 \(stay.name)"
+            allDay.isAllDay  = true
+            allDay.startDate = checkInMidnight
+            allDay.endDate   = checkOutMidnight
+            if !locationStr.isEmpty { allDay.location = locationStr }
+            allDay.notes     = notesStr
+            allDay.url       = url
+            allDay.calendar  = cal
+            events.append(allDay)
+        }
+
+        // 入住定时事件
+        if stay.checkInMinutes >= 0,
+           let ciDate = TransportSegment.itineraryAbsoluteDate(
+               tripDeparture: trip.departureDate,
+               dayOrder: stay.checkInDayOrder,
+               minutes: stay.checkInMinutes,
+               tzId: tzId) {
+            let ev = EKEvent(eventStore: store)
+            ev.title     = "🏨 \(NSLocalizedString("calendar.lodging.checkin", comment: "")) · \(stay.name)"
+            ev.startDate = ciDate
+            ev.endDate   = ciDate.addingTimeInterval(3600)
+            ev.isAllDay  = false
+            ev.timeZone  = TimeZone(identifier: tzId) ?? .current
+            if !locationStr.isEmpty { ev.location = locationStr }
+            ev.notes     = notesStr
+            ev.url       = url
+            ev.calendar  = cal
+            events.append(ev)
+        }
+
+        // 退房定时事件
+        if stay.checkOutMinutes >= 0,
+           let coDate = TransportSegment.itineraryAbsoluteDate(
+               tripDeparture: trip.departureDate,
+               dayOrder: stay.checkOutDayOrder,
+               minutes: stay.checkOutMinutes,
+               tzId: tzId) {
+            let ev = EKEvent(eventStore: store)
+            ev.title     = "🏨 \(NSLocalizedString("calendar.lodging.checkout", comment: "")) · \(stay.name)"
+            ev.startDate = coDate
+            ev.endDate   = coDate.addingTimeInterval(3600)
+            ev.isAllDay  = false
+            ev.timeZone  = TimeZone(identifier: tzId) ?? .current
+            if !locationStr.isEmpty { ev.location = locationStr }
+            ev.notes     = notesStr
+            ev.url       = url
+            ev.calendar  = cal
+            events.append(ev)
+        }
+
+        return events
+    }
+
+    // MARK: - Emoji helpers
+
+    private static func transportEmoji(_ mode: TransportMode) -> String {
+        switch mode {
+        case .flight:    return "✈️"
+        case .train:     return "🚄"
+        case .bus:       return "🚌"
+        case .ferry:     return "⛴️"
+        case .carRental: return "🚗"
+        case .other:     return "🚐"
+        }
+    }
+
+    private static func stopEmoji(_ category: StopCategory) -> String {
+        switch category {
+        case .sightseeing: return "🏛️"
+        case .food:        return "🍽️"
+        case .activity:    return "🎯"
+        case .shopping:    return "🛍️"
+        case .lodging:     return "🏨"
+        default:           return "📍"
         }
     }
 

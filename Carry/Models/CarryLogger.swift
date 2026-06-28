@@ -114,7 +114,9 @@ final class CarryLogger {
         case coffeeSheetOpened      = "coffee_sheet_opened"
 
         // 日历同步
-        case calendarSaveFailed     = "calendar_save_failed"
+        case calendarSaveFailed              = "calendar_save_failed"
+        case calendarItineraryEventsSaved    = "calendar_itinerary_events_saved"   // 行程内事件批量写入成功
+        case calendarItineraryEventFailed    = "calendar_itinerary_event_failed"   // 单条行程内事件写失败
         // Live Activity
         case liveActivityStarted    = "live_activity_started"
         case liveActivityStartFailed = "live_activity_start_failed"
@@ -205,7 +207,7 @@ final class CarryLogger {
         .iconSwitchFailed, .backupRestoreFailed, .backupWriteFailed, .backupCorrupted, .reminderPermissionDenied,
         .abnormalTermination, .geocodeFailed,
         .destinationDecodeFailed, .coffeePurchaseFailed, .coffeeProductsFetchFailed,
-        .calendarSaveFailed, .liveActivityStartFailed,
+        .calendarSaveFailed, .calendarItineraryEventFailed, .liveActivityStartFailed,
         .reminderScheduleFailed,
         .itineraryRouteCalcFailed, .itineraryImportFailed,
         .exchangeRateFetchFailed, .calendarOverlayAccessDenied,

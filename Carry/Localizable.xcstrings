@@ -27799,6 +27799,124 @@
         }
       }
     },
+    "calendar.lodging.checkin" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Check-in"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Check-in"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Check-in"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Arrivée"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "チェックイン"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "체크인"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Check-in"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "入住"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "入住"
+          }
+        }
+      }
+    },
+    "calendar.lodging.checkout" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Check-out"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Check-out"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Check-out"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Départ"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "チェックアウト"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "체크아웃"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Check-out"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "退房"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "退房"
+          }
+        }
+      }
+    },
     "coffee.share.text" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -57418,55 +57536,55 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Reisen kommen in einen Kalender namens „Carry“. Erscheinen sie nicht, aktiviere „Carry“ in der Kalender-App."
+            "value" : "Reisen und ihre Aktivitäten (Flüge, Hotels, Orte mit Uhrzeit) werden dem „Carry“-Kalender hinzugefügt. Erscheinen sie nicht, aktiviere „Carry“ in der Kalender-App."
           }
         },
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Trips go to a calendar named \"Carry.\" If they don’t appear, enable \"Carry\" in the Calendar app."
+            "value" : "Trips and their activities (flights, hotels, and places with a time) are added to a \"Carry\" calendar. If they don't appear, enable \"Carry\" in the Calendar app."
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Los viajes van a un calendario llamado «Carry». Si no aparecen, activa «Carry» en la app Calendario."
+            "value" : "Los viajes y sus actividades (vuelos, hoteles, lugares con hora) se añaden al calendario «Carry». Si no aparecen, activa «Carry» en la app Calendario."
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Les voyages vont dans un calendrier nommé « Carry ». S’ils n’apparaissent pas, activez « Carry » dans l’app Calendrier."
+            "value" : "Les voyages et leurs activités (vols, hôtels, lieux avec heure) sont ajoutés au calendrier « Carry ». S’ils n’apparaissent pas, activez « Carry » dans l’app Calendrier."
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "旅行は「Carry」カレンダーに追加されます。表示されない場合は、カレンダーAppで「Carry」をオンにしてください。"
+            "value" : "旅行とその活動（フライト、ホテル、時刻が設定された場所）が「Carry」カレンダーに追加されます。表示されない場合は、カレンダーAppで「Carry」をオンにしてください。"
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "여행은 \"Carry\" 캘린더에 추가돼요. 표시되지 않으면 캘린더 앱에서 \"Carry\"를 켜 주세요."
+            "value" : "여행과 활동(항공편, 호텔, 시간이 설정된 장소)이 'Carry' 캘린더에 추가돼요. 표시되지 않으면 캘린더 앱에서 'Carry'를 켜 주세요."
           }
         },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "As viagens vão para um calendário chamado \"Carry\". Se não aparecerem, ative \"Carry\" no app Calendário."
+            "value" : "Viagens e suas atividades (voos, hotéis, lugares com horário) são adicionados ao calendário \"Carry\". Se não aparecerem, ative \"Carry\" no app Calendário."
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "行程会加入名为「Carry」的日历。若未显示，请在「日历」App 中勾选「Carry」。"
+            "value" : "行程及其活动（航班、酒店、有时间的地点）会加入名为「Carry」的日历。若未显示，请在「日历」App 中勾选「Carry」。"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "行程會加入名為「Carry」的日曆。若未顯示，請在「日曆」App 中勾選「Carry」。"
+            "value" : "行程及其活動（航班、飯店、有時間的地點）會加入名為「Carry」的日曆。若未顯示，請在「日曆」App 中勾選「Carry」。"
           }
         }
       }

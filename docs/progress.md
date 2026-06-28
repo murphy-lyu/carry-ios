@@ -3,6 +3,18 @@
 ## 最后更新
 2026-06-28
 
+## 上次改动摘要（日志覆盖补全：6 个核心模块系统性修复 · 2026-06-28）
+
+> 单会话、无并行。**全部已提交并 push 到 origin/main**（`0521a51`）。
+
+- **CarryLogger 新增事件**：`attachmentDeleted`、`attachmentDeleteFailed`、`weatherFetchFailed`（区别于通用 apiError），加入 `errorEvents` 集合。
+- **TripStore.updateItemQuantity**：原 `save()` 无错误捕获，静默失败；改为 `do/try/catch` + `log(.persistFailed)`。
+- **TripStore.removeAttachment**：成功后补 `log(.attachmentDeleted)`，`save()` 失败补 `log(.persistFailed)`（原先 `save()` 无捕获）。
+- **DataBackupManager**：`makeExportFile` 编码/写入失败补 `backupWriteFailed`，成功补 `backupExported`（含 trips count）；`restoreFromData`/`mergeFromData` 新增版本不匹配→`backupRestoreFailed`、解码失败→`backupCorrupted`、成功→`backupRestored`/`backupMerged`（含 trips/items count）；`restoreBackgroundImages`/`restoreAttachmentFiles` 写回失败补 `backupRestoreFailed`（原为静默 discardResult）。
+- **AttachmentStore**：`write(data:named:)` 备份还原路径写失败补 `attachmentSaveFailed`；`delete(named:)` 原 `try?` 吞错改为 `do/catch` + `log(.attachmentDeleteFailed)`。
+- **WeatherManager**：`catch` 里 `apiError` 换成 `weatherFetchFailed`，context 加 lat/lon/dest_index/stale-cache 便于远程排查「用户反馈天气不显示」。
+- **NotificationManager**：预算修剪日志从 `#if DEBUG` 限制改为 Release 也记（通知超 64 预算被截是用户可见异常，非调试信息）。
+
 ## 上次改动摘要（细节打磨 Vol.2：备注 data detector + 路径优化 + UI 规范对齐 · 2026-06-28）
 
 > 单会话、无并行。**全部已提交并 push 到 origin/main**。
