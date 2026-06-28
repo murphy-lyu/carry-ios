@@ -447,8 +447,13 @@ struct CarryWidgetEntryView: View {
 
     private func inTripSmallView(_ trip: WidgetTrip, now: Date) -> some View {
         VStack(alignment: .leading, spacing: 4) {
-            dayHeader(trip, now: now)
-            Spacer(minLength: 6)
+            HStack {
+                Text("widget.agenda.title")
+                    .font(.system(.headline, design: .rounded).weight(.bold))
+                Spacer()
+                dayHeader(trip, now: now)
+            }
+            Spacer(minLength: 4)
             if let ev = trip.nextEvent(asOf: now) {
                 // 无图标：名称（flex 截断）+ 时间右对齐，与 Medium/Large 同一语言，省空间给名称。
                 HStack(alignment: .center, spacing: 4) {
