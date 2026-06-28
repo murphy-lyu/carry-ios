@@ -487,63 +487,75 @@ struct CarryWidgetEntryView: View {
 
     private func inTripMediumView(_ trip: WidgetTrip, now: Date) -> some View {
         let next = trip.nextEvent(asOf: now)
-        return VStack(alignment: .leading, spacing: 10) {
-            HStack(alignment: .top) {
-                VStack(alignment: .leading, spacing: 3) {
-                    dayHeader(trip, now: now)
-                    Text(trip.displayTitle)
-                        .font(.system(.title2, design: .rounded).weight(.bold))
+        return VStack(alignment: .leading, spacing: 0) {
+            // 顶部：DAY N/M · 行程名（行程名降级为小字，不占主视觉）
+            HStack(spacing: 6) {
+                dayHeader(trip, now: now)
+                Text(verbatim: "·")
+                    .font(.system(.caption2, design: .rounded))
+                    .foregroundStyle(.secondary)
+                Text(trip.displayTitle)
+                    .font(.system(.caption, design: .rounded).weight(.semibold))
+                    .foregroundStyle(.secondary)
+                    .lineLimit(1)
+            }
+            .padding(.bottom, 8)
+
+            // 主体：下一件事（图标 + 名称左对齐，时间右对齐，副标题独行）
+            if let ev = next {
+                HStack(alignment: .firstTextBaseline, spacing: 6) {
+                    Image(systemName: icon(for: ev.kind))
+                        .font(.system(size: 13, weight: .semibold))
+                        .foregroundStyle(.secondary)
+                        .frame(width: 18)
+                    eventTitle(ev)
+                        .font(.system(.title3, design: .rounded).weight(.bold))
                         .lineLimit(1)
-                    if let ev = next {
-                        HStack(spacing: 5) {
-                            Image(systemName: icon(for: ev.kind)).font(.caption)
-                            eventTitle(ev).lineLimit(1)
-                        }
-                        .font(.system(.caption, design: .rounded).weight(.semibold))
-                        if !ev.secondary.isEmpty {
-                            Text(ev.secondary)
-                                .font(.system(.caption2, design: .rounded))
-                                .foregroundStyle(.secondary)
-                                .lineLimit(1)
-                        }
-                    } else {
-                        // 无带时刻的下一件事 → 列出今天前几项安排（无倒计时）。
-                        let items = trip.todayPlan(asOf: now)
-                        ForEach(Array(items.prefix(3).enumerated()), id: \.offset) { _, it in
-                            HStack(spacing: 5) {
-                                Image(systemName: icon(for: it.kind)).font(.caption)
-                                Text(it.title).lineLimit(1)
-                            }
-                            .font(.system(.caption, design: .rounded).weight(.medium))
-                            .foregroundStyle(.secondary)
-                        }
-                        if items.count > 3 {
-                            Text(String.localizedStringWithFormat(
-                                NSLocalizedString("widget.companion.plan_more", comment: ""), items.count - 3))
-                                .font(.system(.caption2, design: .rounded))
-                                .foregroundStyle(.secondary)
-                        }
-                    }
-                }
-                Spacer()
-                if let ev = next {
-                    VStack(alignment: .trailing, spacing: 2) {
+                    Spacer(minLength: 4)
+                    VStack(alignment: .trailing, spacing: 1) {
                         Text(verbatim: eventDayLabel(ev.date, now: now))
                             .font(.system(.caption2, design: .rounded).weight(.semibold))
                             .foregroundStyle(.secondary)
-                            .lineLimit(1)
                         Text(ev.date, style: .time)
                             .font(.system(.subheadline, design: .rounded).weight(.bold))
                             .monospacedDigit()
+                    }
+                }
+                if !ev.secondary.isEmpty {
+                    Text(ev.secondary)
+                        .font(.system(.caption2, design: .rounded))
+                        .foregroundStyle(.secondary)
+                        .lineLimit(1)
+                        .padding(.leading, 24)
+                        .padding(.top, 2)
+                }
+            } else {
+                // 无带时刻的下一件事 → 列出今天前几项安排。
+                let items = trip.todayPlan(asOf: now)
+                ForEach(Array(items.prefix(3).enumerated()), id: \.offset) { _, it in
+                    HStack(spacing: 6) {
+                        Image(systemName: icon(for: it.kind))
+                            .font(.system(size: 13, weight: .semibold))
+                            .foregroundStyle(.secondary)
+                            .frame(width: 18)
+                        Text(it.title)
+                            .font(.system(.subheadline, design: .rounded).weight(.medium))
                             .lineLimit(1)
                     }
+                    .padding(.bottom, 3)
+                }
+                if items.count > 3 {
+                    Text(String.localizedStringWithFormat(
+                        NSLocalizedString("widget.companion.plan_more", comment: ""), items.count - 3))
+                        .font(.system(.caption2, design: .rounded))
+                        .foregroundStyle(.secondary)
                 }
             }
 
             Spacer(minLength: 0)
 
             if let stay = trip.tonightStay(asOf: now) {
-                Divider()
+                Divider().padding(.bottom, 6)
                 tonightRow(stay)
             }
         }
@@ -619,8 +631,8 @@ struct CarryWidgetEntryView: View {
 
     private func largeAgendaView(_ trip: WidgetTrip, now: Date) -> some View {
         let items = trip.upcomingAgenda(asOf: now)
-        // maxSlots=12：天头1槽、无副标题条目1槽、有副标题条目2槽，systemLarge 约容12槽不超高。
-        let rows = agendaRenderRows(items, maxSlots: 12)
+        // maxSlots=18：天头1槽、无副标题条目1槽、有副标题条目2槽，systemLarge 约容18槽不超高。
+        let rows = agendaRenderRows(items, maxSlots: 18)
         return VStack(alignment: .leading, spacing: 7) {
             HStack {
                 Text("widget.agenda.title")
