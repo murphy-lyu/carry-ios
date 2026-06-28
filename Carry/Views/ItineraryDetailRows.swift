@@ -77,29 +77,30 @@ struct DetailSheetScaffold<Header: View, Content: View, Footer: View>: View {
             header
                 .padding(.horizontal, 20)
                 .padding(.top, 18)
-                .padding(.bottom, 4)   // 头部底部留白收到 4：首卡阴影余量改由下方内容区 .top 承担，「头→首卡」≈ 卡间距 16
+                .padding(.bottom, 4)
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .background(heightReader($headerHeight))
-                .background(Color.carryCanvas)   // 不透明分组画布：滚动内容从下穿过、不透字；与卡片拉开层次
+                .background(Color.carryCanvas)
             ScrollView {
                 content
                     .padding(.horizontal, 20)
-                    // 顶部 inset 12：让首卡向上扩散的柔性阴影（r16）渲染在 ScrollView 裁切边界之内，不被顶部切掉。
                     .padding(.top, 12)
-                    .padding(.bottom, 8)
+                    // 底部留出 footer 高度，避免内容被遮住；footerHeight 量到前用合理默认值。
+                    .padding(.bottom, footerHeight > 0 ? footerHeight : 80)
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .background(heightReader($contentHeight))
             }
             .frame(maxWidth: .infinity)
-            // 底部悬浮动作条 = 原生 `safeAreaInset`：框架把内容**顶到栏之上**（不再渗到栏下 / 不从 home indicator 区穿出）。
-            // `bottomBarFade`：内容在栏上沿柔和淡出 + 渐变垫底**自带 ignoresSafeArea、延伸到屏幕底盖住 home indicator**
-            // （与首页/行程列表底栏同款单一真源）。顺框架、不再手动 overlay 对抗安全区。
-            .safeAreaInset(edge: .bottom, spacing: 0) {
-                footer
-                    .padding(.horizontal, 20)
-                    .bottomBarFade(Color.carryCanvas)
-                    .background(heightReader($footerHeight))
-            }
+        }
+        // footer 用 overlay 钉在整个 sheet 底部（含安全区），不随 detent 高度变化——
+        // safeAreaInset 贴的是 sheet 内容区底边（= 当前 detent 底部），collapsed 时 footer 会浮在半屏；
+        // overlay + ignoresSafeArea 让 footer 始终贴屏幕底部安全区，与 detent 无关。
+        .overlay(alignment: .bottom) {
+            footer
+                .padding(.horizontal, 20)
+                .bottomBarFade(Color.carryCanvas)
+                .background(heightReader($footerHeight))
+                .ignoresSafeArea(edges: .bottom)
         }
         .presentationDetents(detents, selection: $selectedDetent)
         .presentationDragIndicator(.visible)
