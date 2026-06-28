@@ -538,8 +538,9 @@ struct DetailActionFooter: View {
                 Image(systemName: "ellipsis")
                     .font(.system(size: 17, weight: .semibold))
                     .foregroundStyle(.secondary)
-                    .frame(width: 52, height: 52)
+                    .frame(width: 36, height: 36)
                     .glassCircleButton()
+                    .frame(width: 52, height: 52)
                     .contentShape(Circle())
             }
             .accessibilityLabel(Text("common.more"))
