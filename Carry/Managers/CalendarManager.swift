@@ -197,7 +197,9 @@ final class CalendarManager {
 
     private func writeEvents(for trip: TripBundle, to cal: EKCalendar) throws {
         let greg = Calendar.current
-        let tripUrl = URL(string: "carry://trip/\(trip.id.uuidString)")
+        guard let tripUrl = URL(string: "carry://trip/\(trip.id.uuidString)") else {
+            throw CalendarError.dateNormalizationFailed
+        }
 
         // ── 1. 行程全天事件（现有逻辑保持不变）──
         let startComps = greg.dateComponents([.year, .month, .day], from: trip.departureDate)
@@ -279,7 +281,7 @@ final class CalendarManager {
     // MARK: - 交通段事件构建
 
     private func makeTransportEvent(seg: TransportSegment, trip: TripBundle,
-                                    cal: EKCalendar, url: URL?) -> EKEvent? {
+                                    cal: EKCalendar, url: URL) -> EKEvent? {
         guard let startDate = seg.absoluteDeparture(tripDeparture: trip.departureDate) else { return nil }
         let endDate = seg.absoluteArrival(tripDeparture: trip.departureDate)
             ?? startDate.addingTimeInterval(3600)
@@ -297,15 +299,24 @@ final class CalendarManager {
         let emoji = Self.transportEmoji(mode)
 
         // 标题
-        let fromShort = seg.fromCode.isEmpty ? seg.fromName : seg.fromCode
-        let toShort   = seg.toCode.isEmpty   ? seg.toName   : seg.toCode
-        let route     = [fromShort, toShort].filter { !$0.isEmpty }.joined(separator: "→")
-        if !seg.number.isEmpty {
-            ev.title = "\(emoji) \(seg.number)\(route.isEmpty ? "" : " \(route)")"
-        } else if !seg.carrier.isEmpty {
-            ev.title = "\(emoji) \(seg.carrier)\(route.isEmpty ? "" : " \(route)")"
+        if mode == .carRental {
+            // 租车：「🚗 取车 · {vendor} · {pickupName}」—— 无路线格式，语义是「取车地点/公司」
+            var parts: [String] = [NSLocalizedString("calendar.transport.pickup", comment: "")]
+            if !seg.carrier.isEmpty  { parts.append(seg.carrier) }
+            let pickup = seg.fromName.isEmpty ? seg.fromCode : seg.fromName
+            if !pickup.isEmpty { parts.append(pickup) }
+            ev.title = "🚗 " + parts.joined(separator: " · ")
         } else {
-            ev.title = "\(emoji) \(route.isEmpty ? seg.fromName : route)"
+            let fromShort = seg.fromCode.isEmpty ? seg.fromName : seg.fromCode
+            let toShort   = seg.toCode.isEmpty   ? seg.toName   : seg.toCode
+            let route     = [fromShort, toShort].filter { !$0.isEmpty }.joined(separator: "→")
+            if !seg.number.isEmpty {
+                ev.title = "\(emoji) \(seg.number)\(route.isEmpty ? "" : " \(route)")"
+            } else if !seg.carrier.isEmpty {
+                ev.title = "\(emoji) \(seg.carrier)\(route.isEmpty ? "" : " \(route)")"
+            } else {
+                ev.title = "\(emoji) \(route.isEmpty ? seg.fromName : route)"
+            }
         }
 
         // location
@@ -354,7 +365,7 @@ final class CalendarManager {
     // MARK: - 地点事件构建
 
     private func makeStopEvent(stop: ItineraryStop, day: ItineraryDay, trip: TripBundle,
-                                cal: EKCalendar, url: URL?) -> EKEvent? {
+                                cal: EKCalendar, url: URL) -> EKEvent? {
         let tzId = stop.effectiveTimeZoneId(trip: trip)
         guard let startDate = TransportSegment.itineraryAbsoluteDate(
             tripDeparture: trip.departureDate,
@@ -374,7 +385,7 @@ final class CalendarManager {
         ev.calendar  = cal
 
         let emoji = Self.stopEmoji(stop.category)
-        ev.title = "\(emoji) \(stop.name.isEmpty ? NSLocalizedString("phototrip.place.untitled", comment: "") : stop.name)"
+        ev.title = "\(emoji) \(stop.name.isEmpty ? NSLocalizedString("calendar.stop.untitled", comment: "") : stop.name)"
 
         if !stop.address.isEmpty { ev.location = stop.address }
 
@@ -390,7 +401,7 @@ final class CalendarManager {
     // MARK: - 住宿事件构建
 
     private func makeLodgingEvents(stay: LodgingStay, trip: TripBundle,
-                                   cal: EKCalendar, url: URL?) -> [EKEvent] {
+                                   cal: EKCalendar, url: URL) -> [EKEvent] {
         var events: [EKEvent] = []
         let greg = Calendar.current
         let tzId = stay.effectiveTimeZoneId(trip: trip)
@@ -417,13 +428,11 @@ final class CalendarManager {
         let notesStr = notesLines.joined(separator: "\n")
         let locationStr = stay.address.isEmpty ? stay.name : stay.address
 
-        // 全天跨度事件（入住日 → 退房日，exclusive）
-        let checkInDayComps = greg.dateComponents([.year, .month, .day],
-            from: greg.date(byAdding: .day, value: stay.checkInDayOrder, to: trip.departureDate) ?? trip.departureDate)
-        let checkOutDayComps = greg.dateComponents([.year, .month, .day],
-            from: greg.date(byAdding: .day, value: stay.checkOutDayOrder, to: trip.departureDate) ?? trip.departureDate)
-        if let checkInMidnight  = greg.date(from: checkInDayComps),
-           let checkOutMidnight = greg.date(from: checkOutDayComps) {
+        // 全天跨度事件（入住日午夜 → 退房日午夜，exclusive）
+        if let checkInBase  = greg.date(byAdding: .day, value: stay.checkInDayOrder,  to: trip.departureDate),
+           let checkOutBase = greg.date(byAdding: .day, value: stay.checkOutDayOrder, to: trip.departureDate) {
+            let checkInMidnight  = greg.startOfDay(for: checkInBase)
+            let checkOutMidnight = greg.startOfDay(for: checkOutBase)
             let allDay = EKEvent(eventStore: store)
             allDay.title     = "🏨 \(stay.name)"
             allDay.isAllDay  = true
@@ -520,11 +529,12 @@ final class CalendarManager {
             saveAddedIds(addedIds)
         }
         guard let cal = carryCalendar else { return }
-        // 用一个宽窗口（去年 → 明年+1）覆盖所有可能的事件。EKEventStore 没有"按 URL 直接查询"的 API。
+        // 宽窗口（-2 年 ~ +5 年）覆盖所有可能的事件（含未来很久才出发的行程）。
+        // EKEventStore 没有「按 URL 直接查询」的 API，只能按时间范围 predicate 拿全量再 filter。
         let now = Date()
         let cal0 = Calendar.current
-        guard let start = cal0.date(byAdding: .year, value: -1, to: now),
-              let end   = cal0.date(byAdding: .year, value:  2, to: now) else { return }
+        guard let start = cal0.date(byAdding: .year, value: -2, to: now),
+              let end   = cal0.date(byAdding: .year, value:  5, to: now) else { return }
         let predicate = store.predicateForEvents(withStart: start, end: end, calendars: [cal])
         let matches = store.events(matching: predicate).filter {
             $0.url?.absoluteString.contains(idString) == true
@@ -599,7 +609,7 @@ final class CalendarManager {
             .map { ev in
                 let c = greg.dateComponents([.hour, .minute], from: ev.startDate)
                 return CalendarOverlayEvent(
-                    id: ev.eventIdentifier ?? UUID().uuidString,
+                    id: ev.eventIdentifier ?? "\(ev.title ?? "")-\(ev.startDate.timeIntervalSinceReferenceDate)",
                     title: ev.title ?? "",
                     startDate: ev.startDate,
                     endDate: ev.endDate,
