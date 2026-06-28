@@ -7,9 +7,8 @@
 //  方法：最近邻构造 + 2-opt 局部优化；距离用 Haversine 直线距离做排序代理
 //  （真实道路距离仅用于「预览展示」，见 RouteDistanceService）。
 //
-//  时间锚点（Phase 4）：设了 plannedStartMinutes 的停靠点视为**固定锚点**，保持当前位置；
-//  起点（首个停靠点）始终是锚点。只在相邻锚点之间的「自由段」内重排未设时间的停靠点，
-//  且每段都钉住其两端锚点坐标做端点固定的优化——不会把已排好时间的点挪走。
+//  锚点：首尾两个停靠点固定不动（往返日两端是酒店/机场，单程日末尾通常是机场）；
+//  中间所有地点无论是否设了时间，均参与路径优化。
 //
 
 import Foundation
@@ -49,8 +48,7 @@ enum RouteOptimizer {
 
         // 锚点 = 首 ∪ 尾 ∪ 设了时间的停靠点（方案 A：固定首尾、只优化中间）。
         // 往返日「酒店→…→酒店」把酒店放在首尾即两端钉死；单程日末尾点（如机场）也不被挪走。
-        var anchors: Set<Int> = [0, coordStops.count - 1]
-        for (i, s) in coordStops.enumerated() where s.plannedStartMinutes >= 0 { anchors.insert(i) }
+        let anchors: Set<Int> = [0, coordStops.count - 1]
 
         let original = pathDistance(Array(coords.indices), coords)
         let route = optimizeWithAnchors(coords: coords, anchors: anchors)

@@ -335,7 +335,7 @@ struct OptimizeRouteView: View {
                 .opacity(0.5)
         case .notImproved:
             Button { discard() } label: {
-                Text("common.done")
+                Text("itinerary.optimize.got_it")
                     .font(.system(.body, design: .rounded).weight(.semibold))
                     .foregroundStyle(.secondary)
                     .frame(maxWidth: .infinity)
@@ -375,7 +375,7 @@ struct OptimizeRouteView: View {
                 .foregroundStyle(.secondary)
                 .multilineTextAlignment(.center)
                 .padding(.horizontal, 40)
-            Button("common.done") { discard() }
+            Button("itinerary.optimize.got_it") { discard() }
                 .buttonStyle(.bordered)
                 .tint(CarryAccent.color)
                 .padding(.top, 4)
