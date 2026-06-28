@@ -745,10 +745,12 @@ struct CarryWidgetEntryView: View {
             Text("widget.empty.title")
                 .font(.system(.subheadline, design: .rounded).weight(.semibold))
                 .multilineTextAlignment(.center)
-            Text("widget.empty.subtitle")
-                .font(.system(.caption2, design: .rounded))
-                .foregroundStyle(.secondary)
-                .multilineTextAlignment(.center)
+            if family != .systemSmall {
+                Text("widget.empty.subtitle")
+                    .font(.system(.caption2, design: .rounded))
+                    .foregroundStyle(.secondary)
+                    .multilineTextAlignment(.center)
+            }
         }
         .padding(.horizontal, 4)
     }
