@@ -57,20 +57,18 @@ struct DetailSheetScaffold<Header: View, Content: View, Footer: View>: View {
     @State private var headerHeight: CGFloat = 0
     @State private var contentHeight: CGFloat = 0
     @State private var footerHeight: CGFloat = 0
+    @State private var selectedDetent: PresentationDetent = .height(UIScreen.main.bounds.height * 0.50)
     @State private var toastText: String?
     @State private var toastToken = 0
 
+    private let collapsedH = UIScreen.main.bounds.height * 0.50
+    private let expandedMaxH = UIScreen.main.bounds.height * 0.90
+
+    // 始终两档：初始固定 50%，展开 = min(内容实际高, 90%)。
+    // 这样无论内容多少，第一眼高度一致（消除随机感），上滑才展开。
     private var detents: Set<PresentationDetent> {
-        let screenH = UIScreen.main.bounds.height
-        let collapsedH = screenH * 0.50
-        let expandedH  = screenH * 0.90
-        guard headerHeight > 0, contentHeight > 0 else { return [.height(collapsedH)] }
         let idealH = headerHeight + contentHeight + footerHeight + 8
-        // 内容本身 ≤ 50%：单 detent 刚好包住，无需拖拽。
-        // 内容在 50–90%：单 detent 展示全部，无需拖拽。
-        // 内容 > 90%：两档——初始 50% 预览，上滑到 90% 展开，内部滚动看全部。
-        if idealH <= collapsedH { return [.height(idealH)] }
-        if idealH <= expandedH  { return [.height(idealH)] }
+        let expandedH = idealH > 0 ? min(idealH, expandedMaxH) : expandedMaxH
         return [.height(collapsedH), .height(expandedH)]
     }
 
@@ -103,7 +101,7 @@ struct DetailSheetScaffold<Header: View, Content: View, Footer: View>: View {
                     .background(heightReader($footerHeight))
             }
         }
-        .presentationDetents(detents)
+        .presentationDetents(detents, selection: $selectedDetent)
         .presentationDragIndicator(.visible)
         .presentationBackground(Color.carryCanvas)
         .environment(\.carryCopyToast, showCopyToast)
