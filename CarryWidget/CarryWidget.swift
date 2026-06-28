@@ -572,8 +572,8 @@ struct CarryWidgetEntryView: View {
             let needsHeader = it.dayOrder != lastDay
             let headerSlots = needsHeader ? 1 : 0
             let itemSlots = it.subtitle.isEmpty ? 1 : 2
-            // 预留：加天头 + 条目 + 1 slot for "+N more" 不超槽（别只放孤零零的天头）。
-            if usedSlots + headerSlots + itemSlots + 1 > maxSlots { break }
+            // 不超槽，且不放孤零零的天头（天头 + 条目必须同时放得下）。
+            if usedSlots + headerSlots + itemSlots > maxSlots { break }
             if needsHeader {
                 rows.append(AgendaRenderRow(id: "h\(it.dayOrder)", dayOrder: it.dayOrder))
                 lastDay = it.dayOrder
