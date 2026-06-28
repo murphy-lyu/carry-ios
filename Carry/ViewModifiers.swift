@@ -231,6 +231,19 @@ enum DetailSheetLayout {
 }
 
 extension View {
+    /// 详情 Sheet 全宽：iOS 18+ 用 `.presentationSizing(.page)`（全宽、无两侧间隙）；
+    /// 低版本无此 API，系统默认行为在 iOS 17 上本来就是全宽，不需要额外处理。
+    @ViewBuilder
+    func presentationPageSizing() -> some View {
+        if #available(iOS 18, *) {
+            self.presentationSizing(.page)
+        } else {
+            self
+        }
+    }
+}
+
+extension View {
     // MARK: Carry Elevation System（canonical · 单一真源 · design-system.md §Elevation）
 
     /// 【canonical】标准卡片：浮在 `carryCanvas` 上的信息卡——白底 / 深色提亮填充 + 0.5px 描边 +

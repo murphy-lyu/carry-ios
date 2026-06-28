@@ -104,6 +104,7 @@ struct DetailSheetScaffold<Header: View, Content: View, Footer: View>: View {
             }
         }
         .presentationDetents(detents, selection: $selectedDetent)
+        .presentationPageSizing()
         .presentationCornerRadius(DetailSheetLayout.cornerRadius)
         .presentationDragIndicator(.visible)
         .presentationBackground(Color.carryCanvas)

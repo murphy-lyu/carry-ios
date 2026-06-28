@@ -56,6 +56,7 @@ struct CalendarEventDetailView: View {
             }
         }
         .presentationDetents(contentDetents)
+        .presentationPageSizing()
         .presentationCornerRadius(DetailSheetLayout.cornerRadius)
         .presentationDragIndicator(.visible)
         .presentationBackground(Color.carryCanvas)
