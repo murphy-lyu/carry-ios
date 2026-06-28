@@ -363,17 +363,6 @@ struct CarryWidgetEntryView: View {
 
     // MARK: In-trip helpers (spec: widget-trip-companion.md)
 
-    /// 事件日期 → 「今天 / 明天 / 周N」语义标签（Medium Widget 右上角日期行）。
-    private func eventDayLabel(_ date: Date, now: Date) -> String {
-        let cal = Calendar.current
-        let eventDay = cal.startOfDay(for: date)
-        let today    = cal.startOfDay(for: now)
-        let diff = cal.dateComponents([.day], from: today, to: eventDay).day ?? 0
-        if diff == 0 { return NSLocalizedString("widget.companion.today", comment: "") }
-        if diff == 1 { return NSLocalizedString("widget.countdown.tomorrow", comment: "") }
-        return date.formatted(.dateTime.weekday(.abbreviated))
-    }
-
     /// 事件 kind → SF Symbol。
     private func icon(for kind: String) -> String {
         switch kind {
@@ -483,83 +472,10 @@ struct CarryWidgetEntryView: View {
         .widgetURL(trip.deepLink)
     }
 
-    // MARK: In-trip Medium
+    // MARK: In-trip Medium — 复用 agenda 布局，maxSlots 更小
 
     private func inTripMediumView(_ trip: WidgetTrip, now: Date) -> some View {
-        let next = trip.nextEvent(asOf: now)
-        return VStack(alignment: .leading, spacing: 0) {
-            // 顶部：DAY N/M · 行程名（行程名降级为小字，不占主视觉）
-            HStack(spacing: 6) {
-                dayHeader(trip, now: now)
-                Text(verbatim: "·")
-                    .font(.system(.caption2, design: .rounded))
-                    .foregroundStyle(.secondary)
-                Text(trip.displayTitle)
-                    .font(.system(.caption, design: .rounded).weight(.semibold))
-                    .foregroundStyle(.secondary)
-                    .lineLimit(1)
-            }
-            .padding(.bottom, 8)
-
-            // 主体：下一件事（图标 + 名称左对齐，时间右对齐，副标题独行）
-            if let ev = next {
-                HStack(alignment: .firstTextBaseline, spacing: 6) {
-                    Image(systemName: icon(for: ev.kind))
-                        .font(.system(size: 13, weight: .semibold))
-                        .foregroundStyle(.secondary)
-                        .frame(width: 18)
-                    eventTitle(ev)
-                        .font(.system(.title3, design: .rounded).weight(.bold))
-                        .lineLimit(1)
-                    Spacer(minLength: 4)
-                    VStack(alignment: .trailing, spacing: 1) {
-                        Text(verbatim: eventDayLabel(ev.date, now: now))
-                            .font(.system(.caption2, design: .rounded).weight(.semibold))
-                            .foregroundStyle(.secondary)
-                        Text(ev.date, style: .time)
-                            .font(.system(.subheadline, design: .rounded).weight(.bold))
-                            .monospacedDigit()
-                    }
-                }
-                if !ev.secondary.isEmpty {
-                    Text(ev.secondary)
-                        .font(.system(.caption2, design: .rounded))
-                        .foregroundStyle(.secondary)
-                        .lineLimit(1)
-                        .padding(.leading, 24)
-                        .padding(.top, 2)
-                }
-            } else {
-                // 无带时刻的下一件事 → 列出今天前几项安排。
-                let items = trip.todayPlan(asOf: now)
-                ForEach(Array(items.prefix(3).enumerated()), id: \.offset) { _, it in
-                    HStack(spacing: 6) {
-                        Image(systemName: icon(for: it.kind))
-                            .font(.system(size: 13, weight: .semibold))
-                            .foregroundStyle(.secondary)
-                            .frame(width: 18)
-                        Text(it.title)
-                            .font(.system(.subheadline, design: .rounded).weight(.medium))
-                            .lineLimit(1)
-                    }
-                    .padding(.bottom, 3)
-                }
-                if items.count > 3 {
-                    Text(String.localizedStringWithFormat(
-                        NSLocalizedString("widget.companion.plan_more", comment: ""), items.count - 3))
-                        .font(.system(.caption2, design: .rounded))
-                        .foregroundStyle(.secondary)
-                }
-            }
-
-            Spacer(minLength: 0)
-
-            if let stay = trip.tonightStay(asOf: now) {
-                Divider().padding(.bottom, 6)
-                tonightRow(stay)
-            }
-        }
-        .widgetURL(trip.deepLink)
+        agendaView(trip, now: now, maxSlots: 6)
     }
 
     // MARK: Large — 按天分组的「接下来的行程」概览（spec: widget-upcoming-large.md）
@@ -629,10 +545,10 @@ struct CarryWidgetEntryView: View {
         }
     }
 
-    private func largeAgendaView(_ trip: WidgetTrip, now: Date) -> some View {
+    /// Large 和 Medium 共用的 agenda 列表视图，maxSlots 控制装填量。
+    private func agendaView(_ trip: WidgetTrip, now: Date, maxSlots: Int) -> some View {
         let items = trip.upcomingAgenda(asOf: now)
-        // maxSlots=18：天头1槽、无副标题条目1槽、有副标题条目2槽，systemLarge 约容18槽不超高。
-        let rows = agendaRenderRows(items, maxSlots: 18)
+        let rows = agendaRenderRows(items, maxSlots: maxSlots)
         return VStack(alignment: .leading, spacing: 7) {
             HStack {
                 Text("widget.agenda.title")
@@ -673,6 +589,11 @@ struct CarryWidgetEntryView: View {
             }
         }
         .widgetURL(trip.deepLink)
+    }
+
+    private func largeAgendaView(_ trip: WidgetTrip, now: Date) -> some View {
+        // maxSlots=15：天头1槽、无副标题条目1槽、有副标题条目2槽，systemLarge 实测安全上限。
+        agendaView(trip, now: now, maxSlots: 15)
     }
 
     /// 出发前 large：倒计时 + 打包进度 + 出发当天预览。
