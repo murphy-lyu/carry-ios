@@ -18,11 +18,13 @@ struct CalendarEventDetailView: View {
     @State private var headerHeight: CGFloat = 0
     @State private var contentHeight: CGFloat = 0
 
-    /// sheet 高度贴着内容（稀疏事件不留大片空白）。单一真源 cappedContentHeight：钳在屏高以下，
-    /// 长事件也不会顶满屏触发 iOS 26 脱离（斜滚根因）。头部钉在顶、故 detent = 头 + 卡片内容。
     private var contentDetents: Set<PresentationDetent> {
-        guard headerHeight > 0, contentHeight > 0 else { return [.medium] }
-        return [.cappedContentHeight(headerHeight + contentHeight + 8)]
+        guard headerHeight > 0, contentHeight > 0 else { return [.height(DetailSheetLayout.collapsedHeight)] }
+        let screenH = UIScreen.main.bounds.height
+        let expandedH = min(headerHeight + contentHeight + 8, screenH * DetailSheetLayout.expandedRatio)
+        let collapsedH = DetailSheetLayout.collapsedHeight
+        if expandedH <= collapsedH { return [.height(expandedH)] }
+        return [.height(collapsedH), .height(expandedH)]
     }
 
     var body: some View {
@@ -54,6 +56,7 @@ struct CalendarEventDetailView: View {
             }
         }
         .presentationDetents(contentDetents)
+        .presentationCornerRadius(DetailSheetLayout.cornerRadius)
         .presentationDragIndicator(.visible)
         .presentationBackground(Color.carryCanvas)
     }

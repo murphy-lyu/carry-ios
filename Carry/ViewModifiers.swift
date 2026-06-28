@@ -216,8 +216,18 @@ extension PresentationDetent {
     /// 可 2D 拖动的浮动卡片」。钳到屏高以下后弹层永远是正常 sheet，超长内容改内部竖直滚动。
     /// **任何按内容自算高度的 sheet 一律走此入口，禁止裸用 `.height(动态值)`。** 固定小常量高度不在此限。
     static func cappedContentHeight(_ ideal: CGFloat) -> PresentationDetent {
-        .height(min(ideal, UIScreen.main.bounds.height * 0.90))
+        .height(min(ideal, UIScreen.main.bounds.height * DetailSheetLayout.expandedRatio))
     }
+}
+
+/// 详情 Sheet 高度策略（单一真源）。
+/// - collapsed：初始高度 = 屏高 50%，所有详情 sheet 第一眼高度一致，消除「随机感」。
+/// - expandedRatio：展开上限 = 屏高 90%，内容短则刚好包住（cappedContentHeight），内容长则滚动。
+/// - cornerRadius：无间隙 sheet 强制圆角，对齐 Apple 日历/地图详情页风格。
+enum DetailSheetLayout {
+    static let collapsedHeight: CGFloat = UIScreen.main.bounds.height * 0.50
+    static let expandedRatio: CGFloat = 0.90
+    static let cornerRadius: CGFloat = 20
 }
 
 extension View {

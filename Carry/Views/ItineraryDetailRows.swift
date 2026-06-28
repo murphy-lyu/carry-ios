@@ -57,14 +57,21 @@ struct DetailSheetScaffold<Header: View, Content: View, Footer: View>: View {
     @State private var headerHeight: CGFloat = 0
     @State private var contentHeight: CGFloat = 0
     @State private var footerHeight: CGFloat = 0
+    @State private var selectedDetent: PresentationDetent = .height(DetailSheetLayout.collapsedHeight)
     @State private var toastText: String?
     @State private var toastToken = 0
 
     private var detents: Set<PresentationDetent> {
-        guard headerHeight > 0, contentHeight > 0 else { return [.medium] }
-        // 自算高度走单一真源 cappedContentHeight：钳在屏高以下，绝不顶到满屏触发 iOS 26 脱离（斜滚根因）。
-        // 含 footerHeight：底部动作条经 safeAreaInset 占布局高，detent 须含它（否则 sheet 偏矮、内容被压）。
-        return [.cappedContentHeight(headerHeight + contentHeight + footerHeight + 8)]
+        guard headerHeight > 0, contentHeight > 0 else { return [.height(DetailSheetLayout.collapsedHeight)] }
+        let screenH = UIScreen.main.bounds.height
+        let idealH = headerHeight + contentHeight + footerHeight + 8
+        let expandedH = min(idealH, screenH * DetailSheetLayout.expandedRatio)
+        let collapsedH = DetailSheetLayout.collapsedHeight
+        // 内容本身比初始高度矮 → 单 detent 直接展示全部，无需两档拖拽。
+        if expandedH <= collapsedH {
+            return [.height(expandedH)]
+        }
+        return [.height(collapsedH), .height(expandedH)]
     }
 
     var body: some View {
@@ -96,7 +103,8 @@ struct DetailSheetScaffold<Header: View, Content: View, Footer: View>: View {
                     .background(heightReader($footerHeight))
             }
         }
-        .presentationDetents(detents)
+        .presentationDetents(detents, selection: $selectedDetent)
+        .presentationCornerRadius(DetailSheetLayout.cornerRadius)
         .presentationDragIndicator(.visible)
         .presentationBackground(Color.carryCanvas)
         .environment(\.carryCopyToast, showCopyToast)
