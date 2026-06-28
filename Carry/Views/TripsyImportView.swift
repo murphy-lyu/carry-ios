@@ -21,7 +21,6 @@ struct TripsyImportView: View {
 
     @EnvironmentObject private var store: TripStore
     @Environment(\.dismiss) private var dismiss
-    @Environment(\.colorScheme) private var colorScheme
 
     @State private var selected: Set<UUID>
     @State private var importing = false
@@ -68,7 +67,7 @@ struct TripsyImportView: View {
             .navigationTitle(Text("tripsy_import.preview.title"))
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .topBarTrailing) {
+                ToolbarItem(placement: .cancellationAction) {
                     Button { dismiss() } label: { Text("common.cancel") }
                 }
             }
@@ -168,9 +167,8 @@ struct TripsyImportView: View {
         .buttonStyle(.plain)
         .disabled(count == 0 || importing)
         .padding(.horizontal, 16)
-        .padding(.top, 10)
         .padding(.bottom, 12)
-        .background(.bar)
+        .bottomBarScrim(CarrySubtleBackground.baseColor)
     }
 
     private func performImport() {
