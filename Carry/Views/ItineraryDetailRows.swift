@@ -57,21 +57,13 @@ struct DetailSheetScaffold<Header: View, Content: View, Footer: View>: View {
     @State private var headerHeight: CGFloat = 0
     @State private var contentHeight: CGFloat = 0
     @State private var footerHeight: CGFloat = 0
-    @State private var selectedDetent: PresentationDetent = .height(UIScreen.main.bounds.height * 0.50)
-    @State private var detentsReady = false   // 首次高度量完后置 true，只重置一次
     @State private var toastText: String?
     @State private var toastToken = 0
 
+    // 两个固定档位——不随内容高度动态变化，避免 detents 变化触发 sheet 高度跳动。
     private let collapsedH = UIScreen.main.bounds.height * 0.50
-    private let expandedMaxH = UIScreen.main.bounds.height * 0.85
-
-    // 始终两档：初始固定 50%，展开 = min(内容实际高, 90%)。
-    // 这样无论内容多少，第一眼高度一致（消除随机感），上滑才展开。
-    private var detents: Set<PresentationDetent> {
-        let idealH = headerHeight + contentHeight + footerHeight + 8
-        let expandedH = idealH > 0 ? min(idealH, expandedMaxH) : expandedMaxH
-        return [.height(collapsedH), .height(expandedH)]
-    }
+    private let expandedH  = UIScreen.main.bounds.height * 0.85
+    private var detents: Set<PresentationDetent> { [.height(collapsedH), .height(expandedH)] }
 
     var body: some View {
         VStack(spacing: 0) {
@@ -98,15 +90,9 @@ struct DetailSheetScaffold<Header: View, Content: View, Footer: View>: View {
                     .background(heightReader($footerHeight))
             }
         }
-        .presentationDetents(detents, selection: $selectedDetent)
+        .presentationDetents(detents)
         .presentationDragIndicator(.visible)
         .presentationBackground(Color.carryCanvas)
-        .onChange(of: contentHeight) { _, h in
-            // 高度量完后首次把 selection 钉回 collapsed，防止 detents 变化时 SwiftUI 跳到 expanded 档。
-            guard h > 0, !detentsReady else { return }
-            detentsReady = true
-            selectedDetent = .height(collapsedH)
-        }
         .environment(\.carryCopyToast, showCopyToast)
         .overlay(alignment: .center) {
             if let toastText {

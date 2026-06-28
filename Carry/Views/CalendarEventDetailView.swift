@@ -17,18 +17,12 @@ struct CalendarEventDetailView: View {
     @Environment(\.dismiss) private var dismiss
     @State private var headerHeight: CGFloat = 0
     @State private var contentHeight: CGFloat = 0
-    @State private var selectedDetent: PresentationDetent = .height(UIScreen.main.bounds.height * 0.50)
 
     /// sheet 高度贴着内容（稀疏事件不留大片空白）。单一真源 cappedContentHeight：钳在屏高以下，
     /// 长事件也不会顶满屏触发 iOS 26 脱离（斜滚根因）。头部钉在顶、故 detent = 头 + 卡片内容。
     private let collapsedH = UIScreen.main.bounds.height * 0.50
-    private let expandedMaxH = UIScreen.main.bounds.height * 0.85
-
-    private var contentDetents: Set<PresentationDetent> {
-        let idealH = headerHeight + contentHeight + 8
-        let expandedH = idealH > 0 ? min(idealH, expandedMaxH) : expandedMaxH
-        return [.height(collapsedH), .height(expandedH)]
-    }
+    private let expandedH  = UIScreen.main.bounds.height * 0.85
+    private var contentDetents: Set<PresentationDetent> { [.height(collapsedH), .height(expandedH)] }
 
     var body: some View {
         VStack(spacing: 0) {
@@ -58,7 +52,7 @@ struct CalendarEventDetailView: View {
                 .background(heightReader($contentHeight))
             }
         }
-        .presentationDetents(contentDetents, selection: $selectedDetent)
+        .presentationDetents(contentDetents)
         .presentationDragIndicator(.visible)
         .presentationBackground(Color.carryCanvas)
     }
