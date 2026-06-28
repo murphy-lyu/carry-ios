@@ -514,9 +514,8 @@ struct DetailActionFooter: View {
             .buttonStyle(.plain)
             .accessibilityLabel(Text("itinerary.stop.detail.edit"))
 
-            // ··· = 右上角关闭按钮同款方案：glassCircleButton() 在 iOS 26 用 Liquid Glass，
-            // 低版本用系统填充圆——无自定义 background/clipShape/shadow，不参与 Menu 显隐动画，
-            // 彻底消除方形残影根因。
+            // ··· = 独立玻璃圆（溢出菜单）。菜单恒向上展开；iOS 声明越靠前 = 越靠近锚点（底部）。
+            // 顺序：移除（最前 = 最底，危险动作远离其它操作）；费用/备注居上（常用快捷）。
             Menu {
                 Button(role: .destructive, action: onDelete) {
                     Label("common.remove", systemImage: "trash")
@@ -538,9 +537,11 @@ struct DetailActionFooter: View {
                 Image(systemName: "ellipsis")
                     .font(.system(size: 17, weight: .semibold))
                     .foregroundStyle(.secondary)
-                    .frame(width: 36, height: 36)
-                    .glassCircleButton()
                     .frame(width: 52, height: 52)
+                    .background(.thickMaterial, in: Circle())
+                    .overlay(Circle().strokeBorder(Color.primary.opacity(0.07), lineWidth: 0.5))
+                    .compositingGroup()
+                    .shadow(color: Color.carryCardShadow, radius: 16, x: 0, y: 6)
                     .contentShape(Circle())
             }
             .accessibilityLabel(Text("common.more"))
