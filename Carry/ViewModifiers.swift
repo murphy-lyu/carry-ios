@@ -230,16 +230,28 @@ enum DetailSheetLayout {
     static let cornerRadius: CGFloat = 20
 }
 
-extension View {
-    /// 详情 Sheet 全宽：iOS 18+ 用 `.presentationSizing(.page)`（全宽、无两侧间隙）；
-    /// 低版本无此 API，系统默认行为在 iOS 17 上本来就是全宽，不需要额外处理。
-    @ViewBuilder
-    func presentationPageSizing() -> some View {
-        if #available(iOS 18, *) {
-            self.presentationSizing(.page)
-        } else {
-            self
+/// iOS 18 把 UIModalPresentationAutomatic 默认改成 FormSheet（浮动小卡片，有两侧和底部边距）。
+/// 详情 Sheet 需要全宽 pageSheet 样式——在 viewWillAppear 时找到 presented VC 强制设置。
+private struct PageSheetFix: UIViewControllerRepresentable {
+    func makeUIViewController(context: Context) -> Controller { Controller() }
+    func updateUIViewController(_ vc: Controller, context: Context) {}
+
+    final class Controller: UIViewController {
+        override func viewWillAppear(_ animated: Bool) {
+            super.viewWillAppear(animated)
+            // presentedViewController 是包含 SwiftUI content 的宿主 VC；
+            // 它的 presentationController 就是 UISheetPresentationController。
+            if let sheet = presentingViewController?.presentedViewController {
+                sheet.modalPresentationStyle = .pageSheet
+            }
         }
+    }
+}
+
+extension View {
+    /// 强制详情 Sheet 以全宽 pageSheet 呈现，修复 iOS 18+ 默认改为 FormSheet（浮动）的回归。
+    func presentationPageSizing() -> some View {
+        self.background(PageSheetFix())
     }
 }
 
