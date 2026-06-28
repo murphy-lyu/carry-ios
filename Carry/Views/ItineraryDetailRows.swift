@@ -82,6 +82,7 @@ struct DetailSheetScaffold<Header: View, Content: View, Footer: View>: View {
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .background(heightReader($contentHeight))
             }
+            .scrollIndicators(.hidden)
             .frame(maxWidth: .infinity)
             .safeAreaInset(edge: .bottom, spacing: 0) {
                 footer
