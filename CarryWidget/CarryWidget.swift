@@ -445,7 +445,7 @@ struct CarryWidgetEntryView: View {
                         .lineLimit(1)
                         .minimumScaleFactor(0.7)
                 }
-                Text(ev.date, style: .relative)
+                Text(ev.date, style: .time)
                     .font(.system(.subheadline, design: .rounded).weight(.medium))
                     .foregroundStyle(.secondary)
             } else if let first = trip.todayPlan(asOf: now).first {
@@ -510,9 +510,6 @@ struct CarryWidgetEntryView: View {
             rows.append(AgendaRenderRow(id: "i\(i)", item: it))
             usedSlots += itemSlots
             shownItems += 1
-        }
-        if shownItems < items.count {
-            rows.append(AgendaRenderRow(id: "more", moreCount: items.count - shownItems))
         }
         return rows
     }
