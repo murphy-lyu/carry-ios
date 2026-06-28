@@ -363,6 +363,17 @@ struct CarryWidgetEntryView: View {
 
     // MARK: In-trip helpers (spec: widget-trip-companion.md)
 
+    /// 事件日期 → 「今天 / 明天 / 周N」语义标签（Medium Widget 右上角日期行）。
+    private func eventDayLabel(_ date: Date, now: Date) -> String {
+        let cal = Calendar.current
+        let eventDay = cal.startOfDay(for: date)
+        let today    = cal.startOfDay(for: now)
+        let diff = cal.dateComponents([.day], from: today, to: eventDay).day ?? 0
+        if diff == 0 { return NSLocalizedString("widget.companion.today", comment: "") }
+        if diff == 1 { return NSLocalizedString("widget.countdown.tomorrow", comment: "") }
+        return date.formatted(.dateTime.weekday(.abbreviated))
+    }
+
     /// 事件 kind → SF Symbol。
     private func icon(for kind: String) -> String {
         switch kind {
@@ -517,13 +528,14 @@ struct CarryWidgetEntryView: View {
                 Spacer()
                 if let ev = next {
                     VStack(alignment: .trailing, spacing: 2) {
-                        Text(ev.date, style: .relative)
+                        Text(verbatim: eventDayLabel(ev.date, now: now))
+                            .font(.system(.caption2, design: .rounded).weight(.semibold))
+                            .foregroundStyle(.secondary)
+                            .lineLimit(1)
+                        Text(ev.date, style: .time)
                             .font(.system(.subheadline, design: .rounded).weight(.bold))
                             .monospacedDigit()
                             .lineLimit(1)
-                        Text(ev.date, style: .time)
-                            .font(.system(.caption2, design: .rounded))
-                            .foregroundStyle(.secondary)
                     }
                 }
             }
@@ -601,8 +613,8 @@ struct CarryWidgetEntryView: View {
 
     private func largeAgendaView(_ trip: WidgetTrip, now: Date) -> some View {
         let items = trip.upcomingAgenda(asOf: now)
-        // 7 个渲染行：条目行多为两行（标题+地点），保守取值防 systemLarge（固定高、不滚动）超高被裁。
-        let rows = agendaRenderRows(items, maxRows: 7)
+        // 旅行中无打包进度条，空间更充裕；取 10 行（条目行含副标题时两行高，保守不超）。
+        let rows = agendaRenderRows(items, maxRows: 10)
         return VStack(alignment: .leading, spacing: 7) {
             HStack {
                 Text("widget.agenda.title")

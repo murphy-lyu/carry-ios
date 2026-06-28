@@ -3303,15 +3303,26 @@ extension TripStore {
     }
 
     /// large 尺寸「接下来的行程」概览（spec: widget-upcoming-large.md）：地点 + 交通 + 住宿入住/退房，
-    /// 有无时刻都收，带地点副标题 + 可选时钟标签，按 (天, 当天序) 排。`fromDayOrder` 截掉过去天。
+    /// 有无时刻都收，带地点副标题 + 可选时钟标签。`fromDayOrder` 截掉过去天。
+    ///
+    /// 排序规则（与 App 内时间轴对齐）：
+    /// - 同天内按时刻升序（有时刻 = 分钟数 * 2，占偶数槽）；无时刻内容排在有时刻内容之后
+    ///   （无时刻 = 24*60*2 + sortOrder，保留用户手动序的相对顺序）。
+    /// - 住宿退房：当天最前（order = -2）；住宿入住：当天最后（order = Int.max）。
     private static func widgetAgenda(for trip: TripBundle, fromDayOrder: Int) -> [WidgetAgendaItem] {
         var out: [WidgetAgendaItem] = []
         func clock(_ m: Int) -> String { m >= 0 ? timeLabel(dayMinutes: m) : "" }
+        // 时刻 → 排序键：有时刻用 m*2（偶数），无时刻用 24*60*2 + sortOrder（排在所有有时刻之后）。
+        func sortKey(minutes m: Int, sortOrder s: Int) -> Int {
+            m >= 0 ? m * 2 : 24 * 60 * 2 + s
+        }
         for day in trip.safeItineraryDays where day.sortOrder >= fromDayOrder {
             for stop in day.sortedStops {
                 let name = stop.name.trimmingCharacters(in: .whitespaces)
                 guard !name.isEmpty else { continue }
-                out.append(WidgetAgendaItem(dayOrder: day.sortOrder, order: stop.sortOrder, title: name,
+                out.append(WidgetAgendaItem(dayOrder: day.sortOrder,
+                    order: sortKey(minutes: stop.plannedStartMinutes, sortOrder: stop.sortOrder),
+                    title: name,
                     subtitle: stop.address.trimmingCharacters(in: .whitespaces),
                     kind: stop.category.rawValue, time: clock(stop.plannedStartMinutes)))
             }
@@ -3327,20 +3338,22 @@ extension TripStore {
                 }
                 if title.isEmpty { title = subtitle; subtitle = "" }
                 guard !title.isEmpty else { continue }
-                out.append(WidgetAgendaItem(dayOrder: seg.departDayOrder, order: seg.sortOrder, title: title,
+                out.append(WidgetAgendaItem(dayOrder: seg.departDayOrder,
+                    order: sortKey(minutes: seg.departLocalMinutes, sortOrder: seg.sortOrder),
+                    title: title,
                     subtitle: subtitle, kind: seg.mode.rawValue, time: clock(seg.departLocalMinutes)))
             }
         }
-        // 住宿：退房置当天最前（order 极小）、入住置当天最后（order 极大）——符合「早退房 / 晚入住」直觉。
+        // 住宿：退房置当天最前（order = -2）、入住置当天最后（order = Int.max）——符合「早退房 / 晚入住」直觉。
         for stay in trip.safeLodgingStays {
             let name = stay.name.trimmingCharacters(in: .whitespaces)
             guard !name.isEmpty else { continue }
             if stay.checkOutDayOrder >= fromDayOrder {
-                out.append(WidgetAgendaItem(dayOrder: stay.checkOutDayOrder, order: Int.min + 1, title: name,
+                out.append(WidgetAgendaItem(dayOrder: stay.checkOutDayOrder, order: -2, title: name,
                     subtitle: "", kind: "checkout", time: clock(stay.checkOutMinutes)))
             }
             if stay.checkInDayOrder >= fromDayOrder {
-                out.append(WidgetAgendaItem(dayOrder: stay.checkInDayOrder, order: Int.max - 1, title: name,
+                out.append(WidgetAgendaItem(dayOrder: stay.checkInDayOrder, order: Int.max, title: name,
                     subtitle: stay.address.trimmingCharacters(in: .whitespaces),
                     kind: "checkin", time: clock(stay.checkInMinutes)))
             }
