@@ -62,7 +62,7 @@ struct DetailSheetScaffold<Header: View, Content: View, Footer: View>: View {
     @State private var toastToken = 0
 
     private let collapsedH = UIScreen.main.bounds.height * 0.50
-    private let expandedMaxH = UIScreen.main.bounds.height * 0.90
+    private let expandedMaxH = UIScreen.main.bounds.height * 0.85
 
     // 始终两档：初始固定 50%，展开 = min(内容实际高, 90%)。
     // 这样无论内容多少，第一眼高度一致（消除随机感），上滑才展开。

@@ -22,7 +22,7 @@ struct CalendarEventDetailView: View {
     /// sheet 高度贴着内容（稀疏事件不留大片空白）。单一真源 cappedContentHeight：钳在屏高以下，
     /// 长事件也不会顶满屏触发 iOS 26 脱离（斜滚根因）。头部钉在顶、故 detent = 头 + 卡片内容。
     private let collapsedH = UIScreen.main.bounds.height * 0.50
-    private let expandedMaxH = UIScreen.main.bounds.height * 0.90
+    private let expandedMaxH = UIScreen.main.bounds.height * 0.85
 
     private var contentDetents: Set<PresentationDetent> {
         let idealH = headerHeight + contentHeight + 8
