@@ -85,6 +85,7 @@ struct DetailSheetScaffold<Header: View, Content: View, Footer: View>: View {
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .background(heightReader($contentHeight))
             }
+            .frame(maxWidth: .infinity)
             // 底部悬浮动作条 = 原生 `safeAreaInset`：框架把内容**顶到栏之上**（不再渗到栏下 / 不从 home indicator 区穿出）。
             // `bottomBarFade`：内容在栏上沿柔和淡出 + 渐变垫底**自带 ignoresSafeArea、延伸到屏幕底盖住 home indicator**
             // （与首页/行程列表底栏同款单一真源）。顺框架、不再手动 overlay 对抗安全区。
@@ -503,11 +504,9 @@ struct DetailActionFooter: View {
                 .foregroundStyle(CarryAccent.color)
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, 15)
-                // clipShape 在 SwiftUI 渲染树里建立新的渲染边界，shadow 从裁剪后的像素（胶囊形）计算，
-                // 得到胶囊形阴影。.fill(.thickMaterial) 方案中 shadow 从 CALayer 矩形 bounds 计算 → 方形阴影。
-                .background(.thickMaterial)
-                .clipShape(Capsule())
+                .background(.thickMaterial, in: Capsule())
                 .overlay(Capsule().strokeBorder(Color.primary.opacity(0.07), lineWidth: 0.5))
+                .compositingGroup()
                 .shadow(color: Color.carryCardShadow, radius: 16, x: 0, y: 6)
                 .contentShape(Capsule())
             }
