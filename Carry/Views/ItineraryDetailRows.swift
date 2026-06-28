@@ -515,38 +515,45 @@ struct DetailActionFooter: View {
             .accessibilityLabel(Text("itinerary.stop.detail.edit"))
 
             // ··· = 独立玻璃圆（溢出菜单）。菜单恒向上展开；iOS 声明越靠前 = 越靠近锚点（底部）。
-            // 顺序：移除（最前 = 最底，危险动作远离其它操作）；备注/费用居上（常用快捷）。
-            Menu {
-                Button(role: .destructive, action: onDelete) {
-                    Label("common.remove", systemImage: "trash")
-                }
-                if onNote != nil || onCost != nil { Divider() }
-                if let onNote {
-                    Button(action: onNote) {
-                        Label(hasNote ? "itinerary.menu.edit_note" : "itinerary.menu.add_note",
-                              systemImage: "note.text")
-                    }
-                }
-                if let onCost {
-                    Button(action: onCost) {
-                        Label(hasCost ? "itinerary.menu.edit_cost" : "itinerary.menu.record_cost",
-                              systemImage: "creditcard")
-                    }
-                }
-            } label: {
-                Image(systemName: "ellipsis")
-                    .font(.system(size: 17, weight: .semibold))
-                    .foregroundStyle(.secondary)
+            // 圆形背景独立于 Menu label 之外，用 ZStack 叠放——
+            // Menu 展开时系统会隐藏 label（UIKit 层操作），收起时重新显示；
+            // 若背景在 label 内，它参与这个显隐动画，恢复瞬间矩形底色比 clipShape 先出现 → 残影。
+            // 背景层永远可见、不受 Menu 显隐影响，彻底断开残影根因。
+            ZStack {
+                // 背景层：永远显示，不参与 Menu 的 label 显隐动画。
+                Circle()
+                    .fill(.thickMaterial)
                     .frame(width: 52, height: 52)
-                    .background(.thickMaterial)
-                    .clipShape(Circle())
                     .overlay(Circle().strokeBorder(Color.primary.opacity(0.07), lineWidth: 0.5))
                     .shadow(color: Color.carryCardShadow, radius: 16, x: 0, y: 6)
-                    .contentShape(Circle())
+
+                // Menu 层：label 只含图标，无背景，展开/收起时仅图标参与显隐。
+                Menu {
+                    Button(role: .destructive, action: onDelete) {
+                        Label("common.remove", systemImage: "trash")
+                    }
+                    if onNote != nil || onCost != nil { Divider() }
+                    if let onNote {
+                        Button(action: onNote) {
+                            Label(hasNote ? "itinerary.menu.edit_note" : "itinerary.menu.add_note",
+                                  systemImage: "note.text")
+                        }
+                    }
+                    if let onCost {
+                        Button(action: onCost) {
+                            Label(hasCost ? "itinerary.menu.edit_cost" : "itinerary.menu.record_cost",
+                                  systemImage: "creditcard")
+                        }
+                    }
+                } label: {
+                    Image(systemName: "ellipsis")
+                        .font(.system(size: 17, weight: .semibold))
+                        .foregroundStyle(.secondary)
+                        .frame(width: 52, height: 52)
+                        .contentShape(Circle())
+                }
+                .clipShape(Circle())
             }
-            // Menu 控件的 press/highlight 交互动画作用在整个控件的矩形 bounds 上，收起时产生方形残影。
-            // clipShape 施加到 Menu 控件本身（不只是 label 内部），把交互 highlight 也裁成圆形。
-            .clipShape(Circle())
             .accessibilityLabel(Text("common.more"))
         }
     }
