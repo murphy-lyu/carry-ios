@@ -19,9 +19,14 @@ enum StopCategory: String, Codable, CaseIterable {
     // 顺序即菜单顺序（allCases 取声明序）。按「在地体验（高频）→ 住宿+交通（后勤）→ 其他」排。
     // 在地体验
     case sightseeing   // 景点
-    case food          // 餐饮
-    case activity      // 活动
+    case museum        // 博物馆 / 美术馆
+    case park          // 公园 / 自然
+    case beach         // 海滩 / 湖滨
+    case restaurant    // 餐厅
+    case cafe          // 咖啡馆 / 甜品
+    case bar           // 酒吧 / 夜生活
     case shopping      // 购物
+    case experience    // 体验（演出/运动/游乐）
     // 住宿 + 交通（后勤骨架）
     case lodging       // 住宿
     case flight        // 航班（机场/飞机）
@@ -32,8 +37,13 @@ enum StopCategory: String, Codable, CaseIterable {
     case other         // 其他
 
     /// 解析存库字符串；未知值（旧数据/脏数据）一律退化为 .other，绝不崩。
+    /// 旧 rawValue 迁移：food → restaurant，activity → experience。
     init(rawValueOrOther raw: String) {
-        self = StopCategory(rawValue: raw) ?? .other
+        switch raw {
+        case "food":     self = .restaurant
+        case "activity": self = .experience
+        default:         self = StopCategory(rawValue: raw) ?? .other
+        }
     }
 
     /// 结构化本地化 key（须在 xcstrings 显式写 en）。
@@ -45,7 +55,9 @@ enum StopCategory: String, Codable, CaseIterable {
     /// 枚举本身保留全部 case，仅此选择器收窄，旧数据（已加成普通 stop 的航班/租车/邮轮）仍正常解析渲染。
     /// spec: itinerary-car-rental.md。
     static let placeSelectableCases: [StopCategory] =
-        [.sightseeing, .food, .activity, .shopping, .lodging, .other]
+        [.sightseeing, .museum, .park, .beach,
+         .restaurant, .cafe, .bar,
+         .shopping, .experience, .lodging, .other]
 }
 
 // MARK: - ItineraryDay

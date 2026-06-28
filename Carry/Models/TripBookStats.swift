@@ -198,7 +198,8 @@ struct TripBookStats: Equatable {
         }
 
         // 在地足迹：仅「在地体验」类别（住宿有独立 Stays 卡、交通段是「边」不计），按数降序、同数按声明序。
-        let footprintCats: Set<StopCategory> = [.sightseeing, .food, .activity, .shopping, .other]
+        let footprintCats: Set<StopCategory> = [.sightseeing, .museum, .park, .beach,
+                                                .restaurant, .cafe, .bar, .shopping, .experience, .other]
         let catOrder = Dictionary(uniqueKeysWithValues: StopCategory.allCases.enumerated().map { ($1, $0) })
         s.footprintTallies = stopCatCounts
             .filter { footprintCats.contains($0.key) && $0.value > 0 }

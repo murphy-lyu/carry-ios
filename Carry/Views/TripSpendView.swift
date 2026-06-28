@@ -17,10 +17,15 @@ extension SpendCategory {
         switch self {
         case .transport:   return .blue
         case .lodging:     return .indigo
-        case .food:        return .orange
+        case .restaurant:  return .orange
+        case .cafe:        return Color(red: 0.6, green: 0.4, blue: 0.2)  // 咖啡棕
+        case .bar:         return .purple
         case .sightseeing: return .teal
-        case .activity:    return .pink
-        case .shopping:    return .green
+        case .museum:      return Color(red: 0.3, green: 0.5, blue: 0.7)  // 蓝灰
+        case .park:        return .green
+        case .beach:       return Color(red: 0.0, green: 0.7, blue: 0.8)  // 海蓝
+        case .shopping:    return Color(red: 0.9, green: 0.4, blue: 0.5)  // 玫红
+        case .experience:  return .pink
         case .other:       return .gray
         }
     }
@@ -28,10 +33,15 @@ extension SpendCategory {
         switch self {
         case .transport:   return "airplane"
         case .lodging:     return "bed.double.fill"
-        case .food:        return "fork.knife"
+        case .restaurant:  return "fork.knife"
+        case .cafe:        return "cup.and.saucer.fill"
+        case .bar:         return "wineglass.fill"
         case .sightseeing: return "binoculars.fill"
-        case .activity:    return "figure.walk"
+        case .museum:      return "paintpalette.fill"
+        case .park:        return "tree.fill"
+        case .beach:       return "beach.umbrella.fill"
         case .shopping:    return "bag.fill"
+        case .experience:  return "ferriswheel"
         case .other:       return "mappin"
         }
     }

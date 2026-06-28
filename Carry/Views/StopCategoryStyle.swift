@@ -12,9 +12,14 @@ extension StopCategory {
     var symbolName: String {
         switch self {
         case .sightseeing: return "binoculars"
-        case .food:        return "fork.knife"
-        case .activity:    return "figure.walk"
+        case .museum:      return "paintpalette"
+        case .park:        return "tree"
+        case .beach:       return "beach.umbrella"
+        case .restaurant:  return "fork.knife"
+        case .cafe:        return "cup.and.saucer"
+        case .bar:         return "wineglass"
         case .shopping:    return "bag"
+        case .experience:  return "ferriswheel"
         case .lodging:     return "bed.double"
         case .flight:      return "airplane"
         case .train:       return "train.side.front.car"

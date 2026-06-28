@@ -504,9 +504,14 @@ final class CalendarManager {
     private static func stopEmoji(_ category: StopCategory) -> String {
         switch category {
         case .sightseeing: return "🏛️"
-        case .food:        return "🍽️"
-        case .activity:    return "🎯"
+        case .museum:      return "🖼️"
+        case .park:        return "🌳"
+        case .beach:       return "🏖️"
+        case .restaurant:  return "🍽️"
+        case .cafe:        return "☕"
+        case .bar:         return "🍸"
         case .shopping:    return "🛍️"
+        case .experience:  return "🎡"
         case .lodging:     return "🏨"
         default:           return "📍"
         }

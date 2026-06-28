@@ -588,9 +588,12 @@ private nonisolated final class Converter {
 
     private func stopCategory(for type: String) -> String {
         switch type {
-        case "tour", "museum", "park": return StopCategory.sightseeing.rawValue
-        case "restaurant", "cafe": return StopCategory.food.rawValue
-        default: return StopCategory.other.rawValue   // parking / general / 未知
+        case "tour":       return StopCategory.sightseeing.rawValue
+        case "museum":     return StopCategory.museum.rawValue
+        case "park":       return StopCategory.park.rawValue
+        case "restaurant": return StopCategory.restaurant.rawValue
+        case "cafe":       return StopCategory.cafe.rawValue
+        default:           return StopCategory.other.rawValue   // parking / general / 未知
         }
     }
 
