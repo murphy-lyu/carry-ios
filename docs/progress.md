@@ -3,6 +3,20 @@
 ## 最后更新
 2026-06-28
 
+## 上次改动摘要（细节打磨 Vol.2：备注 data detector + 路径优化 + UI 规范对齐 · 2026-06-28）
+
+> 单会话、无并行。**全部已提交并 push 到 origin/main**。
+
+- **备注模块 data detector 根因修（`05ea5d7`）**：`isSelectable=false` 会阻止 UITextView data detector 点击（注释里的说法是错的）；改为 `isSelectable=true` + `sizeThatFits` 修复高度截断 + `UITextItemInteraction` 替换为 iOS 17 新 API `primaryActionFor` + http/https 链接在 Carry 内用 `SFSafariViewController` 打开（与附件链接体验对齐）、tel: 放行系统拨号。
+- **路径优化器去掉时间锚点（`da876a1`）**：`plannedStartMinutes` 只有开始时间、无结束时间，锚点逻辑意义消失；改为只固定首尾两点，中间所有地点均参与优化。「已是最优」按钮文案 `Done` → `Got it`（`itinerary.optimize.got_it`，9 语言）。
+- **航班详情日期对齐（`a7eaf21`）**：到达行有 `+1` 角标时，日期 Text 下方也补同宽 13pt 透明占位，使日期右边缘与时间数字右边缘对齐。
+- **废弃 API 替换（`9655f59`）**：`UITextItemInteraction`（deprecated iOS 17）→ `textView(_:primaryActionFor:defaultAction:)`。
+- **TripsyImportView UI 规范对齐（`da0d96d`/`ca6f0b0`）**：取消按钮移至左上角（`.cancellationAction`）；底部按钮 `CarryAccent` → Tier 1 `Color(.label)`；`carryCard()` 替换裸 `secondarySystemGroupedBackground`；行程名加 `design: .rounded`；`.background(.bar)` → `.bottomBarScrim` 渐变蒙层；删除无用 `colorScheme` 环境变量。
+- **颜色 token 统一（`65bac58`）**：`ContentView` / `ScenePickerView` / `SuggestionPreviewView` / `TripDateRangePickerSheet` 四处硬编码 `Color(red: 0.08/0.09...)` → `CarrySubtleBackground.baseColor`。
+- **去掉境内旅行「证件复印件」智能推荐（`da0d96d`）**：`city_break` 场景移除 `Photo ID copy`，不符合大陆用户境内旅行习惯；物品库保留供手动添加。
+- **全 App 滚动条隐藏（`0f7be67`）**：扫描发现 21 个 View 文件的竖向 `ScrollView` 未隐藏指示器，批量替换为 `ScrollView(showsIndicators: false)`。保留例外：横向 ScrollView（已有）、List/Form 系统组件、TripDateRangePickerSheet 日历（需感知位置）。
+- **ImportSharedTripSheet 文案截断修（`80abac0`）**：`update_note` Text 加 `.fixedSize(horizontal: false, vertical: true)`，防止 GeometryReader 量到压缩高度导致 detent 过小文案被截。
+
 ## 上次改动摘要（细节打磨：残影修复 + 住宿行程逻辑 + 行程册对齐 + 全天事件紧凑 · 2026-06-28）
 
 > 单会话、无并行。**全部已提交并 push 到 origin/main**。
