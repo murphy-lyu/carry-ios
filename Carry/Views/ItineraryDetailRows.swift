@@ -58,6 +58,7 @@ struct DetailSheetScaffold<Header: View, Content: View, Footer: View>: View {
     @State private var contentHeight: CGFloat = 0
     @State private var footerHeight: CGFloat = 0
     @State private var selectedDetent: PresentationDetent = .height(UIScreen.main.bounds.height * 0.50)
+    @State private var detentsReady = false   // 首次高度量完后置 true，只重置一次
     @State private var toastText: String?
     @State private var toastToken = 0
 
@@ -85,26 +86,27 @@ struct DetailSheetScaffold<Header: View, Content: View, Footer: View>: View {
                 content
                     .padding(.horizontal, 20)
                     .padding(.top, 12)
-                    // 底部留出 footer 高度，避免内容被遮住；footerHeight 量到前用合理默认值。
-                    .padding(.bottom, footerHeight > 0 ? footerHeight : 80)
+                    .padding(.bottom, 8)
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .background(heightReader($contentHeight))
             }
             .frame(maxWidth: .infinity)
-        }
-        // footer 用 overlay 钉在整个 sheet 底部（含安全区），不随 detent 高度变化——
-        // safeAreaInset 贴的是 sheet 内容区底边（= 当前 detent 底部），collapsed 时 footer 会浮在半屏；
-        // overlay + ignoresSafeArea 让 footer 始终贴屏幕底部安全区，与 detent 无关。
-        .overlay(alignment: .bottom) {
-            footer
-                .padding(.horizontal, 20)
-                .bottomBarFade(Color.carryCanvas)
-                .background(heightReader($footerHeight))
-                .ignoresSafeArea(edges: .bottom)
+            .safeAreaInset(edge: .bottom, spacing: 0) {
+                footer
+                    .padding(.horizontal, 20)
+                    .bottomBarFade(Color.carryCanvas)
+                    .background(heightReader($footerHeight))
+            }
         }
         .presentationDetents(detents, selection: $selectedDetent)
         .presentationDragIndicator(.visible)
         .presentationBackground(Color.carryCanvas)
+        .onChange(of: contentHeight) { _, h in
+            // 高度量完后首次把 selection 钉回 collapsed，防止 detents 变化时 SwiftUI 跳到 expanded 档。
+            guard h > 0, !detentsReady else { return }
+            detentsReady = true
+            selectedDetent = .height(collapsedH)
+        }
         .environment(\.carryCopyToast, showCopyToast)
         .overlay(alignment: .center) {
             if let toastText {
