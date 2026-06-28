@@ -450,37 +450,28 @@ struct CarryWidgetEntryView: View {
             dayHeader(trip, now: now)
             Spacer(minLength: 6)
             if let ev = trip.nextEvent(asOf: now) {
-                // 名称与时间同行：图标 + 名称（flex 截断）+ 时间右对齐。
-                HStack(alignment: .firstTextBaseline, spacing: 5) {
-                    Image(systemName: icon(for: ev.kind))
-                        .font(.system(size: 13, weight: .semibold))
-                        .foregroundStyle(.secondary)
-                        .frame(width: 18)
+                // 无图标：名称（flex 截断）+ 时间右对齐，与 Medium/Large 同一语言，省空间给名称。
+                HStack(alignment: .center, spacing: 4) {
                     eventTitle(ev)
                         .font(.system(.subheadline, design: .rounded).weight(.bold))
-                        .lineLimit(1)
+                        .lineLimit(2)
                     Spacer(minLength: 2)
                     Text(ev.date, style: .time)
                         .font(.system(.subheadline, design: .rounded).weight(.medium))
                         .foregroundStyle(.secondary)
                         .monospacedDigit()
+                        .fixedSize()
                 }
             } else if let first = trip.todayPlan(asOf: now).first {
-                HStack(alignment: .firstTextBaseline, spacing: 5) {
-                    Image(systemName: icon(for: first.kind))
-                        .font(.system(size: 13, weight: .semibold))
-                        .foregroundStyle(.secondary)
-                        .frame(width: 18)
-                    Text(first.title)
-                        .font(.system(.subheadline, design: .rounded).weight(.bold))
-                        .lineLimit(1)
-                }
+                Text(first.title)
+                    .font(.system(.subheadline, design: .rounded).weight(.bold))
+                    .lineLimit(2)
                 todayCaption(trip, now: now)
             } else {
                 Text(trip.displayTitle)
                     .font(.system(.title2, design: .rounded).weight(.bold))
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.7)
+                    .lineLimit(2)
+                    .minimumScaleFactor(0.8)
             }
             Spacer(minLength: 0)
             if let stay = trip.tonightStay(asOf: now) {
@@ -535,7 +526,7 @@ struct CarryWidgetEntryView: View {
     @ViewBuilder
     private func agendaItemRow(_ it: WidgetAgendaItem) -> some View {
         VStack(alignment: .leading, spacing: 1) {
-            HStack(alignment: .firstTextBaseline, spacing: 8) {
+            HStack(alignment: .center, spacing: 8) {
                 Image(systemName: icon(for: it.kind))
                     .font(.system(size: 13, weight: .semibold))
                     .foregroundStyle(.secondary)
@@ -546,7 +537,7 @@ struct CarryWidgetEntryView: View {
                 Spacer(minLength: 4)
                 if !it.time.isEmpty {
                     Text(it.time)
-                        .font(.system(.caption, design: .rounded).weight(.medium))
+                        .font(.system(.subheadline, design: .rounded).weight(.medium))
                         .foregroundStyle(.secondary)
                         .monospacedDigit()
                 }
