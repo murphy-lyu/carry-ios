@@ -11,7 +11,7 @@ struct WidgetGuideView: View {
     @Environment(\.colorScheme) private var colorScheme
 
     var body: some View {
-        ScrollView {
+        ScrollView(showsIndicators: false) {
             VStack(alignment: .leading, spacing: 16) {
                 // 小部件预览图（占位）
                 guideImage("WidgetPreview", placeholderAspect: 16.0 / 10.0)

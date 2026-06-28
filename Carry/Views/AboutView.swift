@@ -24,7 +24,7 @@ struct AboutView: View {
         // GeometryReader + minHeight 让页脚锚定视口底部：内容不足一屏时 ❤️ 贴底，
         // 内容超一屏时随内容正常滚动——避免短内容下底部留白。
         GeometryReader { proxy in
-            ScrollView {
+            ScrollView(showsIndicators: false) {
                 VStack(spacing: 0) {
                     VStack(alignment: .leading, spacing: 14) {
                         Text("about.tagline")
@@ -196,7 +196,7 @@ struct AboutView: View {
 struct AcknowledgementsView: View {
 
     var body: some View {
-        ScrollView {
+        ScrollView(showsIndicators: false) {
             VStack(alignment: .leading, spacing: 14) {
                 AboutModuleCard(title: "about.data") {
                     VStack(spacing: 0) {

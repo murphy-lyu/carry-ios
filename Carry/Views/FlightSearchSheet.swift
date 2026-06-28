@@ -46,7 +46,7 @@ struct FlightSearchSheet: View {
 
     var body: some View {
         NavigationStack {
-            ScrollView {
+            ScrollView(showsIndicators: false) {
                 VStack(alignment: .leading, spacing: 22) {
                     numberCard
                     if parsedFlight != nil {

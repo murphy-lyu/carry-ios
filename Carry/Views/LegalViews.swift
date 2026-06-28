@@ -54,7 +54,7 @@ private struct LegalScrollView: View {
     @Environment(\.colorScheme) private var colorScheme
 
     var body: some View {
-        ScrollView {
+        ScrollView(showsIndicators: false) {
             legalContent
                 .padding(.horizontal, 16)
                 .padding(.vertical, 20)

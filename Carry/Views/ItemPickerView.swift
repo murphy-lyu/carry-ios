@@ -498,7 +498,7 @@ struct ItemPickerView: View {
                             }
                         } else {
                             let searchResults = orderedSearchResults
-                            ScrollView {
+                            ScrollView(showsIndicators: false) {
                                 VStack(alignment: .leading, spacing: 12) {
                                     if searchResults.isEmpty {
                                         searchEmptyState
@@ -522,7 +522,7 @@ struct ItemPickerView: View {
                             .scrollDismissesKeyboard(.interactively)
                         }
                     } else {
-                        ScrollView {
+                        ScrollView(showsIndicators: false) {
                             VStack(alignment: .leading, spacing: 12) {
                                 if searchText.isEmpty {
                                     ForEach(itemPickerCatalog, id: \.name) { category in
@@ -949,7 +949,7 @@ struct ItemPickerView: View {
     private var smartRecommendationView: some View {
         let labels = filteredSmartSceneLabels
 
-        return ScrollView {
+        return ScrollView(showsIndicators: false) {
             VStack(alignment: .leading, spacing: 12) {
                 searchResultsCard {
                     VStack(alignment: .leading, spacing: 12) {

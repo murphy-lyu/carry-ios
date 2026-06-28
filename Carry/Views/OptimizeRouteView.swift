@@ -134,7 +134,7 @@ struct OptimizeRouteView: View {
     // MARK: Improvement
 
     private func improvementContent(_ result: RouteOptimizer.Result) -> some View {
-        ScrollView {
+        ScrollView(showsIndicators: false) {
             VStack(alignment: .leading, spacing: 14) {
                 HStack(alignment: .top) {
                     VStack(alignment: .leading, spacing: 4) {

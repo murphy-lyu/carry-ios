@@ -39,7 +39,7 @@ struct SharePreviewSheet: View {
 
     @ViewBuilder private var preview: some View {
         if let posterImage {
-            ScrollView {
+            ScrollView(showsIndicators: false) {
                 Image(uiImage: posterImage)
                     .resizable()
                     .scaledToFit()

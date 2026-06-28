@@ -41,7 +41,7 @@ struct CalendarEventDetailView: View {
             .background(heightReader($headerHeight))
             .background(Color.carryCanvas)
 
-            ScrollView {
+            ScrollView(showsIndicators: false) {
                 VStack(alignment: .leading, spacing: 16) {
                     infoCard
                 }

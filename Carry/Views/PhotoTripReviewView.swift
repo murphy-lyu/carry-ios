@@ -26,7 +26,7 @@ struct PhotoTripReviewView: View {
     private struct SplitTarget: Identifiable { let dayIndex: Int; let placeIndex: Int; var id: String { "\(dayIndex)-\(placeIndex)" } }
 
     var body: some View {
-        ScrollView {
+        ScrollView(showsIndicators: false) {
             // LazyVStack：缩略图 UIImage(data:) 在 body 内同步解码，懒加载使只有可见天的照片才解码，
             // 避免大批量导入进预览时一次性解码全部缩略图、首帧卡顿。
             LazyVStack(alignment: .leading, spacing: 18) {
@@ -210,7 +210,7 @@ struct PhotoTripReviewView: View {
     private func splitSheet(_ target: SplitTarget) -> some View {
         let place = draft.days[target.dayIndex].places[target.placeIndex]
         return NavigationStack {
-            ScrollView {
+            ScrollView(showsIndicators: false) {
                 Text("phototrip.split.hint")
                     .font(.subheadline).foregroundStyle(.secondary)
                     .frame(maxWidth: .infinity, alignment: .leading)

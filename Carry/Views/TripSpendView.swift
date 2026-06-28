@@ -69,7 +69,7 @@ struct TripSpendView: View {
         NavigationStack {
             Group {
                 if let d = detail, d.hasAnyCost {
-                    ScrollView { content(d) }
+                    ScrollView(showsIndicators: false) { content(d) }
                 } else {
                     // 空态：在整片可用区域内垂直+水平居中（无内容可滚，故不套 ScrollView，
                     // 用 maxHeight:.infinity 撑满 + frame 默认居中对齐，而非停在顶部固定高度里）。

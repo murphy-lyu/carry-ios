@@ -53,7 +53,7 @@ struct CoffeeSheetView: View {
 
     var body: some View {
         NavigationStack {
-            ScrollView {
+            ScrollView(showsIndicators: false) {
                 VStack(spacing: 0) {
 
                     // — Big emoji

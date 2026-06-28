@@ -75,7 +75,7 @@ struct EditTripView: View {
                 Color(UIColor.systemBackground)
                     .ignoresSafeArea()
 
-                ScrollView {
+                ScrollView(showsIndicators: false) {
                     VStack(alignment: .leading, spacing: 24) {
                         heroSection
 

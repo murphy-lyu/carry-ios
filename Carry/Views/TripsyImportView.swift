@@ -33,7 +33,7 @@ struct TripsyImportView: View {
 
     var body: some View {
         NavigationStack {
-            ScrollView {
+            ScrollView(showsIndicators: false) {
                 VStack(alignment: .leading, spacing: 0) {
                     Text("tripsy_import.preview.intro")
                         .font(.subheadline)

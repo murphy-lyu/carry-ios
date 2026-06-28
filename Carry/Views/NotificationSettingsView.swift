@@ -63,7 +63,7 @@ struct NotificationSettingsView: View {
 
     // MARK: Body
     var body: some View {
-        ScrollView {
+        ScrollView(showsIndicators: false) {
             VStack(alignment: .leading, spacing: 22) {
                 permissionBanner
 

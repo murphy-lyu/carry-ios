@@ -69,7 +69,7 @@ struct SuggestionPreviewView: View {
     // MARK: List
 
     private var list: some View {
-        ScrollView {
+        ScrollView(showsIndicators: false) {
             LazyVStack(alignment: .leading, spacing: 0, pinnedViews: [.sectionHeaders]) {
                 if !displaySections.isEmpty {
                     ForEach(Array(displaySections.enumerated()), id: \.element.title) { _, section in

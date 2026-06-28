@@ -74,7 +74,7 @@ struct AppIconView: View {
     @State private var isChanging = false
 
     var body: some View {
-        ScrollView {
+        ScrollView(showsIndicators: false) {
             VStack(alignment: .leading, spacing: 0) {
                 sectionHeader
                 iconList

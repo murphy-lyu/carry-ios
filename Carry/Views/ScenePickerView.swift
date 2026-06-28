@@ -97,7 +97,7 @@ struct ScenePickerView: View {
             VStack(spacing: 0) {
                 heroSection
 
-                ScrollView {
+                ScrollView(showsIndicators: false) {
                     VStack(alignment: .leading, spacing: 28) {
                         let climateLabels = climateSuggestedLabels
                         if !climateLabels.isEmpty {

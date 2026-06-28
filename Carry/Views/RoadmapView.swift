@@ -148,7 +148,7 @@ struct RoadmapView: View {
                 .padding(.top, 20)
                 .padding(.bottom, 12)
 
-            ScrollView {
+            ScrollView(showsIndicators: false) {
                 VStack(alignment: .leading, spacing: 16) {
                     content
                 }
@@ -177,7 +177,7 @@ struct RoadmapView: View {
 #endif
         .sheet(isPresented: $showSourceSheet) {
             NavigationStack {
-                ScrollView {
+                ScrollView(showsIndicators: false) {
                     VStack(alignment: .leading, spacing: 16) {
                         VStack(alignment: .leading, spacing: 8) {
                             Text(RoadmapL10n.text(en: "Remote JSON URL", zhHans: "远程 JSON 地址", zhHant: "遠端 JSON 位址"))
