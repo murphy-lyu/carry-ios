@@ -69,7 +69,7 @@ struct TripsyImportView: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
-                    Button { dismiss() } label: { Text("Cancel") }
+                    Button { dismiss() } label: { Text("common.cancel") }
                 }
             }
         }
@@ -89,7 +89,7 @@ struct TripsyImportView: View {
 
                 VStack(alignment: .leading, spacing: 4) {
                     Text(draft.name)
-                        .font(.system(size: 16, weight: .semibold))
+                        .font(.system(size: 16, weight: .semibold, design: .rounded))
                         .foregroundStyle(.primary)
                         .lineLimit(1)
                     HStack(spacing: 6) {
@@ -109,10 +109,7 @@ struct TripsyImportView: View {
             }
             .padding(.horizontal, 16)
             .padding(.vertical, 14)
-            .background(
-                RoundedRectangle(cornerRadius: 20, style: .continuous)
-                    .fill(Color(.secondarySystemGroupedBackground))
-            )
+            .carryCard()
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
@@ -159,13 +156,13 @@ struct TripsyImportView: View {
             Text(count == 0
                  ? NSLocalizedString("tripsy_import.preview.action.none", comment: "")
                  : String.localizedStringWithFormat(NSLocalizedString("tripsy_import.preview.action", comment: ""), count))
-                .font(.system(size: 17, weight: .semibold))
-                .foregroundStyle(.white)
+                .font(.system(size: 17, weight: .semibold, design: .rounded))
+                .foregroundStyle(Color(.systemBackground))
                 .frame(maxWidth: .infinity)
                 .frame(height: 52)
                 .background(
                     RoundedRectangle(cornerRadius: 16, style: .continuous)
-                        .fill(count == 0 ? Color.secondary.opacity(0.4) : CarryAccent.color)
+                        .fill(count == 0 ? Color(.label).opacity(0.25) : Color(.label))
                 )
         }
         .buttonStyle(.plain)

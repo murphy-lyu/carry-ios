@@ -246,7 +246,6 @@ let sceneItemMap: [String: [SceneItem]] = [
         makeSceneItem("Comfortable walking shoes", isAlert: true),
         makeSceneItem("Crossbody bag", isAlert: true),
         makeSceneItem("Portable charger", isAlert: true),
-        makeSceneItem("Photo ID copy", isAlert: true),
         makeSceneItem("Transit card / app", isAlert: false),
         makeSceneItem("Sunscreen", isAlert: false),
         makeSceneItem("Umbrella", isAlert: false),
