@@ -514,47 +514,34 @@ struct DetailActionFooter: View {
             .buttonStyle(.plain)
             .accessibilityLabel(Text("itinerary.stop.detail.edit"))
 
-            // ··· = 独立玻璃圆（溢出菜单）。菜单恒向上展开；iOS 声明越靠前 = 越靠近锚点（底部）。
-            // 圆形背景独立于 Menu label 之外，用 ZStack 叠放——
-            // Menu 展开时系统会隐藏 label（UIKit 层操作），收起时重新显示；
-            // 若背景在 label 内，它参与这个显隐动画，恢复瞬间矩形底色比 clipShape 先出现 → 残影。
-            // 背景层永远可见、不受 Menu 显隐影响，彻底断开残影根因。
-            ZStack {
-                // 背景层：永远显示，不参与 Menu 的 label 显隐动画。
-                Circle()
-                    .fill(.thickMaterial)
-                    .frame(width: 52, height: 52)
-                    .overlay(Circle().strokeBorder(Color.primary.opacity(0.07), lineWidth: 0.5))
-                    .shadow(color: Color.carryCardShadow, radius: 16, x: 0, y: 6)
-
-                // Menu 层：label 只含图标，无背景，展开/收起时仅图标参与显隐。
-                Menu {
-                    Button(role: .destructive, action: onDelete) {
-                        Label("common.remove", systemImage: "trash")
-                    }
-                    if onNote != nil || onCost != nil { Divider() }
-                    if let onNote {
-                        Button(action: onNote) {
-                            Label(hasNote ? "itinerary.menu.edit_note" : "itinerary.menu.add_note",
-                                  systemImage: "note.text")
-                        }
-                    }
-                    if let onCost {
-                        Button(action: onCost) {
-                            Label(hasCost ? "itinerary.menu.edit_cost" : "itinerary.menu.record_cost",
-                                  systemImage: "creditcard")
-                        }
-                    }
-                } label: {
-                    Image(systemName: "ellipsis")
-                        .font(.system(size: 17, weight: .semibold))
-                        .foregroundStyle(.secondary)
-                        .frame(width: 52, height: 52)
-                        .contentShape(Circle())
+            // ··· = 右上角关闭按钮同款方案：glassCircleButton() 在 iOS 26 用 Liquid Glass，
+            // 低版本用系统填充圆——无自定义 background/clipShape/shadow，不参与 Menu 显隐动画，
+            // 彻底消除方形残影根因。
+            Menu {
+                Button(role: .destructive, action: onDelete) {
+                    Label("common.remove", systemImage: "trash")
                 }
-                .clipShape(Circle())
+                if onNote != nil || onCost != nil { Divider() }
+                if let onNote {
+                    Button(action: onNote) {
+                        Label(hasNote ? "itinerary.menu.edit_note" : "itinerary.menu.add_note",
+                              systemImage: "note.text")
+                    }
+                }
+                if let onCost {
+                    Button(action: onCost) {
+                        Label(hasCost ? "itinerary.menu.edit_cost" : "itinerary.menu.record_cost",
+                              systemImage: "creditcard")
+                    }
+                }
+            } label: {
+                Image(systemName: "ellipsis")
+                    .font(.system(size: 17, weight: .semibold))
+                    .foregroundStyle(.secondary)
+                    .frame(width: 52, height: 52)
+                    .glassCircleButton()
+                    .contentShape(Circle())
             }
-            .frame(width: 52, height: 52)
             .accessibilityLabel(Text("common.more"))
         }
     }
