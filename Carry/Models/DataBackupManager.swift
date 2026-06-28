@@ -497,7 +497,10 @@ final class DataBackupManager {
     /// temp file URL, or nil on failure.
     func makeExportFile(trips: [TripBundle], myItems: [MyItem]) -> URL? {
         let snapshot = makeBackup(trips: trips, myItems: myItems, embedImages: true)
-        guard let data = Self.encode(snapshot) else { return nil }
+        guard let data = Self.encode(snapshot) else {
+            CarryLogger.shared.log(.backupWriteFailed, context: "reason=encode_failed export=true")
+            return nil
+        }
         let fmt = DateFormatter()
         fmt.dateFormat = "yyyy-MM-dd_HH-mm"
         let url = FileManager.default.temporaryDirectory
@@ -507,8 +510,11 @@ final class DataBackupManager {
                 try FileManager.default.removeItem(at: url)
             }
             try data.write(to: url, options: .atomic)
+            CarryLogger.shared.log(.backupExported, context: "trips=\(trips.count)")
             return url
         } catch {
+            CarryLogger.shared.log(.backupWriteFailed,
+                context: "reason=write_failed export=true error=\(error.localizedDescription)")
             return nil
         }
     }
@@ -600,12 +606,16 @@ final class DataBackupManager {
         struct VersionStub: Decodable { let version: Int }
         if let stub = try? decoder.decode(VersionStub.self, from: data),
            stub.version > Self.currentBackupVersion {
+            CarryLogger.shared.log(.backupRestoreFailed, context: "reason=unsupported_version v=\(stub.version)")
             throw BackupError.unsupportedVersion(stub.version)
         }
         guard let backup = try? decoder.decode(CarryBackup.self, from: data) else {
+            CarryLogger.shared.log(.backupCorrupted, context: "reason=decode_failed bytes=\(data.count)")
             throw BackupError.decodingFailed
         }
-        return try performRestore(from: backup, into: context)
+        let result = try performRestore(from: backup, into: context)
+        CarryLogger.shared.log(.backupRestored, context: "trips=\(result.trips) items=\(result.myItems)")
+        return result
     }
 
     // MARK: - Merge (imported file)
@@ -617,12 +627,16 @@ final class DataBackupManager {
         struct VersionStub: Decodable { let version: Int }
         if let stub = try? decoder.decode(VersionStub.self, from: data),
            stub.version > Self.currentBackupVersion {
+            CarryLogger.shared.log(.backupRestoreFailed, context: "reason=unsupported_version merge v=\(stub.version)")
             throw BackupError.unsupportedVersion(stub.version)
         }
         guard let backup = try? decoder.decode(CarryBackup.self, from: data) else {
+            CarryLogger.shared.log(.backupCorrupted, context: "reason=decode_failed merge bytes=\(data.count)")
             throw BackupError.decodingFailed
         }
-        return try performMerge(from: backup, into: context)
+        let result = try performMerge(from: backup, into: context)
+        CarryLogger.shared.log(.backupMerged, context: "trips=\(result.trips) items=\(result.myItems)")
+        return result
     }
 
     /// 合并一个已在内存中构建好的 `CarryBackup`（如从 Tripsy 转换而来，spec: tripsy-import.md）。
@@ -637,14 +651,18 @@ final class DataBackupManager {
     /// overwriting is safe/idempotent). Trip `backgroundsData` then references them.
     private func restoreBackgroundImages(from backup: CarryBackup) {
         for (name, data) in backup.backgroundImages ?? [:] {
-            BackgroundImageStore.write(data: data, named: name)
+            if !BackgroundImageStore.write(data: data, named: name) {
+                CarryLogger.shared.log(.backupRestoreFailed, context: "reason=bg_image_write_failed name=\(name)")
+            }
         }
     }
 
     /// 写回附件原文件字节（仅 export 备份带；auto-backup 无 attachmentFiles，沙盒文件仍在）。
     private func restoreAttachmentFiles(from backup: CarryBackup) {
         for (name, data) in backup.attachmentFiles ?? [:] {
-            AttachmentStore.write(data: data, named: name)
+            if !AttachmentStore.write(data: data, named: name) {
+                CarryLogger.shared.log(.backupRestoreFailed, context: "reason=attachment_write_failed name=\(name)")
+            }
         }
     }
 

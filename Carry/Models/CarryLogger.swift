@@ -140,6 +140,7 @@ final class CarryLogger {
         // 预留（API 扩展用）
         case apiTimeout             = "api_timeout"
         case apiError               = "api_error"
+        case weatherFetchFailed     = "weather_fetch_failed"    // 单次天气拉取失败（区别于通用 apiError）
 
         // 行程路线规划（spec: itinerary-route-planning.md）
         case itineraryStopAdded     = "itinerary_stop_added"
@@ -160,8 +161,10 @@ final class CarryLogger {
 
         // 行程附件（spec: itinerary-attachments.md）
         case attachmentAdded        = "attachment_added"
+        case attachmentDeleted      = "attachment_deleted"
         case attachmentOpened       = "attachment_opened"
         case attachmentSaveFailed   = "attachment_save_failed"
+        case attachmentDeleteFailed = "attachment_delete_failed"
 
         // 行程详情两面切换（spec: app-navigation-framework.md）——衡量行程/打包频次
         case detailFaceSwitched        = "detail_face_switched"
@@ -207,7 +210,8 @@ final class CarryLogger {
         .itineraryRouteCalcFailed, .itineraryImportFailed,
         .exchangeRateFetchFailed, .calendarOverlayAccessDenied,
         .photoImportFailed, .flightLookupFailed,
-        .attachmentSaveFailed, .tripsyImportFailed,
+        .attachmentSaveFailed, .attachmentDeleteFailed, .tripsyImportFailed,
+        .weatherFetchFailed,
     ]
 
     private let sessionActiveKey = "carry_session_active"

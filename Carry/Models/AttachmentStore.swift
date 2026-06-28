@@ -54,13 +54,22 @@ enum AttachmentStore {
     /// 还原备份时按原文件名写回字节。
     @discardableResult
     static func write(data: Data, named name: String) -> Bool {
-        do { try data.write(to: fileURL(named: name), options: .atomic); return true }
-        catch { return false }
+        do {
+            try data.write(to: fileURL(named: name), options: .atomic)
+            return true
+        } catch {
+            CarryLogger.shared.log(.attachmentSaveFailed, context: "write_restore name=\(name)")
+            return false
+        }
     }
 
     static func delete(named name: String) {
         guard !name.isEmpty else { return }
-        try? FileManager.default.removeItem(at: fileURL(named: name))
+        do {
+            try FileManager.default.removeItem(at: fileURL(named: name))
+        } catch {
+            CarryLogger.shared.log(.attachmentDeleteFailed, context: "name=\(name)")
+        }
     }
 
     /// 复制行程时拷贝文件，返回新文件名（保持原扩展名）。

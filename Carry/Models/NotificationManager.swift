@@ -112,12 +112,10 @@ enum NotificationManager {
             let stale = pending.map(\.identifier).filter { $0.hasPrefix(tripPrefix) && !chosenIds.contains($0) }
             if !stale.isEmpty { center.removePendingNotificationRequests(withIdentifiers: stale) }
             for c in chosen { add(c) }
-#if DEBUG
             if candidates.count > chosen.count {
                 CarryLogger.shared.log(.reminderScheduleFailed,
-                    context: "budget trim: \(candidates.count - chosen.count) dropped (budget=\(budget), foreign=\(foreign))")
+                    context: "budget_trim dropped=\(candidates.count - chosen.count) budget=\(budget) foreign=\(foreign)")
             }
-#endif
         }
     }
 

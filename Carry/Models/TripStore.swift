@@ -312,7 +312,12 @@ final class TripStore: ObservableObject {
         guard let att = allAttachments().first(where: { $0.id == attachmentId }) else { return }
         if !att.fileName.isEmpty { AttachmentStore.delete(named: att.fileName) }
         context.delete(att)
-        save()
+        do {
+            try context.save()
+            CarryLogger.shared.log(.attachmentDeleted)
+        } catch {
+            CarryLogger.shared.log(.persistFailed, context: "removeAttachment")
+        }
     }
 
     /// 深拷贝附件（复制行程用）：记录 + **沙盒文件**（新文件名，避免两行程共享一份字节）。
@@ -1154,7 +1159,11 @@ final class TripStore: ObservableObject {
             if let item = (section.items ?? []).first(where: { $0.id == itemId }) {
                 guard item.quantity != clamped else { return }
                 item.quantity = clamped
-                save()
+                do {
+                    try context.save()
+                } catch {
+                    CarryLogger.shared.log(.persistFailed, context: "updateItemQuantity")
+                }
                 return
             }
         }
