@@ -132,11 +132,23 @@ struct WidgetTrip: Codable, Identifiable {
         return (plan ?? []).filter { $0.dayOrder == idx }.sorted { $0.order < $1.order }
     }
 
-    /// large 概览：从今天起的条目，按 (天, 当天序) 排（spec: widget-upcoming-large.md）。
+    /// large 概览：从「现在」起的条目，按 (天, 当天序) 排（spec: widget-upcoming-large.md）。
+    /// 今天（dayOrder == idx）的有时刻条目只保留时刻 >= 当前分钟数的，过去的不再展示。
+    /// 无时刻条目（order 落在 24*60*2 + sortOrder 区间，即 order >= 24*60*2）不受限制。
     func upcomingAgenda(asOf now: Date) -> [WidgetAgendaItem] {
         let idx = currentDayIndex(asOf: now)
-        return (agenda ?? []).filter { $0.dayOrder >= idx }
-            .sorted { ($0.dayOrder, $0.order) < ($1.dayOrder, $1.order) }
+        let cal = Calendar.current
+        let comps = cal.dateComponents([.hour, .minute], from: now)
+        let nowMinutes = (comps.hour ?? 0) * 60 + (comps.minute ?? 0)
+        return (agenda ?? []).filter { item in
+            guard item.dayOrder >= idx else { return false }
+            // 今天的有时刻条目：order = minutes * 2（偶数槽，< 24*60*2=2880），过了就过滤掉。
+            if item.dayOrder == idx, item.order < 24 * 60 * 2 {
+                return item.order / 2 >= nowMinutes
+            }
+            return true
+        }
+        .sorted { ($0.dayOrder, $0.order) < ($1.dayOrder, $1.order) }
     }
 
     /// 某天序的分组头文案：今天 / 明天 / 周N · M/D。

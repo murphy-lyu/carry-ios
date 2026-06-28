@@ -3309,17 +3309,21 @@ extension TripStore {
     /// - 同天内按时刻升序（有时刻 = 分钟数 * 2，占偶数槽）；无时刻内容排在有时刻内容之后
     ///   （无时刻 = 24*60*2 + sortOrder，保留用户手动序的相对顺序）。
     /// - 住宿退房：当天最前（order = -2）；住宿入住：当天最后（order = Int.max）。
-    private static func widgetAgenda(for trip: TripBundle, fromDayOrder: Int) -> [WidgetAgendaItem] {
+    /// - `sinceMinutes`：今天（dayOrder == fromDayOrder）的有时刻条目，只收 minutes >= sinceMinutes 的；
+    ///   无时刻条目和住宿不受影响（无法判断是否已过）。
+    private static func widgetAgenda(for trip: TripBundle, fromDayOrder: Int, sinceMinutes: Int = 0) -> [WidgetAgendaItem] {
         var out: [WidgetAgendaItem] = []
         func clock(_ m: Int) -> String { m >= 0 ? timeLabel(dayMinutes: m) : "" }
-        // 时刻 → 排序键：有时刻用 m*2（偶数），无时刻用 24*60*2 + sortOrder（排在所有有时刻之后）。
         func sortKey(minutes m: Int, sortOrder s: Int) -> Int {
             m >= 0 ? m * 2 : 24 * 60 * 2 + s
         }
         for day in trip.safeItineraryDays where day.sortOrder >= fromDayOrder {
+            let isToday = day.sortOrder == fromDayOrder
             for stop in day.sortedStops {
                 let name = stop.name.trimmingCharacters(in: .whitespaces)
                 guard !name.isEmpty else { continue }
+                // 今天的有时刻地点：已过（minutes < sinceMinutes）就跳过。
+                if isToday, stop.plannedStartMinutes >= 0, stop.plannedStartMinutes < sinceMinutes { continue }
                 out.append(WidgetAgendaItem(dayOrder: day.sortOrder,
                     order: sortKey(minutes: stop.plannedStartMinutes, sortOrder: stop.sortOrder),
                     title: name,
@@ -3332,19 +3336,21 @@ extension TripStore {
                 let a = seg.fromCode.isEmpty ? seg.fromName : seg.fromCode
                 let b = seg.toCode.isEmpty ? seg.toName : seg.toCode
                 var subtitle = (!a.isEmpty && !b.isEmpty) ? "\(a) → \(b)" : ""
-                if seg.mode == .carRental {                                   // 租车显地址、标题用公司
+                if seg.mode == .carRental {
                     if title.isEmpty { title = seg.fromName }
                     if !seg.fromAddress.isEmpty { subtitle = seg.fromAddress }
                 }
                 if title.isEmpty { title = subtitle; subtitle = "" }
                 guard !title.isEmpty else { continue }
+                // 今天的有时刻交通段：已过就跳过。
+                if isToday, seg.departLocalMinutes >= 0, seg.departLocalMinutes < sinceMinutes { continue }
                 out.append(WidgetAgendaItem(dayOrder: seg.departDayOrder,
                     order: sortKey(minutes: seg.departLocalMinutes, sortOrder: seg.sortOrder),
                     title: title,
                     subtitle: subtitle, kind: seg.mode.rawValue, time: clock(seg.departLocalMinutes)))
             }
         }
-        // 住宿：退房置当天最前（order = -2）、入住置当天最后（order = Int.max）——符合「早退房 / 晚入住」直觉。
+        // 住宿：退房置当天最前（order = -2）、入住置当天最后（order = Int.max）。不按时刻过滤（住宿跨天、时刻语义不同）。
         for stay in trip.safeLodgingStays {
             let name = stay.name.trimmingCharacters(in: .whitespaces)
             guard !name.isEmpty else { continue }
@@ -3366,7 +3372,12 @@ extension TripStore {
     /// hooks (launch / background) and after itinerary/packing data changes.
     func writeWidgetSnapshot() {
         let cal = Calendar.current
-        let today = cal.startOfDay(for: Date())
+        let now = Date()
+        let today = cal.startOfDay(for: now)
+        // 当前时刻转换为「今天已过的分钟数」，供 widgetAgenda 过滤今天已过的有时刻条目。
+        let nowComponents = cal.dateComponents([.hour, .minute], from: now)
+        let nowMinutes = (nowComponents.hour ?? 0) * 60 + (nowComponents.minute ?? 0)
+
         // 「未结束」= returnDate ≥ today（纳入进行中行程）；排除无日期；按出发日升序、上限 3。
         let active = trips
             .filter { trip in
@@ -3396,7 +3407,7 @@ extension TripStore {
                     WidgetStay(name: $0.name, checkInDayOrder: $0.checkInDayOrder, nights: max(1, $0.nights))
                 },
                 plan: Self.widgetPlan(for: trip, fromDayOrder: dayIdx),
-                agenda: Self.widgetAgenda(for: trip, fromDayOrder: dayIdx)
+                agenda: Self.widgetAgenda(for: trip, fromDayOrder: dayIdx, sinceMinutes: nowMinutes)
             )
         }
         guard let defaults = UserDefaults(suiteName: Self.widgetAppGroup) else { return }
