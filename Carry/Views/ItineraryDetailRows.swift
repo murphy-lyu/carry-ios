@@ -486,17 +486,16 @@ private struct LinkAwareText: UIViewRepresentable {
             onLongPress?()
         }
 
-        // 链接拦截：http/https 走 SafariView（应用内），tel: 放行系统拨号，其余放行。
+        // 链接拦截（iOS 17+ API）：http/https 走 SafariView（应用内），tel: 返回 nil 放行系统拨号。
         func textView(_ textView: UITextView,
-                      shouldInteractWith url: URL,
-                      in characterRange: NSRange,
-                      interaction: UITextItemInteraction) -> Bool {
-            guard interaction == .invokeDefaultAction else { return true }
-            if let scheme = url.scheme?.lowercased(), scheme == "http" || scheme == "https" {
-                onOpenURL?(url)
-                return false   // 拦截，不走系统 openURL。
+                      primaryActionFor textItem: UITextItem,
+                      defaultAction: UIAction) -> UIAction? {
+            guard case .link(let url) = textItem.content,
+                  let scheme = url.scheme?.lowercased(),
+                  scheme == "http" || scheme == "https" else {
+                return nil   // 非 http/https（tel: 等）放行默认行为。
             }
-            return true        // tel: 等放行给系统处理。
+            return UIAction { [weak self] _ in self?.onOpenURL?(url) }
         }
 
         // 屏蔽系统编辑菜单（Cut / Copy / Paste 等），返回空 items。
