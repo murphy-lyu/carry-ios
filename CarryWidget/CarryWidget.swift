@@ -560,21 +560,27 @@ struct CarryWidgetEntryView: View {
         var moreCount: Int? = nil
     }
 
-    /// 把按 (天,序) 排好的条目展开成「天头 + 条目」行序列，封顶 maxRows（large 不滚动、是概览非全量）。
-    /// 因条目行常为两行（标题 + 地点），maxRows 取保守值防超高被裁；截断时补「+N 更多」尾行、不假装全量。
-    private func agendaRenderRows(_ items: [WidgetAgendaItem], maxRows: Int) -> [AgendaRenderRow] {
+    /// 把按 (天,序) 排好的条目展开成「天头 + 条目」行序列，封顶 maxSlots 个视觉槽。
+    /// 视觉槽计数：天头 = 1 slot；有副标题的条目 = 2 slots（标题行 + 副标题行）；无副标题 = 1 slot。
+    /// 截断时补「+N 更多」尾行；systemLarge 固定高不滚动，超槽会被系统静默裁剪。
+    private func agendaRenderRows(_ items: [WidgetAgendaItem], maxSlots: Int) -> [AgendaRenderRow] {
         var rows: [AgendaRenderRow] = []
         var lastDay: Int? = nil
+        var usedSlots = 0
         var shownItems = 0
         for (i, it) in items.enumerated() {
             let needsHeader = it.dayOrder != lastDay
-            // 预留：若加了天头 + 条目会超过 maxRows，则停（别只放孤零零的天头）。
-            if rows.count + (needsHeader ? 2 : 1) > maxRows { break }
+            let headerSlots = needsHeader ? 1 : 0
+            let itemSlots = it.subtitle.isEmpty ? 1 : 2
+            // 预留：加天头 + 条目 + 1 slot for "+N more" 不超槽（别只放孤零零的天头）。
+            if usedSlots + headerSlots + itemSlots + 1 > maxSlots { break }
             if needsHeader {
                 rows.append(AgendaRenderRow(id: "h\(it.dayOrder)", dayOrder: it.dayOrder))
                 lastDay = it.dayOrder
+                usedSlots += 1
             }
             rows.append(AgendaRenderRow(id: "i\(i)", item: it))
+            usedSlots += itemSlots
             shownItems += 1
         }
         if shownItems < items.count {
@@ -613,8 +619,8 @@ struct CarryWidgetEntryView: View {
 
     private func largeAgendaView(_ trip: WidgetTrip, now: Date) -> some View {
         let items = trip.upcomingAgenda(asOf: now)
-        // 旅行中无打包进度条，空间更充裕；取 10 行（条目行含副标题时两行高，保守不超）。
-        let rows = agendaRenderRows(items, maxRows: 10)
+        // maxSlots=12：天头1槽、无副标题条目1槽、有副标题条目2槽，systemLarge 约容12槽不超高。
+        let rows = agendaRenderRows(items, maxSlots: 12)
         return VStack(alignment: .leading, spacing: 7) {
             HStack {
                 Text("widget.agenda.title")
