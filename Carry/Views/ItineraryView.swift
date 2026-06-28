@@ -33,7 +33,7 @@ func timeLabel(dayMinutes minutes: Int) -> String {
 /// 单一 sheet 来源——SwiftUI 同一视图上多个 `.sheet(item:)` 会相互抑制，
 /// 故用一个枚举驱动唯一的 sheet。
 private enum ItinerarySheet: Identifiable {
-    case addStop(dayId: UUID)
+    case addStop(dayId: UUID, category: StopCategory = .sightseeing)
     case stopDetail(ItineraryStop)
     case editStop(ItineraryStop)
     case optimize(dayId: UUID)
@@ -50,7 +50,7 @@ private enum ItinerarySheet: Identifiable {
 
     var id: String {
         switch self {
-        case .addStop(let dayId): return "add-\(dayId)"
+        case .addStop(let dayId, let cat): return "add-\(dayId)-\(cat.rawValue)"
         case .stopDetail(let stop): return "detail-\(stop.id)"
         case .editStop(let stop): return "edit-\(stop.id)"
         case .optimize(let dayId): return "opt-\(dayId)"
@@ -169,10 +169,11 @@ struct ItineraryView: View {
         }
         .sheet(item: $activeSheet) { sheet in
             switch sheet {
-            case .addStop(let dayId):
+            case .addStop(let dayId, let category):
                 AddStopView(
                     tripId: tripId,
                     dayId: dayId,
+                    initialCategory: category,
                     biasLatitude: bundle?.latitude ?? 0,
                     biasLongitude: bundle?.longitude ?? 0
                 )
@@ -857,12 +858,27 @@ struct ItineraryView: View {
     /// 次级内联动作用 secondary 灰，与打包「添加物品」一致（避免每组一行 accent 蓝、喧宾夺主）。
     private func addStopRow(_ dayID: UUID) -> some View {
         let order = lineCache.dayByID[dayID]?.sortOrder ?? 0
+        // 地点：高频 3 类直列，低频 5 类收进「更多地点」子菜单。
+        let commonPlaces: [StopCategory] = [.sightseeing, .restaurant, .cafe]
+        let morePlaces: [StopCategory] = [.museum, .park, .beach, .shopping, .bar, .other]
         return Menu {
-            Button { activeSheet = .addStop(dayId: dayID) } label: {
-                Label("itinerary.kind.place", systemImage: "mappin")
+            Section("itinerary.add.section.place") {
+                ForEach(commonPlaces, id: \.self) { cat in
+                    Button { activeSheet = .addStop(dayId: dayID, category: cat) } label: {
+                        Label(cat.titleKey, systemImage: cat.symbolName)
+                    }
+                }
+                Menu {
+                    ForEach(morePlaces, id: \.self) { cat in
+                        Button { activeSheet = .addStop(dayId: dayID, category: cat) } label: {
+                            Label(cat.titleKey, systemImage: cat.symbolName)
+                        }
+                    }
+                } label: {
+                    Label("itinerary.add.more_place", systemImage: "ellipsis")
+                }
             }
-            // 交通组（边）：常用类型直列、低频收进「更多交通」子菜单——外层保持轻、低频也能一步直接落位，
-            // 不在外层重复列出常用项。spec: itinerary-car-rental.md。
+            // 交通组（边）：常用类型直列、低频收进「更多交通」子菜单。spec: itinerary-car-rental.md。
             Section("itinerary.add.section.transport") {
                 ForEach(TransportMode.commonModes, id: \.self) { mode in
                     Button { addTransport(mode, dayID) } label: {
