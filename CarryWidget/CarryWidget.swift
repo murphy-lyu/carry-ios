@@ -450,24 +450,30 @@ struct CarryWidgetEntryView: View {
             dayHeader(trip, now: now)
             Spacer(minLength: 6)
             if let ev = trip.nextEvent(asOf: now) {
-                HStack(spacing: 5) {
-                    Image(systemName: icon(for: ev.kind)).font(.subheadline)
+                // 名称与时间同行：图标 + 名称（flex 截断）+ 时间右对齐。
+                HStack(alignment: .firstTextBaseline, spacing: 5) {
+                    Image(systemName: icon(for: ev.kind))
+                        .font(.system(size: 13, weight: .semibold))
+                        .foregroundStyle(.secondary)
+                        .frame(width: 18)
                     eventTitle(ev)
-                        .font(.system(.title3, design: .rounded).weight(.bold))
+                        .font(.system(.subheadline, design: .rounded).weight(.bold))
                         .lineLimit(1)
-                        .minimumScaleFactor(0.7)
+                    Spacer(minLength: 2)
+                    Text(ev.date, style: .time)
+                        .font(.system(.subheadline, design: .rounded).weight(.medium))
+                        .foregroundStyle(.secondary)
+                        .monospacedDigit()
                 }
-                Text(ev.date, style: .time)
-                    .font(.system(.subheadline, design: .rounded).weight(.medium))
-                    .foregroundStyle(.secondary)
             } else if let first = trip.todayPlan(asOf: now).first {
-                // 无带时刻的下一件事 → 显示今天第一个安排（无倒计时）。
-                HStack(spacing: 5) {
-                    Image(systemName: icon(for: first.kind)).font(.subheadline)
+                HStack(alignment: .firstTextBaseline, spacing: 5) {
+                    Image(systemName: icon(for: first.kind))
+                        .font(.system(size: 13, weight: .semibold))
+                        .foregroundStyle(.secondary)
+                        .frame(width: 18)
                     Text(first.title)
-                        .font(.system(.title3, design: .rounded).weight(.bold))
+                        .font(.system(.subheadline, design: .rounded).weight(.bold))
                         .lineLimit(1)
-                        .minimumScaleFactor(0.7)
                 }
                 todayCaption(trip, now: now)
             } else {
@@ -528,28 +534,29 @@ struct CarryWidgetEntryView: View {
 
     @ViewBuilder
     private func agendaItemRow(_ it: WidgetAgendaItem) -> some View {
-        HStack(spacing: 8) {
-            Image(systemName: icon(for: it.kind))
-                .font(.system(size: 13, weight: .semibold))
-                .foregroundStyle(.secondary)
-                .frame(width: 20)
-            VStack(alignment: .leading, spacing: 1) {
+        VStack(alignment: .leading, spacing: 1) {
+            HStack(alignment: .firstTextBaseline, spacing: 8) {
+                Image(systemName: icon(for: it.kind))
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundStyle(.secondary)
+                    .frame(width: 20)
                 Text(it.title)
                     .font(.system(.subheadline, design: .rounded).weight(.medium))
                     .lineLimit(1)
-                if !it.subtitle.isEmpty {
-                    Text(it.subtitle)
-                        .font(.system(.caption2, design: .rounded))
+                Spacer(minLength: 4)
+                if !it.time.isEmpty {
+                    Text(it.time)
+                        .font(.system(.caption, design: .rounded).weight(.medium))
                         .foregroundStyle(.secondary)
-                        .lineLimit(1)
+                        .monospacedDigit()
                 }
             }
-            Spacer(minLength: 4)
-            if !it.time.isEmpty {
-                Text(it.time)
-                    .font(.system(.caption, design: .rounded).weight(.medium))
+            if !it.subtitle.isEmpty {
+                Text(it.subtitle)
+                    .font(.system(.caption2, design: .rounded))
                     .foregroundStyle(.secondary)
-                    .monospacedDigit()
+                    .lineLimit(1)
+                    .padding(.leading, 28)
             }
         }
     }
