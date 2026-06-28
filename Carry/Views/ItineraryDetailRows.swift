@@ -554,6 +554,7 @@ struct DetailActionFooter: View {
                 }
                 .clipShape(Circle())
             }
+            .frame(width: 52, height: 52)
             .accessibilityLabel(Text("common.more"))
         }
     }
