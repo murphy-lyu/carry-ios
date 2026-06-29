@@ -3317,6 +3317,10 @@ extension TripStore {
         func sortKey(minutes m: Int, sortOrder s: Int) -> Int {
             m >= 0 ? m * 2 : 24 * 60 * 2 + s
         }
+        func prefixedTitle(_ key: String, name: String) -> String {
+            let label = NSLocalizedString(key, comment: "")
+            return name.isEmpty ? label : "\(label) · \(name)"
+        }
         for day in trip.safeItineraryDays where day.sortOrder >= fromDayOrder {
             let isToday = day.sortOrder == fromDayOrder
             for stop in day.sortedStops {
@@ -3337,8 +3341,31 @@ extension TripStore {
                 let b = seg.toCode.isEmpty ? seg.toName : seg.toCode
                 var subtitle = (!a.isEmpty && !b.isEmpty) ? "\(a) → \(b)" : ""
                 if seg.mode == .carRental {
-                    if title.isEmpty { title = seg.fromName }
-                    if !seg.fromAddress.isEmpty { subtitle = seg.fromAddress }
+                    // 取车：加「取车 · 公司」前缀，subtitle 用取车地址
+                    let carrier = title
+                    let pickupTitle = prefixedTitle("itinerary.transport.section.pickup", name: carrier)
+                    let pickupSubtitle = seg.fromAddress.trimmingCharacters(in: .whitespaces).isEmpty
+                        ? seg.fromName.trimmingCharacters(in: .whitespaces)
+                        : seg.fromAddress.trimmingCharacters(in: .whitespaces)
+                    let departIsToday = isToday || (seg.departDayOrder == fromDayOrder)
+                    if !(departIsToday && seg.departLocalMinutes >= 0 && seg.departLocalMinutes < sinceMinutes) {
+                        out.append(WidgetAgendaItem(dayOrder: seg.departDayOrder,
+                            order: sortKey(minutes: seg.departLocalMinutes, sortOrder: seg.sortOrder),
+                            title: pickupTitle, subtitle: pickupSubtitle,
+                            kind: "carRentalPickup", time: clock(seg.departLocalMinutes)))
+                    }
+                    // 还车：单独追加一行，落在还车那天（arriveDayOrder）
+                    if seg.arriveDayOrder >= fromDayOrder {
+                        let dropoffTitle = prefixedTitle("itinerary.transport.section.dropoff", name: carrier)
+                        let dropoffSubtitle = seg.toAddress.trimmingCharacters(in: .whitespaces).isEmpty
+                            ? seg.toName.trimmingCharacters(in: .whitespaces)
+                            : seg.toAddress.trimmingCharacters(in: .whitespaces)
+                        out.append(WidgetAgendaItem(dayOrder: seg.arriveDayOrder,
+                            order: sortKey(minutes: seg.arriveLocalMinutes, sortOrder: seg.sortOrder),
+                            title: dropoffTitle, subtitle: dropoffSubtitle,
+                            kind: "carRentalDropoff", time: clock(seg.arriveLocalMinutes)))
+                    }
+                    continue
                 }
                 if title.isEmpty { title = subtitle; subtitle = "" }
                 guard !title.isEmpty else { continue }
@@ -3356,11 +3383,13 @@ extension TripStore {
             let name = stay.name.trimmingCharacters(in: .whitespaces)
             guard !name.isEmpty else { continue }
             if stay.checkOutDayOrder >= fromDayOrder {
-                out.append(WidgetAgendaItem(dayOrder: stay.checkOutDayOrder, order: -2, title: name,
+                out.append(WidgetAgendaItem(dayOrder: stay.checkOutDayOrder, order: -2,
+                    title: prefixedTitle("itinerary.lodging.event.checkout", name: name),
                     subtitle: "", kind: "checkout", time: clock(stay.checkOutMinutes)))
             }
             if stay.checkInDayOrder >= fromDayOrder {
-                out.append(WidgetAgendaItem(dayOrder: stay.checkInDayOrder, order: Int.max, title: name,
+                out.append(WidgetAgendaItem(dayOrder: stay.checkInDayOrder, order: Int.max,
+                    title: prefixedTitle("itinerary.lodging.event.checkin", name: name),
                     subtitle: stay.address.trimmingCharacters(in: .whitespaces),
                     kind: "checkin", time: clock(stay.checkInMinutes)))
             }

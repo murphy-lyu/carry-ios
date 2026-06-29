@@ -383,7 +383,7 @@ struct CarryWidgetEntryView: View {
         case "train":               return "tram.fill"
         case "bus":                 return "bus"
         case "ferry", "cruise":     return "ferry"
-        case "carRental":           return "car.fill"
+        case "carRental", "carRentalPickup", "carRentalDropoff": return "car.fill"
         case "checkin", "checkout", "lodging": return "bed.double.fill"
         case "food":                return "fork.knife"
         case "sightseeing":         return "camera.fill"
@@ -449,20 +449,11 @@ struct CarryWidgetEntryView: View {
     private func inTripSmallView(_ trip: WidgetTrip, now: Date) -> some View {
         let nextEv = trip.nextEvent(asOf: now)
         return VStack(alignment: .leading, spacing: 4) {
-            HStack(alignment: .center) {
-                Text("widget.agenda.title")
-                    .font(.system(.caption, design: .rounded).weight(.semibold))
-                    .textCase(.uppercase)
-                    .tracking(0.4)
-                    .foregroundStyle(.secondary)
-                Spacer()
-                if let ev = nextEv {
-                    Text(ev.date, style: .time)
-                        .font(.system(.caption, design: .rounded).weight(.semibold))
-                        .foregroundStyle(.secondary)
-                        .monospacedDigit()
-                }
-            }
+            Text("widget.agenda.title")
+                .font(.system(.caption, design: .rounded).weight(.semibold))
+                .textCase(.uppercase)
+                .tracking(0.4)
+                .foregroundStyle(.secondary)
             Spacer(minLength: 2)
             if let ev = nextEv {
                 eventTitle(ev)
@@ -490,13 +481,7 @@ struct CarryWidgetEntryView: View {
     // MARK: In-trip Medium — 复用 agenda 布局，maxSlots 更小
 
     private func inTripMediumView(_ trip: WidgetTrip, now: Date) -> some View {
-        VStack(alignment: .leading, spacing: 0) {
-            agendaView(trip, now: now, maxSlots: 6)
-            if let stay = trip.tonightStay(asOf: now) {
-                Divider().padding(.vertical, 4)
-                tonightRow(stay)
-            }
-        }
+        agendaView(trip, now: now, maxSlots: 5)
     }
 
     // MARK: Large — 按天分组的「接下来的行程」概览（spec: widget-upcoming-large.md）
@@ -533,7 +518,7 @@ struct CarryWidgetEntryView: View {
 
     @ViewBuilder
     private func agendaItemRow(_ it: WidgetAgendaItem) -> some View {
-        VStack(alignment: .leading, spacing: 1) {
+        VStack(alignment: .leading, spacing: 2) {
             HStack(alignment: .center, spacing: 8) {
                 Image(systemName: icon(for: it.kind))
                     .font(.system(size: 13, weight: .semibold))
@@ -564,7 +549,7 @@ struct CarryWidgetEntryView: View {
     private func agendaView(_ trip: WidgetTrip, now: Date, maxSlots: Int) -> some View {
         let items = trip.upcomingAgenda(asOf: now)
         let rows = agendaRenderRows(items, maxSlots: maxSlots)
-        return VStack(alignment: .leading, spacing: 7) {
+        return VStack(alignment: .leading, spacing: 5) {
             HStack {
                 Text("widget.agenda.title")
                     .font(.system(.headline, design: .rounded).weight(.bold))
@@ -589,20 +574,21 @@ struct CarryWidgetEntryView: View {
                             .textCase(.uppercase)
                             .tracking(0.4)
                             .foregroundStyle(.secondary)
-                            .padding(.top, 1)
+                            .padding(.top, 6)
+                            .padding(.bottom, 2)
                     } else if let it = row.item {
                         agendaItemRow(it)
                     }
                 }
-                Spacer(minLength: 0)
             }
         }
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         .widgetURL(trip.deepLink)
     }
 
     private func largeAgendaView(_ trip: WidgetTrip, now: Date) -> some View {
-        // maxSlots=15：天头1槽、无副标题条目1槽、有副标题条目2槽，systemLarge 实测安全上限。
-        agendaView(trip, now: now, maxSlots: 15)
+        // maxSlots=10：天头1槽、无副标题条目1槽、有副标题条目2槽；留底部自然白边而非强制撑满。
+        agendaView(trip, now: now, maxSlots: 10)
     }
 
     /// 出发前 large：倒计时 + 打包进度 + 出发当天预览。
