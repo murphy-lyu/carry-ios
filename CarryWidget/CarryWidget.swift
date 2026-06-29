@@ -447,7 +447,8 @@ struct CarryWidgetEntryView: View {
     // MARK: In-trip Small
 
     private func inTripSmallView(_ trip: WidgetTrip, now: Date) -> some View {
-        VStack(alignment: .leading, spacing: 4) {
+        let nextEv = trip.nextEvent(asOf: now)
+        return VStack(alignment: .leading, spacing: 4) {
             HStack(alignment: .center) {
                 Text("widget.agenda.title")
                     .font(.system(.caption, design: .rounded).weight(.semibold))
@@ -455,22 +456,18 @@ struct CarryWidgetEntryView: View {
                     .tracking(0.4)
                     .foregroundStyle(.secondary)
                 Spacer()
-                dayHeader(trip, now: now)
-            }
-            Spacer(minLength: 2)
-            if let ev = trip.nextEvent(asOf: now) {
-                // 无图标：名称（flex 截断）+ 时间右对齐，与 Medium/Large 同一语言，省空间给名称。
-                HStack(alignment: .center, spacing: 4) {
-                    eventTitle(ev)
-                        .font(.system(.subheadline, design: .rounded).weight(.bold))
-                        .lineLimit(2)
-                    Spacer(minLength: 2)
+                if let ev = nextEv {
                     Text(ev.date, style: .time)
-                        .font(.system(.subheadline, design: .rounded).weight(.medium))
+                        .font(.system(.caption, design: .rounded).weight(.semibold))
                         .foregroundStyle(.secondary)
                         .monospacedDigit()
-                        .fixedSize()
                 }
+            }
+            Spacer(minLength: 2)
+            if let ev = nextEv {
+                eventTitle(ev)
+                    .font(.system(.subheadline, design: .rounded).weight(.bold))
+                    .lineLimit(3)
             } else if let first = trip.todayPlan(asOf: now).first {
                 Text(first.title)
                     .font(.system(.subheadline, design: .rounded).weight(.bold))

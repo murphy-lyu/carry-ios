@@ -502,3 +502,48 @@ Apple 原生风格，极简、克制、优雅。
 ### 两个落地陷阱（复用时直接规避）
 - **自定义 `Menu` 的 label**：标题文字放进 label 内，菜单一展开就**塌成不可见**。正解：标题移到外层 `LabeledContent` 的 label（在 Menu 之外），Menu 的 label 只放当前值 + chevron。（Type / Cabin 选择器都踩过，见 [[swiftui-nested-presentation-and-menu-label-gotchas]]）
 - **顶部留白**：`scrollTo(anchor: .top)` 对齐到滚动内容内边距的边缘，**内容 `.padding(.top)` 会被滚出去无效** → 用 `.contentMargins(.top, X, for: .scrollContent)` 给月历标题等留呼吸感。
+
+## 桌面小组件（WidgetKit，2026-06-28）
+
+### Small Widget（1×1）头部标题规范
+标题「Upcoming」使用 `.caption + semibold + .textCase(.uppercase) + .tracking(0.4) + .secondary`，**不得用 `.headline`**。
+
+原因：Small Widget 画布极窄（约 155pt），`.headline`（17pt semibold）在英文长单词「Upcoming」上会强制换行为「Upcom-\ning」，视觉破碎；改 `.caption`（12pt）配 uppercase + tracking 与 Day 分组 section label 保持一致的「标签感」，兼顾清晰度与紧凑性。
+
+```swift
+// 正确：
+Text("widget.agenda.title")
+    .font(.system(.caption, design: .rounded).weight(.semibold))
+    .textCase(.uppercase)
+    .tracking(0.4)
+    .foregroundStyle(.secondary)
+```
+
+### Medium Widget（2×2）布局结构
+Medium Widget 布局 = `agendaView(maxSlots: 6)` + 可选 `tonightRow` 尾部。两者**在 `agendaView` 外层 `VStack` 里平铺**，tonightRow 前有 `Divider`：
+
+```swift
+VStack(alignment: .leading, spacing: 0) {
+    agendaView(trip, now: now, maxSlots: 6)
+    if let stay = trip.tonightStay(asOf: now) {
+        Divider().padding(.vertical, 4)
+        tonightRow(stay)
+    }
+}
+```
+
+**`tonightRow` 绝不放进 `agendaView` 内部**（`agendaView` 内的 `AgendaRenderRow` slot 机制不认识它，塞进去会被 maxSlots 截断或占用正文 slot）。
+
+### Widget `upcomingAgenda` 时间过滤：哨兵 order 必须跳过时间过滤
+`upcomingAgenda` 对有时刻交通段过滤时，**必须加 `item.order >= 0` 守卫**，避免住宿哨兵（checkout `order = -2`，checkin `order = Int.max`）进入按分钟计算的分支：
+
+```swift
+if item.dayOrder == idx, item.order >= 0, item.order < 24 * 60 * 2 {
+    return item.order / 2 >= nowMinutes
+}
+```
+
+`order < 0` 或 `order == Int.max` 的哨兵行由后续分支处理（全天/多天事件逻辑）。
+
+### `AgendaRenderRow` 无 `moreCount` 字段（静默截断）
+`AgendaRenderRow` **不含 `moreCount` 字段**，也没有「+N 更多」渲染分支。超出 `maxSlots` 的条目静默截断——这是有意为之的 UX：小尺寸组件静默截断比显示「+3 more」更整洁，用户知道有更多内容可打开 App 查看。**禁止**重新加入 `moreCount` 或「+N more」行。

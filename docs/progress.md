@@ -3,6 +3,32 @@
 ## 最后更新
 2026-06-28
 
+## 上次改动摘要（StopCategory 重设计：restaurant/café/bar/museum/park/beach/experience · 2026-06-28）
+
+> 单会话、无并行。**已提交（`696081c`），push 因 SSL 故障失败，待用户重试 `git push`**。
+
+- **Itinerary.swift**：`food`→删，`activity`→删；新增 `restaurant / cafe / bar / museum / park / beach / experience`；`rawValueOrOther` 迁移（"food"→.restaurant, "activity"→.experience）；`placeSelectableCases` 更新。
+- **StopCategoryStyle.swift**：各新 case 对应 SF Symbol（paintpalette/tree/beach.umbrella/fork.knife/cup.and.saucer/wineglass/ferriswheel）。
+- **TripSpendDetail.swift**：SpendCategory 从 7 类扩展到 12 类，`from(stopCategory:)` 完整映射。
+- **TripSpendView.swift**：各新 SpendCategory 的 color / symbolName（restaurant=.orange, cafe=棕, bar=.purple, museum=蓝灰, park=.green, beach=海蓝, experience=.pink）。
+- **CalendarManager.swift**：`stopEmoji()` 更新到新 case。
+- **TripBookStats.swift**：`footprintCats` Set 更新到新 case 集合。
+- **TripsyImporter.swift**：`stopCategory()` 从 Tripsy "museum"/"park"/"restaurant"/"cafe" 分别映射到对应新 case（原统一归 sightseeing/food）。
+- **Localizable.xcstrings**：新增 `itinerary.category.{museum/park/beach/restaurant/cafe/bar/experience}` + `tripspend.cat.{...}` 各 9 语言；删除旧 food/activity key。`i18n-audit [E]=0`，build succeeded。
+
+## 上次改动摘要（日历同步扩展：行程内事件写入系统日历 · 2026-06-28）
+
+> 单会话、无并行。**全部已提交并 push 到 origin/main**（`dc27fce`）。spec: `specs/calendar-sync-itinerary-events.md`。
+
+- **CalendarManager `writeEvents` 全面扩展**：从「仅行程全天事件」扩展为「行程全天事件 + 所有行程内有时间的事件」。改动范围仅限此一个方法，开关/权限/触发时机/removeTrip/updateTrip 全部不变。
+- **交通段**（航班/火车/大巴/渡轮/租车/其他）：有 `departLocalMinutes` 的段写定时事件（出发→到达），emoji 按 mode 区分，location 为出发站/机场名，notes 含承运方、确认号、座位、舱位、备注等完整信息。
+- **住宿**：每个 `LodgingStay` 写 1 条全天事件（横跨入住→退房日期）；有 checkInMinutes 时额外写入住定时事件，有 checkOutMinutes 时额外写退房定时事件。
+- **地点**：`plannedStartMinutes >= 0` 的地点写定时事件（category emoji + 地址 location + note），无时间地点不写。
+- **URL 统一**：所有事件带 `carry://trip/{id}` URL，确保 `removeTrip`/`updateTrip` 按 URL 匹配能批量清除/重写。
+- **单次 commit**：所有事件用 `commit: false` 逐条 save，最后统一 `store.commit()`；单条失败只记日志不中断。
+- **新增本地化**：`calendar.lodging.checkin`（入住）/ `calendar.lodging.checkout`（退房）9 语；`settings.calendar.footer` 9 语更新说明含活动。
+- **新增 CarryLogger.Event**：`calendarItineraryEventsSaved`（成功含事件数）/ `calendarItineraryEventFailed`（单条失败）。
+
 ## 上次改动摘要（日志覆盖补全：6 个核心模块系统性修复 · 2026-06-28）
 
 > 单会话、无并行。**全部已提交并 push 到 origin/main**（`0521a51`）。
@@ -1458,6 +1484,16 @@
 2. [ ] 个人资料（性别等字段，提升推荐精准度）— spec 待写
 3. [ ] 邮件 / 订单导入行程
 4. [ ] 行程统计增强
+
+## 上次改动摘要（Widget 代码审查 + 4 个 Bug 修复 + Small Widget 标题优化 · 2026-06-28）
+
+- **代码审查（8 角度 × 6 候选 → 4 条 CONFIRMED，1 条 REFUTED）**：对 `CarryWidget/CarryWidget.swift` + `Carry/Models/TripStore.swift` 进行多角度 review，确认 4 个真实 bug，REFUTED 1 个（极负 sortOrder，实际写入路径保证 sortOrder ≥ 0）。
+- **Bug Fix V1 — `upcomingAgenda` 住宿哨兵过滤**（`CarryWidget.swift`）：`order = -2`（checkout 哨兵）进入时间过滤分支，`-2/2 = -1 < nowMinutes` 导致当天 checkout 行被错误丢弃。加 `item.order >= 0` 守卫，哨兵绕过时间过滤分支。
+- **Bug Fix V2 — Medium Widget `tonightRow` 恢复**（`CarryWidget.swift`）：`inTripMediumView` 缺少 `tonightRow` 调用，旅行中状态 Medium Widget 没有住宿 footer。补回 `if let stay = trip.tonightStay(asOf: now)` + `Divider + tonightRow`，放在 `agendaView` 外层 VStack（不进 slot 机制）。
+- **Bug Fix V3 — `AgendaRenderRow.moreCount` 死代码清理**（`CarryWidget.swift`）：`moreCount` 字段及 `agendaView` 里的 `else if let more = row.moreCount {}` 渲染分支永不被调用，是残留死代码。彻底移除字段与渲染分支，确立「静默截断」语义。
+- **Bug Fix V4 — 跨天夜行段 `sinceMinutes` 过滤**（`TripStore.swift`）：跨夜航班 `seg.departDayOrder` 指向今天，但 `isToday` 由 `day.sortOrder` 得出，两者不一致时夜行段逃脱过滤。加 `let departIsToday = isToday || (seg.departDayOrder == fromDayOrder)` 守卫。
+- **Small Widget 标题视觉优化**（`CarryWidget.swift`）：「Upcoming」标题从 `.headline`（17pt）改为 `.caption semibold + uppercase + tracking(0.4)`，避免窄画布换行；与 Day 分组 section label 视觉一致。`HStack` 包裹标题与 `dayHeader`，中间 `Spacer` 分开。
+- 以上全部改动合并为 commit `4fc2f87` 提交至 `main`。编译绿（主 app + Widget）。
 
 ## 进行中
 - 无
