@@ -394,14 +394,24 @@ final class LiveActivityManager {
         }
     }
 
-    /// App 回前台时调用：已抵达（过到达 + 宽限）的交通 LA 自动结束。
-    /// 宽限期统一用 arrivalGraceMinutes（15min），让「已抵达」态在锁屏上短暂留存后消失。
+    /// App 回前台时调用：过期的交通 LA 自动结束。两类过期：
+    /// 1. 到达后宽限期（15min）已过 → 通用结束逻辑
+    /// 2. 租车取车 LA 过了「取车后 30min」窗口关闭时刻 → 取车阶段已结束，还车 LA 会在需要时单独启动
     func endTransitIfArrived() {
         let now = Date()
         let grace = TimeInterval(Self.arrivalGraceMinutes * 60)
         for a in Activity<TransportActivityAttributes>.activities where a.activityState == .active {
-            let graceEnd = a.content.state.arrivalDate.addingTimeInterval(grace)
-            if now >= graceEnd {
+            let state = a.content.state
+            let shouldEnd: Bool
+            if state.modeRaw == "carRental" && !state.isCarRentalDropoff {
+                // 取车 LA：取车后 30min 窗口关闭即结束（不等还车时间）
+                let pickupWindowClose = state.departureDate.addingTimeInterval(30 * 60)
+                shouldEnd = now >= pickupWindowClose
+            } else {
+                // 其他所有 LA（含还车 LA）：到达后 grace 期结束
+                shouldEnd = now >= state.arrivalDate.addingTimeInterval(grace)
+            }
+            if shouldEnd {
                 let segId = a.attributes.segmentId
                 Task { await a.end(nil, dismissalPolicy: .default) }
                 if intendedTransitSegment == segId.uuidString { intendedTransitSegment = nil }
