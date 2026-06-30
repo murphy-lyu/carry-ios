@@ -454,6 +454,8 @@ struct CarryWidgetEntryView: View {
                 .textCase(.uppercase)
                 .tracking(0.4)
                 .foregroundStyle(.secondary)
+                .lineLimit(1)
+                .minimumScaleFactor(0.8)
             Spacer(minLength: 2)
             if let ev = nextEv {
                 eventTitle(ev)
@@ -549,7 +551,7 @@ struct CarryWidgetEntryView: View {
     private func agendaView(_ trip: WidgetTrip, now: Date, maxSlots: Int) -> some View {
         let items = trip.upcomingAgenda(asOf: now)
         let rows = agendaRenderRows(items, maxSlots: maxSlots)
-        return VStack(alignment: .leading, spacing: 5) {
+        return VStack(alignment: .leading, spacing: 9) {
             HStack {
                 Text("widget.agenda.title")
                     .font(.system(.headline, design: .rounded).weight(.bold))
@@ -588,7 +590,7 @@ struct CarryWidgetEntryView: View {
 
     private func largeAgendaView(_ trip: WidgetTrip, now: Date) -> some View {
         // maxSlots=10：天头1槽、无副标题条目1槽、有副标题条目2槽；留底部自然白边而非强制撑满。
-        agendaView(trip, now: now, maxSlots: 10)
+        agendaView(trip, now: now, maxSlots: 13)
     }
 
     /// 出发前 large：倒计时 + 打包进度 + 出发当天预览。

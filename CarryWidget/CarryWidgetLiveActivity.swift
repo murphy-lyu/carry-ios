@@ -338,33 +338,67 @@ private struct TransitLockScreenView: View {
                         .lineLimit(1)
                 }
                 Spacer()
-                Text(state.departureDate, style: .time)
+                let headerTime: Date = (state.modeRaw == "carRental" && Date() >= state.departureDate)
+                    ? state.arrivalDate : state.departureDate
+                Text(headerTime, style: .time)
                     .font(.system(size: 13, weight: .medium, design: .rounded))
                     .foregroundStyle(.secondary)
             }
 
-            // 路线：竖排，起点/终点各独占整行（原横排 `from → to` 两个 26pt 名字挤一行，长中文地名——
-            // 尤其租车取/还车点高度相似——会双双截成近乎相同的前缀、分不清两端）。竖排后每行拿到整宽、
-            // 极少截断；空心点=起点、实心点=终点，一眼看出方向（Apple 地图/Flighty 惯用法），不靠读完整名。
-            VStack(alignment: .leading, spacing: 6) {
+            // 路线显示：
+            // - 航班（有 IATA 码）→ 单行 "CKG → XIY"，码短、一行装得下且更简洁
+            // - 租车 → 按当前时间决定显示取车还是还车端：已取车（now >= departureDate）显示还车，否则取车
+            // - 其他（地名长）→ 竖排双行，空心点=起点、实心点=终点
+            let now = Date()
+            let isCarRental = state.modeRaw == "carRental"
+            let hasCodes = !state.fromCode.isEmpty && !state.toCode.isEmpty
+            let pickedUp = isCarRental && now >= state.departureDate
+            let displayLabel: String = isCarRental
+                ? (pickedUp ? state.toLabel : state.fromLabel)
+                : state.fromLabel
+            let displayIcon: String = isCarRental
+                ? (pickedUp ? "circle.fill" : "circle")
+                : "circle"
+
+            if hasCodes && !isCarRental {
+                // 航班/火车：单行 CODE → CODE
+                Text(verbatim: "\(state.fromCode) → \(state.toCode)")
+                    .font(.system(size: 26, weight: .bold, design: .rounded))
+                    .lineLimit(1)
+                    .foregroundStyle(.primary)
+            } else if isCarRental {
+                // 租车：单行显示当前相关端（取车地 or 还车地）
                 HStack(spacing: 8) {
-                    Image(systemName: "circle")
+                    Image(systemName: displayIcon)
                         .font(.system(size: 9, weight: .bold))
                         .foregroundStyle(.secondary)
-                    Text(state.fromLabel)
+                    Text(displayLabel)
                         .font(.system(size: 20, weight: .bold, design: .rounded))
                         .lineLimit(1)
+                        .foregroundStyle(.primary)
                 }
-                HStack(spacing: 8) {
-                    Image(systemName: "circle.fill")
-                        .font(.system(size: 9, weight: .bold))
-                        .foregroundStyle(.secondary)
-                    Text(state.toLabel)
-                        .font(.system(size: 20, weight: .bold, design: .rounded))
-                        .lineLimit(1)
+            } else {
+                // 其他（地名长）：竖排双行
+                VStack(alignment: .leading, spacing: 6) {
+                    HStack(spacing: 8) {
+                        Image(systemName: "circle")
+                            .font(.system(size: 9, weight: .bold))
+                            .foregroundStyle(.secondary)
+                        Text(state.fromLabel)
+                            .font(.system(size: 20, weight: .bold, design: .rounded))
+                            .lineLimit(1)
+                    }
+                    HStack(spacing: 8) {
+                        Image(systemName: "circle.fill")
+                            .font(.system(size: 9, weight: .bold))
+                            .foregroundStyle(.secondary)
+                        Text(state.toLabel)
+                            .font(.system(size: 20, weight: .bold, design: .rounded))
+                            .lineLimit(1)
+                    }
                 }
+                .foregroundStyle(.primary)
             }
-            .foregroundStyle(.primary)
 
             // 倒计时 / 状态 + 航站楼·座位
             transitCountdown(state, now: Date(), large: true)

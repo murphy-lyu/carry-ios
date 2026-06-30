@@ -272,9 +272,9 @@ struct ItineraryReorderCollection: UIViewRepresentable {
                       let sectionID = self.dataSource.sectionIdentifier(for: indexPath.section) else { return }
                 // 吸顶 header 必须不透明：cv 背景为透明（为底部淡出），不能再靠它兜底，故在 cell 级
                 // 给实心 systemBackground，pinned 时保证不透出滚动内容（与页面同色、无缝）。
-                var headerBG = UIBackgroundConfiguration.clear()
-                headerBG.backgroundColor = .systemBackground
-                header.backgroundConfiguration = headerBG
+                // UIBackgroundConfiguration 在 pin 时会被 UIKit 重置（不重调 handler），改用
+                // UIView.backgroundColor 直接设在 cell 层，pin 提升不影响这个属性。
+                header.backgroundColor = .systemBackground
                 header.contentView.backgroundColor = .clear
                 guard let model = self.parent.sections.first(where: { $0.id == sectionID }) else { return }
                 header.contentConfiguration = UIHostingConfiguration { self.parent.headerContent(model) }

@@ -3394,7 +3394,7 @@ extension TripStore {
                     kind: "checkin", time: clock(stay.checkInMinutes)))
             }
         }
-        return out.sorted { ($0.dayOrder, $0.order) < ($1.dayOrder, $1.order) }.prefix(16).map { $0 }
+        return out.sorted { ($0.dayOrder, $0.order) < ($1.dayOrder, $1.order) }.prefix(30).map { $0 }
     }
 
     /// Publishes the up-to-3 most relevant **unfinished** trips (in-progress first, then
