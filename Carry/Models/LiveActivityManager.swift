@@ -46,10 +46,22 @@ final class LiveActivityManager {
 
     /// 出行日「下一程」LA 的主开关 key。控制自动起（A）与显式起（B）。
     static let transitEnabledKey = "liveActivityTransitEnabled"
-    /// 出发前多少小时内开始追踪「下一程」（自动起 A 的时间窗）。
-    static let transitWindowHours = 24
     /// 到达后保留多久再结束（让「已抵达」态留片刻）。
-    static let arrivalGraceMinutes = 60
+    static let arrivalGraceMinutes = 15
+
+    /// 按交通类型返回「出发前多久开始显示 LA」（秒）。
+    /// 设计原则：LA 面向「此刻正在发生/即将发生的紧迫事件」——
+    /// 航班流程长（值机/安检/登机）需要 3h；其他交通 1h 已足够；
+    /// 租车还车需要 2h（找停车场/还车点）。
+    static func transitLeadSeconds(for mode: TransportMode, isDropoff: Bool = false) -> TimeInterval {
+        switch mode {
+        case .flight:     return 3 * 3600          // 3h：值机+安检+登机
+        case .carRental:  return isDropoff ? 2 * 3600 : 3600  // 还车 2h，取车 1h
+        case .train:      return 90 * 60           // 1.5h：赶站+找站台
+        case .bus, .ferry: return 3600             // 1h
+        default:          return 3600              // 其他 1h
+        }
+    }
 
     /// 主开关：未显式设置时默认 **开**（出行日是 Live Activity 最高价值场景）。
     var isTransitEnabled: Bool {
@@ -208,42 +220,72 @@ final class LiveActivityManager {
     // MARK: - 交通 LA：启动 / 结束（spec: widget-transit-live-activity.md）
 
     /// A（自动起）：App 进前台 / 启动时扫所有行程，为「最临近的下一程」起 LA。
-    /// 候选条件：非无日期行程、交通段有出发时间、且「现在」落在 [出发前 transitWindowHours, 到达 + 宽限] 内
-    /// （即出发临近、或正在途中）。多段取出发最早（最当下）的一段。
+    /// 候选条件：非无日期行程、交通段有出发时间、且「现在」落在 [出发前 leadSeconds, 到达 + 宽限] 内。
+    /// 租车段拆为「取车」「还车」两个独立候选，各自按对应时间窗判定（取车 1h / 还车 2h）。
+    /// 多候选取「开始时刻」最近（最当下）的一个。
     func startTransitIfNeeded(trips: [TripBundle]) {
         guard isTransitEnabled else { return }
         guard ActivityAuthorizationInfo().areActivitiesEnabled else { return }
         reconcileDismissedTransit()   // 先认领「用户划掉」的段，A 才不会把它重新起起来
         let now = Date()
-        let windowEnd = now.addingTimeInterval(Double(Self.transitWindowHours) * 3600)
+
         // 剪枝：dismissed 只保留「当前仍存在的段」（防跨行程长期累积）。
+        // 租车段的取车/还车候选共用同一个 segmentId，dismissed 同样能正确屏蔽两端。
         let allSegmentIds = Set(trips.flatMap { $0.safeItineraryDays.flatMap { $0.sortedSegments.map(\.id.uuidString) } })
         let dismissed = dismissedTransitSegmentIds.intersection(allSegmentIds)
         if dismissed != dismissedTransitSegmentIds { dismissedTransitSegmentIds = dismissed }
 
-        var best: (trip: TripBundle, seg: TransportSegment, depart: Date)?
+        // 候选：(行程, 段, 候选开始时刻, 是否租车还车端)
+        var best: (trip: TripBundle, seg: TransportSegment, windowStart: Date, isDropoff: Bool)?
+
         for trip in trips where !trip.isDateless {
-            // 粗筛：出发晚于时间窗末端 → 最早段（≥ departureDate）必都在窗外，跳过、不深扫。
-            // （过去侧不剪：返程日晚间可能仍有回程航班，靠内层 now ≤ graceEnd 逐段过滤。）
-            guard trip.departureDate <= windowEnd else { continue }
             for day in trip.safeItineraryDays {
                 for seg in day.sortedSegments {
-                    guard !dismissed.contains(seg.id.uuidString) else { continue }   // 用户显式停过 → 不自动重起
+                    guard !dismissed.contains(seg.id.uuidString) else { continue }
                     guard let dep = seg.absoluteDeparture(tripDeparture: trip.departureDate) else { continue }
                     let arr = seg.absoluteArrival(tripDeparture: trip.departureDate) ?? dep
-                    let windowOpen = dep.addingTimeInterval(-Double(Self.transitWindowHours) * 3600)
-                    let graceEnd = arr.addingTimeInterval(Double(Self.arrivalGraceMinutes) * 60)
-                    guard now >= windowOpen, now <= graceEnd else { continue }
-                    if best == nil || dep < best!.depart { best = (trip, seg, dep) }
+                    let grace = TimeInterval(Self.arrivalGraceMinutes * 60)
+
+                    if seg.mode == .carRental {
+                        // 取车候选
+                        let pickupLead = Self.transitLeadSeconds(for: .carRental, isDropoff: false)
+                        let pickupWindowOpen = dep.addingTimeInterval(-pickupLead)
+                        // 取车窗：[dep - 1h, dep + 30min]（取到车后 30min 消失，切换到还车 LA）
+                        let pickupWindowClose = dep.addingTimeInterval(30 * 60)
+                        if now >= pickupWindowOpen && now <= pickupWindowClose {
+                            if best == nil || pickupWindowOpen > best!.windowStart {
+                                best = (trip, seg, pickupWindowOpen, false)
+                            }
+                        }
+                        // 还车候选
+                        let dropoffLead = Self.transitLeadSeconds(for: .carRental, isDropoff: true)
+                        let dropoffWindowOpen = arr.addingTimeInterval(-dropoffLead)
+                        let dropoffWindowClose = arr.addingTimeInterval(grace)
+                        if now >= dropoffWindowOpen && now <= dropoffWindowClose {
+                            if best == nil || dropoffWindowOpen > best!.windowStart {
+                                best = (trip, seg, dropoffWindowOpen, true)
+                            }
+                        }
+                    } else {
+                        let lead = Self.transitLeadSeconds(for: seg.mode)
+                        let windowOpen = dep.addingTimeInterval(-lead)
+                        let graceEnd = arr.addingTimeInterval(grace)
+                        guard now >= windowOpen, now <= graceEnd else { continue }
+                        // 多候选取窗口最晚开始（最当下）的，等价于「最临近出发」的段。
+                        if best == nil || windowOpen > best!.windowStart {
+                            best = (trip, seg, windowOpen, false)
+                        }
+                    }
                 }
             }
         }
         guard let best else { return }   // 无候选 → 在途结束交给 endTransitIfArrived
-        startTransit(for: best.seg, trip: best.trip)
+        startTransit(for: best.seg, trip: best.trip, isCarRentalDropoff: best.isDropoff)
     }
 
     /// A/B 共用启动器。B（显式）由详情页按钮调用，可在自动时间窗之外启动用户主动追踪的一程。
-    func startTransit(for segment: TransportSegment, trip: TripBundle) {
+    /// isCarRentalDropoff：true = 还车 LA（显示还车端信息）；false = 取车 LA 或非租车段。
+    func startTransit(for segment: TransportSegment, trip: TripBundle, isCarRentalDropoff: Bool = false) {
         guard !isStartingTransit else { return }
         guard isTransitEnabled else { return }
         guard !trip.isDateless else { return }
@@ -251,16 +293,21 @@ final class LiveActivityManager {
         guard let dep = segment.absoluteDeparture(tripDeparture: trip.departureDate) else { return }
         let arr = segment.absoluteArrival(tripDeparture: trip.departureDate) ?? dep
 
-        // 同一段已有活跃 Activity → 重连引用并 no-op（覆盖冷启动：系统持久化的 LA 仍在、但本进程
-        // currentTransit* 为 nil；不重连会被下面 terminate+recreate 造成闪烁）。
+        // 同一段（含同一段的取车/还车端切换）已有活跃 Activity → 检查是否需要重建。
+        // 租车段取车→还车切换时，isCarRentalDropoff 发生变化，必须重建 LA（不能 no-op）。
         if let existing = Activity<TransportActivityAttributes>.activities.first(where: {
             $0.attributes.segmentId == segment.id && $0.activityState == .active
         }) {
-            currentTransitActivity = existing
-            currentTransitSegmentId = segment.id
-            currentTransitTripId = trip.id
-            intendedTransitSegment = segment.id.uuidString
-            return
+            let sameDropoffState = existing.content.state.isCarRentalDropoff == isCarRentalDropoff
+            if sameDropoffState {
+                // 同段同状态：重连引用（覆盖冷启动 currentTransit* 为 nil 的情况），no-op。
+                currentTransitActivity = existing
+                currentTransitSegmentId = segment.id
+                currentTransitTripId = trip.id
+                intendedTransitSegment = segment.id.uuidString
+                return
+            }
+            // 同段但状态不同（取车→还车切换）：结束旧 LA，继续往下新建还车 LA。
         }
 
         let number = segment.number.trimmingCharacters(in: .whitespaces)
@@ -273,6 +320,7 @@ final class LiveActivityManager {
             fromName: segment.fromName, toName: segment.toName,
             departureDate: dep, arrivalDate: arr,
             fromTerminal: segment.fromTerminal, seat: segment.seat,
+            isCarRentalDropoff: isCarRentalDropoff,
             liveStatus: nil, gate: nil, actualDepartureDate: nil
         )
         let attributes = TransportActivityAttributes(tripId: trip.id, segmentId: segment.id)
@@ -347,10 +395,12 @@ final class LiveActivityManager {
     }
 
     /// App 回前台时调用：已抵达（过到达 + 宽限）的交通 LA 自动结束。
+    /// 宽限期统一用 arrivalGraceMinutes（15min），让「已抵达」态在锁屏上短暂留存后消失。
     func endTransitIfArrived() {
         let now = Date()
+        let grace = TimeInterval(Self.arrivalGraceMinutes * 60)
         for a in Activity<TransportActivityAttributes>.activities where a.activityState == .active {
-            let graceEnd = a.content.state.arrivalDate.addingTimeInterval(Double(Self.arrivalGraceMinutes) * 60)
+            let graceEnd = a.content.state.arrivalDate.addingTimeInterval(grace)
             if now >= graceEnd {
                 let segId = a.attributes.segmentId
                 Task { await a.end(nil, dismissalPolicy: .default) }

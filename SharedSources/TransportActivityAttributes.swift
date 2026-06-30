@@ -25,6 +25,11 @@ struct TransportActivityAttributes: ActivityAttributes {
         var fromTerminal: String   // 可空
         var seat: String           // 可空
 
+        // ── 租车专属（取车 / 还车段区分）──
+        /// 租车还车段标记。true = 还车 LA（显示还车地）；false/缺省 = 取车 LA（显示取车地）。
+        /// 仅 modeRaw == "carRental" 时有意义，其他交通类型忽略此字段。
+        var isCarRentalDropoff: Bool = false
+
         // ── 实时预留（本轮恒为 nil，接 API 时填充，不改结构）──
         var liveStatus: String?    // "On Time" / "Delayed 20m" / "Boarding" …
         var gate: String?

@@ -338,7 +338,7 @@ private struct TransitLockScreenView: View {
                         .lineLimit(1)
                 }
                 Spacer()
-                let headerTime: Date = (state.modeRaw == "carRental" && Date() >= state.departureDate)
+                let headerTime: Date = (state.modeRaw == "carRental" && state.isCarRentalDropoff)
                     ? state.arrivalDate : state.departureDate
                 Text(headerTime, style: .time)
                     .font(.system(size: 13, weight: .medium, design: .rounded))
@@ -347,17 +347,15 @@ private struct TransitLockScreenView: View {
 
             // 路线显示：
             // - 航班（有 IATA 码）→ 单行 "CKG → XIY"，码短、一行装得下且更简洁
-            // - 租车 → 按当前时间决定显示取车还是还车端：已取车（now >= departureDate）显示还车，否则取车
+            // - 租车取车 LA → 显示取车地（空心点）；租车还车 LA → 显示还车地（实心点）
             // - 其他（地名长）→ 竖排双行，空心点=起点、实心点=终点
-            let now = Date()
             let isCarRental = state.modeRaw == "carRental"
             let hasCodes = !state.fromCode.isEmpty && !state.toCode.isEmpty
-            let pickedUp = isCarRental && now >= state.departureDate
             let displayLabel: String = isCarRental
-                ? (pickedUp ? state.toLabel : state.fromLabel)
+                ? (state.isCarRentalDropoff ? state.toLabel : state.fromLabel)
                 : state.fromLabel
             let displayIcon: String = isCarRental
-                ? (pickedUp ? "circle.fill" : "circle")
+                ? (state.isCarRentalDropoff ? "circle.fill" : "circle")
                 : "circle"
 
             if hasCodes && !isCarRental {
