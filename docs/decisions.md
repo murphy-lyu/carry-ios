@@ -1377,3 +1377,26 @@ if departIsToday, seg.departLocalMinutes >= 0, seg.departLocalMinutes < sinceMin
 ### Medium Widget 布局：`tonightRow` 在 `agendaView` 外层（2026-06-28）
 原因：`tonightRow`（「Tonight · 酒店名」住宿 footer）曾意外缺失，根因是它被放进了 `agendaView` 的 slot 机制内，被 `maxSlots` 截断。
 决定：Medium Widget 结构 = `agendaView(maxSlots: 6)` + 可选 `tonightRow`，两者在外层 `VStack` 平铺，tonightRow 前加 `Divider`。`agendaView` 只负责行程条目，`tonightRow` 是独立的住宿 footer，不参与 slot 计数。已写入 design-system.md §桌面小组件。
+
+### 交通 LA 时机哲学：「此刻正在发生」而非「未来某天有个事」（2026-07-01）
+原因：旧实现用 `transitWindowHours = 24` 全局窗口，导致租车出发前 30+ 小时就出现 LA，且因 `now >= departureDate` 日期计算错误显示「En route 67h」——对用户毫无价值（"谁要看这种 Live Activity"）。
+决定：Live Activity 的意义是「此刻正在发生 / 即将发生」，必须让用户感受到它的即时相关性。**方法 A（固定按类型，无 Settings 配置）**：
+- 航班：起飞前 3h 出现，降落后 15min 消失
+- 租车取车段：取车前 1h 出现，取车后 30min 消失
+- 租车还车段：还车前 2h 出现（给足时间确认目的地），还车后 15min 消失
+- 火车：发车前 90min 出现
+- 大巴/渡轮：出发前 1h 出现
+- `arrivalGraceMinutes` 统一从 60min 缩短到 15min
+
+### 租车 LA 拆两段：取车和还车是两个独立关键时刻（2026-07-01）
+原因：取车和还车在时间上相差几天，对用户是两个完全独立的「即将到来的事件」。旧实现把整段（取车日到还车日）当一个 LA，取车后 LA 依然存在直到还车，中途无意义。
+决定：将单租车 LA 拆成两个独立候选，各自有自己的时间窗口：
+- **取车 LA**：窗口 `[dep-1h, dep+30min]`；仅显示取车地点（空心点图标）
+- **还车 LA**：窗口 `[arr-2h, arr+15min]`；仅显示还车地点（实心点图标）
+- **中间无 LA**（取车 +30min 到还车 -2h）：用户在驾驶中，不需要 LA 噪声
+- 两段共用同一 `segmentId` + `dismissed` 机制：用户滑掉取车 LA → 还车 LA 也不出（用户已表达不需要此段 LA）
+- `isCarRentalDropoff: Bool = false` 新字段加入 `TransportActivityAttributes.ContentState`（`SharedSources/TransportActivityAttributes.swift`），`= false` 默认值确保 Codable 向后兼容
+
+### Widget 侧租车状态判断：用 flag 取代时间推断（2026-07-01）
+原因：旧 Widget 用 `Date() >= state.departureDate` 推断「已取车」——但 `departureDate` 日期计算在某些情况下会错误（如今日日期已过 18:30），导致 LA 认为已取车、显示「En route」到几十小时后的还车时间。
+决定：Widget 完全依赖 `state.isCarRentalDropoff` flag（由 App 侧在创建 LA 时设定），不做任何时间推断。取车 LA 始终显示取车地，还车 LA 始终显示还车地，逻辑清晰无歧义。

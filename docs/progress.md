@@ -1,7 +1,38 @@
 # 项目进度
 
 ## 最后更新
-2026-06-28
+2026-07-01
+
+## 上次改动摘要（交通 LA 时机重构：按交通类型精确窗口 + 租车两段拆分 · 2026-07-01）
+
+> 单会话、有并行（另一会话同步操作）。**全部已提交并 push 到 origin/main**（`9a45fa0` + `86275dd`）。
+
+- **LA 时机哲学重定义**：Live Activity =「此刻正在发生 / 即将发生」的精确提醒，而非提前几十小时噪声。删除旧 `transitWindowHours = 24` 全局常量，改为按交通类型精确窗口。
+- **`transitLeadSeconds(for:isDropoff:)` 新增**（`LiveActivityManager.swift`）：flight=3h，carRental 取车=1h/还车=2h，train=90min，bus/ferry=1h。
+- **`arrivalGraceMinutes` 60→15**：到达后 LA 最多保留 15 分钟，不再停留 1 小时。
+- **租车 LA 拆两段**：原来单 LA 覆盖取车→还车全程（几十小时），现在拆成两个独立候选——取车 LA 窗口 `[dep-1h, dep+30min]`，还车 LA 窗口 `[arr-2h, arr+15min]`；中间驾驶途中无 LA（有意为之）。两段共用同一 `segmentId`，用户滑掉取车 LA 即视为整段 dismissed，还车 LA 也不出。
+- **`isCarRentalDropoff: Bool = false` 字段**（`SharedSources/TransportActivityAttributes.swift`）：取车/还车 LA 由创建时设定的 flag 区分，Widget 侧不再用 `now >= departureDate` 时间推断（旧逻辑因日期计算错误导致「提前几十小时显示 En route 67h」的 bug）。
+- **Widget 显示修正**（`CarryWidgetLiveActivity.swift`）：header 时间、路线地点（取车地/还车地）、点图标（空心/实心）均改用 `state.isCarRentalDropoff` 判断，与 LA 创建时意图一致。
+- **`endTransitIfArrived` 修复**（`86275dd`）：取车 LA 窗口 `dep+30min` 到期不会自动结束（旧逻辑只对比 `arrivalDate`，即几天后还车时间）。新增 `!isCarRentalDropoff` 分支在 `dep+30min` 强制结束取车 LA。
+
+## 待验收（真机）
+- [ ] 航班 LA：起飞前 3h 出现，降落后 15min 消失
+- [ ] 租车取车 LA：取车时间前 1h 出现，取车时间后 30min 消失
+- [ ] 租车还车 LA：还车时间前 2h 出现，还车时间后 15min 消失
+- [ ] 无中间段 LA（取车 LA 消失到还车 LA 出现之间无 LA）
+- [ ] 用户滑掉取车 LA → 还车 LA 也不出（dismissed 跳过）
+
+## 上次改动摘要（Widget agenda 优化：前缀 + 布局 + 标题 · 2026-06-30）
+
+> 单会话、无并行。**全部已提交并 push 到 origin/main**（`6b43c4d`）。
+
+- **Medium（1×4）删除「今晚住宿」footer**：`inTripMediumView` 直接调 `agendaView`，去掉 `tonightRow`；Small（1×1）保留不变。
+- **住宿 agenda 条目加前缀**：`widgetAgenda` 构建时 checkin/checkout title 拼入 `入住 · ` / `退房 · `（走主 App 本地化 `itinerary.lodging.event.checkin/checkout`）。
+- **租车 agenda 拆两行加前缀**：取车日输出 `取车 · 公司` + `carRentalPickup` kind，还车日单独追加 `还车 · 公司` + `carRentalDropoff` kind；Widget `icon()` 同步支持新 kind。
+- **标题改为「下一个活动 / Next Activity」**：`widget.agenda.title` 9 语言全部更新。
+- **Large/Medium 顶对齐留白**：去掉 `agendaView` 内 `Spacer(minLength: 0)`，加 `.frame(maxHeight: .infinity, alignment: .topLeading)`；Large `maxSlots` 15→10，Medium 6→5。
+- **行间距优化**：`agendaView` VStack spacing 7→5；日期头加 `.padding(.top, 6).padding(.bottom, 2)` 使分组有呼吸感；`agendaItemRow` 内部 spacing 1→2。
+- **Small（1×1）去掉标题右侧时间**：空间太小，只保留标题文字。
 
 ## 上次改动摘要（StopCategory 重设计：restaurant/café/bar/museum/park/beach/experience · 2026-06-28）
 
