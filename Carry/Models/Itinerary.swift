@@ -706,6 +706,11 @@ final class LodgingStay: CostBearing {
     func covers(dayOrder: Int) -> Bool {
         dayOrder >= checkInDayOrder && dayOrder < checkOutDayOrder
     }
+
+    /// 展示用名称：空名兜底为本地化「住宿」。复用既有 key `itinerary.category.lodging`。
+    var displayName: String {
+        name.isEmpty ? NSLocalizedString("itinerary.category.lodging", comment: "") : name
+    }
 }
 
 // MARK: - 行程时区辅助（spec: itinerary-timezone.md）

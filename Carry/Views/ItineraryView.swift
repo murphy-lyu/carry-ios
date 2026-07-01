@@ -1391,9 +1391,6 @@ private struct LodgingBannerRow: View {
     let showTopLine: Bool
     let showBottomLine: Bool
 
-    private var displayName: String {
-        stay.name.isEmpty ? NSLocalizedString("itinerary.category.lodging", comment: "") : stay.name
-    }
     /// 入住/退房=离散**事件**（实心床、medium，与交通/地点同分量）；
     /// 出发/过夜=基地**锚点**（空心床、regular，更退后——它是「这天从这儿开始/结束」的位置标，不是要办的事）。
     private var isEvent: Bool { role == .checkIn || role == .checkout }
@@ -1410,7 +1407,7 @@ private struct LodgingBannerRow: View {
             // 角色才是各行唯一差异、也最有用。酒店名当锚（与地点名/航班号一致），长名独占一行不被前缀挤掉。
             VStack(alignment: .leading, spacing: 2) {
                 HStack(alignment: .center, spacing: 6) {
-                    Text(displayName)
+                    Text(stay.displayName)
                         // 事件（入住/退房）semibold + 实心床；锚点（出发/返回）medium + 空心床，更退后。
                         .font(.system(.body, design: .rounded).weight(isEvent ? .semibold : .medium))
                         .foregroundStyle(.primary)

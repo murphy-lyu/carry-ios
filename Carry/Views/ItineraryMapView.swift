@@ -63,7 +63,18 @@ struct ItineraryMapView: View {
         days.flatMap { $0.sortedStops }.filter { $0.hasCoordinate }
     }
 
-    /// 指定天集合里所有「地理坐标」——停靠点 + 交通段起讫两端。
+    /// 指定天集合里覆盖到的住宿（含入住日、退房日、住宿中间日）。用日期区间（含退房日）而非
+    /// `LodgingStay.covers(dayOrder:)`（那个语义故意排除退房日、服务「过夜」判断）——地图要展示
+    /// 的是「这天酒店在哪」，退房日人也还在附近，理应显示。
+    private func lodgingStays(for days: [ItineraryDay]) -> [LodgingStay] {
+        let dayOrders = Set(days.map(\.sortOrder))
+        return (bundle?.safeLodgingStays ?? []).filter { stay in
+            guard stay.hasCoordinate else { return false }
+            return dayOrders.contains { $0 >= stay.checkInDayOrder && $0 <= stay.checkOutDayOrder }
+        }
+    }
+
+    /// 指定天集合里所有「地理坐标」——停靠点 + 交通段起讫两端 + 当天覆盖的住宿。
     /// 取景与空态判定都用它，使「某天只有航班、没有地点」时地图也能框住航段、不误判为空（spec: transport-lodging）。
     private func routeCoordinates(in days: [ItineraryDay]) -> [CLLocationCoordinate2D] {
         var coords = coordinateStops(in: days).compactMap(\.coordinate)
@@ -73,16 +84,20 @@ struct ItineraryMapView: View {
                 if let t = seg.toCoordinate { coords.append(t) }
             }
         }
+        coords += lodgingStays(for: days).compactMap(\.coordinate)
         return coords
     }
 
-    /// 取景专用坐标：优先「停靠点」，**交通段端点不参与缩放**——避免洲际航段（机场相距数千公里）
-    /// 把整张图撑到跨国尺度、当天市内地点缩成针尖。当天无任何停靠点（纯航班日）才回退到含端点的
+    /// 取景专用坐标：优先「停靠点 + 住宿」，**交通段端点不参与缩放**——避免洲际航段（机场相距数千公里）
+    /// 把整张图撑到跨国尺度、当天市内地点缩成针尖。当天无任何停靠点/住宿（纯航班日）才回退到含端点的
     /// routeCoordinates（那天本无市内地点会被缩小，框住航段反而是该有的「旅行日」视图）。
+    /// 纳入住宿坐标确保镜头能同时框住当天地点与酒店（spec: itinerary-map-lodging）。
     /// 仅用于预览取景；空态判定与全屏取景仍用 routeCoordinates。
     private func framingCoordinates(in days: [ItineraryDay]) -> [CLLocationCoordinate2D] {
         let stops = coordinateStops(in: days).compactMap(\.coordinate)
-        return stops.isEmpty ? routeCoordinates(in: days) : stops
+        let lodging = lodgingStays(for: days).compactMap(\.coordinate)
+        let primary = stops + lodging
+        return primary.isEmpty ? routeCoordinates(in: days) : primary
     }
 
     /// 预览态坐标点数（聚焦当天）——决定空态 / 单点提示。含交通段端点：只有航班的天也算「有内容」。
@@ -354,6 +369,13 @@ struct ItineraryMapView: View {
     private func mapAnnotations(for days: [ItineraryDay], dimmed: Bool = false) -> some MapContent {
         // 只为「真有内容」的天建标注——空天（无坐标地点、无路线）贡献零 MapContent，却照样让 MapKit
         // diff 一个空 ForEach 身份。长行程焦点落在空天时（.context 态铺整趟）尤其浪费。行为等价、纯减负。
+        // 住宿标注先画（视觉层级最底），不遮挡后续的地点序号针/交通端点（spec: itinerary-map-lodging）。
+        let lodgings = lodgingStays(for: days)
+        ForEach(lodgings, id: \.id) { stay in
+            Annotation(stay.displayName, coordinate: stay.coordinate!) {
+                lodgingMarker(dimmed: dimmed)
+            }
+        }
         let mapData = dayMapData(for: days).filter { !$0.stops.isEmpty || $0.routeCoords.count >= 2 }
         ForEach(mapData) { day in
             ForEach(day.stops, id: \.stop.id) { entry in
@@ -394,6 +416,21 @@ struct ItineraryMapView: View {
                 }
             }
         }
+    }
+
+    /// 住宿标记：中性床图标（不跟随当天调色板）——住宿常跨多天，用某天颜色会产生「该归哪天」的歧义，
+    /// 保持中性反而清楚地传达「这是背景锚点，不是某天的行程站点」（spec: itinerary-map-lodging）。
+    private func lodgingMarker(dimmed: Bool) -> some View {
+        ZStack {
+            Circle().fill(Color(UIColor.systemBackground))
+            Circle().strokeBorder(Color.secondary, lineWidth: 1.5)
+            Image(systemName: "bed.double.fill")
+                .font(.system(size: 10, weight: .semibold))
+                .foregroundStyle(Color.secondary)
+        }
+        .frame(width: 20, height: 20)
+        .shadow(color: .black.opacity(0.18), radius: 2, x: 0, y: 1)
+        .opacity(dimmed ? 0.4 : 1)
     }
 
     /// 交通段端点标记：白底圆 + 当天色描边 + mode 图标。比停靠点序号针更轻（端点是「过路」非「停留」）。
