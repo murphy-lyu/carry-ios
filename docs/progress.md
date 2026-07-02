@@ -5,7 +5,9 @@
 
 ## 上次改动摘要（行程地图显示住宿 + 修复时间轴插入点吞掉无时间地点 · 2026-07-02）
 
-> 单会话、无并行。**全部已提交并 push 到 origin/main**（`2fd047e` + `1de0c1a` + `8a5f09c`）。
+> 单会话、无并行。**全部已提交并 push 到 origin/main**（`2fd047e` + `1de0c1a` + `8a5f09c` + `0d9fa79`）。
+
+- **修复：真机上打开进行中的行程，自动吸顶偶发定位到当天中间某个地点**（`ItineraryReorderCollection.swift:scrollDayToTop`）：吸顶目标 Y 是从自适应行高（`UIHostingConfiguration`）的布局属性算出的，真机上这个自适应高度可能不止一帧才收敛（行程越长、目标天越靠后，前面待测的行越多），过早读到的是还没定型的估算高度，滚动 offset 就焊死在错的位置；模拟器机器快、单帧内多半已收敛，故此前在模拟器上未现。改为连续两帧算出同一个 Y 才提交滚动，不一致就再等一帧重算，最多重试 4 次兜底。
 
 - **行程地图显示当天住宿位置**（`ItineraryMapView.swift`）：新增 `lodgingStays(for:)`，按 `checkInDayOrder...checkOutDayOrder`（含退房日）取当天覆盖的住宿，坐标纳入 `routeCoordinates`/`framingCoordinates` 的自动取景计算；新增住宿标记 `lodgingMarker`。`LodgingStay` 新增 `displayName`（复用 `itinerary.category.lodging` key），`ItineraryView.swift` 的 `LodgingBannerRow` 同步改为调用它，消除重复。
 - **住宿标记改为跟随当天调色板 + 对齐地点针尺寸**（`8a5f09c`）：初版用中性灰床图标（怕跨天归属歧义），用户反馈后改为**入住日**颜色实心圆（跨多天住宿的确定性取色规则，不随查看范围变化）+ 24×24 尺寸/自适应深浅图标，与地点序号针视觉语言完全对齐。
