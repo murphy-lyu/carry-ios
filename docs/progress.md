@@ -5,9 +5,10 @@
 
 ## 上次改动摘要（行程地图显示住宿 + 修复时间轴插入点吞掉无时间地点 · 2026-07-02）
 
-> 单会话、无并行。**全部已提交并 push 到 origin/main**（`2fd047e` + `1de0c1a`）。
+> 单会话、无并行。**全部已提交并 push 到 origin/main**（`2fd047e` + `1de0c1a` + `8a5f09c`）。
 
-- **行程地图显示当天住宿位置**（`ItineraryMapView.swift`）：新增 `lodgingStays(for:)`，按 `checkInDayOrder...checkOutDayOrder`（含退房日）取当天覆盖的住宿，坐标纳入 `routeCoordinates`/`framingCoordinates` 的自动取景计算；新增中性床图标标记 `lodgingMarker`（不跟随当天调色板，避免跨天归属歧义）。`LodgingStay` 新增 `displayName`（复用 `itinerary.category.lodging` key），`ItineraryView.swift` 的 `LodgingBannerRow` 同步改为调用它，消除重复。
+- **行程地图显示当天住宿位置**（`ItineraryMapView.swift`）：新增 `lodgingStays(for:)`，按 `checkInDayOrder...checkOutDayOrder`（含退房日）取当天覆盖的住宿，坐标纳入 `routeCoordinates`/`framingCoordinates` 的自动取景计算；新增住宿标记 `lodgingMarker`。`LodgingStay` 新增 `displayName`（复用 `itinerary.category.lodging` key），`ItineraryView.swift` 的 `LodgingBannerRow` 同步改为调用它，消除重复。
+- **住宿标记改为跟随当天调色板 + 对齐地点针尺寸**（`8a5f09c`）：初版用中性灰床图标（怕跨天归属歧义），用户反馈后改为**入住日**颜色实心圆（跨多天住宿的确定性取色规则，不随查看范围变化）+ 24×24 尺寸/自适应深浅图标，与地点序号针视觉语言完全对齐。
 - **修复：拖拽无时间地点到「退房」和某个有时间地点之间会跑到退房上面**（`ItineraryView.swift:timelineRowIDs`）：根因是住宿/交通/日历事件的插入点查找只认 `minutes >= 0`，排在当天最前、前面还没出现过已知时间的无时间地点 `minutes` 恒为 -1，对时间比较「隐形」，导致查找径直跳过它们，把退房挤到它们前面（无视用户实际拖拽的位置）。修法：查找前对开头这段无归属的 -1 做一次反向回填（用它们后面第一个已知时间），统一应用到还车/入住/退房/日历事件四处插入点，而非只给退房打补丁。
 
 ## 上次改动摘要（交通 LA 时机重构：按交通类型精确窗口 + 租车两段拆分 · 2026-07-01）
