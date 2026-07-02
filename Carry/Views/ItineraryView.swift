@@ -571,10 +571,24 @@ struct ItineraryView: View {
                     : (.transport(t.id), eff))
             }
         }
+        // 按时间就位的插入点：找「timed 里第一个有效时间晚于 m 的位置」，插在它前面。
+        // 前向 carry-forward（上面的循环）只能让无时间项继承**前面**已知的时间；排在当天**最前**、
+        // 前面还没出现过任何已知时间的无时间项，`minutes` 只能是 -1——对只认 `>= 0` 的时间比较「隐形」，
+        // 导致查找径直跳过它们、落到它们身后第一个有时间项那里，把这些原本手动排在前面的无时间项
+        // 挤到插入结果的前面（表现为「拖到退房和某景点之间，松手却跑到退房上面」）。
+        // 修法：查找前先补一次「反向」carry——把开头这段没有归属的 -1，回填成它们后面第一个已知时间，
+        // 使这些无时间项在时间比较里不再被跳过，插入点能正确落在用户手动排定的位置。
+        func insertionIndex(before m: Int, default def: Int) -> Int {
+            guard m >= 0 else { return def }
+            var keys = timed.map(\.minutes)
+            if let firstKnown = keys.firstIndex(where: { $0 >= 0 }) {
+                for i in 0..<firstKnown { keys[i] = keys[firstKnown] }
+            }
+            return keys.firstIndex(where: { $0 >= 0 && $0 > m }) ?? def
+        }
         for seg in carRentals where seg.arriveDayOrder == day.sortOrder {
             let m = seg.arriveLocalMinutes
-            var idx = timed.count
-            if m >= 0, let found = timed.firstIndex(where: { $0.minutes >= 0 && $0.minutes > m }) { idx = found }
+            let idx = insertionIndex(before: m, default: timed.count)
             timed.insert((.carRental(segment: seg.id, day: day.sortOrder, pickup: false), m), at: idx)
         }
         // 住宿按当天角色注入主脊（spec 增补 2026-06-20）：入住日=入住（按入住时间就位、默认置末——
@@ -587,13 +601,11 @@ struct ItineraryView: View {
             where stay.checkInDayOrder <= day.sortOrder && day.sortOrder <= stay.checkOutDayOrder {
             if day.sortOrder == stay.checkInDayOrder {
                 let m = stay.checkInMinutes
-                var idx = timed.count
-                if m >= 0, let found = timed.firstIndex(where: { $0.minutes >= 0 && $0.minutes > m }) { idx = found }
+                let idx = insertionIndex(before: m, default: timed.count)
                 timed.insert((.lodging(stay: stay.id, day: day.sortOrder, role: .checkIn), m), at: idx)
             } else if day.sortOrder == stay.checkOutDayOrder {
                 let m = stay.checkOutMinutes
-                var idx = 0
-                if m >= 0, let found = timed.firstIndex(where: { $0.minutes >= 0 && $0.minutes > m }) { idx = found }
+                let idx = insertionIndex(before: m, default: 0)
                 timed.insert((.lodging(stay: stay.id, day: day.sortOrder, role: .checkout), m), at: idx)
             } else if !timed.isEmpty {
                 departs.append(.lodging(stay: stay.id, day: day.sortOrder, role: .depart))
@@ -603,8 +615,7 @@ struct ItineraryView: View {
         // 定时日历事件按各自时刻插入主脊（spec: itinerary-calendar-overlay.md 增补 2026-06-22）：
         // 时间轴承诺按时序读 → 定时事件落到它的时间位、不再全钉顶部；全天事件无时刻、仍钉顶（见 daySections）。
         for ev in timedCalendar {
-            var idx = timed.count
-            if ev.minutes >= 0, let found = timed.firstIndex(where: { $0.minutes >= 0 && $0.minutes > ev.minutes }) { idx = found }
+            let idx = insertionIndex(before: ev.minutes, default: timed.count)
             timed.insert((.calendarEvent(id: ev.id, day: day.sortOrder), ev.minutes), at: idx)
         }
         return departs + timed.map(\.row) + overnights
