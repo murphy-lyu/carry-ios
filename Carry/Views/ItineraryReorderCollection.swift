@@ -346,8 +346,13 @@ struct ItineraryReorderCollection: UIViewRepresentable {
         }
 
         /// 把 dayID 对应 section 的 header 顶到列表顶部。header 已 pinToVisibleBounds，落位即吸顶。
-        private func scrollDayToTop(_ dayID: UUID, animated: Bool) {
+        /// `previousY`/`attemptsLeft`：真机上 UIHostingConfiguration 的自适应行高可能不止一帧就收敛
+        /// （长行程、目标天靠后时前面待测的 cell 更多），过早读到的 minY 是还没定型的估算值——
+        /// 连续两帧算出同一个 Y 才提交滚动，否则再等一帧重算，最多重试几次兜底（模拟器机器快、单帧
+        /// 内就已收敛，故此前未必现；真机复现为「吸顶落在当天中间某个地点，且与具体位置无固定规律」）。
+        private func scrollDayToTop(_ dayID: UUID, animated: Bool, previousY: CGFloat? = nil, attemptsLeft: Int = 4) {
             guard let collectionView, let dataSource else { return }
+            collectionView.layoutIfNeeded()
             let snapshot = dataSource.snapshot()
             guard let sectionIndex = snapshot.indexOfSection(dayID) else { return }
             // 目标 section 不在顶部 → 其 header 处于「自然」位置（非 pinned），minY 即该天起始 Y。
@@ -362,6 +367,12 @@ struct ItineraryReorderCollection: UIViewRepresentable {
                     + collectionView.adjustedContentInset.bottom
             )
             let targetY = min(max(attrs.frame.minY - topInset, -topInset), maxY)
+            if let previousY, abs(previousY - targetY) > 0.5, attemptsLeft > 0 {
+                DispatchQueue.main.async { [weak self] in
+                    self?.scrollDayToTop(dayID, animated: animated, previousY: targetY, attemptsLeft: attemptsLeft - 1)
+                }
+                return
+            }
             // 已在目标位置：不滚也不置标志（animated 滚动若无位移不会回调 didEndScrollingAnimation，
             // 否则 isProgrammaticScroll 会卡在 true 而永久屏蔽反向联动）。
             guard abs(targetY - collectionView.contentOffset.y) > 0.5 else { return }
