@@ -372,8 +372,9 @@ struct ItineraryMapView: View {
         // 住宿标注先画（视觉层级最底），不遮挡后续的地点序号针/交通端点（spec: itinerary-map-lodging）。
         let lodgings = lodgingStays(for: days)
         ForEach(lodgings, id: \.id) { stay in
+            // 跨多天的住宿统一用入住日的颜色（确定性规则，不随当前查看的天集合变化）。
             Annotation(stay.displayName, coordinate: stay.coordinate!) {
-                lodgingMarker(dimmed: dimmed)
+                lodgingMarker(color: ItineraryDayPalette.color(forDayIndex: stay.checkInDayOrder), dimmed: dimmed)
             }
         }
         let mapData = dayMapData(for: days).filter { !$0.stops.isEmpty || $0.routeCoords.count >= 2 }
@@ -418,18 +419,18 @@ struct ItineraryMapView: View {
         }
     }
 
-    /// 住宿标记：中性床图标（不跟随当天调色板）——住宿常跨多天，用某天颜色会产生「该归哪天」的歧义，
-    /// 保持中性反而清楚地传达「这是背景锚点，不是某天的行程站点」（spec: itinerary-map-lodging）。
-    private func lodgingMarker(dimmed: Bool) -> some View {
+    /// 住宿标记：与地点序号针同尺寸/同视觉语言（当天色实心圆 + 白描边 + 自适应深浅图标），
+    /// 跨多天的住宿统一取入住日的颜色。
+    private func lodgingMarker(color: Color, dimmed: Bool) -> some View {
         ZStack {
-            Circle().fill(Color(UIColor.systemBackground))
-            Circle().strokeBorder(Color.secondary, lineWidth: 1.5)
+            Circle().fill(color)
+            Circle().strokeBorder(.white, lineWidth: 1.5)
             Image(systemName: "bed.double.fill")
-                .font(.system(size: 10, weight: .semibold))
-                .foregroundStyle(Color.secondary)
+                .font(.system(size: 11, weight: .bold))
+                .foregroundStyle(color.legibleInk)
         }
-        .frame(width: 20, height: 20)
-        .shadow(color: .black.opacity(0.18), radius: 2, x: 0, y: 1)
+        .frame(width: 24, height: 24)
+        .shadow(color: .black.opacity(0.22), radius: 2.5, x: 0, y: 1)
         .opacity(dimmed ? 0.4 : 1)
     }
 
