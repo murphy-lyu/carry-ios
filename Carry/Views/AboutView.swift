@@ -21,8 +21,6 @@ struct AboutView: View {
     }
 
     var body: some View {
-        // GeometryReader + minHeight 让页脚锚定视口底部：内容不足一屏时 ❤️ 贴底，
-        // 内容超一屏时随内容正常滚动——避免短内容下底部留白。
         GeometryReader { proxy in
             ScrollView(showsIndicators: false) {
                 VStack(spacing: 0) {
@@ -82,22 +80,13 @@ struct AboutView: View {
                         }
                     }
 
-                    // 至少 44pt 的页脚分隔（比卡间距更松）；内容不足一屏时撑开把 ❤️ 推到底。
-                    Spacer(minLength: 44)
+                    Spacer(minLength: 16)
 
-                    HStack(spacing: 6) {
-                        Text("about.madeWith")
-                            .font(.footnote)
-                            .foregroundStyle(colorScheme == .dark ? Color.secondary.opacity(0.7) : Color(UIColor.tertiaryLabel))
-                        Text("❤️")
-                            .font(.footnote)
-                    }
-                    .frame(maxWidth: .infinity, alignment: .center)
-                    .padding(.bottom, 8)
+                    madeWithFooter
                 }
                 .padding(.horizontal, 16)
                 .padding(.bottom, 20)
-                .frame(minHeight: proxy.size.height, alignment: .top)
+                .frame(minHeight: max(0, proxy.size.height - 32), alignment: .top)
             }
         }
         .background(Color(.systemGroupedBackground).ignoresSafeArea())
@@ -106,6 +95,18 @@ struct AboutView: View {
     }
 
     // MARK: Subviews
+
+    private var madeWithFooter: some View {
+        HStack(spacing: 6) {
+            Text("about.madeWith")
+                .font(.footnote)
+                .foregroundStyle(colorScheme == .dark ? Color.secondary.opacity(0.7) : Color(UIColor.tertiaryLabel))
+            Text("❤️")
+                .font(.footnote)
+        }
+        .frame(maxWidth: .infinity, alignment: .center)
+        .padding(.bottom, 8)
+    }
 
     private func legalRow<Destination: View>(
         label: LocalizedStringKey,
