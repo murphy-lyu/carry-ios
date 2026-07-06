@@ -50,7 +50,7 @@ struct WidgetAgendaItem: Codable {
 }
 
 /// 旅行相位（spec: widget-trip-companion.md）。
-enum TripPhase { case preTrip, inTrip }
+enum TripPhase { case preTrip, inTrip, ended }
 
 /// Field-identical mirror of the main app's `WidgetTripSnapshot`, decoded from the
 /// JSON the app writes into the App Group UserDefaults.
@@ -102,7 +102,7 @@ struct WidgetTrip: Codable, Identifiable {
         guard let returnDate, !(isDateless ?? false) else { return .preTrip }
         let cal = Calendar.current
         let today = cal.startOfDay(for: now)
-        guard today <= cal.startOfDay(for: returnDate) else { return .preTrip }   // 已结束（防御，选片已排除）
+        guard today <= cal.startOfDay(for: returnDate) else { return .ended }
         return today >= cal.startOfDay(for: departureDate) ? .inTrip : .preTrip
     }
 
@@ -118,6 +118,15 @@ struct WidgetTrip: Codable, Identifiable {
     /// 现在之后最近的一件事（绝对时刻比较，跨午夜也成立）。
     func nextEvent(asOf now: Date) -> WidgetEvent? {
         (events ?? []).first { $0.date > now }
+    }
+
+    /// 某绝对时刻相对出发日的 0-based 天序号，clamp 到 [0, spanDays-1]（供 agendaDayLabel 取日期标签用）。
+    func dayOrder(for date: Date) -> Int {
+        let cal = Calendar.current
+        let d = cal.dateComponents([.day],
+                                   from: cal.startOfDay(for: departureDate),
+                                   to: cal.startOfDay(for: date)).day ?? 0
+        return max(0, min(d, spanDays - 1))
     }
 
     /// 今晚住哪（住宿覆盖当前天：checkIn ≤ idx < checkIn+nights）。
@@ -352,7 +361,11 @@ struct CarryWidgetEntryView: View {
 
     var body: some View {
         Group {
-            if let trip = entry.trips.first {
+            // 「未结束」的行程才作为 Widget 主角；returnDate 已过的排在前面也视同无活跃行程。
+            // （writeWidgetSnapshot 只在 App 生命周期节点重算过滤，snapshot 写入后到下次写入之间，
+            // 午夜翻页可能让原本未结束的行程在这段间隙里变成已结束——这里兜底过滤，避免误显示。）
+            let activeTrips = entry.trips.filter { $0.phase(asOf: entry.date) != .ended }
+            if let trip = activeTrips.first {
                 switch (family, trip.phase(asOf: entry.date)) {
                 case (.systemLarge, .inTrip):
                     largeAgendaView(trip, now: entry.date)
@@ -361,7 +374,7 @@ struct CarryWidgetEntryView: View {
                 case (.systemMedium, .inTrip):
                     inTripMediumView(trip, now: entry.date)
                 case (.systemMedium, .preTrip):
-                    mediumView(primary: trip, secondary: entry.trips.dropFirst().first)
+                    mediumView(primary: trip, secondary: activeTrips.dropFirst().first)
                 case (_, .inTrip):
                     inTripSmallView(trip, now: entry.date)
                 default:
@@ -458,9 +471,20 @@ struct CarryWidgetEntryView: View {
                 .minimumScaleFactor(0.8)
             Spacer(minLength: 2)
             if let ev = nextEv {
+                Text(trip.agendaDayLabel(trip.dayOrder(for: ev.date), asOf: now))
+                    .font(.system(.caption2, design: .rounded).weight(.medium))
+                    .foregroundStyle(.secondary)
                 eventTitle(ev)
                     .font(.system(.subheadline, design: .rounded).weight(.bold))
                     .lineLimit(3)
+                // 交通类事件（primary=航班号/车次）补一行 secondary（航线），
+                // 否则 1×1 只有一个航班号，信息量不足；checkin/checkout 的 secondary 恒为空，不受影响。
+                if !ev.secondary.isEmpty {
+                    Text(verbatim: ev.secondary)
+                        .font(.system(.caption2, design: .rounded))
+                        .foregroundStyle(.secondary)
+                        .lineLimit(1)
+                }
             } else if let first = trip.todayPlan(asOf: now).first {
                 Text(first.title)
                     .font(.system(.subheadline, design: .rounded).weight(.bold))
@@ -531,8 +555,9 @@ struct CarryWidgetEntryView: View {
                     .lineLimit(1)
                 Spacer(minLength: 4)
                 if !it.time.isEmpty {
+                    // 右侧时间是辅助信息，字重应轻于标题（.medium）而非同权重并列。
                     Text(it.time)
-                        .font(.system(.subheadline, design: .rounded).weight(.medium))
+                        .font(.system(.subheadline, design: .rounded).weight(.regular))
                         .foregroundStyle(.secondary)
                         .monospacedDigit()
                 }

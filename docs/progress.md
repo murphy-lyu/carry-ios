@@ -1,7 +1,23 @@
 # 项目进度
 
 ## 最后更新
-2026-07-02
+2026-07-04
+
+## 上次改动摘要（交通 LA 视觉打磨 + Widget agenda 4 处修复 · 2026-07-04）
+
+> 单会话、无并行。**未提交**（工作区改动：`CarryWidget/CarryWidget.swift` + `CarryWidgetLiveActivity.swift` + `Localizable.xcstrings`）。首次真机验收交通 LA 通过（航班/租车链路均已触发）。
+
+- **交通 LA 锁屏卡片视觉打磨**（`CarryWidgetLiveActivity.swift`，真机截图走查）：
+  - 倒计时区域改堆叠布局：数字在上、"until departure"说明文字紧贴其下方，替代原先"数字+文字并排+Spacer撑两端"的分离感。
+  - 航站楼/座位号从 `Label(icon+text)` 图标形式改为纯文字 `T3 · 45A`（中点分隔），新增 `terminalLabel()` 复用主 App"纯数字前缀 T"逻辑；新增 `widget.transit.terminal_prefix` key（9 语言，值均为 `T`）。
+  - 标题行删除右侧重复的绝对时刻（与下方倒计时表达同一信息，冗余）。
+  - 租车场景标题行新增"取车/还车"文字标签替代原先的空心/实心圆点图标（圆点语义不直观，用户扫一眼锁屏无法确认当前阶段）；新增 `widget.transit.pickup`/`widget.transit.dropoff` key（复用主 App `itinerary.transport.section.pickup/dropoff` 已有翻译）。
+- **Widget agenda 4 处修复**（`CarryWidget.swift`，用户截图走查发现）：
+  - 1×1 Small 事件标题上方补日期标签（TODAY/TOMORROW/具体日期），复用 4×4 的 `agendaDayLabel`；新增 `WidgetTrip.dayOrder(for:)` 把事件绝对时间换算成天序号。
+  - 1×1 航班等交通事件原先 `eventTitle()` 只显示 `primary`（航班号），信息量不足；现补一行 `secondary`（航线），checkin/checkout 的 secondary 恒为空不受影响。
+  - 1×4/4×4 agenda 行右侧时间字段从 `.medium` 降为 `.regular`，与标题（`.medium`）拉开主次层级（此前两者同权重，视觉太重）。
+  - **修复根因性 bug：行程结束后 Widget 误显示打包进度 UI**。`TripPhase` 原先只有 `preTrip`/`inTrip` 两态，`phase(asOf:)` 把"已结束"（`returnDate` 已过）错误地 `return .preTrip`，导致命中"出发前"分支渲染倒计时+打包进度。新增第三态 `ended`，`CarryWidgetEntryView.body` 过滤已结束行程走既有 `emptyView`（产品决策：结束后显示空状态，引导新建/查看下一程，而非总结卡片）。
+- 均为 Widget target 改动，未涉及主 App/SwiftData。模拟器 build 通过，i18n audit [E]=0。**待办**：真机验收本轮全部改动（交通 LA 视觉、1×1 日期与航班信息、字重、行程结束空态）。
 
 ## 上次改动摘要（行程地图显示住宿 + 修复时间轴插入点吞掉无时间地点 · 2026-07-02）
 

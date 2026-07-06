@@ -215,6 +215,13 @@ private func transitIcon(_ modeRaw: String) -> String {
     }
 }
 
+/// 航站楼显示：纯数字前缀 "T"（如 "3" → "T3"），非数字（如已含 "T3" 或字母楼号）原样显示。
+private func terminalLabel(_ s: TransportActivityAttributes.ContentState) -> String {
+    let t = s.fromTerminal.trimmingCharacters(in: .whitespaces)
+    guard s.modeRaw == "flight", let first = t.first, first.isNumber else { return t }
+    return String(localized: "widget.transit.terminal_prefix") + t
+}
+
 /// 当前相位（按 `Date()` 在渲染时判定）。
 private enum TransitPhase { case beforeDeparture, enRoute, arrived }
 private func transitPhase(_ s: TransportActivityAttributes.ContentState, now: Date) -> TransitPhase {
@@ -272,16 +279,19 @@ struct CarryTransitLiveActivity: Widget {
 @ViewBuilder
 private func transitCountdown(_ s: TransportActivityAttributes.ContentState, now: Date, large: Bool) -> some View {
     let phase = transitPhase(s, now: now)
-    HStack(alignment: .firstTextBaseline) {
-        switch phase {
-        case .beforeDeparture:
+    switch phase {
+    case .beforeDeparture:
+        // 堆叠：倒计时数字为主角，说明文字紧贴其下方（父子关系，而非并列的两端对齐）。
+        VStack(alignment: .leading, spacing: 0) {
             Text(timerInterval: now...s.departureDate, countsDown: true)
-                .font(.system(size: large ? 22 : 15, weight: .bold, design: .rounded))
+                .font(.system(size: large ? 26 : 15, weight: .bold, design: .rounded))
                 .monospacedDigit()
             Text("widget.transit.until_departure")
                 .font(.system(size: 12, weight: .medium, design: .rounded))
                 .foregroundStyle(.secondary)
-        case .enRoute:
+        }
+    case .enRoute:
+        HStack(alignment: .firstTextBaseline) {
             Text("widget.transit.en_route")
                 .font(.system(size: large ? 18 : 14, weight: .bold, design: .rounded))
             Spacer(minLength: 4)
@@ -289,12 +299,11 @@ private func transitCountdown(_ s: TransportActivityAttributes.ContentState, now
                 .font(.system(size: large ? 16 : 13, weight: .medium, design: .rounded))
                 .monospacedDigit()
                 .foregroundStyle(.secondary)
-        case .arrived:
-            Text("widget.transit.arrived")
-                .font(.system(size: large ? 18 : 14, weight: .bold, design: .rounded))
-                .foregroundStyle(.green)
         }
-        if case .beforeDeparture = phase { Spacer(minLength: 4) }
+    case .arrived:
+        Text("widget.transit.arrived")
+            .font(.system(size: large ? 18 : 14, weight: .bold, design: .rounded))
+            .foregroundStyle(.green)
     }
 }
 
@@ -325,7 +334,7 @@ private struct TransitLockScreenView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
-            // 标题行：mode 图标 + 班次 + 出发时刻
+            // 标题行：mode 图标 + 班次。绝对时刻不在此重复——倒计时区域已是本卡片唯一的时间维度。
             HStack {
                 Image(systemName: transitIcon(state.modeRaw))
                     .font(.system(size: 14, weight: .semibold))
@@ -338,25 +347,24 @@ private struct TransitLockScreenView: View {
                         .lineLimit(1)
                 }
                 Spacer()
-                let headerTime: Date = (state.modeRaw == "carRental" && state.isCarRentalDropoff)
-                    ? state.arrivalDate : state.departureDate
-                Text(headerTime, style: .time)
-                    .font(.system(size: 13, weight: .medium, design: .rounded))
-                    .foregroundStyle(.secondary)
+                // 租车专属：取车/还车阶段身份标签，替代此前的空心/实心圆点——
+                // 用户扫一眼锁屏应能立刻确认「现在是提醒我取车还是还车」，符号不如文字直接。
+                if state.modeRaw == "carRental" {
+                    Text(state.isCarRentalDropoff ? "widget.transit.dropoff" : "widget.transit.pickup")
+                        .font(.system(size: 12, weight: .semibold, design: .rounded))
+                        .foregroundStyle(.secondary)
+                }
             }
 
             // 路线显示：
             // - 航班（有 IATA 码）→ 单行 "CKG → XIY"，码短、一行装得下且更简洁
-            // - 租车取车 LA → 显示取车地（空心点）；租车还车 LA → 显示还车地（实心点）
-            // - 其他（地名长）→ 竖排双行，空心点=起点、实心点=终点
+            // - 租车 → 单行显示当前相关端（取车地 or 还车地），阶段身份已在标题行标出
+            // - 其他（地名长）→ 竖排双行，空心点=起点、实心点=终点（两端同时可见，符号足以区分）
             let isCarRental = state.modeRaw == "carRental"
             let hasCodes = !state.fromCode.isEmpty && !state.toCode.isEmpty
             let displayLabel: String = isCarRental
                 ? (state.isCarRentalDropoff ? state.toLabel : state.fromLabel)
                 : state.fromLabel
-            let displayIcon: String = isCarRental
-                ? (state.isCarRentalDropoff ? "circle.fill" : "circle")
-                : "circle"
 
             if hasCodes && !isCarRental {
                 // 航班/火车：单行 CODE → CODE
@@ -365,16 +373,10 @@ private struct TransitLockScreenView: View {
                     .lineLimit(1)
                     .foregroundStyle(.primary)
             } else if isCarRental {
-                // 租车：单行显示当前相关端（取车地 or 还车地）
-                HStack(spacing: 8) {
-                    Image(systemName: displayIcon)
-                        .font(.system(size: 9, weight: .bold))
-                        .foregroundStyle(.secondary)
-                    Text(displayLabel)
-                        .font(.system(size: 20, weight: .bold, design: .rounded))
-                        .lineLimit(1)
-                        .foregroundStyle(.primary)
-                }
+                Text(displayLabel)
+                    .font(.system(size: 20, weight: .bold, design: .rounded))
+                    .lineLimit(1)
+                    .foregroundStyle(.primary)
             } else {
                 // 其他（地名长）：竖排双行
                 VStack(alignment: .leading, spacing: 6) {
@@ -398,19 +400,13 @@ private struct TransitLockScreenView: View {
                 .foregroundStyle(.primary)
             }
 
-            // 倒计时 / 状态 + 航站楼·座位
+            // 倒计时 / 状态 + 航站楼·座位（纯文字，中点分隔，不用图标——航站楼数字配图标语义不清）
             transitCountdown(state, now: Date(), large: true)
             if !state.fromTerminal.isEmpty || !state.seat.isEmpty {
-                HStack(spacing: 12) {
-                    if !state.fromTerminal.isEmpty {
-                        Label(state.fromTerminal, systemImage: "building.2")
-                    }
-                    if !state.seat.isEmpty {
-                        Label(state.seat, systemImage: "chair")
-                    }
-                }
-                .font(.system(size: 12, weight: .medium, design: .rounded))
-                .foregroundStyle(.secondary)
+                let parts = [terminalLabel(state), state.seat].filter { !$0.isEmpty }
+                Text(parts.joined(separator: " · "))
+                    .font(.system(size: 12, weight: .medium, design: .rounded))
+                    .foregroundStyle(.secondary)
             }
         }
         .padding(.horizontal, 16)
