@@ -1,11 +1,42 @@
 # 项目进度
 
 ## 最后更新
-2026-07-06
+2026-07-07
+
+## 上次改动摘要（code review 修复：Widget 兜底相关 3 处 · 2026-07-07）
+
+> 单会话、无并行。**未提交**。来源：对上一轮"地点顺序/时间冲突提示 + Widget 规划中兜底"两个功能跑 code review（8 finder agent），修复 3 处真实/潜在问题，另有 2 处重复代码类建议评估后决定不合并（详见下）。
+
+- **修复：Widget 刷新窗口被规划中兜底行程意外压缩**（`CarryWidget.swift:CarryProvider.timeline()`）：算刷新窗口用的 `trips.first?.returnDate` 之前只可能是「真实 returnDate」或 nil；规划中兜底行程的 `returnDate` 是创建时占位值（会变成过去的日期），导致「生成每日午夜刷新点」的循环一开始就不成立，Widget 退化成仅 1 小时刷新一次，与代码注释里"无 returnDate 则 14 天兜底"的设计意图不符。改为判断 `isDateless` 后再决定是否读 `returnDate`。
+- **修复：Widget 与首页"规划中最新一个"取法不一致**：新增 `TripBundle.planningSortDescending`（`createdAt` 降序，相同时按 id 兜底排序），首页 `HomeView.cachedPlanning` 和 `TripStore.writeWidgetSnapshot()` 的兜底逻辑改为共用这一套排序，不再各自独立实现（此前 Widget 侧缺 id tiebreaker，同一时刻创建的多个规划中行程可能与首页选出不同结果）。
+- **修复：`isDateless` 倒计时判断收敛为 `WidgetTrip.countdownTextIfDated` 共享属性**：原先 `smallView`/`mediumView`（primary + secondary）/`largePreTripView` 四处调用点里，`mediumView` 的 secondary 槽缺这个判断（目前不可达，只靠远端"兜底只产生单条 snapshot"这个约定维持安全，属于潜在陷阱）。收敛成一个属性后四处统一调用，secondary 槽补上本地防御。
+- **评估后决定不改**：`stopsWithTimeOrderConflict`（`Itinerary.swift`）和 `timeline` 属性里已有的 carry-forward 逻辑虽然都是"沿用上一个已知时间"的思路，但作用的集合不同（前者只扫地点、后者要在地点+交通混合序列里找插入点），强行合并成一次遍历会让两个概念耦合、只换来可忽略的性能提升（列表数据量小）——按"最小必要改动集合"原则不做。
+- 主 App + Widget 两个 target 均 build 通过，i18n audit [E]=0（本轮未改动 xcstrings）。
+
+## 上次改动摘要（Widget 三级兜底：规划中行程 · 2026-07-06）
+
+> 单会话、无并行。**未提交**。spec: `specs/widget-planning-trip-fallback.md`（已实现，标记 Shipped）。
+
+- **优先级补第三级**：Widget（1×1/1×4/4×4）原本「进行中 > 有日期即将出发」都没有候选时直接空状态；现补「规划中」（`isDateless`，无日期）兜底——取 `createdAt` 最新的一个，仅在前两级都为空时出现，不与有日期行程混排。
+- **`TripStore.writeWidgetSnapshot()`**：`active` 为空时，从 `isDateless` 行程里按 `createdAt` 降序取最新一个，`events`/`stays`/`plan`/`agenda` 全传空（day/时间相关概念对无日期行程没有意义）。
+- **`CarryWidget.swift`**：`widgetHeader` 加 `isPlanning` 参数换成 "Planning" 文案；`smallView`/`mediumView`/`largePreTripView` 在 `trip.isDateless == true` 时隐藏倒计时那一行（**不是显示错误内容，是整行不渲染**——规划中行程的 `departureDate` 是创建时占位值，绝不能被拿去算倒计时，呼应 `dateless-planning-trips.md` "占位日期是 bug 之源"的教训）；Medium 的 secondary 槽因兜底只产生 1 个 snapshot 而天然为空，不需要额外分支。
+- **本地化**：新增 `widget.header.planning`（`CarryWidget/Localizable.xcstrings`），9 语言直接照抄主 App 已有的 `home.planning` 翻译。
+- 主 App + Widget 两个 target 均 build 通过，i18n audit [E]=0。**待办**：真机验收（清空所有有日期行程、只留规划中行程，确认 Widget 三个尺寸都显示 Planning 标签 + 行程名 + 打包进度，且没有倒计时/day1 内容）。
+
+## 上次改动摘要（地点顺序/时间冲突提示 · 2026-07-06）
+
+> 单会话、无并行。**未提交**。spec: `specs/itinerary-stop-time-order-hint.md`（已实现，标记 Shipped）。
+
+- **产品决策沿用现状**：地点（stop）永远保持手动 `sortOrder`，不因填时间而重排（`Itinerary.swift:timeline` 既有规则）——这是刻意设计，路线顺序≠预计时间。但缺口是"顺序和时间冲突时用户看不出来"，本轮补上安静的视觉提示，不改变排序行为。
+- **`ItineraryDay.stopsWithTimeOrderConflict`**（`Models/Itinerary.swift`）：按手动 `sortOrder` 检查已设时间（≥0）的停靠点是否时间单调不减，冲突的 stop id 存入 Set；未设时间的跳过、不参与比较也不误报；只在同一天内比较。
+- **`TimelineStopRow` 时间文字着色**：命中冲突时 `.secondary` → `Color.alertOrange`（复用 `voltage-converter-nudge` 已确立的警示色 token），不加图标、不可点、不弹窗——纯颜色信号。
+- **性能**：冲突集合在 `daySections` 构建时一次性算好存入既有的 `TimelineLineCache`（与 connectivity 同一套预算机制），行闭包 O(1) 查表，不在每行滚动时重算。
+- **范围收窄**：只做列表行；`StopDetailView` 头部因用共享的 `DetailSheetHeader` 组件、时间与日期拼成一整条 String，改动成本明显超过收益，故跳过（spec 里已记录理由）。
+- 模拟器 build 通过，不涉及 xcstrings（无新文案）。**待办**：真机验收（同一天内让某地点时间早于前一个已设时间的地点，确认该地点时间变橙；正常顺序不误报）。
 
 ## 上次改动摘要（代码重复清理：航站楼前缀 + Widget 天序号 · 2026-07-06）
 
-> 单会话、无并行。**未提交**。来源：对 Widget 改动（`fef4c55`）跑 code review 发现的两处重复实现，本轮清理。
+> 单会话、无并行。已随后续提交（`a5b3898`）一并提交。来源：对 Widget 改动（`fef4c55`）跑 code review 发现的两处重复实现，本轮清理。
 
 - **航站楼「数字前缀 T」逻辑三处重复 → 合一**：`TransportDetailView.terminalDisplay`、`ItineraryView.terminalDisplay`、`CarryWidgetLiveActivity.terminalLabel()` 各自独立实现同一条规则。新增 `SharedSources/TransportModeDisplay.swift`（`numericTerminalNeedingPrefix(modeRaw:rawTerminal:)`），只共享判断逻辑、不共享本地化文案（Widget/主 App 的 xcstrings 表不互通，各自本地化前缀）；三处调用点改为调用它，pbxproj 已加入两个 target。
 - **`WidgetTrip.dayOrder(for:)` 与 `currentDayIndex(asOf:)` 重复 → 删除前者**：两者是同一套「按 departureDate 算天序号 + clamp 到 spanDays」逻辑，仅参数名不同。删除 `dayOrder(for:)`，调用点改用 `currentDayIndex(asOf:)`。

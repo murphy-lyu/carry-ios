@@ -83,6 +83,8 @@ private final class TimelineLineCache {
     var dayBySegmentID: [UUID: ItineraryDay] = [:]
     var dayByOrder: [Int: ItineraryDay] = [:]
     var stayByID: [UUID: LodgingStay] = [:]
+    /// 顺序/时间冲突的停靠点 id 集合，跨全部天并集（spec: itinerary-stop-time-order-hint.md）。
+    var stopTimeConflicts: Set<UUID> = []
 }
 
 struct ItineraryView: View {
@@ -515,7 +517,9 @@ struct ItineraryView: View {
         let stayByID = Dictionary(stays.map { ($0.id, $0) }, uniquingKeysWith: { a, _ in a })
 
         var connectivity: [ItineraryRowID: (top: Bool, bottom: Bool)] = [:]
+        var stopTimeConflicts: Set<UUID> = []
         let sections = allDays.map { day -> ItineraryDaySection in
+            stopTimeConflicts.formUnion(day.stopsWithTimeOrderConflict)
             // 日历事件叠加行（spec: itinerary-calendar-overlay.md 增补 2026-06-22）：
             // 全天事件无时刻 → 钉当天顶部（背景信息 band）；定时事件 → 交给 timelineRowIDs 按各自时刻插入主脊，
             // 让这一天按时序读（时间轴的核心承诺），而非把所有日历事件不分时刻全钉顶部。
@@ -541,6 +545,7 @@ struct ItineraryView: View {
         lineCache.dayBySegmentID = dayBySegmentID
         lineCache.dayByOrder = dayByOrder
         lineCache.stayByID = stayByID
+        lineCache.stopTimeConflicts = stopTimeConflicts
         return sections
     }
 
@@ -650,7 +655,8 @@ struct ItineraryView: View {
                 stop: stop,
                 showTopLine: showsTopLine(.stop(stopID), in: day),
                 showBottomLine: showsBottomLine(.stop(stopID), in: day),
-                dayColor: ItineraryDayPalette.color(forDayIndex: day.sortOrder)
+                dayColor: ItineraryDayPalette.color(forDayIndex: day.sortOrder),
+                hasTimeOrderConflict: lineCache.stopTimeConflicts.contains(stopID)
             )
             .padding(.horizontal, 16)
             .contentShape(Rectangle())
@@ -1534,6 +1540,9 @@ private struct TimelineStopRow: View {
     var showBottomLine: Bool = true
     /// 当天配色（与地图针 / 路线同色，便于图文互相对照）。
     let dayColor: Color
+    /// 本地点的时间早于「前面某个已设时间地点」（spec: itinerary-stop-time-order-hint.md）。
+    /// 只做安静的颜色提示，不阻断、不驱动排序——地点顺序永远尊重手动 sortOrder。
+    var hasTimeOrderConflict: Bool = false
 
     var body: some View {
         // cell 只含主行（名称/时间/地址）。备注【不在列表展示】——两行备注会让行高参差、破坏列表工整；
@@ -1572,9 +1581,10 @@ private struct TimelineStopRow: View {
                         Spacer(minLength: 6)
                         // 纯时间文字（去掉前导 pin 图标）：时间本身即表达「已排期」，图标冗余且其「优化时不会动」
                         // 的语义不自明。锚定行为不变，只去视觉噪音。secondary，不抢名称锚点。
+                        // 顺序/时间冲突时着色 alertOrange——安静的颜色信号，不加图标/不可点，不打断浏览。
                         Text(timeRangeLabel)
                             .font(.system(.caption, design: .rounded).weight(.medium))
-                            .foregroundStyle(.secondary)
+                            .foregroundStyle(hasTimeOrderConflict ? Color.alertOrange : .secondary)
                             .fixedSize()
                     }
                 }

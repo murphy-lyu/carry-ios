@@ -68,6 +68,13 @@ final class TripBundle {
     /// 打包数量与提醒沿用，不变）；实际天数含两端 = days + 1。无日期「规划中」行程固定 1 天。
     var spanDays: Int { isDateless ? 1 : max(1, days + 1) }
 
+    /// 「规划中」（isDateless）行程的排序规则：按创建时间降序，同一时刻创建则按 id 兜底保证确定性。
+    /// 首页「规划中」分区与 Widget 兜底显示共用同一套规则（原先各自独立实现、tiebreaker 不一致）。
+    static func planningSortDescending(_ a: TripBundle, _ b: TripBundle) -> Bool {
+        if a.createdAt != b.createdAt { return a.createdAt > b.createdAt }
+        return a.id.uuidString < b.id.uuidString
+    }
+
     var reminderConfigs: [TripReminderConfig] {
         get {
             guard !reminderConfigData.isEmpty else { return TripReminderConfig.defaults }
@@ -3417,7 +3424,7 @@ extension TripStore {
             }
             .sorted { $0.departureDate < $1.departureDate }
             .prefix(3)
-        let snapshots = active.map { trip -> WidgetTripSnapshot in
+        var snapshots: [WidgetTripSnapshot] = active.map { trip -> WidgetTripSnapshot in
             let ret = cal.date(byAdding: .day, value: trip.days, to: trip.departureDate) ?? trip.departureDate
             // 当前天序（clamp 到 [0, spanDays-1]）：plan 从今天起算、截掉过去天。
             let span = max(1, trip.days + 1)
@@ -3440,8 +3447,27 @@ extension TripStore {
                 agenda: Self.widgetAgenda(for: trip, fromDayOrder: dayIdx, sinceMinutes: nowMinutes)
             )
         }
+        // 三级兜底（spec: widget-planning-trip-fallback.md）：进行中/有日期即将出发都没有候选时，
+        // 用最新创建的「规划中」（isDateless）行程顶上，让 Widget 别沦为空状态。只取 1 个、不参与
+        // 上面的多行程排序——规划中行程没有日期可比，也不该和有日期的行程混排（Medium 的 secondary 槽同理不填）。
+        // day/events/stays 相关字段对无日期行程没有意义，一律传空——占位 departureDate 只用于满足非可选
+        // 字段、Widget 侧必须先判 isDateless 才能读它（否则会显示随时间推移毫无意义的「过期」倒计时）。
+        if snapshots.isEmpty,
+           let planning = trips.filter({ $0.isDateless }).sorted(by: TripBundle.planningSortDescending).first {
+            snapshots = [WidgetTripSnapshot(
+                tripId: planning.id.uuidString,
+                name: planning.name,
+                destinationCity: planning.destinationCity,
+                departureDate: planning.departureDate,
+                packedCount: planning.packedCount,
+                totalCount: planning.totalCount,
+                returnDate: planning.departureDate,
+                isDateless: true,
+                events: [], stays: [], plan: [], agenda: []
+            )]
+        }
         guard let defaults = UserDefaults(suiteName: Self.widgetAppGroup) else { return }
-        if let data = try? JSONEncoder().encode(Array(snapshots)) {
+        if let data = try? JSONEncoder().encode(snapshots) {
             defaults.set(data, forKey: Self.widgetSnapshotKey)
         }
         #if canImport(WidgetKit)

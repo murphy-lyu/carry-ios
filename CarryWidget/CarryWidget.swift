@@ -86,6 +86,14 @@ struct WidgetTrip: Codable, Identifiable {
 
     var displayTitle: String { name.isEmpty ? destinationCity : name }
 
+    /// 规划中（isDateless）行程没有出发日可用于倒计时——那是创建时的占位值，拿去算会显示随时间
+    /// 推移毫无意义的「过期」倒计时。所有调用点统一从这里取，不再各自重复判断
+    /// （spec: widget-planning-trip-fallback.md；code review 2026-07-07 发现 4 处倒计时调用点里
+    /// 有一处漏了判断，只靠远端「规划中兜底只产生单条 snapshot」这个约定维持安全）。
+    var countdownTextIfDated: String? {
+        isDateless == true ? nil : countdownText(for: departureDate)
+    }
+
     // MARK: 相位推导（asOf 取 entry.date，使「今天 / 下一件事」随 timeline 推进）
 
     /// 含两端的日历天数（= returnDate − departureDate + 1）；无 returnDate 退化为 1。
@@ -327,7 +335,11 @@ struct CarryProvider: AppIntentTimelineProvider {
             for ev in (primary.events ?? []) where ev.date > now { refDates.insert(ev.date) }
         }
         // 一串每日午夜（覆盖到主卡 returnDate 之后一天，无则 14 天兜底）。
-        let end = trips.first?.returnDate.flatMap { cal.date(byAdding: .day, value: 1, to: $0) }
+        // 规划中（isDateless）行程的 returnDate 是创建时占位值（可能已在过去），不能当真实日期用——
+        // 否则 end 落在过去、下面 while 循环一次都不跑，Widget 刷新窗口被意外压成仅 1 小时
+        // （spec: widget-planning-trip-fallback.md 补充；code review 2026-07-07 发现）。
+        let primaryReturnDate = (trips.first?.isDateless == true) ? nil : trips.first?.returnDate
+        let end = primaryReturnDate.flatMap { cal.date(byAdding: .day, value: 1, to: $0) }
             ?? cal.date(byAdding: .day, value: 14, to: now) ?? now.addingTimeInterval(14 * 86400)
         var m = firstMidnight
         while m <= end {
@@ -610,17 +622,21 @@ struct CarryWidgetEntryView: View {
         agendaView(trip, now: now, maxSlots: 13)
     }
 
-    /// 出发前 large：倒计时 + 打包进度 + 出发当天预览。
+    /// 出发前 large：倒计时 + 打包进度 + 出发当天预览。规划中（isDateless）兜底行程没有倒计时/day1 概念——
+    /// 后者天然为空（snapshot 侧 plan/agenda 已传空数组，见 writeWidgetSnapshot），前者显式隐藏（spec:
+    /// widget-planning-trip-fallback.md）。
     private func largePreTripView(_ trip: WidgetTrip, now: Date) -> some View {
         let day1 = trip.upcomingAgenda(asOf: now).filter { $0.dayOrder == 0 }
         return VStack(alignment: .leading, spacing: 8) {
-            widgetHeader
+            widgetHeader(isPlanning: trip.isDateless ?? false)
             Text(trip.displayTitle)
                 .font(.system(.title2, design: .rounded).weight(.bold))
                 .lineLimit(1)
-            Text(countdownText(for: trip.departureDate))
-                .font(.system(.subheadline, design: .rounded).weight(.medium))
-                .foregroundStyle(.secondary)
+            if let countdown = trip.countdownTextIfDated {
+                Text(countdown)
+                    .font(.system(.subheadline, design: .rounded).weight(.medium))
+                    .foregroundStyle(.secondary)
+            }
             ProgressView(value: trip.progress).tint(.primary)
             HStack {
                 Text(progressText(trip))
@@ -644,15 +660,17 @@ struct CarryWidgetEntryView: View {
 
     private func smallView(_ trip: WidgetTrip) -> some View {
         VStack(alignment: .leading, spacing: 4) {
-            widgetHeader
+            widgetHeader(isPlanning: trip.isDateless ?? false)
             Spacer(minLength: 8)
             Text(trip.name.isEmpty ? trip.destinationCity : trip.name)
                 .font(.system(.title2, design: .rounded).weight(.bold))
                 .lineLimit(1)
                 .minimumScaleFactor(0.7)
-            Text(countdownText(for: trip.departureDate))
-                .font(.system(.subheadline, design: .rounded).weight(.medium))
-                .foregroundStyle(.secondary)
+            if let countdown = trip.countdownTextIfDated {
+                Text(countdown)
+                    .font(.system(.subheadline, design: .rounded).weight(.medium))
+                    .foregroundStyle(.secondary)
+            }
             ProgressView(value: trip.progress)
                 .tint(.primary)
                 .padding(.top, 8)
@@ -669,13 +687,14 @@ struct CarryWidgetEntryView: View {
         .widgetURL(trip.deepLink)
     }
 
-    /// Header row: suitcase icon + "Upcoming" label, both in the same secondary
+    /// Header row: suitcase icon + "Upcoming"/"Planning" label, both in the same secondary
     /// colour. Used as a small-caption header above the trip name in both sizes.
-    private var widgetHeader: some View {
+    /// `isPlanning`：规划中（isDateless）兜底行程时换成 "Planning" 文案（spec: widget-planning-trip-fallback.md）。
+    private func widgetHeader(isPlanning: Bool) -> some View {
         HStack(spacing: 5) {
             Image(systemName: "suitcase.fill")
                 .font(.caption)
-            Text("widget.header.upcoming")
+            Text(isPlanning ? "widget.header.planning" : "widget.header.upcoming")
                 .font(.system(.caption, design: .rounded).weight(.semibold))
                 .textCase(.uppercase)
                 .tracking(0.5)
@@ -689,13 +708,15 @@ struct CarryWidgetEntryView: View {
         VStack(alignment: .leading, spacing: 10) {
             HStack(alignment: .center) {
                 VStack(alignment: .leading, spacing: 3) {
-                    widgetHeader
+                    widgetHeader(isPlanning: primary.isDateless ?? false)
                     Text(primary.name.isEmpty ? primary.destinationCity : primary.name)
                         .font(.system(.title2, design: .rounded).weight(.bold))
                         .lineLimit(1)
-                    Text(countdownText(for: primary.departureDate))
-                        .font(.system(.caption, design: .rounded).weight(.semibold))
-                        .foregroundStyle(.secondary)
+                    if let countdown = primary.countdownTextIfDated {
+                        Text(countdown)
+                            .font(.system(.caption, design: .rounded).weight(.semibold))
+                            .foregroundStyle(.secondary)
+                    }
                     Text(progressText(primary))
                         .font(.system(.caption2, design: .rounded))
                         .foregroundStyle(.secondary)
@@ -717,9 +738,13 @@ struct CarryWidgetEntryView: View {
                         .font(.system(.caption, design: .rounded).weight(.medium))
                         .lineLimit(1)
                     Spacer()
-                    Text(countdownText(for: secondary.departureDate))
-                        .font(.system(.caption2, design: .rounded))
-                        .foregroundStyle(.secondary)
+                    // 目前 secondary 永远不会是规划中行程（兜底只产生单条 snapshot），但本地防御
+                    // 而非只靠远端约定——见 countdownTextIfDated 文档注释（code review 2026-07-07）。
+                    if let countdown = secondary.countdownTextIfDated {
+                        Text(countdown)
+                            .font(.system(.caption2, design: .rounded))
+                            .foregroundStyle(.secondary)
+                    }
                 }
             }
         }

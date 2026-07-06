@@ -163,10 +163,7 @@ struct HomeView: View {
         } else {
             cachedPlanning = store.trips
                 .filter { $0.isDateless }
-                .sorted {
-                    if $0.createdAt != $1.createdAt { return $0.createdAt > $1.createdAt }
-                    return $0.id.uuidString < $1.id.uuidString
-                }
+                .sorted(by: TripBundle.planningSortDescending)
         }
 
         // Past by year（同样排除无日期行程）

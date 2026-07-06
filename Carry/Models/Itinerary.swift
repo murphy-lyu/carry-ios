@@ -97,6 +97,22 @@ final class ItineraryDay {
         (segments ?? []).sorted { $0.sortOrder < $1.sortOrder }
     }
 
+    /// 当天停靠点里，时间早于「前面某个已设时间停靠点」的那些 stop id（spec: itinerary-stop-time-order-hint.md）。
+    /// 只按手动 sortOrder 比较已设时间（≥0）的停靠点，不含交通段（交通段已按时间就位、不存在这类冲突）；
+    /// 未设时间的停靠点跳过、不参与比较也不因此误报。仅用于 UI 提示，不驱动排序——地点顺序永远尊重手动 sortOrder。
+    var stopsWithTimeOrderConflict: Set<UUID> {
+        var lastSeenMinutes = -1
+        var conflicts: Set<UUID> = []
+        for stop in sortedStops where stop.plannedStartMinutes >= 0 {
+            if stop.plannedStartMinutes < lastSeenMinutes {
+                conflicts.insert(stop.id)
+            } else {
+                lastSeenMinutes = stop.plannedStartMinutes
+            }
+        }
+        return conflicts
+    }
+
     /// 时间轴单一数据源（spec: itinerary-transport-lodging.md）。
     ///
     /// **排序规则**（与「地点排序」手动重排不冲突——后者只管 stop）：
