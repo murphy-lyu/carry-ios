@@ -1306,11 +1306,13 @@ private struct TransportTimelineRow: View {
         return parts.joined(separator: " ")
     }
 
-    /// 航站楼显示：仅航班、数字开头加「T」（2→T2）；火车站台等字母开头原样。与详情卡 terminalDisplay 同款。
+    /// 航站楼显示：判断逻辑共享自 `TransportModeDisplay`（见其文档注释），本地化前缀走主 App 表。
     private func terminalDisplay(_ raw: String) -> String {
-        let t = raw.trimmingCharacters(in: .whitespaces)
-        guard segment.mode == .flight, let first = t.first, first.isNumber else { return t }
-        return NSLocalizedString("itinerary.transport.field.terminal_prefix", comment: "") + t
+        guard let numeric = TransportModeDisplay.numericTerminalNeedingPrefix(
+            modeRaw: segment.mode.rawValue, rawTerminal: raw) else {
+            return raw.trimmingCharacters(in: .whitespaces)
+        }
+        return NSLocalizedString("itinerary.transport.field.terminal_prefix", comment: "") + numeric
     }
 }
 
@@ -1617,6 +1619,9 @@ struct StopDetailView: View {
     @State private var editing = false
     @State private var showQuickNote = false
     @State private var showQuickCost = false
+    @State private var showQuickTime = false
+    @State private var quickTimeHasTime = false
+    @State private var quickTimeDate = Date()
     @State private var zoomedPhoto: ZoomedPhoto?
 
     var body: some View {
@@ -1639,8 +1644,14 @@ struct StopDetailView: View {
                 onDelete: deleteStop,
                 onNote: { showQuickNote = true },
                 onCost: { showQuickCost = true },
+                onTime: {
+                    quickTimeHasTime = stop.plannedStartMinutes >= 0
+                    quickTimeDate = dateFromDayMinutes(stop.plannedStartMinutes >= 0 ? stop.plannedStartMinutes : 9 * 60)
+                    showQuickTime = true
+                },
                 hasNote: !stop.note.isEmpty,
-                hasCost: stop.hasCost
+                hasCost: stop.hasCost,
+                hasTime: stop.plannedStartMinutes >= 0
             )
         }
         // 编辑钻入到详情之上：保存后回到详情（@Model 可观察、详情自动反映新值），再下滑关。
@@ -1659,6 +1670,19 @@ struct StopDetailView: View {
             ) { amount, code in
                 store.setStopCost(tripId: tripId, stopId: stop.id, amount: amount, currencyCode: code)
             }
+        }
+        // 「设定时间」快捷入口：复用编辑态同款弹层（ItineraryTimePickerSheet，Binding 驱动、无取消回调）。
+        // 弹层完成/清除时才会改写 quickTimeHasTime/quickTimeDate；取消或下滑关闭不碰这两个值，
+        // 故此处以「新值是否与当前 stop 不同」为准才提交，避免每次「打开看一眼就关掉」都触发一次
+        // 无意义的 save() + rescheduleDailySummary()（与 QuickNoteSheet/QuickCostSheet 的取消不写语义对齐）。
+        .sheet(isPresented: $showQuickTime) {
+            ItineraryTimePickerSheet(hasTime: $quickTimeHasTime, time: $quickTimeDate)
+        }
+        .onChange(of: showQuickTime) { wasShowing, isShowing in
+            guard wasShowing, !isShowing else { return }
+            let newMinutes = quickTimeHasTime ? dayMinutes(from: quickTimeDate) : -1
+            guard newMinutes != stop.plannedStartMinutes else { return }
+            store.updateItineraryStop(tripId: tripId, stopId: stop.id, plannedStartMinutes: newMinutes)
         }
         // 点缩略图放大看（存的是约 640px 缩略图；零授权不取系统原图）。
         .fullScreenCover(item: $zoomedPhoto) { z in

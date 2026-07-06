@@ -215,11 +215,13 @@ private func transitIcon(_ modeRaw: String) -> String {
     }
 }
 
-/// 航站楼显示：纯数字前缀 "T"（如 "3" → "T3"），非数字（如已含 "T3" 或字母楼号）原样显示。
+/// 航站楼显示：判断逻辑共享自 `TransportModeDisplay`（见其文档注释），本地化前缀走 Widget 表。
 private func terminalLabel(_ s: TransportActivityAttributes.ContentState) -> String {
-    let t = s.fromTerminal.trimmingCharacters(in: .whitespaces)
-    guard s.modeRaw == "flight", let first = t.first, first.isNumber else { return t }
-    return String(localized: "widget.transit.terminal_prefix") + t
+    guard let numeric = TransportModeDisplay.numericTerminalNeedingPrefix(
+        modeRaw: s.modeRaw, rawTerminal: s.fromTerminal) else {
+        return s.fromTerminal.trimmingCharacters(in: .whitespaces)
+    }
+    return String(localized: "widget.transit.terminal_prefix") + numeric
 }
 
 /// 当前相位（按 `Date()` 在渲染时判定）。

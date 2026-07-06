@@ -1,7 +1,22 @@
 # 项目进度
 
 ## 最后更新
-2026-07-04
+2026-07-06
+
+## 上次改动摘要（代码重复清理：航站楼前缀 + Widget 天序号 · 2026-07-06）
+
+> 单会话、无并行。**未提交**。来源：对 Widget 改动（`fef4c55`）跑 code review 发现的两处重复实现，本轮清理。
+
+- **航站楼「数字前缀 T」逻辑三处重复 → 合一**：`TransportDetailView.terminalDisplay`、`ItineraryView.terminalDisplay`、`CarryWidgetLiveActivity.terminalLabel()` 各自独立实现同一条规则。新增 `SharedSources/TransportModeDisplay.swift`（`numericTerminalNeedingPrefix(modeRaw:rawTerminal:)`），只共享判断逻辑、不共享本地化文案（Widget/主 App 的 xcstrings 表不互通，各自本地化前缀）；三处调用点改为调用它，pbxproj 已加入两个 target。
+- **`WidgetTrip.dayOrder(for:)` 与 `currentDayIndex(asOf:)` 重复 → 删除前者**：两者是同一套「按 departureDate 算天序号 + clamp 到 spanDays」逻辑，仅参数名不同。删除 `dayOrder(for:)`，调用点改用 `currentDayIndex(asOf:)`。
+- 主 App + Widget 两个 scheme 均 build 通过。
+
+## 上次改动摘要（「设定时间」快捷入口：修复取消也写入 · 2026-07-06）
+
+> 单会话、无并行。**未提交**。code review 发现：`StopDetailView` 的「设定时间」quick sheet 用 `.onChange(of: showQuickTime)` 判断关闭即写，取消/下滑关闭时 binding 未变但仍会无条件触发 `store.updateItineraryStop` → 多余的 `save()` + `rescheduleDailySummary()`，与 `QuickNoteSheet`/`QuickCostSheet` 的「取消不写」语义不一致，代码注释也名不副实。
+
+- **修复**（`ItineraryView.swift`）：`onChange` 里改为先算出 `newMinutes`，与 `stop.plannedStartMinutes` 相同则直接 return，不同才调用 `updateItineraryStop`——取消/下滑关闭现在是真正的零副作用，仅在时间实际发生变化时才写入+重排通知。
+- 模拟器 build 通过。**待办**：真机验收（打开设定时间 sheet 后点取消/下滑，确认不产生多余写入；正常改时间仍生效）。
 
 ## 上次改动摘要（交通 LA 视觉打磨 + Widget agenda 4 处修复 · 2026-07-04）
 

@@ -106,7 +106,8 @@ struct WidgetTrip: Codable, Identifiable {
         return today >= cal.startOfDay(for: departureDate) ? .inTrip : .preTrip
     }
 
-    /// 0-based 当前天序号，clamp 到 [0, spanDays-1]。
+    /// 0-based 天序号（相对出发日），clamp 到 [0, spanDays-1]。传「现在」得「当前第几天」，
+    /// 传任意事件绝对时刻得「该事件所在第几天」（供 agendaDayLabel 取日期标签用）——同一套换算，参数名统一叫 asOf。
     func currentDayIndex(asOf now: Date) -> Int {
         let cal = Calendar.current
         let d = cal.dateComponents([.day],
@@ -118,15 +119,6 @@ struct WidgetTrip: Codable, Identifiable {
     /// 现在之后最近的一件事（绝对时刻比较，跨午夜也成立）。
     func nextEvent(asOf now: Date) -> WidgetEvent? {
         (events ?? []).first { $0.date > now }
-    }
-
-    /// 某绝对时刻相对出发日的 0-based 天序号，clamp 到 [0, spanDays-1]（供 agendaDayLabel 取日期标签用）。
-    func dayOrder(for date: Date) -> Int {
-        let cal = Calendar.current
-        let d = cal.dateComponents([.day],
-                                   from: cal.startOfDay(for: departureDate),
-                                   to: cal.startOfDay(for: date)).day ?? 0
-        return max(0, min(d, spanDays - 1))
     }
 
     /// 今晚住哪（住宿覆盖当前天：checkIn ≤ idx < checkIn+nights）。
@@ -471,7 +463,7 @@ struct CarryWidgetEntryView: View {
                 .minimumScaleFactor(0.8)
             Spacer(minLength: 2)
             if let ev = nextEv {
-                Text(trip.agendaDayLabel(trip.dayOrder(for: ev.date), asOf: now))
+                Text(trip.agendaDayLabel(trip.currentDayIndex(asOf: ev.date), asOf: now))
                     .font(.system(.caption2, design: .rounded).weight(.medium))
                     .foregroundStyle(.secondary)
                 eventTitle(ev)

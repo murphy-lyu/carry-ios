@@ -163,12 +163,13 @@ struct TransportDetailView: View {
         airportNames = resolved
     }
 
-    /// 航站楼显示：仅航班、且值以数字开头时加「T」前缀（2 → T2，国际通用航站楼记法）。
-    /// 火车此字段是「站台」、字母开头（如 "A" / 已带 "T2"）的原样返回，避免误加。
+    /// 航站楼显示：判断逻辑共享自 `TransportModeDisplay`（见其文档注释），本地化前缀走主 App 表。
     private func terminalDisplay(_ raw: String) -> String {
-        let t = raw.trimmingCharacters(in: .whitespaces)
-        guard segment.mode == .flight, let first = t.first, first.isNumber else { return t }
-        return NSLocalizedString("itinerary.transport.field.terminal_prefix", comment: "") + t
+        guard let numeric = TransportModeDisplay.numericTerminalNeedingPrefix(
+            modeRaw: segment.mode.rawValue, rawTerminal: raw) else {
+            return raw.trimmingCharacters(in: .whitespaces)
+        }
+        return NSLocalizedString("itinerary.transport.field.terminal_prefix", comment: "") + numeric
     }
 
     /// 飞行时长「3h 15m」（h/m 通用、无需逐语言）。

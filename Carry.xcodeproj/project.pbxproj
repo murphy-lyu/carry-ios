@@ -15,6 +15,8 @@
 		ABCD000400000000ABCD0004 /* PackingActivityAttributes.swift in Sources */ = {isa = PBXBuildFile; fileRef = ABCD000100000000ABCD0001 /* PackingActivityAttributes.swift */; };
 		ABCD000600000000ABCD0006 /* TransportActivityAttributes.swift in Sources */ = {isa = PBXBuildFile; fileRef = ABCD000500000000ABCD0005 /* TransportActivityAttributes.swift */; };
 		ABCD000700000000ABCD0007 /* TransportActivityAttributes.swift in Sources */ = {isa = PBXBuildFile; fileRef = ABCD000500000000ABCD0005 /* TransportActivityAttributes.swift */; };
+		ABCD000800000000ABCD0008 /* TransportModeDisplay.swift in Sources */ = {isa = PBXBuildFile; fileRef = ABCD000900000000ABCD0009 /* TransportModeDisplay.swift */; };
+		ABCD000A00000000ABCD000A /* TransportModeDisplay.swift in Sources */ = {isa = PBXBuildFile; fileRef = ABCD000900000000ABCD0009 /* TransportModeDisplay.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -50,6 +52,7 @@
 		1183E3AC2FBD8D980039DC34 /* Carry.storekit */ = {isa = PBXFileReference; lastKnownFileType = text; path = Carry.storekit; sourceTree = "<group>"; };
 		ABCD000100000000ABCD0001 /* PackingActivityAttributes.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PackingActivityAttributes.swift; sourceTree = "<group>"; };
 		ABCD000500000000ABCD0005 /* TransportActivityAttributes.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TransportActivityAttributes.swift; sourceTree = "<group>"; };
+		ABCD000900000000ABCD0009 /* TransportModeDisplay.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TransportModeDisplay.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
@@ -144,6 +147,7 @@
 			children = (
 				ABCD000100000000ABCD0001 /* PackingActivityAttributes.swift */,
 				ABCD000500000000ABCD0005 /* TransportActivityAttributes.swift */,
+				ABCD000900000000ABCD0009 /* TransportModeDisplay.swift */,
 			);
 			path = SharedSources;
 			sourceTree = "<group>";
@@ -270,6 +274,7 @@
 			files = (
 				ABCD000400000000ABCD0004 /* PackingActivityAttributes.swift in Sources */,
 				ABCD000600000000ABCD0006 /* TransportActivityAttributes.swift in Sources */,
+				ABCD000800000000ABCD0008 /* TransportModeDisplay.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -279,6 +284,7 @@
 			files = (
 				ABCD000300000000ABCD0003 /* PackingActivityAttributes.swift in Sources */,
 				ABCD000700000000ABCD0007 /* TransportActivityAttributes.swift in Sources */,
+				ABCD000A00000000ABCD000A /* TransportModeDisplay.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

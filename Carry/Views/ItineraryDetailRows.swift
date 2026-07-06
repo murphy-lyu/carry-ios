@@ -520,10 +520,14 @@ struct DetailActionFooter: View {
     var onNote: (() -> Void)? = nil
     /// nil = 不在 ··· 菜单里显示此项。
     var onCost: (() -> Void)? = nil
+    /// nil = 不在 ··· 菜单里显示此项（仅地点详情传入；住宿/交通时间结构含多字段，不适合塞进单一弹层，维持整体编辑态）。
+    var onTime: (() -> Void)? = nil
     /// 已有备注时菜单文案切为「编辑备注」。
     var hasNote: Bool = false
     /// 已有费用时菜单文案切为「编辑费用」。
     var hasCost: Bool = false
+    /// 已设定时间时菜单文案切为「修改时间」。
+    var hasTime: Bool = false
 
     var body: some View {
         // 两个**分离**的悬浮毛玻璃元件（编辑胶囊 + 独立的 ··· 圆，中间留空）——明确是两个按钮，不是「一个胶囊切两半」。
@@ -549,12 +553,18 @@ struct DetailActionFooter: View {
             .accessibilityLabel(Text("itinerary.stop.detail.edit"))
 
             // ··· = 独立玻璃圆（溢出菜单）。菜单恒向上展开；iOS 声明越靠前 = 越靠近锚点（底部）。
-            // 顺序：移除（最前 = 最底，危险动作远离其它操作）；费用/备注居上（常用快捷）。
+            // 顺序：移除（最前 = 最底，危险动作远离其它操作）；时间/费用/备注居上（常用快捷）。
             Menu {
                 Button(role: .destructive, action: onDelete) {
                     Label("common.remove", systemImage: "trash")
                 }
-                if onNote != nil || onCost != nil { Divider() }
+                if onNote != nil || onCost != nil || onTime != nil { Divider() }
+                if let onTime {
+                    Button(action: onTime) {
+                        Label(hasTime ? "itinerary.menu.edit_time" : "itinerary.menu.set_time",
+                              systemImage: "clock")
+                    }
+                }
                 if let onNote {
                     Button(action: onNote) {
                         Label(hasNote ? "itinerary.menu.edit_note" : "itinerary.menu.add_note",
