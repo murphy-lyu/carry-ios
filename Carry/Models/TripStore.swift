@@ -803,8 +803,10 @@ final class TripStore: ObservableObject {
         CarryLogger.shared.log(.tripDeleted)
     }
 
+    /// - Parameter includeTransportAndLodging: false 时不深拷交通段/住宿（具体预订信息通常已过期，
+    ///   见 spec: copy-trip-options.md）；停靠点（地点安排）与打包清单不受影响，始终全量保留。
     @discardableResult
-    func duplicateTrip(withId id: UUID) -> UUID? {
+    func duplicateTrip(withId id: UUID, includeTransportAndLodging: Bool = true) -> UUID? {
         guard let originalIndex = trips.firstIndex(where: { $0.id == id }) else {
             CarryLogger.shared.log(.duplicateFailed, context: "context=trip_not_found")
             return nil
@@ -890,7 +892,9 @@ final class TripStore: ObservableObject {
             }
             let copiedDay = ItineraryDay(sortOrder: day.sortOrder, title: day.title, note: day.note, stops: copiedStops)
             // 交通段深拷贝（新 UUID）；坐标/时间全在 SwiftData 内，直接复制字段。
-            copiedDay.segments = day.sortedSegments.map { seg in
+            // includeTransportAndLodging=false 时跳过——具体预订信息（确认码/客票号等）通常已过期
+            // （spec: copy-trip-options.md），地点安排（上面的 copiedStops）不受影响、始终保留。
+            copiedDay.segments = includeTransportAndLodging ? day.sortedSegments.map { seg in
                 let newSeg = TransportSegment(
                     mode: seg.mode,
                     carrier: seg.carrier, number: seg.number,
@@ -919,11 +923,11 @@ final class TripStore: ObservableObject {
                 newSeg.remindersMuted = seg.remindersMuted
                 newSeg.attachments = copyAttachments(seg.attachments)
                 return newSeg
-            }
+            } : []
             return copiedDay
         }
-        // 住宿跨度深拷贝（新 UUID），归副本 bundle。
-        newBundle.lodgingStays = original.safeLodgingStays.map { stay in
+        // 住宿跨度深拷贝（新 UUID），归副本 bundle。includeTransportAndLodging=false 时跳过（同上）。
+        newBundle.lodgingStays = includeTransportAndLodging ? original.safeLodgingStays.map { stay in
             let newStay = LodgingStay(
                 name: stay.name, address: stay.address,
                 latitude: stay.latitude, longitude: stay.longitude,
@@ -939,7 +943,7 @@ final class TripStore: ObservableObject {
             newStay.timeZoneId = stay.timeZoneId
             newStay.attachments = copyAttachments(stay.attachments)
             return newStay
-        }
+        } : []
         context.insert(newBundle)
         // Insert in-memory first to avoid full-list refetch jumpiness in UI.
         let insertIndex = min(originalIndex + 1, trips.count)

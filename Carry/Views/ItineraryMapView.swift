@@ -434,17 +434,19 @@ struct ItineraryMapView: View {
         .opacity(dimmed ? 0.4 : 1)
     }
 
-    /// 交通段端点标记：白底圆 + 当天色描边 + mode 图标。比停靠点序号针更轻（端点是「过路」非「停留」）。
+    /// 交通段端点标记：白底圆 + 当天色描边 + mode 图标。与地点/住宿标记同尺寸——三者统一大小，
+    /// 只用「实心填色 vs 白底描边」区分「停留」与「过路」，不再靠尺寸差异表达（用户反馈：尺寸不一致更像疏漏，
+    /// 而非有意义的层级）。
     private func transportEndpointMarker(mode: TransportMode, color: Color, dimmed: Bool) -> some View {
         ZStack {
             Circle().fill(Color(UIColor.systemBackground))
             Circle().strokeBorder(color, lineWidth: 1.5)
             Image(systemName: mode.symbolName)
-                .font(.system(size: 9, weight: .semibold))
+                .font(.system(size: 12, weight: .semibold))
                 .foregroundStyle(color)
         }
-        .frame(width: 18, height: 18)
-        .shadow(color: .black.opacity(0.18), radius: 2, x: 0, y: 1)
+        .frame(width: 24, height: 24)
+        .shadow(color: .black.opacity(0.22), radius: 2.5, x: 0, y: 1)
         .opacity(dimmed ? 0.4 : 1)
     }
 

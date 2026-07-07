@@ -106,6 +106,7 @@ struct PackingListView: View {
     @State private var newSectionName = ""
     @State private var showAddItemsSheet = false
     @State private var showSharePreview = false
+    @State private var showCopyOptions = false
     /// 行程「地点排序」模式：菜单进入、工具栏 …↔完成、隐藏底部切换器，传给 ItineraryView 驱动压缩行拖拽。
     @State private var isReorderingItinerary = false
     /// 底部「行程/打包」切换器随滚动收起（下滑读列表→收起腾空间，上滑/近顶→露出）。行程脸 + 打包脸滚动均驱动。spec: 3+2。
@@ -306,14 +307,11 @@ struct PackingListView: View {
                                 Label("tripspend.menu", systemImage: "chart.pie")
                             }
                         }
-                        // 复制整个行程 → 记下副本 id 让首页扫光高亮 → 返回首页根看到新副本（放「分享行程」上方）。
-                        // 放 ··· 菜单而非左滑：从行程内触发，首页不在左滑态，插入干净、无空白闪烁。
+                        // 复制整个行程 → 弹轻量选项层（新日期 + 要不要带交通/住宿具体信息，
+                        // spec: copy-trip-options.md）→ 确认后记下副本 id 让首页扫光高亮 → 返回首页根。
                         Button {
                             UIImpactFeedbackGenerator(style: .light).impactOccurred()
-                            if let newId = store.duplicateTrip(withId: tripId) {
-                                store.pendingShimmerTripId = newId
-                            }
-                            router.path = NavigationPath()
+                            showCopyOptions = true
                         } label: {
                             Label("trip.swipe.duplicate", systemImage: "doc.on.doc")
                         }
@@ -468,6 +466,18 @@ struct PackingListView: View {
             if let bundle {
                 SharePreviewSheet(trip: bundle)
                     .tint(CarryAccent.color)
+            }
+        }
+        // 复制行程：新日期 + 交通/住宿开关（spec: copy-trip-options.md）。确认后关闭本 sheet、
+        // 记下副本 id 让首页扫光高亮、回首页根——与旧的「点了立即复制」收尾一致。
+        .sheet(isPresented: $showCopyOptions) {
+            if let bundle {
+                CopyTripOptionsSheet(trip: bundle) { newId in
+                    showCopyOptions = false
+                    store.pendingShimmerTripId = newId
+                    router.path = NavigationPath()
+                }
+                .tint(CarryAccent.color)
             }
         }
         .sheet(isPresented: $showBackgroundPicker, onDismiss: {

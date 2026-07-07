@@ -1,7 +1,26 @@
 # 项目进度
 
 ## 最后更新
-2026-07-07
+2026-07-08
+
+## 上次改动摘要（行程地图标记尺寸统一 · 2026-07-08）
+
+> 单会话、无并行。**未提交**。
+
+- **`transportEndpointMarker`（交通段端点标记）从 18×18 改为 24×24**，与地点序号针/住宿标记统一（`ItineraryMapView.swift`）。原尺寸差异是刻意设计（注释"端点是过路非停留"），但用户反馈这种大小不一致视觉上更像疏漏而非有意义的层级，改为三者统一尺寸，只保留「实心填色 vs 白底描边」表达停留/过路的区别。图标字号从 9pt 同步放大到 12pt、阴影参数对齐另外两种标记。
+- 主 App build 通过，无本地化/数据层改动。
+
+## 上次改动摘要（复制行程：新日期 + 交通/住宿开关 · 2026-07-07）
+
+> 单会话、无并行。**未提交**。spec: `specs/copy-trip-options.md`（已实现，标记 Shipped）。参考 Tripsy 复制行程流程分析后，选定比其更轻量的方案。
+
+- **动机**：原「复制行程」零交互、立即深拷贝——包括原日期（不问）和航班/租车/住宿的具体预订信息（确认码/客票号等，大概率过期/需要重订）。参考 Tripsy 的 7 屏 wizard 后判断对 Carry 太重，改做一个轻量弹层。
+- **新增 `CopyTripOptionsSheet`**（`Views/CopyTripOptionsSheet.swift`）：只问两件事——新日期（复用创建/编辑行程同款 `TripDateRangePickerSheet`，含"先规划不定日期"入口）+ 一个"带上航班/租车/住宿信息"开关（默认关）。行程规划的地点安排、打包清单不作为选项，永远保留。
+- **`TripStore.duplicateTrip` 加 `includeTransportAndLodging: Bool = true` 参数**：为 `false` 时交通段（`segments`）和住宿（`lodgingStays`）整体不深拷贝（留空数组），停靠点（地点）不受影响。默认值 `true` 保持函数原行为，不影响其他潜在调用点。
+- **新日期的天数变化处理：复用现成机制，未新写**。发现 `updateTripInfo` 内部已有 `syncItineraryDays`——日期改短导致天数变化时，超出新天数的尾部天的地点/交通段会自动挪到最后保留的那天（不丢数据）。复制流程 = `duplicateTrip` 产出副本 → 立即对新 id 调用 `updateTripInfo` 套用户选的新日期，两步组合，通知重排/日历同步/Live Activity 状态也一并白得。
+- **`PackingListView.swift` 调用点**：「···」菜单的复制按钮从"点了立即复制"改为弹 `CopyTripOptionsSheet`，确认后关闭 sheet + 记副本 id 扫光高亮 + 回首页根，收尾行为与之前一致。
+- **本地化**：新增 5 个 key（`trip.copy.title`/`date_section`/`include_transport_lodging`/`.footer`/`confirm`），9 语言。
+- 主 App build 通过，i18n audit [E]=0。**待办**：真机验收（复制行程后确认新日期生效、开关关闭时交通/住宿确实为空、开关打开时和现状一样全量带走、行程变短时超出天数的地点被正确收拢不丢失）。
 
 ## 上次改动摘要（code review 修复：Widget 兜底相关 3 处 · 2026-07-07）
 
