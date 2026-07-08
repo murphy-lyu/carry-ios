@@ -196,7 +196,7 @@ struct CopyTripOptionsSheet: View {
             Button { showDatePicker = true } label: {
                 HStack(spacing: 0) {
                     VStack(alignment: .leading, spacing: 3) {
-                        Text("itinerary.transport.field.date")
+                        Text("Departure")
                             .font(.caption.weight(.semibold))
                             .foregroundStyle(.secondary.opacity(0.82))
                         Text(departureDate.formatted(date: .abbreviated, time: .omitted))
@@ -209,7 +209,7 @@ struct CopyTripOptionsSheet: View {
                         .foregroundStyle(.tertiary.opacity(0.88))
                     Spacer()
                     VStack(alignment: .trailing, spacing: 3) {
-                        Text("itinerary.transport.field.date")
+                        Text("Return")
                             .font(.caption.weight(.semibold))
                             .foregroundStyle(.secondary.opacity(0.82))
                         Text(returnDate.formatted(date: .abbreviated, time: .omitted))
