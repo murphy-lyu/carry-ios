@@ -3,6 +3,17 @@
 ## 最后更新
 2026-07-09
 
+## 上次改动摘要（复制行程弹层视觉重做 + 地点详情菜单顺序 + Widget 规划空状态 · 2026-07-09）
+
+> 单会话、无并行。**未提交**。
+
+- **地点详情"···"菜单顺序**：`DetailActionFooter`（`ItineraryDetailRows.swift`）菜单向上展开、声明顺序=从下到上，此前"设置时间"声明在"备注"/"费用"之前，视觉上反而显示在两者下方。改为最后声明，现在视觉顺序（从上到下）为：时间 > 备注 > 费用 > 分隔线 > 移除。
+- **`CopyTripOptionsSheet` 视觉重做**：用户反馈这个弹层用原生 `Form`/`Section` 列表样式，视觉不如 App 内其它页面。改为对齐 `EditTripView` 的"创建/编辑行程"描边卡片语言——自定义 `ZStack` 背景 + `heroSection`（30pt 圆体大标题 + 副标题）+ `fieldGroup`（大写小字 label）+ 边框主导容器（`systemBackground.opacity(0.64/0.66)` + `strokeBorder` + 圆角 12）；名称字段换成 `IMESafeTextField`（与 EditTripView 同款，修复第三方输入法选词 bug）；两个开关改成独立的边框卡片（标题+Toggle+说明文字），不再用 Form 的分组灰底。同时把两个开关的上下顺序对调（交通/住宿在上，打包清单在下）。
+- **名称字段 label 改为「New Trip Name」**：与「New Trip Dates」保持同款措辞一致（用户提问后决定）。`trip.copy.name_section` 只被 `CopyTripOptionsSheet` 引用，不影响 `EditTripView`/`TripInfoView` 的创建/编辑流程。
+- 新增本地化 `trip.copy.subtitle`（hero 副标题，9 语言）；改写 `trip.copy.name_section`（9 语言）。i18n audit [E]=0，diff 干净（无意外重排）。
+- **Widget 4×4 规划中「零内容」空状态**：用户反馈截图显示规划中行程还没加任何地点/交通时，`largePreTripView` 顶部只有 3 行文字、下面一大片空白，看着像"莫名居中"。排查后确认不是布局 bug（`Spacer(minLength:0)` 本就是贴顶显示），根因是这个"零内容"边界情况从没设计过——对比同文件 `agendaView` 遇到"没有可展示行程"时会用上下 `Spacer` 把引导文案居中放进整块空间（已上线的既有模式）。现在 `largePreTripView` 补上同款处理：`isPlanningEmpty` 时不在顶部重复展示"开始规划行程"，改为在剩余空间居中展示图标 + 文案（复用既有 key `widget.planning.empty`，无新增本地化）。
+- 主 App / Widget build 通过。**待办**：真机/模拟器验收新版复制行程弹层 + Widget 4×4 规划空状态。
+
 ## 上次改动摘要（Widget 规划中兜底 v2：打包进度 → 规划进度 · 2026-07-09）
 
 > 单会话、无并行。**未提交**。spec: `specs/widget-planning-trip-fallback.md`（v2 补充，仍标记 Shipped）。用户反馈"规划中阶段大概率还没到打包，Widget 该展示行程规划信息而非打包进度"。

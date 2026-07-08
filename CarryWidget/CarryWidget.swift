@@ -643,15 +643,20 @@ struct CarryWidgetEntryView: View {
     private func largePreTripView(_ trip: WidgetTrip, now: Date) -> some View {
         let isPlanning = trip.isDateless == true
         let preview = isPlanning ? planningAgendaPreview(trip) : trip.upcomingAgenda(asOf: now).filter { $0.dayOrder == 0 }
+        // 规划中且还没添加任何地点/交通：顶部只有 header+标题两行，若照常留白会在 4×4 画布里空出
+        // 大半张卡片（用户反馈）。改为不在顶部重复展示「开始规划行程」，把它挪到下方居中展示。
+        let isPlanningEmpty = isPlanning && preview.isEmpty
         return VStack(alignment: .leading, spacing: 8) {
             widgetHeader(isPlanning: isPlanning)
             Text(trip.displayTitle)
                 .font(.system(.title2, design: .rounded).weight(.bold))
                 .lineLimit(1)
             if isPlanning {
-                Text(planningSummaryText(trip))
-                    .font(.system(.subheadline, design: .rounded).weight(.medium))
-                    .foregroundStyle(.secondary)
+                if !isPlanningEmpty {
+                    Text(planningSummaryText(trip))
+                        .font(.system(.subheadline, design: .rounded).weight(.medium))
+                        .foregroundStyle(.secondary)
+                }
             } else {
                 if let countdown = trip.countdownTextIfDated {
                     Text(countdown)
@@ -672,8 +677,27 @@ struct CarryWidgetEntryView: View {
                 ForEach(Array(preview.prefix(isPlanning ? 8 : 4).enumerated()), id: \.offset) { _, it in
                     agendaItemRow(it)
                 }
+                Spacer(minLength: 0)
+            } else if isPlanningEmpty {
+                // 与 agendaView 的 rows.isEmpty 空状态同款处理（上下 Spacer 把引导文案居中放进剩余空间），
+                // 而不是让「已规划 0 项」这句话孤零零地贴在顶部、下方大片留白（spec: widget-planning-trip-fallback.md）。
+                Spacer()
+                HStack {
+                    Spacer()
+                    VStack(spacing: 6) {
+                        Image(systemName: "mappin.and.ellipse")
+                            .font(.system(size: 22, weight: .medium))
+                            .foregroundStyle(.tertiary)
+                        Text("widget.planning.empty")
+                            .font(.system(.subheadline, design: .rounded).weight(.medium))
+                            .foregroundStyle(.secondary)
+                    }
+                    Spacer()
+                }
+                Spacer()
+            } else {
+                Spacer(minLength: 0)
             }
-            Spacer(minLength: 0)
         }
         .widgetURL(trip.deepLink)
     }

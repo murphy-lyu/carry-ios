@@ -553,16 +553,16 @@ struct DetailActionFooter: View {
             .accessibilityLabel(Text("itinerary.stop.detail.edit"))
 
             // ··· = 独立玻璃圆（溢出菜单）。菜单恒向上展开；iOS 声明越靠前 = 越靠近锚点（底部）。
-            // 顺序：移除（最前 = 最底，危险动作远离其它操作）；时间/费用/备注居上（常用快捷）。
+            // 顺序（视觉从上到下）：时间 > 备注 > 费用 > 分隔线 > 移除（最底，危险动作远离其它操作、离锚点最近）。
             Menu {
                 Button(role: .destructive, action: onDelete) {
                     Label("common.remove", systemImage: "trash")
                 }
                 if onNote != nil || onCost != nil || onTime != nil { Divider() }
-                if let onTime {
-                    Button(action: onTime) {
-                        Label(hasTime ? "itinerary.menu.edit_time" : "itinerary.menu.set_time",
-                              systemImage: "clock")
+                if let onCost {
+                    Button(action: onCost) {
+                        Label(hasCost ? "itinerary.menu.edit_cost" : "itinerary.menu.record_cost",
+                              systemImage: "creditcard")
                     }
                 }
                 if let onNote {
@@ -571,10 +571,10 @@ struct DetailActionFooter: View {
                               systemImage: "note.text")
                     }
                 }
-                if let onCost {
-                    Button(action: onCost) {
-                        Label(hasCost ? "itinerary.menu.edit_cost" : "itinerary.menu.record_cost",
-                              systemImage: "creditcard")
+                if let onTime {
+                    Button(action: onTime) {
+                        Label(hasTime ? "itinerary.menu.edit_time" : "itinerary.menu.set_time",
+                              systemImage: "clock")
                     }
                 }
             } label: {
