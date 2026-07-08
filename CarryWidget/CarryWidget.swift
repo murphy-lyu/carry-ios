@@ -695,7 +695,6 @@ struct CarryWidgetEntryView: View {
                     .font(.system(.subheadline, design: .rounded).weight(.medium))
                     .foregroundStyle(.secondary)
                     .lineLimit(2)
-                Spacer(minLength: 0)
             } else {
                 if let countdown = trip.countdownTextIfDated {
                     Text(countdown)
