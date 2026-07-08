@@ -2,8 +2,9 @@
 //  CopyTripOptionsSheet.swift
 //  Carry
 //
-//  「复制行程」轻量弹层：只问新日期 + 要不要带上交通/住宿具体预订信息，
-//  其余（行程规划的地点安排、打包清单）默认全部保留、不作为选项（spec: copy-trip-options.md）。
+//  「复制行程」轻量弹层：新行程名称（预填原名，不自动加后缀）+ 新日期 +
+//  要不要带上打包清单（默认不带，不同季节物品往往不同）+ 要不要带上交通/住宿具体预订信息（默认不带）。
+//  行程规划的地点安排始终保留、不作为选项（spec: copy-trip-options.md）。
 //
 
 import SwiftUI
@@ -16,24 +17,39 @@ struct CopyTripOptionsSheet: View {
     @EnvironmentObject var store: TripStore
     @Environment(\.dismiss) private var dismiss
 
+    /// 预填原行程名称，不自动加"（副本）"后缀——改不改由用户自己决定（用户反馈）。
+    @State private var name: String
     @State private var departureDate: Date
     @State private var returnDate: Date
     @State private var isDateless: Bool
     @State private var includeTransportAndLodging = false
+    /// 默认不带打包清单——不同季节/行程物品往往不同，交给用户重新规划更合理（用户反馈）。
+    @State private var includePackingList = false
     @State private var showDatePicker = false
 
     init(trip: TripBundle, onCompleted: @escaping (UUID) -> Void) {
         self.trip = trip
         self.onCompleted = onCompleted
         let ret = Calendar.current.date(byAdding: .day, value: trip.days, to: trip.departureDate) ?? trip.departureDate
+        _name = State(initialValue: trip.name)
         _departureDate = State(initialValue: trip.departureDate)
         _returnDate = State(initialValue: ret)
         _isDateless = State(initialValue: trip.isDateless)
     }
 
+    private var canConfirm: Bool {
+        !name.trimmingCharacters(in: .whitespaces).isEmpty
+    }
+
     var body: some View {
         NavigationStack {
             Form {
+                Section {
+                    TextField(text: $name) { Text("trip.copy.name_placeholder") }
+                } header: {
+                    Text("trip.copy.name_section")
+                }
+
                 Section {
                     if isDateless {
                         Button { showDatePicker = true } label: {
@@ -68,6 +84,14 @@ struct CopyTripOptionsSheet: View {
                 .buttonStyle(.plain)
 
                 Section {
+                    Toggle(isOn: $includePackingList) {
+                        Text("trip.copy.include_packing_list")
+                    }
+                } footer: {
+                    Text("trip.copy.include_packing_list.footer")
+                }
+
+                Section {
                     Toggle(isOn: $includeTransportAndLodging) {
                         Text("trip.copy.include_transport_lodging")
                     }
@@ -85,6 +109,7 @@ struct CopyTripOptionsSheet: View {
                     Button(action: confirm) {
                         Text("trip.copy.confirm").fontWeight(.semibold)
                     }
+                    .disabled(!canConfirm)
                 }
             }
             .sheet(isPresented: $showDatePicker) {
@@ -102,13 +127,17 @@ struct CopyTripOptionsSheet: View {
     }
 
     private func confirm() {
-        guard let newId = store.duplicateTrip(withId: trip.id, includeTransportAndLodging: includeTransportAndLodging) else {
+        guard let newId = store.duplicateTrip(
+            withId: trip.id,
+            includeTransportAndLodging: includeTransportAndLodging,
+            includePackingList: includePackingList
+        ) else {
             dismiss()
             return
         }
         if let newBundle = store.bundle(for: newId) {
             let info = TripInfo(
-                name: newBundle.name,
+                name: name.trimmingCharacters(in: .whitespaces),
                 destinationCity: newBundle.destinationCity,
                 departureDate: departureDate,
                 returnDate: returnDate,

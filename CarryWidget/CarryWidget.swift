@@ -238,6 +238,20 @@ private func progressText(_ trip: WidgetTrip) -> String {
     String.localizedStringWithFormat(NSLocalizedString("widget.progress.packed", comment: ""), trip.packedCount, trip.totalCount)
 }
 
+/// 规划中（isDateless）兜底行程「已规划 N 项」文案；N=0 时换成引导文案（spec: widget-planning-trip-fallback.md）。
+private func planningSummaryText(_ trip: WidgetTrip) -> String {
+    let count = trip.agenda?.count ?? 0
+    guard count > 0 else { return NSLocalizedString("widget.planning.empty", comment: "") }
+    return String.localizedStringWithFormat(NSLocalizedString("widget.planning.items_count", comment: ""), count)
+}
+
+/// 规划中行程的地点/交通预览——直接取 dayOrder==0 的条目，**不做任何按时刻过滤**。
+/// 与 `WidgetTrip.upcomingAgenda(asOf:)` 不同：那个方法按 `currentDayIndex(asOf:)` 算「今天」，
+/// 而规划中行程的 departureDate 是占位值，拿去算「今天」没有意义，会把某个时段的地点误判成「已过」而漏显示。
+private func planningAgendaPreview(_ trip: WidgetTrip) -> [WidgetAgendaItem] {
+    (trip.agenda ?? []).filter { $0.dayOrder == 0 }.sorted { $0.order < $1.order }
+}
+
 // MARK: - Widget appearance configuration
 
 enum WidgetAppearance: String, AppEnum {
@@ -622,32 +636,40 @@ struct CarryWidgetEntryView: View {
         agendaView(trip, now: now, maxSlots: 13)
     }
 
-    /// 出发前 large：倒计时 + 打包进度 + 出发当天预览。规划中（isDateless）兜底行程没有倒计时/day1 概念——
-    /// 后者天然为空（snapshot 侧 plan/agenda 已传空数组，见 writeWidgetSnapshot），前者显式隐藏（spec:
-    /// widget-planning-trip-fallback.md）。
+    /// 出发前 large：倒计时 + 打包进度 + 出发当天预览。规划中（isDateless）兜底行程改展示规划进度 +
+    /// 已规划条目预览（不是倒计时/打包进度，spec: widget-planning-trip-fallback.md v2）——用
+    /// `planningAgendaPreview` 而非 `upcomingAgenda(asOf:)`，因为后者依赖 `departureDate` 算「今天」，
+    /// 对占位日期的规划中行程没有意义、会误判条目「已过」。
     private func largePreTripView(_ trip: WidgetTrip, now: Date) -> some View {
-        let day1 = trip.upcomingAgenda(asOf: now).filter { $0.dayOrder == 0 }
+        let isPlanning = trip.isDateless == true
+        let preview = isPlanning ? planningAgendaPreview(trip) : trip.upcomingAgenda(asOf: now).filter { $0.dayOrder == 0 }
         return VStack(alignment: .leading, spacing: 8) {
-            widgetHeader(isPlanning: trip.isDateless ?? false)
+            widgetHeader(isPlanning: isPlanning)
             Text(trip.displayTitle)
                 .font(.system(.title2, design: .rounded).weight(.bold))
                 .lineLimit(1)
-            if let countdown = trip.countdownTextIfDated {
-                Text(countdown)
+            if isPlanning {
+                Text(planningSummaryText(trip))
                     .font(.system(.subheadline, design: .rounded).weight(.medium))
                     .foregroundStyle(.secondary)
+            } else {
+                if let countdown = trip.countdownTextIfDated {
+                    Text(countdown)
+                        .font(.system(.subheadline, design: .rounded).weight(.medium))
+                        .foregroundStyle(.secondary)
+                }
+                ProgressView(value: trip.progress).tint(.primary)
+                HStack {
+                    Text(progressText(trip))
+                    Spacer()
+                    Text("\(Int((trip.progress * 100).rounded()))%")
+                }
+                .font(.system(.caption2, design: .rounded))
+                .foregroundStyle(.secondary)
             }
-            ProgressView(value: trip.progress).tint(.primary)
-            HStack {
-                Text(progressText(trip))
-                Spacer()
-                Text("\(Int((trip.progress * 100).rounded()))%")
-            }
-            .font(.system(.caption2, design: .rounded))
-            .foregroundStyle(.secondary)
-            if !day1.isEmpty {
+            if !preview.isEmpty {
                 Divider().padding(.vertical, 2)
-                ForEach(Array(day1.prefix(4).enumerated()), id: \.offset) { _, it in
+                ForEach(Array(preview.prefix(isPlanning ? 8 : 4).enumerated()), id: \.offset) { _, it in
                     agendaItemRow(it)
                 }
             }
@@ -666,22 +688,32 @@ struct CarryWidgetEntryView: View {
                 .font(.system(.title2, design: .rounded).weight(.bold))
                 .lineLimit(1)
                 .minimumScaleFactor(0.7)
-            if let countdown = trip.countdownTextIfDated {
-                Text(countdown)
+            // 规划中（isDateless）兜底行程：展示规划进度，不展示打包进度——这个阶段大概率还没到打包，
+            // 「已规划 N 项」更能反映用户实际在推进的事（spec: widget-planning-trip-fallback.md v2）。
+            if trip.isDateless == true {
+                Text(planningSummaryText(trip))
                     .font(.system(.subheadline, design: .rounded).weight(.medium))
                     .foregroundStyle(.secondary)
-            }
-            ProgressView(value: trip.progress)
-                .tint(.primary)
-                .padding(.top, 8)
-            HStack {
-                Text(progressText(trip))
-                    .font(.system(.caption2, design: .rounded))
-                    .foregroundStyle(.secondary)
-                Spacer()
-                Text("\(Int((trip.progress * 100).rounded()))%")
-                    .font(.system(.caption2, design: .rounded).weight(.semibold))
-                    .foregroundStyle(.secondary)
+                    .lineLimit(2)
+                Spacer(minLength: 0)
+            } else {
+                if let countdown = trip.countdownTextIfDated {
+                    Text(countdown)
+                        .font(.system(.subheadline, design: .rounded).weight(.medium))
+                        .foregroundStyle(.secondary)
+                }
+                ProgressView(value: trip.progress)
+                    .tint(.primary)
+                    .padding(.top, 8)
+                HStack {
+                    Text(progressText(trip))
+                        .font(.system(.caption2, design: .rounded))
+                        .foregroundStyle(.secondary)
+                    Spacer()
+                    Text("\(Int((trip.progress * 100).rounded()))%")
+                        .font(.system(.caption2, design: .rounded).weight(.semibold))
+                        .foregroundStyle(.secondary)
+                }
             }
         }
         .widgetURL(trip.deepLink)
@@ -705,25 +737,43 @@ struct CarryWidgetEntryView: View {
     // MARK: Medium
 
     private func mediumView(primary: WidgetTrip, secondary: WidgetTrip?) -> some View {
-        VStack(alignment: .leading, spacing: 10) {
+        let isPlanning = primary.isDateless == true
+        return VStack(alignment: .leading, spacing: 10) {
             HStack(alignment: .center) {
                 VStack(alignment: .leading, spacing: 3) {
-                    widgetHeader(isPlanning: primary.isDateless ?? false)
+                    widgetHeader(isPlanning: isPlanning)
                     Text(primary.name.isEmpty ? primary.destinationCity : primary.name)
                         .font(.system(.title2, design: .rounded).weight(.bold))
                         .lineLimit(1)
-                    if let countdown = primary.countdownTextIfDated {
-                        Text(countdown)
+                    if isPlanning {
+                        // 规划中兜底：展示规划进度，不展示打包进度（同 smallView，spec v2）。
+                        Text(planningSummaryText(primary))
                             .font(.system(.caption, design: .rounded).weight(.semibold))
                             .foregroundStyle(.secondary)
+                    } else {
+                        if let countdown = primary.countdownTextIfDated {
+                            Text(countdown)
+                                .font(.system(.caption, design: .rounded).weight(.semibold))
+                                .foregroundStyle(.secondary)
+                        }
+                        Text(progressText(primary))
+                            .font(.system(.caption2, design: .rounded))
+                            .foregroundStyle(.secondary)
                     }
-                    Text(progressText(primary))
-                        .font(.system(.caption2, design: .rounded))
-                        .foregroundStyle(.secondary)
                 }
                 Spacer()
-                progressRing(primary.progress)
-                    .frame(width: 58, height: 58)
+                if !isPlanning {
+                    progressRing(primary.progress)
+                        .frame(width: 58, height: 58)
+                }
+            }
+
+            if isPlanning {
+                let preview = planningAgendaPreview(primary)
+                if let first = preview.first {
+                    Divider()
+                    agendaItemRow(first)
+                }
             }
 
             Spacer(minLength: 0)

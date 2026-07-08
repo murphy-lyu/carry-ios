@@ -1,7 +1,29 @@
 # 项目进度
 
 ## 最后更新
-2026-07-08
+2026-07-09
+
+## 上次改动摘要（Widget 规划中兜底 v2：打包进度 → 规划进度 · 2026-07-09）
+
+> 单会话、无并行。**未提交**。spec: `specs/widget-planning-trip-fallback.md`（v2 补充，仍标记 Shipped）。用户反馈"规划中阶段大概率还没到打包，Widget 该展示行程规划信息而非打包进度"。
+
+- **关键架构前提**：`TripBundle.spanDays` 对 `isDateless` 恒为 `1`——规划中行程的行程规划固定只有一天，这不是本次改动引入的约束，是复核既有代码确认的既有设计，决定了"规划进度"能展示的内容形态。
+- **`writeWidgetSnapshot()`**：兜底分支不再传空 `plan`/`agenda`，改为正常调用 `widgetPlan`/`widgetAgenda(fromDayOrder: 0, sinceMinutes: 0)`——`sinceMinutes: 0` 让"已过滤过去时刻"判断永远不成立，等效关闭（这两个函数本身没有"今天"概念问题，不需要新写过滤逻辑）。
+- **新增 `planningSummaryText`/`planningAgendaPreview` 两个 helper**：前者"已规划 N 项"文案（N=0 换成"开始规划行程"引导语）；后者**不能复用**已有的 `WidgetTrip.upcomingAgenda(asOf:)`——那个方法靠 `departureDate` 算"今天"，规划中行程的 `departureDate` 是占位值，拿去用会把某个时段的地点误判成"已过"而漏显示（这是第一版就存在的坑，这次实际要展示预览列表才暴露出来）。
+- **三个尺寸的视图**：`smallView`/`mediumView`/`largePreTripView` 在 `isDateless == true` 时，倒计时+打包进度条+百分比整块换成"规划进度"文案；Large/Medium 额外展示已规划条目预览（复用现有 `agendaItemRow`）；Medium 的打包进度环不再渲染。
+- **本地化**：新增 `widget.planning.items_count`（西/法/葡语过去分词随数变格，参照既有 `%lld / %lld packed` key 写法做了复数变体）、`widget.planning.empty`。
+- 主 App build 通过，i18n audit [E]=0。**待办**：真机验收（规划中行程有/无地点两种情况下 Small/Medium/Large 三个尺寸的展示是否符合预期）。
+- **注意**：本次改动叠加在上一轮"复制行程第二轮"的未提交改动之上，两批一起还没提交。
+
+## 上次改动摘要（复制行程第二轮：名称可改不加后缀 + 打包清单可选 · 2026-07-08）
+
+> 单会话、无并行。**未提交**。spec: `specs/copy-trip-options.md`（第二轮补充，仍标记 Shipped）。用户对第一轮方案的两点反馈驱动。
+
+- **名称不再自动加"（副本）"后缀**：`CopyTripOptionsSheet` 新增名称输入框，预填原行程名称（无后缀），可编辑、为空则确认按钮禁用。`TripStore.duplicateTrip` 内部不再拼 `+ copySuffix`，直接用 `original.name` 作为过渡态，最终名称由确认时的 `updateTripInfo` 调用写入。已删除不再使用的 `trip.copy_suffix` xcstrings key。
+- **打包清单改为可选项，默认不带**：`duplicateTrip` 新增 `includePackingList: Bool = true` 参数（默认值保持原行为），为 `false` 时 `newSections` 传空数组，同时**同步清空 `selectedSceneKeys`**——否则清单为空但 App 会以为场景推荐"已应用"（`PackingListView.hasScenes` 依赖此字段），导致用户没法用场景推荐重新建清单。Sheet 里新增对应开关，默认关，说明"不同季节/行程物品可能不同，建议重新规划"。
+- 现在弹层共 4 项：名称（可编辑）+ 新日期 + 打包清单开关（默认关）+ 交通/住宿开关（默认关），只有地点安排始终保留不作为选项。
+- **代码质量审查追加修复**：`dismissedSurpriseNames`（顺手考虑忽略名单）与 `sceneCardDismissed`（场景卡是否已关闭）原先无条件复制，和 `selectedSceneKeys` 是同一类问题——`includePackingList=false` 时清单已清空，但这两个字段若继续带旧值，会让"顺手考虑"/场景卡推荐对新清单静默失效。改为随 `includePackingList` 一起重置。
+- 主 App build 通过，i18n audit [E]=0。**待办**：真机验收（改名不加后缀；打包清单开关两种状态下清单/场景推荐/顺手考虑入口表现是否符合预期；名称清空时确认按钮正确禁用）。
 
 ## 上次改动摘要（行程地图标记尺寸统一 · 2026-07-08）
 

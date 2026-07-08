@@ -803,17 +803,21 @@ final class TripStore: ObservableObject {
         CarryLogger.shared.log(.tripDeleted)
     }
 
-    /// - Parameter includeTransportAndLodging: false 时不深拷交通段/住宿（具体预订信息通常已过期，
-    ///   见 spec: copy-trip-options.md）；停靠点（地点安排）与打包清单不受影响，始终全量保留。
+    /// - Parameters:
+    ///   - includeTransportAndLodging: false 时不深拷交通段/住宿（具体预订信息通常已过期，
+    ///     见 spec: copy-trip-options.md）；停靠点（地点安排）不受影响，始终全量保留。
+    ///   - includePackingList: false 时不带打包清单（不同季节/行程物品往往不同，交给用户重新规划），
+    ///     副本以空清单开始。
+    /// 名称不再自动加"（副本）"后缀——调用方（`CopyTripOptionsSheet`）让用户自己决定新名称，
+    /// 这里直接沿用原名作为占位，紧随其后的 `updateTripInfo` 调用会写入用户选定的最终名称。
     @discardableResult
-    func duplicateTrip(withId id: UUID, includeTransportAndLodging: Bool = true) -> UUID? {
+    func duplicateTrip(withId id: UUID, includeTransportAndLodging: Bool = true, includePackingList: Bool = true) -> UUID? {
         guard let originalIndex = trips.firstIndex(where: { $0.id == id }) else {
             CarryLogger.shared.log(.duplicateFailed, context: "context=trip_not_found")
             return nil
         }
         let original = trips[originalIndex]
-        let copySuffix = NSLocalizedString("trip.copy_suffix", comment: "")
-        let newSections = original.safeSections.map { section -> PackingSection in
+        let newSections = includePackingList ? original.safeSections.map { section -> PackingSection in
             let items = section.sortedItems
                 .filter { !$0.name.isEmpty }
                 .enumerated()
@@ -821,16 +825,18 @@ final class TripStore: ObservableObject {
                     PackingItem(name: item.name, quantity: item.quantity, isPacked: false, isAlert: item.isAlert, sortOrder: idx)
                 }
             return PackingSection(title: section.title, items: items, sortOrder: section.sortOrder)
-        }
+        } : []
         let newBundle = TripBundle(
-            name: original.name + copySuffix,
+            name: original.name,
             destinationCity: original.destinationCity,
             days: original.days,
             dateRange: original.dateRange,
             departureDate: original.departureDate,
             isDateless: original.isDateless,
             createdAt: Date(),
-            selectedSceneKeys: original.selectedSceneKeys,
+            // 清单不带走时场景标记也清空——否则清单是空的，但 App 会以为场景推荐「已应用」而不再提示，
+            // 用户没法用场景推荐重新建清单（selectedSceneKeys 语义见 PackingListView.hasScenes 等用法）。
+            selectedSceneKeys: includePackingList ? original.selectedSceneKeys : [],
             sections: newSections
         )
         // 目的地解析结果直接深拷（主目的地码/坐标 + additionalDestinations 含 name）——否则副本地图不点亮、
@@ -840,11 +846,16 @@ final class TripStore: ObservableObject {
         newBundle.longitude = original.longitude
         newBundle.additionalDestinationsData = original.additionalDestinationsData
         // 提醒偏好随行程走：不拷会回落默认（remindersEnabled=true）→ 把用户**关掉提醒的行程**复制后又开启并排期，
-        // 自定义提醒偏移也丢。dismiss 类用户决定（顺手考虑/场景卡）同理，不拷会让已忽略项在副本里重现。
+        // 自定义提醒偏移也丢。
         newBundle.remindersEnabled = original.remindersEnabled
         newBundle.reminderConfigData = original.reminderConfigData
-        newBundle.dismissedSurpriseNames = original.dismissedSurpriseNames
-        newBundle.sceneCardDismissed = original.sceneCardDismissed
+        // dismiss 类用户决定（顺手考虑忽略名单/场景卡是否已关闭）与打包清单是同一套推荐状态——
+        // includePackingList=false 时清单本就是空的，这两个若继续带旧值，会让「顺手考虑」/场景卡推荐
+        // 对新清单静默失效（旧季节忽略过的物品在新季节副本里也推荐不出来、场景卡也不会重新出现引导建清单），
+        // 与上面 selectedSceneKeys 清空是同一个问题、必须一起处理；includePackingList=true 时才原样带走
+        // （呼应"忽略项不该在副本里重现"的既有设计）。
+        newBundle.dismissedSurpriseNames = includePackingList ? original.dismissedSurpriseNames : []
+        newBundle.sceneCardDismissed = includePackingList ? original.sceneCardDismissed : false
         // 背景图深拷贝：每个条目的文件复制成独立新文件，副本拥有自己的字节（不与原行程共享
         // 文件名，否则删/换任一方都会误伤另一方）。无本地文件的条目（未来在线源）原样带过；
         // 复制失败的条目直接丢弃（副本退回 monogram 兜底），绝不残留共享引用。crop 等元数据保留。
@@ -3454,8 +3465,12 @@ extension TripStore {
         // 三级兜底（spec: widget-planning-trip-fallback.md）：进行中/有日期即将出发都没有候选时，
         // 用最新创建的「规划中」（isDateless）行程顶上，让 Widget 别沦为空状态。只取 1 个、不参与
         // 上面的多行程排序——规划中行程没有日期可比，也不该和有日期的行程混排（Medium 的 secondary 槽同理不填）。
-        // day/events/stays 相关字段对无日期行程没有意义，一律传空——占位 departureDate 只用于满足非可选
-        // 字段、Widget 侧必须先判 isDateless 才能读它（否则会显示随时间推移毫无意义的「过期」倒计时）。
+        // events/stays 传空（住宿入住/退房是"事件"概念，对没有日期的行程没有意义）；占位 departureDate
+        // 只用于满足非可选字段、Widget 侧必须先判 isDateless 才能读它（否则显示随时间推移毫无意义的「过期」倒计时）。
+        // plan/agenda **正常填充**（v2 补充，2026-07-09）：规划中行程虽无日期，但行程规划本身是有内容的
+        // （地点/交通段），Widget 该展示"规划进度"而非打包进度——`fromDayOrder`/`sinceMinutes` 都传 0，
+        // 因为规划中行程没有"今天"概念、spanDays 恒为 1（TripBundle.spanDays），只有唯一一天，不需要也
+        // 不能做任何"已过滤过去时刻"的判断（那是给有日期行程用的，用在这里会把某个时段的地点误判成"已过"）。
         if snapshots.isEmpty,
            let planning = trips.filter({ $0.isDateless }).sorted(by: TripBundle.planningSortDescending).first {
             snapshots = [WidgetTripSnapshot(
@@ -3467,7 +3482,9 @@ extension TripStore {
                 totalCount: planning.totalCount,
                 returnDate: planning.departureDate,
                 isDateless: true,
-                events: [], stays: [], plan: [], agenda: []
+                events: [], stays: [],
+                plan: Self.widgetPlan(for: planning, fromDayOrder: 0),
+                agenda: Self.widgetAgenda(for: planning, fromDayOrder: 0, sinceMinutes: 0)
             )]
         }
         guard let defaults = UserDefaults(suiteName: Self.widgetAppGroup) else { return }
