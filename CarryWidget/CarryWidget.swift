@@ -688,9 +688,11 @@ struct CarryWidgetEntryView: View {
     // MARK: Small
 
     private func smallView(_ trip: WidgetTrip) -> some View {
+        // 内容一律紧贴顶部按顺序排列，不做居中/大 Spacer 填空，与 mediumView/largePreTripView 统一
+        // （用户反馈：三个尺寸此前各用一套锚定方式，看着不协调；这里之前遗留的 Spacer(minLength: 8)
+        // 是更早一轮"贴底展示"的旧写法，本轮统一时漏改，导致 1×1 单独跟另外两个尺寸不一致）。
         VStack(alignment: .leading, spacing: 4) {
             widgetHeader(isPlanning: trip.isDateless ?? false)
-            Spacer(minLength: 8)
             Text(trip.name.isEmpty ? trip.destinationCity : trip.name)
                 .font(.system(.title2, design: .rounded).weight(.bold))
                 .lineLimit(1)
@@ -721,6 +723,7 @@ struct CarryWidgetEntryView: View {
                         .foregroundStyle(.secondary)
                 }
             }
+            Spacer(minLength: 0)
         }
         .widgetURL(trip.deepLink)
     }
