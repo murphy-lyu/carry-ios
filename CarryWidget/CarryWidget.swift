@@ -402,6 +402,10 @@ struct CarryWidgetEntryView: View {
                 emptyView
             }
         }
+        // WidgetKit 的系统自动 content margins 按 family 各给一套默认值，Small 天然比 Medium/Large 更紧——
+        // 三个尺寸的标题/内容左边距因此对不上（用户反馈）。改为统一关掉自动边距、三个尺寸共用同一份手动
+        // padding，从根上保证边距永远一致，不再依赖系统按 family 给的黑盒默认值。
+        .padding(16)
         .modifier(WidgetColorSchemeOverride(appearance: entry.appearance))
     }
 
@@ -871,6 +875,7 @@ struct CarryWidget: Widget {
         .configurationDisplayName("widget.display_name")
         .description("widget.description")
         .supportedFamilies([.systemSmall, .systemMedium, .systemLarge])
+        .contentMarginsDisabled()
     }
 }
 
