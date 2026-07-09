@@ -648,20 +648,17 @@ struct CarryWidgetEntryView: View {
     private func largePreTripView(_ trip: WidgetTrip, now: Date) -> some View {
         let isPlanning = trip.isDateless == true
         let preview = isPlanning ? planningAgendaPreview(trip) : trip.upcomingAgenda(asOf: now).filter { $0.dayOrder == 0 }
-        // 规划中且还没添加任何地点/交通：顶部只有 header+标题两行，若照常留白会在 4×4 画布里空出
-        // 大半张卡片（用户反馈）。改为不在顶部重复展示「开始规划行程」，把它挪到下方居中展示。
-        let isPlanningEmpty = isPlanning && preview.isEmpty
+        // 内容一律紧贴顶部按顺序排列，不做居中/大 Spacer 填空——卡片下方多余的空间就是留白，
+        // 跟 Apple 自家 Widget（日历/提醒事项）的处理一致（用户反馈：居中处理反而显得断层、不协调）。
         return VStack(alignment: .leading, spacing: 8) {
             widgetHeader(isPlanning: isPlanning)
             Text(trip.displayTitle)
                 .font(.system(.title2, design: .rounded).weight(.bold))
                 .lineLimit(1)
             if isPlanning {
-                if !isPlanningEmpty {
-                    Text(planningSummaryText(trip))
-                        .font(.system(.subheadline, design: .rounded).weight(.medium))
-                        .foregroundStyle(.secondary)
-                }
+                Text(planningSummaryText(trip))
+                    .font(.system(.subheadline, design: .rounded).weight(.medium))
+                    .foregroundStyle(.secondary)
             } else {
                 if let countdown = trip.countdownTextIfDated {
                     Text(countdown)
@@ -682,27 +679,8 @@ struct CarryWidgetEntryView: View {
                 ForEach(Array(preview.prefix(isPlanning ? 8 : 4).enumerated()), id: \.offset) { _, it in
                     agendaItemRow(it)
                 }
-                Spacer(minLength: 0)
-            } else if isPlanningEmpty {
-                // 与 agendaView 的 rows.isEmpty 空状态同款处理（上下 Spacer 把引导文案居中放进剩余空间），
-                // 而不是让「已规划 0 项」这句话孤零零地贴在顶部、下方大片留白（spec: widget-planning-trip-fallback.md）。
-                Spacer()
-                HStack {
-                    Spacer()
-                    VStack(spacing: 6) {
-                        Image(systemName: "mappin.and.ellipse")
-                            .font(.system(size: 22, weight: .medium))
-                            .foregroundStyle(.tertiary)
-                        Text("widget.planning.empty")
-                            .font(.system(.subheadline, design: .rounded).weight(.medium))
-                            .foregroundStyle(.secondary)
-                    }
-                    Spacer()
-                }
-                Spacer()
-            } else {
-                Spacer(minLength: 0)
             }
+            Spacer(minLength: 0)
         }
         .widgetURL(trip.deepLink)
     }
@@ -767,9 +745,7 @@ struct CarryWidgetEntryView: View {
     private func mediumView(primary: WidgetTrip, secondary: WidgetTrip?) -> some View {
         let isPlanning = primary.isDateless == true
         let planningPreview = isPlanning ? planningAgendaPreview(primary) : []
-        // 规划中且还没添加任何地点/交通：不在标题正下方紧贴展示「开始规划行程」（挤在一起，用户反馈），
-        // 挪到下方剩余空间居中，跟 largePreTripView 的同款空状态处理保持一致的视觉语言。
-        let isPlanningEmpty = isPlanning && planningPreview.isEmpty
+        // 内容一律紧贴顶部按顺序排列，不做居中/大 Spacer 填空，与 largePreTripView 统一（用户反馈）。
         return VStack(alignment: .leading, spacing: 10) {
             HStack(alignment: .center) {
                 VStack(alignment: .leading, spacing: 3) {
@@ -779,11 +755,9 @@ struct CarryWidgetEntryView: View {
                         .lineLimit(1)
                     if isPlanning {
                         // 规划中兜底：展示规划进度，不展示打包进度（同 smallView，spec v2）。
-                        if !isPlanningEmpty {
-                            Text(planningSummaryText(primary))
-                                .font(.system(.caption, design: .rounded).weight(.semibold))
-                                .foregroundStyle(.secondary)
-                        }
+                        Text(planningSummaryText(primary))
+                            .font(.system(.caption, design: .rounded).weight(.semibold))
+                            .foregroundStyle(.secondary)
                     } else {
                         if let countdown = primary.countdownTextIfDated {
                             Text(countdown)
@@ -805,26 +779,9 @@ struct CarryWidgetEntryView: View {
             if isPlanning, let first = planningPreview.first {
                 Divider()
                 agendaItemRow(first)
-                Spacer(minLength: 0)
-            } else if isPlanningEmpty {
-                // 与 largePreTripView 同款空状态（上下 Spacer 居中放引导文案 + 小图标）。
-                Spacer()
-                HStack {
-                    Spacer()
-                    VStack(spacing: 4) {
-                        Image(systemName: "mappin.and.ellipse")
-                            .font(.system(size: 16, weight: .medium))
-                            .foregroundStyle(.tertiary)
-                        Text("widget.planning.empty")
-                            .font(.system(.caption, design: .rounded).weight(.medium))
-                            .foregroundStyle(.secondary)
-                    }
-                    Spacer()
-                }
-                Spacer()
-            } else {
-                Spacer(minLength: 0)
             }
+
+            Spacer(minLength: 0)
 
             if let secondary {
                 Divider()
