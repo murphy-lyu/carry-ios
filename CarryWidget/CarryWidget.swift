@@ -94,6 +94,12 @@ struct WidgetTrip: Codable, Identifiable {
         isDateless == true ? nil : countdownText(for: departureDate)
     }
 
+    /// 行程规划（地点/交通/住宿）是否为空——规划中/即将出发两种 pre-trip 状态统一用它判断要不要
+    /// 展示「开始规划行程」引导（而非打包进度），单点维护，避免三个尺寸各自重复算一遍（code review 2026-07-10）。
+    var hasItinerary: Bool {
+        !(agenda?.isEmpty ?? true)
+    }
+
     // MARK: 相位推导（asOf 取 entry.date，使「今天 / 下一件事」随 timeline 推进）
 
     /// 含两端的日历天数（= returnDate − departureDate + 1）；无 returnDate 退化为 1。
@@ -236,6 +242,21 @@ private func countdownText(for date: Date) -> String {
 
 private func progressText(_ trip: WidgetTrip) -> String {
     String.localizedStringWithFormat(NSLocalizedString("widget.progress.packed", comment: ""), trip.packedCount, trip.totalCount)
+}
+
+/// 行程规划引导行（可选倒计时 + 规划进度文案），供三个尺寸的 pre-trip 视图共用——行程规划为空
+/// 或规划中兜底行程都落进这里，避免三处各自重复写一遍（code review 2026-07-10）。
+@ViewBuilder
+private func planningGuideText(_ trip: WidgetTrip, font: Font, summaryLineLimit: Int? = nil) -> some View {
+    if let countdown = trip.countdownTextIfDated {
+        Text(countdown)
+            .font(font)
+            .foregroundStyle(.secondary)
+    }
+    Text(planningSummaryText(trip))
+        .font(font)
+        .foregroundStyle(.secondary)
+        .lineLimit(summaryLineLimit)
 }
 
 /// 规划中（isDateless）兜底行程「已规划 N 项」文案；N=0 时换成引导文案（spec: widget-planning-trip-fallback.md）。
@@ -648,9 +669,8 @@ struct CarryWidgetEntryView: View {
     private func largePreTripView(_ trip: WidgetTrip, now: Date) -> some View {
         let isPlanning = trip.isDateless == true
         // 行程规划（地点/交通）是否为空——不管规划中还是有日期，行程规划为空就统一引导去规划，
-        // 不展示打包进度；有至少 1 项才展示对应内容（用户反馈）。preTrip 阶段 agenda 恒为「今天起
-        // 全部内容」（dayIdx 在出发前恒为 0，见 TripStore.writeWidgetSnapshot），可放心整体判空。
-        let hasItinerary = !(trip.agenda?.isEmpty ?? true)
+        // 不展示打包进度；有至少 1 项才展示对应内容（用户反馈）。
+        let hasItinerary = trip.hasItinerary
         let preview = isPlanning ? planningAgendaPreview(trip) : trip.upcomingAgenda(asOf: now).filter { $0.dayOrder == 0 }
         // 内容一律紧贴顶部按顺序排列，不做居中/大 Spacer 填空——卡片下方多余的空间就是留白，
         // 跟 Apple 自家 Widget（日历/提醒事项）的处理一致（用户反馈：居中处理反而显得断层、不协调）。
@@ -664,19 +684,8 @@ struct CarryWidgetEntryView: View {
             Text(trip.displayTitle)
                 .font(.system(.title2, design: .rounded).weight(.bold))
                 .lineLimit(1)
-            if !hasItinerary {
-                if let countdown = trip.countdownTextIfDated {
-                    Text(countdown)
-                        .font(.system(.subheadline, design: .rounded).weight(.medium))
-                        .foregroundStyle(.secondary)
-                }
-                Text(planningSummaryText(trip))
-                    .font(.system(.subheadline, design: .rounded).weight(.medium))
-                    .foregroundStyle(.secondary)
-            } else if isPlanning {
-                Text(planningSummaryText(trip))
-                    .font(.system(.subheadline, design: .rounded).weight(.medium))
-                    .foregroundStyle(.secondary)
+            if !hasItinerary || isPlanning {
+                planningGuideText(trip, font: .system(.subheadline, design: .rounded).weight(.medium))
             } else {
                 if let countdown = trip.countdownTextIfDated {
                     Text(countdown)
@@ -714,30 +723,17 @@ struct CarryWidgetEntryView: View {
         let isPlanning = trip.isDateless ?? false
         // 行程规划为空就统一引导去规划、不展示打包进度，不管规划中还是有日期（用户反馈，见
         // largePreTripView 同款注释）。
-        let hasItinerary = !(trip.agenda?.isEmpty ?? true)
+        let hasItinerary = trip.hasItinerary
         return VStack(alignment: .leading, spacing: 4) {
             widgetHeader(isPlanning: isPlanning)
             Text(trip.name.isEmpty ? trip.destinationCity : trip.name)
                 .font(.system(.title2, design: .rounded).weight(.bold))
                 .lineLimit(1)
                 .minimumScaleFactor(0.7)
-            if !hasItinerary {
-                if let countdown = trip.countdownTextIfDated {
-                    Text(countdown)
-                        .font(.system(.subheadline, design: .rounded).weight(.medium))
-                        .foregroundStyle(.secondary)
-                }
-                Text(planningSummaryText(trip))
-                    .font(.system(.subheadline, design: .rounded).weight(.medium))
-                    .foregroundStyle(.secondary)
-                    .lineLimit(2)
-            } else if isPlanning {
-                // 规划中（isDateless）兜底行程：展示规划进度，不展示打包进度——这个阶段大概率还没到
-                // 打包，「已规划 N 项」更能反映用户实际在推进的事（spec: widget-planning-trip-fallback.md v2）。
-                Text(planningSummaryText(trip))
-                    .font(.system(.subheadline, design: .rounded).weight(.medium))
-                    .foregroundStyle(.secondary)
-                    .lineLimit(2)
+            if !hasItinerary || isPlanning {
+                // 规划中（isDateless）或行程规划为空的有日期行程：展示规划进度，不展示打包进度——
+                // 「已规划 N 项」更能反映用户实际在推进的事（spec: widget-planning-trip-fallback.md v2）。
+                planningGuideText(trip, font: .system(.subheadline, design: .rounded).weight(.medium), summaryLineLimit: 2)
             } else {
                 if let countdown = trip.countdownTextIfDated {
                     Text(countdown)
@@ -785,7 +781,7 @@ struct CarryWidgetEntryView: View {
         let planningPreview = isPlanning ? planningAgendaPreview(primary) : []
         // 行程规划为空就统一引导去规划、不展示打包进度，不管规划中还是有日期（用户反馈，见
         // largePreTripView 同款注释）。
-        let hasItinerary = !(primary.agenda?.isEmpty ?? true)
+        let hasItinerary = primary.hasItinerary
         // 内容一律紧贴顶部按顺序排列，不做居中/大 Spacer 填空，与 largePreTripView 统一（用户反馈）；
         // 显式要回整块画布尺寸 + 声明左上对齐（根因见 largePreTripView 同款注释）。
         return VStack(alignment: .leading, spacing: 10) {
@@ -795,20 +791,9 @@ struct CarryWidgetEntryView: View {
                     Text(primary.name.isEmpty ? primary.destinationCity : primary.name)
                         .font(.system(.title2, design: .rounded).weight(.bold))
                         .lineLimit(1)
-                    if !hasItinerary {
-                        if let countdown = primary.countdownTextIfDated {
-                            Text(countdown)
-                                .font(.system(.caption, design: .rounded).weight(.semibold))
-                                .foregroundStyle(.secondary)
-                        }
-                        Text(planningSummaryText(primary))
-                            .font(.system(.caption, design: .rounded).weight(.semibold))
-                            .foregroundStyle(.secondary)
-                    } else if isPlanning {
-                        // 规划中兜底：展示规划进度，不展示打包进度（同 smallView，spec v2）。
-                        Text(planningSummaryText(primary))
-                            .font(.system(.caption, design: .rounded).weight(.semibold))
-                            .foregroundStyle(.secondary)
+                    if !hasItinerary || isPlanning {
+                        // 规划中兜底/行程规划为空：展示规划进度，不展示打包进度（同 smallView，spec v2）。
+                        planningGuideText(primary, font: .system(.caption, design: .rounded).weight(.semibold))
                     } else {
                         if let countdown = primary.countdownTextIfDated {
                             Text(countdown)

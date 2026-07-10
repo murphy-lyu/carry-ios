@@ -3445,6 +3445,11 @@ extension TripStore {
             let span = max(1, trip.days + 1)
             let dayIdx = max(0, min(cal.dateComponents([.day], from: cal.startOfDay(for: trip.departureDate),
                                                        to: today).day ?? 0, span - 1))
+            // 尚未出发的行程：day 0 不是「今天」，用当前真实时刻去过滤 day 0 的有时刻条目没有意义
+            // （会把用户已设定好时间的地点/交通误判成「已过」而漏进 agenda，见 code review 2026-07-10）。
+            // 只有行程已经开始（today ≥ departureDate）时，dayIdx 对应的那天才真的是「今天」，
+            // 这时才该用真实时刻过滤；未出发时传 0，等效不过滤（同规划中兜底分支的既有处理）。
+            let hasDeparted = today >= cal.startOfDay(for: trip.departureDate)
             return WidgetTripSnapshot(
                 tripId: trip.id.uuidString,
                 name: trip.name,
@@ -3459,7 +3464,7 @@ extension TripStore {
                     WidgetStay(name: $0.name, checkInDayOrder: $0.checkInDayOrder, nights: max(1, $0.nights))
                 },
                 plan: Self.widgetPlan(for: trip, fromDayOrder: dayIdx),
-                agenda: Self.widgetAgenda(for: trip, fromDayOrder: dayIdx, sinceMinutes: nowMinutes)
+                agenda: Self.widgetAgenda(for: trip, fromDayOrder: dayIdx, sinceMinutes: hasDeparted ? nowMinutes : 0)
             )
         }
         // 三级兜底（spec: widget-planning-trip-fallback.md）：进行中/有日期即将出发都没有候选时，
