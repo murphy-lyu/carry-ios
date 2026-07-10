@@ -650,6 +650,11 @@ struct CarryWidgetEntryView: View {
         let preview = isPlanning ? planningAgendaPreview(trip) : trip.upcomingAgenda(asOf: now).filter { $0.dayOrder == 0 }
         // 内容一律紧贴顶部按顺序排列，不做居中/大 Spacer 填空——卡片下方多余的空间就是留白，
         // 跟 Apple 自家 Widget（日历/提醒事项）的处理一致（用户反馈：居中处理反而显得断层、不协调）。
+        // 根因：WidgetKit 不会自动把整个可用画布的尺寸提议给这里的根 VStack——内容量少时，VStack
+        // 只会按内容尺寸收缩，然后被系统在整块画布内居中摆放，`Spacer(minLength: 0)` 因为拿不到
+        // 「画布减去内容」的多余空间可分配、根本不生效。`agendaView`（Large/Medium 共用的进行中视图）
+        // 早就用 `.frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)` 显式把
+        // 整块画布尺寸要回来、再声明左上对齐，这里补齐同款处理，从根上解决"内容偏少时整体跑到画布中间"。
         return VStack(alignment: .leading, spacing: 8) {
             widgetHeader(isPlanning: isPlanning)
             Text(trip.displayTitle)
@@ -682,6 +687,7 @@ struct CarryWidgetEntryView: View {
             }
             Spacer(minLength: 0)
         }
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         .widgetURL(trip.deepLink)
     }
 
@@ -691,6 +697,7 @@ struct CarryWidgetEntryView: View {
         // 内容一律紧贴顶部按顺序排列，不做居中/大 Spacer 填空，与 mediumView/largePreTripView 统一
         // （用户反馈：三个尺寸此前各用一套锚定方式，看着不协调；这里之前遗留的 Spacer(minLength: 8)
         // 是更早一轮"贴底展示"的旧写法，本轮统一时漏改，导致 1×1 单独跟另外两个尺寸不一致）。
+        // 显式要回整块画布尺寸 + 声明左上对齐（根因见 largePreTripView 同款注释）。
         VStack(alignment: .leading, spacing: 4) {
             widgetHeader(isPlanning: trip.isDateless ?? false)
             Text(trip.name.isEmpty ? trip.destinationCity : trip.name)
@@ -725,6 +732,7 @@ struct CarryWidgetEntryView: View {
             }
             Spacer(minLength: 0)
         }
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         .widgetURL(trip.deepLink)
     }
 
@@ -748,7 +756,8 @@ struct CarryWidgetEntryView: View {
     private func mediumView(primary: WidgetTrip, secondary: WidgetTrip?) -> some View {
         let isPlanning = primary.isDateless == true
         let planningPreview = isPlanning ? planningAgendaPreview(primary) : []
-        // 内容一律紧贴顶部按顺序排列，不做居中/大 Spacer 填空，与 largePreTripView 统一（用户反馈）。
+        // 内容一律紧贴顶部按顺序排列，不做居中/大 Spacer 填空，与 largePreTripView 统一（用户反馈）；
+        // 显式要回整块画布尺寸 + 声明左上对齐（根因见 largePreTripView 同款注释）。
         return VStack(alignment: .leading, spacing: 10) {
             HStack(alignment: .center) {
                 VStack(alignment: .leading, spacing: 3) {
@@ -806,6 +815,7 @@ struct CarryWidgetEntryView: View {
                 }
             }
         }
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         .widgetURL(primary.deepLink)
     }
 
