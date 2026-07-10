@@ -647,6 +647,10 @@ struct CarryWidgetEntryView: View {
     /// 对占位日期的规划中行程没有意义、会误判条目「已过」。
     private func largePreTripView(_ trip: WidgetTrip, now: Date) -> some View {
         let isPlanning = trip.isDateless == true
+        // 行程规划（地点/交通）是否为空——不管规划中还是有日期，行程规划为空就统一引导去规划，
+        // 不展示打包进度；有至少 1 项才展示对应内容（用户反馈）。preTrip 阶段 agenda 恒为「今天起
+        // 全部内容」（dayIdx 在出发前恒为 0，见 TripStore.writeWidgetSnapshot），可放心整体判空。
+        let hasItinerary = !(trip.agenda?.isEmpty ?? true)
         let preview = isPlanning ? planningAgendaPreview(trip) : trip.upcomingAgenda(asOf: now).filter { $0.dayOrder == 0 }
         // 内容一律紧贴顶部按顺序排列，不做居中/大 Spacer 填空——卡片下方多余的空间就是留白，
         // 跟 Apple 自家 Widget（日历/提醒事项）的处理一致（用户反馈：居中处理反而显得断层、不协调）。
@@ -660,7 +664,16 @@ struct CarryWidgetEntryView: View {
             Text(trip.displayTitle)
                 .font(.system(.title2, design: .rounded).weight(.bold))
                 .lineLimit(1)
-            if isPlanning {
+            if !hasItinerary {
+                if let countdown = trip.countdownTextIfDated {
+                    Text(countdown)
+                        .font(.system(.subheadline, design: .rounded).weight(.medium))
+                        .foregroundStyle(.secondary)
+                }
+                Text(planningSummaryText(trip))
+                    .font(.system(.subheadline, design: .rounded).weight(.medium))
+                    .foregroundStyle(.secondary)
+            } else if isPlanning {
                 Text(planningSummaryText(trip))
                     .font(.system(.subheadline, design: .rounded).weight(.medium))
                     .foregroundStyle(.secondary)
@@ -698,15 +711,29 @@ struct CarryWidgetEntryView: View {
         // （用户反馈：三个尺寸此前各用一套锚定方式，看着不协调；这里之前遗留的 Spacer(minLength: 8)
         // 是更早一轮"贴底展示"的旧写法，本轮统一时漏改，导致 1×1 单独跟另外两个尺寸不一致）。
         // 显式要回整块画布尺寸 + 声明左上对齐（根因见 largePreTripView 同款注释）。
-        VStack(alignment: .leading, spacing: 4) {
-            widgetHeader(isPlanning: trip.isDateless ?? false)
+        let isPlanning = trip.isDateless ?? false
+        // 行程规划为空就统一引导去规划、不展示打包进度，不管规划中还是有日期（用户反馈，见
+        // largePreTripView 同款注释）。
+        let hasItinerary = !(trip.agenda?.isEmpty ?? true)
+        return VStack(alignment: .leading, spacing: 4) {
+            widgetHeader(isPlanning: isPlanning)
             Text(trip.name.isEmpty ? trip.destinationCity : trip.name)
                 .font(.system(.title2, design: .rounded).weight(.bold))
                 .lineLimit(1)
                 .minimumScaleFactor(0.7)
-            // 规划中（isDateless）兜底行程：展示规划进度，不展示打包进度——这个阶段大概率还没到打包，
-            // 「已规划 N 项」更能反映用户实际在推进的事（spec: widget-planning-trip-fallback.md v2）。
-            if trip.isDateless == true {
+            if !hasItinerary {
+                if let countdown = trip.countdownTextIfDated {
+                    Text(countdown)
+                        .font(.system(.subheadline, design: .rounded).weight(.medium))
+                        .foregroundStyle(.secondary)
+                }
+                Text(planningSummaryText(trip))
+                    .font(.system(.subheadline, design: .rounded).weight(.medium))
+                    .foregroundStyle(.secondary)
+                    .lineLimit(2)
+            } else if isPlanning {
+                // 规划中（isDateless）兜底行程：展示规划进度，不展示打包进度——这个阶段大概率还没到
+                // 打包，「已规划 N 项」更能反映用户实际在推进的事（spec: widget-planning-trip-fallback.md v2）。
                 Text(planningSummaryText(trip))
                     .font(.system(.subheadline, design: .rounded).weight(.medium))
                     .foregroundStyle(.secondary)
@@ -756,6 +783,9 @@ struct CarryWidgetEntryView: View {
     private func mediumView(primary: WidgetTrip, secondary: WidgetTrip?) -> some View {
         let isPlanning = primary.isDateless == true
         let planningPreview = isPlanning ? planningAgendaPreview(primary) : []
+        // 行程规划为空就统一引导去规划、不展示打包进度，不管规划中还是有日期（用户反馈，见
+        // largePreTripView 同款注释）。
+        let hasItinerary = !(primary.agenda?.isEmpty ?? true)
         // 内容一律紧贴顶部按顺序排列，不做居中/大 Spacer 填空，与 largePreTripView 统一（用户反馈）；
         // 显式要回整块画布尺寸 + 声明左上对齐（根因见 largePreTripView 同款注释）。
         return VStack(alignment: .leading, spacing: 10) {
@@ -765,7 +795,16 @@ struct CarryWidgetEntryView: View {
                     Text(primary.name.isEmpty ? primary.destinationCity : primary.name)
                         .font(.system(.title2, design: .rounded).weight(.bold))
                         .lineLimit(1)
-                    if isPlanning {
+                    if !hasItinerary {
+                        if let countdown = primary.countdownTextIfDated {
+                            Text(countdown)
+                                .font(.system(.caption, design: .rounded).weight(.semibold))
+                                .foregroundStyle(.secondary)
+                        }
+                        Text(planningSummaryText(primary))
+                            .font(.system(.caption, design: .rounded).weight(.semibold))
+                            .foregroundStyle(.secondary)
+                    } else if isPlanning {
                         // 规划中兜底：展示规划进度，不展示打包进度（同 smallView，spec v2）。
                         Text(planningSummaryText(primary))
                             .font(.system(.caption, design: .rounded).weight(.semibold))
@@ -782,7 +821,7 @@ struct CarryWidgetEntryView: View {
                     }
                 }
                 Spacer()
-                if !isPlanning {
+                if hasItinerary, !isPlanning {
                     progressRing(primary.progress)
                         .frame(width: 58, height: 58)
                 }
