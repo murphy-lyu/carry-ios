@@ -450,6 +450,28 @@ struct CarryWidgetEntryView: View {
         }
     }
 
+    /// 事件 kind → 类别色，复用 `SpendCategory.color`（`TripSpendView.swift`）同款配色，
+    /// 不新造一套颜色语言（对标 Tripsy 事件列表的彩色图标圆底，用户反馈 2026-07-12）。
+    private func categoryColor(for kind: String) -> Color {
+        switch kind {
+        case "flight", "train", "bus", "ferry", "cruise",
+             "carRental", "carRentalPickup", "carRentalDropoff":
+            return .blue
+        case "checkin", "checkout", "lodging":
+            return .indigo
+        case "food":
+            return .orange
+        case "sightseeing":
+            return .teal
+        case "shopping":
+            return Color(red: 0.9, green: 0.4, blue: 0.5)
+        case "activity":
+            return .green
+        default:
+            return .gray
+        }
+    }
+
     /// 事件标题文本：checkin/checkout 前缀本地化（用户数据拼在后），其余直接用用户数据。
     /// 单一 Text（verbatim 组合「已本地化标签 · 用户数据」）：避免 `Text + Text`（iOS 26 弃用）
     /// 与「插值字面量被抽成本地化键」两个坑，且整串作为一体截断更自然。
@@ -586,14 +608,25 @@ struct CarryWidgetEntryView: View {
         return rows
     }
 
+    /// `coloredIcon`：图标是否用类别色圆底（对标 Tripsy 的事件列表，参考截图+用户反馈 2026-07-12）。
+    /// 仅供规划中/即将出发的预览列表使用，默认 false 保持 `agendaView`（进行中）原样不变——
+    /// 用户明确要求这轮只调规划中/即将出发两种状态，进行中不动。
     @ViewBuilder
-    private func agendaItemRow(_ it: WidgetAgendaItem) -> some View {
+    private func agendaItemRow(_ it: WidgetAgendaItem, coloredIcon: Bool = false) -> some View {
         VStack(alignment: .leading, spacing: 2) {
             HStack(alignment: .center, spacing: 8) {
-                Image(systemName: icon(for: it.kind))
-                    .font(.system(size: 13, weight: .semibold))
-                    .foregroundStyle(.secondary)
-                    .frame(width: 20)
+                if coloredIcon {
+                    Image(systemName: icon(for: it.kind))
+                        .font(.system(size: 10, weight: .semibold))
+                        .foregroundStyle(.white)
+                        .frame(width: 20, height: 20)
+                        .background(categoryColor(for: it.kind), in: Circle())
+                } else {
+                    Image(systemName: icon(for: it.kind))
+                        .font(.system(size: 13, weight: .semibold))
+                        .foregroundStyle(.secondary)
+                        .frame(width: 20)
+                }
                 Text(it.title)
                     .font(.system(.subheadline, design: .rounded).weight(.medium))
                     .lineLimit(1)
@@ -704,7 +737,7 @@ struct CarryWidgetEntryView: View {
             if !preview.isEmpty {
                 Divider().padding(.vertical, 2)
                 ForEach(Array(preview.prefix(isPlanning ? 8 : 4).enumerated()), id: \.offset) { _, it in
-                    agendaItemRow(it)
+                    agendaItemRow(it, coloredIcon: true)
                 }
             }
             Spacer(minLength: 0)
@@ -814,7 +847,7 @@ struct CarryWidgetEntryView: View {
 
             if isPlanning, let first = planningPreview.first {
                 Divider()
-                agendaItemRow(first)
+                agendaItemRow(first, coloredIcon: true)
             }
 
             Spacer(minLength: 0)
