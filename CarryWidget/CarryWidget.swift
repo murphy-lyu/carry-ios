@@ -626,6 +626,22 @@ struct CarryWidgetEntryView: View {
         return rows
     }
 
+    /// 无天头版视觉槽封顶——供规划中/即将出发的单日预览列表用（这些列表恒为同一天，不需要天头，
+    /// 语义已经由标题行/倒计时表达「第一天」）。槽位计数同 `agendaRenderRows`：有副标题条目 2 槽、无副标题 1 槽。
+    /// 修复：`largePreTripView` 原先用 `.prefix(固定条数)` 封顶，没算副标题占用的第二行高度，条目多、
+    /// 且大多带副标题（地址）时会撑爆 4×4 固定画布、溢出到相邻 Widget（用户反馈 2026-07-12）。
+    private func agendaSlotsCapped(_ items: [WidgetAgendaItem], maxSlots: Int) -> [WidgetAgendaItem] {
+        var out: [WidgetAgendaItem] = []
+        var usedSlots = 0
+        for it in items {
+            let slots = it.subtitle.isEmpty ? 1 : 2
+            if usedSlots + slots > maxSlots { break }
+            out.append(it)
+            usedSlots += slots
+        }
+        return out
+    }
+
     /// `coloredIcon`：图标是否用类别色圆底（对标 Tripsy 的事件列表，参考截图+用户反馈 2026-07-12）。
     /// 仅供规划中/即将出发的预览列表使用，默认 false 保持 `agendaView`（进行中）原样不变——
     /// 用户明确要求这轮只调规划中/即将出发两种状态，进行中不动。
@@ -754,7 +770,8 @@ struct CarryWidgetEntryView: View {
             }
             if !preview.isEmpty {
                 Divider().padding(.vertical, 2)
-                ForEach(Array(preview.prefix(isPlanning ? 8 : 4).enumerated()), id: \.offset) { _, it in
+                // 按视觉槽封顶而非固定条数——见 agendaSlotsCapped 文档注释（用户反馈 2026-07-12）。
+                ForEach(Array(agendaSlotsCapped(preview, maxSlots: 10).enumerated()), id: \.offset) { _, it in
                     agendaItemRow(it, coloredIcon: true)
                 }
             }
