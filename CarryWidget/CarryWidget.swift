@@ -261,9 +261,13 @@ private func planningGuideText(_ trip: WidgetTrip, font: Font, summaryLineLimit:
 
 /// 规划中（isDateless）兜底行程「已规划 N 项」文案；N=0 时换成引导文案（spec: widget-planning-trip-fallback.md）。
 private func planningSummaryText(_ trip: WidgetTrip) -> String {
-    let count = trip.agenda?.count ?? 0
+    let count = plannedItemsCount(trip)
     guard count > 0 else { return NSLocalizedString("widget.planning.empty", comment: "") }
     return String.localizedStringWithFormat(NSLocalizedString("widget.planning.items_count", comment: ""), count)
+}
+
+private func plannedItemsCount(_ trip: WidgetTrip) -> Int {
+    trip.agenda?.count ?? 0
 }
 
 /// 规划中行程的地点/交通预览——直接取 dayOrder==0 的条目，**不做任何按时刻过滤**。
@@ -626,34 +630,26 @@ struct CarryWidgetEntryView: View {
         return rows
     }
 
-    /// 无天头版视觉槽封顶——供规划中/即将出发的单日预览列表用（这些列表恒为同一天，不需要天头，
-    /// 语义已经由标题行/倒计时表达「第一天」）。槽位计数同 `agendaRenderRows`：有副标题条目 2 槽、无副标题 1 槽。
-    /// 修复：`largePreTripView` 原先用 `.prefix(固定条数)` 封顶，没算副标题占用的第二行高度，条目多、
-    /// 且大多带副标题（地址）时会撑爆 4×4 固定画布、溢出到相邻 Widget（用户反馈 2026-07-12）。
-    private func agendaSlotsCapped(_ items: [WidgetAgendaItem], maxSlots: Int) -> [WidgetAgendaItem] {
-        var out: [WidgetAgendaItem] = []
-        var usedSlots = 0
-        for it in items {
-            let slots = it.subtitle.isEmpty ? 1 : 2
-            if usedSlots + slots > maxSlots { break }
-            out.append(it)
-            usedSlots += slots
-        }
-        return out
-    }
-
     /// `coloredIcon`：图标是否用类别色圆底（对标 Tripsy 的事件列表，参考截图+用户反馈 2026-07-12）。
     /// 仅供规划中/即将出发的预览列表使用，默认 false 保持 `agendaView`（进行中）原样不变——
-    /// 用户明确要求这轮只调规划中/即将出发两种状态，进行中不动。
+    /// 用户明确要求这轮只调规划中/即将出发两种状态，进行中不动。同时复用这个开关抑制副标题（地址）：
+    /// 完整门牌+行政区划全称对「一眼扫过」的预览场景信息密度过高、且长地址会被 lineLimit(1) 硬切在
+    /// 单词中间，观感粗糙（用户反馈 2026-07-12，见 docs/design-north-star.md 第 1/7 条）；进行中的
+    /// agendaView 场景不同（用户已在行程里，地址是实际导航需要的信息），不受影响。
     @ViewBuilder
     private func agendaItemRow(_ it: WidgetAgendaItem, coloredIcon: Bool = false) -> some View {
+        // Small（155pt 宽）用 .subheadline 时地名只能显示 10~12 个字符就被截断，
+        // 比 Medium/Large 明显更狠——预览行的价值在于「认出是哪个地点」，砍得太狠会读不出信息。
+        // coloredIcon 行只在 pre-trip 预览里用（agendaView 进行中路径恒为 coloredIcon: false，
+        // 且从不在 systemSmall 下渲染），缩小仅影响这里，不影响进行中样式（用户反馈 2026-07-12）。
+        let isCompact = coloredIcon && family == .systemSmall
         VStack(alignment: .leading, spacing: 2) {
             HStack(alignment: .center, spacing: 8) {
                 if coloredIcon {
                     Image(systemName: icon(for: it.kind))
-                        .font(.system(size: 10, weight: .semibold))
+                        .font(.system(size: isCompact ? 8 : 10, weight: .semibold))
                         .foregroundStyle(.white)
-                        .frame(width: 20, height: 20)
+                        .frame(width: isCompact ? 16 : 20, height: isCompact ? 16 : 20)
                         .background(categoryColor(for: it.kind), in: Circle())
                 } else {
                     Image(systemName: icon(for: it.kind))
@@ -662,7 +658,7 @@ struct CarryWidgetEntryView: View {
                         .frame(width: 20)
                 }
                 Text(it.title)
-                    .font(.system(.subheadline, design: .rounded).weight(.medium))
+                    .font(.system(isCompact ? .caption : .subheadline, design: .rounded).weight(.medium))
                     .lineLimit(1)
                 Spacer(minLength: 4)
                 if !it.time.isEmpty {
@@ -673,7 +669,7 @@ struct CarryWidgetEntryView: View {
                         .monospacedDigit()
                 }
             }
-            if !it.subtitle.isEmpty {
+            if !coloredIcon, !it.subtitle.isEmpty {
                 Text(it.subtitle)
                     .font(.system(.caption2, design: .rounded))
                     .foregroundStyle(.secondary)
@@ -739,6 +735,7 @@ struct CarryWidgetEntryView: View {
         // 不展示打包进度；有至少 1 项才展示对应内容（用户反馈）。
         let hasItinerary = trip.hasItinerary
         let preview = isPlanning ? planningAgendaPreview(trip) : trip.upcomingAgenda(asOf: now).filter { $0.dayOrder == 0 }
+        let hasPlannedCount = isPlanning && plannedItemsCount(trip) > 0
         // 内容一律紧贴顶部按顺序排列，不做居中/大 Spacer 填空——卡片下方多余的空间就是留白，
         // 跟 Apple 自家 Widget（日历/提醒事项）的处理一致（用户反馈：居中处理反而显得断层、不协调）。
         // 根因：WidgetKit 不会自动把整个可用画布的尺寸提议给这里的根 VStack——内容量少时，VStack
@@ -747,12 +744,14 @@ struct CarryWidgetEntryView: View {
         // 早就用 `.frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)` 显式把
         // 整块画布尺寸要回来、再声明左上对齐，这里补齐同款处理，从根上解决"内容偏少时整体跑到画布中间"。
         return VStack(alignment: .leading, spacing: 8) {
-            widgetHeader(isPlanning: isPlanning)
+            widgetHeader(isPlanning: isPlanning, trailing: hasPlannedCount ? planningSummaryText(trip) : nil)
             Text(trip.displayTitle)
                 .font(.system(.title2, design: .rounded).weight(.bold))
                 .lineLimit(1)
             if !hasItinerary || isPlanning {
-                planningGuideText(trip, font: .system(.subheadline, design: .rounded).weight(.medium))
+                if !hasPlannedCount {
+                    planningGuideText(trip, font: .system(.subheadline, design: .rounded).weight(.medium))
+                }
             } else {
                 if let countdown = trip.countdownTextIfDated {
                     Text(countdown)
@@ -770,8 +769,11 @@ struct CarryWidgetEntryView: View {
             }
             if !preview.isEmpty {
                 Divider().padding(.vertical, 2)
-                // 按视觉槽封顶而非固定条数——见 agendaSlotsCapped 文档注释（用户反馈 2026-07-12）。
-                ForEach(Array(agendaSlotsCapped(preview, maxSlots: 10).enumerated()), id: \.offset) { _, it in
+                // 预览行不展示副标题（地址），恒为单行高度，直接按条数封顶即可——
+                // 不再需要 agendaSlotsCapped 那套"副标题占 2 槽"的可变高度预算（用户反馈 2026-07-12）。
+                // 封顶 9 条而非 10——10 条时行高总和逼近画布上限，会把顶部重新挤成不固定
+                // （用户反馈 2026-07-12：达到 10 条时顶部又不固定了，同类根因见本函数上方长注释）。
+                ForEach(Array(preview.prefix(9).enumerated()), id: \.offset) { _, it in
                     agendaItemRow(it, coloredIcon: true)
                 }
             }
@@ -792,6 +794,15 @@ struct CarryWidgetEntryView: View {
         // 行程规划为空就统一引导去规划、不展示打包进度，不管规划中还是有日期（用户反馈，见
         // largePreTripView 同款注释）。
         let hasItinerary = trip.hasItinerary
+        let hasPlannedCount = isPlanning && plannedItemsCount(trip) > 0
+        // 规划中且已有条目时展示预览——之前 Small 只有三行文字、下方大片空白看着像没做完；
+        // 跟 Medium/Large 用同一个 coloredIcon 行组件展示已规划地点，三个尺寸视觉语言统一
+        // （用户反馈 2026-07-12）。范围同 Q2：只覆盖规划中状态，不动"有日期+已有行程规划"的正常态
+        // （那个分支已经有倒计时+打包进度条撑满空间，没有空白问题）。
+        // 「顶部标题+行程名+X Planned」三行头部占用太多、几乎不剩空间展示行程本身——去掉 X Planned
+        // 这行文案（`hasPlannedCount` 为真时跳过 `planningGuideText`），腾出的空间用来多展示 2 条预览
+        // （用户反馈 2026-07-12：宁要 3 行地点，不要 3 行头部信息）。count=0 的引导态文案不受影响。
+        let planningPreview = isPlanning ? planningAgendaPreview(trip) : []
         return VStack(alignment: .leading, spacing: 4) {
             widgetHeader(isPlanning: isPlanning)
             Text(trip.name.isEmpty ? trip.destinationCity : trip.name)
@@ -801,7 +812,16 @@ struct CarryWidgetEntryView: View {
             if !hasItinerary || isPlanning {
                 // 规划中（isDateless）或行程规划为空的有日期行程：展示规划进度，不展示打包进度——
                 // 「已规划 N 项」更能反映用户实际在推进的事（spec: widget-planning-trip-fallback.md v2）。
-                planningGuideText(trip, font: .system(.subheadline, design: .rounded).weight(.medium), summaryLineLimit: 2)
+                if !hasPlannedCount {
+                    planningGuideText(trip, font: .system(.subheadline, design: .rounded).weight(.medium), summaryLineLimit: 2)
+                }
+                if !planningPreview.isEmpty {
+                    Divider().padding(.vertical, 2)
+                    // 缩字号后单行更矮，且截图显示 3 条下方仍有余量——放到 4 条（用户反馈 2026-07-12）。
+                    ForEach(Array(planningPreview.prefix(4).enumerated()), id: \.offset) { _, it in
+                        agendaItemRow(it, coloredIcon: true)
+                    }
+                }
             } else {
                 if let countdown = trip.countdownTextIfDated {
                     Text(countdown)
@@ -830,7 +850,11 @@ struct CarryWidgetEntryView: View {
     /// Header row: suitcase icon + "Upcoming"/"Planning" label, both in the same secondary
     /// colour. Used as a small-caption header above the trip name in both sizes.
     /// `isPlanning`：规划中（isDateless）兜底行程时换成 "Planning" 文案（spec: widget-planning-trip-fallback.md）。
-    private func widgetHeader(isPlanning: Bool) -> some View {
+    /// `trailing`：已规划条目数摘要（如「9 Planned」），靠右显示在同一行——原先单独占一整行文案，
+    /// 跟标题/行程名合计三行偏占空间；合并进头部行，规划中/即将出发两种状态从三行收紧到两行
+    /// （用户反馈 2026-07-12）。仅在有条目可数时传入，为空引导文案（「开始规划行程」句子偏长，
+    /// 不适合挤进头部行）仍走下方 `planningGuideText` 独立一行。
+    private func widgetHeader(isPlanning: Bool, trailing: String? = nil) -> some View {
         HStack(spacing: 5) {
             Image(systemName: "suitcase.fill")
                 .font(.caption)
@@ -838,6 +862,12 @@ struct CarryWidgetEntryView: View {
                 .font(.system(.caption, design: .rounded).weight(.semibold))
                 .textCase(.uppercase)
                 .tracking(0.5)
+            if let trailing {
+                Spacer(minLength: 4)
+                Text(trailing)
+                    .font(.system(.caption, design: .rounded).weight(.semibold))
+                    .lineLimit(1)
+            }
         }
         .foregroundStyle(.secondary)
     }
@@ -847,6 +877,7 @@ struct CarryWidgetEntryView: View {
     private func mediumView(primary: WidgetTrip, secondary: WidgetTrip?) -> some View {
         let isPlanning = primary.isDateless == true
         let planningPreview = isPlanning ? planningAgendaPreview(primary) : []
+        let hasPlannedCount = isPlanning && plannedItemsCount(primary) > 0
         // 行程规划为空就统一引导去规划、不展示打包进度，不管规划中还是有日期（用户反馈，见
         // largePreTripView 同款注释）。
         let hasItinerary = primary.hasItinerary
@@ -855,13 +886,15 @@ struct CarryWidgetEntryView: View {
         return VStack(alignment: .leading, spacing: 10) {
             HStack(alignment: .center) {
                 VStack(alignment: .leading, spacing: 3) {
-                    widgetHeader(isPlanning: isPlanning)
+                    widgetHeader(isPlanning: isPlanning, trailing: hasPlannedCount ? planningSummaryText(primary) : nil)
                     Text(primary.name.isEmpty ? primary.destinationCity : primary.name)
                         .font(.system(.title2, design: .rounded).weight(.bold))
                         .lineLimit(1)
                     if !hasItinerary || isPlanning {
                         // 规划中兜底/行程规划为空：展示规划进度，不展示打包进度（同 smallView，spec v2）。
-                        planningGuideText(primary, font: .system(.caption, design: .rounded).weight(.semibold))
+                        if !hasPlannedCount {
+                            planningGuideText(primary, font: .system(.caption, design: .rounded).weight(.semibold))
+                        }
                     } else {
                         if let countdown = primary.countdownTextIfDated {
                             Text(countdown)
@@ -880,9 +913,12 @@ struct CarryWidgetEntryView: View {
                 }
             }
 
-            if isPlanning, let first = planningPreview.first {
+            if isPlanning, !planningPreview.isEmpty {
                 Divider()
-                agendaItemRow(first, coloredIcon: true)
+                // 预览行不再展示地址副标题、恒为单行高度，腾出的空间够多展示 1 条（用户反馈 2026-07-12）。
+                ForEach(Array(planningPreview.prefix(2).enumerated()), id: \.offset) { _, it in
+                    agendaItemRow(it, coloredIcon: true)
+                }
             }
 
             Spacer(minLength: 0)
