@@ -433,20 +433,30 @@ struct CarryWidgetEntryView: View {
 
     // MARK: In-trip helpers (spec: widget-trip-companion.md)
 
-    /// 事件 kind → SF Symbol。
+    /// 事件 kind → SF Symbol。kind 直接来自 `StopCategory`/`TransportMode` 的 rawValue
+    /// （见 `TripStore.widgetAgenda`/`widgetPlan` 里 `stop.category.rawValue`/`seg.mode.rawValue`），
+    /// 图标必须跟主 App 唯一真源 `Carry/Views/StopCategoryStyle.swift` 的 `symbolName` 逐条对齐，
+    /// 否则同一地点在 App 里和 Widget 里显示不同图标（用户反馈 2026-07-12）。
     private func icon(for kind: String) -> String {
         switch kind {
+        case "sightseeing":         return "binoculars"
+        case "museum":              return "paintpalette"
+        case "park":                return "tree"
+        case "beach":               return "beach.umbrella"
+        case "restaurant":          return "fork.knife"
+        case "cafe":                return "cup.and.saucer"
+        case "bar":                 return "wineglass"
+        case "shopping":            return "bag"
+        case "lodging", "checkin", "checkout": return "bed.double"
         case "flight":              return "airplane"
-        case "train":               return "tram.fill"
+        // StopCategory.train 的 rawValue 显式保留旧值 "transport"；TransportSegment 走 seg.mode.rawValue = "train"。
+        case "train", "transport":  return "train.side.front.car"
         case "bus":                 return "bus"
-        case "ferry", "cruise":     return "ferry"
+        case "ferry":               return "ferry.fill"
+        // StopCategory 没有独立 cruise 图标真源，沿用 TransportMode.ferry 同款渡轮图标。
+        case "cruise":              return "ferry.fill"
         case "carRental", "carRentalPickup", "carRentalDropoff": return "car.fill"
-        case "checkin", "checkout", "lodging": return "bed.double.fill"
-        case "food":                return "fork.knife"
-        case "sightseeing":         return "camera.fill"
-        case "activity":            return "figure.walk"
-        case "shopping":            return "bag.fill"
-        default:                    return "mappin.circle.fill"
+        default:                    return "mappin"
         }
     }
 
@@ -454,19 +464,27 @@ struct CarryWidgetEntryView: View {
     /// 不新造一套颜色语言（对标 Tripsy 事件列表的彩色图标圆底，用户反馈 2026-07-12）。
     private func categoryColor(for kind: String) -> Color {
         switch kind {
-        case "flight", "train", "bus", "ferry", "cruise",
+        case "flight", "train", "transport", "bus", "ferry", "cruise",
              "carRental", "carRentalPickup", "carRentalDropoff":
             return .blue
         case "checkin", "checkout", "lodging":
             return .indigo
-        case "food":
+        case "restaurant":
             return .orange
+        case "cafe":
+            return Color(red: 0.6, green: 0.4, blue: 0.2)
+        case "bar":
+            return .purple
         case "sightseeing":
             return .teal
+        case "museum":
+            return Color(red: 0.3, green: 0.5, blue: 0.7)
+        case "park":
+            return .green
+        case "beach":
+            return Color(red: 0.0, green: 0.7, blue: 0.8)
         case "shopping":
             return Color(red: 0.9, green: 0.4, blue: 0.5)
-        case "activity":
-            return .green
         default:
             return .gray
         }
