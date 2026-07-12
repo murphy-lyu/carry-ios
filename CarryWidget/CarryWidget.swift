@@ -246,9 +246,12 @@ private func progressText(_ trip: WidgetTrip) -> String {
 
 /// 行程规划引导行（可选倒计时 + 规划进度文案），供三个尺寸的 pre-trip 视图共用——行程规划为空
 /// 或规划中兜底行程都落进这里，避免三处各自重复写一遍（code review 2026-07-10）。
+/// `showCountdown`：Large/Medium 现在把倒计时合并进头部行的 trailing 位置（同「X Planned」），
+/// 这里传 false 避免正文再重复一遍；Small 倒计时挪到卡片底部单独展示，不走这个函数的倒计时分支，
+/// 保持默认 true 不受影响（用户反馈 2026-07-12）。
 @ViewBuilder
-private func planningGuideText(_ trip: WidgetTrip, font: Font, summaryLineLimit: Int? = nil) -> some View {
-    if let countdown = trip.countdownTextIfDated {
+private func planningGuideText(_ trip: WidgetTrip, font: Font, summaryLineLimit: Int? = nil, showCountdown: Bool = true) -> some View {
+    if showCountdown, let countdown = trip.countdownTextIfDated {
         Text(countdown)
             .font(font)
             .foregroundStyle(.secondary)
@@ -736,6 +739,13 @@ struct CarryWidgetEntryView: View {
         let hasItinerary = trip.hasItinerary
         let preview = isPlanning ? planningAgendaPreview(trip) : trip.upcomingAgenda(asOf: now).filter { $0.dayOrder == 0 }
         let hasPlannedCount = isPlanning && plannedItemsCount(trip) > 0
+        // 头部行 trailing：规划中且有条目显示「X Planned」，有日期行程显示倒计时——跟「X Planned」
+        // 同一个位置、同一套处理，正文不再重复一遍（用户反馈 2026-07-12）。
+        let headerTrailing = hasPlannedCount ? planningSummaryText(trip) : trip.countdownTextIfDated
+        // 「即将出发（已规划、打包中）」分支的头部比「规划中」多出进度条 + 打包行（倒计时已挪进头部，
+        // 两分支这里差距缩小了，但打包分支仍多 2 行）——同样封顶会把预览列表撑出固定画布、顶部不稳定，
+        // 按分支给不同的条数预算；截图显示 6 条下方仍有余量，放宽到 8（用户反馈 2026-07-12）。
+        let previewCap = isPlanning ? 9 : 8
         // 内容一律紧贴顶部按顺序排列，不做居中/大 Spacer 填空——卡片下方多余的空间就是留白，
         // 跟 Apple 自家 Widget（日历/提醒事项）的处理一致（用户反馈：居中处理反而显得断层、不协调）。
         // 根因：WidgetKit 不会自动把整个可用画布的尺寸提议给这里的根 VStack——内容量少时，VStack
@@ -744,20 +754,15 @@ struct CarryWidgetEntryView: View {
         // 早就用 `.frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)` 显式把
         // 整块画布尺寸要回来、再声明左上对齐，这里补齐同款处理，从根上解决"内容偏少时整体跑到画布中间"。
         return VStack(alignment: .leading, spacing: 8) {
-            widgetHeader(isPlanning: isPlanning, trailing: hasPlannedCount ? planningSummaryText(trip) : nil)
+            widgetHeader(isPlanning: isPlanning, trailing: headerTrailing)
             Text(trip.displayTitle)
                 .font(.system(.title2, design: .rounded).weight(.bold))
                 .lineLimit(1)
             if !hasItinerary || isPlanning {
                 if !hasPlannedCount {
-                    planningGuideText(trip, font: .system(.subheadline, design: .rounded).weight(.medium))
+                    planningGuideText(trip, font: .system(.subheadline, design: .rounded).weight(.medium), showCountdown: false)
                 }
             } else {
-                if let countdown = trip.countdownTextIfDated {
-                    Text(countdown)
-                        .font(.system(.subheadline, design: .rounded).weight(.medium))
-                        .foregroundStyle(.secondary)
-                }
                 ProgressView(value: trip.progress).tint(.primary)
                 HStack {
                     Text(progressText(trip))
@@ -771,9 +776,7 @@ struct CarryWidgetEntryView: View {
                 Divider().padding(.vertical, 2)
                 // 预览行不展示副标题（地址），恒为单行高度，直接按条数封顶即可——
                 // 不再需要 agendaSlotsCapped 那套"副标题占 2 槽"的可变高度预算（用户反馈 2026-07-12）。
-                // 封顶 9 条而非 10——10 条时行高总和逼近画布上限，会把顶部重新挤成不固定
-                // （用户反馈 2026-07-12：达到 10 条时顶部又不固定了，同类根因见本函数上方长注释）。
-                ForEach(Array(preview.prefix(9).enumerated()), id: \.offset) { _, it in
+                ForEach(Array(preview.prefix(previewCap).enumerated()), id: \.offset) { _, it in
                     agendaItemRow(it, coloredIcon: true)
                 }
             }
@@ -823,11 +826,10 @@ struct CarryWidgetEntryView: View {
                     }
                 }
             } else {
-                if let countdown = trip.countdownTextIfDated {
-                    Text(countdown)
-                        .font(.system(.subheadline, design: .rounded).weight(.medium))
-                        .foregroundStyle(.secondary)
-                }
+                // 倒计时不跟标题紧挨着，弱化成分割线下的小字——纯为了好看，倒计时不是这张卡片此刻
+                // 最要紧的信息，打包进度才是。但也不能整块顶到画布最底部：中间会空出一大截、看着
+                // 像断层，比原来「紧跟标题」还难看（用户反馈 2026-07-12）。改成紧跟在打包进度块
+                // 后面——同一组内容里降一级，不再单独占用底部，剩余空间仍然是紧贴内容之后的纯留白。
                 ProgressView(value: trip.progress)
                     .tint(.primary)
                     .padding(.top, 8)
@@ -838,6 +840,12 @@ struct CarryWidgetEntryView: View {
                     Spacer()
                     Text("\(Int((trip.progress * 100).rounded()))%")
                         .font(.system(.caption2, design: .rounded).weight(.semibold))
+                        .foregroundStyle(.secondary)
+                }
+                if let countdown = trip.countdownTextIfDated {
+                    Divider().padding(.top, 4)
+                    Text(countdown)
+                        .font(.system(.caption2, design: .rounded))
                         .foregroundStyle(.secondary)
                 }
             }
@@ -876,47 +884,54 @@ struct CarryWidgetEntryView: View {
 
     private func mediumView(primary: WidgetTrip, secondary: WidgetTrip?) -> some View {
         let isPlanning = primary.isDateless == true
-        let planningPreview = isPlanning ? planningAgendaPreview(primary) : []
+        // 「即将出发（已规划、打包中）」不展示出发当天预览——试过跟 largePreTripView 统一展示，
+        // 但 Medium 只有约 155pt 高，倒计时进头部 + 进度条换线性样式两轮调整后，2 条预览仍然装不下
+        // （用户反馈 2026-07-12：还是显示不下）。这个相位的主线信息是打包进度，预览本就是「空间够时
+        // 的锦上添花」而非必需——Medium 空间不够，就不勉强塞，交给 Large 承担预览这件事；
+        // 只有「规划中」分支（下面这行 `planningPreview` 的唯一来源）继续展示，那个分支已验证过没问题。
+        let preview = isPlanning ? planningAgendaPreview(primary) : []
         let hasPlannedCount = isPlanning && plannedItemsCount(primary) > 0
         // 行程规划为空就统一引导去规划、不展示打包进度，不管规划中还是有日期（用户反馈，见
         // largePreTripView 同款注释）。
         let hasItinerary = primary.hasItinerary
+        // 头部行 trailing：规划中且有条目显示「X Planned」，有日期行程显示倒计时——跟 largePreTripView
+        // 同款处理，正文不再重复一遍（用户反馈 2026-07-12）。
+        let headerTrailing = hasPlannedCount ? planningSummaryText(primary) : primary.countdownTextIfDated
         // 内容一律紧贴顶部按顺序排列，不做居中/大 Spacer 填空，与 largePreTripView 统一（用户反馈）；
         // 显式要回整块画布尺寸 + 声明左上对齐（根因见 largePreTripView 同款注释）。
         return VStack(alignment: .leading, spacing: 10) {
-            HStack(alignment: .center) {
-                VStack(alignment: .leading, spacing: 3) {
-                    widgetHeader(isPlanning: isPlanning, trailing: hasPlannedCount ? planningSummaryText(primary) : nil)
-                    Text(primary.name.isEmpty ? primary.destinationCity : primary.name)
-                        .font(.system(.title2, design: .rounded).weight(.bold))
-                        .lineLimit(1)
-                    if !hasItinerary || isPlanning {
-                        // 规划中兜底/行程规划为空：展示规划进度，不展示打包进度（同 smallView，spec v2）。
-                        if !hasPlannedCount {
-                            planningGuideText(primary, font: .system(.caption, design: .rounded).weight(.semibold))
-                        }
-                    } else {
-                        if let countdown = primary.countdownTextIfDated {
-                            Text(countdown)
-                                .font(.system(.caption, design: .rounded).weight(.semibold))
-                                .foregroundStyle(.secondary)
-                        }
-                        Text(progressText(primary))
-                            .font(.system(.caption2, design: .rounded))
-                            .foregroundStyle(.secondary)
-                    }
+            // `widgetHeader` 必须是这层画布宽 VStack 的直接子视图，才能拿到跟 largePreTripView 一样的
+            // 「完整画布宽度」提案，内部 Spacer 才能把 trailing 摘要真正推到右边缘——之前嵌在
+            // 「标题+倒计时」那个 leading VStack 里（当时还跟进度环平铺在同一个 HStack 里），
+            // 那层 VStack 按内容宽度收缩、不撑满，trailing 文案右边距因此比 Large 明显更大
+            // （用户反馈 2026-07-12：1×4 和 4×4 的 "X Planned" 右边距不一样）。
+            widgetHeader(isPlanning: isPlanning, trailing: headerTrailing)
+            Text(primary.name.isEmpty ? primary.destinationCity : primary.name)
+                .font(.system(.title2, design: .rounded).weight(.bold))
+                .lineLimit(1)
+            if !hasItinerary || isPlanning {
+                // 规划中兜底/行程规划为空：展示规划进度，不展示打包进度（同 smallView，spec v2）。
+                if !hasPlannedCount {
+                    planningGuideText(primary, font: .system(.caption, design: .rounded).weight(.semibold), showCountdown: false)
                 }
-                Spacer()
-                if hasItinerary, !isPlanning {
-                    progressRing(primary.progress)
-                        .frame(width: 58, height: 58)
+            } else {
+                // 原来的 58×58 进度环把「标题+进度」这一行的高度顶到跟环一样高，挤占了下面预览列表
+                // 的空间（用户反馈 2026-07-12：怀疑是环太大导致内容显示不全）。改成跟 largePreTripView
+                // 同款的线性进度条，高度只要几 pt，把腾出的空间让给预览条目；两个尺寸视觉也更统一。
+                ProgressView(value: primary.progress).tint(.primary)
+                HStack {
+                    Text(progressText(primary))
+                    Spacer()
+                    Text("\(Int((primary.progress * 100).rounded()))%")
                 }
+                .font(.system(.caption2, design: .rounded))
+                .foregroundStyle(.secondary)
             }
 
-            if isPlanning, !planningPreview.isEmpty {
+            if !preview.isEmpty {
                 Divider()
                 // 预览行不再展示地址副标题、恒为单行高度，腾出的空间够多展示 1 条（用户反馈 2026-07-12）。
-                ForEach(Array(planningPreview.prefix(2).enumerated()), id: \.offset) { _, it in
+                ForEach(Array(preview.prefix(2).enumerated()), id: \.offset) { _, it in
                     agendaItemRow(it, coloredIcon: true)
                 }
             }
@@ -945,20 +960,6 @@ struct CarryWidgetEntryView: View {
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         .widgetURL(primary.deepLink)
-    }
-
-    private func progressRing(_ value: Double) -> some View {
-        ZStack {
-            Circle()
-                .stroke(.secondary.opacity(0.2), lineWidth: 5)
-            Circle()
-                .trim(from: 0, to: max(0.001, value))
-                .stroke(.primary, style: StrokeStyle(lineWidth: 5, lineCap: .round))
-                .rotationEffect(.degrees(-90))
-            Text("\(Int((value * 100).rounded()))%")
-                .font(.system(size: 13, weight: .bold, design: .rounded))
-                .minimumScaleFactor(0.7)
-        }
     }
 
     // MARK: Empty
