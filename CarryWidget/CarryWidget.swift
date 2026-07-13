@@ -537,68 +537,113 @@ struct CarryWidgetEntryView: View {
         .foregroundStyle(.secondary)
     }
 
-    /// 「今天」/「今天 · 共 N 处」副标题（无时刻安排时替代倒计时行）。
-    private func todayCaption(_ trip: WidgetTrip, now: Date) -> some View {
-        let count = trip.todayPlan(asOf: now).count
-        let s = count > 1
-            ? String.localizedStringWithFormat(NSLocalizedString("widget.companion.today_count", comment: ""), count)
-            : NSLocalizedString("widget.companion.today", comment: "")
-        return Text(s)
-            .font(.system(.subheadline, design: .rounded).weight(.medium))
-            .foregroundStyle(.secondary)
-    }
-
     // MARK: In-trip Small
 
     private func inTripSmallView(_ trip: WidgetTrip, now: Date) -> some View {
         let nextEv = trip.nextEvent(asOf: now)
-        return VStack(alignment: .leading, spacing: 4) {
-            Text("widget.agenda.title")
-                .font(.system(.caption, design: .rounded).weight(.semibold))
-                .textCase(.uppercase)
-                .tracking(0.4)
-                .foregroundStyle(.secondary)
-                .lineLimit(1)
-                .minimumScaleFactor(0.8)
-            Spacer(minLength: 2)
-            if let ev = nextEv {
-                Text(trip.agendaDayLabel(trip.currentDayIndex(asOf: ev.date), asOf: now))
-                    .font(.system(.caption2, design: .rounded).weight(.medium))
-                    .foregroundStyle(.secondary)
-                eventTitle(ev)
-                    .font(.system(.subheadline, design: .rounded).weight(.bold))
-                    .lineLimit(3)
-                // 交通类事件（primary=航班号/车次）补一行 secondary（航线），
-                // 否则 1×1 只有一个航班号，信息量不足；checkin/checkout 的 secondary 恒为空，不受影响。
-                if !ev.secondary.isEmpty {
+        let firstPlan = trip.todayPlan(asOf: now).first
+        let heroKind: String? = nextEv?.kind ?? firstPlan?.kind
+        let dayLabelText: String? = {
+            if let ev = nextEv { return trip.agendaDayLabel(trip.currentDayIndex(asOf: ev.date), asOf: now) }
+            if firstPlan != nil { return trip.agendaDayLabel(trip.currentDayIndex(asOf: now), asOf: now) }
+            return nil
+        }()
+        // 三段式：头部+TODAY 固定贴顶（跟 Medium/Large 一样），分割线+今日小结固定贴底，
+        // 中间的图标+地点名在剩下的空白里用前后 Spacer 垂直居中——内容总量没变，只是把原来
+        // 全部堆在顶部、留白甩在最后一段的分布，改成两头固定、中段居中（用户反馈 2026-07-13）。
+        // 不再把图标叠到标题上方（那版已撤回、会溢出），保持图标+标题同一行、safe。
+        return VStack(alignment: .leading, spacing: 6) {
+            HStack(spacing: 5) {
+                Image(systemName: "suitcase.fill").font(.caption2)
+                Text("widget.agenda.title")
+                    .font(.system(.caption2, design: .rounded).weight(.semibold))
+                    .textCase(.uppercase)
+                    .tracking(0.4)
+            }
+            .foregroundStyle(.secondary)
+
+            if let dayLabelText {
+                dayGroupLabel(dayLabelText)
+            }
+
+            Spacer(minLength: 4)
+
+            if let kind = heroKind {
+                HStack(alignment: .center, spacing: 10) {
+                    Image(systemName: icon(for: kind))
+                        .font(.system(size: 19, weight: .semibold))
+                        .foregroundStyle(.white)
+                        .frame(width: 40, height: 40)
+                        .background(categoryColor(for: kind), in: Circle())
+                    Group {
+                        if let ev = nextEv {
+                            eventTitle(ev)
+                        } else if let first = firstPlan {
+                            Text(first.title)
+                        }
+                    }
+                    .font(.system(.subheadline, design: .rounded).weight(.semibold))
+                    .lineLimit(2)
+                    .fixedSize(horizontal: false, vertical: true)
+                }
+                // 交通类事件（primary=航班号/车次）补一行 secondary（航线），否则信息量不足；
+                // checkin/checkout 的 secondary 恒为空，不受影响。
+                if let ev = nextEv, !ev.secondary.isEmpty {
                     Text(verbatim: ev.secondary)
                         .font(.system(.caption2, design: .rounded))
                         .foregroundStyle(.secondary)
                         .lineLimit(1)
+                        .padding(.leading, 50)
                 }
-            } else if let first = trip.todayPlan(asOf: now).first {
-                Text(first.title)
-                    .font(.system(.subheadline, design: .rounded).weight(.bold))
-                    .lineLimit(2)
-                todayCaption(trip, now: now)
             } else {
                 Text(trip.displayTitle)
                     .font(.system(.title2, design: .rounded).weight(.bold))
                     .lineLimit(2)
                     .minimumScaleFactor(0.8)
             }
-            Spacer(minLength: 0)
+
+            Spacer(minLength: 4)
+
+            todayTotalFooter(trip, now: now)
             if let stay = trip.tonightStay(asOf: now) {
                 tonightRow(stay)
             }
         }
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         .widgetURL(trip.deepLink)
+    }
+
+    /// 天分组标签（如 "TODAY"/"TOMORROW"/"MON · 7/14"）——跟 `agendaRenderRows` 渲染天头用的样式
+    /// 完全一致，供进行中的三个尺寸共用同一套视觉语言（用户反馈 2026-07-13）。
+    private func dayGroupLabel(_ text: String) -> some View {
+        Text(text)
+            .font(.system(.caption, design: .rounded).weight(.semibold))
+            .textCase(.uppercase)
+            .tracking(0.4)
+            .foregroundStyle(.secondary)
+    }
+
+    /// 进行中 agenda 列表底部小结——「今日共 N 项」，独立于上方因 `maxItems` 封顶而实际展示的条目数，
+    /// 补偿"少展示几条"丢掉的信息（用户反馈 2026-07-13）。按当前天的 `dayOrder` 从完整 `agenda`
+    /// （非按时刻过滤的 `upcomingAgenda`）数，反映"今天总共安排了几处"而非"还剩几处没去"。
+    @ViewBuilder
+    private func todayTotalFooter(_ trip: WidgetTrip, now: Date) -> some View {
+        let idx = trip.currentDayIndex(asOf: now)
+        let count = (trip.agenda ?? []).filter { $0.dayOrder == idx }.count
+        if count > 0 {
+            Divider().padding(.top, 4).padding(.bottom, 2)
+            Text(String.localizedStringWithFormat(NSLocalizedString("widget.agenda.today_stops", comment: ""), count))
+                .font(.system(.caption2, design: .rounded))
+                .foregroundStyle(.secondary)
+        }
     }
 
     // MARK: In-trip Medium — 复用 agenda 布局，maxSlots 更小
 
     private func inTripMediumView(_ trip: WidgetTrip, now: Date) -> some View {
-        agendaView(trip, now: now, maxSlots: 5)
+        // 1 条：2 条 + 地址 + 分割线 + 小结在 Medium 真实高度上会溢出，撤回过一次；居中卡片式
+        // （图标叠标题上方）同样溢出、已撤回（用户反馈 2026-07-13）。退回列表行样式，1 条。
+        agendaView(trip, now: now, maxSlots: 3, maxItems: 1)
     }
 
     // MARK: Large — 按天分组的「接下来的行程」概览（spec: widget-upcoming-large.md）
@@ -633,33 +678,24 @@ struct CarryWidgetEntryView: View {
         return rows
     }
 
-    /// `coloredIcon`：图标是否用类别色圆底（对标 Tripsy 的事件列表，参考截图+用户反馈 2026-07-12）。
-    /// 仅供规划中/即将出发的预览列表使用，默认 false 保持 `agendaView`（进行中）原样不变——
-    /// 用户明确要求这轮只调规划中/即将出发两种状态，进行中不动。同时复用这个开关抑制副标题（地址）：
-    /// 完整门牌+行政区划全称对「一眼扫过」的预览场景信息密度过高、且长地址会被 lineLimit(1) 硬切在
-    /// 单词中间，观感粗糙（用户反馈 2026-07-12，见 docs/design-north-star.md 第 1/7 条）；进行中的
-    /// agendaView 场景不同（用户已在行程里，地址是实际导航需要的信息），不受影响。
+    /// 图标统一用类别色圆底（对标 Tripsy 的事件列表），规划中/即将出发/进行中三种状态共用同一套
+    /// 视觉语言，不再有「进行中朴素图标、别处彩色图标」的不一致（用户反馈 2026-07-13）。
+    /// `showSubtitle`：地址副标题是否展示——跟图标风格解耦成独立参数，因为两者取舍的理由不同：
+    /// 规划中/即将出发预览行的任务是「浏览我规划了什么」，完整门牌是噪音，砍掉（默认 false）；
+    /// 进行中的任务是「我现在要去哪」，地址是实际导航需要的信息，保留（agendaView 传 true）。
     @ViewBuilder
-    private func agendaItemRow(_ it: WidgetAgendaItem, coloredIcon: Bool = false) -> some View {
-        // Small（155pt 宽）用 .subheadline 时地名只能显示 10~12 个字符就被截断，
-        // 比 Medium/Large 明显更狠——预览行的价值在于「认出是哪个地点」，砍得太狠会读不出信息。
-        // coloredIcon 行只在 pre-trip 预览里用（agendaView 进行中路径恒为 coloredIcon: false，
-        // 且从不在 systemSmall 下渲染），缩小仅影响这里，不影响进行中样式（用户反馈 2026-07-12）。
-        let isCompact = coloredIcon && family == .systemSmall
+    private func agendaItemRow(_ it: WidgetAgendaItem, showSubtitle: Bool = false) -> some View {
+        // Small（155pt 宽）用 .subheadline 时地名只能显示 10~12 个字符就被截断，比 Medium/Large
+        // 明显更狠——预览行的价值在于「认出是哪个地点」，砍得太狠会读不出信息。只在不展示地址的
+        // 预览行里收紧（这些是唯一会在 systemSmall 下渲染的调用点，用户反馈 2026-07-12）。
+        let isCompact = !showSubtitle && family == .systemSmall
         VStack(alignment: .leading, spacing: 2) {
             HStack(alignment: .center, spacing: 8) {
-                if coloredIcon {
-                    Image(systemName: icon(for: it.kind))
-                        .font(.system(size: isCompact ? 8 : 10, weight: .semibold))
-                        .foregroundStyle(.white)
-                        .frame(width: isCompact ? 16 : 20, height: isCompact ? 16 : 20)
-                        .background(categoryColor(for: it.kind), in: Circle())
-                } else {
-                    Image(systemName: icon(for: it.kind))
-                        .font(.system(size: 13, weight: .semibold))
-                        .foregroundStyle(.secondary)
-                        .frame(width: 20)
-                }
+                Image(systemName: icon(for: it.kind))
+                    .font(.system(size: isCompact ? 8 : 10, weight: .semibold))
+                    .foregroundStyle(.white)
+                    .frame(width: isCompact ? 16 : 20, height: isCompact ? 16 : 20)
+                    .background(categoryColor(for: it.kind), in: Circle())
                 Text(it.title)
                     .font(.system(isCompact ? .caption : .subheadline, design: .rounded).weight(.medium))
                     .lineLimit(1)
@@ -672,7 +708,7 @@ struct CarryWidgetEntryView: View {
                         .monospacedDigit()
                 }
             }
-            if !coloredIcon, !it.subtitle.isEmpty {
+            if showSubtitle, !it.subtitle.isEmpty {
                 Text(it.subtitle)
                     .font(.system(.caption2, design: .rounded))
                     .foregroundStyle(.secondary)
@@ -682,9 +718,11 @@ struct CarryWidgetEntryView: View {
         }
     }
 
-    /// Large 和 Medium 共用的 agenda 列表视图，maxSlots 控制装填量。
-    private func agendaView(_ trip: WidgetTrip, now: Date, maxSlots: Int) -> some View {
-        let items = trip.upcomingAgenda(asOf: now)
+    /// Large 和 Medium 共用的 agenda 列表视图。`maxSlots` 是视觉槽兜底（防止极端情况撑爆画布），
+    /// `maxItems` 才是主要的条数封顶——2 条带地址的条目挤在 Medium 里底边距明显不够，改成「少展示
+    /// 几条 + 底部『今日共 N 项』小结」腾出呼吸感，小结补偿被截掉的条目信息（用户反馈 2026-07-13）。
+    private func agendaView(_ trip: WidgetTrip, now: Date, maxSlots: Int, maxItems: Int) -> some View {
+        let items = Array(trip.upcomingAgenda(asOf: now).prefix(maxItems))
         let rows = agendaRenderRows(items, maxSlots: maxSlots)
         return VStack(alignment: .leading, spacing: 9) {
             HStack {
@@ -706,17 +744,14 @@ struct CarryWidgetEntryView: View {
             } else {
                 ForEach(rows) { row in
                     if let d = row.dayOrder {
-                        Text(trip.agendaDayLabel(d, asOf: now))
-                            .font(.system(.caption, design: .rounded).weight(.semibold))
-                            .textCase(.uppercase)
-                            .tracking(0.4)
-                            .foregroundStyle(.secondary)
+                        dayGroupLabel(trip.agendaDayLabel(d, asOf: now))
                             .padding(.top, 6)
                             .padding(.bottom, 2)
                     } else if let it = row.item {
-                        agendaItemRow(it)
+                        agendaItemRow(it, showSubtitle: true)
                     }
                 }
+                todayTotalFooter(trip, now: now)
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
@@ -724,8 +759,10 @@ struct CarryWidgetEntryView: View {
     }
 
     private func largeAgendaView(_ trip: WidgetTrip, now: Date) -> some View {
-        // maxSlots=10：天头1槽、无副标题条目1槽、有副标题条目2槽；留底部自然白边而非强制撑满。
-        agendaView(trip, now: now, maxSlots: 13)
+        // maxSlots=13：天头1槽、无副标题条目1槽、有副标题条目2槽；留底部自然白边而非强制撑满。
+        // maxItems=5（原先按槽位算出来的是 6）——少展示 1 条，换底部「今日共 N 项」小结，呼吸感更好
+        // （用户反馈 2026-07-13）。
+        agendaView(trip, now: now, maxSlots: 13, maxItems: 5)
     }
 
     /// 出发前 large：倒计时 + 打包进度 + 出发当天预览。规划中（isDateless）兜底行程改展示规划进度 +
@@ -777,7 +814,7 @@ struct CarryWidgetEntryView: View {
                 // 预览行不展示副标题（地址），恒为单行高度，直接按条数封顶即可——
                 // 不再需要 agendaSlotsCapped 那套"副标题占 2 槽"的可变高度预算（用户反馈 2026-07-12）。
                 ForEach(Array(preview.prefix(previewCap).enumerated()), id: \.offset) { _, it in
-                    agendaItemRow(it, coloredIcon: true)
+                    agendaItemRow(it)
                 }
             }
             Spacer(minLength: 0)
@@ -822,7 +859,7 @@ struct CarryWidgetEntryView: View {
                     Divider().padding(.vertical, 2)
                     // 缩字号后单行更矮，且截图显示 3 条下方仍有余量——放到 4 条（用户反馈 2026-07-12）。
                     ForEach(Array(planningPreview.prefix(4).enumerated()), id: \.offset) { _, it in
-                        agendaItemRow(it, coloredIcon: true)
+                        agendaItemRow(it)
                     }
                 }
             } else {
@@ -932,7 +969,7 @@ struct CarryWidgetEntryView: View {
                 Divider()
                 // 预览行不再展示地址副标题、恒为单行高度，腾出的空间够多展示 1 条（用户反馈 2026-07-12）。
                 ForEach(Array(preview.prefix(2).enumerated()), id: \.offset) { _, it in
-                    agendaItemRow(it, coloredIcon: true)
+                    agendaItemRow(it)
                 }
             }
 
