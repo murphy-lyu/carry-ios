@@ -543,11 +543,14 @@ struct CarryWidgetEntryView: View {
         let nextEv = trip.nextEvent(asOf: now)
         let firstPlan = trip.todayPlan(asOf: now).first
         let heroKind: String? = nextEv?.kind ?? firstPlan?.kind
-        // 无论有没有下一件事，天数标签都要展示——跟 Medium/Large 的 dayHeader 一样常驻，
-        // 否则「今天没安排」这个真实状态在 1×1 上直接被略过、显得跟另外两个尺寸不同步（用户反馈 2026-07-13）。
-        let dayLabelText: String = {
+        // 「TODAY/TOMORROW」和 Medium/Large 头部的「DAY N/M」是两码事，不能互相替代：前者是相对日期
+        // 分组标签，专门用来分辨「下一件事是今天的还是滚到明天了」，只有真的有下一件事时才有信息量。
+        // 没有下一件事时压根没有可分辨的对象——此时改用「DAY N/M」这个跟 Medium/Large 一致的行程进度
+        // 常驻信息（见下方 body），而不是显示一个永远等于「今天」、没有信息量的空转标签（用户反馈 2026-07-13）。
+        let dayLabelText: String? = {
             if let ev = nextEv { return trip.agendaDayLabel(trip.currentDayIndex(asOf: ev.date), asOf: now) }
-            return trip.agendaDayLabel(trip.currentDayIndex(asOf: now), asOf: now)
+            if firstPlan != nil { return trip.agendaDayLabel(trip.currentDayIndex(asOf: now), asOf: now) }
+            return nil
         }()
         // 三段式：头部+TODAY 固定贴顶（跟 Medium/Large 一样），分割线+今日小结固定贴底，
         // 中间的图标+地点名在剩下的空白里用前后 Spacer 垂直居中——内容总量没变，只是把原来
@@ -563,7 +566,11 @@ struct CarryWidgetEntryView: View {
             }
             .foregroundStyle(.secondary)
 
-            dayGroupLabel(dayLabelText)
+            if let dayLabelText {
+                dayGroupLabel(dayLabelText)
+            } else {
+                dayHeader(trip, now: now)
+            }
 
             Spacer(minLength: 4)
 
