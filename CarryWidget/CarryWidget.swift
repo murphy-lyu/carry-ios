@@ -543,10 +543,11 @@ struct CarryWidgetEntryView: View {
         let nextEv = trip.nextEvent(asOf: now)
         let firstPlan = trip.todayPlan(asOf: now).first
         let heroKind: String? = nextEv?.kind ?? firstPlan?.kind
-        let dayLabelText: String? = {
+        // 无论有没有下一件事，天数标签都要展示——跟 Medium/Large 的 dayHeader 一样常驻，
+        // 否则「今天没安排」这个真实状态在 1×1 上直接被略过、显得跟另外两个尺寸不同步（用户反馈 2026-07-13）。
+        let dayLabelText: String = {
             if let ev = nextEv { return trip.agendaDayLabel(trip.currentDayIndex(asOf: ev.date), asOf: now) }
-            if firstPlan != nil { return trip.agendaDayLabel(trip.currentDayIndex(asOf: now), asOf: now) }
-            return nil
+            return trip.agendaDayLabel(trip.currentDayIndex(asOf: now), asOf: now)
         }()
         // 三段式：头部+TODAY 固定贴顶（跟 Medium/Large 一样），分割线+今日小结固定贴底，
         // 中间的图标+地点名在剩下的空白里用前后 Spacer 垂直居中——内容总量没变，只是把原来
@@ -562,9 +563,7 @@ struct CarryWidgetEntryView: View {
             }
             .foregroundStyle(.secondary)
 
-            if let dayLabelText {
-                dayGroupLabel(dayLabelText)
-            }
+            dayGroupLabel(dayLabelText)
 
             Spacer(minLength: 4)
 
@@ -596,10 +595,11 @@ struct CarryWidgetEntryView: View {
                         .padding(.leading, 50)
                 }
             } else {
-                Text(trip.displayTitle)
-                    .font(.system(.title2, design: .rounded).weight(.bold))
-                    .lineLimit(2)
-                    .minimumScaleFactor(0.8)
+                // 今天没有下一件事时，跟 Medium/Large 的 agendaView 空状态用同一句文案（不是
+                // 单纯重复行程名——那样等于没告诉用户「今天没安排」这个真实状态，用户反馈 2026-07-13）。
+                Text("widget.agenda.empty")
+                    .font(.system(.subheadline, design: .rounded))
+                    .foregroundStyle(.secondary)
             }
 
             Spacer(minLength: 4)
