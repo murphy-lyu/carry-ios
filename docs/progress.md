@@ -1,7 +1,31 @@
 # 项目进度
 
 ## 最后更新
-2026-07-10
+2026-07-14
+
+## 上次改动摘要（反馈/联系邮箱统一为工作室邮箱 · 2026-07-14）
+
+> 单会话、无并行。**两处均未提交**（Carry：已改未 stage；legal：已 stage 未 commit）——下次会话务必收尾。
+
+- 把全项目留的个人邮箱 `murphy.lyu@icloud.com` 统一替换为工作室邮箱 `support@nevestudio.app`，不再对外暴露个人邮箱。
+- **Carry 主仓（2 处）**：`CoffeeSheetView.swift` / `SettingsView.swift` 的"意见反馈"mailto 收件地址。build 通过。
+- **legal 仓（`~/Documents/Projects/carry-legal`，即 neve-web；7 文件 10 处）**：privacy zh/en、terms zh/en 各 2 处（正文联系方式 + 末尾"邮箱"栏），`legal/index.html`、`legal/carry/index.html`、`README.md` 各 1 处。`mailto:` 与显示文本同串一并替换，署名"TIAN LYU"保留。已确认仓库无 `icloud.com` 残留。
+- **注意**：`docs/infrastructure.md` 里的 `murphy.lyu@hotmail.com`（Cloudflare/Azure 账号主体）是**另一个邮箱**，非本次范围，未动。
+- **待办**：Carry 提交 + push；legal 提交 + push（Cloudflare Pages 自动部署，线上法务页邮箱随之更新）。
+
+## 上次改动摘要（Widget 三相位 × 三尺寸排版打磨收敛 · 2026-07-12～14）
+
+> 多轮迭代、单会话无并行。**已提交并 push**：`a9435c4`（pre-trip 预览行）/ `39af0df`（upcoming 三尺寸重做）/ `b12d8e2`（in-trip 图标统一 + today-stops footer + Small 重做）。另有 07-12 早间三提交（`72ede91`/`2d7dcc1`/`774bb71`）本次一并纳入 progress 记录。
+
+- **贯穿主线**：把 Widget 三种相位（Planning 规划中 / Upcoming 即将出发 / In-trip 进行中）× 三尺寸（Small 1×1 / Medium 1×4 / Large 4×4）的地点条目视觉语言统一，并按相位差异化信息密度。**本次只调 Planning/Upcoming/In-trip 的地点展示，不碰打包进度主线逻辑**。
+- **地点图标统一为类别色圆底**（对标 Tripsy）：`agendaItemRow` 不再分"朴素描边 vs 彩色圆底"两套，全 App 同一套；配色复用 `SpendCategory`（`categoryColor(for:)`），图标映射对齐 `StopCategoryStyle.swift`（单一真源，`icon(for:)` case-for-case）。修了原 `icon(for:)` 按错误字符串 case 匹配（`"food"`/`"activity"` 等从不命中真实 `kind`）导致 museum/park/train 等 fallback 成通用图钉的 bug。
+- **地址副标题按相位差异化**（与图标风格解耦成独立 `showSubtitle` 参数）：Planning/Upcoming 预览行**不展示**地址（任务是"浏览规划了什么"，完整门牌是噪音、且长地址被 `lineLimit(1)` 硬切在单词中间观感差）；In-trip **展示**地址（任务是"现在要去哪"，地址是实际导航需要）。详见 decisions.md 同日条目。
+- **头部收紧**：Planning/Upcoming 的 Large/Medium 把"X Planned"/倒计时并进头部行 trailing（`widgetHeader(trailing:)`），正文不再重复；从"标题+行程名+数量/倒计时"三行收紧到两行。修了 Medium 的 trailing 右边距比 Large 大的 bug（`widgetHeader` 之前嵌在内层收缩 VStack 里拿不到整宽，改为画布宽 VStack 直接子视图）。
+- **各尺寸条数封顶**（防溢出 + 呼吸感，反复真机校准的最终值）：Large upcoming 预览 8 条、Large in-trip agenda `maxItems: 5`、Medium in-trip `maxItems: 1`（2 条带地址会溢出，撤回过）、Small planning 预览 4 条。**Medium upcoming（有日期已规划、打包中）不展示地点预览**——约 155pt 高塞不下，交给 Large 承担；进度环换成线性进度条（58×58 环占高太多挤掉预览）。
+- **In-trip 新增 `todayTotalFooter`**（"N stops today"，分割线下小字）：Medium/Large 因封顶少展示几条，footer 补偿"今天共几处"的全量信息。新增本地化 `widget.agenda.today_stops`（9 语言 + 复数变体），删除被取代的 `widget.companion.today_count`。抽了共享 `dayGroupLabel`（TODAY/TOMORROW 天头样式三尺寸统一）。
+- **In-trip Small 重做**：头部 + TODAY（独立一行、左对齐）贴顶，分割线 + today-stops footer 贴底，中间"类别色图标 + 地点名"用前后 `Spacer` 在剩余空间垂直居中；地点名 `lineLimit(2)` + `.fixedSize(vertical:true)` 真正撑到两行（只设 lineLimit 不生效，被兄弟视图挤成一行）。
+- **撤回记录（避免下次重试）**：① Small 试过"大图标叠在标题正上方居中"——垂直堆叠比左右并排高得多，在 155pt 画布把头部顶出裁切，已撤回退回"图标+标题同一行"。② Medium in-trip 试过 2 条 / heroStyle 居中卡片——均溢出，退回 1 条列表行。
+- 主 App / Widget build 全程通过；i18n audit [E]=0（`widget.agenda.today_stops` 手写 9 语后审计过，改 xcstrings 未再跑 xcodebuild 覆盖）。**待办**：真机验收 In-trip 三尺寸（尤其 Small 两行标题 + 居中、Medium 1 条 + footer）。
 
 ## 上次改动摘要（Widget 内容居中根因修复 + 空规划统一引导 · 2026-07-10）
 

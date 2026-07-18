@@ -132,7 +132,7 @@ struct SettingsView: View {
         let device = UIDevice.current.model
         let system = "\(UIDevice.current.systemName) \(UIDevice.current.systemVersion)"
 
-        let to = "murphy.lyu@icloud.com"
+        let to = "support@nevestudio.app"
         let subject = "Carry Feedback"
         let body = """
 
