@@ -2073,6 +2073,7 @@ final class TripStore: ObservableObject {
         }
         dismissSurpriseItem(tripId: tripId, itemName: item.name)
         save()
+        reschedulePackProgress(trip)
 #if !targetEnvironment(macCatalyst)
         Task { @MainActor in LiveActivityManager.shared.update(for: trip) }
 #endif
