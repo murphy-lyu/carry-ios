@@ -33,13 +33,6 @@ struct MacGlobePanel: View {
 
     // MARK: - Data
 
-    private static func normalizedCountryCode(_ code: String) -> String {
-        switch code.uppercased() {
-        case "HK", "MO", "TW": return "CN"
-        default: return code.uppercased()
-        }
-    }
-
     private var visitedCities: [VisitedCity] {
         var keyIndex: [String: Int] = [:]
         var cities: [VisitedCity] = []
