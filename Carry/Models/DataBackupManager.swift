@@ -1119,6 +1119,21 @@ final class DataBackupManager {
         }
 
         try context.save()
+        // 还原成功：安全副本已完成使命，只留最近几份防线（+ 每次还原都会新建一份，
+        // 不清理会无限堆积孤儿文件）。失败路径（本函数抛出）刻意不清——那正是需要它的时候。
+        pruneOldSafetyCopies(keepLatest: 3)
         return (backup.trips.count, backup.myItems.count)
+    }
+
+    /// 清理 `performRestore` 生成的 `carry_backup.pre-restore-{epoch}.json` 安全副本，只保留最近 N 份。
+    private func pruneOldSafetyCopies(keepLatest: Int) {
+        guard let backupURL, let dir = backupURL.deletingLastPathComponent() as URL? else { return }
+        let prefix = backupURL.deletingPathExtension().lastPathComponent + ".pre-restore-"
+        guard let entries = try? FileManager.default.contentsOfDirectory(at: dir, includingPropertiesForKeys: nil) else { return }
+        let stale = entries
+            .filter { $0.lastPathComponent.hasPrefix(prefix) && $0.pathExtension == "json" }
+            .sorted { $0.lastPathComponent > $1.lastPathComponent }   // epoch 字符串序 == 时间序，新→旧
+            .dropFirst(keepLatest)
+        for url in stale { try? FileManager.default.removeItem(at: url) }
     }
 }

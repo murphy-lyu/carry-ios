@@ -1,6 +1,6 @@
 import Foundation
 
-#if canImport(ActivityKit)
+#if canImport(ActivityKit) && !targetEnvironment(macCatalyst)
 import ActivityKit
 
 struct PackingActivityAttributes: ActivityAttributes {

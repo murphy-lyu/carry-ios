@@ -1,6 +1,6 @@
 import Foundation
 
-#if canImport(ActivityKit)
+#if canImport(ActivityKit) && !targetEnvironment(macCatalyst)
 import ActivityKit
 
 /// 出行日「下一程」Live Activity 的共享数据模型（spec: widget-transit-live-activity.md）。
