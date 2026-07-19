@@ -13,7 +13,6 @@ struct QuickNoteSheet: View {
 
     @Environment(\.dismiss) private var dismiss
     @State private var text: String = ""
-    @State private var cancelled = false
     @FocusState private var focused: Bool
 
     var body: some View {
@@ -40,7 +39,6 @@ struct QuickNoteSheet: View {
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button(LocalizedStringKey("common.cancel")) {
-                        cancelled = true
                         dismiss()
                     }
                 }
@@ -58,17 +56,11 @@ struct QuickNoteSheet: View {
             text = existingNote
             focused = true
         }
-        .onDisappear {
-            // 下滑关闭 = 放弃（不保存）；只有点「完成」才保存。
-            guard !cancelled else { return }
-            onSave(text)
-        }
     }
 
     private func save() {
         focused = false
         onSave(text)
-        cancelled = true   // 标记已显式保存，onDisappear 不重复调用。
         dismiss()
     }
 }

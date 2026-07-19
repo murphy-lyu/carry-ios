@@ -18,7 +18,6 @@ struct QuickCostSheet: View {
     @State private var amountText: String = ""
     @State private var currencyCode: String = ""
     @State private var showCurrencyPicker = false
-    @State private var cancelled = false
     @FocusState private var numpadFocused: Bool
 
     private var homeCode: String {
@@ -88,7 +87,6 @@ struct QuickCostSheet: View {
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button(LocalizedStringKey("common.cancel")) {
-                        cancelled = true
                         dismiss()
                     }
                 }
@@ -117,16 +115,11 @@ struct QuickCostSheet: View {
                 numpadFocused = true
             }
         }
-        .onDisappear {
-            guard !cancelled else { return }
-            commitSave()
-        }
     }
 
     private func save() {
         numpadFocused = false
         commitSave()
-        cancelled = true
         dismiss()
     }
 
