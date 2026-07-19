@@ -265,7 +265,9 @@ final class DataBackupManager {
     /// passes false: the bytes already persist as sandbox files, so re-reading + base64-encoding
     /// them on every save (e.g. ticking a packing item) would be pure waste.
     /// 把一天的交通段映射为备份镜像（spec: itinerary-transport-lodging.md）。整份备份与单行程导出共用。
-    private func backupSegments(_ day: ItineraryDay) -> [BackupTransportSegment] {
+    /// `includeAttachments`：附件（含缩略图字节）仅供自己用的完整备份/导出携带；「发给同行者」的单行程分享
+    /// 必须传 false——附件可能是证件照/确认单截图，分享渲染器不读附件、天然不该外泄（spec: itinerary-attachments.md）。
+    private func backupSegments(_ day: ItineraryDay, includeAttachments: Bool = true) -> [BackupTransportSegment] {
         day.sortedSegments.map { s in
             BackupTransportSegment(
                 id: s.id, modeRaw: s.modeRaw, carrier: s.carrier, number: s.number,
@@ -286,7 +288,7 @@ final class DataBackupManager {
                 fromAddress: s.fromAddress, toAddress: s.toAddress,
                 phone: s.phone,
                 remindersMuted: s.remindersMuted,
-                attachments: backupAttachments(s.attachments)
+                attachments: includeAttachments ? backupAttachments(s.attachments) : nil
             )
         }
     }
@@ -304,8 +306,8 @@ final class DataBackupManager {
         }
     }
 
-    /// 把一个行程的住宿跨度映射为备份镜像。
-    private func backupLodging(_ trip: TripBundle) -> [BackupLodgingStay] {
+    /// 把一个行程的住宿跨度映射为备份镜像。`includeAttachments` 同 `backupSegments`。
+    private func backupLodging(_ trip: TripBundle, includeAttachments: Bool = true) -> [BackupLodgingStay] {
         trip.safeLodgingStays.map { l in
             BackupLodgingStay(
                 id: l.id, name: l.name, address: l.address,
@@ -317,7 +319,7 @@ final class DataBackupManager {
                 phone: l.phone,
                 timeZoneId: l.timeZoneId,
                 remindersMuted: l.remindersMuted,
-                attachments: backupAttachments(l.attachments)
+                attachments: includeAttachments ? backupAttachments(l.attachments) : nil
             )
         }
     }
@@ -898,11 +900,11 @@ final class DataBackupManager {
                     timeZoneId: $0.timeZoneId
                 )
             }
-            let segments = backupSegments(day)
+            let segments = backupSegments(day, includeAttachments: false)
             return BackupItineraryDay(id: day.id, sortOrder: day.sortOrder, title: day.title, note: day.note,
                                       stops: stops, segments: segments.isEmpty ? nil : segments)
         }
-        let lodgingStays = backupLodging(trip)
+        let lodgingStays = backupLodging(trip, includeAttachments: false)
         let bt = BackupTrip(
             id: trip.id, name: trip.name, destinationCity: trip.destinationCity,
             days: trip.days, dateRange: trip.dateRange, departureDate: trip.departureDate,
@@ -1028,9 +1030,13 @@ final class DataBackupManager {
             CarryLogger.shared.log(.backupSafetyCopyCreated, context: "path=\(safety.lastPathComponent)")
         }
 
-        // Wipe existing data (cascade deletes PackingSection + PackingItem)
-        try context.delete(model: TripBundle.self)
-        try context.delete(model: MyItem.self)
+        // Wipe existing data (cascade deletes PackingSection + PackingItem).
+        // 用逐实例 delete（非类型擦除的批量 `context.delete(model:)`）——后者是直接落盘的批量操作，
+        // 不参与 context 的待提交事务，一旦本函数后续任何一步（重建行程/最终 save）失败，旧数据已经
+        // 永久消失、新数据从未提交，只能靠隐藏的 pre-restore 安全副本手动找回。逐实例 delete 会随下面
+        // 新建的对象一起，在最终唯一一次 `context.save()` 里同生共死——失败即整体不落盘，旧数据完好无损。
+        for t in try context.fetch(FetchDescriptor<TripBundle>()) { context.delete(t) }
+        for m in try context.fetch(FetchDescriptor<MyItem>()) { context.delete(m) }
 
         // Rewrite background image files to the sandbox before relinking trips.
         restoreBackgroundImages(from: backup)

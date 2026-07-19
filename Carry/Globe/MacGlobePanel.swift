@@ -68,7 +68,7 @@ struct MacGlobePanel: View {
 
         func consider(code: String, lat: Double, lon: Double, date: Date) {
             guard !code.isEmpty, lat != 0 else { return }
-            let normalized = Self.normalizedCountryCode(code)
+            let normalized = normalizedCountryCode(code)
             let (pinLat, pinLon): (Double, Double) = {
                 if normalized != code.uppercased(),
                    let centroid = GeocodingData.countryCentroid(for: normalized) {
