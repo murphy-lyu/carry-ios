@@ -133,8 +133,9 @@ struct ImportSharedTripSheet: View {
         guard !importing else { return }
         importing = true
         do {
-            let id = try DataBackupManager.shared.importSharedTrip(from: summary.data, into: context)
-            store.refresh()
+            // 走 TripStore 的漏斗（而非直接调 DataBackupManager）：同步触发提醒重排 + widget snapshot
+            // 刷新，否则新导入/被更新的行程会静默漏排提醒，直到用户碰巧切前后台才补上。
+            let id = try store.importSharedTrip(from: summary.data)
             CarryLogger.shared.log(.itineraryImported, context: isUpdate ? "mode=update" : "mode=new")
             UINotificationFeedbackGenerator().notificationOccurred(.success)
             router.pendingSharedTrip = nil

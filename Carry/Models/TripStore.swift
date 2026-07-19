@@ -384,6 +384,17 @@ final class TripStore: ObservableObject {
         return result
     }
 
+    /// 导入同行者分享的单行程 `.carrytrip`（新建或更新已存在的同 UUID 行程）。
+    /// 与 mergeFromData/mergeBackup 走同一套副作用漏斗——否则新导入/被更新的行程会静默
+    /// 漏排提醒、widget snapshot 也不刷新，直到用户碰巧触发别的重排（如切前后台）才补上。
+    @discardableResult
+    func importSharedTrip(from data: Data) throws -> UUID {
+        let existingIds = Set(trips.map(\.id))
+        let id = try DataBackupManager.shared.importSharedTrip(from: data, into: context)
+        applyPostMergeSideEffects(previousTripIds: existingIds)
+        return id
+    }
+
     /// 还原后清理副作用：旧 trip 的 pending 通知 / Live Activity 必须全清，否则会出现
     /// "通知 ID 指向已不存在的 trip" 或"灵动岛挂着旧行程"等幽灵。然后按新还原的 trip
     /// 重排所有提醒，并触发 widget snapshot 重写。
@@ -789,8 +800,11 @@ final class TripStore: ObservableObject {
             LiveActivityManager.shared.endTransit(tripId: id)
         }
 #endif
-        // 同步清理日历事件，避免"删行程但日历残留"幽灵
-        if UserDefaults.standard.bool(forKey: "calendar_sync_enabled") {
+        // 同步清理日历事件，避免"删行程但日历残留"幽灵。按「是否有权限（=事件可能存在）」
+        // 判断，不按当前「同步」开关——开关只该管「要不要新建」，用户先开同步写了事件、
+        // 又关掉同步开关，事件仍在日历里；此时删行程若只看开关（已是 false）就会跳过清理、
+        // 永久留下孤儿事件（已踩：开关只控制未来写入，不代表过去写过的事件已清空）。
+        if CalendarManager.shared.hasAccess {
             Task { CalendarManager.shared.removeTrip(id) }
         }
         // 清理沙盒里的背景图字节，避免"删行程但图片残留"的孤儿文件（文件名是 UUID，
@@ -1018,20 +1032,26 @@ final class TripStore: ObservableObject {
                 updateCountryCode(for: tripId, city: info.destinationCity)
             }
         }
-        // 同步更新日历事件：退回规划中（无日期）→ 删除；否则按当前数据重写。
-        if UserDefaults.standard.bool(forKey: "calendar_sync_enabled") {
-            if info.isDateless {
+        // 同步更新日历事件：退回规划中（无日期）→ 删除（只看权限，不看当前同步开关——
+        // 开关只管"要不要新建"，不该拦"清理曾经建过的"，理由同 removeTrip）；
+        // 否则按当前数据重写（新写入沿用既有的"同步开关"语义）。
+        if info.isDateless {
+            if CalendarManager.shared.hasAccess {
                 Task { CalendarManager.shared.removeTrip(tripId) }
-            } else {
-                Task { CalendarManager.shared.updateTrip(trip) }
             }
+        } else if UserDefaults.standard.bool(forKey: "calendar_sync_enabled") {
+            Task { CalendarManager.shared.updateTrip(trip) }
         }
 #if !targetEnvironment(macCatalyst)
         Task { @MainActor in
-            // 退回规划中：结束 Live Activity；其余情况正常更新。
+            // 退回规划中：结束 Live Activity；否则先按当前条件尝试启动（覆盖"规划中→有日期"
+            // 或改期后重新进入激活窗口——这两种情况原来的 update(for:) 是空操作，因为没有
+            // 已在跑的 activity 可更新），再刷新一次内容（覆盖"本就在跑、只是改名/目的地"这种
+            // update(for:) 本该处理的路径；startIfNeeded 对已在跑的同一行程会直接空转跳过）。
             if info.isDateless {
                 LiveActivityManager.shared.end(for: tripId)
             } else {
+                LiveActivityManager.shared.startIfNeeded(for: trip)
                 LiveActivityManager.shared.update(for: trip)
             }
         }
