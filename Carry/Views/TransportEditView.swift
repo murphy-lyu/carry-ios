@@ -917,13 +917,13 @@ struct TransportEditView: View {
         if r.from.hasAirport {
             fromName = r.from.name; fromCode = r.from.iata
             if r.from.latitude != 0 || r.from.longitude != 0 { fromLatitude = r.from.latitude; fromLongitude = r.from.longitude }
-            if !r.from.timeZoneId.isEmpty { fromTimeZoneId = r.from.timeZoneId }
+            if !r.from.timeZoneId.isEmpty { fromTimeZoneId = TimeZoneCanonicalizer.canonical(r.from.timeZoneId) }
             fromTerminal = r.from.terminal
         }
         if r.to.hasAirport {
             toName = r.to.name; toCode = r.to.iata
             if r.to.latitude != 0 || r.to.longitude != 0 { toLatitude = r.to.latitude; toLongitude = r.to.longitude }
-            if !r.to.timeZoneId.isEmpty { toTimeZoneId = r.to.timeZoneId }
+            if !r.to.timeZoneId.isEmpty { toTimeZoneId = TimeZoneCanonicalizer.canonical(r.to.timeZoneId) }
             toTerminal = r.to.terminal
         }
         applyFlightTimes(r)
