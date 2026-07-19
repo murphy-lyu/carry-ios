@@ -770,6 +770,9 @@ final class TripStore: ObservableObject {
         // 结束所有 Live Activity，避免重置后灵动岛挂着已不存在的行程
         Task { @MainActor in LiveActivityManager.shared.endAll() }
 #endif
+        // 同 eraseAllData：清掉本地自动备份文件，否则「重置」后下次自动备份写入前，
+        // 手动一次「从本地备份还原」会把刚重置掉的数据原样带回来，与「重置」的意图矛盾。
+        DataBackupManager.shared.clearBackup()
         trips = []
         myItems = []
         draftTrip = nil
