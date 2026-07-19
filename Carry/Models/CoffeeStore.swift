@@ -23,10 +23,47 @@ final class CoffeeStore: ObservableObject {
     @Published var supportCount: Int = 0
     private let supportCountKey = "support_count"
     private let defaults = UserDefaults.standard
+    private var transactionListenerTask: Task<Void, Never>?
 
     init() {
         supportCount = defaults.integer(forKey: supportCountKey)
+        // 唯一确权入口：不仅接收 buy() 直接发起的购买，也覆盖购买过程中 App 被系统中断、
+        // Face ID / Ask to Buy 延迟导致验证结果在 buy() 的 Task 结束后才到达等场景
+        // （StoreKit 2 官方推荐做法）。buy() 本身不再直接记账，避免同一笔交易被计两次。
+        transactionListenerTask = Task { [weak self] in await self?.observeTransactionUpdates() }
         Task { await fetchProducts() }
+    }
+
+    deinit {
+        transactionListenerTask?.cancel()
+    }
+
+    private func observeTransactionUpdates() async {
+        for await result in Transaction.updates {
+            await handle(result)
+        }
+    }
+
+    /// 统一处理入口：`.verified` 才记账+计数；`.unverified` 不记账，但仍要 `finish()`——
+    /// 否则交易会一直卡在队列里反复投递（原实现两者都不处理，静默丢弃已付费但未验证的交易）。
+    private func handle(_ result: VerificationResult<Transaction>) async {
+        switch result {
+        case .verified(let transaction):
+            guard Self.productIDs.contains(transaction.productID) else {
+                await transaction.finish()
+                return
+            }
+            lastPurchasedID = transaction.productID
+            supportCount += 1
+            defaults.set(supportCount, forKey: supportCountKey)
+            CarryLogger.shared.log(.coffeePurchased,
+                context: "product=\(transaction.productID) totalCount=\(supportCount)")
+            await transaction.finish()
+        case .unverified(let transaction, let error):
+            CarryLogger.shared.log(.coffeePurchaseFailed,
+                context: "product=\(transaction.productID) unverified error=\(error.localizedDescription)")
+            await transaction.finish()
+        }
     }
 
     func fetchProducts() async {
@@ -54,22 +91,9 @@ final class CoffeeStore: ObservableObject {
         isPurchasing = true
         defer { isPurchasing = false }
         do {
-            let result = try await product.purchase()
-            switch result {
-            case .success(let verification):
-                if case .verified(let transaction) = verification {
-                    await transaction.finish()
-                    lastPurchasedID = productID
-                    supportCount += 1
-                    defaults.set(supportCount, forKey: supportCountKey)
-                    CarryLogger.shared.log(.coffeePurchased,
-                        context: "product=\(productID) totalCount=\(supportCount)")
-                }
-            case .userCancelled, .pending:
-                break
-            @unknown default:
-                break
-            }
+            // 记账/计数统一交给 observeTransactionUpdates()（唯一确权入口）：`Transaction.updates`
+            // 也会收到这次 purchase() 产生的交易，这里如果再直接记一遍就会把同一笔交易计两次。
+            _ = try await product.purchase()
         } catch {
             CarryLogger.shared.log(.coffeePurchaseFailed,
                 context: "product=\(productID) error=\(error.localizedDescription)")
