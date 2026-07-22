@@ -174,12 +174,15 @@ struct WidgetTrip: Codable, Identifiable {
     }
 
     /// 某天序的分组头文案：今天 / 明天 / 周N · M/D。
+    /// 按「该天序对应的真实日历日期」与「now 的真实日期」直接比较，不借道 `currentDayIndex`——
+    /// 后者专为「行程进行中」设计，出发前会把负数天序钳到 0，导致第 0 天（出发当天，其实还没到）
+    /// 被误标成「今天」而非「明天」（已踩：出发前一晚看 4×4 预览标题，把明天错认成今天）。
     func agendaDayLabel(_ dayOrder: Int, asOf now: Date) -> String {
-        let cur = currentDayIndex(asOf: now)
-        if dayOrder == cur { return NSLocalizedString("widget.companion.today", comment: "") }
-        if dayOrder == cur + 1 { return NSLocalizedString("widget.countdown.tomorrow", comment: "") }
         let cal = Calendar.current
         let date = cal.date(byAdding: .day, value: dayOrder, to: cal.startOfDay(for: departureDate)) ?? departureDate
+        let daysFromNow = cal.dateComponents([.day], from: cal.startOfDay(for: now), to: date).day ?? 0
+        if daysFromNow == 0 { return NSLocalizedString("widget.companion.today", comment: "") }
+        if daysFromNow == 1 { return NSLocalizedString("widget.countdown.tomorrow", comment: "") }
         return date.formatted(.dateTime.weekday(.abbreviated).month(.abbreviated).day())
     }
 
@@ -838,6 +841,13 @@ struct CarryWidgetEntryView: View {
             }
             if !preview.isEmpty {
                 Divider().padding(.vertical, 2)
+                // 有日期行程：预览列表就是「出发当天（day 0）」的安排，补一个日期分组标题跟上面
+                // 打包进度块分开——否则两段内容只隔一条分割线，说不清下面这段到底是哪天的、
+                // 和上面打包进度是什么关系（用户反馈：看不出上下两段的定位区别）。
+                // 规划中（isDateless）没有真实日期可标，维持不加。
+                if !isPlanning {
+                    dayGroupLabel(trip.agendaDayLabel(0, asOf: now))
+                }
                 // 预览行不展示副标题（地址），恒为单行高度，直接按条数封顶即可——
                 // 不再需要 agendaSlotsCapped 那套"副标题占 2 槽"的可变高度预算（用户反馈 2026-07-12）。
                 ForEach(Array(preview.prefix(previewCap).enumerated()), id: \.offset) { _, it in
@@ -870,14 +880,11 @@ struct CarryWidgetEntryView: View {
         // 这行文案（`hasPlannedCount` 为真时跳过 `planningGuideText`），腾出的空间用来多展示 2 条预览
         // （用户反馈 2026-07-12：宁要 3 行地点，不要 3 行头部信息）。count=0 的引导态文案不受影响。
         let planningPreview = isPlanning ? planningAgendaPreview(trip) : []
-        // 倒计时挪进头部行（跟 Large/Medium 的 headerTrailing 同一处理），不再贴着分割线单独占一行——
-        // 那样视觉上跟「进行中」agenda 的 TODAY/TOMORROW 分组标题（同一个本地化 key、同一种灰色小字）
-        // 撞脸，但下面不接任何条目，容易让人以为漏了内容（用户反馈：看不懂逻辑）。挪进头部后，
-        // "Tomorrow" 只会出现在"UPCOMING ⋯ Tomorrow"这一句里，语义是"还有多久出发"，不再跟
-        // agenda 的日期分组标题同框、同款式。
-        let headerTrailing = hasPlannedCount ? planningSummaryText(trip) : trip.countdownTextIfDated
+        // 倒计时（连同「X Planned」）不能像 Large/Medium 那样塞进头部行——Small 只有 155pt 宽，
+        // "UPCOMING"/"PLANNING" 本身已经不短，再加一段 trailing 文字会直接把头部行挤到换行/截断
+        // （已踩：UPCOMING 被挤断成 "UP-/COMING"，Tomorrow 被截成 "Tomorr..."）。头部维持不带 trailing。
         return VStack(alignment: .leading, spacing: 4) {
-            widgetHeader(isPlanning: isPlanning, trailing: headerTrailing)
+            widgetHeader(isPlanning: isPlanning)
             Text(trip.name.isEmpty ? trip.destinationCity : trip.name)
                 .font(.system(.title2, design: .rounded).weight(.bold))
                 .lineLimit(1)
@@ -896,8 +903,8 @@ struct CarryWidgetEntryView: View {
                     }
                 }
             } else {
-                // 倒计时已挪进头部行（headerTrailing），这里只剩打包进度——不再单独占一行，
-                // 也不会跟 agenda 的日期分组标题撞脸（见上方 headerTrailing 注释）。
+                // 倒计时放不进头部行（见上方注释），退回分割线下单独一行；不用 dayGroupLabel 那种
+                // 全大写+字距的样式，避免看起来像"分组标题却没接条目"（用户反馈过的困惑）。
                 ProgressView(value: trip.progress)
                     .tint(.primary)
                     .padding(.top, 8)
@@ -908,6 +915,12 @@ struct CarryWidgetEntryView: View {
                     Spacer()
                     Text("\(Int((trip.progress * 100).rounded()))%")
                         .font(.system(.caption2, design: .rounded).weight(.semibold))
+                        .foregroundStyle(.secondary)
+                }
+                if let countdown = trip.countdownTextIfDated {
+                    Divider().padding(.top, 4)
+                    Text(countdown)
+                        .font(.system(.caption2, design: .rounded))
                         .foregroundStyle(.secondary)
                 }
             }
