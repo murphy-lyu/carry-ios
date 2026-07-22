@@ -582,31 +582,37 @@ struct CarryWidgetEntryView: View {
             Spacer(minLength: 4)
 
             if let kind = heroKind {
-                HStack(alignment: .center, spacing: 10) {
-                    Image(systemName: icon(for: kind))
-                        .font(.system(size: 19, weight: .semibold))
-                        .foregroundStyle(.white)
-                        .frame(width: 40, height: 40)
-                        .background(categoryColor(for: kind), in: Circle())
-                    Group {
-                        if let ev = nextEv {
-                            eventTitle(ev)
-                        } else if let first = firstPlan {
-                            Text(first.title)
+                // 标题行 + 航线副标题行必须紧密配对成一组（spacing 2，同 agendaItemRow 的标题/地址
+                // 配对手法），不能当成外层 VStack(spacing 6) 的两个平级子视图——那样两行间距等同于
+                // 「不相关版块之间」的间距，比标题内部的行距明显大出一截，显得松散挤占空间
+                // （用户反馈：交通类信息两行间距太大）。
+                VStack(alignment: .leading, spacing: 2) {
+                    HStack(alignment: .center, spacing: 10) {
+                        Image(systemName: icon(for: kind))
+                            .font(.system(size: 19, weight: .semibold))
+                            .foregroundStyle(.white)
+                            .frame(width: 40, height: 40)
+                            .background(categoryColor(for: kind), in: Circle())
+                        Group {
+                            if let ev = nextEv {
+                                eventTitle(ev)
+                            } else if let first = firstPlan {
+                                Text(first.title)
+                            }
                         }
+                        .font(.system(.subheadline, design: .rounded).weight(.semibold))
+                        .lineLimit(2)
+                        .fixedSize(horizontal: false, vertical: true)
                     }
-                    .font(.system(.subheadline, design: .rounded).weight(.semibold))
-                    .lineLimit(2)
-                    .fixedSize(horizontal: false, vertical: true)
-                }
-                // 交通类事件（primary=航班号/车次）补一行 secondary（航线），否则信息量不足；
-                // checkin/checkout 的 secondary 恒为空，不受影响。
-                if let ev = nextEv, !ev.secondary.isEmpty {
-                    Text(verbatim: ev.secondary)
-                        .font(.system(.caption2, design: .rounded))
-                        .foregroundStyle(.secondary)
-                        .lineLimit(1)
-                        .padding(.leading, 50)
+                    // 交通类事件（primary=航班号/车次）补一行 secondary（航线），否则信息量不足；
+                    // checkin/checkout 的 secondary 恒为空，不受影响。
+                    if let ev = nextEv, !ev.secondary.isEmpty {
+                        Text(verbatim: ev.secondary)
+                            .font(.system(.caption2, design: .rounded))
+                            .foregroundStyle(.secondary)
+                            .lineLimit(1)
+                            .padding(.leading, 50)
+                    }
                 }
             } else {
                 // 今天没有下一件事时，跟 Medium/Large 的 agendaView 空状态用同一句文案（不是
@@ -721,9 +727,10 @@ struct CarryWidgetEntryView: View {
                     .lineLimit(1)
                 Spacer(minLength: 4)
                 if !it.time.isEmpty {
-                    // 右侧时间是辅助信息，字重应轻于标题（.medium）而非同权重并列。
+                    // 右侧时间是辅助信息：跟标题同用 .subheadline 时，只靠字重（.regular vs .medium）
+                    // 区分不够，视觉上仍跟标题抢注意力（用户反馈：字号太大）。实际调小一档到 .footnote。
                     Text(it.time)
-                        .font(.system(.subheadline, design: .rounded).weight(.regular))
+                        .font(.system(.footnote, design: .rounded).weight(.regular))
                         .foregroundStyle(.secondary)
                         .monospacedDigit()
                 }
