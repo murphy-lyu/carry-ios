@@ -479,7 +479,7 @@ struct CarryWidgetEntryView: View {
         switch kind {
         case "flight", "train", "transport", "bus", "ferry", "cruise",
              "carRental", "carRentalPickup", "carRentalDropoff":
-            return .blue
+            return Color(red: 0.25, green: 0.47, blue: 0.83)  // 精调蓝，同 SpendCategory.transport
         case "checkin", "checkout", "lodging":
             return .indigo
         case "restaurant":

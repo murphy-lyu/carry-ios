@@ -15,7 +15,7 @@ extension SpendCategory {
     /// 系统语义色（暗色自适应、非硬编码 hex），用于比例带与类别点。
     var color: Color {
         switch self {
-        case .transport:   return .blue
+        case .transport:   return Color(red: 0.25, green: 0.47, blue: 0.83)  // 精调蓝，比系统纯蓝柔和
         case .lodging:     return .indigo
         case .restaurant:  return .orange
         case .cafe:        return Color(red: 0.6, green: 0.4, blue: 0.2)  // 咖啡棕
