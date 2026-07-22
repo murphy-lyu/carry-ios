@@ -526,24 +526,7 @@ struct CarryWidgetEntryView: View {
         .foregroundStyle(.secondary)
     }
 
-    /// 今晚住哪行（"Tonight · 酒店名"，占位符由本地化字符串带）。
-    private func tonightRow(_ stay: WidgetStay) -> some View {
-        let s = String(format: NSLocalizedString("widget.companion.tonight", comment: ""), stay.name)
-        return HStack(spacing: 5) {
-            Image(systemName: "bed.double.fill").font(.caption2)
-            Text(s).lineLimit(1)
-        }
-        .font(.system(.caption2, design: .rounded))
-        .foregroundStyle(.secondary)
-    }
-
     // MARK: In-trip Small
-
-    /// Small（155×155pt）的视觉槽总预算：header(1) + 日期标签(1) 固定占 2，hero 行按最坏情况
-    /// （标题 2 行 + 可选副标题 1 行）预留，剩余槽位再按优先级分给小结／今晚住宿——同一套纪律
-    /// 跟 Medium/Large 的 `agendaRenderRows` 一致，只是 Small 没有可枚举的条目数组，槽位靠"预留"
-    /// 而非"数组计数"分配。宁可偏保守（标题实际只渲染 1 行时留一点空白）也不能让内容溢出。
-    private static let smallMaxSlots = 7
 
     private func inTripSmallView(_ trip: WidgetTrip, now: Date) -> some View {
         let nextEv = trip.nextEvent(asOf: now)
@@ -558,24 +541,6 @@ struct CarryWidgetEntryView: View {
             if firstPlan != nil { return trip.agendaDayLabel(trip.currentDayIndex(asOf: now), asOf: now) }
             return nil
         }()
-
-        // 今晚住宿若和 hero 行说的是同一件事（下一件事正是今晚这家的入住），tonightRow 纯属重复
-        // 信息，无论预算够不够都不该显示。
-        let rawTonightStay = trip.tonightStay(asOf: now)
-        let tonightDuplicatesHero = nextEv?.kind == "checkin" && nextEv?.primary == rawTonightStay?.name
-
-        // 槽位预算：header(1) + 日期标签(1) 固定；hero 按最坏情况（标题最多 2 行 + 副标题 1 行，
-        // 空态时只有 1 行文案）预留；剩余槽位按优先级依次分给小结（2 槽：分割线+文字）、
-        // 今晚住宿（1 槽）——放不下就静默省略，不强行都塞上去导致局促（用户反馈）。
-        let heroSlots: Int = {
-            guard heroKind != nil else { return 1 }
-            return 2 + (nextEv?.secondary.isEmpty == false ? 1 : 0)
-        }()
-        var remainingSlots = Self.smallMaxSlots - 2 - heroSlots
-        let footerCount = (trip.agenda ?? []).filter { $0.dayOrder == trip.currentDayIndex(asOf: now) }.count
-        let showFooter = footerCount > 0 && remainingSlots >= 2
-        if showFooter { remainingSlots -= 2 }
-        let showTonightRow = !tonightDuplicatesHero && rawTonightStay != nil && remainingSlots >= 1
 
         // 三段式：头部+TODAY 固定贴顶（跟 Medium/Large 一样），分割线+今日小结固定贴底，
         // 中间的图标+地点名在剩下的空白里用前后 Spacer 垂直居中——内容总量没变，只是把原来
@@ -636,12 +601,10 @@ struct CarryWidgetEntryView: View {
 
             Spacer(minLength: 4)
 
-            if showFooter {
-                todayTotalFooter(trip, now: now)
-            }
-            if showTonightRow, let stay = rawTonightStay {
-                tonightRow(stay)
-            }
+            // 底部固定只留「X stop today」一行，不再叠「今晚住哪」——两行内容堆在这么窄的宽度里
+            // 必然局促，且信息优先级也更低（今晚住哪本就常与上方 hero 重复，见 tonightRow 的历史
+            // 去重逻辑）；今日小结已能回答「今天还有几件事」，一行讲完（用户反馈）。
+            todayTotalFooter(trip, now: now)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         .widgetURL(trip.deepLink)
@@ -669,6 +632,7 @@ struct CarryWidgetEntryView: View {
             Text(String.localizedStringWithFormat(NSLocalizedString("widget.agenda.today_stops", comment: ""), count))
                 .font(.system(.caption2, design: .rounded))
                 .foregroundStyle(.secondary)
+                .lineLimit(1)
         }
     }
 
@@ -677,7 +641,10 @@ struct CarryWidgetEntryView: View {
     private func inTripMediumView(_ trip: WidgetTrip, now: Date) -> some View {
         // 1 条：2 条 + 地址 + 分割线 + 小结在 Medium 真实高度上会溢出，撤回过一次；居中卡片式
         // （图标叠标题上方）同样溢出、已撤回（用户反馈 2026-07-13）。退回列表行样式，1 条。
-        agendaView(trip, now: now, maxSlots: 3, maxItems: 1)
+        // 有效条目预算＝3（天头 1 + 带地址条目 2，刚好 1 条）；`agendaView` 会在小结要显示时
+        // 先扣掉 footerReserveSlots，这里要把它加回来，否则预算被压到 1、连 1 条都放不下、
+        // 直接空转成"No plans yet"（已踩：加小结预留时漏了 Medium 这个本就贴着边算的尺寸）。
+        agendaView(trip, now: now, maxSlots: 3 + Self.footerReserveSlots, maxItems: 1)
     }
 
     // MARK: Large — 按天分组的「接下来的行程」概览（spec: widget-upcoming-large.md）
