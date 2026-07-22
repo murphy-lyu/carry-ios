@@ -641,9 +641,11 @@ struct CarryWidgetEntryView: View {
     private func inTripMediumView(_ trip: WidgetTrip, now: Date) -> some View {
         // 1 条：2 条 + 地址 + 分割线 + 小结在 Medium 真实高度上会溢出，撤回过一次；居中卡片式
         // （图标叠标题上方）同样溢出、已撤回（用户反馈 2026-07-13）。退回列表行样式，1 条。
-        // 有效条目预算＝3（天头 1 + 带地址条目 2，刚好 1 条）；`agendaView` 会在小结要显示时
-        // 先扣掉 footerReserveSlots，这里要把它加回来，否则预算被压到 1、连 1 条都放不下、
-        // 直接空转成"No plans yet"（已踩：加小结预留时漏了 Medium 这个本就贴着边算的尺寸）。
+        // 有效条目预算＝3（天头 1 + 带地址条目 2，刚好 1 条）。Medium 的 maxItems=1 几乎总会截断
+        // 「今天」的条目（今天真实条目数常 >1），小结因此几乎总会触发、`agendaView` 会自动扣掉
+        // footerReserveSlots——这里必须先把它加回去，否则扣完只剩 1、连 1 条都放不下，直接空转成
+        // "No plans yet"（已踩）。Large 不需要同样处理：它的条目预算够大，today 通常不会被截断，
+        // 小结大概率不触发，`agendaView` 会自动不扣槽位。
         agendaView(trip, now: now, maxSlots: 3 + Self.footerReserveSlots, maxItems: 1)
     }
 
@@ -728,12 +730,19 @@ struct CarryWidgetEntryView: View {
     /// 几条 + 底部『今日共 N 项』小结」腾出呼吸感，小结补偿被截掉的条目信息（用户反馈 2026-07-13）。
     private func agendaView(_ trip: WidgetTrip, now: Date, maxSlots: Int, maxItems: Int) -> some View {
         let items = Array(trip.upcomingAgenda(asOf: now).prefix(maxItems))
-        // 小结只在「今天有安排」时才渲染（todayTotalFooter 内部 count > 0 才出），只有这种情况才需要
-        // 预留它的槽位；今天没安排时小结本就不占地方，天头/条目可以用满全部预算。
         let idx = trip.currentDayIndex(asOf: now)
-        let footerWillShow = (trip.agenda ?? []).contains { $0.dayOrder == idx }
-        let rowBudget = footerWillShow ? max(0, maxSlots - Self.footerReserveSlots) : maxSlots
-        let rows = agendaRenderRows(items, maxSlots: rowBudget)
+        let todayTotal = (trip.agenda ?? []).filter { $0.dayOrder == idx }.count
+
+        // 小结的意义是「补偿被截掉看不见的今日条目」——先按满预算试排一次，看今天的条目是否真的
+        // 被截了（Medium maxItems=1 常截；Large maxItems=5 通常今天的条目本就能全展示）。
+        // 只有真被截了才需要小结、也才需要为它预留槽位；没截时小结是纯重复信息（今天独占列表最上面、
+        // 已经完整可见），硬展示只会占地方、把后面本该展示的条目挤没（已踩：那位酒店入住被挤没了）。
+        let fullRows = agendaRenderRows(items, maxSlots: maxSlots)
+        let todayShown = fullRows.filter { $0.item?.dayOrder == idx }.count
+        let footerNeeded = todayShown < todayTotal
+        let rows = footerNeeded
+            ? agendaRenderRows(items, maxSlots: max(0, maxSlots - Self.footerReserveSlots))
+            : fullRows
         return VStack(alignment: .leading, spacing: 9) {
             HStack {
                 Text("widget.agenda.title")
@@ -761,7 +770,9 @@ struct CarryWidgetEntryView: View {
                         agendaItemRow(it, showSubtitle: true)
                     }
                 }
-                todayTotalFooter(trip, now: now)
+                if footerNeeded {
+                    todayTotalFooter(trip, now: now)
+                }
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
