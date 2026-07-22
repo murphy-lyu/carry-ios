@@ -870,8 +870,14 @@ struct CarryWidgetEntryView: View {
         // 这行文案（`hasPlannedCount` 为真时跳过 `planningGuideText`），腾出的空间用来多展示 2 条预览
         // （用户反馈 2026-07-12：宁要 3 行地点，不要 3 行头部信息）。count=0 的引导态文案不受影响。
         let planningPreview = isPlanning ? planningAgendaPreview(trip) : []
+        // 倒计时挪进头部行（跟 Large/Medium 的 headerTrailing 同一处理），不再贴着分割线单独占一行——
+        // 那样视觉上跟「进行中」agenda 的 TODAY/TOMORROW 分组标题（同一个本地化 key、同一种灰色小字）
+        // 撞脸，但下面不接任何条目，容易让人以为漏了内容（用户反馈：看不懂逻辑）。挪进头部后，
+        // "Tomorrow" 只会出现在"UPCOMING ⋯ Tomorrow"这一句里，语义是"还有多久出发"，不再跟
+        // agenda 的日期分组标题同框、同款式。
+        let headerTrailing = hasPlannedCount ? planningSummaryText(trip) : trip.countdownTextIfDated
         return VStack(alignment: .leading, spacing: 4) {
-            widgetHeader(isPlanning: isPlanning)
+            widgetHeader(isPlanning: isPlanning, trailing: headerTrailing)
             Text(trip.name.isEmpty ? trip.destinationCity : trip.name)
                 .font(.system(.title2, design: .rounded).weight(.bold))
                 .lineLimit(1)
@@ -890,10 +896,8 @@ struct CarryWidgetEntryView: View {
                     }
                 }
             } else {
-                // 倒计时不跟标题紧挨着，弱化成分割线下的小字——纯为了好看，倒计时不是这张卡片此刻
-                // 最要紧的信息，打包进度才是。但也不能整块顶到画布最底部：中间会空出一大截、看着
-                // 像断层，比原来「紧跟标题」还难看（用户反馈 2026-07-12）。改成紧跟在打包进度块
-                // 后面——同一组内容里降一级，不再单独占用底部，剩余空间仍然是紧贴内容之后的纯留白。
+                // 倒计时已挪进头部行（headerTrailing），这里只剩打包进度——不再单独占一行，
+                // 也不会跟 agenda 的日期分组标题撞脸（见上方 headerTrailing 注释）。
                 ProgressView(value: trip.progress)
                     .tint(.primary)
                     .padding(.top, 8)
@@ -904,12 +908,6 @@ struct CarryWidgetEntryView: View {
                     Spacer()
                     Text("\(Int((trip.progress * 100).rounded()))%")
                         .font(.system(.caption2, design: .rounded).weight(.semibold))
-                        .foregroundStyle(.secondary)
-                }
-                if let countdown = trip.countdownTextIfDated {
-                    Divider().padding(.top, 4)
-                    Text(countdown)
-                        .font(.system(.caption2, design: .rounded))
                         .foregroundStyle(.secondary)
                 }
             }
