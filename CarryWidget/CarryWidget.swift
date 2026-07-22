@@ -186,6 +186,14 @@ struct WidgetTrip: Codable, Identifiable {
         return date.formatted(.dateTime.weekday(.abbreviated).month(.abbreviated).day())
     }
 
+    /// 纯日期格式（周N · M/D），不做「今天/明天」相对判断——供卡片别处已经展示过相对日期词
+    /// （如出发前 Large 头部的 "Tomorrow"）的场景使用，避免同一张卡片里两处重复同一个词。
+    func absoluteDayLabel(_ dayOrder: Int) -> String {
+        let cal = Calendar.current
+        let date = cal.date(byAdding: .day, value: dayOrder, to: cal.startOfDay(for: departureDate)) ?? departureDate
+        return date.formatted(.dateTime.weekday(.abbreviated).month(.abbreviated).day())
+    }
+
     static let preview = WidgetTrip(
         tripId: "preview",
         name: "Tokyo",
@@ -844,9 +852,11 @@ struct CarryWidgetEntryView: View {
                 // 有日期行程：预览列表就是「出发当天（day 0）」的安排，补一个日期分组标题跟上面
                 // 打包进度块分开——否则两段内容只隔一条分割线，说不清下面这段到底是哪天的、
                 // 和上面打包进度是什么关系（用户反馈：看不出上下两段的定位区别）。
+                // 用 absoluteDayLabel（纯日期，不判断今天/明天）而非 agendaDayLabel——头部
+                // headerTrailing 已经显示过一次「Tomorrow」，这里再说一遍会重复（用户反馈）。
                 // 规划中（isDateless）没有真实日期可标，维持不加。
                 if !isPlanning {
-                    dayGroupLabel(trip.agendaDayLabel(0, asOf: now))
+                    dayGroupLabel(trip.absoluteDayLabel(0))
                 }
                 // 预览行不展示副标题（地址），恒为单行高度，直接按条数封顶即可——
                 // 不再需要 agendaSlotsCapped 那套"副标题占 2 槽"的可变高度预算（用户反馈 2026-07-12）。
