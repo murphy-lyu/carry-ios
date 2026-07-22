@@ -155,11 +155,17 @@ struct WidgetTrip: Codable, Identifiable {
         let cal = Calendar.current
         let comps = cal.dateComponents([.hour, .minute], from: now)
         let nowMinutes = (comps.hour ?? 0) * 60 + (comps.minute ?? 0)
+        // 「按挂钟时间过滤已过条目」只在行程真正开始后才有意义：currentDayIndex 对尚未出发的行程会把
+        // 负数天序钳到 0，这个 0 只是「出发当天」的占位序号、并非「今天」，拿眼下的挂钟分钟数去跟
+        // 明天/后天某个时刻的分钟数比大小毫无意义（21:00 明天 < 23:31 今天，纯属巧合的数值大小，
+        // 却会把明天的航班/餐厅等带时刻条目误判成「已过」而过滤掉——只有入住/退房因用哨兵值天生绕开
+        // 这条过滤才幸免；已踩，出发前一晚查看会把 Day 0 大半真实安排看丢）。
+        let hasStarted = cal.startOfDay(for: now) >= cal.startOfDay(for: departureDate)
         return (agenda ?? []).filter { item in
             guard item.dayOrder >= idx else { return false }
             // 今天的有时刻条目：order = minutes * 2（偶数槽，0…2878），过了就过滤掉。
             // order < 0（退房 = -2）或 order >= 24*60*2（无时刻/入住）不做时刻过滤，直接保留。
-            if item.dayOrder == idx, item.order >= 0, item.order < 24 * 60 * 2 {
+            if hasStarted, item.dayOrder == idx, item.order >= 0, item.order < 24 * 60 * 2 {
                 return item.order / 2 >= nowMinutes
             }
             return true
