@@ -899,6 +899,13 @@ struct CarryWidgetEntryView: View {
                 .font(.system(.title2, design: .rounded).weight(.bold))
                 .lineLimit(1)
                 .minimumScaleFactor(0.7)
+            // 「哪天出发」比打包进度更该先读到——挪到行程名正下方，不再垫在打包进度后面、
+            // 表达顺序倒过来（用户反馈：应该先说时间、再说细节）。
+            if let countdown = trip.countdownTextIfDated {
+                Text(countdown)
+                    .font(.system(.caption2, design: .rounded))
+                    .foregroundStyle(.secondary)
+            }
             if !hasItinerary || isPlanning {
                 // 规划中（isDateless）或行程规划为空的有日期行程：展示规划进度，不展示打包进度——
                 // 「已规划 N 项」更能反映用户实际在推进的事（spec: widget-planning-trip-fallback.md v2）。
@@ -913,8 +920,7 @@ struct CarryWidgetEntryView: View {
                     }
                 }
             } else {
-                // 倒计时放不进头部行（见上方注释），退回分割线下单独一行；不用 dayGroupLabel 那种
-                // 全大写+字距的样式，避免看起来像"分组标题却没接条目"（用户反馈过的困惑）。
+                // 倒计时已挪到行程名下面（见上方），这里只剩打包进度。
                 ProgressView(value: trip.progress)
                     .tint(.primary)
                     .padding(.top, 8)
@@ -925,12 +931,6 @@ struct CarryWidgetEntryView: View {
                     Spacer()
                     Text("\(Int((trip.progress * 100).rounded()))%")
                         .font(.system(.caption2, design: .rounded).weight(.semibold))
-                        .foregroundStyle(.secondary)
-                }
-                if let countdown = trip.countdownTextIfDated {
-                    Divider().padding(.top, 4)
-                    Text(countdown)
-                        .font(.system(.caption2, design: .rounded))
                         .foregroundStyle(.secondary)
                 }
             }
