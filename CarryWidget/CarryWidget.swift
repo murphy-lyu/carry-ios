@@ -538,14 +538,19 @@ struct CarryWidgetEntryView: View {
         }
     }
 
-    /// "DAY N / M" 头部行。
-    private func dayHeader(_ trip: WidgetTrip, now: Date) -> some View {
-        let s = String.localizedStringWithFormat(
+    /// "DAY N / M" 文案（纯字符串，供带图标/不带图标两种呈现共用）。
+    private func dayOfTripText(_ trip: WidgetTrip, now: Date) -> String {
+        String.localizedStringWithFormat(
             NSLocalizedString("widget.companion.day_of", comment: ""),
             trip.currentDayIndex(asOf: now) + 1, trip.spanDays)
-        return HStack(spacing: 5) {
+    }
+
+    /// "DAY N / M" 头部行（带图标）——用于 Medium/Large 头部行右侧，那一行本身没有别的图标，
+    /// 这里的箱子图标是唯一一个。
+    private func dayHeader(_ trip: WidgetTrip, now: Date) -> some View {
+        HStack(spacing: 5) {
             Image(systemName: "suitcase.fill").font(.caption)
-            Text(s)
+            Text(dayOfTripText(trip, now: now))
                 .font(.system(.caption, design: .rounded).weight(.semibold))
                 .textCase(.uppercase)
                 .tracking(0.5)
@@ -586,7 +591,10 @@ struct CarryWidgetEntryView: View {
             if let dayLabelText {
                 dayGroupLabel(dayLabelText)
             } else {
-                dayHeader(trip, now: now)
+                // 没有下一件事时的兜底行：跟上面「TODAY/TOMORROW」分支一样用纯文字样式，
+                // 不能用带图标的 dayHeader——那样会跟上面「NEXT ACTIVITY」那行的箱子图标重复
+                // （已踩：截图里堆了两个手提箱图标）。
+                dayGroupLabel(dayOfTripText(trip, now: now))
             }
 
             Spacer(minLength: 4)
