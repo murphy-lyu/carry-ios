@@ -514,6 +514,16 @@ struct CarryWidgetEntryView: View {
         }
     }
 
+    /// 品牌强调色，跟主 App `CarryAccent.uiColor`（`Models/AppearanceMode.swift`）保持一致的数值——
+    /// Widget target 拿不到主 App 那个 enum（未放 SharedSources/），手动同步，同 `categoryColor` 与
+    /// `SpendCategory.color` 的既有同步惯例。用在卡片标题上给一点品牌存在感，对标 Tripsy 用强调色
+    /// 渲染标题的做法（此前我们标题一律用 primary/secondary 灰白，跟 App 本身的视觉语言脱节）。
+    private static let widgetAccentColor = Color(UIColor { traits in
+        traits.userInterfaceStyle == .dark
+            ? UIColor(red: 0.478, green: 0.612, blue: 0.722, alpha: 1)
+            : UIColor(red: 0.357, green: 0.478, blue: 0.588, alpha: 1)
+    })
+
     /// 事件标题文本：checkin/checkout 前缀本地化（用户数据拼在后），其余直接用用户数据。
     /// 单一 Text（verbatim 组合「已本地化标签 · 用户数据」）：避免 `Text + Text`（iOS 26 弃用）
     /// 与「插值字面量被抽成本地化键」两个坑，且整串作为一体截断更自然。
@@ -571,7 +581,7 @@ struct CarryWidgetEntryView: View {
                     .textCase(.uppercase)
                     .tracking(0.4)
             }
-            .foregroundStyle(.secondary)
+            .foregroundStyle(Self.widgetAccentColor)
 
             if let dayLabelText {
                 dayGroupLabel(dayLabelText)
@@ -654,6 +664,9 @@ struct CarryWidgetEntryView: View {
         let id: String
         var dayOrder: Int? = nil
         var item: WidgetAgendaItem? = nil
+        /// 条目行专属：紧跟在天头后面的第一条不画（天头本身已经分隔过），同一天内后续条目之间画，
+        /// 对标 Tripsy 逐行分割线的干净列表感（用户反馈：行间的呼吸感/分隔跟 Tripsy 比不够）。
+        var showsDividerAbove: Bool = false
     }
 
     /// 把按 (天,序) 排好的条目展开成「天头 + 条目」行序列，封顶 maxSlots 个视觉槽。
@@ -673,7 +686,7 @@ struct CarryWidgetEntryView: View {
                 lastDay = it.dayOrder
                 usedSlots += 1
             }
-            rows.append(AgendaRenderRow(id: "i\(i)", item: it))
+            rows.append(AgendaRenderRow(id: "i\(i)", item: it, showsDividerAbove: !needsHeader))
             usedSlots += itemSlots
         }
         return rows
@@ -726,10 +739,11 @@ struct CarryWidgetEntryView: View {
     private func agendaView(_ trip: WidgetTrip, now: Date, maxSlots: Int, maxItems: Int) -> some View {
         let items = Array(trip.upcomingAgenda(asOf: now).prefix(maxItems))
         let rows = agendaRenderRows(items, maxSlots: maxSlots)
-        return VStack(alignment: .leading, spacing: 9) {
+        return VStack(alignment: .leading, spacing: 10) {
             HStack {
                 Text("widget.agenda.title")
                     .font(.system(.headline, design: .rounded).weight(.bold))
+                    .foregroundStyle(Self.widgetAccentColor)
                 Spacer()
                 dayHeader(trip, now: now)
             }
@@ -750,6 +764,9 @@ struct CarryWidgetEntryView: View {
                             .padding(.top, 6)
                             .padding(.bottom, 2)
                     } else if let it = row.item {
+                        if row.showsDividerAbove {
+                            Divider().padding(.bottom, 1)
+                        }
                         agendaItemRow(it, showSubtitle: true)
                     }
                 }
@@ -912,18 +929,20 @@ struct CarryWidgetEntryView: View {
         HStack(spacing: 5) {
             Image(systemName: "suitcase.fill")
                 .font(.caption)
+                .foregroundStyle(Self.widgetAccentColor)
             Text(isPlanning ? "widget.header.planning" : "widget.header.upcoming")
                 .font(.system(.caption, design: .rounded).weight(.semibold))
                 .textCase(.uppercase)
                 .tracking(0.5)
+                .foregroundStyle(Self.widgetAccentColor)
             if let trailing {
                 Spacer(minLength: 4)
                 Text(trailing)
                     .font(.system(.caption, design: .rounded).weight(.semibold))
                     .lineLimit(1)
+                    .foregroundStyle(.secondary)
             }
         }
-        .foregroundStyle(.secondary)
     }
 
     // MARK: Medium
