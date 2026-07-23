@@ -623,11 +623,6 @@ struct CarryWidgetEntryView: View {
             }
 
             Spacer(minLength: 4)
-
-            // 底部固定只留「X stop today」一行，不再叠「今晚住哪」——两行内容堆在这么窄的宽度里
-            // 必然局促，且信息优先级也更低（今晚住哪本就常与上方 hero 重复，见 tonightRow 的历史
-            // 去重逻辑）；今日小结已能回答「今天还有几件事」，一行讲完（用户反馈）。
-            todayTotalFooter(trip, now: now)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         .widgetURL(trip.deepLink)
@@ -643,33 +638,13 @@ struct CarryWidgetEntryView: View {
             .foregroundStyle(.secondary)
     }
 
-    /// 进行中 agenda 列表底部小结——「今日共 N 项」，独立于上方因 `maxItems` 封顶而实际展示的条目数，
-    /// 补偿"少展示几条"丢掉的信息（用户反馈 2026-07-13）。按当前天的 `dayOrder` 从完整 `agenda`
-    /// （非按时刻过滤的 `upcomingAgenda`）数，反映"今天总共安排了几处"而非"还剩几处没去"。
-    @ViewBuilder
-    private func todayTotalFooter(_ trip: WidgetTrip, now: Date) -> some View {
-        let idx = trip.currentDayIndex(asOf: now)
-        let count = (trip.agenda ?? []).filter { $0.dayOrder == idx }.count
-        if count > 0 {
-            Divider().padding(.top, 4).padding(.bottom, 2)
-            Text(String.localizedStringWithFormat(NSLocalizedString("widget.agenda.today_stops", comment: ""), count))
-                .font(.system(.caption2, design: .rounded))
-                .foregroundStyle(.secondary)
-                .lineLimit(1)
-        }
-    }
-
     // MARK: In-trip Medium — 复用 agenda 布局，maxSlots 更小
 
     private func inTripMediumView(_ trip: WidgetTrip, now: Date) -> some View {
-        // 1 条：2 条 + 地址 + 分割线 + 小结在 Medium 真实高度上会溢出，撤回过一次；居中卡片式
+        // 1 条：2 条 + 地址 + 分割线在 Medium 真实高度上会溢出，撤回过一次；居中卡片式
         // （图标叠标题上方）同样溢出、已撤回（用户反馈 2026-07-13）。退回列表行样式，1 条。
-        // 有效条目预算＝3（天头 1 + 带地址条目 2，刚好 1 条）。Medium 的 maxItems=1 几乎总会截断
-        // 「今天」的条目（今天真实条目数常 >1），小结因此几乎总会触发、`agendaView` 会自动扣掉
-        // footerReserveSlots——这里必须先把它加回去，否则扣完只剩 1、连 1 条都放不下，直接空转成
-        // "No plans yet"（已踩）。Large 不需要同样处理：它的条目预算够大，today 通常不会被截断，
-        // 小结大概率不触发，`agendaView` 会自动不扣槽位。
-        agendaView(trip, now: now, maxSlots: 3 + Self.footerReserveSlots, maxItems: 1)
+        // 有效条目预算＝3（天头 1 + 带地址条目 2，刚好 1 条）。
+        agendaView(trip, now: now, maxSlots: 3, maxItems: 1)
     }
 
     // MARK: Large — 按天分组的「接下来的行程」概览（spec: widget-upcoming-large.md）
@@ -745,28 +720,12 @@ struct CarryWidgetEntryView: View {
         }
     }
 
-    /// 底部「今日共 N 项」小结固定占用的视觉槽（分割线 1 + 文字行 1）——`agendaRenderRows` 的槽预算
-    /// 必须先扣掉它，否则天头/条目正好用满 maxSlots 时小结会被顶到底边、毫无呼吸感（用户反馈）。
-    private static let footerReserveSlots = 2
-
     /// Large 和 Medium 共用的 agenda 列表视图。`maxSlots` 是视觉槽兜底（防止极端情况撑爆画布），
-    /// `maxItems` 才是主要的条数封顶——2 条带地址的条目挤在 Medium 里底边距明显不够，改成「少展示
-    /// 几条 + 底部『今日共 N 项』小结」腾出呼吸感，小结补偿被截掉的条目信息（用户反馈 2026-07-13）。
+    /// `maxItems` 是条数封顶。超出封顶的条目静默不展示（不加「今日共 N 项」这类小结数字——
+    /// 用户反馈：这个数字没有实际信息量，砍掉，把腾出来的空间/槽位让给真正的行程条目）。
     private func agendaView(_ trip: WidgetTrip, now: Date, maxSlots: Int, maxItems: Int) -> some View {
         let items = Array(trip.upcomingAgenda(asOf: now).prefix(maxItems))
-        let idx = trip.currentDayIndex(asOf: now)
-        let todayTotal = (trip.agenda ?? []).filter { $0.dayOrder == idx }.count
-
-        // 小结的意义是「补偿被截掉看不见的今日条目」——先按满预算试排一次，看今天的条目是否真的
-        // 被截了（Medium maxItems=1 常截；Large maxItems=5 通常今天的条目本就能全展示）。
-        // 只有真被截了才需要小结、也才需要为它预留槽位；没截时小结是纯重复信息（今天独占列表最上面、
-        // 已经完整可见），硬展示只会占地方、把后面本该展示的条目挤没（已踩：那位酒店入住被挤没了）。
-        let fullRows = agendaRenderRows(items, maxSlots: maxSlots)
-        let todayShown = fullRows.filter { $0.item?.dayOrder == idx }.count
-        let footerNeeded = todayShown < todayTotal
-        let rows = footerNeeded
-            ? agendaRenderRows(items, maxSlots: max(0, maxSlots - Self.footerReserveSlots))
-            : fullRows
+        let rows = agendaRenderRows(items, maxSlots: maxSlots)
         return VStack(alignment: .leading, spacing: 9) {
             HStack {
                 Text("widget.agenda.title")
@@ -794,9 +753,6 @@ struct CarryWidgetEntryView: View {
                         agendaItemRow(it, showSubtitle: true)
                     }
                 }
-                if footerNeeded {
-                    todayTotalFooter(trip, now: now)
-                }
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
@@ -805,8 +761,6 @@ struct CarryWidgetEntryView: View {
 
     private func largeAgendaView(_ trip: WidgetTrip, now: Date) -> some View {
         // maxSlots=13：天头1槽、无副标题条目1槽、有副标题条目2槽；留底部自然白边而非强制撑满。
-        // maxItems=5（原先按槽位算出来的是 6）——少展示 1 条，换底部「今日共 N 项」小结，呼吸感更好
-        // （用户反馈 2026-07-13）。
         agendaView(trip, now: now, maxSlots: 13, maxItems: 5)
     }
 
