@@ -10,7 +10,10 @@ import ActivityKit
 /// `Text(timerInterval:)` 自走倒计时，本地 `pushType:nil` 即可、过程零 App 干预。
 /// **实时数据就绪**：`liveStatus`/`gate`/`actualDepartureDate` 预留——将来接航班动态 API 时只
 /// 填充并 `update`，**不改本结构**（呼应 `TransportSegment.liveStatusData` 预留字段）。
-struct TransportActivityAttributes: ActivityAttributes {
+// The app target defaults declarations to @MainActor. ActivityKit invokes this
+// value-type conformance from concurrent contexts, so keep the shared payload
+// explicitly nonisolated (the widget target compiles the same source file).
+nonisolated struct TransportActivityAttributes: ActivityAttributes {
 
     struct ContentState: Codable, Hashable {
         // ── 计划信息（schedule-based，必填）──

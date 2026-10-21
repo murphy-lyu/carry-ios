@@ -3255,7 +3255,7 @@ extension TripStore {
     /// App Group shared with CarryWidgetExtension. Requires the matching App Group
     /// capability on both targets; absent it, `UserDefaults(suiteName:)` is nil and
     /// the write is a safe no-op (widget shows its empty state).
-    static let widgetAppGroup = "group.com.murphy.carry"
+    static let widgetAppGroup = "group.app.nevestudio.carry"
     static let widgetSnapshotKey = "carry_widget_trips"
 
     /// 「当地墙上分钟数 + dayOrder + IANA 时区」→ 绝对 `Date`。

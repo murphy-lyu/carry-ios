@@ -1,11 +1,12 @@
-# Apple Sign In + iCloud 同步（账号身份与跨设备同步）
+# iCloud 同步与可选 Apple 登录
 
-> **Status: Draft（待确认后实现）** — 本 spec 等用户确认范围后再开工。
+> **Status: Phase B 已接入，待双机验收；Apple 登录明确延后** — 2026-09-25
 
 ## 已确认的产品决策（来自需求讨论）
 
-1. **范围 = 身份 + iCloud 同步（中档）**：做 Apple 登录拿到身份（名字/邮箱/头像），并用 **CloudKit 私有库**把行程/打包清单跨设备同步。**不**自建后端、**不**做邮箱登录（那是更重的独立特性，留到以后真有需求再说）。
-2. **登录可选**：不登录也能完整使用 App。登录只是「锦上添花」——展示身份、为将来铺路。**禁止**用登录门槛挡住任何现有功能。
+1. 首版只启用 **CloudKit 私有库同步**，不加入 App 内“使用 Apple 登录”。
+2. 不登录 App 也能完整使用；同步使用设备本身的 iCloud 账号。
+3. 不自建后端，不做邮箱登录或多人协作。
 
 ## 关键架构事实（决定怎么建）
 
@@ -23,16 +24,16 @@
 - 关系全部可选 + 显式 `inverse` + `.cascade` ✅
 - 无任何 `@Attribute(.unique)` ✅
 
-→ **开 CloudKit 不需要痛苦的 schema 迁移**。唯一要确认的细节：CloudKit 不支持 `.cascade` 自动删除（它只支持 `.nullify`），SwiftData 在 CloudKit 模式下会把 cascade 当 nullify 处理 → 删除 `TripBundle` 后子记录需由我们显式删（`TripStore` 现有删除逻辑已是显式遍历删，需复核确认不依赖 cascade 兜底）。
+→ 开 CloudKit 不需要 schema 迁移。Apple 当前文档明确不支持的是 `.deny`、唯一约束和非可选关系；`.cascade` 是 SwiftData 支持的删除规则，保留现有关系定义。
 
-## 外部依赖（用户必须在 Xcode / Apple Developer 完成，我无法代劳）
+## 外部依赖状态
 
-1. **Signing & Capabilities** 添加：
-   - **Sign in with Apple**
-   - **iCloud → CloudKit**（新建/选择一个 CloudKit container，如 `iCloud.com.murphy.carry`）
-   - **Background Modes → Remote notifications**（CloudKit 静默推送拉取远端变更）
-2. 上述需有效 provisioning（付费开发者账号，已具备）。
-3. entitlements 文件里的 key 我可以加，但 capability 勾选 + 重签必须在 Xcode 内点。
+1. [x] iCloud → CloudKit，容器 `iCloud.app.nevestudio.carry`
+2. [x] Background Modes → Remote notifications
+3. [x] Team `25RAM7275Z` 的有效 provisioning profile
+4. [x] Release 真机构建、签名、安装
+5. [x] 真机冷启动成功，未触发 in-memory fallback
+6. [ ] 双机同步、删除重装恢复、Production schema 部署
 
 ## App Store 合规
 
@@ -42,7 +43,7 @@
 
 ## 实现分期
 
-### Phase A — Apple 登录身份（自包含，先做，立即可见效果）
+### Phase A — Apple 登录身份（首版不做）
 1. `AccountStore: ObservableObject`（注入 environment）：
    - `signInState`（`.signedOut` / `.signedIn(profile)`）、`displayName`、`email`、`userIdentifier`
    - Keychain 存 `userIdentifier` + 首次返回的 name/email
@@ -54,13 +55,13 @@
 3. 文案：所有新增 UI 文案进 `Localizable.xcstrings`，补全 9 种语言。
 4. 埋点：登录成功/失败/登出/删除账号 Event（按 `CarryLogger` 闭环规范，定义即接线）。
 
-### Phase B — iCloud 同步（依赖用户先开 capability）
-1. `CarryApp.container`：`ModelConfiguration` 加 `cloudKitDatabase: .private("iCloud.com.murphy.carry")`（或 `.automatic`）。in-memory fallback 分支不动。
-2. 复核 `TripStore` 删除路径不依赖 cascade 兜底（CloudKit 下 cascade 退化为 nullify）。
+### Phase B — iCloud 同步（已接入，待验收）
+1. [x] `CarryApp.container` 使用 `ModelConfiguration(..., cloudKitDatabase: .automatic)`；in-memory fallback 显式使用 `.none`。
+2. [x] `Carry.entitlements` 使用 `iCloud.app.nevestudio.carry`；Info.plist 开启 Remote notifications。
 3. 真机验证：两台同 iCloud 账号设备增删行程/物品 → 双向同步；无 iCloud 账号设备 → 纯本地正常工作（不崩、不报错）。
 4. 首次开启 CloudKit 后，Development → Production schema 部署（CloudKit Dashboard）必须在上架前完成，否则线上用户同步失败。
 
-### Phase C — 账号删除（合规，A/B 完成后）
+### Phase C — 账号删除（仅未来加入 Apple 登录时需要）
 - 删除流程：二次确认 → 清 CloudKit 私有库（删本地所有 `@Model` 实例并等待同步推送删除）+ 清 Keychain + 状态归零。
 
 ## 明确不做（本特性边界）

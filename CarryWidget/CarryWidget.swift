@@ -12,7 +12,7 @@ import UIKit
 
 // MARK: - Shared data (mirror of TripStore.WidgetTripSnapshot)
 
-private let widgetAppGroup = "group.com.murphy.carry"
+private let widgetAppGroup = "group.app.nevestudio.carry"
 private let widgetSnapshotKey = "carry_widget_trips"
 
 /// 行程「有时间的事件」镜像（spec: widget-trip-companion.md）。绝对 `date` 由主 App 按活动时区算好；

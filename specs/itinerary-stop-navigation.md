@@ -37,7 +37,7 @@ GCJ-02→BD-09 用公开标准算法（约 10 行，`MapNavigationService` 内�
 - **Apple**：`MKMapItem(placemark:).openInMaps(launchOptions: [MKLaunchOptionsDirectionsModeKey: MKLaunchOptionsDirectionsModeDriving])`，`mapItem.name = stop.name`。
 - **高德**：`iosamap://path?sourceApplication=Carry&slat=&slon=&dlat={lat}&dlon={lon}&dname={name}&dev=0&t=0`
 - **Google**：`comgooglemaps://?daddr={lat},{lon}&directionsmode=driving`
-- **百度**：`baidumap://map/direction?destination=latlng:{bdLat},{bdLon}|name:{name}&mode=driving&coord_type=bd09ll&src=com.murphy.carry`
+- **百度**：`baidumap://map/direction?destination=latlng:{bdLat},{bdLon}|name:{name}&mode=driving&coord_type=bd09ll&src=app.nevestudio.carry`
 
 `{name}` 需 URL 编码。
 

@@ -20,7 +20,7 @@
           "locale" : "zh_CN"
         }
       ],
-      "productID" : "com.murphy.carry.juice",
+      "productID" : "app.nevestudio.carry.juice",
       "referenceName" : "Juice",
       "type" : "Consumable"
     },
@@ -40,7 +40,7 @@
           "locale" : "zh_CN"
         }
       ],
-      "productID" : "com.murphy.carry.americano",
+      "productID" : "app.nevestudio.carry.americano",
       "referenceName" : "Americano",
       "type" : "Consumable"
     },
@@ -60,7 +60,7 @@
           "locale" : "zh_CN"
         }
       ],
-      "productID" : "com.murphy.carry.latte",
+      "productID" : "app.nevestudio.carry.latte",
       "referenceName" : "Latte",
       "type" : "Consumable"
     },
@@ -80,7 +80,7 @@
           "locale" : "zh_CN"
         }
       ],
-      "productID" : "com.murphy.carry.cappuccino",
+      "productID" : "app.nevestudio.carry.cappuccino",
       "referenceName" : "Cappuccino",
       "type" : "Consumable"
     },
@@ -100,7 +100,7 @@
           "locale" : "zh_CN"
         }
       ],
-      "productID" : "com.murphy.carry.beer",
+      "productID" : "app.nevestudio.carry.beer",
       "referenceName" : "Beer",
       "type" : "Consumable"
     }

@@ -41,10 +41,10 @@ private extension UserDefaults {
 /// system from AppShortcutsProvider (which only feeds Spotlight/Siri/Shortcuts), so
 /// they must be wired explicitly via the scene delegate.
 enum CarryQuickAction {
-    static let newTrip     = "com.murphy.carry.quickaction.new_trip"
-    static let nearestTrip = "com.murphy.carry.quickaction.nearest_trip"
+    static let newTrip     = "app.nevestudio.carry.quickaction.new_trip"
+    static let nearestTrip = "app.nevestudio.carry.quickaction.nearest_trip"
     /// 「My Trip Book」长按入口（原 Footprint→地图，现重指向行程册 sheet）。
-    static let tripBook    = "com.murphy.carry.quickaction.trip_book"
+    static let tripBook    = "app.nevestudio.carry.quickaction.trip_book"
 
     /// Translates a tapped quick action into the shared UserDefaults action.
     /// Writing the key triggers `UserDefaults.didChangeNotification`, which

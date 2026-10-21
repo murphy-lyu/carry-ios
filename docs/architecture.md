@@ -111,9 +111,9 @@ ZStack（全窗口）
 - `TripStore.inferCountryCodes` / `inferIsInternational`：geocoding 异步完成前用本地城市表同步推断国家码，避免证件误推
 
 ## Widget Extension（CarryWidgetExtension）
-- 独立 target，bundle ID `com.murphy.carry.CarryWidget`
+- 独立 target，bundle ID `app.nevestudio.carry.widget`
 - `CarryWidgetBundle`：注册 `CarryWidget`（桌面组件）+ `CarryWidgetLiveActivity`（打包 LA）+ `CarryTransitLiveActivity`（交通 LA）
-- **`CarryWidget`（桌面组件，spec: widget-trip-companion.md）**：`.systemSmall`/`.systemMedium`，**随旅行相位自适应**——出发前=倒计时+打包进度（现状）；旅行中=`Day N/M` + 下一件事倒计时 + 今晚住哪/退房。数据从 App Group（`group.com.murphy.carry` → `carry_widget_trips`）解码 `WidgetTrip`（镜像主 App 的 `WidgetTripSnapshot`）。相位/当前天/下一件事在 Widget 侧按 `entry.date` 推导（事件绝对时刻由 App 预算好），timeline 在「每个未来事件 + 每日午夜」放 entry → 跨天自走、App 不开也对。外观选择器（Automatic/Light/Dark）见 `WidgetColorSchemeOverride`
+- **`CarryWidget`（桌面组件，spec: widget-trip-companion.md）**：`.systemSmall`/`.systemMedium`，**随旅行相位自适应**——出发前=倒计时+打包进度（现状）；旅行中=`Day N/M` + 下一件事倒计时 + 今晚住哪/退房。数据从 App Group（`group.app.nevestudio.carry` → `carry_widget_trips`）解码 `WidgetTrip`（镜像主 App 的 `WidgetTripSnapshot`）。相位/当前天/下一件事在 Widget 侧按 `entry.date` 推导（事件绝对时刻由 App 预算好），timeline 在「每个未来事件 + 每日午夜」放 entry → 跨天自走、App 不开也对。外观选择器（Automatic/Light/Dark）见 `WidgetColorSchemeOverride`
 - `CarryWidgetLiveActivity`：打包进度。锁屏卡片（LockScreenView）+ 灵动岛（展开/紧凑/最小态）
 - `CarryTransitLiveActivity`：出行日「下一程」。锁屏卡片（FROM→TO + `Text(timerInterval:)` 倒计时 + 航站楼/座位）+ 灵动岛三态；相位（起飞前/途中/已抵达）渲染时按 `Date()` 判定
 - `CarryWidget/Localizable.xcstrings`：widget 专属本地化（9 种语言）。⚠️ 纯数据/分隔符用 `Text(verbatim:)`，避免 `Text("\(a) → \(b)")` 被 Xcode 抽成本地化键

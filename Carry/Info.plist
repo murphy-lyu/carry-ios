@@ -15,6 +15,8 @@
 			</array>
 		</dict>
 	</array>
+	<key>ITSAppUsesNonExemptEncryption</key>
+	<false/>
 	<key>NSCameraUsageDescription</key>
 	<string>Carry uses the camera so you can photograph documents — like a rental contract or hotel confirmation — and attach them to your trip. Photos are stored only on your device.</string>
 	<key>NSCalendarsFullAccessUsageDescription</key>
@@ -23,15 +25,21 @@
 	<string>Carry uses your location to show your current position on the travel map.</string>
 	<key>NSHealthShareUsageDescription</key>
 	<string>Carry reads your Cycle Tracking on-device to remind you to pack period essentials when a trip may overlap your period. This data never leaves your device.</string>
+	<key>NSHealthUpdateUsageDescription</key>
+	<string>Carry does not write to Apple Health. Period reminders only read Cycle Tracking data on your device.</string>
 	<key>NSSupportsLiveActivities</key>
 	<true/>
+	<key>UIBackgroundModes</key>
+	<array>
+		<string>remote-notification</string>
+	</array>
 	<key>LSSupportsOpeningDocumentsInPlace</key>
 	<true/>
 	<key>UTExportedTypeDeclarations</key>
 	<array>
 		<dict>
 			<key>UTTypeIdentifier</key>
-			<string>com.murphy.carry.trip</string>
+			<string>app.nevestudio.carry.trip</string>
 			<key>UTTypeDescription</key>
 			<string>Carry Trip</string>
 			<key>UTTypeConformsTo</key>
@@ -58,7 +66,7 @@
 			<string>Owner</string>
 			<key>LSItemContentTypes</key>
 			<array>
-				<string>com.murphy.carry.trip</string>
+				<string>app.nevestudio.carry.trip</string>
 			</array>
 		</dict>
 	</array>

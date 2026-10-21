@@ -34,8 +34,8 @@ App Store Connect 提交审核时「隐私政策 URL」为必填项，缺少则�
 - **Apple MapKit / CLGeocoder**：地图和地理编码服务由 Apple 提供。
 
 **数据存储与安全**
-- 所有用户数据（行程、物品清单）仅存储在用户设备本地（SwiftData + 本地备份文件）。
-- 不存在云同步、远程服务器或后端数据库。
+- 行程、物品清单保存在设备本地，并通过用户自己的 iCloud 私有 CloudKit 数据库在其设备间同步；开发者无法读取这些私有数据。
+- 用户可以导出本地备份文件。航班查询会把航班号和日期发送到 Carry 的查询代理，地点、天气及地图查询会把完成请求所需的查询词或坐标发送给对应服务商；这些查询不与 Carry 账号或广告标识关联。
 
 **用户权利**
 - 面向 EU 用户（GDPR）：用户可随时在 App 内删除所有数据（设置 → 恢复数据），或直接卸载 App，所有本地数据随之清除。
@@ -77,16 +77,16 @@ App Store Connect → App → App Privacy → 「Get Started」或「Edit」
 
 ---
 
-## 3. TestFlight（待完成）
+## 3. TestFlight（进行中）
 
-**前提条件：** 已付费加入 Apple Developer Program（$99/年）
+**当前状态（2026-10-21 本地记录）：** App Store Connect 应用记录已创建，build `1.0 (1)` 与 `1.0 (2)` 已上传并处理；内部测试组和测试资料已配置。下一次上传使用 build `1.0 (3)`。
 
 **操作步骤：**
 1. Xcode → Product → Archive（使用 Release scheme）
 2. Window → Organizer → Distribute App → TestFlight & App Store
 3. 上传成功后在 App Store Connect → TestFlight 里找到构建版本
-4. 添加内部测试员（自己的 Apple ID），安装 TestFlight App 后即可测试
-5. 重点测试路径：创建行程 → 添加物品 → Auto Pack → 打包勾选 → 内购 → 通知
+4. 内部测试员安装 TestFlight App 后测试；外部测试需为构建提交 Beta App Review
+5. 重点测试路径：创建行程 → 添加物品 → Auto Pack → 打包勾选 → iCloud 同步 → Widget / Live Activity → 内购 → 通知
 
 ---
 

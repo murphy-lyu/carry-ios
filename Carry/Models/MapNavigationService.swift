@@ -143,7 +143,7 @@ enum MapNavigationService {
             case .walking: bm = "walking"
             case .cycling: bm = "riding"
             }
-            open("baidumap://map/direction?destination=latlng:\(bd.latitude),\(bd.longitude)|name:\(encodedName)&mode=\(bm)&coord_type=bd09ll&src=com.murphy.carry")
+            open("baidumap://map/direction?destination=latlng:\(bd.latitude),\(bd.longitude)|name:\(encodedName)&mode=\(bm)&coord_type=bd09ll&src=app.nevestudio.carry")
         }
     }
 

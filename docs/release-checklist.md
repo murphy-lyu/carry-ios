@@ -6,16 +6,25 @@
 
 ---
 
-## ⏳ 待付费账号统一处理（$99 Apple Developer，预计 2026-06-08 当周到位）
+## Apple Developer / App Store Connect 状态（2026-09-26，2026-10-21 本地复核）
 
-> 以下全部**阻塞在付费账号**，账号一到位作为一批集中做。代码/文档侧能做的已完成（见下方各节 ✅）。
-
-1. **WeatherKit**：Developer Portal → App ID 勾选 WeatherKit → 保存 → Xcode 重下 Provisioning Profile → **然后才把 `com.apple.developer.weatherkit` 加回 `Carry.entitlements`**（⚠️ 免费 Personal Team 不支持 WeatherKit，entitlement 提前加会导致真机签名失败，故现已撤回，详见 §1）
-2. **iCloud 同步（这版做）**：Developer Portal 建 CloudKit 容器 `iCloud.com.murphy.carry` + 加 iCloud/CloudKit capability → `ModelConfiguration` 切 `cloudKitDatabase: .automatic`（保留本地/in-memory fallback）→ 真机跨设备联调 + 删 App 重装验证恢复。**schema 已确认 CloudKit 兼容、无迁移风险**（详见记忆 `carry-icloud-todo`）
-3. **ASC 政策项**：隐私营养标签（位置 + 天气坐标 = 功能性、不追踪；**照片回溯功能 = 照片/位置端上处理、零传输 → 填「未收集」**，详见 `docs/photo-trip-launch-checklist.md`）、出口合规（勾豁免加密）、支持 URL、年龄分级（4+）、填元数据（用 `app-store-metadata.md`，审核备注已含 HealthKit/WeatherKit ✅）
-4. **TestFlight + 监控**：Release build 跑核心流程、接崩溃监控（Xcode Organizer 免费）
-5. **HealthKit 经期**：上架前剩余真机验证 + 文案定稿（详见记忆 `carry-healthkit-todo`）
-6. **Build number**：每次提交 ASC 递增 `CFBundleVersion`
+- [x] 付费 Apple Developer 团队已切换为 `Bing Xue`（Team ID `25RAM7275Z`），App 与 Widget 均可正式签名。
+- [x] Bundle ID 已统一为 `app.nevestudio.carry`，Widget 为 `app.nevestudio.carry.widget`，App Group 为 `group.app.nevestudio.carry`。
+- [x] WeatherKit、HealthKit、App Group、iCloud/CloudKit 已进入 provisioning profile；Release 真机构建与安装通过。
+- [x] SwiftData 已启用 CloudKit `.automatic`，容器为 `iCloud.app.nevestudio.carry`；本地初始化失败时仍保留 in-memory fallback。
+- [x] 真机冷启动成功，设备内事件日志无 `db_init_failed`，确认未进入 in-memory fallback。
+- [ ] 两台登录同一 iCloud 账号的设备验证新增、修改、删除双向同步；再做删除 App 后重装恢复。
+- [ ] CloudKit Development schema 确认无误后部署到 Production；此步必须在正式上架前完成。
+- [x] App Store Connect 应用记录已创建：Apple ID `6816165107`，状态 `Prepare for Submission`。
+- [x] TestFlight build `1.0 (1)` 已于 2026-09-26 上传并处理完成；首次出口合规已手工确认。
+- [x] TestFlight build `1.0 (2)` 已上传并处理完成，安装包内含出口合规键与 HealthKit 双用途说明，无需再次回答加密问题。
+- [x] 已创建内部测试组 `Carry Internal`，开启 Xcode 构建自动分发；管理员与账户持有人均已加入。build 1、2 均已分配，后台显示各有 `2` 个邀请。
+- [x] TestFlight 测试资料、审核联系人、隐私政策 URL、审核备注和 build 1 的「测试重点」已填写。
+- [ ] 填写正式版本的政策项、内购和元数据；内测分组与 TestFlight 测试资料已配置。
+- [ ] HealthKit 经期与 WeatherKit 天气仍需真机功能验收。
+- [x] 本地版本已递增为 `1.0 (3)`，Release 模拟器目标构建通过；下一次上传使用 build 3。（2026-10-21）
+- [x] Swift 6 并发前瞻检查：Live Activity 共享 attributes 已显式设为 `nonisolated`，消除 8 处未来会升级为错误的 actor isolation 警告。（2026-10-21）
+- [x] `1.0 (3)` Release Archive 与 App Store Connect 分发导出成功；导出的 IPA 为 Production CloudKit、`beta-reports-active = true`、`get-task-allow = false`，App 与 Widget 签名及 entitlement 均已核对。（2026-10-21）
 
 ---
 
@@ -28,12 +37,14 @@
 - [x] **App Icon 完整性**：AppIcon.appiconset 含 Light/Dark 1024×1024，iOS 16+ 单尺寸方式，Archive 自动生成全尺寸 ✅（2026-05-27 确认）
 - [x] **开发者选项隔离**：`DeveloperModeView` 已有 `#if DEBUG` 保护 ✅（2026-05-27 确认）
 - [x] **SwiftData migration plan**：新版本如有 schema 变更，migration 已覆盖 ✅（已有 CarryMigrationPlan）
-- [ ] **Build number 递增**：每次提交 App Store Connect，`CFBundleVersion` 必须比上一次大
-- [ ] ⚠️ **WeatherKit 能力配置**（含天气功能的版本发布前必做）：
-  1. [ ] `Carry.entitlements` 加 `com.apple.developer.weatherkit`（⚠️ **2026-06-01 曾提前加，导致免费 Personal Team 真机签名失败「do not support the WeatherKit capability」，已撤回**。务必在付费账号 + 下面 2/3 步完成后再加回）
-  2. [ ] Developer Portal → App ID → 勾选 WeatherKit → 保存（**需付费账号，未做**）
-  3. [ ] Xcode 重新下载 Provisioning Profile（**需付费账号，未做**）
+- [x] **Build number 递增**：当前已由 2 递增为 3；后续每次提交 App Store Connect 继续递增
+- [x] **WeatherKit 能力配置**：
+  1. [x] `Carry.entitlements` 已加入 `com.apple.developer.weatherkit`
+  2. [x] Apple Developer App ID 已启用 WeatherKit（Automatic Signing 已成功创建 profile）
+  3. [x] 新 provisioning profile 已下载并用于 Release 真机构建（2026-09-25）
   4. ✅ 隐私政策已补天气条款（carry-legal privacy/zh.html + index.html，2026-06-01 已发布）
+- [x] **HealthKit 上传校验**：补齐 App Store 要求的 `NSHealthUpdateUsageDescription`；功能仍只请求经期数据读取权限，不请求写入权限。
+- [x] **出口合规**：项目未实现加密算法；网络加密仅使用 Apple 系统 HTTPS，`ITSAppUsesNonExemptEncryption = NO`。首个已上传构建已在 App Store Connect 选择“None of the algorithms mentioned above”。
 
 ---
 
@@ -46,26 +57,26 @@
   - 航班查询 / 地点检索：发送的查询参数（航班号+日期 / 检索词+目的地大致坐标）**不关联身份**；按 ASC 口径，若不关联用户身份且仅用于功能，可声明为「功能性、未与身份关联、不用于追踪」
   - 无广告追踪、无第三方分析 SDK、无跨 App 数据共享 → 可勾选对应豁免项
   - ⚠️ **接入 WeatherKit 后新增**：目的地坐标发送至 Apple Weather 服务 → 同样声明为「功能性」用途
-- [ ] **出口合规（Export Compliance）**：仅使用 HTTPS + StoreKit 标准加密，勾选「使用豁免加密」
+- [x] **出口合规（Export Compliance）**：仅使用 Apple 系统 HTTPS + StoreKit 标准加密，项目已声明 `ITSAppUsesNonExemptEncryption = NO`；build 1 已完成问卷确认
 - [ ] **App Store Connect 应用分类**：确认与工程 `LSApplicationCategoryType = public.app-category.travel` 一致（2026-05-30 代码审计确认已配置）
 - [ ] **年龄分级**：按问卷填写，无暴力/成人内容，预期 4+（2026-05-30 代码审计确认内容合规）
-- [ ] **支持 URL**：App Store Connect 必填，需要真实可访问的页面（联系邮件页亦可）
-- [x] **隐私政策 URL**：https://murphy-lyu.github.io/carry-legal/privacy/ ✅（2026-05-27 上线）
+- [x] **支持页面**：`https://legal.nevestudio.app/carry/support/zh`（中英双语；创建应用记录后填入 ASC）
+- [x] **隐私政策页面**：`https://legal.nevestudio.app/carry/privacy/zh` 已作为正式地址
 
 ---
 
 ## 3. 隐私协议 & 用户协议层面
 
-- [x] **隐私政策页面上线**：https://murphy-lyu.github.io/carry-legal/privacy/ ✅（2026-05-27）
+- [x] **隐私政策页面上线**：https://legal.nevestudio.app/carry/privacy/zh
 - [x] **隐私政策内容覆盖**：✅（2026-05-27 确认，含位置访问、通知、StoreKit、GDPR/CCPA）
 - [x] **接入 WeatherKit 后新增**：✅ 已更新隐私政策位置数据章节 + 第三方服务，补充「目的地坐标通过 WeatherKit 发送至 Apple 用于获取天气预报」（中英，2026-06-01 发布）
-- [x] **用户协议页面上线**：https://murphy-lyu.github.io/carry-legal/terms/ ✅（2026-05-27）
-- [x] **App 内隐私入口**：`LegalViews` 链接已指向 GitHub Pages，可访问 ✅
+- [x] **用户协议页面上线**：https://legal.nevestudio.app/carry/terms/zh
+- [x] **App 内隐私入口**：`LegalViews` 已指向 `legal.nevestudio.app`，可访问 ✅
 - [x] **本地通知说明**：隐私政策 Section 5 已注明 ✅
 - [x] **权限文案全面复核**（2026-06-21）：系统弹窗文案统一第二人称「你」、定位声明从 pbxproj 迁入 Info.plist 单点维护；日历文案补「读取叠加显示」（实现既写入又读取所选日历，需 Full Access）；相册确认纯 PHPicker、不申请授权（隐私最佳实践）；通知/Live Activity 无需 usage description（核对无误）✅
 - [x] **隐私政策补日历披露**（2026-06-21）：Section 5 新增日历段（写入行程/提醒 + 「日历叠加」读取所选日历、均设备本地零传输）、标题加「日历」；PIPL 第 14 条同步——处理目的改「旅行助手」、撤回同意权加日历、跨境处理据实披露（境外地点检索关键词在境外处理、不关联身份、提供不使用即可避免的退路），消除原「零传输」与 Section 5 已披露的航班/境外检索传输之间的自相矛盾。中英同步 ✅
 - [x] **用户协议定位更新**（2026-06-21）：terms 从「旅行打包清单应用」改「旅行助手应用（行程规划 + 打包）」、并修正失真的「不依赖网络连接」表述（航班/检索/天气/地图为可选联网功能）。中英同步 ✅
-- [ ] ⏳ **ASC 隐私政策 / 用户协议 URL 指向自营域名**（待账号）：填 `https://legal.nevestudio.app/carry/privacy/zh` 与 `…/carry/terms/zh`（大陆可达；github.io 被 GFW 干扰）。neve-web 仓库 `legal/` 站点，内容已含日历披露 + 新定位。注：URL 为每-app 结构 `/carry/...`（Pages root=`legal/`）
+- [ ] **ASC 隐私政策 / 用户协议 URL**：应用记录创建后填 `https://legal.nevestudio.app/carry/privacy/zh` 与 `https://legal.nevestudio.app/carry/terms/zh`。
 
 ---
 
@@ -75,15 +86,17 @@
 
 发布前检查：确认本次版本新增或修改的所有 key，9 种语言均已补全：
 
-- [ ] en（英语）
-- [ ] zh-Hans（简体中文）
-- [ ] zh-Hant（繁体中文，台湾/香港用语）
-- [ ] de（德语）
-- [ ] es（西班牙语）
-- [ ] fr（法语）
-- [ ] ja（日语）
-- [ ] ko（韩语）
-- [ ] pt-BR（葡萄牙语-巴西）
+- [x] en（英语）
+- [x] zh-Hans（简体中文）
+- [x] zh-Hant（繁体中文，台湾/香港用语）
+- [x] de（德语）
+- [x] es（西班牙语）
+- [x] fr（法语）
+- [x] ja（日语）
+- [x] ko（韩语）
+- [x] pt-BR（葡萄牙语-巴西）
+
+2026-10-21 执行 `scripts/i18n-audit.py`：App 与 Widget 均为 0 errors / 0 warnings。
 
 ---
 
@@ -104,7 +117,7 @@
 - [ ] **TestFlight 内测**：提交正式版前用 Release build 完整跑一遍核心流程
 - [ ] **崩溃监控**：接入 Xcode Organizer Crash Reports（免费，Apple 原生）或 Firebase Crashlytics
 - [ ] **App Store Connect 元数据**（文案见 `app-store-metadata.md`）：
-  - [ ] 显示名称（三语）：`Carry: Travel Packing List` / `启程: 旅行打包清单` / `啟程: 旅行打包清單`（**刻意不叫 Travel Planner**——规划功能未上线，避免名不副实）
+  - [ ] 显示名称（三语）：`Carry: Trip Planner & Packing` / `启程：让每一次出发更从容` / `啟程：讓每一次出發更從容`
   - [ ] 副标题（Subtitle，≤30 字符，影响搜索权重）：en / zh-Hans / zh-Hant 三语已定稿，补名称未含的新词
   - [ ] 关键词（Keywords，认真选，直接影响搜索排名）
   - [ ] 主分类 + 次分类
@@ -130,11 +143,11 @@
 
 ---
 
-## 已上线版本历史
+## 正式发布记录
 
 | 版本 | 日期 | 备注 |
 |------|------|------|
-| 首次上线 | 2026-05 | — |
+| 暂无 | — | 当前仅 TestFlight，尚未正式上架 |
 
 ---
 

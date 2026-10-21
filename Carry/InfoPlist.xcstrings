@@ -250,6 +250,66 @@
         }
       }
     },
+    "NSHealthUpdateUsageDescription" : {
+      "comment" : "Privacy - Health Update Usage Description (required by App Store validation; Carry requests no write types)",
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Carry schreibt keine Daten in Apple Health. Periodenerinnerungen lesen nur Zyklusdaten auf deinem Gerät."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Carry does not write to Apple Health. Period reminders only read Cycle Tracking data on your device."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Carry no escribe datos en Apple Health. Los recordatorios del periodo solo leen el seguimiento del ciclo en tu dispositivo."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Carry n’écrit aucune donnée dans Apple Santé. Les rappels de règles lisent uniquement le suivi du cycle sur votre appareil."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Carry は Apple ヘルスケアにデータを書き込みません。生理リマインダーは端末上の周期記録を読み取るだけです。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Carry는 Apple 건강에 데이터를 기록하지 않습니다. 생리 알림은 기기에서 생리 주기 기록만 읽습니다."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "O Carry não grava dados no Apple Saúde. Os lembretes de menstruação apenas leem o acompanhamento de ciclo no seu dispositivo."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "启程不会向 Apple 健康写入数据。经期提醒只在本机读取你的经期记录。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "啟程不會向 Apple 健康寫入資料。生理期提醒只在本機讀取你的生理期記錄。"
+          }
+        }
+      }
+    },
     "NSLocationWhenInUseUsageDescription" : {
       "comment" : "Privacy - Location When In Use Usage Description",
       "extractionState" : "manual",

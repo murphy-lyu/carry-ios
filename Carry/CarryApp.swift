@@ -20,19 +20,31 @@ struct CarryApp: App {
     @UIApplicationDelegateAdaptor(CarryAppDelegate.self) private var appDelegate
 
     static let container: ModelContainer = {
+        let schema = Schema(versionedSchema: SchemaV1.self)
         do {
             // Use the versioned schema + migration plan so future schema changes
-            // can be applied without corrupting existing user data.
+            // can be applied without corrupting existing user data. CloudKit uses
+            // the primary container declared in Carry.entitlements; devices that
+            // aren't signed in to iCloud continue to use the same local store.
+            let configuration = ModelConfiguration(
+                schema: schema,
+                cloudKitDatabase: .automatic
+            )
             return try ModelContainer(
-                for: TripBundle.self, MyItem.self,
-                migrationPlan: CarryMigrationPlan.self
+                for: schema,
+                migrationPlan: CarryMigrationPlan.self,
+                configurations: [configuration]
             )
         } catch {
             CarryLogger.shared.log(.dbInitFailed, context: "error=\(error.localizedDescription)")
             // Fall back to an in-memory store so the app stays alive.
             return try! ModelContainer(
-                for: TripBundle.self, MyItem.self,
-                configurations: ModelConfiguration(isStoredInMemoryOnly: true)
+                for: schema,
+                configurations: ModelConfiguration(
+                    schema: schema,
+                    isStoredInMemoryOnly: true,
+                    cloudKitDatabase: .none
+                )
             )
         }
     }()

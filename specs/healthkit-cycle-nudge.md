@@ -122,15 +122,15 @@ enum CycleInference {
   `scenepicker.nudge.cycle.title`，并补全 9 种语言。**最终文案上线前与作者确认语气**（敏感话题，需克制、不冒犯）。
 - 不新增面向用户的硬编码文案；所有提示走 `Localizable.xcstrings`。
 
-## 工程接入清单
+## 工程接入清单（2026-09-25 已完成，待真机授权验收）
 
-- [ ] Xcode 开启 **HealthKit** Capability（主 app target）
-- [ ] `Info.plist` 增加 `NSHealthShareUsageDescription`（中英及其余语言通过 InfoPlist 本地化）——
+- [x] Xcode 开启 **HealthKit** Capability（主 app target）
+- [x] `Info.plist` 增加 `NSHealthShareUsageDescription`（中英及其余语言通过 InfoPlist 本地化）——
       用途文案聚焦"读取经期记录，用于在行程可能赶上经期时提醒你打包相关物品"
-- [ ] 不申请 `NSHealthUpdateUsageDescription`（本功能不写 HealthKit）
-- [ ] `CycleInference.swift` 新增，封装所有 `HKHealthStore` 调用，HealthKit import 只此一处
-- [ ] `ScenePickerView` 接入异步 nudge
-- [ ] 埋点（闭环）：`CarryLogger.Event` 视情况新增
+- [x] 功能不申请任何 HealthKit 写权限；因 App Store 上传校验要求，`Info.plist` 保留 `NSHealthUpdateUsageDescription`，文案明确说明 Carry 不写入 Apple 健康
+- [x] `CycleInference.swift` 新增，封装所有 `HKHealthStore` 调用，HealthKit import 只此一处
+- [x] `ScenePickerView` 接入异步 nudge
+- [x] 埋点（闭环）：`CarryLogger.Event` 已新增
       `cycleNudgeShown` / `cycleNudgeAccepted`，并在同一改动里接上调用点；
       **不记录任何健康数据本身**，只记录"是否展示/是否被采纳"这类无关隐私的交互事件
 

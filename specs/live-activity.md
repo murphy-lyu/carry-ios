@@ -150,7 +150,7 @@ Trailing: 65%  （进度百分比文字）
 
 ## 八、待确认问题
 
-- [ ] Widget Extension 的 Bundle ID 命名规范（建议 `com.murphy.carry.PackingWidget`）
+- [x] Widget Extension Bundle ID：`app.nevestudio.carry.widget`
 - [ ] 倒计时文案：「今天出发」「明天出发」「3 天后出发」——是否需要国际化日期表达方式做额外适配
 - [ ] 打包提醒可能设置多个时间，以哪一个为准触发 Live Activity？（建议：最近一个未触发的提醒）
 - [ ] 行程有多个时，同时只允许一个 Live Activity（系统限制），如何处理多行程并发？（建议：以最近出发的行程为准）

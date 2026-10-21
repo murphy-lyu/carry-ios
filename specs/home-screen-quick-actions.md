@@ -44,7 +44,7 @@ SceneDelegate 把 `shortcutItem.type` 翻成现有 `carry_shortcut_action`（+ `
 
 `handlePendingShortcut()` 的 switch（`create_trip` / `open_trip` / `show_map`）已覆盖三种动作，导航零改动。
 
-shortcutItem.type 命名：`com.murphy.carry.quickaction.{create_trip|nearest_trip|footprint}`，在 SceneDelegate 映射到 action key。
+shortcutItem.type 命名：`app.nevestudio.carry.quickaction.{new_trip|nearest_trip|trip_book}`，在 SceneDelegate 映射到现有 action key。
 
 ### 4. 本地化
 

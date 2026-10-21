@@ -1,6 +1,6 @@
 # Destination Info — Spec
 
-> **Status: Pending**
+> **Status: Implemented；WeatherKit capability 已配置，待真机天气验收** — 2026-09-25
 
 ## 功能定位
 
@@ -114,10 +114,10 @@ Link(destination: attribution.legalPageURL) {
 
 ### 天气 — WeatherKit
 
-**前置工程配置（实现前必做）：**
-1. Xcode → Target → Signing & Capabilities → 添加 `WeatherKit` capability
-2. Apple Developer Portal → App ID → 开启 WeatherKit
-3. `.entitlements` 文件中确认 `com.apple.developer.weatherkit = true`
+**工程配置（已完成）：**
+1. [x] App target 已添加 WeatherKit capability
+2. [x] Apple Developer App ID 已启用 WeatherKit
+3. [x] `.entitlements` 包含 `com.apple.developer.weatherkit = true`
 
 **调用方式：**
 ```swift
@@ -210,7 +210,7 @@ let destinations = zip(cityTokens, coords)
 
 WeatherKit 会将目的地坐标发送至 Apple 服务器获取天气数据。虽然这是行程目的地（非用户当前位置），但需要更新隐私政策：
 
-- **Privacy Policy 页面**（https://murphy-lyu.github.io/carry-legal/privacy/）：在位置数据章节补充"目的地坐标用于通过 WeatherKit 获取天气预报"
+- **Privacy Policy 页面**（https://legal.nevestudio.app/carry/privacy/zh）：位置数据章节已说明“目的地坐标用于通过 WeatherKit 获取天气预报”
 - **App Store Privacy Nutrition Labels**：在 App Store Connect 中确认位置数据用途覆盖 WeatherKit
 
 ---

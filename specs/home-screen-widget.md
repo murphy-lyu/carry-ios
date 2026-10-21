@@ -1,6 +1,6 @@
 # Home Screen Widget — Spec
 
-> **Status: Implemented（待 App Group 配置 + 真机验证）** — 2026-05-31
+> **Status: Implemented（App Group 已配置，待 Widget 真机验收）** — 2026-09-25
 > 由 Claude 按理解实现，等待开发者确认。
 
 ## 背景
@@ -24,8 +24,8 @@ Widget 在独立进程，无法直接访问主 App 的 SwiftData。采用 **App 
 
 ### App Group
 
-- ID：`group.com.murphy.carry`
-- **需开发者在 Xcode 操作**（见下方「待确认」）：给 `Carry` 和 `CarryWidgetExtension` 两个 target 在 Signing & Capabilities 添加 App Group `group.com.murphy.carry`。Automatic signing 会自动同步 entitlements + provisioning。
+- ID：`group.app.nevestudio.carry`
+- `Carry` 和 `CarryWidgetExtension` 两个 target 已配置同一 App Group；Automatic Signing 与 Release 真机构建均通过。
 - 未配置时：`UserDefaults(suiteName:)` 返回 nil，Widget 安全降级为空状态，App 不崩。
 
 ### 快照结构
@@ -74,15 +74,14 @@ Widget 在独立进程，无法直接访问主 App 的 SwiftData。采用 **App 
 
 Widget 设 `widgetURL(carry://trip/{tripId})`；`CarryApp.onOpenURL` 已处理 `carry://trip/{uuid}` → `router.pendingTripId` → 跳转打包清单。复用，零改动。
 
-## 待开发者确认（明天）
+## 待真机验收
 
-1. **加 App Group capability**：Xcode → `Carry` target → Signing & Capabilities → + App Group → `group.com.murphy.carry`；对 `CarryWidgetExtension` target 重复。
-2. **真机验证**：
+1. **真机验证**：
    - 主屏幕添加 Carry Widget（Small / Medium）。
    - 有即将出发行程：显示目的地 + 倒计时 + 进度；点击进入该行程。
    - 改打包进度 → 切后台 → Widget 刷新。
    - 无即将出发行程：显示空状态。
-3. 确认深浅色模式、9 语言文案显示正常。
+2. 确认深浅色模式、9 语言文案显示正常。
 
 ## 设计取向
 

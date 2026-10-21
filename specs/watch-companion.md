@@ -17,7 +17,7 @@
 
 1. **只读，单向**：Watch 端**只展示** iPhone 推过来的快照；不在 Watch 上修改任何数据。完全消除双向同步复杂度（其他 Watch 类 App 的"勾选→同步→冲突"是最常出 bug 的地方）。
 2. **复用 WidgetTripSnapshot**：iPhone 已有的 Widget 快照结构（`tripId / name / destinationCity / departureDate / packedCount / totalCount`）字段一致即可，Watch 端复制一份 mirror struct（同 widget 模式）。**零新模型**。
-3. **WatchConnectivity 数据通道**（不用 CloudKit）：免费 Personal Team 即可用，无 entitlement 门槛；用 `transferUserInfo`（持久化、保证送达）推快照到 Watch。下周付费账号到位 + iCloud 同步上线后**仍保留 WC 通道**——它是低延迟刷新的主路径，CloudKit 同步用户行程数据，二者职责分离。
+3. **WatchConnectivity 数据通道**（不用 CloudKit）：用 `transferUserInfo`（持久化、保证送达）推快照到 Watch。未来加入 Watch target 后仍保留 WC 通道——它是低延迟刷新的主路径，CloudKit 同步用户行程数据，二者职责分离。
 4. **Apple HIG 友好**：所有界面用系统 SwiftUI 容器，不堆装饰；Carry 的克制黑白调性正好契合 Watch 设计语言。
 
 ## 界面（仅 2 处）
@@ -75,7 +75,7 @@ Watch SwiftUI View 自动刷新；Complication 调 reloadTimeline
 ### Watch App target（新建）
 
 1. Xcode 新建 watchOS App target（你做 GUI 操作）：
-   - Bundle ID: `com.murphy.carry.watchkitapp`（Apple 约定后缀）
+   - Bundle ID: `app.nevestudio.carry.watchkitapp`（计划值，创建 Watch target 时再确认）
    - Deployment: watchOS 10.0+（与 SwiftUI 现代特性匹配）
    - SwiftUI lifecycle
 2. 文件结构：
@@ -108,8 +108,8 @@ Watch SwiftUI View 自动刷新；Complication 调 reloadTimeline
 | 阶段 | 内容 | 阻塞? |
 |---|---|---|
 | **首版上线前** | **不做**，但 spec 就绪、`WidgetTripSnapshot` 已设计为可复用 | — |
-| **付费账号到位前** | 可写代码 + 真机调试（WC 不需付费 entitlement）| 否 |
-| **v1.1（上线后 1–2 周）** | 完成 + 提交 ASC，触发 "Available on Apple Watch" 标识 | 等付费账号 |
+| **当前** | 付费账号已到位，但首版仍不做 Watch target | 产品排期 |
+| **v1.1（上线后 1–2 周）** | 完成 + 提交 ASC，触发 "Available on Apple Watch" 标识 | 不再受账号阻塞 |
 
 ## 待确认决策
 

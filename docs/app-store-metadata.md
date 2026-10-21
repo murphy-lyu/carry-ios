@@ -1,6 +1,6 @@
 # App Store 元数据
 
-供提交 App Store Connect 时复制粘贴使用。整理于 2026-05-27。
+供提交 App Store Connect 时复制粘贴使用。首次整理于 2026-05-27，2026-09-26 按当前产品范围更新。
 
 ---
 
@@ -8,14 +8,23 @@
 
 | 字段 | 值 |
 |------|----|
-| 显示名称（en-US） | `Carry: Travel Packing List`（26 字符 ✅） |
-| 显示名称（zh-Hans） | `启程: 旅行打包清单` |
-| 显示名称（zh-Hant） | `啟程: 旅行打包清單` |
+| App Store Connect 主要语言 | 简体中文（Chinese, Simplified） |
+| 显示名称（zh-Hans） | `启程：让每一次出发更从容` |
+| 显示名称（en-US） | `Carry: Trip Planner & Packing`（29 字符 ✅） |
+| 显示名称（zh-Hant） | `啟程：讓每一次出發更從容` |
+| Bundle ID | `app.nevestudio.carry` |
+| App Store Connect Apple ID | `6816165107` |
+| SKU | `carry-ios-1`（仅团队内部识别，用户不可见，创建后不可修改） |
+| 用户访问权限 | Full Access |
+| 支持 URL（zh-Hans） | `https://legal.nevestudio.app/carry/support/zh` |
+| 支持 URL（en-US） | `https://legal.nevestudio.app/carry/support/` |
+| 隐私政策 URL（zh-Hans） | `https://legal.nevestudio.app/carry/privacy/zh` |
+| 隐私政策 URL（en-US） | `https://legal.nevestudio.app/carry/privacy/` |
 | 主分类 | Travel |
 | 次分类 | Productivity |
 | 定价 | 免费下载，含自愿内购（Coffee Shop） |
 
-> **命名决策（2026-06-02）**：刻意**不叫 "Travel Planner"**——行程规划尚未上线，名不副实会招致差评/退款，且正面硬刚 Tripsy/TripIt 等成熟规划工具打不过。名称是权重最高的关键词位，压在真实交付且能赢的词 `packing` 上（参考 Luggy 的 `Packing List - Luggy`）。等中期规划功能上线，再升级为 `Carry: Travel Planner & Packing` 顺理成章——先用名字兑现现状，不预支未来。
+> **命名决策（2026-09-26）**：中文名称使用更有情感色彩的品牌定位 `启程：让每一次出发更从容`；功能搜索词由副标题与关键词承担。英文名称使用 `Carry: Trip Planner & Packing`。主要语言选择简体中文，随后添加 en-US、zh-Hant 等本地化；未匹配到本地化的市场会回退到主要语言。
 
 ---
 
@@ -66,8 +75,8 @@ Set a local reminder so you never leave packing to the last minute. Notification
 YOUR TRAVEL HISTORY, BEAUTIFULLY MAPPED
 Every trip you create lights up a country on your personal world map. Watch your travel story grow, one trip at a time.
 
-BUILT FOR PRIVACY
-Everything lives on your device. No account, no cloud sync, no tracking. Your trips are yours alone.
+PRIVATE BY DESIGN
+No Carry account is required and there is no advertising tracking. Your travel data is stored locally and privately synced across your devices through your personal iCloud account.
 
 DESIGNED WITH CARE
 Multiple app icons, dark mode, Siri shortcuts, and full localization in 9 languages — because the details matter.
@@ -116,7 +125,7 @@ Carry 帮你为每次旅行整理完美的打包清单——快速、智能、�
 每创建一次行程，对应的国家就会在你的世界地图上亮起。看着自己的旅行故事一点点生长。
 
 隐私优先
-所有数据保存在你的设备上。无需注册账号，无云同步，无数据追踪。你的行程，只属于你。
+无需注册 Carry 账号，也没有广告追踪。旅行数据保存在本机，并通过你的个人 iCloud 账号在自己的设备间私密同步。
 
 用心打磨
 多套应用图标、深色模式、Siri 快捷指令，以及 9 种语言的完整本地化——因为细节很重要。
@@ -162,7 +171,7 @@ Carry 幫你為每次旅行整理完美的打包清單——快速、智慧、�
 每建立一次行程，對應的國家就會在你的世界地圖上亮起。看著自己的旅行故事一點點成長。
 
 隱私優先
-所有資料儲存在你的裝置上。無需註冊帳號，無雲端同步，無資料追蹤。你的行程，只屬於你。
+無需註冊 Carry 帳號，也沒有廣告追蹤。旅行資料儲存在本機，並透過你的個人 iCloud 帳號在自己的裝置間私密同步。
 
 用心打磨
 多套應用程式圖示、深色模式、Siri 捷徑，以及 9 種語言的完整在地化——因為細節很重要。
@@ -222,7 +231,7 @@ App Store Connect 支持英文作为这几个市场的 fallback，可先以英�
 Thank you for reviewing Carry.
 
 OVERVIEW
-Carry is a local-first travel packing list app. No account or login is required. All data is stored on-device.
+Carry is a local-first trip planner and packing app. No in-app account or login is required. Travel data is stored locally and can sync privately through the user's personal iCloud account.
 
 IN-APP PURCHASES — Coffee Shop
 The app contains optional tip-style in-app purchases ($0.99–$4.99) under "Coffee Shop." These are entirely voluntary and do not unlock any features — users who do not purchase have full access to all functionality.
@@ -252,9 +261,9 @@ An internal developer menu exists in DEBUG builds only and is completely hidden 
 
 ## 填写顺序建议
 
-1. 先填英文（en-US）版本，作为全球 fallback
-2. 再填简体中文（zh-Hans）
-3. 再填繁体中文（zh-Hant）
+1. 创建记录时以简体中文（zh-Hans）作为主要语言
+2. 添加英文（en-US）本地化，覆盖主要国际市场
+3. 添加繁体中文（zh-Hant）
 4. 日语（ja）、韩语（ko）按需补充
 5. de / es / fr / pt-BR 可暂用英文 fallback，翻译完成后更新
 
