@@ -1,5 +1,15 @@
 # 决策日志
 
+## 2026-10-22 Codex 接入：受限 MCP 与配对设备事务执行
+
+用户已确认远程请求/快照与设备离线待执行体验。使用 Cloudflare Streamable HTTP MCP + OAuth PKCE 配对；SwiftData/CloudKit 保持真实数据来源，不直接编辑自动管理的 CloudKit records，不新增 Apple 登录或模型 API key。
+
+默认只访问选定行程；物品库单独授权。附件/原图、HealthKit、系统日历叠加、全局设置、备份/还原/清空和分享文件不进入默认权限。系统权限、相机、支付仍需设备交互，工具不伪装无交互成功。
+
+外部命令采用隔离 ModelContext，提交时一并写入幂等回执，随后发布新观察图。真实测试发现仅 rollback 会遗留关系数组，不能保留原做法。快照附时间，更新检查本地完整元数据摘要，`applied` 不承诺另一台 iCloud 设备已同步。恢复/清空前同步写入 Keychain 撤销标记，避免退出窗口恢复旧权限。
+
+用户要求两轮验收与自行 Review，本轮已完成两轮本地自动验收；生产域名、正确 CloudKit 团队、真机界面及同步尚未验证，不标为已交付，不上传新 TestFlight。完整证据、发现与去留见 `docs/codex-integration-qa.md`。
+
 ## 2026-07-14 反馈/联系邮箱：全项目移除个人 icloud，统一工作室邮箱
 
 **决策**：App 内"意见反馈"与法务页（隐私政策/用户协议/站点页）所有对外联系邮箱，从个人 `murphy.lyu@icloud.com` 统一改为工作室邮箱 `support@nevestudio.app`；此后不再对外暴露个人邮箱。

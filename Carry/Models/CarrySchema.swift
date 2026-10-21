@@ -26,6 +26,7 @@ enum SchemaV1: VersionedSchema {
             ItineraryAttachment.self,
             TransportSegment.self,
             LodgingStay.self,
+            AutomationExecutionRecord.self,
         ]
     }
 }

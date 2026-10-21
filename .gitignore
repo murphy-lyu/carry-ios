@@ -13,3 +13,7 @@ Carry.xcodeproj/xcuserdata/**/xcdebugger/
 
 # App secrets（仅本地，含 Worker APP_TOKEN；绝不进公开仓库）
 Carry/Resources/Secrets.plist
+
+# MCP local dependencies and Durable Object development storage
+scripts/carry-mcp/node_modules/
+scripts/carry-mcp/.wrangler/

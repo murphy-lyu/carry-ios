@@ -14,7 +14,7 @@
 - [x] SwiftData 已启用 CloudKit `.automatic`，容器为 `iCloud.app.nevestudio.carry`；本地初始化失败时仍保留 in-memory fallback。
 - [x] 真机冷启动成功，设备内事件日志无 `db_init_failed`，确认未进入 in-memory fallback。
 - [ ] 两台登录同一 iCloud 账号的设备验证新增、修改、删除双向同步；再做删除 App 后重装恢复。
-- [ ] CloudKit Development schema 确认无误后部署到 Production；此步必须在正式上架前完成。
+- [ ] CloudKit Development schema 确认无误后部署到 Production；存在 schema 变更的新 TestFlight 构建也必须先完成此步，不能只等正式上架。
 - [x] App Store Connect 应用记录已创建：Apple ID `6816165107`，状态 `Prepare for Submission`。
 - [x] TestFlight build `1.0 (1)` 已于 2026-09-26 上传并处理完成；首次出口合规已手工确认。
 - [x] TestFlight build `1.0 (2)` 已上传并处理完成，安装包内含出口合规键与 HealthKit 双用途说明，无需再次回答加密问题。
@@ -30,6 +30,20 @@
 ---
 
 ## 1. 工程层面
+
+### Codex 连接发布门禁（2026-10-22）
+
+- [x] 默认授权范围的 40 项工具实现；两轮本地自动验收与自行代码审查，证据见 `docs/codex-integration-qa.md`。
+- [x] 新增回执模型本地旧库迁移、旧 JSON 备份兼容、真实 Keychain、事务保存与重复请求验证。
+- [x] 主 App + Widget Release 真机目标构建；9 语言审计 0 errors / 0 warnings。
+- [x] 中英隐私政策修改、push 和原 Pages 项目部署；英文线上新条款已读回。
+- [ ] 中文线上新条款完整读回；当前访问有超时，不能只看部署命令成功。
+- [ ] 生产域名普通解析与完整合成配对/命令/回执/撤销链路通过；当前普通 DNS 仍返回否定缓存，其他访问也有超时。
+- [ ] 在 `Bing Xue / 25RAM7275Z` 团队核对 `AutomationExecutionRecord` 的 Development schema 并部署 Production；当前浏览器只显示个人团队。
+- [ ] 新功能真机界面、配对、离线恢复、前后台竞争、iCloud 账号切换与真实双设备同步验收。
+- [ ] 按新数据用途核对 App Store Connect 隐私声明后，才上传包含连接功能的新 TestFlight 构建。当前旧 build 3 不包含本功能，未上传后续构建。
+
+### 工程基线
 
 - [x] **Release build 配置**：`SWIFT_COMPILATION_MODE = wholemodule`，`SWIFT_OPTIMIZATION_LEVEL` 沿用 Xcode 默认 `-O`，配置正确 ✅（2026-05-27 确认）
 - [x] **Strip debug symbols**：`STRIP_SWIFT_SYMBOLS` 沿用 Xcode 默认 YES，Archive 时自动 strip ✅（2026-05-27 确认）

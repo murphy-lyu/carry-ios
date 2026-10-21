@@ -21,6 +21,7 @@ enum SettingsRoute: Hashable {
     case cycleReminder
     case dataManagement   // 二级「数据与备份」页（导出/导入/本地备份/抹除）
     case dataRecovery
+    case automation
     case about
     case roadmap
     case developer
@@ -201,9 +202,14 @@ struct SettingsView: View {
             try? await Task.sleep(for: .seconds(eraseWindowSeconds))
             guard !Task.isCancelled else { return }
             withAnimation(.easeInOut(duration: 0.2)) { eraseUndoVisible = false }
-            store.eraseAllData()
-            refreshBackupCache()   // 备份已清 → 同步刷新「上次备份」状态
-            UINotificationFeedbackGenerator().notificationOccurred(.success)
+            do {
+                try store.eraseAllData()
+                refreshBackupCache()   // 备份已清 → 同步刷新「上次备份」状态
+                UINotificationFeedbackGenerator().notificationOccurred(.success)
+            } catch {
+                restoreToastMessage = NSLocalizedString("automation.error.invalidate", comment: "")
+                UINotificationFeedbackGenerator().notificationOccurred(.error)
+            }
             pendingEraseTask = nil
             eraseStartDate = nil
         }
@@ -343,6 +349,14 @@ struct SettingsView: View {
                             .padding(.bottom, 18)
                         } header: {
                             sectionHeader("settings.section.language_region")
+                        }
+
+                        Section {
+                            settingsCard {
+                                settingsNavigationRow(title: "automation.title", route: .automation)
+                            }
+                            .padding(.horizontal, 16)
+                            .padding(.bottom, 18)
                         }
 
                         // 提醒与显示：Carry 在哪儿提醒我 / 出现（通知 · 日历 · 灵动岛 · 小部件 · 经期）
@@ -983,6 +997,8 @@ struct SettingsView: View {
             dataManagementPage
         case .dataRecovery:
             DataRecoveryView()
+        case .automation:
+            AutomationConnectionView()
         case .about:
             AboutView()
         case .roadmap:
@@ -1689,11 +1705,11 @@ private struct DeveloperModeView: View {
             isPresented: $showResetAllConfirm
         ) {
             Button("settings.developer.reset_all_data.confirm.action", role: .destructive) {
-                store.resetAllData()
-                UINotificationFeedbackGenerator().notificationOccurred(.warning)
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) {
-                    exit(0)
-                }
+                do {
+                    try store.resetAllData()
+                    UINotificationFeedbackGenerator().notificationOccurred(.warning)
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) { exit(0) }
+                } catch { toastMessage = "automation.error.invalidate" }
             }
             Button("common.cancel", role: .cancel) {}
         } message: {

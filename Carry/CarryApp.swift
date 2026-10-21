@@ -13,6 +13,7 @@ import UIKit
 
 @main
 struct CarryApp: App {
+    private(set) static var hasPersistentStore = false
     // Bridges UIKit app/scene lifecycle for home-screen Quick Actions, which have
     // no native SwiftUI hook. The scene delegate (set in CarryAppDelegate) receives
     // the quick-action callbacks; the adaptor itself does not alter SwiftUI's
@@ -30,11 +31,13 @@ struct CarryApp: App {
                 schema: schema,
                 cloudKitDatabase: .automatic
             )
-            return try ModelContainer(
+            let container = try ModelContainer(
                 for: schema,
                 migrationPlan: CarryMigrationPlan.self,
                 configurations: [configuration]
             )
+            hasPersistentStore = true
+            return container
         } catch {
             CarryLogger.shared.log(.dbInitFailed, context: "error=\(error.localizedDescription)")
             // Fall back to an in-memory store so the app stays alive.
@@ -51,6 +54,7 @@ struct CarryApp: App {
 
     @StateObject private var store = TripStore()
     @StateObject private var router = NavigationRouter()
+    @StateObject private var automation = CarryAutomationConnection()
 
     @AppStorage("appearance_mode") private var appearanceModeRaw = AppearanceMode.system.rawValue
 
@@ -71,6 +75,16 @@ struct CarryApp: App {
             SplashView()
                 .environmentObject(store)
                 .environmentObject(router)
+                .environmentObject(automation)
+                .onReceive(store.$automationReady) { ready in
+                    if ready { automation.start(store: store, router: router) }
+                }
+                .onReceive(NotificationCenter.default.publisher(for: UIApplication.didBecomeActiveNotification)) { _ in
+                    automation.start(store: store, router: router)
+                }
+                .onReceive(NotificationCenter.default.publisher(for: UIApplication.didEnterBackgroundNotification)) { _ in
+                    automation.stop()
+                }
                 .preferredColorScheme(appearanceMode.colorScheme)
                 .onAppear {
                     CarryLogger.shared.log(.appLaunched)

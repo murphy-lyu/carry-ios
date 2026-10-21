@@ -467,6 +467,44 @@ final class DataBackupManager {
         )
     }
 
+    /// Local-only optimistic concurrency fingerprint. Includes private metadata so a delete
+    /// based on an old public snapshot cannot miss a newly attached document. Only the digest
+    /// leaves the device; never expose this mirror as an MCP query projection.
+    func automationRevision(for trip: TripBundle) throws -> String {
+        guard var mirror = makeBackup(trips: [trip], myItems: [], embedImages: false).trips.first else {
+            throw AutomationError.notFound
+        }
+        func attachments(_ values: [BackupAttachment]?) -> [BackupAttachment]? {
+            values?.map { value in
+                var result = value; result.thumbnailData = Data(); return result
+            }.sorted { $0.id.uuidString < $1.id.uuidString }
+        }
+        mirror.sections = mirror.sections.map { section in
+            var result = section
+            result.items.sort { $0.sortOrder != $1.sortOrder ? $0.sortOrder < $1.sortOrder : $0.id.uuidString < $1.id.uuidString }
+            return result
+        }.sorted { $0.sortOrder != $1.sortOrder ? $0.sortOrder < $1.sortOrder : $0.id.uuidString < $1.id.uuidString }
+        mirror.itineraryDays = mirror.itineraryDays?.map { day in
+            var result = day
+            result.stops = day.stops.map { stop in
+                var item = stop
+                item.photos = stop.photos?.map { photo in
+                    var value = photo; value.thumbnailData = Data(); return value
+                }.sorted { $0.id.uuidString < $1.id.uuidString }
+                item.attachments = attachments(stop.attachments)
+                return item
+            }.sorted { $0.sortOrder != $1.sortOrder ? $0.sortOrder < $1.sortOrder : $0.id.uuidString < $1.id.uuidString }
+            result.segments = day.segments?.map { segment in
+                var item = segment; item.attachments = attachments(segment.attachments); return item
+            }.sorted { $0.id.uuidString < $1.id.uuidString }
+            return result
+        }.sorted { $0.sortOrder < $1.sortOrder }
+        mirror.lodgingStays = mirror.lodgingStays?.map { stay in
+            var item = stay; item.attachments = attachments(stay.attachments); return item
+        }.sorted { $0.id.uuidString < $1.id.uuidString }
+        return try AutomationCodec.privateDigest(mirror)
+    }
+
     /// Auto-backup after every save. Hot path → stays cheap: builds a TEXT-ONLY snapshot (no
     /// embedded image bytes — the images live on as sandbox files and are reconciled separately),
     /// then encodes + writes it off the main thread. The portable, self-contained file with image

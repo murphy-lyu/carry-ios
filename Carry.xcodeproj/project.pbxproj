@@ -20,6 +20,7 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
+		CAAA00010000000000000001 = {isa = PBXContainerItemProxy; containerPortal = 115B304B2FB56F4E006FD636; proxyType = 1; remoteGlobalIDString = 115B30522FB56F4E006FD636; remoteInfo = Carry; };
 		0DFA34F52FC9C12200D55AA8 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
 			containerPortal = 115B304B2FB56F4E006FD636 /* Project object */;
@@ -44,6 +45,7 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		CAAA00020000000000000002 = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = CarryAutomationTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		0DFA34E12FC9C12100D55AA8 /* CarryWidgetExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = CarryWidgetExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		0DFA34E32FC9C12100D55AA8 /* WidgetKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = WidgetKit.framework; path = System/Library/Frameworks/WidgetKit.framework; sourceTree = SDKROOT; };
 		0DFA34E52FC9C12100D55AA8 /* SwiftUI.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = SwiftUI.framework; path = System/Library/Frameworks/SwiftUI.framework; sourceTree = SDKROOT; };
@@ -73,6 +75,7 @@
 /* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
+		CAAA00030000000000000003 = {isa = PBXFileSystemSynchronizedRootGroup; path = CarryAutomationTests; sourceTree = "<group>"; };
 		0DFA34E72FC9C12100D55AA8 /* CarryWidget */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			exceptions = (
@@ -92,6 +95,7 @@
 /* End PBXFileSystemSynchronizedRootGroup section */
 
 /* Begin PBXFrameworksBuildPhase section */
+		CAAA00040000000000000004 = {isa = PBXFrameworksBuildPhase; buildActionMask = 2147483647; files = (); runOnlyForDeploymentPostprocessing = 0; };
 		0DFA34DE2FC9C12100D55AA8 /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
@@ -125,6 +129,7 @@
 			children = (
 				0DFA37212FCBD4D400D55AA8 /* CarryWidgetExtension.entitlements */,
 				115B30552FB56F4F006FD636 /* Carry */,
+				CAAA00030000000000000003 /* CarryAutomationTests */,
 				0DFA34E72FC9C12100D55AA8 /* CarryWidget */,
 				ABCD000200000000ABCD0002 /* SharedSources */,
 				0DFA34E22FC9C12100D55AA8 /* Frameworks */,
@@ -137,6 +142,7 @@
 			isa = PBXGroup;
 			children = (
 				115B30532FB56F4F006FD636 /* Carry.app */,
+				CAAA00020000000000000002 /* CarryAutomationTests.xctest */,
 				0DFA34E12FC9C12100D55AA8 /* CarryWidgetExtension.appex */,
 			);
 			name = Products;
@@ -155,6 +161,18 @@
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
+		CAAA00050000000000000005 = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = CAAA00060000000000000006;
+			buildPhases = (CAAA00070000000000000007, CAAA00040000000000000004, CAAA00080000000000000008);
+			buildRules = ();
+			dependencies = (CAAA00090000000000000009);
+			fileSystemSynchronizedGroups = (CAAA00030000000000000003);
+			name = CarryAutomationTests;
+			productName = CarryAutomationTests;
+			productReference = CAAA00020000000000000002;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
 		0DFA34E02FC9C12100D55AA8 /* CarryWidgetExtension */ = {
 			isa = PBXNativeTarget;
 			buildConfigurationList = 0DFA34F82FC9C12200D55AA8 /* Build configuration list for PBXNativeTarget "CarryWidgetExtension" */;
@@ -243,6 +261,7 @@
 			projectDirPath = "";
 			projectRoot = "";
 			targets = (
+				CAAA00050000000000000005 /* CarryAutomationTests */,
 				115B30522FB56F4E006FD636 /* Carry */,
 				0DFA34E02FC9C12100D55AA8 /* CarryWidgetExtension */,
 			);
@@ -250,6 +269,7 @@
 /* End PBXProject section */
 
 /* Begin PBXResourcesBuildPhase section */
+		CAAA00080000000000000008 = {isa = PBXResourcesBuildPhase; buildActionMask = 2147483647; files = (); runOnlyForDeploymentPostprocessing = 0; };
 		0DFA34DF2FC9C12100D55AA8 /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -268,6 +288,7 @@
 /* End PBXResourcesBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
+		CAAA00070000000000000007 = {isa = PBXSourcesBuildPhase; buildActionMask = 2147483647; files = (); runOnlyForDeploymentPostprocessing = 0; };
 		0DFA34DD2FC9C12100D55AA8 /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -291,6 +312,7 @@
 /* End PBXSourcesBuildPhase section */
 
 /* Begin PBXTargetDependency section */
+		CAAA00090000000000000009 = {isa = PBXTargetDependency; target = 115B30522FB56F4E006FD636; targetProxy = CAAA00010000000000000001; };
 		0DFA34F62FC9C12200D55AA8 /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
 			target = 0DFA34E02FC9C12100D55AA8 /* CarryWidgetExtension */;
@@ -299,6 +321,32 @@
 /* End PBXTargetDependency section */
 
 /* Begin XCBuildConfiguration section */
+		CAAA000A000000000000000A = {isa = XCBuildConfiguration; name = Debug; buildSettings = {
+			BUNDLE_LOADER = "$(TEST_HOST)";
+			CODE_SIGN_STYLE = Automatic;
+			DEVELOPMENT_TEAM = 25RAM7275Z;
+			GENERATE_INFOPLIST_FILE = YES;
+			IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+			PRODUCT_BUNDLE_IDENTIFIER = app.nevestudio.carry.automationtests;
+			PRODUCT_NAME = "$(TARGET_NAME)";
+			SDKROOT = iphoneos;
+			SWIFT_VERSION = 5.0;
+			TARGETED_DEVICE_FAMILY = "1,2";
+			TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Carry.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/Carry";
+		}; };
+		CAAA000B000000000000000B = {isa = XCBuildConfiguration; name = Release; buildSettings = {
+			BUNDLE_LOADER = "$(TEST_HOST)";
+			CODE_SIGN_STYLE = Automatic;
+			DEVELOPMENT_TEAM = 25RAM7275Z;
+			GENERATE_INFOPLIST_FILE = YES;
+			IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+			PRODUCT_BUNDLE_IDENTIFIER = app.nevestudio.carry.automationtests;
+			PRODUCT_NAME = "$(TARGET_NAME)";
+			SDKROOT = iphoneos;
+			SWIFT_VERSION = 5.0;
+			TARGETED_DEVICE_FAMILY = "1,2";
+			TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Carry.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/Carry";
+		}; };
 		0DFA34F92FC9C12200D55AA8 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
@@ -575,6 +623,7 @@
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
+		CAAA00060000000000000006 = {isa = XCConfigurationList; buildConfigurations = (CAAA000A000000000000000A, CAAA000B000000000000000B); defaultConfigurationIsVisible = 0; defaultConfigurationName = Release; };
 		0DFA34F82FC9C12200D55AA8 /* Build configuration list for PBXNativeTarget "CarryWidgetExtension" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (

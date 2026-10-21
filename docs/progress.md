@@ -1,15 +1,20 @@
 # 项目进度
 
 ## 最后更新
-2026-10-21
+2026-10-22
 
-## 上次改动摘要（Codex 接入方案草稿 · 2026-10-21）
+## 上次改动摘要（Codex 接入实现与两轮验收 · 2026-10-21～22）
 
 - 当前聊天已关联到 Carry 本地主项目。项目迁移没有改写聊天原 cwd；本功能读写显式使用 `/Users/murphy/Documents/Projects/Carry-codex-integration`（分支 `codex/carry-integration`，基于 `98ab2b5`）。这是普通 Git worktree，尚未作为 Codex managed worktree 附加。
-- 已核对 `CLAUDE.md`、架构/基建/发布记录、相关 spec 与真实代码入口。`progress.md` 旧摘要中的“未提交”等历史状态不可直接当成当前工作区状态；本轮起点主仓干净。
-- 新增 `specs/codex-mcp-integration.md`：推荐远程 MCP + 已配对设备执行，保留 CloudKit；标明设备离线时待执行、查询快照时效、事务回执、重试去重和权限范围。
-- 发现实施前置项：快捷指令创建目前进入 UI；部分 `TripStore` 保存失败只记日志。外部命令需要可抛错的事务入口，不能以方法返回代替保存成功。
-- **待产品确认**：是否接受云端保存授权范围内的请求/查询快照，以及 Carry 未运行时请求等待下次打开执行。本轮仅文档，未开始功能实现或部署，不需要 App 构建。
+- 用户已确认云端请求/快照和离线待执行方案，并要求一次完成两轮全面验收、自行 Review、修复与记录；没有拆分交付，也没有启动多 Agent。
+- 实现 `scripts/carry-mcp`：40 项 typed tools、OAuth + PKCE、16 位一次性配对码、逐行程授权、独立物品库授权、白名单快照、队列/回执/取消/撤销/期限清理。服务 `https://connect.nevestudio.app/mcp` 已部署；没有 OpenAI API key、没有 Apple 登录。
+- App 新增设置连接页、ThisDeviceOnly Keychain、前台执行管理器与 `AutomationExecutionRecord`；事务内保存业务变更及回执。命令失败不污染观察图，重试不重复创建，版本冲突不静默覆盖。还原/清空前先同步持久化撤销状态；账号变化暂停旧连接。
+- 复用模型复制、目的地回填、行程天数协调、打包推荐、路线算法和通知/日历/Widget/Live Activity。首页缓存补上新 Context 同 ID 模型的实例变化监听。新增 39 个界面键，9 语言；审计 0 errors / 0 warnings。
+- 最终两轮本地验收：每轮签名模拟器 34/34（0 跳过），协议测试 16/16，真实 Miniflare HTTP 12/12；主 App + Widget Release 真机目标构建通过。包含旧版 VersionedSchema 迁移、旧备份还原、保存失败、关系回滚、最小权限、重复请求、Keychain、撤销重试、设备密钥 HMAC 私有版本、私有字段排除等；问题与去留完整记录于 `docs/codex-integration-qa.md`。
+- 隐私政策中英更新已在 `neve-web` 提交并 push：`7f0aaa2`。Pages 没有因 Git 推送自动部署，已手动部署原项目（`4d2e404a`）。英文线上新条款已读回，中文线上完整读取仍有网络超时。
+- **当前没有交付完成**：生产域名完整合成链路受普通 DNS 否定缓存和访问超时阻塞，最后的服务端权限收紧也因 Cloudflare API TLS 失败尚未重部署（最近成功版本 `41e372a1`）；CloudKit Console 当前仅显示个人团队 `77U9DL9873`，须用户登录 Carry 的 Bing Xue 团队 `25RAM7275Z` 后核对并部署新增 schema。此环境没有 Simulator GUI App，未冒充完成界面视觉验收。真机配对、前后台/账号切换与双设备同步仍是发布门禁。
+- 未上传新 TestFlight 构建，旧 build 3 不含本功能；未配对或上传用户现有行程。当前源代码、自动测试和云端部署都不能替代上述门禁。使用及开发方式见 `scripts/carry-mcp/README.md`。
+- 实现及记录已在 `codex/carry-integration` 本地提交，工作区干净；GitHub push 受相同 TLS 连接故障阻塞，尚未推送功能分支或合入 main。下一步从本 worktree 继续，避免误把主目录旧代码当作本功能实现。
 
 ## 上次改动摘要（反馈/联系邮箱统一为工作室邮箱 · 2026-07-14）
 

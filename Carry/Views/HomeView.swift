@@ -128,7 +128,8 @@ struct HomeView: View {
     }
 
     /// Recomputes both sorted lists in one pass. Called from onAppear and
-    /// onChange(of: store.trips) so sorting never runs during animation frames.
+    /// Observe model instances too: a committed automation transaction publishes
+    /// a fresh context whose models retain the same persistent IDs.
     private func rebuildTripLists() {
         let calendar = Calendar.current
         // Compute today's boundary once and share across all trip evaluations.
@@ -537,7 +538,7 @@ struct HomeView: View {
                 rebuildTripLists()
             }
         }
-        .onChange(of: store.trips) { _, _ in rebuildTripLists() }
+        .onChange(of: store.trips.map { ObjectIdentifier($0) }) { _, _ in rebuildTripLists() }
         .alert(
             String(format: NSLocalizedString("Delete %@?", comment: ""), tripToDelete?.name ?? ""),
             isPresented: $showDeleteConfirmation
@@ -660,7 +661,7 @@ struct HomeView: View {
                     }
                 }
             }
-            .onChange(of: store.trips) { oldTrips, newTrips in
+            .onChange(of: store.trips.map { ObjectIdentifier($0) }) { oldTrips, newTrips in
                 rebuildTripLists()
                 if !hasShownFirstTripShimmer && oldTrips.isEmpty && newTrips.count == 1 {
                     firstTripCreatedAtInterval = Date().timeIntervalSince1970
