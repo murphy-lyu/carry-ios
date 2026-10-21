@@ -22,9 +22,10 @@
 - [x] TestFlight 测试资料、审核联系人、隐私政策 URL、审核备注和 build 1 的「测试重点」已填写。
 - [ ] 填写正式版本的政策项、内购和元数据；内测分组与 TestFlight 测试资料已配置。
 - [ ] HealthKit 经期与 WeatherKit 天气仍需真机功能验收。
-- [x] 本地版本已递增为 `1.0 (3)`，Release 模拟器目标构建通过；下一次上传使用 build 3。（2026-10-21）
+- [x] 版本已递增为 `1.0 (3)`，Release 模拟器目标构建通过。（2026-10-21）
 - [x] Swift 6 并发前瞻检查：Live Activity 共享 attributes 已显式设为 `nonisolated`，消除 8 处未来会升级为错误的 actor isolation 警告。（2026-10-21）
 - [x] `1.0 (3)` Release Archive 与 App Store Connect 分发导出成功；导出的 IPA 为 Production CloudKit、`beta-reports-active = true`、`get-task-allow = false`，App 与 Widget 签名及 entitlement 均已核对。（2026-10-21）
+- [x] TestFlight build `1.0 (3)` 已上传成功，App Store Connect 已接收并开始处理；处理完成后的分组与 Beta App Review 状态待后台确认。（2026-10-21）
 
 ---
 
@@ -37,7 +38,7 @@
 - [x] **App Icon 完整性**：AppIcon.appiconset 含 Light/Dark 1024×1024，iOS 16+ 单尺寸方式，Archive 自动生成全尺寸 ✅（2026-05-27 确认）
 - [x] **开发者选项隔离**：`DeveloperModeView` 已有 `#if DEBUG` 保护 ✅（2026-05-27 确认）
 - [x] **SwiftData migration plan**：新版本如有 schema 变更，migration 已覆盖 ✅（已有 CarryMigrationPlan）
-- [x] **Build number 递增**：当前已由 2 递增为 3；后续每次提交 App Store Connect 继续递增
+- [x] **Build number 递增**：build 3 已上传；后续再次上传时从 4 继续递增
 - [x] **WeatherKit 能力配置**：
   1. [x] `Carry.entitlements` 已加入 `com.apple.developer.weatherkit`
   2. [x] Apple Developer App ID 已启用 WeatherKit（Automatic Signing 已成功创建 profile）

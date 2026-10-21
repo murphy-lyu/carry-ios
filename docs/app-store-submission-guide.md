@@ -79,7 +79,7 @@ App Store Connect → App → App Privacy → 「Get Started」或「Edit」
 
 ## 3. TestFlight（进行中）
 
-**当前状态（2026-10-21 本地记录）：** App Store Connect 应用记录已创建，build `1.0 (1)` 与 `1.0 (2)` 已上传并处理；内部测试组和测试资料已配置。下一次上传使用 build `1.0 (3)`。
+**当前状态（2026-10-21）：** App Store Connect 应用记录已创建，build `1.0 (1)` 与 `1.0 (2)` 已上传并处理；build `1.0 (3)` 已上传成功并进入 Apple 处理队列。内部测试组和测试资料已配置。
 
 **操作步骤：**
 1. Xcode → Product → Archive（使用 Release scheme）
