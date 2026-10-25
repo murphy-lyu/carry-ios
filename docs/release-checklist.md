@@ -42,7 +42,7 @@
 - [x] 生产完整合成配对/命令/回执/撤销链路两轮各 12/12 通过（2026-10-25）；原始 Node fetch 脚本使用普通域名和证书验证，测试连接已撤销。此前 curl/代理传输超时仍记录为历史网络波动，不等于所有网络环境可用。
 - [ ] 原生 URLSession 连接生产服务的完整 SwiftData 往返验收：补充测试已确认创建命令、本地落盘和首个回执，随后重复回执请求 `-1001` 超时，未完成快照读回（2026-10-25）；不能用 Node 协议验收替代。
 - [x] 账户持有人已登录 CloudKit，核对为 `Bing Xue / 25RAM7275Z` 和 `iCloud.app.nevestudio.carry`（2026-10-25）。
-- [ ] 初始化并核对完整 CloudKit Development schema，再部署 Production：两个环境实际均只有系统 `Users`，没有 Carry 业务类型；不仅是新增回执类型缺失。原生 dry-run 因专用模拟器无 iCloud 账号返回 `134060 → 134406 → 134400 / CKAccountStatusNoAccount`，需要具备 Development 访问权限且已登录 iCloud 的测试设备（2026-10-25）。
+- [ ] 初始化并核对完整 CloudKit Development schema，再部署 Production：两个环境实际均只有系统 `Users`，没有 Carry 业务类型。模拟器 dry-run 缺 iCloud 账号；现已将签名隔离的初始化工具安装到用户既有测试 iPhone，但启动被锁屏拦截。待解锁后依据实际 iCloud 接口结果继续，不预先要求换设备或 Apple ID（2026-10-25）。
 - [ ] 新功能真机界面、配对、离线恢复、前后台竞争、iCloud 账号切换与真实双设备同步验收。
 - [ ] 按新数据用途核对 App Store Connect 隐私声明后，才上传包含连接功能的新 TestFlight 构建。当前旧 build 3 不包含本功能，未上传后续构建。
 

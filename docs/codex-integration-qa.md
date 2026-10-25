@@ -73,6 +73,16 @@
 - 当前可见 `Murphy’s iPhone` 物理设备连接，但未检查其私人 iCloud 身份、安装或覆盖 App。已询问用户是否能提供账户持有人的 iPhone 作为初始化测试设备；设备和备份核对完成前不覆盖现有 Carry。
 - 依据：[Apple SwiftData 同步与初始化说明](https://developer.apple.com/documentation/swiftdata/syncing-model-data-across-a-persons-devices)、[Apple dryRun 定义](https://developer.apple.com/documentation/coredata/nspersistentcloudkitcontainerschemainitializationoptions/dryrun)。
 
+## 2026-10-25 既有 iPhone 与隔离初始化工具
+
+- 用户确认继续使用自己的既有测试 iPhone。不能仅从设备归属推断 CloudKit 访问权限，最初直接要求账户持有人的手机过早；后续改为以实际账户/容器接口结果判断，不要求预先切换 Apple ID。
+- 设备检查：iPhone 17 Pro、iOS 27.0.1、已配对、开发者模式开启；现有 Carry 仍是 `1.0 (3)`，开发构建的数据容器可访问。只检查元数据与容器目录，没有读取旅行记录或声称已建立完整备份，没有覆盖或卸载现有 Carry。
+- 新增开发工具 `scripts/cloudkit-schema-bootstrap`：单独 Bundle ID `app.nevestudio.carry.schema-bootstrap`，独立 App ID/profile，不创建 App Store Connect 应用记录。实际签名和 profile 核对为团队 `25RAM7275Z`、唯一工具标识、容器 `iCloud.app.nevestudio.carry`、`Development`、包含已连接设备；没有 Carry App Group 或 HealthKit。工具只有模型检查、dry-run 和显式 Development 初始化三种模式，没有生产部署入口。
+- 原生模型由 `CloudKitModelExportTests` 使用 Apple API 从当前 `SchemaV1.models` 导出并安全归档，验证全部 11 个实体以及读回后的实体版本哈希。导出不打开 CloudKit store、不读取用户数据库。独立工具在模拟器中 `--inspect-model` 成功读取全部 11 个实体，证明不依赖 Carry 应用模块中的类来手填结构。产物为 21608 字节，构建使用的模型 SHA256 `df7a4c1bc5b696818d60e888fa1a63a5b2587bb73708caac36b39ef2a4c8ff61`；产物与生成的 Xcode project 不提交。
+- 工具模拟器/真机编译通过；首轮通用目标方向配置告警已通过声明完整支持方向解决，最终真机构建无该告警。临时库在成功和失败路径均卸载与清理，错误只保存阶段及域/码，不保存凭据、账户标识或用户内容。工具源代码已自行检查；只有测试与运维辅助代码变化，Carry 生产业务代码未改。
+- 独立工具已安装到已连接 iPhone。启动默认 dry-run 时系统返回 `FBSOpenApplicationErrorDomain:7 / Locked`，未进入工具的账户状态检查，也没有结果文件，不能报告 iCloud 访问通过或结构已初始化。随后只读锁状态确认 `passcodeRequired=true`；已请用户解锁并保持亮屏。现有 Carry 再次查询仍为 `1.0 (3)`。
+- 新测试加入后的两轮本地全量回归均 **35/35、0 失败、0 跳过**；第二轮增加归档实体版本哈希相等校验。结果：`/tmp/CarryCodexRegression35-20261025.xcresult`、`/tmp/CarryCodexRegression35-final-20261025.xcresult`。独立工具模型读取结果：`/tmp/carry-bootstrap-model-inspection-20261025.json`；最终真机构建日志：`/tmp/carry-schema-bootstrap-device-build-final-20261025.log`。这两轮不替代此前未通过的原生 MCP 线上往返、真实 CloudKit 初始化或双设备同步验收。
+
 ## 2026-10-22 线上与真实设备门禁（历史快照）
 
 1. Worker `carry-mcp` 已部署，自定义域名 `connect.nevestudio.app`，最近成功版本 `41e372a1-cfef-44ea-b6b8-a5eead82dfea`。QA-18 的最后服务端权限收紧尚未成功重部署：Cloudflare API 经已有代理发生 TLS/连接失败。健康端点曾成功返回；完整远程合成链路因 DNS/连接超时未完成，不能计为通过，也不能说线上已是最终源码。

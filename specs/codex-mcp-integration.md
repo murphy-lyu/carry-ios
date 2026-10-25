@@ -110,6 +110,8 @@ Status: Implemented / Device release validation pending — 2026-10-25。已实�
 
 2026-10-25 CloudKit 复核：账户持有人已登录正确团队；Development 和 Production 的 Record Types 均只有系统 `Users`，没有业务类型。Apple 的 `NSManagedObjectModel.makeManagedObjectModel(for:)` 从完整 `SchemaV1.models` 构建模型后，已尝试在独立临时库执行 `initializeCloudKitSchema(options: .dryRun)`，但 mirroring delegate 因设备没有 iCloud 账号而失败；没有上传记录、读取用户库或手工推测字段。失败探针保留于本机证据，未留在默认测试套件。实际初始化须在具备正确 Development 签名和 iCloud 会话的测试设备上显式运行，再核对 Console 中完整业务类型及部署差异；仅登录网页不代表设备端初始化或同步已完成。
 
+用户现已连接自己的既有测试 iPhone；不根据设备归属预先要求切换 Apple ID。为避免覆盖 Carry 1.0(3)，使用独立开发工具 `app.nevestudio.carry.schema-bootstrap`：通过测试目标从当前真实模型安全归档导出 `.mom`，工具只加载该模型并使用新建临时库；不包含 Carry 的 App Group、HealthKit、照片或 WeatherKit 权限。先做设备账户状态与 dry-run 检查，成功后才通过显式参数执行 Development 初始化；签名必须核对为团队 `25RAM7275Z`、容器 `iCloud.app.nevestudio.carry`、环境 `Development`。工具没有生产部署入口，不修改现有 Carry 安装或数据。实际访问失败时依据错误决定后续账号步骤。
+
 - 主项目：`/Users/murphy/Documents/Projects/Carry`。
 - 本功能独立 worktree：`/Users/murphy/Documents/Projects/Carry-codex-integration`，分支 `codex/carry-integration`，起点 `98ab2b5`。
 - 当前聊天已迁入 Carry 项目；本轮开发与构建使用上述隔离 worktree。
