@@ -62,7 +62,16 @@
 - 原生补充验收：测试专用 `CARRY_RELAY_TEST_BASE_URL` 允许显式连接生产服务，默认仍为本地；配置仅在生成的 `.xctestrun` 副本中传入，未改 App 的 endpoint 或 scheme。只记录 endpoint、请求路径与状态，不输出临时授权查询参数、正文或令牌。测试超时与 App 请求一致为 20s，没有增加自动重试或跳过失败。
 - 两次原生生产尝试均未通过：首次为 `URLSession -1001`，失败结果已打印，随后 Xcode 卡在诊断收集，本会话终止该次诊断进程，未把未完成的结果包当作完整证据；第二次完整结果为 **0/1 通过、1 失败、0 跳过**。第二次路径日志确认注册、配对、PKCE 令牌、创建命令、SwiftData 落盘数量断言及首个回执全部成功，随后第二次 `/device/receipt` 请求超时；catch 清理 `/device/revoke` 返回 200。尚未到达快照与 MCP 读回，不记为原生生产全链路通过。完整结果：`/tmp/CarryCodexProductionNative-20261025-diagnostic.xcresult`；日志：`/tmp/carry-codex-production-native-20261025-diagnostic.log`。测试库显式 `cloudKitDatabase: .none`，不能将宿主无 iCloud 账号告警当作这次网络超时的根因。
 - 新测试配置回归：显式选择 `AutomationTests` 和 `RelayRoundTripTests` 两个测试类，本地 **34/34 通过、0 失败、0 跳过**；原生回归路径确认为默认本地 relay，完整保存/快照/读回/撤销检查通过。结果：`/tmp/CarryCodexRegressionExplicit-20261025.xcresult`；日志：`/tmp/carry-codex-regression-explicit-20261025.log`。此前不带类选择的同一测试配置停留在 Xcode 启动宿主之前，终止该次未启动的测试进程后重新执行，未将其算作测试通过。测试构建与九语言审计通过；没有修改生产 Swift/Worker 源码，也没有为了环境问题加入生产补丁。
-- 用户暂缓 CloudKit 登录；正确团队的 Development/Production schema、真机界面与双设备同步仍待完成。不上传新 TestFlight 构建，不配对或上传真实旅行数据。
+- CloudKit 登录后续已完成，详见下节；真机界面与双设备同步仍待完成。不上传新 TestFlight 构建，不配对或上传真实旅行数据。
+
+## 2026-10-25 CloudKit 正确团队复核
+
+- 控制台确认团队 `Bing Xue / 25RAM7275Z`，容器 `iCloud.app.nevestudio.carry`；账户登录门禁通过。分别切换 Development / Production，等待类型列表加载后，两边均只有 `Users`（7 fields），没有 `CD_TripBundle` 或其他 Carry 模型。未查询私人记录、切换系统 iCloud、导入 schema、修改权限或执行生产部署。
+- 这项不是只补 `AutomationExecutionRecord`：完整业务 schema 尚未在这两个环境出现，现有 iCloud 同步不能据工程 entitlement 或本地初始化通过就宣称已验收。先由原生模型初始化完整 Development schema，再核对差异并部署 Production，最后验证双设备同步。
+- 根据 Apple 官方 SwiftData 同步文档，用 `NSManagedObjectModel.makeManagedObjectModel(for: SchemaV1.models)`、独立临时 Core Data 库与 `initializeCloudKitSchema(options: .dryRun)` 做了一次明确不上传记录的验证。源码编译成功，但执行 **0/1 通过、1 失败**：错误链 `134060 → 134406 → 134400 / CKAccountStatusNoAccount`。dry-run 仍需 mirroring delegate 完成 iCloud 账户初始化，不能以网页会话代替设备会话，也不能绕过校验或手填猜测字段。
+- 证据：`/tmp/CarryCloudKitSchemaDryRun-20261025.xcresult`、`/tmp/carry-cloudkit-schema-dryrun-20261025.log`；探针源码保留于 `/tmp/CarryCloudKitSchemaTests-20261025.swift`。该实验未解决设备账户前提，按最小有效改动原则从默认测试套件移除，未加入生产代码或把失败改成跳过；原有 34 项测试源保持不变。
+- 当前可见 `Murphy’s iPhone` 物理设备连接，但未检查其私人 iCloud 身份、安装或覆盖 App。已询问用户是否能提供账户持有人的 iPhone 作为初始化测试设备；设备和备份核对完成前不覆盖现有 Carry。
+- 依据：[Apple SwiftData 同步与初始化说明](https://developer.apple.com/documentation/swiftdata/syncing-model-data-across-a-persons-devices)、[Apple dryRun 定义](https://developer.apple.com/documentation/coredata/nspersistentcloudkitcontainerschemainitializationoptions/dryrun)。
 
 ## 2026-10-22 线上与真实设备门禁（历史快照）
 

@@ -108,6 +108,8 @@ Status: Implemented / Device release validation pending — 2026-10-25。已实�
 
 ## 当前实现与发布门禁
 
+2026-10-25 CloudKit 复核：账户持有人已登录正确团队；Development 和 Production 的 Record Types 均只有系统 `Users`，没有业务类型。Apple 的 `NSManagedObjectModel.makeManagedObjectModel(for:)` 从完整 `SchemaV1.models` 构建模型后，已尝试在独立临时库执行 `initializeCloudKitSchema(options: .dryRun)`，但 mirroring delegate 因设备没有 iCloud 账号而失败；没有上传记录、读取用户库或手工推测字段。失败探针保留于本机证据，未留在默认测试套件。实际初始化须在具备正确 Development 签名和 iCloud 会话的测试设备上显式运行，再核对 Console 中完整业务类型及部署差异；仅登录网页不代表设备端初始化或同步已完成。
+
 - 主项目：`/Users/murphy/Documents/Projects/Carry`。
 - 本功能独立 worktree：`/Users/murphy/Documents/Projects/Carry-codex-integration`，分支 `codex/carry-integration`，起点 `98ab2b5`。
 - 当前聊天已迁入 Carry 项目；本轮开发与构建使用上述隔离 worktree。
