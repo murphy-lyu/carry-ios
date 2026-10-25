@@ -1,6 +1,6 @@
 # Carry 与 Codex 接入
 
-Status: Implemented / Device release validation pending — 2026-10-25。已实现默认授权范围内的 40 项工具，完成两轮本地自动验收与自行代码审查；生产域名完整合成链路两轮各 12/12 通过。CloudKit Production 与真机界面验收仍未完成，不标记交付完成；没有上传新 TestFlight 构建或授权真实行程。详见 `docs/codex-integration-qa.md`。
+Status: Superseded as final product architecture — 2026-10-25。用户已明确长期要求手机关闭时也可完成对话操作，最终方向转为账户服务与可靠离线同步，见 `carry-cloud-and-ai.md`（产品方向已确认，具体方案待确认）。本文保留既有设备执行实现与验收历史，不能按旧方案作为最终功能发布。已实现 40 项工具、完成本地测试及配对恢复修复；CloudKit Production 结构已部署并读回。未上传新 TestFlight、未合并主线；最新证据见 `docs/codex-integration-qa.md`。
 
 ## 目标与验收口径
 

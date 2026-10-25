@@ -2,6 +2,8 @@
 
 ## Codex 受限自动化连接（2026-10-25）
 
+**方向变更**：以下描述分支中的既有实现。用户已确认手机关闭时也应可完成 AI 操作，最终架构提案为 `specs/carry-cloud-and-ai.md` 的账户数据服务与离线同步；具体方案待确认，尚未实现，不能把下文前台执行当作最终产品约束。
+
 `scripts/carry-mcp/worker.js` 提供 Streamable HTTP MCP、OAuth/PKCE、授权快照与请求队列。`CarryAutomationConnection` 管理 ThisDeviceOnly Keychain 凭据、前台轮询和撤销；`CarryAutomationProtocol`/`CarryAutomationQueries` 校验并调用现有 SwiftData 业务操作。业务数据和 `AutomationExecutionRecord` 在隔离事务中一起保存，成功后发布新的观察图；服务端不直接修改 CloudKit 私人记录。
 
 配对先在 Keychain 保存随机连接 UUID、设备凭据和 `AutomationPendingPair`，再请求批准。服务端只保存凭据及原始授权输入的摘要，精确重复请求返回同一连接；待完成状态不传快照、不执行操作。取消和批准使用同一服务端串行入口，取消未使用的配对码或撤销已创建连接，防止迟到批准重新启用权限。OAuth `/revoke` 与设备撤销共用清理逻辑，删除快照、队列及令牌映射。恢复配对不延长 OAuth 授权码有效期。
