@@ -78,4 +78,6 @@ python3 scripts/i18n-audit.py
 
 远程合成验证：`node scripts/carry-mcp/test/live-relay.mjs https://connect.nevestudio.app`。脚本请求超时有上限，结束会撤销测试配对；失败不得报告为通过。`--curl` 可使用本机已有代理；只有经可信 DNS 核实后才用 `--resolve-address=<IPv4>` 做单次诊断，保留原域名的 Host/SNI 与证书验证，不修改系统 DNS。`--use-proxy` 使该诊断仍经过已有代理。诊断地址不能作为应用硬编码或普通网络可用性的证明。
 
+原生 SwiftData 线上验证：`RelayRoundTripTests` 默认仍连接本地 relay。只有在专用测试设备上，显式给测试进程设置 `CARRY_RELAY_TEST_BASE_URL=https://connect.nevestudio.app` 才会连接生产服务；只允许文档中的本地/生产地址。可在 `build-for-testing` 生成的 `.xctestrun` 副本内，为 `CarryAutomationTests.EnvironmentVariables` 设置该值，再通过 `test-without-building -xctestrun <副本> -only-testing:CarryAutomationTests/RelayRoundTripTests` 执行。副本放在原文件同目录，保留 `__TESTROOT__` 相对路径。不要改默认 scheme 或 App 的运行环境。该测试使用新建临时磁盘库、合成行程和短期配对，不验证 CloudKit 同步或真机 UI。
+
 生产部署：`npx wrangler deploy --env ''`，仅使用顶层生产配置。`local` 环境不继承生产自定义域名。部署后检查健康、发现文档、完整配对/队列/回执/撤销链路，再完成真机与跨设备验收。不得把部署命令成功等同于验收成功。

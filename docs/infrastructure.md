@@ -12,7 +12,7 @@
 | `flight.nevestudio.app` | 航班号查询代理 | Worker `carry-flight` |
 | `config.nevestudio.app` | App 远程配置（roadmap.json 代发） | Worker `carry-config` |
 | `places.nevestudio.app` | 海外地点检索代理 | Worker `carry-places` |
-| `connect.nevestudio.app` | 可选 Codex/MCP 配对、请求及快照 | Worker `carry-mcp` + SQLite Durable Object；完整线上验收仍阻塞，见验收记录 |
+| `connect.nevestudio.app` | 可选 Codex/MCP 配对、请求及快照 | Worker `carry-mcp` + SQLite Durable Object；2026-10-25 生产合成链路两轮通过，真机与 CloudKit 门禁另验 |
 | `legal.nevestudio.app` | 法务站（每 app 一文件夹，URL `/<app>/<doc>/[zh]`） | Cloudflare Pages 项目（接 `neve-web` 仓库、**Root directory = `legal/`**；原 `carry-legal`） |
 | `nevestudio.app`（规划中） | 工作室官网/落地页 | 同 `neve-web` 仓库另开 Pages 项目、Root directory = `site/` |
 

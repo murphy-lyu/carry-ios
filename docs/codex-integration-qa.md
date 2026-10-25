@@ -53,10 +53,15 @@
 ## 2026-10-25 线上复查
 
 - GitHub 功能分支推送成功，远程 `codex/carry-integration` 已核对为实现提交 `15a8212fa98774bc71887665387489d2b62d66bb`；`origin/main` 仍为 `98ab2b5`，未合并主线。
-- 生产 Worker 最终源码部署成功，版本 `14cc66af-d01a-4a71-a9c3-c60c9842d822`，包含 QA-18 的权限修复。协议回归 16/16、0 跳过通过；本轮没有修改 App 实现或复跑既有模拟器验收。
+- 生产 Worker 最终源码部署成功，版本 `14cc66af-d01a-4a71-a9c3-c60c9842d822`，包含 QA-18 的权限修复。协议回归 16/16、0 跳过通过；本轮没有修改 App 实现。
 - 中文政策已从正式域名完整读取至 `/tmp/carry-privacy-zh-20261025.html`；解码 Cloudflare 邮箱保护并移除其注入脚本后，全文与已提交源码逐字一致。源码 SHA256：`fd4aa59e3758f8b2c07c29f7da38674e21de7e9a2b8659b7d4ee998832b8262f`。
 - 普通 DNS 解析已恢复，直接通过原域名和有效 HTTPS 证书读取 `/health`、OAuth authorization-server 与 protected-resource 配置成功；IPv4/IPv6 健康检查分别 4.48s/6.32s 返回 HTTP 200。没有硬编码 IP、关闭证书验证或修改系统 DNS/代理。
-- 远程完整合成测试仍未通过：原始脚本、仅在进程中绕过代理的诊断、HTTP/2 诊断分别在健康、发现文档、授权状态或令牌请求发生 20s 传输超时；部分请求已有响应正文，不能据此报告通过。诊断能完成注册、配对并进入授权/令牌环节；失败后已执行设备撤销请求，但未计为完整撤销链路验收。HTTP/1.1 压缩发现文档单独读取也返回 200，暂不能把失败归因于特定 HTTP 版本。诊断脚本仅在 `/tmp` 增加请求路径日志和传输选项，没有改变业务请求、打印凭据或纳入生产代码。日志：`/tmp/carry-mcp-production-20261025-round1.log`、`/tmp/carry-mcp-production-20261025-direct-round1.log`、`/tmp/carry-mcp-production-20261025-http2.log`。仍需在稳定网络下跑通原始完整脚本。
+- 早期重试记录：原始脚本、仅在进程中绕过代理的诊断、HTTP/2 诊断分别在健康、发现文档、授权状态或令牌请求发生 20s 传输超时；部分请求已有响应正文。失败后已执行设备撤销请求，但未计为完整撤销链路验收。HTTP/1.1 压缩发现文档单独读取也返回 200，暂不能把失败归因于特定 HTTP 版本。诊断脚本仅在 `/tmp` 增加请求路径日志和传输选项，没有改变业务请求、打印凭据或纳入生产代码。失败日志保留于 `/tmp/carry-mcp-production-20261025-round1.log`、`/tmp/carry-mcp-production-20261025-direct-round1.log`、`/tmp/carry-mcp-production-20261025-http2.log`。
+- 随后原始 Node fetch 生产合成脚本连续两轮各 **12/12 通过**，覆盖真实部署的注册、PKCE 配对/令牌、投影脱敏、命令重复去重、队列、重复回执和撤销后 401；使用普通 DNS、有效证书与未修改的业务脚本，无固定地址或重试放宽。日志：`/tmp/carry-mcp-production-fetch-20261025.log`、`/tmp/carry-mcp-production-fetch-20261025-round2.log`。两轮成功连接均确认撤销。
+- 只输出路由、方法、结果和执行时长的脱敏 Worker tail 观察到上述请求 `outcome=ok`，执行约 11～65ms；独立健康探针总耗时约 2.11s。没有读取或保存请求正文、授权头或令牌。该证据支持服务端处理正常，不能证明所有代理/网络路径稳定；未为网络波动修改生产业务。
+- 原生补充验收：测试专用 `CARRY_RELAY_TEST_BASE_URL` 允许显式连接生产服务，默认仍为本地；配置仅在生成的 `.xctestrun` 副本中传入，未改 App 的 endpoint 或 scheme。只记录 endpoint、请求路径与状态，不输出临时授权查询参数、正文或令牌。测试超时与 App 请求一致为 20s，没有增加自动重试或跳过失败。
+- 两次原生生产尝试均未通过：首次为 `URLSession -1001`，失败结果已打印，随后 Xcode 卡在诊断收集，本会话终止该次诊断进程，未把未完成的结果包当作完整证据；第二次完整结果为 **0/1 通过、1 失败、0 跳过**。第二次路径日志确认注册、配对、PKCE 令牌、创建命令、SwiftData 落盘数量断言及首个回执全部成功，随后第二次 `/device/receipt` 请求超时；catch 清理 `/device/revoke` 返回 200。尚未到达快照与 MCP 读回，不记为原生生产全链路通过。完整结果：`/tmp/CarryCodexProductionNative-20261025-diagnostic.xcresult`；日志：`/tmp/carry-codex-production-native-20261025-diagnostic.log`。测试库显式 `cloudKitDatabase: .none`，不能将宿主无 iCloud 账号告警当作这次网络超时的根因。
+- 新测试配置回归：显式选择 `AutomationTests` 和 `RelayRoundTripTests` 两个测试类，本地 **34/34 通过、0 失败、0 跳过**；原生回归路径确认为默认本地 relay，完整保存/快照/读回/撤销检查通过。结果：`/tmp/CarryCodexRegressionExplicit-20261025.xcresult`；日志：`/tmp/carry-codex-regression-explicit-20261025.log`。此前不带类选择的同一测试配置停留在 Xcode 启动宿主之前，终止该次未启动的测试进程后重新执行，未将其算作测试通过。测试构建与九语言审计通过；没有修改生产 Swift/Worker 源码，也没有为了环境问题加入生产补丁。
 - 用户暂缓 CloudKit 登录；正确团队的 Development/Production schema、真机界面与双设备同步仍待完成。不上传新 TestFlight 构建，不配对或上传真实旅行数据。
 
 ## 2026-10-22 线上与真实设备门禁（历史快照）

@@ -4,21 +4,32 @@ import Combine
 import CryptoKit
 @testable import Carry
 
-/// Requires the local relay documented in scripts/carry-mcp/README.md.
-/// Only synthetic data is used; no credentials are printed or persisted to Keychain.
+/// Defaults to the local relay; production testing requires an explicit test-only URL.
+/// Only synthetic data is used; no connection credentials are printed or persisted to Keychain.
 @MainActor
 final class RelayRoundTripTests: XCTestCase {
     func testDevicePersistsRelayRequestAndPublishesConfirmedSnapshot() async throws {
-        let base = "http://127.0.0.1:8789"
+        let configuredBase = ProcessInfo.processInfo.environment["CARRY_RELAY_TEST_BASE_URL"] ?? ""
+        let base = configuredBase.isEmpty ? "http://127.0.0.1:8789" : configuredBase
+        guard ["http://127.0.0.1:8789", "https://connect.nevestudio.app"].contains(base) else {
+            XCTFail("Relay test URL must be the documented local or production endpoint")
+            return
+        }
+        print("Relay test endpoint: \(base)")
         func send(_ path: String, _ body: Any? = nil, token: String? = nil, method: String = "POST", headers: [String: String] = [:]) async throws -> (Data, Int) {
             var request = URLRequest(url: try XCTUnwrap(URL(string: base + path)))
-            request.httpMethod = method; request.timeoutInterval = 10
+            request.httpMethod = method; request.timeoutInterval = 20
             if let string = body as? String { request.httpBody = Data(string.utf8); request.setValue("application/x-www-form-urlencoded", forHTTPHeaderField: "Content-Type") }
             else if let body { request.httpBody = try JSONSerialization.data(withJSONObject: body); request.setValue("application/json", forHTTPHeaderField: "Content-Type") }
             if let token { request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization") }
             for (key, value) in headers { request.setValue(value, forHTTPHeaderField: key) }
+            // Log the route only: authorize URLs contain temporary flow parameters.
+            let route = String(path.split(separator: "?", maxSplits: 1)[0])
+            print("Relay request: \(method) \(route)")
             let (data, response) = try await URLSession.shared.data(for: request)
-            return (data, try XCTUnwrap(response as? HTTPURLResponse).statusCode)
+            let status = try XCTUnwrap(response as? HTTPURLResponse).statusCode
+            print("Relay response: \(method) \(route) \(status)")
+            return (data, status)
         }
         func object(_ result: (Data, Int), status: Int = 200) throws -> [String: Any] {
             XCTAssertEqual(result.1, status)

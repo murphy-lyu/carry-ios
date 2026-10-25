@@ -1,6 +1,6 @@
 # Carry 与 Codex 接入
 
-Status: Implemented / Release validation blocked — 2026-10-22。已实现默认授权范围内的 40 项工具，完成两轮本地自动验收与自行代码审查。尚未通过生产域名完整链路、CloudKit Production 与真机界面验收，不标记交付完成；没有上传新 TestFlight 构建或授权真实行程。详见 `docs/codex-integration-qa.md`。
+Status: Implemented / Device release validation pending — 2026-10-25。已实现默认授权范围内的 40 项工具，完成两轮本地自动验收与自行代码审查；生产域名完整合成链路两轮各 12/12 通过。CloudKit Production 与真机界面验收仍未完成，不标记交付完成；没有上传新 TestFlight 构建或授权真实行程。详见 `docs/codex-integration-qa.md`。
 
 ## 目标与验收口径
 
@@ -22,7 +22,7 @@ Status: Implemented / Release validation blocked — 2026-10-22。已实现默�
 
 `Codex → 远程 MCP → 已配对请求队列 → Carry 命令执行器 → SwiftData/CloudKit → 持久化回执`
 
-远程 MCP 提供 Streamable HTTP 接口，已部署在 `https://connect.nevestudio.app/mcp`，使用 Cloudflare Worker 与 SQLite Durable Object。2026-10-25 已重新部署最终源码，普通 DNS、健康端点与 OAuth 发现文档读取恢复；生产完整链路仍须单独验收，详见 `docs/codex-integration-qa.md`。
+远程 MCP 提供 Streamable HTTP 接口，已部署在 `https://connect.nevestudio.app/mcp`，使用 Cloudflare Worker 与 SQLite Durable Object。2026-10-25 已重新部署最终源码，生产完整合成链路两轮各 12/12 通过；原生设备、CloudKit 与界面验收单独记录于 `docs/codex-integration-qa.md`。
 
 云端保存授权范围内的结构化查询快照、请求、执行状态与回执。SwiftData/CloudKit 保持旅行数据的真实来源；查询快照可重建。云端不直接编辑 SwiftData 自动管理的 CloudKit records，也不持有开发者私钥来读取用户私有库。
 
@@ -113,7 +113,7 @@ Status: Implemented / Release validation blocked — 2026-10-22。已实现默�
 - 当前聊天已迁入 Carry 项目；本轮开发与构建使用上述隔离 worktree。
 - 新增模型 `AutomationExecutionRecord` 为可加迁移，本地旧库迁移已实际验证；仍须在正确 Apple 团队中核对 Development schema，并部署到 Production 后验证同步。
 - 中英隐私政策已提交并推送至 `neve-web`（`7f0aaa2`）；Git 推送未触发 Pages 自动部署，已手动部署到原 `neve-web` 项目（`4d2e404a`）。英文线上已读到新条款；中文于 2026-10-25 完整读取并核对与源码一致（仅 Cloudflare 邮箱保护转换）。
-- 发布前仍须通过生产域名完整合成链路、真机配对与界面验收、CloudKit Production schema 和跨设备同步。App 功能默认关闭，实际旅行数据未上传。详见验收记录。
+- 生产域名完整合成链路已通过；发布前仍须通过真机配对与界面验收、CloudKit Production schema 和跨设备同步。App 功能默认关闭，实际旅行数据未上传。详见验收记录。
 
 ## 来源
 
