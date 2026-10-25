@@ -59,9 +59,12 @@ try {
   const flow = page.match(/'X-Flow':"([a-f0-9]+)"/)?.[1];
   assert.ok(code && flow); checks++;
   const tripId = crypto.randomUUID();
-  const paired = await (await send("/device/pair", { code, tripIds: [tripId] })).json();
+  const pairAttempt = { code, tripIds: [tripId], shareLibrary: false, connectionId: crypto.randomUUID(), deviceToken: Buffer.from(crypto.getRandomValues(new Uint8Array(32))).toString("hex") };
+  const paired = await (await send("/device/pair", pairAttempt)).json();
   deviceToken = paired.deviceToken;
   assert.ok(deviceToken); checks++;
+  const recovered = await (await send("/device/pair", pairAttempt)).json();
+  assert.equal(recovered.connectionId, paired.connectionId); assert.equal(recovered.deviceToken, deviceToken); checks++;
   const ready = await (await send("/authorize/status", null, null, { "X-Flow": flow })).json();
   const authCode = new URL(ready.redirect).searchParams.get("code");
   const tokens = await (await send("/token", new URLSearchParams({ grant_type: "authorization_code", client_id: client.client_id, code: authCode, code_verifier: verifier, redirect_uri: "http://127.0.0.1:51234/callback" }).toString(), null, { "Content-Type": "application/x-www-form-urlencoded" })).json();
@@ -81,6 +84,24 @@ try {
   assert.equal((await call(tokens.access_token, "get_operation", { requestId })).status, "applied"); checks++;
   assert.equal((await send("/device/revoke", {}, deviceToken)).status, 200);
   assert.equal((await send("/mcp", { jsonrpc: "2.0", id: 2, method: "tools/list" }, tokens.access_token)).status, 401); checks++;
+  const cancellationPage = await (await send("/authorize?" + params)).text();
+  const cancellationCode = cancellationPage.match(/<code>([A-F0-9]{16})<\/code>/)?.[1];
+  assert.ok(cancellationCode);
+  const cancelledAttempt = { code: cancellationCode, tripIds: [], connectionId: crypto.randomUUID(), deviceToken: Buffer.from(crypto.getRandomValues(new Uint8Array(32))).toString("hex") };
+  assert.equal((await send("/device/cancel-pair", cancelledAttempt)).status, 200);
+  assert.equal((await send("/device/pair", cancelledAttempt)).status, 404); checks++;
+  const revokePage = await (await send("/authorize?" + params)).text();
+  const revokeCode = revokePage.match(/<code>([A-F0-9]{16})<\/code>/)?.[1];
+  const revokeFlow = revokePage.match(/'X-Flow':"([a-f0-9]+)"/)?.[1];
+  assert.ok(revokeCode && revokeFlow);
+  const revokePair = await (await send("/device/pair", { code: revokeCode, tripIds: [] })).json();
+  deviceToken = revokePair.deviceToken;
+  const revokeReady = await (await send("/authorize/status", null, null, { "X-Flow": revokeFlow })).json();
+  const revokeAuthCode = new URL(revokeReady.redirect).searchParams.get("code");
+  const revokeTokens = await (await send("/token", new URLSearchParams({ grant_type: "authorization_code", client_id: client.client_id, code: revokeAuthCode, code_verifier: verifier, redirect_uri: "http://127.0.0.1:51234/callback" }).toString(), null, { "Content-Type": "application/x-www-form-urlencoded" })).json();
+  assert.ok(revokeTokens.access_token);
+  assert.equal((await send("/revoke", new URLSearchParams({ token: revokeTokens.access_token, client_id: client.client_id }).toString(), null, { "Content-Type": "application/x-www-form-urlencoded" })).status, 200);
+  assert.equal((await send("/device/next", {}, deviceToken)).status, 401); checks++;
   console.log(`Live relay: ${checks} checks passed; synthetic connection revoked.`);
   deviceToken = undefined;
 } finally {

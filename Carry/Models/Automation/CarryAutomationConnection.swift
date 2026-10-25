@@ -11,6 +11,11 @@ extension Notification.Name {
     static let carryAutomationInvalidated = Notification.Name("carryAutomationInvalidated")
 }
 
+struct AutomationPendingPair: Codable {
+    let code: String
+    let shareLibrary: Bool
+}
+
 struct AutomationCredentials: Codable {
     let connectionId: UUID
     let deviceToken: String
@@ -19,6 +24,7 @@ struct AutomationCredentials: Codable {
     let scope: String
     var cloudAccount: String
     var revocationPending = false
+    var pendingPair: AutomationPendingPair?
 }
 
 struct AutomationOperationSummary: Decodable, Identifiable {
@@ -195,32 +201,60 @@ final class CarryAutomationConnection: ObservableObject {
         try await request("/device/pair", body: ["code": .string(code), "preview": .bool(true)], token: nil)
     }
 
-    func connect(code: String, tripIds: Set<UUID>, shareLibrary: Bool = false, expectedScope: String, store: TripStore) async {
+    func connect(code: String, tripIds: Set<UUID>, shareLibrary: Bool = false, expectedScope: String, clientName: String = "Codex", store: TripStore) async {
         guard !isBusy, credentials == nil, store.automationReady, CarryApp.hasPersistentStore else { return }
         isBusy = true; errorKey = nil
         defer { isBusy = false }
+        let expectedGeneration = generation
+        let expectedStoreVersion = store.automationInvalidationVersion
         do {
             let account = try await currentCloudAccount()
-            struct Paired: Decodable {
-                let connectionId: UUID; let deviceToken: String; let clientName: String; let tripIds: [UUID]; let scope: String
-            }
-            let paired: Paired = try await request("/device/pair", body: ["code": .string(code), "tripIds": .array(tripIds.map { .string($0.uuidString) }), "shareLibrary": .bool(shareLibrary)], token: nil)
+            guard generation == expectedGeneration, !Task.isCancelled, credentials == nil,
+                  UIApplication.shared.applicationState == .active, store.automationReady,
+                  store.automationInvalidationVersion == expectedStoreVersion else { throw CancellationError() }
             let approvedScopes = AutomationAuthorization.scopeSet(expectedScope).intersection(AutomationAuthorization.scopes).filter { shareLibrary || !$0.hasPrefix("library:") }
-            guard Set(paired.tripIds) == tripIds, AutomationAuthorization.scopeSet(paired.scope).isSubset(of: Set(approvedScopes)) else {
-                let _: EmptyResponse = try await request("/device/revoke", body: [:], token: paired.deviceToken)
-                throw AutomationError.unauthorized
-            }
-            let credential = AutomationCredentials(connectionId: paired.connectionId, deviceToken: paired.deviceToken,
-                clientName: paired.clientName, tripIds: paired.tripIds, scope: paired.scope, cloudAccount: account)
-            do { try AutomationKeychain.save(credential) }
-            catch {
-                // Pairing consumed the code. Revoke the orphan grant if local credential storage fails.
-                let _: EmptyResponse = try await request("/device/revoke", body: [:], token: paired.deviceToken)
-                throw AutomationError.saveFailed
-            }
+            let deviceToken = (UUID().uuidString + UUID().uuidString).replacingOccurrences(of: "-", with: "").lowercased()
+            let credential = AutomationCredentials(connectionId: UUID(), deviceToken: deviceToken, clientName: clientName,
+                tripIds: Array(tripIds), scope: approvedScopes.sorted().joined(separator: " "), cloudAccount: account,
+                pendingPair: AutomationPendingPair(code: code, shareLibrary: shareLibrary))
+            // The recoverable secret must exist durably before the server can consume the code.
+            try AutomationKeychain.save(credential)
             credentials = credential
-            start(store: store)
+            try await finishPairing()
         } catch { errorKey = "automation.error.connection" }
+        start(store: store)
+    }
+
+    func finishPairing() async throws {
+        guard let credential = credentials, let pending = credential.pendingPair, !credential.revocationPending else { return }
+        let expectedGeneration = generation
+        struct Paired: Decodable {
+            let connectionId: UUID; let deviceToken: String; let clientName: String; let tripIds: [UUID]; let scope: String
+        }
+        let body: [String: AutomationValue] = ["code": .string(pending.code), "connectionId": .string(credential.connectionId.uuidString),
+            "deviceToken": .string(credential.deviceToken), "tripIds": .array(credential.tripIds.map { .string($0.uuidString) }), "shareLibrary": .bool(pending.shareLibrary)]
+        let paired: Paired
+        do { paired = try await request("/device/pair", body: body, token: nil) }
+        catch let error as AutomationHTTPError where error.status == 403 || error.status == 404 {
+            if credentials?.connectionId == credential.connectionId {
+                credentials?.revocationPending = true
+                if let credentials { try AutomationKeychain.save(credentials) }
+            }
+            throw error
+        }
+        guard generation == expectedGeneration, !Task.isCancelled, credentials?.connectionId == credential.connectionId,
+              credentials?.revocationPending == false else { throw CancellationError() }
+        guard paired.connectionId == credential.connectionId, paired.deviceToken == credential.deviceToken,
+              Set(paired.tripIds) == Set(credential.tripIds), AutomationAuthorization.scopeSet(paired.scope).isSubset(of: AutomationAuthorization.scopeSet(credential.scope)) else {
+            credentials?.revocationPending = true
+            if let credentials { try AutomationKeychain.save(credentials) }
+            throw AutomationError.unauthorized
+        }
+        let completed = AutomationCredentials(connectionId: paired.connectionId, deviceToken: paired.deviceToken, clientName: paired.clientName,
+            tripIds: paired.tripIds, scope: paired.scope, cloudAccount: credential.cloudAccount)
+        try AutomationKeychain.save(completed)
+        credentials = completed
+        errorKey = nil
     }
 
     func disconnect() async {
@@ -238,7 +272,12 @@ final class CarryAutomationConnection: ObservableObject {
     private func finishRevocation() async {
         guard let credential = credentials, credential.revocationPending else { return }
         do {
-            let _: EmptyResponse = try await request("/device/revoke", body: [:], token: credential.deviceToken)
+            if let pending = credential.pendingPair {
+                let _: EmptyResponse = try await request("/device/cancel-pair", body: ["code": .string(pending.code),
+                    "connectionId": .string(credential.connectionId.uuidString), "deviceToken": .string(credential.deviceToken)], token: nil)
+            } else {
+                let _: EmptyResponse = try await request("/device/revoke", body: [:], token: credential.deviceToken)
+            }
             guard credentials?.connectionId == credential.connectionId, credentials?.revocationPending == true else { return }
             try AutomationKeychain.clear()
             credentials = nil; lastSynced = nil; errorKey = nil; operations = []
@@ -261,6 +300,7 @@ final class CarryAutomationConnection: ObservableObject {
         isBusy = true
         defer { isBusy = false }
         do {
+            if credential.pendingPair != nil { try await finishPairing(); return }
             try Task.checkCancellation()
             // The server may have accepted a previous receipt before the response was lost.
             // Treat its scope as an upper bound; only local approval/creation can add IDs.

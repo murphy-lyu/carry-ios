@@ -29,3 +29,7 @@ xcodebuild -project CarrySchemaBootstrap.xcodeproj -scheme CarrySchemaBootstrap 
 完成初始化后在 CloudKit Console 核对全量业务类型、字段、索引和生产差异。生产发布确认、实际 iCloud 同步、原生 MCP 联网与 UI 验收单独进行；工具成功不代表这些门禁通过。用户日常测试手机可以先用于接口检查，不能仅根据设备归属要求更换 Apple ID；真实权限错误另行核对。
 
 依据：[Apple SwiftData 同步与原生初始化](https://developer.apple.com/documentation/swiftdata/syncing-model-data-across-a-persons-devices)。
+
+## 2026-10-25 结构快照
+
+用户既有 iPhone 完成原生初始化后，从控制台导出 Development；用户当次确认部署后，控制台显示 Changes Deployed，切换 Production 读回全部 11 个业务类型，再导出 Production。`schema/development.ckdb` 和 `schema/production.ckdb` 字节完全一致，均为 20303 字节，SHA256 `50065f98c272e11711f2be22ddda33c7b11bbefaeebd51f3a52070d96a4fc7b2`。只包含类型、字段、索引和默认角色规则，无用户记录、账号凭据或 token。快照相同证明结构一致，不代替真实双设备同步。工具已从日常测试手机卸载。

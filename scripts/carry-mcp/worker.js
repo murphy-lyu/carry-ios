@@ -245,10 +245,10 @@ export class CarryRelay {
     if (path === "/health") return json({ service: "carry-mcp", version: 1 });
     if (path.startsWith("/.well-known/oauth-protected-resource")) return json({ resource: origin + "/mcp", authorization_servers: [origin], scopes_supported: SCOPES });
     if (path === "/.well-known/oauth-authorization-server") return json({ issuer: origin, authorization_endpoint: origin + "/authorize",
-      token_endpoint: origin + "/token", registration_endpoint: origin + "/register", response_types_supported: ["code"],
+      token_endpoint: origin + "/token", registration_endpoint: origin + "/register", revocation_endpoint: origin + "/revoke", response_types_supported: ["code"],
       grant_types_supported: ["authorization_code", "refresh_token"], code_challenge_methods_supported: ["S256"],
       token_endpoint_auth_methods_supported: ["none"], scopes_supported: SCOPES });
-    if (["/register", "/authorize", "/device/pair", "/token"].includes(path)) await this.rateLimit(request);
+    if (["/register", "/authorize", "/device/pair", "/device/cancel-pair", "/token", "/revoke"].includes(path)) await this.rateLimit(request);
     if (path === "/register" && request.method === "POST") {
       const body = await readBody(request);
       if (!Array.isArray(body.redirect_uris) || !body.redirect_uris.length || body.redirect_uris.length > 5 || !body.redirect_uris.every(redirectAllowed)) fail("invalid_redirect_uri");
@@ -279,22 +279,66 @@ export class CarryRelay {
     }
     if (path === "/device/pair" && request.method === "POST") {
       const body = await readBody(request), code = text(body.code, 16).replaceAll(" ", "").toUpperCase();
+      const recoverable = body.connectionId !== undefined || body.deviceToken !== undefined;
+      let pairingHash;
+      if (recoverable) {
+        if (!UUID.test(body.connectionId || "") || !/^[a-f0-9]{64}$/.test(body.deviceToken || "") ||
+            !Array.isArray(body.tripIds) || body.tripIds.length > 100 || !body.tripIds.every(id => UUID.test(id))) fail("invalid_pairing_attempt");
+        pairingHash = await digest(JSON.stringify(canonical({ code, tripIds: [...new Set(body.tripIds.map(id => id.toLowerCase()))].sort(), shareLibrary: body.shareLibrary === true })));
+        const existing = await this.storage.get("connection:" + body.connectionId.toLowerCase());
+        if (existing) {
+          if (existing.revoked || existing.expires < now || existing.deviceHash !== await digest(body.deviceToken) || existing.pairingHash !== pairingHash) fail("invalid_pairing_attempt", 403);
+          return json({ connectionId: existing.id, deviceToken: body.deviceToken, clientName: existing.clientName, tripIds: existing.tripIds, scope: existing.scope });
+        }
+        if (await this.storage.get("device:" + await digest(body.deviceToken))) fail("invalid_pairing_attempt", 403);
+      }
       const pair = await this.storage.get("pair:" + code);
-      if (!pair || pair.expires < now) fail("invalid_pairing_code", 404);
+      if (!pair || pair.consumed || pair.expires < now) fail("invalid_pairing_code", 404);
       if (body.preview === true) return json({ clientName: pair.clientName, redirectHost: new URL(pair.redirect).host, scope: pair.scope });
       if (!Array.isArray(body.tripIds) || body.tripIds.length > 100 || !body.tripIds.every(id => UUID.test(id))) fail("invalid_trip_scope");
-      const connectionId = crypto.randomUUID(), deviceToken = random(), authCode = random();
+      const connectionId = recoverable ? body.connectionId.toLowerCase() : crypto.randomUUID(), deviceToken = recoverable ? body.deviceToken : random(), authCode = random();
       const grantedScope = pair.scope.split(" ").filter(s => !s.startsWith("library:") || body.shareLibrary === true).join(" ");
       const connection = { id: connectionId, clientId: pair.clientId, clientName: pair.clientName, scope: grantedScope,
-        tripIds: [...new Set(body.tripIds.map(id => id.toLowerCase()))], deviceHash: await digest(deviceToken), revoked: false, createdAt: now, expires: now + 30 * DAY };
-      await this.storage.put("connection:" + connectionId, connection);
-      await this.storage.put("device:" + connection.deviceHash, { connectionId, expires: connection.expires });
-      await this.storage.put("code:" + await digest(authCode), { ...pair, connectionId, expires: now + MINUTE });
+        tripIds: [...new Set(body.tripIds.map(id => id.toLowerCase()))], deviceHash: await digest(deviceToken), ...(pairingHash ? { pairingHash } : {}), revoked: false, createdAt: now, expires: now + 30 * DAY };
       const redirect = new URL(pair.redirect);
       redirect.searchParams.set("code", authCode); redirect.searchParams.set("state", pair.state);
-      await this.storage.put("flow:" + pair.flowId, { redirect: redirect.href, expires: pair.expires });
-      await this.storage.delete("pair:" + code);
+      // One Storage API batch is an atomic transaction, including consumption.
+      // A failed write cannot leave a connection without its device/grant indexes.
+      await this.storage.put({
+        ["connection:" + connectionId]: connection,
+        ["device:" + connection.deviceHash]: { connectionId, expires: connection.expires },
+        ["code:" + await digest(authCode)]: { ...pair, connectionId, expires: now + MINUTE },
+        ["flow:" + pair.flowId]: { redirect: redirect.href, expires: pair.expires },
+        ["pair:" + code]: { consumed: true, expires: pair.expires },
+      });
       return json({ connectionId, deviceToken, clientName: pair.clientName, tripIds: connection.tripIds, scope: grantedScope });
+    }
+    if (path === "/device/cancel-pair" && request.method === "POST") {
+      const body = await readBody(request), code = text(body.code, 16).toUpperCase();
+      if (!UUID.test(body.connectionId || "") || !/^[a-f0-9]{64}$/.test(body.deviceToken || "")) fail("invalid_pairing_attempt");
+      const hash = await digest(body.deviceToken), conn = await this.storage.get("connection:" + body.connectionId.toLowerCase());
+      if (conn) {
+        if (conn.deviceHash !== hash) fail("invalid_pairing_attempt", 403);
+        await this.revokeConnection(conn);
+      } else {
+        const pair = await this.storage.get("pair:" + code);
+        // Cancellation and approval share the serialized gate. Consume the unused
+        // code first so any delayed approval fails instead of creating an orphan.
+        if (pair) {
+          await this.storage.delete("pair:" + code);
+          if (pair.flowId) await this.storage.delete("flow:" + pair.flowId);
+        }
+      }
+      return json({ revoked: true });
+    }
+    if (path === "/revoke" && request.method === "POST") {
+      const body = Object.fromEntries(new URLSearchParams(await readText(request)));
+      const hash = await digest(text(body.token || "", 256));
+      const grant = await this.storage.get("refresh:" + hash) || await this.storage.get("access:" + hash);
+      const conn = grant && await this.storage.get("connection:" + grant.connectionId);
+      if (conn && conn.clientId === body.client_id) await this.revokeConnection(conn);
+      // OAuth revocation deliberately does not disclose whether a token exists.
+      return json({});
     }
     if (path === "/token" && request.method === "POST") {
       const body = Object.fromEntries(new URLSearchParams(await readText(request)));
@@ -338,13 +382,7 @@ export class CarryRelay {
         return json({ cancelled: true });
       }
       if (path === "/device/revoke" && request.method === "POST") {
-        conn.revoked = true;
-        await this.storage.put("connection:" + conn.id, conn);
-        await this.storage.delete("device:" + conn.deviceHash);
-        for (const prefix of ["access:", "refresh:", "code:"]) {
-          for await (const [key, value] of this.entries(prefix)) if (value.connectionId === conn.id) await this.storage.delete(key);
-        }
-        for await (const [key] of this.entries("data:" + conn.id + ":")) await this.storage.delete(key);
+        await this.revokeConnection(conn);
         return json({ revoked: true });
       }
       if (path === "/device/snapshot" && request.method === "POST") {
@@ -425,6 +463,15 @@ export class CarryRelay {
       return json({ jsonrpc: "2.0", id: rpc.id, result });
     }
     fail("not_found", 404);
+  }
+  async revokeConnection(conn) {
+    conn.revoked = true;
+    await this.storage.put("connection:" + conn.id, conn);
+    await this.storage.delete("device:" + conn.deviceHash);
+    for (const prefix of ["access:", "refresh:", "code:"]) {
+      for await (const [key, value] of this.entries(prefix)) if (value.connectionId === conn.id) await this.storage.delete(key);
+    }
+    for await (const [key] of this.entries("data:" + conn.id + ":")) await this.storage.delete(key);
   }
   async authenticate(request, kind, origin) {
     const bearer = request.headers.get("Authorization")?.match(/^Bearer ([a-zA-Z0-9]+)$/)?.[1];

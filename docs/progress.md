@@ -3,6 +3,14 @@
 ## 最后更新
 2026-10-25
 
+## 上次改动摘要（原 Carry 真机与 Tripsy 对照 · 2026-10-25）
+
+- 用户自己的 iPhone 已完成原生 CloudKit dry-run 与 Development 初始化；用户当次确认后已部署 Production 并读回 11 个业务类型。两环境导出结构逐字节相同；未要求切换手机 Apple ID，真实双设备同步仍待验收。
+- 覆盖安装前已完整备份 App/App Group，5 个 SQLite 库 quick_check 通过，13 个行程；原 Carry 安装后和重启后实际首页均显示 13 行程。独立初始化工具已从手机卸载。
+- Debug/Release 显式指定 CloudKit Development/Production，真机目标构建与实际签名 entitlement 均通过；不据此宣称已完成 iCloud 同步或新 TestFlight 发布。
+- 真机配对发现服务端批准而手机未保存连接。已改为先持久化待完成凭据、幂等恢复/取消，服务端原子保存授权并新增 OAuth 撤销。两轮原生各 39/39、最终协议各 20/20、HTTP 各 15/15，Release 与真机 Debug 构建通过；最终 Worker `5369784f-332e-414c-8c5b-84afba2331b6` 已部署。完整真机链路仍受间歇网络超时影响，没有选择既有行程、授权物品库或宣称测试行程创建成功；详细失败与清理状态见 QA。
+- Tripsy 的截图、官方 API/MCP 文档及本会话工具目录只读研究完成，见 `docs/tripsy-mcp-comparison.md`。两者均使用 MCP/OAuth；账户 API 与手机前台执行的差别已明确，没有据此替换已确认的 Carry 架构。
+
 ## 上次改动摘要（Codex 接入线上复查 · 2026-10-25）
 
 - `codex/carry-integration` 已成功推送 GitHub，远程实现提交为 `15a8212`；主线仍为 `98ab2b5`，没有合并或上传新版 TestFlight。

@@ -21,7 +21,7 @@ struct AutomationConnectionView: View {
             if let credential = connection.credentials {
                 Section {
                     LabeledContent("automation.client", value: credential.clientName)
-                    Text(credential.revocationPending ? "automation.revoking" : "automation.connected")
+                    Text(credential.revocationPending ? "automation.revoking" : credential.pendingPair != nil ? "automation.status.queued" : "automation.connected")
                     if credential.scope.contains("library:read") { Text("automation.library.enabled").foregroundStyle(.secondary) }
                     if let synced = connection.lastSynced {
                         LabeledContent("automation.last_sync") { Text(synced, style: .relative) }
@@ -91,7 +91,7 @@ struct AutomationConnectionView: View {
                     Section {
                         Button("automation.approve") {
                             guard let preview else { return }
-                            Task { await connection.connect(code: normalizedCode, tripIds: selectedTrips, shareLibrary: shareLibrary, expectedScope: preview.scope, store: store) }
+                            Task { await connection.connect(code: normalizedCode, tripIds: selectedTrips, shareLibrary: shareLibrary, expectedScope: preview.scope, clientName: preview.clientName, store: store) }
                         }
                         .fontWeight(.semibold)
                         .disabled(connection.isBusy)

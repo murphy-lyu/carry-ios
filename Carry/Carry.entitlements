@@ -14,6 +14,8 @@
 	<array>
 		<string>CloudKit</string>
 	</array>
+	<key>com.apple.developer.icloud-container-environment</key>
+	<string>$(CARRY_CLOUDKIT_ENVIRONMENT)</string>
 	<key>com.apple.developer.ubiquity-kvstore-identifier</key>
 	<string>$(TeamIdentifierPrefix)app.nevestudio.carry</string>
 	<key>com.apple.developer.weatherkit</key>

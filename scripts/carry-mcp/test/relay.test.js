@@ -8,7 +8,11 @@ class Storage {
   values = new Map();
   alarmAt = null;
   async get(key) { return structuredClone(this.values.get(key)); }
-  async put(key, value) { this.values.set(key, structuredClone(value)); }
+  async put(key, value) {
+    const entries = typeof key === "string" ? [[key, value]] : Object.entries(key);
+    const cloned = entries.map(([k, v]) => [k, structuredClone(v)]);
+    for (const [k, v] of cloned) this.values.set(k, v);
+  }
   async delete(key) { this.values.delete(key); }
   async list({ prefix = "", limit = Infinity, startAfter = "" } = {}) { return new Map([...this.values].sort(([a], [b]) => a < b ? -1 : a > b ? 1 : 0).filter(([k]) => k.startsWith(prefix) && k > startAfter).slice(0, limit).map(([k, v]) => [k, structuredClone(v)])); }
   async getAlarm() { return this.alarmAt; }
@@ -52,6 +56,75 @@ function fixture() {
 }
 const id = () => crypto.randomUUID();
 const revision = "a".repeat(64);
+
+async function pendingPair(f) {
+  const client = await (await f.send("/register", { client_name: "Recovery QA", redirect_uris: ["http://127.0.0.1:51234/callback"] })).json();
+  const verifier = "r".repeat(64);
+  const challenge = Buffer.from(await crypto.subtle.digest("SHA-256", new TextEncoder().encode(verifier))).toString("base64url");
+  const params = new URLSearchParams({ client_id: client.client_id, redirect_uri: "http://127.0.0.1:51234/callback", response_type: "code", code_challenge_method: "S256", code_challenge: challenge, scope: "trips:read trips:write library:read" });
+  const page = await (await f.send("/authorize?" + params, null, null, "GET")).text();
+  return { code: page.match(/<code>([A-F0-9]{16})<\/code>/)[1], connectionId: id(), deviceToken: "c".repeat(64), tripIds: [], shareLibrary: false };
+}
+
+test("lost pairing responses recover the same connection without storing secrets or widening consent", async () => {
+  const f = fixture(), attempt = await pendingPair(f);
+  const first = await (await f.send("/device/pair", attempt)).json();
+  assert.equal((await f.storage.get("pair:" + attempt.code)).consumed, true);
+  const recovered = await (await f.send("/device/pair", attempt)).json();
+  assert.deepEqual(recovered, first);
+  assert.equal(first.deviceToken, attempt.deviceToken);
+  assert.equal(first.scope, "trips:read trips:write");
+  assert.equal(JSON.stringify([...f.storage.values]).includes(attempt.deviceToken), false);
+  assert.equal((await f.send("/device/pair", { ...attempt, tripIds: [id()] })).status, 403);
+  assert.equal((await f.send("/device/pair", { ...attempt, deviceToken: "d".repeat(64) })).status, 403);
+  assert.equal((await f.send("/device/pair", { ...attempt, shareLibrary: true })).status, 403);
+  await f.send("/device/revoke", {}, attempt.deviceToken);
+  assert.equal((await f.send("/device/pair", attempt)).status, 403);
+});
+
+test("cancelling pending pairing blocks late approval and revokes an already created grant", async () => {
+  const f = fixture(), attempt = await pendingPair(f);
+  assert.equal((await f.send("/device/cancel-pair", attempt)).status, 200);
+  assert.equal((await f.send("/device/pair", attempt)).status, 404);
+  assert.equal(await f.storage.get("connection:" + attempt.connectionId), undefined);
+  const g = fixture(), created = await pendingPair(g);
+  assert.equal((await g.send("/device/pair", created)).status, 200);
+  assert.equal((await g.send("/device/cancel-pair", { ...created, deviceToken: "d".repeat(64) })).status, 403);
+  assert.equal((await g.send("/device/next", {}, created.deviceToken)).status, 200);
+  assert.equal((await g.send("/device/cancel-pair", created)).status, 200);
+  assert.equal((await g.send("/device/cancel-pair", created)).status, 200);
+  assert.equal((await g.send("/device/next", {}, created.deviceToken)).status, 401);
+  assert.equal((await g.send("/device/pair", created)).status, 403);
+});
+
+test("pairing storage failure cannot consume the code or publish a partial grant", async () => {
+  const f = fixture(), attempt = await pendingPair(f), put = f.storage.put.bind(f.storage);
+  f.storage.put = async (key, value) => {
+    if (typeof key === "object" && Object.keys(key).some(k => k.startsWith("connection:"))) {
+      assert.equal(Object.keys(key).length, 5);
+      throw new Error("Injected atomic batch failure");
+    }
+    return put(key, value);
+  };
+  assert.equal((await f.send("/device/pair", attempt)).status, 500);
+  assert.equal((await f.storage.get("pair:" + attempt.code)).consumed, undefined);
+  assert.equal(await f.storage.get("connection:" + attempt.connectionId), undefined);
+  assert.equal(await f.storage.get("device:" + await digest(attempt.deviceToken)), undefined);
+  f.storage.put = put;
+  assert.equal((await f.send("/device/pair", attempt)).status, 200);
+  assert.equal((await f.send("/device/pair", attempt)).status, 200);
+});
+
+test("OAuth revocation is client-bound, idempotent and clears both client and device access", async () => {
+  const f = fixture(), conn = await f.pair();
+  const revoke = client_id => f.send("/revoke", new URLSearchParams({ token: conn.access_token, client_id }).toString(), null, "POST", { "Content-Type": "application/x-www-form-urlencoded" });
+  assert.equal((await revoke(id())).status, 200);
+  assert.equal((await f.send("/device/next", {}, conn.deviceToken)).status, 200);
+  assert.equal((await revoke(conn.grant.client_id)).status, 200);
+  assert.equal((await f.send("/device/next", {}, conn.deviceToken)).status, 401);
+  assert.equal((await f.send("/mcp", { jsonrpc: "2.0", id: 1, method: "tools/list" }, conn.access_token)).status, 401);
+  assert.equal((await revoke(conn.grant.client_id)).status, 200);
+});
 
 test("library-only OAuth does not retain trip snapshots even if a device sends them", async () => {
   const f = fixture(), tripId = id(), conn = await f.pair([tripId], "library:read library:write", true);

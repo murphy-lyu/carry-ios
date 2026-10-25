@@ -20,7 +20,7 @@ final class CloudKitModelExportTests: XCTestCase {
         try data.write(to: destination, options: .atomic)
         print("Schema export: \(expected.count) native model types, \(data.count) bytes; no user records or CloudKit upload.")
         for entity in decoded.entities.sorted(by: { ($0.name ?? "") < ($1.name ?? "") }) {
-            print("Schema entity: \(entity.name ?? "unnamed") / \(entity.managedObjectClassName)")
+            print("Schema entity: \(entity.name ?? "unnamed") / \(entity.managedObjectClassName ?? "unspecified")")
         }
     }
 }

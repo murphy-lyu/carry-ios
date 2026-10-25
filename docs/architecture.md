@@ -1,5 +1,13 @@
 # Carry 架构说明
 
+## Codex 受限自动化连接（2026-10-25）
+
+`scripts/carry-mcp/worker.js` 提供 Streamable HTTP MCP、OAuth/PKCE、授权快照与请求队列。`CarryAutomationConnection` 管理 ThisDeviceOnly Keychain 凭据、前台轮询和撤销；`CarryAutomationProtocol`/`CarryAutomationQueries` 校验并调用现有 SwiftData 业务操作。业务数据和 `AutomationExecutionRecord` 在隔离事务中一起保存，成功后发布新的观察图；服务端不直接修改 CloudKit 私人记录。
+
+配对先在 Keychain 保存随机连接 UUID、设备凭据和 `AutomationPendingPair`，再请求批准。服务端只保存凭据及原始授权输入的摘要，精确重复请求返回同一连接；待完成状态不传快照、不执行操作。取消和批准使用同一服务端串行入口，取消未使用的配对码或撤销已创建连接，防止迟到批准重新启用权限。OAuth `/revoke` 与设备撤销共用清理逻辑，删除快照、队列及令牌映射。恢复配对不延长 OAuth 授权码有效期。
+
+Debug/Release 的 `CARRY_CLOUDKIT_ENVIRONMENT` 分别为 Development/Production，实际签名 entitlement 单独核对。完整模型由原生 API 导出并初始化，不能手工猜字段；开发与生产结构快照保存在 `scripts/cloudkit-schema-bootstrap/schema/`。真实跨设备同步、原生线上链路与本地测试分别验收。
+
 ## 整体结构
 
 ### iOS（2026-06-12 起：根级不再是 TabView，见 `specs/app-navigation-framework.md`，feature 分支未合并）

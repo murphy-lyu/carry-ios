@@ -1,6 +1,6 @@
 # Codex 接入验收与代码审查
 
-日期：2026-10-21～25。分支：`codex/carry-integration`。两轮本地自动验收与自行代码审查已完成；最新线上复查见下文，正确 Apple 团队及真机界面验收仍未完成，不标记整件任务交付完成。
+日期：2026-10-21～25。分支：`codex/carry-integration`。正确 Apple 团队、完整 CloudKit Production schema 和原 Carry 真机首页已核对。真机发现的配对恢复缺口已实现修复并重新完成两轮本地验收；完整原生线上/双设备链路仍待通过，不标记整件任务交付完成。
 
 ## 隔离与范围
 
@@ -8,6 +8,31 @@
 - SwiftData 测试每例新建临时磁盘数据库，验证真实持久化和关系，不用 JSON mock 替代模型事务。
 - MCP 测试使用合成行程和临时配对，完成后撤销；不读取或上传现有旅行数据。
 - 用户已明确授权本任务自行全面验收两轮并进行代码 Review；此授权不延伸至其他任务。
+
+## 2026-10-25 原 Carry 真机推进与新增问题
+
+以下为现场过程记录；本轮最终修复与结构部署结果见紧接其后的「配对恢复修复」小节，过程中的待办状态不能代替最新结果。
+
+- 用户自己的 iPhone 上，独立原生工具的 dry-run 和实际 Development 初始化均成功，覆盖 11 个真实业务实体；无需换用账户持有人的手机或切换手机 Apple ID。结果文件为 `/tmp/carry-bootstrap-device-dryrun-resumed-20261025.json`、`/tmp/carry-bootstrap-device-initialize-20261025.json`。CloudKit Console 随后读回 11 个 `CD_` 类型及系统 `Users`。
+- Development schema 已导出至 `scripts/cloudkit-schema-bootstrap/schema/development.ckdb`，仅结构元数据，SHA256 `50065f98c272e11711f2be22ddda33c7b11bbefaeebd51f3a52070d96a4fc7b2`。Production 预览为新增 11 类及对应索引，保留原生默认角色规则，无删除；尚未点击部署，访问规则相关操作已向用户请求当次确认。
+- 原 Carry 替换前，App 和 App Group 已分别完整复制到本机私人备份目录；38 个文件、5 个 SQLite 库均完成 quick_check，13 个行程，校验清单重新计算后再次核对。备份不进入仓库、不上传云端。安装后与后续重启，原 Carry 首页均实际显示 `13 trips · 4 countries`；这证明现有数据可读，不代替云同步验收。
+- 独立初始化 App 已从手机卸载，继续使用原 `app.nevestudio.carry`。原工程签名缺少明确的 CloudKit 环境选择，现为 Debug=`Development`、Release=`Production`；两类真机目标构建及实际签名 entitlement 核对通过。不能据此倒推旧同步故障一定由该项引起。构建日志为 `/tmp/carry-codex-physical-debug-explicit-env-20261025.log`、`/tmp/carry-codex-release-explicit-env-20261025.log`。
+- 真机 UI 已打开设置和连接页，默认没有选中现有 13 个行程；测试 OAuth 仅请求 trips 读写，不请求物品库。实际预览成功返回合成测试客户端及 loopback 返回地址。
+- **新问题：配对两端状态不一致，尚未修复。** 手机批准后显示连接失败，重启连接页无保存凭据；服务端却已能完成对应 OAuth 授权码交换，查询返回 `snapshot_unavailable`。没有共享现有旅行数据，也没有创建测试行程；该授权的清理状态尚待确认。响应丢失或本地凭据保存失败均可能造成这种状态，现有代码在消费配对码后无法可靠恢复，不能将重试碰巧成功作为修复。
+- 正在加入仅 Debug 的临时阶段/错误域/错误码诊断以区分网络响应与 Keychain 保存；不记录 URL、正文、配对码、身份或令牌。临时探针必须在交付前移除，故障须补齐失败路径测试后重新验收。
+- Mac 直接 Node fetch 连接超时、直接 curl 20s 无响应；使用现有系统代理 `127.0.0.1:6152` 后健康端点成功 200、部分 OAuth 请求成功，仍有超时。未改系统代理、固定 IP 或关闭证书验证。LLDB 的两次检查没有取得可用的应用持久化查询，不列为验收证据。
+- Tripsy 只读研究另见 `docs/tripsy-mcp-comparison.md`；不把竞品分析作为替换已确认架构的授权，也没有修改 Tripsy 私人数据。
+
+### 配对恢复修复与生产结构部署（本轮最新结果）
+
+- **CloudKit Production 已完成。** 用户当次明确回复「确认部署」后执行；控制台显示 `Changes Deployed`，切换 Production 等待列表加载，确认 11 个业务类型及系统 Users。导出 `production.ckdb` 与 Development 逐字节一致，20303 字节，SHA256 同上。不查询私人记录、不删除数据；结构一致仍不等于真实双设备同步通过。
+- **QA-20：配对响应丢失的恢复缺口已修复。** 第一次真机失败没有取得原生 NSError，不能断言直接诱因一定是 Keychain 或网络；但服务端已消费码、手机没有可恢复凭据的结构性窗口由代码确认，并用明确的丢失响应注入复现。现为批准前持久化随机连接 ID、设备凭据和待完成输入；服务端按凭据及授权摘要幂等恢复，待完成时不传快照、不执行命令。旧凭据兼容。取消在服务端串行入口消费未使用的码或撤销已成立连接，迟到请求不能重建。增加客户端绑定的 OAuth 撤销；配对恢复不延长 OAuth 授权码生命周期。
+- **QA-21：自行 Review 补上服务端配对原子提交。** 连接、设备索引、授权码、浏览器回跳和配对码消费使用一次 Storage API 批量 put 原子提交，避免存储故障造成部分授权状态。故障注入验证失败不消费码、不建立连接，随后相同输入可以恢复。依据：[Cloudflare SQLite Storage API 的原子方法与批量 put](https://developers.cloudflare.com/durable-objects/api/sqlite-storage-api/)。
+- 最终 App 代码的两轮签名原生全量回归均 **39/39、0 失败、0 跳过**，结果为 `/tmp/CarryPairRecoveryFullRound1-20261025.xcresult`、`/tmp/CarryPairRecoveryFullRound2-20261025.xcresult`。新增 4 项覆盖跨管理器恢复、离线取消、拒绝扩权、旧凭据兼容。第一轮发现模型导出测试的 optional 打印编译告警，改为显式兜底后第二轮消除；Xcode 的 SDK build-number 与无 iCloud 测试模拟器的系统日志保留，不伪装实际云同步。
+- 最终服务端代码协议测试两轮均 **20/20**，真实本地 Miniflare HTTP 两轮均 **15/15**，合成连接均撤销。日志为 `/tmp/carry-pair-protocol-final-round{1,2}-20261025.log`、`/tmp/carry-pair-http-final-round{1,2}-20261025.log`。原子批处理定稿后，原生实际 HTTP 往返另补测通过：`/tmp/CarryPairRecoveryAtomicRelay-20261025.xcresult`。
+- 保留一次测试配置失败：误用不含测试动作的 Carry scheme，命令拒绝执行，未计为通过；随后使用既有 CarryAutomationTests scheme。另一次 live 测试与原生测试共享本地来源预算而触发限流，未通过；改用独立 Wrangler 数据目录与端口后通过，没有降低限流或跳过断言。Release、Debug 真机目标均构建成功，九语言审计 0 errors / 0 warnings，临时 Debug 配对探针已从源码移除。
+- 最终服务端已部署：`5369784f-332e-414c-8c5b-84afba2331b6`。原 Carry 真机修复构建已安装。前两条测试授权均已撤销并分别实际验证旧访问令牌为 401，对应临时本机令牌文件均已删除。第二次旧实现配对曾在真机显示 Connected，但同步随后报网络失败；创建合成行程的请求超时，后续查询为 operation_not_found，没有据此宣称落盘或增加行程成功。修复后重新发起的注册请求再次传输超时，尚未获得新配对码，未计为真机完整通过。
+- 当前生产网络仍有间歇超时：健康 GET 在 HTTP/SOCKS 系统代理上均可正常协商 HTTP/2 返回 200；部分 MCP POST 未到达 Worker。脱敏 tail 中到达的撤销请求处理约 183～209ms，未记录令牌、正文或请求头。不能用更换 CLI 传输成功替代原生端到端验收，完整真机/离线恢复/账号切换与真实双设备同步仍为门禁。
 
 ## 已发现问题与处理
 

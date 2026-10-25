@@ -1,5 +1,11 @@
 # 决策日志
 
+## 2026-10-25 配对恢复与 CloudKit 环境
+
+真机出现服务端批准而手机未保存连接，代码审查确认一次性配对消费与本地凭据保存之间存在无法恢复的窗口。改为批准前持久化随机设备凭据和连接 UUID，服务端按凭据与授权摘要幂等恢复；取消使用同一串行入口消费未使用的码或撤销已建授权。新增 OAuth 撤销以管理客户端授权及清理异常测试连接。不更改已确认的手机前台执行与本地数据主存储方案。
+
+使用用户既有测试 iPhone 完成原生 Development 初始化，用户当次确认后部署 Production 并读回、导出核对完全一致。Debug/Release 明确选择 Development/Production。Tripsy 对照研究只形成接入指引和长期服务端执行取舍建议，未据此批准架构替换；证据边界见 QA 文档。
+
 ## 2026-10-22 Codex 接入：受限 MCP 与配对设备事务执行
 
 用户已确认远程请求/快照与设备离线待执行体验。使用 Cloudflare Streamable HTTP MCP + OAuth PKCE 配对；SwiftData/CloudKit 保持真实数据来源，不直接编辑自动管理的 CloudKit records，不新增 Apple 登录或模型 API key。

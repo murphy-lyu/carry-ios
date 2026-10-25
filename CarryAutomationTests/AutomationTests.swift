@@ -362,6 +362,82 @@ final class AutomationTests: XCTestCase {
         XCTAssertEqual(recreated.credentials?.revocationPending, true)
     }
 
+    func testLostPairResponseRecoversFromDurableCredentialAfterManagerRecreation() async throws {
+        guard try AutomationKeychain.load() == nil else { throw XCTSkip("An existing device connection must not be overwritten by QA") }
+        let credential = AutomationCredentials(connectionId: UUID(), deviceToken: String(repeating: "c", count: 64), clientName: "QA", tripIds: [],
+            scope: "trips:read trips:write", cloudAccount: "local-only", pendingPair: AutomationPendingPair(code: "1234567890ABCDEF", shareLibrary: false))
+        try AutomationKeychain.save(credential)
+        defer { try? AutomationKeychain.clear() }
+        let interrupted = CarryAutomationConnection(sendData: { _ in throw URLError(.timedOut) })
+        do { try await interrupted.finishPairing(); XCTFail("Expected a lost response") }
+        catch { XCTAssertEqual((error as? URLError)?.code, .timedOut) }
+        XCTAssertEqual(try AutomationKeychain.load()?.pendingPair?.code, credential.pendingPair?.code)
+        let recovered = CarryAutomationConnection(sendData: { request in
+            XCTAssertEqual(request.url?.path, "/device/pair")
+            let sent = try JSONDecoder().decode([String: AutomationValue].self, from: try XCTUnwrap(request.httpBody))
+            XCTAssertEqual(sent["deviceToken"], .string(credential.deviceToken))
+            XCTAssertEqual(sent["connectionId"], .string(credential.connectionId.uuidString))
+            XCTAssertNil(request.value(forHTTPHeaderField: "Authorization"))
+            let result = try JSONSerialization.data(withJSONObject: ["connectionId": credential.connectionId.uuidString,
+                "deviceToken": credential.deviceToken, "clientName": "QA", "tripIds": [], "scope": credential.scope])
+            return (result, try XCTUnwrap(HTTPURLResponse(url: try XCTUnwrap(request.url), statusCode: 200, httpVersion: nil, headerFields: nil)))
+        })
+        try await recovered.finishPairing()
+        XCTAssertNil(recovered.credentials?.pendingPair)
+        XCTAssertNil(try AutomationKeychain.load()?.pendingPair)
+        XCTAssertEqual(recovered.credentials?.connectionId, credential.connectionId)
+        XCTAssertEqual(recovered.credentials?.deviceToken, credential.deviceToken)
+        XCTAssertNil(recovered.lastSynced)
+    }
+
+    func testPendingPairCancellationSurvivesOfflineAndRecreation() async throws {
+        guard try AutomationKeychain.load() == nil else { throw XCTSkip("An existing device connection must not be overwritten by QA") }
+        let credential = AutomationCredentials(connectionId: UUID(), deviceToken: String(repeating: "c", count: 64), clientName: "QA", tripIds: [],
+            scope: "trips:read", cloudAccount: "local-only", pendingPair: AutomationPendingPair(code: "1234567890ABCDEF", shareLibrary: false))
+        try AutomationKeychain.save(credential)
+        defer { try? AutomationKeychain.clear() }
+        let offline = CarryAutomationConnection(sendData: { _ in throw URLError(.notConnectedToInternet) })
+        await offline.disconnect()
+        XCTAssertEqual(try AutomationKeychain.load()?.revocationPending, true)
+        XCTAssertNotNil(try AutomationKeychain.load()?.pendingPair)
+        let online = CarryAutomationConnection(sendData: { request in
+            XCTAssertEqual(request.url?.path, "/device/cancel-pair")
+            let sent = try JSONDecoder().decode([String: AutomationValue].self, from: try XCTUnwrap(request.httpBody))
+            XCTAssertEqual(sent["code"], .string("1234567890ABCDEF"))
+            XCTAssertEqual(sent["deviceToken"], .string(credential.deviceToken))
+            return (Data("{}".utf8), try XCTUnwrap(HTTPURLResponse(url: try XCTUnwrap(request.url), statusCode: 200, httpVersion: nil, headerFields: nil)))
+        })
+        await online.disconnect()
+        XCTAssertNil(online.credentials)
+        XCTAssertNil(try AutomationKeychain.load())
+    }
+
+    func testPendingPairRejectsBroaderScopeAndKeepsDurableRevocation() async throws {
+        guard try AutomationKeychain.load() == nil else { throw XCTSkip("An existing device connection must not be overwritten by QA") }
+        let credential = AutomationCredentials(connectionId: UUID(), deviceToken: String(repeating: "c", count: 64), clientName: "QA", tripIds: [],
+            scope: "trips:read", cloudAccount: "local-only", pendingPair: AutomationPendingPair(code: "1234567890ABCDEF", shareLibrary: false))
+        try AutomationKeychain.save(credential)
+        defer { try? AutomationKeychain.clear() }
+        let manager = CarryAutomationConnection(sendData: { request in
+            let result = try JSONSerialization.data(withJSONObject: ["connectionId": credential.connectionId.uuidString,
+                "deviceToken": credential.deviceToken, "clientName": "QA", "tripIds": [], "scope": "trips:read library:read"])
+            return (result, try XCTUnwrap(HTTPURLResponse(url: try XCTUnwrap(request.url), statusCode: 200, httpVersion: nil, headerFields: nil)))
+        })
+        do { try await manager.finishPairing(); XCTFail("Expected consent rejection") }
+        catch { XCTAssertEqual(error as? AutomationError, .unauthorized) }
+        XCTAssertEqual(try AutomationKeychain.load()?.revocationPending, true)
+        XCTAssertNotNil(try AutomationKeychain.load()?.pendingPair)
+        XCTAssertNil(manager.lastSynced)
+    }
+
+    func testLegacyCredentialDecodesWithoutPendingPair() throws {
+        let old: [String: Any] = ["connectionId": UUID().uuidString, "deviceToken": "synthetic", "clientName": "QA", "tripIds": [],
+            "scope": "trips:read", "cloudAccount": "local-only", "revocationPending": false]
+        let decoded = try JSONDecoder().decode(AutomationCredentials.self, from: JSONSerialization.data(withJSONObject: old))
+        XCTAssertNil(decoded.pendingPair)
+        XCTAssertFalse(decoded.revocationPending)
+    }
+
     func testPendingRevocationRetriesWithoutCancellingItsOwnNetworkRequest() async throws {
         guard try AutomationKeychain.load() == nil else { throw XCTSkip("An existing device connection must not be overwritten by QA") }
         var credential = AutomationCredentials(connectionId: UUID(), deviceToken: "synthetic-local-test-credential", clientName: "QA", tripIds: [], scope: "trips:read", cloudAccount: "local-only")
