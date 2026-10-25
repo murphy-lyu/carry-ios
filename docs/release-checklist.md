@@ -37,9 +37,10 @@
 - [x] 新增回执模型本地旧库迁移、旧 JSON 备份兼容、真实 Keychain、事务保存与重复请求验证。
 - [x] 主 App + Widget Release 真机目标构建；9 语言审计 0 errors / 0 warnings。
 - [x] 中英隐私政策修改、push 和原 Pages 项目部署；英文线上新条款已读回。
-- [ ] 中文线上新条款完整读回；当前访问有超时，不能只看部署命令成功。
-- [ ] 生产域名普通解析与完整合成配对/命令/回执/撤销链路通过；当前普通 DNS 仍返回否定缓存，其他访问也有超时。
-- [ ] 在 `Bing Xue / 25RAM7275Z` 团队核对 `AutomationExecutionRecord` 的 Development schema 并部署 Production；当前浏览器只显示个人团队。
+- [x] 中文线上新条款完整读回（2026-10-25）；解码 Cloudflare 邮箱保护并移除对应注入脚本后，完整 HTML 与已提交源码一致。
+- [x] 功能分支已推送 GitHub；最终 Worker 源码已部署，版本 `14cc66af-d01a-4a71-a9c3-c60c9842d822`（2026-10-25）。
+- [ ] 生产完整合成配对/命令/回执/撤销链路通过；普通 DNS、健康和 OAuth 配置读取已恢复，但完整测试仍出现传输超时（2026-10-25）。
+- [ ] 在 `Bing Xue / 25RAM7275Z` 团队核对 `AutomationExecutionRecord` 的 Development schema 并部署 Production；用户已暂缓登录，待其方便时继续（2026-10-25）。
 - [ ] 新功能真机界面、配对、离线恢复、前后台竞争、iCloud 账号切换与真实双设备同步验收。
 - [ ] 按新数据用途核对 App Store Connect 隐私声明后，才上传包含连接功能的新 TestFlight 构建。当前旧 build 3 不包含本功能，未上传后续构建。
 
