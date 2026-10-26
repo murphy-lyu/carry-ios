@@ -17,3 +17,5 @@ Carry/Resources/Secrets.plist
 # MCP local dependencies and Durable Object development storage
 scripts/carry-mcp/node_modules/
 scripts/carry-mcp/.wrangler/
+scripts/carry-account-service/node_modules/
+scripts/carry-account-service/supabase/.temp/

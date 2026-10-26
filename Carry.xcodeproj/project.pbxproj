@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		CACC00010000000000000001 /* Auth in Frameworks */ = {isa = PBXBuildFile; productRef = CACC00020000000000000002 /* Auth */; };
 		0DFA34E42FC9C12100D55AA8 /* WidgetKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 0DFA34E32FC9C12100D55AA8 /* WidgetKit.framework */; };
 		0DFA34E62FC9C12100D55AA8 /* SwiftUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 0DFA34E52FC9C12100D55AA8 /* SwiftUI.framework */; };
 		0DFA34F72FC9C12200D55AA8 /* CarryWidgetExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 0DFA34E12FC9C12100D55AA8 /* CarryWidgetExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
@@ -109,6 +110,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				CACC00010000000000000001 /* Auth in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -214,6 +216,7 @@
 			);
 			name = Carry;
 			packageProductDependencies = (
+				CACC00020000000000000002 /* Auth */,
 			);
 			productName = Carry;
 			productReference = 115B30532FB56F4F006FD636 /* Carry.app */;
@@ -255,6 +258,7 @@
 			mainGroup = 115B304A2FB56F4E006FD636;
 			minimizedProjectReferenceProxies = 1;
 			packageReferences = (
+				CACC00030000000000000003 /* supabase-swift */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 115B30542FB56F4F006FD636 /* Products */;
@@ -319,6 +323,14 @@
 			targetProxy = 0DFA34F52FC9C12200D55AA8 /* PBXContainerItemProxy */;
 		};
 /* End PBXTargetDependency section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		CACC00030000000000000003 /* supabase-swift */ = {isa = XCRemoteSwiftPackageReference; repositoryURL = "https://github.com/supabase/supabase-swift.git"; requirement = {kind = exactVersion; version = 2.55.5; }; };
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		CACC00020000000000000002 /* Auth */ = {isa = XCSwiftPackageProductDependency; package = CACC00030000000000000003 /* supabase-swift */; productName = Auth; };
+/* End XCSwiftPackageProductDependency section */
 
 /* Begin XCBuildConfiguration section */
 		CAAA000A000000000000000A = {isa = XCBuildConfiguration; name = Debug; buildSettings = {

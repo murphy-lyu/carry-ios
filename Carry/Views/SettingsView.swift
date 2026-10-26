@@ -12,6 +12,7 @@ import EventKit
 /// Settings 二级页路由。用 value-based 导航把 tab bar 显隐控制提到 ContentView
 /// 外层（settingsPath.isEmpty 驱动），与 Trips 链路同构，消除返回时 tab bar 延迟。
 enum SettingsRoute: Hashable {
+    case account
     case appIcon
     case currency
     case notifications
@@ -28,6 +29,7 @@ enum SettingsRoute: Hashable {
 }
 
 struct SettingsView: View {
+    @EnvironmentObject private var account: CarryAccountStore
     @Binding var path: NavigationPath
     // 设置现以 sheet 呈现（根级去 TabView 后），根页需要关闭入口。
     @Environment(\.dismiss) private var dismiss
@@ -296,6 +298,16 @@ struct SettingsView: View {
         ZStack {
             ScrollView {
                 LazyVStack(alignment: .leading, spacing: 0) {
+                        if account.showsEntry {
+                            settingsCard {
+                                NavigationLink(value: SettingsRoute.account) {
+                                    CarryAccountEntry()
+                                }
+                                .buttonStyle(.plain)
+                            }
+                            .padding(.horizontal, 16)
+                            .padding(.top, 18)
+                        }
 
                         // 个性化：App 长什么样（外观 · 语言 · 应用图标）
                         Section {
@@ -971,6 +983,8 @@ struct SettingsView: View {
     @ViewBuilder
     private func settingsDestination(_ route: SettingsRoute) -> some View {
         switch route {
+        case .account:
+            AccountView()
         case .appIcon:
             AppIconView()
         case .currency:
@@ -1471,6 +1485,7 @@ private struct CalendarSettingsView: View {
 #Preview {
     SettingsView(path: .constant(NavigationPath()))
         .environmentObject(TripStore())
+        .environmentObject(CarryAccountStore(service: CarryAccountService()))
 }
 
 #if DEBUG

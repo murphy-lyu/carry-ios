@@ -55,6 +55,7 @@ struct CarryApp: App {
     @StateObject private var store = TripStore()
     @StateObject private var router = NavigationRouter()
     @StateObject private var automation = CarryAutomationConnection()
+    @StateObject private var account = CarryAccountStore(service: CarryAccountService())
 
     @AppStorage("appearance_mode") private var appearanceModeRaw = AppearanceMode.system.rawValue
 
@@ -76,11 +77,14 @@ struct CarryApp: App {
                 .environmentObject(store)
                 .environmentObject(router)
                 .environmentObject(automation)
+                .environmentObject(account)
+                .task { await account.restoreIfNeeded() }
                 .onReceive(store.$automationReady) { ready in
                     if ready { automation.start(store: store, router: router) }
                 }
                 .onReceive(NotificationCenter.default.publisher(for: UIApplication.didBecomeActiveNotification)) { _ in
                     automation.start(store: store, router: router)
+                    Task { await account.refresh() }
                 }
                 .onReceive(NotificationCenter.default.publisher(for: UIApplication.didEnterBackgroundNotification)) { _ in
                     automation.stop()

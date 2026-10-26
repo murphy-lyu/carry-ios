@@ -7,6 +7,12 @@ Apple 原生风格，极简、克制、优雅。
 
 ## Color Tokens
 
+### 账户入口（2026-10-26，已确认；待可视验收与服务门禁）
+- 首页右上入口保留 Settings 导航；未登录为中性齿轮，已登录为姓名首字母头像，无姓名用人物符号。40pt 图形、至少 44pt 命中区域，沿用 Sheet 渐隐/空态可达性；状态异常放设置内说明。
+- 设置顶部采用横向紧凑账户卡片，与既有设置边缘对齐；主行姓名或“登录 Carry”，次行仅展示一条有用状态。邮箱移入账户详情，不做大幅个人资料页。
+- Apple 登录使用官方按钮，深浅色对应系统样式；登录/注册共用入口，无首次强制姓名/头像或密码表单。登录、选择同步内容、授权 AI 分开。
+- 同步状态必须来源于实际回执，不能把登录成功显示成“已同步”。当前账户发布门禁关闭；详细交互见 `../specs/account-entry-and-settings.md`。
+
 ### 语义色（优先使用）
 - Background Primary：Color(.systemBackground)
 - Background Secondary：Color(.secondarySystemBackground)
