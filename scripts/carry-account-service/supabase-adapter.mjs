@@ -59,7 +59,7 @@ export function createSupabaseAdapter({ configuration, jose, fetcher = fetch }) 
     return path === 'revoke' ? null : response.json();
   }
   async function rows(id) {
-    return api(`/rest/v1/carry_apple_credentials?account_id=eq.${encodeURIComponent(id)}&select=account_id,apple_subject,audience,encrypted_token,status`);
+    return rpc('carry_account_credentials', { p_account_id: id });
   }
   return {
     authenticate: async bearer => {

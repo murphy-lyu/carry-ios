@@ -3,6 +3,14 @@
 ## 最后更新
 2026-10-26
 
+## 上次改动摘要（Supabase 免费开发环境 · 2026-10-26）
+
+- Supabase 插件已授权；在用户新建的 Neve Studio Free 组织创建 `carry-dev`（新加坡），报价 $0/月，健康状态已读回。未升级付费，未建立生产环境。
+- 两份生命周期迁移已部署；凭据/限流表收进私有 schema，五个 RPC 使用 SECURITY INVOKER 且仅 service_role 可执行。真实开发库两轮合成事务检查均通过，回滚后测试用户/凭据/限流记录为 0；两轮 HTTP 各 3/3 权限负向检查通过。
+- 修改后的本地服务测试两轮 21/21；Security 只有两条私有表默认拒绝策略的 INFO，Performance 无提示。云端迁移历史与本地文件版本一致，详见 `docs/carry-account-hosted-qa.md`。
+- 开发 publishable 配置保存在忽略文件且入口关闭。Edge Functions 尚未部署；Apple 配置、完整数据/离线同步/删除、真实 UI/设备/生产网络仍未通过，继续同一草稿 PR，不标记交付。
+- 进一步完成真机 Debug 签名构建并核对 App/profile：Bing Xue Team `25RAM7275Z`、原 Bundle ID、Sign in with Apple `Default`、CloudKit Development 均正确，strict codesign 验证通过。未覆盖安装手机；Supabase Apple provider 实际仍为关闭，网页身份/密钥/服务端配置尚未完成。
+
 ## 上次改动摘要（账户入口与身份接入 · 2026-10-26）
 
 - 用户确认开始实现，采用首页齿轮/头像、设置顶部紧凑账户卡片、原生 Apple 登录。新增统一账户状态、Keychain、nonce/state、会话恢复与 SDK 适配，默认关闭发布门禁，不上传既有行程。

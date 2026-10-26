@@ -1,4 +1,6 @@
-# Carry 账户生命周期服务（未部署）
+# Carry 账户生命周期服务（开发库已部署，函数未部署）
+
+2026-10-26：已通过授权插件创建独立免费 `carry-dev`，部署并核对两份数据库迁移；凭据表位于不暴露的 `carry_private`，RPC 仅 service_role 可执行。真实托管库与 HTTP 权限检查见 `../../docs/carry-account-hosted-qa.md`。Edge Function 未部署，以下产品门禁继续有效。
 
 这份实现连接原生 Apple 登录与 Supabase Auth，提供身份二次核验、服务端 Apple 凭证保管、速率限制与可恢复的删除状态。它不是行程云服务，尚未实现账户旅行图、文件迁移、持久 outbox、网页登录同身份、生产通知和完整删除。**禁止打开 App 的账户发布门禁或直接部署给真实用户。**
 
@@ -7,14 +9,14 @@
 - `lifecycle.mjs`：有界请求解析、从服务端会话确定账户、Apple 新授权与代码交换的身份绑定、成功回执边界。
 - `supabase-adapter.mjs`：使用 JOSE 验证 Apple RS256/JWKS/issuer/audience/exp/iat/nonce，短期 ES256 client secret，代码交换、AES-GCM 凭据保管、Supabase 用户查询和事务 RPC。客户端不能传入 owner 来指定账户。
 - `supabase/functions/carry-account/index.ts`：Deno Edge Function 入口；保留平台 JWT 检查，另向 Auth 查询当前用户。尚未在 Deno/托管环境部署验证。
-- SQL：仅新增账户生命周期设施，不读写原 Carry/iCloud 数据。凭据表开启 RLS，并撤销 anon/authenticated 的直接访问与 RPC 执行权。
+- SQL：仅新增账户生命周期设施，不读写原 Carry/iCloud 数据。凭据表移入私有 schema，开启 RLS；显式撤销 anon/authenticated 访问与 RPC 执行权，服务函数使用 invoker 权限。
 - 三组测试共 21 项：接口边界、真实 JOSE/加密与调用顺序、PGlite 本地 PostgreSQL 权限与状态。PGlite 不代表真实 Supabase 环境已验收；网络测试全部注入合成响应。
 
 运行需 Node 24+：先 `npm ci --ignore-scripts`，再 `npm test`。本机 Node 24 位于 `/Users/murphy/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/bin/node`，可直接运行 `--test *.test.mjs`。测试不访问 Apple/Supabase 真实服务。
 
 ## 外部配置（尚未完成）
 
-Supabase 项目、Apple App ID 的 Sign in with Apple 能力、关联的网页 Services ID、域名回调、Apple 私钥与团队配置均需在正确账户下核对。原生用户使用自己的 Apple 身份；开发者账户只用于发行配置。
+Supabase 免费开发项目已建立；Apple App ID 的 Sign in with Apple 能力、关联的网页 Services ID、域名回调、Apple 私钥与团队配置仍需在正确账户下核对。原生用户使用自己的 Apple 身份；开发者账户只用于发行配置。
 
 服务端环境需要：`SUPABASE_URL`、`SUPABASE_SERVICE_ROLE_KEY`、`CARRY_APPLE_TEAM_ID`、`CARRY_APPLE_KEY_ID`、`CARRY_APPLE_PRIVATE_KEY`、逗号分隔的 `CARRY_APPLE_CLIENT_IDS`，以及 32 字节随机 AES 密钥的 Base64 值 `CARRY_ACCOUNT_ENCRYPTION_KEY`。密钥只放服务端安全配置，不写入仓库、App 或日志。换加密密钥前必须有版本化重加密与恢复方案，不能直接覆盖旧密钥。
 

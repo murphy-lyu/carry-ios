@@ -99,7 +99,7 @@ test('incomplete data purge cannot delete auth identity or claim completion', as
   const adapter = setup(async (url, options) => {
     const path = new URL(url).pathname; paths.push(path);
     if (path.endsWith('carry_account_begin_delete')) return new Response(null, { status: 204 });
-    if (path.endsWith('carry_apple_credentials')) return Response.json([]);
+    if (path.endsWith('carry_account_credentials')) return Response.json([]);
     if (path.endsWith('carry_account_purge_owned_data')) return Response.json({ error: 'not_implemented' }, { status: 500 });
     throw new Error('must_not_reach_auth_deletion');
   });
@@ -122,7 +122,7 @@ test('Apple revocation uses encrypted stored token before purge and auth deletio
         audience: value.p_audience, encrypted_token: value.p_encrypted_token, status: 'deleting' };
       return new Response(null, { status: 204 });
     }
-    if (path.endsWith('carry_apple_credentials')) return Response.json([record]);
+    if (path.endsWith('carry_account_credentials')) return Response.json([record]);
     if (path === '/auth/revoke') {
       assert.equal(options.body.get('token'), 'synthetic-fresh-refresh');
       assert.equal(options.body.get('token_type_hint'), 'refresh_token');
@@ -133,6 +133,6 @@ test('Apple revocation uses encrypted stored token before purge and auth deletio
     throw new Error('unexpected_route');
   });
   await adapter.deleteAccount('internal-account', { subject: 'synthetic-subject', audience: 'app.nevestudio.carry' }, 'synthetic-fresh-refresh');
-  assert.deepEqual(paths, ['/rest/v1/rpc/carry_account_begin_delete', '/rest/v1/carry_apple_credentials',
+  assert.deepEqual(paths, ['/rest/v1/rpc/carry_account_begin_delete', '/rest/v1/rpc/carry_account_credentials',
     '/auth/revoke', '/rest/v1/rpc/carry_account_purge_owned_data', '/auth/v1/admin/users/internal-account']);
 });
