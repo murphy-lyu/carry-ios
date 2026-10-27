@@ -15,6 +15,13 @@ const configuration = {
 };
 const nonce = 'a'.repeat(43);
 const digest = Buffer.from(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(nonce))).toString('hex');
+const accountID = '00000000-0000-0000-0000-000000000001';
+const sessionID = '00000000-0000-0000-0000-000000000002';
+async function sessionToken(claims = {}) {
+  return new jose.SignJWT({ sub: accountID, session_id: sessionID,
+    iss: configuration.projectURL + '/auth/v1', exp: Math.floor(Date.now() / 1000) + 3600, ...claims })
+    .setProtectedHeader({ alg: 'ES256' }).sign(privateKey.privateKey);
+}
 async function token(overrides = {}, key = rsa.privateKey) {
   return new jose.SignJWT({ nonce: digest, ...overrides }).setProtectedHeader({ alg: 'RS256', kid: publicKey.kid })
     .setIssuer('https://appleid.apple.com').setAudience('app.nevestudio.carry')
@@ -47,15 +54,40 @@ test('expired tokens and tokens for another audience are rejected', async () => 
   }
 });
 test('authentication derives account and Apple subjects from server user lookup', async () => {
+  const bearer = await sessionToken();
+  const paths = [];
   const adapter = setup(async (url, options) => {
+    paths.push(url.pathname);
+    if (url.pathname.endsWith('carry_account_require_session')) {
+      assert.deepEqual(JSON.parse(options.body), { p_account: accountID, p_session: sessionID });
+      return new Response(null, { status: 204 });
+    }
     assert.equal(url.href, 'https://account-qa.invalid/auth/v1/user');
-    assert.equal(options.headers.Authorization, 'Bearer synthetic-user-jwt');
-    return Response.json({ id: 'internal-account', identities: [
+    assert.equal(options.headers.Authorization, `Bearer ${bearer}`);
+    return Response.json({ id: accountID, identities: [
       { provider: 'apple', identity_data: { sub: 'apple-subject' } },
       { provider: 'other', identity_data: { sub: 'must-not-match' } },
     ] });
   });
-  assert.deepEqual(await adapter.authenticate('synthetic-user-jwt'), { id: 'internal-account', appleSubjects: ['apple-subject'] });
+  assert.deepEqual(await adapter.authenticate(bearer), { id: accountID, appleSubjects: ['apple-subject'] });
+  assert.deepEqual(paths, ['/auth/v1/user', '/rest/v1/rpc/carry_account_require_session']);
+});
+test('account lifecycle rejects OAuth, mismatched and expired claims before credential access', async () => {
+  const adapter = setup(async url => {
+    assert.equal(url.pathname, '/auth/v1/user', 'Invalid claims must never reach privileged RPCs');
+    return Response.json({ id: accountID, identities: [{ provider: 'apple', identity_data: { sub: 'subject' } }] });
+  });
+  for (const claims of [{ client_id: 'mcp-client' }, { sub: sessionID }, { iss: 'https://other.invalid/auth/v1' },
+    { exp: 0 }, { session_id: null }]) {
+    await assert.rejects(adapter.authenticate(await sessionToken(claims)), { status: 401, code: 'unauthorized' });
+  }
+  await assert.rejects(adapter.authenticate('malformed'), { status: 401, code: 'unauthorized' });
+});
+test('database session revocation denies lifecycle even while Auth still accepts the access JWT', async () => {
+  const adapter = setup(async url => url.pathname === '/auth/v1/user'
+    ? Response.json({ id: accountID, identities: [{ provider: 'apple', identity_data: { sub: 'subject' } }] })
+    : Response.json({ code: '28000', message: 'session_expired' }, { status: 400 }));
+  await assert.rejects(adapter.authenticate(await sessionToken()), { status: 401, code: 'session_expired' });
 });
 test('code exchange signs short-lived client secret and validates selected audience', async () => {
   const adapter = setup(async (url, options) => {

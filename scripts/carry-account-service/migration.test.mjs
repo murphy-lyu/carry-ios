@@ -12,6 +12,7 @@ test('PostgreSQL lifecycle migration enforces RLS, account lock, rate budget and
       create role service_role bypassrls;
       create schema auth;
       create table auth.users (id uuid primary key);
+      create table auth.sessions (id uuid primary key, user_id uuid references auth.users(id), not_after timestamptz, oauth_client_id uuid);
       insert into auth.users values ('00000000-0000-0000-0000-000000000001'), ('00000000-0000-0000-0000-000000000002');
     `);
     const directory = new URL('./supabase/migrations/', import.meta.url);

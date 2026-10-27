@@ -10,12 +10,37 @@ const sql=`-- Isolated carry-dev only. Metadata is synthetic; no real Auth login
 -- Everything, including fake user/session rows, is rolled back.
 begin;
 do $$
-declare a uuid:=gen_random_uuid(); b uuid:=gen_random_uuid(); s uuid:=gen_random_uuid(); bs uuid:=gen_random_uuid();
+declare a uuid:=gen_random_uuid(); b uuid:=gen_random_uuid(); s uuid:=gen_random_uuid(); bs uuid:=gen_random_uuid(); o uuid:=gen_random_uuid();
  d1 uuid:=gen_random_uuid(); d2 uuid:=gen_random_uuid(); place uuid:=gen_random_uuid(); day_before jsonb;
  t uuid:=gen_random_uuid(); request uuid:=gen_random_uuid(); result jsonb; original jsonb; command jsonb; e jsonb; seq bigint;
 begin
  insert into auth.users(id) values(a),(b);
  insert into auth.sessions(id,user_id) values(s,a),(bs,b);
+ set local role service_role;
+ perform public.carry_account_require_session(a,s);
+ begin
+   perform public.carry_account_require_session(a,bs);raise exception 'qa_lifecycle_cross_session_accepted';
+ exception when invalid_authorization_specification then null;
+ end;
+ reset role;
+ insert into auth.oauth_clients(id,registration_type,redirect_uris,grant_types,client_type,token_endpoint_auth_method)
+   values(o,'manual','https://synthetic.invalid/callback','authorization_code','public','none');
+ update auth.sessions set oauth_client_id=o where id=s;
+ set local role service_role;
+ begin
+   perform public.carry_account_require_session(a,s);raise exception 'qa_lifecycle_oauth_accepted';
+ exception when invalid_authorization_specification then null;
+ end;
+ reset role;
+ update auth.sessions set oauth_client_id=null,not_after=now()-interval '1 minute' where id=s;
+ set local role service_role;
+ begin
+   perform public.carry_account_require_session(a,s);raise exception 'qa_lifecycle_expired_accepted';
+ exception when invalid_authorization_specification then null;
+ end;
+ reset role;
+ update auth.sessions set not_after=null where id=s;
+ set local role service_role;
  perform public.carry_account_enroll(a,'synthetic-a','app.nevestudio.carry','synthetic-encrypted');
  perform public.carry_account_enroll(b,'synthetic-b','app.nevestudio.carry','synthetic-encrypted');
  set local role service_role;
@@ -72,18 +97,25 @@ begin
  delete from auth.sessions where id=s;
  set local role service_role;
  begin
+   perform public.carry_account_require_session(a,s);raise exception 'qa_lifecycle_revoked_accepted';
+ exception when invalid_authorization_specification then null;
+ end;
+ begin
    perform public.carry_graph_pull(a,s,0);raise exception 'qa_revoked_session_accepted';
  exception when invalid_authorization_specification then null;
  end;
  reset role;
  if exists(select 1 from pg_proc p join pg_namespace n on n.oid=p.pronamespace
-   where n.nspname='public' and p.proname like 'carry_graph_%' and
+   where n.nspname='public' and p.proname like 'carry_%' and
    (p.prosecdef or has_function_privilege('anon',p.oid,'execute') or has_function_privilege('authenticated',p.oid,'execute')))
    then raise exception 'qa_public_grant_leak'; end if;
+ if (select count(*) from pg_proc p join pg_namespace n on n.oid=p.pronamespace
+   where n.nspname='carry_private' and p.prosecdef)<>1 then raise exception 'qa_unexpected_definer'; end if;
 end;
 $$;
 rollback;
 select jsonb_build_object('users',(select count(*) from auth.users),
+ 'sessions',(select count(*) from auth.sessions),'oauthClients',(select count(*) from auth.oauth_clients),
  'accounts',(select count(*) from carry_private.graph_accounts),
  'entities',(select count(*) from carry_private.graph_entities),
  'changes',(select count(*) from carry_private.graph_changes),

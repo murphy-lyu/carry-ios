@@ -8,7 +8,8 @@ const unbase64 = value => Uint8Array.from(atob(value), char => char.charCodeAt(0
 export function createSupabaseAdapter({ configuration, jose, fetcher = fetch }) {
   const { projectURL, serviceKey, appleTeamID, appleKeyID, applePrivateKey, appleClientIDs, encryptionKey } = configuration;
   const project = new URL(projectURL);
-  if (project.protocol !== 'https:' || !serviceKey || !appleTeamID || !appleKeyID || !applePrivateKey ||
+  if (project.protocol !== 'https:' || project.username || project.password || project.search || project.hash ||
+      !['', '/'].includes(project.pathname) || !serviceKey || !appleTeamID || !appleKeyID || !applePrivateKey ||
       !appleClientIDs?.length || unbase64(encryptionKey).length !== 32) throw new Error('invalid_configuration');
   const jwks = jose.createRemoteJWKSet(new URL('https://appleid.apple.com/auth/keys'));
   const encryption = crypto.subtle.importKey('raw', unbase64(encryptionKey), 'AES-GCM', false, ['encrypt', 'decrypt']);
@@ -24,6 +25,8 @@ export function createSupabaseAdapter({ configuration, jose, fetcher = fetch }) 
     } });
     if (!response.ok) {
       if (userToken && [401, 403].includes(response.status)) throw new AccountRequestError(401, 'unauthorized');
+      const error = await response.json().catch(() => null);
+      if (error?.code === '28000') throw new AccountRequestError(401, 'session_expired');
       throw new Error('backend_request_failed');
     }
     return response.status === 204 ? null : response.json();
@@ -64,6 +67,19 @@ export function createSupabaseAdapter({ configuration, jose, fetcher = fetch }) 
   return {
     authenticate: async bearer => {
       const user = await api('/auth/v1/user', {}, bearer);
+      // Auth verified this exact bearer before any decoded claim is trusted.
+      // The database then checks continued session existence and OAuth origin.
+      let claims;
+      try { claims = jose.decodeJwt(bearer); }
+      catch { throw new AccountRequestError(401, 'unauthorized'); }
+      const uuid = value => typeof value === 'string' && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value);
+      if (claims.client_id !== undefined || !uuid(user.id) || claims.sub !== user.id ||
+          claims.iss !== new URL('/auth/v1', project).href || !uuid(claims.session_id) ||
+          typeof claims.exp !== 'number' || claims.exp <= Date.now() / 1000 ||
+          !user.identities?.some(value => value.provider === 'apple')) {
+        throw new AccountRequestError(401, 'unauthorized');
+      }
+      await rpc('carry_account_require_session', { p_account: user.id, p_session: claims.session_id });
       return { id: user.id, appleSubjects: (user.identities ?? []).filter(value => value.provider === 'apple')
         .map(value => value.identity_data?.sub).filter(value => typeof value === 'string') };
     },

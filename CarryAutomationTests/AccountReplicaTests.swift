@@ -7,6 +7,9 @@ final class AccountReplicaTests: XCTestCase {
     private func database() throws -> (URL, ModelContainer) {
         let url = FileManager.default.temporaryDirectory.appendingPathComponent("CarryReplica-\(UUID().uuidString)", isDirectory: true)
         try FileManager.default.createDirectory(at: url, withIntermediateDirectories: true)
+        // XCTest runs teardown after test-local replicas and containers leave
+        // scope. Unlinking a live SQLite store in defer triggers API violations.
+        addTeardownBlock { try FileManager.default.removeItem(at: url) }
         return (url, try CarryAccountReplica.container(at: url.appendingPathComponent("account.store")))
     }
     private func entity(id: UUID = UUID(), version: Int = 0, name: String = "Tokyo") -> CarryGraphEntity {
@@ -28,8 +31,7 @@ final class AccountReplicaTests: XCTestCase {
 
     func testBusinessGraphAndOutboxRollbackTogetherOnSaveFailure() throws {
         enum Injected: Error { case failed }
-        let (url, container) = try database()
-        defer { try? FileManager.default.removeItem(at: url) }
+        let (_, container) = try database()
         var reject = false
         let replica = try CarryAccountReplica(container: container, accountID: UUID(), save: {
             if reject { throw Injected.failed }; try $0.save()
@@ -45,8 +47,7 @@ final class AccountReplicaTests: XCTestCase {
     }
 
     func testRetryAfterReopenKeepsFrozenRequestIDAndLatestUnsentEdit() throws {
-        let (url, container) = try database()
-        defer { try? FileManager.default.removeItem(at: url) }
+        let (_, container) = try database()
         let owner = UUID(), replica = try CarryAccountReplica(container: container, accountID: owner)
         var local = entity(); try replica.edit(local)
         let command = try XCTUnwrap(replica.nextCommand())
@@ -65,8 +66,7 @@ final class AccountReplicaTests: XCTestCase {
     }
 
     func testAccountCacheRejectsAnotherOwnerAndDisablesAutosave() throws {
-        let (url, container) = try database()
-        defer { try? FileManager.default.removeItem(at: url) }
+        let (_, container) = try database()
         let owner = UUID(), replica = try CarryAccountReplica(container: container, accountID: owner)
         XCTAssertFalse(replica.context.autosaveEnabled)
         XCTAssertThrowsError(try CarryAccountReplica(container: container, accountID: UUID()))
@@ -74,8 +74,7 @@ final class AccountReplicaTests: XCTestCase {
     }
 
     func testRemotePullPreservesUnsentLocalFieldAndItsConflictBaseline() throws {
-        let (url, container) = try database()
-        defer { try? FileManager.default.removeItem(at: url) }
+        let (_, container) = try database()
         let replica = try CarryAccountReplica(container: container, accountID: UUID())
         let initial = entity(version: 1)
         try replica.receive(CarryGraphPage(changes: [CarryGraphChange(sequence: 1, entity: initial)], cursor: 1, hasMore: false))
@@ -89,8 +88,7 @@ final class AccountReplicaTests: XCTestCase {
 
     func testPullProjectionFailureRollsBackBothGraphAndCursorAndRejectsGaps() throws {
         enum Injected: Error { case failed }
-        let (url, container) = try database()
-        defer { try? FileManager.default.removeItem(at: url) }
+        let (_, container) = try database()
         let replica = try CarryAccountReplica(container: container, accountID: UUID())
         let page = CarryGraphPage(changes: [CarryGraphChange(sequence: 1, entity: entity(version: 1))], cursor: 1, hasMore: false)
         XCTAssertThrowsError(try replica.receive(page) { _, _ in throw Injected.failed })
@@ -101,8 +99,7 @@ final class AccountReplicaTests: XCTestCase {
     }
 
     func testWrongReceiptCannotClearFlightAndPermanentRejectionBlocksAutomaticRetries() throws {
-        let (url, container) = try database()
-        defer { try? FileManager.default.removeItem(at: url) }
+        let (_, container) = try database()
         let replica = try CarryAccountReplica(container: container, accountID: UUID())
         let e = entity(); try replica.edit(e)
         let command = try XCTUnwrap(replica.nextCommand())
@@ -113,8 +110,7 @@ final class AccountReplicaTests: XCTestCase {
         XCTAssertThrowsError(try replica.nextCommand())
     }
     func testLateReceiptDoesNotOverwriteNewerPullOrAdvancePendingFieldBaseline() throws {
-        let (url, container) = try database()
-        defer { try? FileManager.default.removeItem(at: url) }
+        let (_, container) = try database()
         let replica = try CarryAccountReplica(container: container, accountID: UUID())
         let original = entity(version: 1)
         try replica.receive(CarryGraphPage(changes: [CarryGraphChange(sequence: 1, entity: original)], cursor: 1, hasMore: false))
@@ -129,6 +125,60 @@ final class AccountReplicaTests: XCTestCase {
         XCTAssertEqual(try replica.localEntities().first?.fields["name"], .string("Next local edit"))
         XCTAssertEqual(try replica.nextCommand()?.mutations.first?.fieldVersions, ["name": 2])
         XCTAssertEqual(try replica.cursor, 3)
+    }
+
+    func testEditingAndQueueSelectionDoNotDecodeUnrelatedCleanPayloads() throws {
+        let (_, container) = try database()
+        let replica = try CarryAccountReplica(container: container, accountID: UUID())
+        // An intentionally unreadable unrelated payload makes any accidental
+        // full-cache decoding fail deterministically, without timing thresholds.
+        let unrelated = CarryReplicaRecord(id: UUID(), payload: Data([0xff]), hasPendingChanges: false)
+        replica.context.insert(unrelated)
+        try replica.context.save()
+        var local = entity()
+        try replica.edit(local)
+        local.fields["name"] = .string("Only this trip changed")
+        try replica.edit(local)
+        let command = try XCTUnwrap(replica.nextCommand())
+        XCTAssertEqual(command.mutations.count, 1)
+        XCTAssertEqual(command.mutations.first?.id, local.id)
+        XCTAssertEqual(command.mutations.first?.fields?["name"], .string("Only this trip changed"))
+        let accepted = entity(id: local.id, version: 1, name: "Only this trip changed")
+        var projected: [CarryGraphEntity] = []
+        try replica.accept(receipt(command, entity: accepted)) { values, _ in projected = values }
+        XCTAssertEqual(projected, [accepted], "ACK projection is a delta, not a full-cache read")
+        let pulled = entity(id: local.id, version: 2, name: "Remote change")
+        try replica.receive(CarryGraphPage(changes: [CarryGraphChange(sequence: 1, entity: accepted),
+            CarryGraphChange(sequence: 2, entity: pulled)], cursor: 2, hasMore: false)) { values, _ in projected = values }
+        XCTAssertEqual(projected, [pulled])
+        try replica.receive(CarryGraphPage(changes: [], cursor: 2, hasMore: false)) { _, _ in
+            XCTFail("An empty pull must not re-project the complete business graph")
+        }
+        XCTAssertEqual(unrelated.payload, Data([0xff]))
+        XCTAssertFalse(unrelated.hasPendingChanges)
+        XCTAssertThrowsError(try replica.localEntities(), "Explicit full reads still surface corrupt data")
+    }
+
+    func testPendingQueueFlagRepairsOldCacheAndTracksUndoWithoutAnUpload() throws {
+        let (_, container) = try database()
+        let owner = UUID(), replica = try CarryAccountReplica(container: container, accountID: owner)
+        let original = entity(version: 1)
+        try replica.receive(CarryGraphPage(changes: [CarryGraphChange(sequence: 1, entity: original)], cursor: 1, hasMore: false))
+        let row = try XCTUnwrap(replica.context.fetch(FetchDescriptor<CarryReplicaRecord>()).first)
+        XCTAssertFalse(row.hasPendingChanges)
+        // Older caches get the model's true default during lightweight migration.
+        row.hasPendingChanges = true
+        try replica.context.save()
+        XCTAssertNil(try replica.nextCommand())
+        XCTAssertFalse(row.hasPendingChanges)
+        var edited = original; edited.fields["name"] = .string("Unsent change")
+        try replica.edit(edited)
+        XCTAssertTrue(row.hasPendingChanges)
+        try replica.edit(original)
+        XCTAssertNil(try replica.nextCommand())
+        XCTAssertFalse(row.hasPendingChanges)
+        let reopened = try CarryAccountReplica(container: container, accountID: owner)
+        XCTAssertNil(try reopened.nextCommand())
     }
 
 }

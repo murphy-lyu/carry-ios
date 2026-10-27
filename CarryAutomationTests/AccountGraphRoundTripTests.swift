@@ -20,7 +20,7 @@ final class AccountGraphRoundTripTests: XCTestCase {
         let transport = CarryGraphTransport(configuration: configuration, accessToken: { "synthetic-native-qa" })
         let directory = FileManager.default.temporaryDirectory.appendingPathComponent("CarryGraphHTTP-\(UUID().uuidString)")
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
-        defer { try? FileManager.default.removeItem(at: directory) }
+        addTeardownBlock { try FileManager.default.removeItem(at: directory) }
         func replica(_ name: String) throws -> CarryAccountReplica {
             try CarryAccountReplica(container: CarryAccountReplica.container(at: directory.appendingPathComponent(name + ".store")), accountID: fixture.accountID)
         }

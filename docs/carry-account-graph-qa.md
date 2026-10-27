@@ -22,10 +22,10 @@
 | `20261027013832_account_graph_compound_subtrees` | 已部署，事务内移动/删除使用事务起始子树基线，仍拦截外部并发 |
 | `carry_private.graph_accounts/entities/changes/receipts` | 已开启 RLS，客户端没有 schema/table 权限 |
 | `carry_graph_apply/pull` | SECURITY INVOKER，只允许 service_role；账户/有效会话/已登记 Apple 身份均核对 |
-| `carry_private.graph_require_session` | 唯一需要读取 Auth 会话的私有 definer 谓词；固定 search_path、仅服务端可调用，不暴露 Auth 表 |
+| `carry_private.graph_require_session` | 唯一需要读取 Auth 会话的现为 invoker；调用私有 `account_require_native_session` 的最小 Auth 查询，固定 search_path、仅服务端可调用 |
 | `carry-data` Edge Function | ACTIVE v1，`verify_jwt=true`，SHA-256 `3d34ed61f5752b9073c98b83d11c670a037d2e09980ad82d6f007ee1b716327b` |
 | 账户数据接口的 AI 隔离 | JWT client_id 和 Auth OAuth 会话均拒绝；未来 AI 需要另一个受行程授权限制的入口，不能复用全账户接口 |
-| Apple provider / 生命周期函数 | 原生 Apple 已启用，Client IDs 为 `app.nevestudio.carry`，公开 settings 读回 true；`carry-account` 未部署，P8/Services ID/真实登录未就绪 |
+| Apple provider / 生命周期函数 | 原生 Apple 已启用，Client IDs 为 `app.nevestudio.carry`，公开 settings 读回 true；`carry-account` 未部署，专用 P8 已注册并本地安全保管；Services ID/服务端密钥安装/真实登录未就绪 |
 
 原 `20261027004907` 迁移保持不可变；费用修正以新迁移追加。`graph-transactions.sql` 是首次迁移的可读源码，不用于重写已经部署的历史。
 
@@ -72,7 +72,7 @@
 
 1. 新副本还未路由原 `TripStore` 的所有真实写入口；本地删除/恢复、备份导入/还原、Siri、地理回填和系统副作用须统一接入、逐项回归。不能仅因独立副本测试通过就发布账户同步入口。
 2. 实际 Storage 上传/续传/配额/清理、Photos 原图收集、迁移批次提交、源图只读标记、旧 TestFlight 分叉审核及账户缓存/Widget/备份的统一展示还未完成。
-3. 原生/网页 Apple 同一身份、Services ID/关联域名/P8、服务端登记/删除任务、设备会话和 AI 授权管理仍未联调。网页 tab 控制持续超时，已用 CUA 原生 Chrome 窗口接入既有已登录会话，完成原生 provider 配置；未要求用户重登 Supabase。Apple Developer 网站会话实际需要登录，已打开并异步请用户完成登录/双重验证，其余工程继续。
+3. 原生/网页 Apple 同一身份、Services ID/关联域名/P8、服务端登记/删除任务、设备会话和 AI 授权管理仍未联调。网页 tab 控制持续超时，已用 CUA 原生 Chrome 窗口接入既有已登录会话，完成原生 provider 配置；未要求用户重登 Supabase。Apple Developer 网站会话实际需要登录，用户随后完成登录，已核对 Bing Xue / 25RAM7275Z 并经当次确认注册 Carry 专用登录密钥；后续 Apple/Supabase 页面持续加载，未配置网页 Services ID 或服务端 secrets。
 4. 新 MCP 账户执行、按行程/物品库/附件授权、预览绑定确认、撤销、搜索/航班/推荐等全部业务适配仍未完成。生产旧 Worker 未切换；未把既有前台执行器描述成手机关闭后可用。
 5. 数据过期正文清理/保留知识、完整备份恢复演练、账户 purge、国内/境外真实网络、真机 UI 与双设备完整两轮验收仍未完成。单批 500 条的上限也不能替代大型迁移 staging/提交流程。
 
@@ -82,4 +82,28 @@
 
 Release 真机目标构建通过，无编译警告/错误；strict codesign 通过。App 为 Team `25RAM7275Z`、`25RAM7275Z.app.nevestudio.carry`、Apple 登录 `Default`、CloudKit `Production`，profile 同时允许 Production/Development。日志 `/tmp/carry-account-graph-release.log`；仅核对构建与签名，未运行真实设备/CloudKit 或导出上传。九语言审计 0 errors/0 warnings。
 
-原生 Apple provider 保存后重新打开核对，公开 `/auth/v1/settings` 再读回 true。OAuth secret 留空，当前仅配置原生 bundle，网页流程与生命周期 P8 尚待。私有本地截图 `/tmp/carry-apple-provider-enabled.png`；不上传包含浏览器上下文的截图至 GitHub。
+原生 Apple provider 保存后重新打开核对，公开 `/auth/v1/settings` 再读回 true。OAuth secret 留空，当前仅配置原生 bundle，网页流程与生命周期 P8 已注册并安全保管在本机，服务端安装和网页流程仍待。私有本地截图 `/tmp/carry-apple-provider-enabled.png`；不上传包含浏览器上下文的截图至 GitHub。
+
+## 登录密钥与会话/缓存复核（2026-10-27 晚）
+
+- Apple Developer 已实际登录并核对 Bing Xue / Team `25RAM7275Z`。注册前核对团队现有 Keys 为空；用户当次确认后注册 `Carry Account Sign In` / Key ID `8LRP72FMZY`，只启用 Sign in with Apple，主 App 为 `app.nevestudio.carry`。下载完成后移入本机受限目录（目录 0700、文件 0600）；私钥未进入 Git、App 或工具输出。使用 JOSE 本地导入 ES256 密钥并验证 5 分钟客户端断言；这不等于实际 Apple 代码交换成功。
+- 本机服务端配置及 32 字节随机 AES 密钥已准备，使用独占新建、0600 文件，已存在配置不会覆盖。尚未上传 Supabase secrets，`carry-account` 仍未部署；网页 Services ID 尚未创建，不能把已注册 P8 当作原生/网页真实登录完成。
+- 第六份迁移 `20261027145234_account_native_sessions` 已部署并对齐本地历史。新增服务端专用会话检查：允许尚未登记的新原生会话进入 enrolment，但拒绝会话不存在、跨账户、到期和 OAuth 来源。数据图再检查账户登记/删除状态。唯一 private definer 现在只读取 Auth session，图检查改为 invoker；所有 public RPC 仍仅 service_role 可执行。
+- 生命周期适配器在 Auth 验证当前 bearer 后核对 issuer/sub/session/expiry，拒绝 client_id，并查询当前数据库会话；避免仅凭尚未过期的 JWT/用户查询接受已撤销会话。此适配器尚未随 `carry-account` 部署，不能把数据库已部署描述成生命周期服务已上线。
+- 副本编辑按 UUID 查找，outbox 使用持久 pending 标志筛选；旧缓存新增字段默认 true，由首次队列读取安全归一。ACK/拉取/冲突投影仅传改变后的本地快照（包括墓碑），不是全图替换；空页不重投影。显式 `localEntities()` 仍是完整读取并报告坏记录。
+- 新回归放入无关且明确损坏的 clean payload：编辑、冻结请求、ACK、远端合并和增量投影均不读取它；显式全量读取必须报错。另验证 pending 标志在本地撤回、重开缓存和无上传时保持一致。没有用计时阈值或吞错冒充性能验证；尚无真实大型行程的性能成绩。
+- 修复测试过早 unlink 仍打开的 SQLite：把账户副本及真实 HTTP 测试的目录清理移至 XCTest teardown，测试局部容器释放后再删除；修复后对应日志没有 vnode-unlinked/API-violation。
+
+| 晚间最终组件复跑 | 第一轮 | 第二轮 |
+|---|---|---|
+| 原生完整组件集 | 76/76，0 失败、0 跳过 | 76/76，0 失败、0 跳过 |
+| Node/JOSE/HTTP/PostgreSQL | 47/47 | 47/47 |
+| 实际托管 service_role SQL | 通过，包含原生新会话、跨账号/过期/撤销/OAuth 拒绝及原数据事务 | 通过，所有夹具 rollback |
+
+原生最终证据：`/tmp/CarryAccountDeltaSessionRound1.xcresult`、`/tmp/CarryAccountDeltaSessionRound2.xcresult`，文本 `/tmp/carry-account-delta-session-round{1,2}.log`；服务端 `/tmp/carry-account-native-session-round{1,2}.log`。托管检查用事务内合成 Auth 用户/会话/OAuth 客户端（不是实际注册或 OAuth 授权），回滚后 users/sessions/oauthClients/accounts/entities/changes/receipts 全为 0。Security Advisors 仍仅六项 INFO，Performance 无提示。
+
+浏览器阻塞的实际观察：Apple 切换 Services IDs 后长时间空白；Supabase 控制台显示 “Taking longer than expected”。普通刷新、完整重新加载与组织页导航未恢复，内置浏览器绑定也超时。没有清除 cookies、退出登录、修改代理或要求用户重登；没有从浏览器内部提取会话凭据。Supabase 插件数据库操作正常，不能据此归因为 Apple/Supabase 账户权限不够。
+
+以上是同一功能开发中的组件检查，完整发布门禁保持未完成。
+
+本次最终 Release 真机目标构建通过，strict codesign、Team `25RAM7275Z`、Apple 登录 `Default`、CloudKit `Production` 与打包后账户门禁关闭均核对通过，无编译警告/错误；日志 `/tmp/carry-account-session-queue-release.log`。九语言最终审计 0 errors/0 warnings，日志 `/tmp/carry-account-session-i18n.log`。未安装真实手机或上传 TestFlight。

@@ -79,6 +79,7 @@ final class CarryAccountSyncEngine {
     private let project: ([CarryGraphEntity], ModelContext) throws -> Void
     private var running = false
 
+    /// The projection applies a delta of changed local snapshots in one save.
     init(replica: CarryAccountReplica, transport: any CarryGraphTransporting,
          project: @escaping ([CarryGraphEntity], ModelContext) throws -> Void = { _, _ in }) {
         self.replica = replica

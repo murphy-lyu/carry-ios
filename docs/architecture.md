@@ -6,7 +6,9 @@
 
 `CarryAccountReplica` 使用独立 `.none` ModelContainer：原有业务模型加 `CarryReplicaRecord/Checkpoint`，**不修改原 iCloud SchemaV1**。投影回调、逐字段意图、冻结请求、冲突与拉取游标共用本地 save/rollback。账户身份固定写在 checkpoint；缓存不得跨账户复用。当前尚未路由原 TripStore 的全部真实写入口，不能用这些组件替代完整原生接入验收。
 
-服务端是 `carry_private` 中的父子数据图、账户提交序号、变更日志及请求回执；同一账户写入取得事务锁，业务、日志与回执原子提交。独立字段可以合并，同字段冲突保留当前值/提议值。祖先子树版本也作为变更事件同步，用于检测删除预览之后的子项编辑；移动同时更新两条祖先路径。账户数据入口只接受有效原生用户会话，OAuth 客户端必须另经尚待实现的 AI 权限层。
+副本热路径按对象 UUID 查找，持久 pending 标志筛选待同步记录；旧缓存默认 true 并在队列读取时归一。`accept/receive/resolveFields` 的投影参数是改变后的本地快照增量，包含墓碑，消费者必须在同一 context 原子应用；不得当作完整图替换。空页不重新投影全部业务对象。
+
+服务端是 `carry_private` 中的父子数据图、账户提交序号、变更日志及请求回执；同一账户写入取得事务锁，业务、日志与回执原子提交。独立字段可以合并，同字段冲突保留当前值/提议值。祖先子树版本也作为变更事件同步，用于检测删除预览之后的子项编辑；移动同时更新两条祖先路径。账户管理和数据入口均核对当前数据库中的有效原生会话；登记新账户不预先要求已登记身份，数据写入再核对登记/删除状态。只有读取 Auth 会话的私有谓词使用 definer，其余 public RPC 和图状态检查为 invoker。账户数据入口只接受有效原生用户会话，OAuth 客户端必须另经尚待实现的 AI 权限层。
 
 `CarryGraphMigrationCodec` 在后台以完整 Backup DTO 编解码选中范围，核对文件内容与引用；Photos 资料库原图明确列为待源设备采集。纯值 DTO 显式 nonisolated/Sendable，数据库和 UI 仍按原有 actor 隔离。实际 Storage 上传、源图归属切换、旧设备分叉、完整删除及新 MCP 链路仍在开发中。部署、组件测试与待完成门禁见 `docs/carry-account-graph-qa.md`。
 

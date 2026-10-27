@@ -49,6 +49,12 @@
 
 > 不用 Google/DeepL/中国源的原因：DeepL 绑卡受限、Google 在华敏感、用户倾向非中国源。provider 都藏在 Worker 后，**换它只改 Worker、App 不动**。
 
+### Carry 账户开发环境（2026-10-27）
+
+Supabase `carry-dev` / `lbxsvguuoqqpctkinpwy`，Neve Studio Free 组织、新加坡，仅开发。六份迁移和 `carry-data` v1 已部署，`carry-account` 未部署；完整状态见 `carry-account-graph-qa.md`，不能据此开启生产账户入口。
+
+Apple 登录发行团队为 Bing Xue / `25RAM7275Z`，原生 Bundle ID `app.nevestudio.carry`。专用 Key `Carry Account Sign In` / `8LRP72FMZY` 只启用 Sign in with Apple 并关联 Carry 主 App。P8 与本地服务端配置位于 `~/Library/Application Support/Carry Development Secrets/`，目录 0700、文件 0600，未安装到服务端；不得进 App/Git/日志或覆盖已存在的 AES 配置。网页登录 Services ID/回调域名与真实身份联调仍未完成。
+
 ## 4. App 内密钥（`Carry/Resources/Secrets.plist`，**gitignored**）
 
 | 键 | 对应 Worker secret | 用途 |

@@ -209,3 +209,32 @@ test('compound move and parent deletion use transaction-start subtree baselines 
     assert.equal((await entity(db,stop.id)).version,moved.version);
   }finally{await db.close();}
 });
+
+test('native account lifecycle requires an active non-OAuth session before enrollment',async()=>{
+  const db=await database();try{
+    await db.query('select public.carry_account_require_session($1,$2)',[account,session]);
+    // A new native account can enroll; no existing graph/credential is required.
+    await db.query('delete from carry_private.carry_apple_credentials where account_id=$1',[account]);
+    await db.query('select public.carry_account_require_session($1,$2)',[account,session]);
+    await assert.rejects(db.query('select public.carry_account_require_session($1,$2)',[other,session]),/session_expired/);
+    await db.exec('reset role');
+    await db.query('update auth.sessions set oauth_client_id=$1 where id=$2',[other,session]);
+    await db.exec('set role service_role');
+    await assert.rejects(db.query('select public.carry_account_require_session($1,$2)',[account,session]),/session_expired/);
+    await db.exec('reset role');
+    await db.query("update auth.sessions set oauth_client_id=null,not_after=now()-interval '1 second' where id=$1",[session]);
+    await db.exec('set role service_role');
+    await assert.rejects(db.query('select public.carry_account_require_session($1,$2)',[account,session]),/session_expired/);
+    await db.exec('reset role');
+    await db.query('delete from auth.sessions where id=$1',[session]);
+    await db.exec('set role service_role');
+    await assert.rejects(db.query('select public.carry_account_require_session($1,$2)',[account,session]),/session_expired/);
+    for(const role of ['anon','authenticated']){
+      await db.exec('reset role;set role '+role);
+      await assert.rejects(db.query('select public.carry_account_require_session($1,$2)',[other,otherSession]),/permission denied/);
+      await assert.rejects(db.query('select carry_private.account_require_native_session($1,$2)',[other,otherSession]),/permission denied/);
+    }
+    await db.exec('reset role');
+    assert.equal((await db.query("select count(*)::int n from pg_proc p join pg_namespace n on n.oid=p.pronamespace where n.nspname='carry_private' and p.prosecdef")).rows[0].n,1);
+  }finally{await db.close();}
+});

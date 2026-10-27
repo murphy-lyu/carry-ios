@@ -7,7 +7,12 @@ import SwiftData
 final class CarryReplicaRecord {
     @Attribute(.unique) var id: UUID
     var payload: Data
-    init(id: UUID, payload: Data) { self.id = id; self.payload = payload }
+    // Default true also repairs caches written before this materialized queue
+    // flag existed. The next queue pass normalizes those records once.
+    var hasPendingChanges: Bool = true
+    init(id: UUID, payload: Data, hasPendingChanges: Bool) {
+        self.id = id; self.payload = payload; self.hasPendingChanges = hasPendingChanges
+    }
 }
 
 @Model
@@ -85,6 +90,21 @@ final class CarryAccountReplica {
         try context.fetch(FetchDescriptor<CarryReplicaRecord>())
     }
 
+    private func row(id: UUID) throws -> CarryReplicaRecord? {
+        var query = FetchDescriptor<CarryReplicaRecord>(predicate: #Predicate { $0.id == id })
+        query.fetchLimit = 1
+        return try context.fetch(query).first
+    }
+
+    private func pendingRows() throws -> [CarryReplicaRecord] {
+        try context.fetch(FetchDescriptor<CarryReplicaRecord>(predicate: #Predicate { $0.hasPendingChanges }))
+    }
+
+    private func store(_ value: CarryReplicaPayload, in row: CarryReplicaRecord) throws {
+        row.payload = try encoder.encode(value)
+        row.hasPendingChanges = value.structuralAction != nil || !value.intents.isEmpty
+    }
+
     private func payload(_ row: CarryReplicaRecord) throws -> CarryReplicaPayload {
         try decoder.decode(CarryReplicaPayload.self, from: row.payload)
     }
@@ -114,8 +134,7 @@ final class CarryAccountReplica {
               project: (ModelContext) throws -> Void = { _ in }) throws {
         try transaction {
             _ = try checkpoint()
-            let records = try rows()
-            let row = records.first { $0.id == desired.id }
+            let row = try row(id: desired.id)
             var value: CarryReplicaPayload
             if let row {
                 value = try payload(row)
@@ -133,9 +152,9 @@ final class CarryAccountReplica {
                 guard desired.version == 0, desired.deletedAt == nil else { throw CarryReplicaFailure.invalidState }
                 value = CarryReplicaPayload(remote: nil, local: desired, intents: [:], structuralAction: "create")
             }
-            let bytes = try encoder.encode(value)
-            if let row { row.payload = bytes }
-            else { context.insert(CarryReplicaRecord(id: desired.id, payload: bytes)) }
+            if let row { try store(value, in: row) }
+            else { context.insert(CarryReplicaRecord(id: desired.id, payload: try encoder.encode(value),
+                                                     hasPendingChanges: true)) }
             try project(context)
         }
     }
@@ -152,7 +171,7 @@ final class CarryAccountReplica {
             let order = ["trip": 0, "libraryItem": 0, "section": 1, "day": 1, "lodging": 1,
                          "packingItem": 2, "stop": 2, "transport": 2, "photo": 3, "attachment": 3]
             var pendingValues: [CarryReplicaPayload] = []
-            for row in try rows() {
+            for row in try pendingRows() {
                 var value = try payload(row)
                 if let remote = value.remote {
                     for key in value.intents.keys where value.local.fields[key] == remote.fields[key] {
@@ -161,7 +180,7 @@ final class CarryAccountReplica {
                     if value.structuralAction == "move", value.local.parentID == remote.parentID {
                         value.structuralAction = nil
                     }
-                    row.payload = try encoder.encode(value)
+                    try store(value, in: row)
                 }
                 pendingValues.append(value)
             }
@@ -190,6 +209,8 @@ final class CarryAccountReplica {
         }
     }
 
+    /// Projection receives only changed local snapshots, including tombstones.
+    /// Consumers apply the whole delta atomically, not a replacement full graph.
     func accept(_ receipt: CarryGraphReceipt,
                 project: ([CarryGraphEntity], ModelContext) throws -> Void = { _, _ in }) throws {
         try transaction {
@@ -205,13 +226,13 @@ final class CarryAccountReplica {
             for (previous, next) in zip(receipt.changes, receipt.changes.dropFirst()) {
                 guard previous.sequence < Int.max, next.sequence == previous.sequence + 1 else { throw CarryReplicaFailure.invalidReceipt }
             }
-            try merge(receipt.changes, flight: flight)
+            let changed = try merge(receipt.changes, flight: flight)
             state.flight = nil
             state.failureData = nil
             state.blocked = false
             // A receipt can start after unseen edits by another client. Only a
             // contiguous pull advances the durable cursor, never an upload ACK.
-            try project(localEntities(), context)
+            if !changed.isEmpty { try project(changed, context) }
         }
     }
 
@@ -227,14 +248,14 @@ final class CarryAccountReplica {
                 guard change.sequence == expected else { throw CarryReplicaFailure.invalidCursor }
             }
             guard page.cursor == expected else { throw CarryReplicaFailure.invalidCursor }
-            try merge(page.changes, flight: nil)
-            try project(localEntities(), context)
+            let changed = try merge(page.changes, flight: nil)
+            if !changed.isEmpty { try project(changed, context) }
             state.cursor = page.cursor
         }
     }
 
-    private func merge(_ changes: [CarryGraphChange], flight: CarryReplicaFlight?) throws {
-        var records = Dictionary(uniqueKeysWithValues: try rows().map { ($0.id, $0) })
+    private func merge(_ changes: [CarryGraphChange], flight: CarryReplicaFlight?) throws -> [CarryGraphEntity] {
+        var changed: [CarryGraphEntity] = []
         // Process only the newest snapshot of each entity within this response.
         // Ancestor metadata updates can repeat an entity without a field revision.
         var latest: [UUID: CarryGraphEntity] = [:]
@@ -248,7 +269,7 @@ final class CarryAccountReplica {
         }
         for incoming in latest.values {
             var remote = incoming
-            if let row = records[remote.id] {
+            if let row = try row(id: remote.id) {
                 var value = try payload(row)
                 guard value.local.kind == remote.kind else { throw CarryReplicaFailure.invalidReceipt }
                 if value.remote == nil && value.structuralAction == "create" && flight == nil {
@@ -297,14 +318,17 @@ final class CarryAccountReplica {
                 } else if sent != nil { value.structuralAction = nil }
                 value.remote = remote
                 value.local = local
-                row.payload = try encoder.encode(value)
+                try store(value, in: row)
+                changed.append(local)
             } else {
                 let value = CarryReplicaPayload(remote: remote, local: remote, intents: [:], structuralAction: nil)
-                let row = CarryReplicaRecord(id: remote.id, payload: try encoder.encode(value))
+                let row = CarryReplicaRecord(id: remote.id, payload: try encoder.encode(value),
+                                             hasPendingChanges: false)
                 context.insert(row)
-                records[remote.id] = row
+                changed.append(remote)
             }
         }
+        return changed
     }
 
     /// A permanent rejection stays visible until the user resolves it. A network
@@ -344,7 +368,7 @@ final class CarryAccountReplica {
                   let mutation = flight.command.mutations.first(where: { $0.id == remote.id }),
                   mutation.kind == remote.kind,
                   choices.keys.allSatisfy({ mutation.fields?[$0] != nil }),
-                  let row = try rows().first(where: { $0.id == remote.id }) else {
+                  let row = try row(id: remote.id) else {
                 throw CarryReplicaFailure.invalidState
             }
             var value = try payload(row)
@@ -365,11 +389,11 @@ final class CarryAccountReplica {
             value.local.version = remote.version
             value.local.subtreeVersion = remote.subtreeVersion
             value.local.fieldVersions = remote.fieldVersions
-            row.payload = try encoder.encode(value)
+            try store(value, in: row)
             state.flight = nil
             state.failureData = nil
             state.blocked = false
-            try project(localEntities(), context)
+            try project([value.local], context)
         }
     }
 }
