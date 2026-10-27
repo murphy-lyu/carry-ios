@@ -178,6 +178,24 @@ final class CarryAccountService: CarryAccountAuthenticating {
         } catch { throw classify(error) }
     }
 
+    /// Bind every data request to the cache's owner, including after a token
+    /// refresh. Never reuse a transport across an account switch.
+    func graphTransport(for accountID: UUID) throws -> CarryGraphTransport {
+        guard let configuration else { throw CarryAccountFailure.unavailable }
+        return CarryGraphTransport(configuration: configuration, accessToken: { [weak self] in
+            guard let self, let client = self.client else { throw CarryAccountFailure.unavailable }
+            guard self.cachedProfile?.id == accountID else { throw CarryAccountFailure.accountMismatch }
+            do {
+                let session = try await client.session
+                guard session.user.id == accountID, self.cachedProfile?.id == accountID else {
+                    throw CarryAccountFailure.accountMismatch
+                }
+                try self.persistSession(session)
+                return session.accessToken
+            } catch { throw self.classify(error) }
+        }, send: send)
+    }
+
     private func saveProfile(_ user: User, name: String? = nil) throws -> CarryAccountProfile {
         let profile = CarryAccountProfile(id: user.id,
             displayName: name ?? user.userMetadata["full_name"]?.stringValue

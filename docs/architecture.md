@@ -1,5 +1,15 @@
 # Carry 架构说明
 
+## 账户数据与独立副本（开发中 · 2026-10-27）
+
+`CarryAccountService` 为数据传输创建绑定账户 ID 的令牌提供器，刷新后再次核对缓存所属身份。`CarryGraphTransport` 调用开发库的 `carry-data`；`CarryAccountSyncEngine` 串行执行有界发送/拉取，不把 ACK 当作已经接收全部远端变化。
+
+`CarryAccountReplica` 使用独立 `.none` ModelContainer：原有业务模型加 `CarryReplicaRecord/Checkpoint`，**不修改原 iCloud SchemaV1**。投影回调、逐字段意图、冻结请求、冲突与拉取游标共用本地 save/rollback。账户身份固定写在 checkpoint；缓存不得跨账户复用。当前尚未路由原 TripStore 的全部真实写入口，不能用这些组件替代完整原生接入验收。
+
+服务端是 `carry_private` 中的父子数据图、账户提交序号、变更日志及请求回执；同一账户写入取得事务锁，业务、日志与回执原子提交。独立字段可以合并，同字段冲突保留当前值/提议值。祖先子树版本也作为变更事件同步，用于检测删除预览之后的子项编辑；移动同时更新两条祖先路径。账户数据入口只接受有效原生用户会话，OAuth 客户端必须另经尚待实现的 AI 权限层。
+
+`CarryGraphMigrationCodec` 在后台以完整 Backup DTO 编解码选中范围，核对文件内容与引用；Photos 资料库原图明确列为待源设备采集。纯值 DTO 显式 nonisolated/Sendable，数据库和 UI 仍按原有 actor 隔离。实际 Storage 上传、源图归属切换、旧设备分叉、完整删除及新 MCP 链路仍在开发中。部署、组件测试与待完成门禁见 `docs/carry-account-graph-qa.md`。
+
 ## Codex 受限自动化连接（2026-10-25）
 
 **方向变更**：以下描述分支中的既有实现。用户已确认手机关闭时也应可完成 AI 操作，并同意适合时使用 Apple 登录。新方案为 `specs/carry-cloud-and-ai.md` 的可选账户、首选 Apple 身份、独立数据服务与离线同步；工程选型与风险验证见 `docs/adr-carry-account-and-sync.md`。尚未实现完整账户/同步，不能把下文前台执行当作最终产品约束。

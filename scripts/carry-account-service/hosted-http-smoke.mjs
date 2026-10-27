@@ -7,6 +7,9 @@ if (base.protocol !== 'https:' || !base.hostname.endsWith('.supabase.co') || bas
 }
 const probes = [
   ['private_credentials', '/rest/v1/carry_apple_credentials?select=account_id', null],
+  ['private_graph', '/rest/v1/graph_entities?select=id', null],
+  ['graph_pull_rpc', '/rest/v1/rpc/carry_graph_pull', {p_account:'00000000-0000-0000-0000-000000000001',p_session:'00000000-0000-0000-0000-000000000003',p_cursor:0,p_limit:1}],
+  ['graph_apply_rpc', '/rest/v1/rpc/carry_graph_apply', {p_account:'00000000-0000-0000-0000-000000000001',p_session:'00000000-0000-0000-0000-000000000003',p_command:{}}],
   ['credential_rpc', '/rest/v1/rpc/carry_account_credentials', { p_account_id: '00000000-0000-0000-0000-000000000001' }],
   ['enrollment_rpc', '/rest/v1/rpc/carry_account_enroll', {
     p_account_id: '00000000-0000-0000-0000-000000000001', p_subject: 'synthetic-subject',

@@ -12,7 +12,7 @@ import UIKit
 /// Non-destructive framing: the visible sub-rect of the stored image, in normalized image
 /// coordinates (0…1). Lets the user choose which region of a tall/wide photo shows on the
 /// wide background card, without altering the original. Nil → show the whole image.
-struct BackgroundCrop: Codable, Equatable {
+nonisolated struct BackgroundCrop: Codable, Equatable, Sendable {
     var x: Double
     var y: Double
     var width: Double
@@ -23,9 +23,9 @@ struct BackgroundCrop: Codable, Equatable {
 }
 
 /// One background image for a trip. Stored JSON-encoded in `TripBundle.backgroundsData`.
-struct TripBackgroundEntry: Codable, Equatable {
+nonisolated struct TripBackgroundEntry: Codable, Equatable, Sendable {
 
-    enum Source: String, Codable {
+    enum Source: String, Codable, Sendable {
         case local       // user uploaded from Photos (Phase 1)
         case unsplash    // Phase 2
         case pexels      // Phase 2

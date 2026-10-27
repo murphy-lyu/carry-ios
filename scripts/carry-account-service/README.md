@@ -1,22 +1,31 @@
-# Carry 账户生命周期服务（开发库已部署，函数未部署）
+# Carry 账户与数据服务（免费开发环境）
 
-2026-10-26：已通过授权插件创建独立免费 `carry-dev`，部署并核对两份数据库迁移；凭据表位于不暴露的 `carry_private`，RPC 仅 service_role 可执行。真实托管库与 HTTP 权限检查见 `../../docs/carry-account-hosted-qa.md`。Edge Function 未部署，以下产品门禁继续有效。
+2026-10-27：`carry-dev` 已部署五份迁移及 `carry-data` v1；原生/网页身份生命周期 `carry-account` 仍未部署。完整验收范围见 `../../docs/carry-account-graph-qa.md`，早期身份验证见 `../../docs/carry-account-hosted-qa.md`。
 
-这份实现连接原生 Apple 登录与 Supabase Auth，提供身份二次核验、服务端 Apple 凭证保管、速率限制与可恢复的删除状态。它不是行程云服务，尚未实现账户旅行图、文件迁移、持久 outbox、网页登录同身份、生产通知和完整删除。**禁止打开 App 的账户发布门禁或直接部署给真实用户。**
+当前已有账户图事务、独立原生副本、完整备份图/文件编解码组件；全 App 写入口路由、实际资产迁移、网页登录同身份、新 AI 权限/执行和完整删除尚未完成。**不能开启 App 账户发布门禁或直接向真实用户发布。**
 
-## 文件与验证
+## 模块
 
-- `lifecycle.mjs`：有界请求解析、从服务端会话确定账户、Apple 新授权与代码交换的身份绑定、成功回执边界。
-- `supabase-adapter.mjs`：使用 JOSE 验证 Apple RS256/JWKS/issuer/audience/exp/iat/nonce，短期 ES256 client secret，代码交换、AES-GCM 凭据保管、Supabase 用户查询和事务 RPC。客户端不能传入 owner 来指定账户。
-- `supabase/functions/carry-account/index.ts`：Deno Edge Function 入口；保留平台 JWT 检查，另向 Auth 查询当前用户。尚未在 Deno/托管环境部署验证。
-- SQL：仅新增账户生命周期设施，不读写原 Carry/iCloud 数据。凭据表移入私有 schema，开启 RLS；显式撤销 anon/authenticated 访问与 RPC 执行权，服务函数使用 invoker 权限。
-- 三组测试共 21 项：接口边界、真实 JOSE/加密与调用顺序、PGlite 本地 PostgreSQL 权限与状态。PGlite 不代表真实 Supabase 环境已验收；网络测试全部注入合成响应。
+- `lifecycle.mjs` / `supabase-adapter.mjs`：Apple 新授权/代码交换二次绑定、AES-GCM 凭据保管、限流和删除状态。`carry-account/index.ts` 需要 Apple 服务端配置，仍未部署。
+- `graph-schema.mjs`：业务字段封闭契约；`graph-schema.test.mjs` 对照原生 Backup DTO 检查遗漏。原始费用/币种保持真相，兼容空币种和 -1 快照，不将真实 0 元费用当成未记录。
+- `graph-transactions.sql`：首份数据图迁移的可读源码；已部署历史不可重写，后续变更追加迁移。私有表开启 RLS、客户端无访问权限，RPC 仅服务端可调用。
+- `graph-http.mjs` / `graph-adapter.mjs`：请求体有界、当前用户验证、会话/账户绑定、业务错误去敏化。全账户接口拒绝 OAuth 客户端 JWT/会话，不能把 AI 登录自动升级为全账户访问。
+- `supabase/functions/carry-data/index.ts`：已部署开发接口。保留 `verify_jwt=true`，handler 再查询当前用户，数据库核对有效非 OAuth 会话与已登记账户。服务密钥只使用 Edge 自带的服务器环境，不进入 App。
+- `hosted-graph-smoke.sql`：托管库合成事务与 rollback，覆盖实际 service_role、隔离/版本/失败回滚/费用等。
+- `hosted-http-smoke.mjs`：Data API 六项权限负向检查；`hosted-edge-smoke.mjs`：平台与实际 handler 身份拒绝检查。只允许显式开发地址/public key；可选 legacy anon JWT 必须是当前项目的公开 anon 身份，禁止服务 key。
+- `graph-qa-server.mjs`：仅本地真实 HTTP/PostgreSQL QA。必须 `CARRY_GRAPH_QA=synthetic-only`，固定合成身份，监听 127.0.0.1；**不可部署**，不是真实认证替代品。
 
-运行需 Node 24+：先 `npm ci --ignore-scripts`，再 `npm test`。本机 Node 24 位于 `/Users/murphy/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/bin/node`，可直接运行 `--test *.test.mjs`。测试不访问 Apple/Supabase 真实服务。
+## 本地验证
+
+运行需 Node 24+，安装依赖使用 `npm ci --ignore-scripts`。本机运行时：`/Users/murphy/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/bin/node`。在本目录执行 `--test *.test.mjs`，当前测试集 44 项；provider 网络返回为合成夹具，PostgreSQL/PGlite 实际执行。
+
+原生实际 HTTP 测试先启动 `graph-qa-server.mjs`，再运行共享 `CarryAutomationTests` scheme，排除需要另一个旧服务的 `RelayRoundTripTests`。`AccountGraphMigrationTests` 的费用集成项与 `AccountGraphRoundTripTests` 都依赖 127.0.0.1:8891；不应在未启本地 QA 服务时把网络失败跳过并算通过。
+
+历史失败、修复和正式复跑日志路径记录在 QA 文档；编译/模拟器/实际 HTTP/真实 Apple/物理设备/生产验收分别记录。
 
 ## 外部配置（尚未完成）
 
-Supabase 免费开发项目已建立；Apple App ID 的 Sign in with Apple 能力、关联的网页 Services ID、域名回调、Apple 私钥与团队配置仍需在正确账户下核对。原生用户使用自己的 Apple 身份；开发者账户只用于发行配置。
+Supabase 免费开发项目已建立；原生 App ID/正确团队签名能力及 Supabase 原生 provider 已核对；关联的网页 Services ID、域名回调和 Apple 私钥尚需配置。原生用户使用自己的 Apple 身份；开发者账户只用于发行配置。
 
 服务端环境需要：`SUPABASE_URL`、`SUPABASE_SERVICE_ROLE_KEY`、`CARRY_APPLE_TEAM_ID`、`CARRY_APPLE_KEY_ID`、`CARRY_APPLE_PRIVATE_KEY`、逗号分隔的 `CARRY_APPLE_CLIENT_IDS`，以及 32 字节随机 AES 密钥的 Base64 值 `CARRY_ACCOUNT_ENCRYPTION_KEY`。密钥只放服务端安全配置，不写入仓库、App 或日志。换加密密钥前必须有版本化重加密与恢复方案，不能直接覆盖旧密钥。
 

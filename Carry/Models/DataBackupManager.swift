@@ -8,7 +8,7 @@ import SwiftData
 
 // MARK: - Codable Mirror Types
 
-struct BackupPackingItem: Codable, Sendable {
+nonisolated struct BackupPackingItem: Codable, Sendable {
     var id: UUID
     var name: String
     var quantity: Int
@@ -17,7 +17,7 @@ struct BackupPackingItem: Codable, Sendable {
     var sortOrder: Int
 }
 
-struct BackupPackingSection: Codable, Sendable {
+nonisolated struct BackupPackingSection: Codable, Sendable {
     var id: UUID
     var title: String
     var sortOrder: Int
@@ -27,7 +27,7 @@ struct BackupPackingSection: Codable, Sendable {
 /// 照片回溯生成的停靠点照片（spec: photo-trip-reconstruction.md）。
 /// 缩略图字节随备份走（CLAUDE.md 备份约定：沙盒外/不在关系图直存的字节必须显式带上）；
 /// assetLocalIdentifier 也带上，换机后原图可能取不到、UI 退化为「仅缩略图」，可接受。
-struct BackupStopPhoto: Codable, Sendable {
+nonisolated struct BackupStopPhoto: Codable, Sendable {
     var id: UUID
     var assetLocalIdentifier: String
     var thumbnailData: Data
@@ -39,7 +39,7 @@ struct BackupStopPhoto: Codable, Sendable {
 
 /// 附件镜像（spec: itinerary-attachments.md）。缩略图字节随记录走（小）；原文件字节存
 /// CarryBackup.attachmentFiles（按 fileName 索引，仅 export 内嵌）。分享/导出渲染器不读附件 → 天然不外泄。
-struct BackupAttachment: Codable, Sendable {
+nonisolated struct BackupAttachment: Codable, Sendable {
     var id: UUID
     var kindRaw: String
     var displayName: String
@@ -51,7 +51,7 @@ struct BackupAttachment: Codable, Sendable {
     var addedAt: Date
 }
 
-struct BackupItineraryStop: Codable, Sendable {
+nonisolated struct BackupItineraryStop: Codable, Sendable {
     var id: UUID
     var name: String
     var latitude: Double
@@ -77,7 +77,7 @@ struct BackupItineraryStop: Codable, Sendable {
     var attachments: [BackupAttachment]? = nil
 }
 
-struct BackupTransportSegment: Codable, Sendable {
+nonisolated struct BackupTransportSegment: Codable, Sendable {
     var id: UUID
     var modeRaw: String
     var carrier: String
@@ -130,7 +130,7 @@ struct BackupTransportSegment: Codable, Sendable {
     var attachments: [BackupAttachment]? = nil
 }
 
-struct BackupLodgingStay: Codable, Sendable {
+nonisolated struct BackupLodgingStay: Codable, Sendable {
     var id: UUID
     var name: String
     var address: String
@@ -156,7 +156,7 @@ struct BackupLodgingStay: Codable, Sendable {
     var attachments: [BackupAttachment]? = nil
 }
 
-struct BackupItineraryDay: Codable, Sendable {
+nonisolated struct BackupItineraryDay: Codable, Sendable {
     var id: UUID
     var sortOrder: Int
     var title: String
@@ -166,7 +166,7 @@ struct BackupItineraryDay: Codable, Sendable {
     var segments: [BackupTransportSegment]?
 }
 
-struct BackupTrip: Codable, Sendable {
+nonisolated struct BackupTrip: Codable, Sendable {
     var id: UUID
     var name: String
     var destinationCity: String
@@ -198,7 +198,7 @@ struct BackupTrip: Codable, Sendable {
     var lodgingStays: [BackupLodgingStay]?
 }
 
-struct BackupMyItem: Codable, Sendable {
+nonisolated struct BackupMyItem: Codable, Sendable {
     var id: UUID
     var name: String
     var collectionName: String
@@ -211,7 +211,7 @@ struct BackupMyItem: Codable, Sendable {
     var updatedAt: Date
 }
 
-struct CarryBackup: Codable, Sendable {
+nonisolated struct CarryBackup: Codable, Sendable {
     var version: Int
     var createdAt: Date
     var trips: [BackupTrip]
@@ -602,7 +602,7 @@ final class DataBackupManager {
     /// 不递增版本号。版本号的唯一作用是发布后拦截"用更新格式的备份在旧 App 还原";
     /// 发布后再因破坏性格式变更才升到 v2、v3…。当前 v1 字段即 BackupTrip/CarryBackup
     /// 的全部字段（含可选的 additionalDestinations / 通知偏好 / 背景图条目+裁剪 / 图片字节）。
-    static let currentBackupVersion = 1
+    nonisolated static let currentBackupVersion = 1
 
     enum BackupError: LocalizedError {
         case fileNotFound

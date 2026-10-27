@@ -18,7 +18,7 @@ enum AttachmentOwner {
 
 enum AttachmentStore {
     /// 单文件大小上限（25MB）：超限不入库，防备份包膨胀。spec 已定。
-    static let maxBytes = 25 * 1024 * 1024
+    nonisolated static let maxBytes = 25 * 1024 * 1024
 
     private static var directory: URL {
         let base = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]

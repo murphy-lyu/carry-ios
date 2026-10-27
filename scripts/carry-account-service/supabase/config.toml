@@ -2,3 +2,6 @@ project_id = "carry-account"
 
 [functions.carry-account]
 verify_jwt = true
+
+[functions.carry-data]
+verify_jwt = true

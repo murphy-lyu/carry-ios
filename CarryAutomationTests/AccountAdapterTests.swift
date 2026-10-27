@@ -108,4 +108,16 @@ final class AccountAdapterTests: XCTestCase {
         catch { XCTAssertEqual(error as? CarryAccountFailure, .service) }
         XCTAssertNil(service.cachedProfile)
     }
+    func testDataTransportRejectsCacheOwnerMismatchBeforeAnyNetworkRequest() async throws {
+        try storage.store(key: "session", value: JSONSerialization.data(withJSONObject: sessionJSON()))
+        try storage.store(key: "profile", value: JSONEncoder().encode(CarryAccountProfile(id: userID, displayName: nil, email: nil)))
+        let service = CarryAccountService(configuration: configuration, storage: storage, send: { _ in
+            XCTFail("A different account's cache must not contact the API")
+            throw CarryAccountFailure.service
+        })
+        let transport = try service.graphTransport(for: UUID())
+        do { _ = try await transport.pull(cursor: 0); XCTFail("Must reject wrong owner") }
+        catch { XCTAssertEqual(error as? CarryAccountFailure, .accountMismatch) }
+    }
+
 }
