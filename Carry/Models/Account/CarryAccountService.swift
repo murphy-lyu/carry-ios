@@ -85,7 +85,7 @@ final class CarryAccountService: CarryAccountAuthenticating {
          send: @escaping AuthClient.FetchHandler = { request in
              var bounded = request
              bounded.timeoutInterval = 20
-             return try await URLSession.shared.data(for: bounded)
+             return try await CarryGraphTransport.boundedResponse(bounded)
          }) {
         self.configuration = configuration
         self.send = send

@@ -18,3 +18,5 @@
 - [ ] 根据日志与复现结果修复，覆盖相关入口并回归；未取得证据前不猜测修改。
 
 TestFlight 反馈没有站内对话式回复入口。邮箱邀请测试者的地址可在反馈详情显示；通过公开链接加入者默认匿名，除非提交反馈时主动填写邮箱。参考 [Apple 官方说明](https://developer.apple.com/help/app-store-connect/test-a-beta-version/view-tester-feedback/)。
+
+2026-10-28 代码检查：已发现并优化打包保存、自动备份、备份信息和列表图片的确定性额外工作，见 [性能复核](performance-review-2026-10-28.md)。没有该条反馈的堆栈/复现证据，TF-001 状态不变，不能记为根因已定位或真机已修复。

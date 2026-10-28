@@ -1,5 +1,6 @@
 import XCTest
 import SwiftData
+import Auth
 @testable import Carry
 
 /// Requires scripts/carry-account-service/graph-qa-server.mjs on localhost.
@@ -7,6 +8,41 @@ import SwiftData
 /// synthetic fixture. This does not claim Apple/Supabase production acceptance.
 @MainActor
 final class AccountGraphRoundTripTests: XCTestCase {
+    func testOversizedDeclaredAndChunkedResponsesCancelBeforeDownloadingTheCompleteBody() async throws {
+        struct Probe: Decodable { let sent: Int; let total: Int }
+        let base = try XCTUnwrap(URL(string: "http://127.0.0.1:8891"))
+        for mode in ["declared", "chunked"] {
+            let id = UUID().uuidString.lowercased()
+            let configuration = CarryAccountConfiguration(
+                projectURL: base.appendingPathComponent("__response_limit/\(mode)/\(id)"),
+                publishableKey: "sb_publishable_synthetic_only")
+            // Exercise the real AccountService factory, whose injected HTTP
+            // sender must preserve the streaming cap in the shipped path.
+            let owner = UUID()
+            let storage = CarryAccountSecureStorage(namespace: "bounded-http-\(id)")
+            addTeardownBlock {
+                try storage.remove(key: "session")
+                try storage.remove(key: "profile")
+            }
+            try storage.store(key: "profile", value: JSONEncoder().encode(
+                CarryAccountProfile(id: owner, displayName: nil, email: nil)))
+            let session = Session(accessToken: "synthetic-native-qa", tokenType: "bearer",
+                expiresIn: 3600, expiresAt: Date().timeIntervalSince1970 + 3600,
+                refreshToken: "synthetic-refresh", user: User(id: owner, appMetadata: [:],
+                    userMetadata: [:], aud: "authenticated", createdAt: Date(), updatedAt: Date()))
+            try storage.store(key: "session", value: JSONEncoder().encode(session))
+            let service = CarryAccountService(configuration: configuration, storage: storage)
+            let transport = try service.graphTransport(for: owner)
+            do { _ = try await transport.pull(cursor: 0); XCTFail("Oversized responses must fail") }
+            catch CarryGraphTransportFailure.invalidResponse { }
+            let (data, _) = try await URLSession.shared.data(from: base.appendingPathComponent("__response_limit_stats/\(id)"))
+            let probe = try JSONDecoder().decode(Probe.self, from: data)
+            XCTAssertEqual(probe.total, 64 * 1024 * 1024)
+            XCTAssertLessThan(probe.sent, 32 * 1024 * 1024,
+                "A post-download size check would consume the complete 64 MiB fixture")
+        }
+    }
+
     private struct Fixture: Decodable {
         let accountID: UUID
         let fields: [String: CarryGraphValue]

@@ -553,3 +553,7 @@ if item.dayOrder == idx, item.order >= 0, item.order < 24 * 60 * 2 {
 
 ### `AgendaRenderRow` 无 `moreCount` 字段（静默截断）
 `AgendaRenderRow` **不含 `moreCount` 字段**，也没有「+N 更多」渲染分支。超出 `maxSlots` 的条目静默截断——这是有意为之的 UX：小尺寸组件静默截断比显示「+3 more」更整洁，用户知道有更多内容可打开 App 查看。**禁止**重新加入 `moreCount` 或「+N more」行。
+
+## 列表媒体与备份读取（2026-10-28）
+- 行程照片、附件图标及照片导入预览共用 `PreparedThumbnail`：保持调用方现有尺寸/圆角/占位样式，后台按屏幕密度准备 square-fill 像素，取消过期任务；禁止在列表 body 内解码 UIImage。横向照片条惰性构建。
+- 设置及恢复页异步核对备份时显示原生检查状态，完成前不闪现“无备份”；状态采用九语言 `settings.data.backup.checking`。仍待实体界面/VoiceOver 验收。

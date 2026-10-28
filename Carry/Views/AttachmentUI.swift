@@ -20,6 +20,35 @@ import SafariServices
 // MARK: - 缩略图
 
 enum AttachmentThumbnail {
+    /// Prepare bounded display pixels off the UI actor, rather than handing a
+    /// lazily compressed UIImage to the first visible draw.
+    nonisolated static func displayImage(from imageData: Data, maxPixel: Int, fillingSquare: Bool = false) -> UIImage? {
+        guard (1...4096).contains(maxPixel),
+              let source = CGImageSourceCreateWithData(imageData as CFData,
+                  [kCGImageSourceShouldCache: false] as CFDictionary) else { return nil }
+        var longestEdge = maxPixel
+        if fillingSquare {
+            guard let properties = CGImageSourceCopyPropertiesAtIndex(source, 0, nil) as? [CFString: Any],
+                  let width = (properties[kCGImagePropertyPixelWidth] as? NSNumber)?.doubleValue,
+                  let height = (properties[kCGImagePropertyPixelHeight] as? NSNumber)?.doubleValue,
+                  width.isFinite, height.isFinite, width > 0, height > 0 else { return nil }
+            let longest = max(width, height), aspect = longest / min(width, height)
+            // A square fill needs enough pixels on the SHORT edge; using only
+            // the box's width as longest edge blurs landscape/portrait crops.
+            // Cap pathological aspect ratios to a 1-Mpixel display allocation.
+            longestEdge = Int(ceil(min(longest, Double(maxPixel) * aspect,
+                                       sqrt(1_048_576 * aspect), 8192)))
+        }
+        let options: [CFString: Any] = [
+            kCGImageSourceCreateThumbnailFromImageAlways: true,
+            kCGImageSourceCreateThumbnailWithTransform: true,
+            kCGImageSourceShouldCacheImmediately: true,
+            kCGImageSourceThumbnailMaxPixelSize: longestEdge
+        ]
+        guard let image = CGImageSourceCreateThumbnailAtIndex(source, 0, options as CFDictionary) else { return nil }
+        return UIImage(cgImage: image)
+    }
+
     /// 由图片字节生成约 640px JPEG 缩略图（列表/详情快渲；原图存沙盒）。
     static func make(from imageData: Data, maxPixel: CGFloat = 640) -> Data? {
         guard let src = CGImageSourceCreateWithData(imageData as CFData, nil) else { return nil }
@@ -30,6 +59,57 @@ enum AttachmentThumbnail {
         ]
         guard let cg = CGImageSourceCreateThumbnailAtIndex(src, 0, opts as CFDictionary) else { return nil }
         return UIImage(cgImage: cg).jpegData(compressionQuality: 0.8)
+    }
+}
+
+/// Visible square thumbnails share bounded, cancellable background decoding.
+/// Keep placeholder styling with the caller so attachment glyphs and photo cards
+/// retain their existing visual roles.
+struct PreparedThumbnail<Placeholder: View>: View {
+    private nonisolated struct Request: Equatable {
+        let data: Data
+        let pixels: Int
+    }
+    let data: Data?
+    let size: CGFloat
+    @ViewBuilder var placeholder: () -> Placeholder
+    @Environment(\.displayScale) private var displayScale
+    @State private var image: UIImage?
+    @State private var decodedRequest: Request?
+
+    private var request: Request {
+        Request(data: data ?? Data(), pixels: Int(ceil(size * displayScale)))
+    }
+
+    var body: some View {
+        Group {
+            if let image {
+                Image(uiImage: image).resizable().scaledToFill()
+            } else {
+                placeholder()
+            }
+        }
+        .frame(width: size, height: size)
+        .clipped()
+        .task(id: request) {
+            let current = request
+            guard decodedRequest != current else { return }
+            image = nil
+            guard !current.data.isEmpty else {
+                decodedRequest = current
+                return
+            }
+            let decoding = Task.detached(priority: .utility) {
+                guard !Task.isCancelled else { return nil as UIImage? }
+                return AttachmentThumbnail.displayImage(from: current.data,
+                    maxPixel: current.pixels, fillingSquare: true)
+            }
+            let decoded = await withTaskCancellationHandler(operation: { await decoding.value },
+                                                           onCancel: { decoding.cancel() })
+            guard !Task.isCancelled else { return }
+            image = decoded
+            decodedRequest = current
+        }
     }
 }
 
@@ -399,16 +479,12 @@ struct SafariView: UIViewControllerRepresentable {
 
 // MARK: - 共用：缩略图或图标
 
-@ViewBuilder
 private func attachmentGlyph(symbol: String, thumbnailData: Data, size: CGFloat) -> some View {
-    if !thumbnailData.isEmpty, let img = UIImage(data: thumbnailData) {
-        Image(uiImage: img).resizable().scaledToFill()
-            .frame(width: size, height: size)
-            .clipShape(RoundedRectangle(cornerRadius: 5, style: .continuous))
-    } else {
+    PreparedThumbnail(data: thumbnailData, size: size) {
         Image(systemName: symbol)
             .font(.system(size: size * 0.62))
             .foregroundStyle(.secondary)
             .frame(width: size, height: size)
     }
+    .clipShape(RoundedRectangle(cornerRadius: 5, style: .continuous))
 }

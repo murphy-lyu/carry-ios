@@ -25,7 +25,7 @@
 
 ## 外部配置（尚未完成）
 
-Supabase 免费开发项目已建立；原生 App ID/正确团队签名能力及 Supabase 原生 provider 已核对；Carry 专用 Apple 私钥已注册并在本机安全保管，关联的网页 Services ID、域名回调和服务端 secrets 尚需配置。原生用户使用自己的 Apple 身份；开发者账户只用于发行配置。
+Supabase 免费开发项目已建立；原生 App ID/正确团队签名能力及 Supabase 原生 provider 已核对；Carry 专用 Apple 私钥已注册并在本机安全保管，2026-10-28 已保存关联的网页 Services ID / 精确域名回调，并经逐项确认安装五项服务端 secrets、核对摘要一致；网站部署/真实回调/身份联调尚未完成，生命周期服务未部署。原生用户使用自己的 Apple 身份；开发者账户只用于发行配置。
 
 服务端环境需要：`SUPABASE_URL`、`SUPABASE_SERVICE_ROLE_KEY`、`CARRY_APPLE_TEAM_ID`、`CARRY_APPLE_KEY_ID`、`CARRY_APPLE_PRIVATE_KEY`、逗号分隔的 `CARRY_APPLE_CLIENT_IDS`，以及 32 字节随机 AES 密钥的 Base64 值 `CARRY_ACCOUNT_ENCRYPTION_KEY`。密钥只放服务端安全配置，不写入仓库、App 或日志。换加密密钥前必须有版本化重加密与恢复方案，不能直接覆盖旧密钥。
 

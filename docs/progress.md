@@ -1,7 +1,14 @@
 # 项目进度
 
 ## 最后更新
-2026-10-27
+2026-10-28
+
+## 上次改动摘要（性能复核与 Apple 外部配置 · 2026-10-28）
+
+- 用户逐项确认后保存 Carry Account Web / `app.nevestudio.carry.web`，重新打开确认 Sign in with Apple 已启用、关联原 Carry，地址列表仅含 `account.nevestudio.app` 及 `https://account.nevestudio.app/auth/apple/callback`。不代表网站已部署或原生/网页登录同一身份已验收。
+- Carry 专用 P8 与原 AES 密钥等五项配置已安装到 carry-dev 服务端 Secrets，逐项 SHA256 与本机原件一致；未输出密钥、未进 App/Git，客户端范围当前只含原生 ID。生命周期服务仍未部署，完整删除仍有门禁。
+- 修复打包时全表重取、自动备份主线程编码/重复采样、备份抹除与旧在途写竞争、设置页同步重复读取、四处列表缩略图惰性解码及 HTTP 接收后才限长；Review 追加修正实际 AccountService 工厂绕过流式限长。证据和未完成的 iPhone 12 真机门禁见 `performance-review-2026-10-28.md`。
+- 用户要求完整功能及两轮验收/Review 通过后备份并安装到已连接的实体 iPhone；现在尚未达到安装条件，不提前覆盖原 Carry。
 
 ## 上次改动摘要（Apple 密钥与会话/缓存复核 · 2026-10-27 晚）
 

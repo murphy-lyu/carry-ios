@@ -175,8 +175,18 @@ final class TripBundle {
             $0.sortOrder != $1.sortOrder ? $0.sortOrder < $1.sortOrder : $0.checkInDayOrder < $1.checkInDayOrder
         }
     }
-    var packedCount: Int { safeSections.flatMap { $0.items ?? [] }.filter { $0.isPacked && !$0.name.isEmpty }.count }
-    var totalCount:  Int { safeSections.flatMap { $0.items ?? [] }.filter { !$0.name.isEmpty }.count }
+    // Counts do not depend on display order. Avoid sorting sections and building
+    // two temporary item arrays on every progress/card/animation evaluation.
+    var packedCount: Int {
+        (sections ?? []).reduce(0) { count, section in
+            count + (section.items ?? []).reduce(0) { $0 + ($1.isPacked && !$1.name.isEmpty ? 1 : 0) }
+        }
+    }
+    var totalCount: Int {
+        (sections ?? []).reduce(0) { count, section in
+            count + (section.items ?? []).reduce(0) { $0 + (!$1.name.isEmpty ? 1 : 0) }
+        }
+    }
 
     /// 行程是否已计入"到访"——用于地图点亮（国家/城市）与首页 Trip Overview 的到访国家数。
     /// 规则：出发日期的**次日**起才算到访，出发当天及之前都不计入。
@@ -678,10 +688,7 @@ final class TripStore: ObservableObject {
 
             trips = fetchedTrips
             myItems = fetchedMyItems
-            // Keep the JSON backup in sync after every data load.
-            // Encoding a few trips worth of JSON is sub-millisecond, so doing it
-            // inline here is safe and ensures the backup is always up-to-date.
-            DataBackupManager.shared.backup(trips: fetchedTrips, myItems: fetchedMyItems)
+            scheduleAutomaticBackup()
             for trip in trips {
                 if trip.sections == nil {
                     CarryLogger.shared.log(.dataCorrupted, context: "context=fetchTrips_nil_sections")
@@ -733,13 +740,28 @@ final class TripStore: ObservableObject {
         return didDelete
     }
 
-    private func save(_ caller: String = #function) {
+    private func scheduleAutomaticBackup() {
+        DataBackupManager.shared.scheduleBackup { [weak self] in
+            guard let self else { return nil }
+            return (self.trips, self.myItems)
+        }
+    }
+
+    private func save(_ caller: String = #function, refreshCollections: Bool = true) {
         do {
             try context.save()
         } catch {
             CarryLogger.shared.log(.persistFailed, context: "caller=\(caller)")
         }
-        fetchTrips()
+        if refreshCollections {
+            fetchTrips()
+        } else {
+            // Packing flags change existing observed models, not collection
+            // membership/order. Keep immediate persistence without fetching both
+            // complete tables again on every checkbox tap.
+            objectWillChange.send()
+            scheduleAutomaticBackup()
+        }
     }
 
     // MARK: - Trip background image (specs/trip-background-image.md)
@@ -796,7 +818,7 @@ final class TripStore: ObservableObject {
 #endif
         // 同 eraseAllData：清掉本地自动备份文件，否则「重置」后下次自动备份写入前，
         // 手动一次「从本地备份还原」会把刚重置掉的数据原样带回来，与「重置」的意图矛盾。
-        DataBackupManager.shared.clearBackup()
+        try DataBackupManager.shared.clearBackup()
         trips = []
         myItems = []
         draftTrip = nil
@@ -1104,7 +1126,7 @@ final class TripStore: ObservableObject {
         catch { CarryLogger.shared.log(.persistFailed, context: "eraseAutomationReceipts") }
         save()   // 内部 context.save() + fetchTrips()（trips/myItems 刷成空、并写一份空备份）
         // 3. 备份文件最后清（连 save→fetchTrips 写的那份空备份也删掉，确保「被遗忘」彻底）
-        DataBackupManager.shared.clearBackup()
+        try DataBackupManager.shared.clearBackup()
         writeWidgetSnapshot()
         CarryLogger.shared.log(.allDataErased)
     }
@@ -1142,7 +1164,7 @@ final class TripStore: ObservableObject {
             if let item = (section.items ?? []).first(where: { $0.id == itemId }) {
                 item.isPacked.toggle()
                 CarryLogger.shared.log(item.isPacked ? .itemChecked : .itemUnchecked)
-                save()
+                save(refreshCollections: false)
                 reschedulePackProgress(trip)
 #if !targetEnvironment(macCatalyst)
                 Task { @MainActor in LiveActivityManager.shared.update(for: trip) }
@@ -1159,7 +1181,7 @@ final class TripStore: ObservableObject {
                 item.isPacked = true
             }
         }
-        save()
+        save(refreshCollections: false)
         CarryLogger.shared.log(.tripCompleted)
         reschedulePackProgress(trip)   // 全打完 → 撤销「还剩 N 件」提醒
 #if !targetEnvironment(macCatalyst)
@@ -1174,7 +1196,7 @@ final class TripStore: ObservableObject {
                 item.isPacked = false
             }
         }
-        save()
+        save(refreshCollections: false)
         CarryLogger.shared.log(.tripUncompleted)
         reschedulePackProgress(trip)
 #if !targetEnvironment(macCatalyst)

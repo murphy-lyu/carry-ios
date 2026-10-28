@@ -53,7 +53,7 @@
 
 Supabase `carry-dev` / `lbxsvguuoqqpctkinpwy`，Neve Studio Free 组织、新加坡，仅开发。六份迁移和 `carry-data` v1 已部署，`carry-account` 未部署；完整状态见 `carry-account-graph-qa.md`，不能据此开启生产账户入口。
 
-Apple 登录发行团队为 Bing Xue / `25RAM7275Z`，原生 Bundle ID `app.nevestudio.carry`。专用 Key `Carry Account Sign In` / `8LRP72FMZY` 只启用 Sign in with Apple 并关联 Carry 主 App。P8 与本地服务端配置位于 `~/Library/Application Support/Carry Development Secrets/`，目录 0700、文件 0600，未安装到服务端；不得进 App/Git/日志或覆盖已存在的 AES 配置。网页登录 Services ID/回调域名与真实身份联调仍未完成。
+Apple 登录发行团队为 Bing Xue / `25RAM7275Z`，原生 Bundle ID `app.nevestudio.carry`。专用 Key `Carry Account Sign In` / `8LRP72FMZY` 只启用 Sign in with Apple 并关联 Carry 主 App。P8 与本地服务端配置位于 `~/Library/Application Support/Carry Development Secrets/`，目录 0700、文件 0600；2026-10-28 经用户逐项确认安装到 carry-dev 服务端 Secrets，五项摘要逐项匹配本机原件；不得进 App/Git/日志或覆盖已存在的 AES 配置。网页 Services ID `app.nevestudio.carry.web` 已保存并关联原生 Carry；仅登记 `account.nevestudio.app` 与 `https://account.nevestudio.app/auth/apple/callback`。网站/回调部署、原生网页同账户和真实身份联调仍未完成，服务端 Client IDs 暂仅含原生 ID。
 
 ## 4. App 内密钥（`Carry/Resources/Secrets.plist`，**gitignored**）
 

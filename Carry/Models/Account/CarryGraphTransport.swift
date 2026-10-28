@@ -15,6 +15,7 @@ protocol CarryGraphTransporting {
 /// while account ownership is derived and verified again on the server.
 @MainActor
 final class CarryGraphTransport: CarryGraphTransporting {
+    private nonisolated static let responseLimit = 16 * 1024 * 1024
     private struct Body: Encodable {
         let action: String
         var command: CarryGraphCommand?
@@ -29,11 +30,40 @@ final class CarryGraphTransport: CarryGraphTransporting {
 
     init(configuration: CarryAccountConfiguration,
          accessToken: @escaping () async throws -> String,
-         send: @escaping (URLRequest) async throws -> (Data, URLResponse) = { try await URLSession.shared.data(for: $0) }) {
+         send: @escaping (URLRequest) async throws -> (Data, URLResponse) = {
+             try await CarryGraphTransport.boundedResponse($0)
+         }) {
         endpoint = configuration.projectURL.appendingPathComponent("functions/v1/carry-data")
         publishableKey = configuration.publishableKey
         self.accessToken = accessToken
         self.send = send
+    }
+
+    // Reject while receiving, not after data(for:) has already buffered an
+    // unbounded response. Byte processing stays off the UI actor.
+    @concurrent nonisolated static func boundedResponse(_ request: URLRequest) async throws -> (Data, URLResponse) {
+        let (bytes, response) = try await URLSession.shared.bytes(for: request)
+        defer { bytes.task.cancel() }
+        guard response.expectedContentLength <= responseLimit else {
+            throw CarryGraphTransportFailure.invalidResponse
+        }
+        var data = Data()
+        data.reserveCapacity(min(max(Int(response.expectedContentLength), 0), responseLimit))
+        var buffer: [UInt8] = []
+        buffer.reserveCapacity(16 * 1024)
+        var received = 0
+        for try await byte in bytes {
+            guard received < responseLimit else { throw CarryGraphTransportFailure.invalidResponse }
+            received += 1
+            buffer.append(byte)
+            if buffer.count == 16 * 1024 {
+                try Task.checkCancellation()
+                data.append(contentsOf: buffer)
+                buffer.removeAll(keepingCapacity: true)
+            }
+        }
+        data.append(contentsOf: buffer)
+        return (data, response)
     }
 
     func apply(_ command: CarryGraphCommand) async throws -> CarryGraphReceipt {
@@ -54,7 +84,7 @@ final class CarryGraphTransport: CarryGraphTransporting {
         request.setValue("Bearer \(try await accessToken())", forHTTPHeaderField: "Authorization")
         request.httpBody = try JSONEncoder().encode(body)
         let (data, response) = try await send(request)
-        guard let http = response as? HTTPURLResponse, data.count <= 16 * 1024 * 1024 else {
+        guard let http = response as? HTTPURLResponse, data.count <= Self.responseLimit else {
             throw CarryGraphTransportFailure.invalidResponse
         }
         if http.statusCode == 401 { throw CarryGraphTransportFailure.sessionExpired }

@@ -140,6 +140,7 @@ struct CarryApp: App {
                 ) { _ in
                     CarryLogger.shared.log(.appDidEnterBackground)
                     CarryLogger.shared.markSessionEnded()
+                    Task { await DataBackupManager.shared.flushPendingBackup() }
                     // Refresh the home-screen widget + phase-aware Quick Actions with the latest trip data.
                     store.writeWidgetSnapshot()
                     Self.refreshQuickActions(trips: store.trips)

@@ -5,6 +5,8 @@
 
 import Foundation
 import SwiftData
+import os
+import Darwin
 
 // MARK: - Codable Mirror Types
 
@@ -228,18 +230,153 @@ nonisolated struct CarryBackup: Codable, Sendable {
 
 // MARK: - DataBackupManager
 
+nonisolated struct CarryBackupInfo: Sendable {
+    let date: Date
+    let tripCount: Int
+}
+
+/// One serial worker owns automatic-backup encoding and disk writes. New work
+/// replaces queued snapshots; an older detached write cannot win the race.
+nonisolated final class CarryBackupWriter: Sendable {
+    private struct Job: Sendable { let snapshot: CarryBackup; let url: URL; let generation: UUID }
+    private struct MetadataTrip: Decodable { let id: UUID }
+    private struct MetadataHeader: Decodable { let createdAt: Date; let trips: [MetadataTrip] }
+    private struct State: Sendable {
+        var pending: Job?
+        var running = false
+        var generation = UUID()
+    }
+    private let state = OSAllocatedUnfairLock(initialState: State())
+    private let queue = DispatchQueue(label: "app.nevestudio.carry.backup", qos: .utility)
+    private let encode: @Sendable (CarryBackup) throws -> Data
+    private let report: @Sendable (Error) -> Void
+    private static let stagingPrefix = ".carry-backup-stage-"
+
+    private func pruneStaging(in directory: URL) throws {
+        for url in try FileManager.default.contentsOfDirectory(at: directory, includingPropertiesForKeys: nil)
+        where url.lastPathComponent.hasPrefix(Self.stagingPrefix) {
+            try FileManager.default.removeItem(at: url)
+        }
+    }
+
+    init(encode: @escaping @Sendable (CarryBackup) throws -> Data = { snapshot in
+        let encoder = JSONEncoder()
+        encoder.dateEncodingStrategy = .iso8601
+        encoder.outputFormatting = .prettyPrinted
+        return try encoder.encode(snapshot)
+    }, report: @escaping @Sendable (Error) -> Void = { error in
+        let message = error.localizedDescription
+        Task { @MainActor in
+            CarryLogger.shared.log(.backupWriteFailed, context: "reason=write_failed error=\(message)")
+        }
+    }) { self.encode = encode; self.report = report }
+
+    func submit(_ snapshot: CarryBackup, to url: URL) {
+        let start = state.withLock { value in
+            value.pending = Job(snapshot: snapshot, url: url, generation: value.generation)
+            if value.running { return false }
+            value.running = true
+            return true
+        }
+        if start { queue.async { self.drain() } }
+    }
+
+    private func drain() {
+        while let job = state.withLock({ value -> Job? in
+            let job = value.pending
+            value.pending = nil
+            if job == nil { value.running = false }
+            return job
+        }) {
+            let directory = job.url.deletingLastPathComponent()
+            let stagingDirectory = directory.appendingPathComponent(Self.stagingPrefix + UUID().uuidString,
+                                                                     isDirectory: true)
+            let staging = stagingDirectory.appendingPathComponent("snapshot.json")
+            defer {
+                do {
+                    if FileManager.default.fileExists(atPath: stagingDirectory.path) {
+                        try FileManager.default.removeItem(at: stagingDirectory)
+                    }
+                } catch { report(error) }
+            }
+            do {
+                let active = try state.withLock { value in
+                    guard value.generation == job.generation else { return false }
+                    try pruneStaging(in: directory)
+                    try FileManager.default.createDirectory(at: stagingDirectory, withIntermediateDirectories: false)
+                    return true
+                }
+                if !active { continue }
+                // Encoding and large file IO never hold the gate that clear()
+                // uses. Only the final, same-directory atomic rename is gated.
+                try encode(job.snapshot).write(to: staging, options: .atomic)
+                try state.withLock { value in
+                    guard value.generation == job.generation else { return }
+                    try staging.withUnsafeFileSystemRepresentation { source in
+                        try job.url.withUnsafeFileSystemRepresentation { destination in
+                            guard let source, let destination else { throw CocoaError(.fileWriteInvalidFileName) }
+                            if Darwin.rename(source, destination) != 0 {
+                                throw POSIXError(POSIXErrorCode(rawValue: errno) ?? .EIO)
+                            }
+                        }
+                    }
+                }
+            }
+            catch {
+                // A cleared generation deliberately removes its staging parent;
+                // a late file write then fails without recreating private bytes.
+                if state.withLock({ $0.generation == job.generation }) { report(error) }
+            }
+        }
+    }
+
+    func flush() async {
+        await withCheckedContinuation { continuation in queue.async { continuation.resume() } }
+    }
+
+    func info(at url: URL) async throws -> CarryBackupInfo? {
+        try await withCheckedThrowingContinuation { continuation in
+            queue.async {
+                do {
+                    guard FileManager.default.fileExists(atPath: url.path) else {
+                        continuation.resume(returning: nil)
+                        return
+                    }
+                    let decoder = JSONDecoder(); decoder.dateDecodingStrategy = .iso8601
+                    let data = try Data(contentsOf: url, options: .mappedIfSafe)
+                    let header = try decoder.decode(MetadataHeader.self, from: data)
+                    continuation.resume(returning: CarryBackupInfo(date: header.createdAt, tripCount: header.trips.count))
+                } catch { continuation.resume(throwing: error) }
+            }
+        }
+    }
+
+    /// Invalidate pending/in-flight work before deleting. The short commit gate
+    /// prevents late rename after erasure without waiting for encoding or IO.
+    func clear(_ url: URL) throws {
+        try state.withLock { value in
+            value.generation = UUID()
+            value.pending = nil
+            if FileManager.default.fileExists(atPath: url.path) {
+                try FileManager.default.removeItem(at: url)
+            }
+            try pruneStaging(in: url.deletingLastPathComponent())
+        }
+    }
+}
+
 final class DataBackupManager {
     static let shared = DataBackupManager()
-    private init() {}
+    private init() { explicitBackupURL = nil }
+    init(backupURL: URL) { explicitBackupURL = backupURL }
+
+    private let explicitBackupURL: URL?
+    private let writer = CarryBackupWriter()
+    private var pendingBackup: Task<Void, Never>?
+    private var pendingSource: (@MainActor () -> (trips: [TripBundle], myItems: [MyItem])?)?
+    private var backupDeadline: ContinuousClock.Instant?
 
     private let fileName = "carry_backup.json"
-
-    private let encoder: JSONEncoder = {
-        let e = JSONEncoder()
-        e.dateEncodingStrategy = .iso8601
-        e.outputFormatting = .prettyPrinted
-        return e
-    }()
 
     private let decoder: JSONDecoder = {
         let d = JSONDecoder()
@@ -248,6 +385,7 @@ final class DataBackupManager {
     }()
 
     private var backupURL: URL? {
+        if let explicitBackupURL { return explicitBackupURL }
         guard let dir = FileManager.default.urls(
             for: .applicationSupportDirectory,
             in: .userDomainMask
@@ -505,31 +643,38 @@ final class DataBackupManager {
         return try AutomationCodec.privateDigest(mirror)
     }
 
-    /// Auto-backup after every save. Hot path → stays cheap: builds a TEXT-ONLY snapshot (no
-    /// embedded image bytes — the images live on as sandbox files and are reconciled separately),
-    /// then encodes + writes it off the main thread. The portable, self-contained file with image
-    /// bytes is produced on demand by `makeExportFile` only when the user actually exports.
-    func backup(trips: [TripBundle], myItems: [MyItem]) {
-        guard let url = backupURL else { return }
-        // Text-only snapshot → encoding is sub-millisecond, so it stays on the main actor; only
-        // the disk write (IO) is offloaded. (Image bytes are no longer embedded here, which is
-        // exactly what used to make per-save encoding expensive.)
-        let snapshot = makeBackup(trips: trips, myItems: myItems, embedImages: false)
-        guard let data = Self.encode(snapshot) else {
-            CarryLogger.shared.log(.backupWriteFailed, context: "reason=encode_failed")
-            return
+    /// SwiftData saves stay immediate. Coalesce automatic-backup work for 250 ms
+    /// (at most one second during continuous edits), then read the current graph
+    /// on its actor. Thumbnail bytes remain in the backup; JSON/base64 and disk
+    /// work run on the serial utility worker, never in the tap handler.
+    func scheduleBackup(source: @escaping @MainActor () -> (trips: [TripBundle], myItems: [MyItem])?) {
+        pendingSource = source
+        pendingBackup?.cancel()
+        let clock = ContinuousClock()
+        let deadline = backupDeadline ?? clock.now.advanced(by: .seconds(1))
+        backupDeadline = deadline
+        let due = min(deadline, clock.now.advanced(by: .milliseconds(250)))
+        pendingBackup = Task { @MainActor [weak self] in
+            do { try await Task.sleep(until: due, clock: .continuous) }
+            catch { return }
+            guard !Task.isCancelled else { return }
+            self?.performPendingBackup()
         }
-        Task.detached(priority: .utility) {
-            do {
-                try data.write(to: url, options: .atomic)
-            } catch {
-                let errorDesc = error.localizedDescription
-                await MainActor.run {
-                    CarryLogger.shared.log(.backupWriteFailed,
-                        context: "reason=write_failed error=\(errorDesc)")
-                }
-            }
-        }
+    }
+
+    private func performPendingBackup() {
+        let source = pendingSource
+        pendingSource = nil
+        pendingBackup = nil
+        backupDeadline = nil
+        guard let models = source?(), let url = backupURL else { return }
+        writer.submit(makeBackup(trips: models.trips, myItems: models.myItems, embedImages: false), to: url)
+    }
+
+    func flushPendingBackup() async {
+        pendingBackup?.cancel()
+        performPendingBackup()
+        await writer.flush()
     }
 
     /// Builds a self-contained export file (WITH embedded image bytes) to a temp URL for sharing.
@@ -573,23 +718,26 @@ final class DataBackupManager {
 
     /// 删除本地自动备份文件（用于「抹掉所有数据」——否则抹除后 restore 又把数据带回来，
     /// 与「被遗忘」矛盾。spec: erase-all-data.md）。文件不存在视为成功。
-    func clearBackup() {
-        guard let url = backupURL, FileManager.default.fileExists(atPath: url.path) else { return }
-        try? FileManager.default.removeItem(at: url)
+    func clearBackup() throws {
+        pendingBackup?.cancel()
+        pendingBackup = nil
+        pendingSource = nil
+        backupDeadline = nil
+        guard let url = backupURL else { return }
+        do { try writer.clear(url) }
+        catch {
+            CarryLogger.shared.log(.backupWriteFailed, context: "reason=erase_failed")
+            throw error
+        }
     }
 
-    func latestBackupDate() -> Date? {
-        guard let url = backupURL,
-              let data = try? Data(contentsOf: url),
-              let backup = try? decoder.decode(CarryBackup.self, from: data) else { return nil }
-        return backup.createdAt
-    }
-
-    func latestBackupTripCount() -> Int? {
-        guard let url = backupURL,
-              let data = try? Data(contentsOf: url),
-              let backup = try? decoder.decode(CarryBackup.self, from: data) else { return nil }
-        return backup.trips.count
+    func latestBackupInfo() async -> CarryBackupInfo? {
+        guard let url = backupURL else { return nil }
+        do { return try await writer.info(at: url) }
+        catch {
+            CarryLogger.shared.log(.loadFailed, context: "reason=backup_metadata")
+            return nil
+        }
     }
 
     // MARK: - Restore

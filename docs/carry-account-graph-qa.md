@@ -107,3 +107,8 @@ Release 真机目标构建通过，无编译警告/错误；strict codesign 通�
 以上是同一功能开发中的组件检查，完整发布门禁保持未完成。
 
 本次最终 Release 真机目标构建通过，strict codesign、Team `25RAM7275Z`、Apple 登录 `Default`、CloudKit `Production` 与打包后账户门禁关闭均核对通过，无编译警告/错误；日志 `/tmp/carry-account-session-queue-release.log`。九语言最终审计 0 errors/0 warnings，日志 `/tmp/carry-account-session-i18n.log`。未安装真实手机或上传 TestFlight。
+
+## 2026-10-28 性能复核与外部配置
+- 用户当次确认后完成 Apple 网页 Services ID 的原 Carry 关联/精确域名回调及五项 carry-dev Secrets 安装。重新打开 Apple Configure 并展开地址列表读回两项；Supabase 摘要逐项与本机一致。仅表示外部配置持久化，不表示真实原生/网页身份、生命周期或全产品通过。
+- 性能复核后最终两轮原生 **86/86**、Release/签名及九语言审计通过；失败原因、Review 修复和原始日志路径见 `performance-review-2026-10-28.md`。实际请求工厂已覆盖流式接收限制；未运行旧 Relay 服务测试，未安装实体机。
+- 全业务、资产/归属迁移、新 OAuth/MCP、完整删除/恢复及真实设备仍待完成。用户要求全部完成并自检后先备份再装其已连接 iPhone，不提前发版或把组件验收当最终验收。

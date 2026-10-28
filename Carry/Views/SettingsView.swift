@@ -73,6 +73,8 @@ struct SettingsView: View {
     private let eraseUndoWindowAccessible: TimeInterval = 20
     // 备份信息缓存：onAppear 时读取一次，避免每次 body 求值触发磁盘 I/O
     @State private var cachedBackupDate: Date? = nil
+    @State private var backupCacheTask: Task<Void, Never>?
+    @State private var isReadingBackup = true
     // 当前 App Icon 显示名：onAppear / 前台激活时刷新（图标切换后同步）
     @State private var currentIconName: String = currentAppIconDisplayName()
     @Environment(\.scenePhase) private var scenePhase
@@ -165,11 +167,19 @@ struct SettingsView: View {
 
     /// 从磁盘刷新备份日期缓存（onAppear / 前台激活时调用一次）
     private func refreshBackupCache() {
-        cachedBackupDate = DataBackupManager.shared.latestBackupDate()
+        backupCacheTask?.cancel()
+        isReadingBackup = true
+        backupCacheTask = Task {
+            let info = await DataBackupManager.shared.latestBackupInfo()
+            guard !Task.isCancelled else { return }
+            cachedBackupDate = info?.date
+            isReadingBackup = false
+        }
     }
 
     /// Value text shown on the Auto-Save navigation row — uses cached date, no disk I/O.
     private var autoSaveValueText: String {
+        if isReadingBackup { return NSLocalizedString("settings.data.backup.checking", comment: "") }
         guard let date = cachedBackupDate else {
             return NSLocalizedString("settings.data.restore.no_backup", comment: "")
         }
@@ -531,6 +541,7 @@ struct SettingsView: View {
             refreshBackupCache()
             currentIconName = currentAppIconDisplayName()
         }
+        .onDisappear { backupCacheTask?.cancel() }
         .onChange(of: scenePhase) { _, phase in
             if phase == .active {
                 refreshBackupCache()
@@ -1040,6 +1051,8 @@ private struct DataRecoveryView: View {
     // 磁盘读取缓存：onAppear 时加载一次，避免每次 body 求值触发 I/O
     @State private var backupDate: Date? = nil
     @State private var backupTripCount: Int? = nil
+    @State private var backupInfoTask: Task<Void, Never>?
+    @State private var isReadingBackup = true
 
     // 静态缓存 DateFormatter，避免重复创建
     private static let recoveryDateFormatter: DateFormatter = {
@@ -1055,8 +1068,15 @@ private struct DataRecoveryView: View {
     }
 
     private func loadBackupInfo() {
-        backupDate = DataBackupManager.shared.latestBackupDate()
-        backupTripCount = DataBackupManager.shared.latestBackupTripCount()
+        backupInfoTask?.cancel()
+        isReadingBackup = true
+        backupInfoTask = Task {
+            let info = await DataBackupManager.shared.latestBackupInfo()
+            guard !Task.isCancelled else { return }
+            backupDate = info?.date
+            backupTripCount = info?.tripCount
+            isReadingBackup = false
+        }
     }
 
     var body: some View {
@@ -1071,7 +1091,14 @@ private struct DataRecoveryView: View {
                         .fixedSize(horizontal: false, vertical: true)
                         .padding(.horizontal, 4)
 
-                    if backupDate != nil {
+                    if isReadingBackup {
+                        ProgressView("settings.data.backup.checking")
+                            .font(.subheadline)
+                            .foregroundStyle(.secondary)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .padding(18)
+                            .background(cardBackground)
+                    } else if backupDate != nil {
                         // Backup snapshot info
                         VStack(spacing: 0) {
                             infoRow(
@@ -1155,6 +1182,7 @@ private struct DataRecoveryView: View {
         }
         .animation(.easeInOut(duration: 0.2), value: toastMessage != nil)
         .onAppear { loadBackupInfo() }
+        .onDisappear { backupInfoTask?.cancel() }
     }
 
     private func infoRow(label: Text, value: String) -> some View {

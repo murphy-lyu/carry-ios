@@ -98,7 +98,7 @@ ZStack（全窗口）
 - NotificationManager：本地通知（行程提醒）；`tripId(fromIdentifier:)` 从通知 ID 解析行程 UUID
 - CalendarManager（`Managers/CalendarManager.swift`，`@MainActor` 单例）：EventKit 集成。① **写**：把行程写入专属「Carry」日历（事件带 `carry://trip/{uuid}` URL）；② **读（日历叠加层，spec: `itinerary-calendar-overlay.md`）**：`overlayEvents(start:end:calendarIDs:)` 读用户勾选日历在行程区间内的只读事件（排除 `carry://` 自写防回环）、`availableCalendars`/`selectedOrDefaultOverlayIDs`（首次默认勾节假日类只读公共日历）。**叠加事件只活在视图层临时态（`ItineraryView.overlayEventsByDay`），永不入 model/分享/导出/备份**（隐私红线，构造保证）。渲染：`ItineraryReorderCollection` 的 `.calendarEvent(id:day:)` 行 + 点击弹 `CalendarEventDetailView`（Carry 内浮层，不跳系统日历）
 - PackReminderNotificationDelegate：`UNUserNotificationCenterDelegate`，点击打包提醒后解析 tripId 写入 `NavigationRouter.pendingTripId`，实现自动跳转
-- DataBackupManager：数据备份（JSON 镜像 + 还原/合并）。**含非 SwiftData 关联文件**：背景图字节随备份带上（`CarryBackup.backgroundImages` 文件名→base64），还原时写回沙盒；裁剪元数据走 `BackupTrip.backgroundsData`
+- DataBackupManager：数据备份（JSON 镜像 + 还原/合并）。自动备份合并采样、Sendable 镜像 utility 串行编码/原子写入；generation 防抹除后在途写复活。设置/恢复页异步读取一次 metadata；模型读取仍在主 actor，SwiftData 保存不延迟。性能证据见 `performance-review-2026-10-28.md`。**含非 SwiftData 关联文件**：背景图字节随备份带上（`CarryBackup.backgroundImages` 文件名→base64），还原时写回沙盒；裁剪元数据走 `BackupTrip.backgroundsData`
 - 行程背景图（`feature/home-ui-redesign` 分支，Phase 1）：
   - `TripBackground.swift`：`TripBackgroundEntry`（条目，含归一化裁剪框 `BackgroundCrop`，存于 `TripBundle.backgroundsData`）+ `BackgroundImageStore`（沙盒 `Application Support/TripBackgrounds/`，压缩存图/取图/裁剪缓存；存图时烘焙方向+scale 1 以保裁剪坐标正确）
   - `BackgroundPicker.swift`：`PhotoPicker`（PHPicker 封装，`.compatible`，只转发 itemProvider/cancel，不自行 dismiss/加载）

@@ -34,8 +34,30 @@ const handler=createGraphHandler({
 const fixture=Object.fromEntries(Object.entries(graphSchema.trip.fields).filter(([,rule])=>!rule.optional).map(([key,rule])=>[key,
   rule.type==='string'?(rule.format==='date-time'?'2026-11-01T00:00:00Z':''):rule.type==='number'?Math.max(0,rule.min):rule.type==='array'?[]:false]));
 fixture.name='Synthetic native HTTP QA';fixture.days=3;
+const responseProbes=new Map();
 const server=createServer(async(incoming,outgoing)=>{
   try{
+    const probe=incoming.url?.match(/^\/__response_limit\/(declared|chunked)\/([0-9a-f-]{36})\/functions\/v1\/carry-data$/i);
+    if(probe){
+      const [,mode,id]=probe,total=64*1024*1024,state={sent:0,closed:false,total};
+      if(responseProbes.size>=32)responseProbes.delete(responseProbes.keys().next().value);
+      responseProbes.set(id,state);
+      outgoing.writeHead(200,{'content-type':'application/json','cache-control':'no-store',
+        ...(mode==='declared'?{'content-length':total}:{})});
+      outgoing.on('close',()=>{state.closed=true;});
+      const chunk=Buffer.alloc(64*1024,32);
+      function send(){
+        if(outgoing.destroyed||state.closed)return;
+        state.sent+=chunk.length;
+        const writable=outgoing.write(chunk);
+        if(state.sent>=total){outgoing.end();return;}
+        if(writable)setImmediate(send);else outgoing.once('drain',send);
+      }
+      send();return;
+    }
+    const stats=incoming.url?.match(/^\/__response_limit_stats\/([0-9a-f-]{36})$/i);
+    if(stats){outgoing.writeHead(200,{'content-type':'application/json','cache-control':'no-store'});
+      outgoing.end(JSON.stringify(responseProbes.get(stats[1])??null));return;}
     if(incoming.url==='/__fixture'){outgoing.writeHead(200,{'content-type':'application/json','cache-control':'no-store'});outgoing.end(JSON.stringify({accountID:account,fields:fixture}));return;}
     if(incoming.url!=='/functions/v1/carry-data'){outgoing.writeHead(404);outgoing.end();return;}
     const request=new Request('http://127.0.0.1:8891'+incoming.url,{method:incoming.method,headers:incoming.headers,
