@@ -1,5 +1,5 @@
 # Carry 账户文件同步：实现与验收记录
-日期：2026-10-28。继续同一账户/AI 功能与草稿 PR；本页记录组件证据，完整产品尚未交付，未安装实体 iPhone。
+日期：2026-10-28。继续同一账户/AI 功能与草稿 PR；本页记录组件证据，完整产品尚未交付。组件检查后，用户进一步授权安装当前开发版本；安装结果见 `carry-iphone-install-2026-10-28.md`，不作为完整功能验收。
 
 ## 已实现
 - 原生 `CarryAssetUploader` 使用 TUS 1.0、6 MiB 分块、最多两个并发文件和单文件 50 MiB 上限。散列以 64 KiB 读取；每个网络请求重新获取账户服务中的令牌，缓存只保留文件身份、受限上传地址和已确认偏移，不写认证头。
@@ -27,6 +27,6 @@
 
 最终原生日志 `/tmp/carry-asset-final-round{1,2}.log`，结果包 `/tmp/CarryAssetFinalRound{1,2}.xcresult`；服务端 `/tmp/carry-asset-server-final-round{1,2}.log`。原生显式排除依赖旧独立服务的 `RelayRoundTripTests`，没有将它算作通过。模拟器没有 iCloud 账户的系统日志不构成 CloudKit 或双设备验收证据。
 
-Release 证据 `/tmp/carry-asset-final-release.log`；九语言审计 `/tmp/carry-asset-final-i18n.log`。不新增 UI/文案；实际实体机性能、真实文件同步、迁移归属切换、完整删除/恢复与 AI 功能仍待完成。用户要求全部完成、自检后先备份再覆盖其原 Carry；当前不满足安装条件。
+Release 证据 `/tmp/carry-asset-final-release.log`；九语言审计 `/tmp/carry-asset-final-i18n.log`。不新增 UI/文案；实际实体机性能、真实文件同步、迁移归属切换、完整删除/恢复与 AI 功能仍待完成。原先按完整验收后装机安排，后续用户明确授权先安装当前开发版本；已完成备份、原位安装、启动和安装前后数据核对，仍未达到完整功能交付条件。
 
 参考：[Supabase TUS](https://supabase.com/docs/guides/storage/uploads/resumable-uploads)、[Storage 访问控制](https://supabase.com/docs/guides/storage/security/access-control)、[Deno node:crypto](https://docs.deno.com/api/node/crypto/)。
