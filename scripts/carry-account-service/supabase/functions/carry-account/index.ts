@@ -18,6 +18,8 @@ const adapter = createSupabaseAdapter({
     applePrivateKey: required('CARRY_APPLE_PRIVATE_KEY'),
     appleClientIDs: required('CARRY_APPLE_CLIENT_IDS').split(',').map(value => value.trim()).filter(Boolean),
     encryptionKey: required('CARRY_ACCOUNT_ENCRYPTION_KEY'),
+    appleRedirectURIs: Deno.env.get('CARRY_APPLE_WEB_REDIRECT_URI')
+      ? { 'app.nevestudio.carry.web': required('CARRY_APPLE_WEB_REDIRECT_URI') } : {},
   },
 });
 

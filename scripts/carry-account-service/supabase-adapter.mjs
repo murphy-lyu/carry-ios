@@ -7,6 +7,15 @@ const unbase64 = value => Uint8Array.from(atob(value), char => char.charCodeAt(0
 /// External operations are injectable for local tests; all URLs derive from operator configuration.
 export function createSupabaseAdapter({ configuration, jose, fetcher = fetch }) {
   const { projectURL, serviceKey, appleTeamID, appleKeyID, applePrivateKey, appleClientIDs, encryptionKey } = configuration;
+  const appleRedirectURIs = configuration.appleRedirectURIs ?? {};
+  for (const [audience, raw] of Object.entries(appleRedirectURIs)) {
+    const uri = new URL(raw);
+    if (!appleClientIDs?.includes(audience) || uri.protocol !== 'https:' || uri.username || uri.password ||
+        uri.search || uri.hash) throw new Error('invalid_configuration');
+  }
+  if (appleClientIDs?.includes('app.nevestudio.carry.web') && !appleRedirectURIs['app.nevestudio.carry.web']) {
+    throw new Error('missing_web_redirect_uri');
+  }
   const project = new URL(projectURL);
   if (project.protocol !== 'https:' || project.username || project.password || project.search || project.hash ||
       !['', '/'].includes(project.pathname) || !serviceKey || !appleTeamID || !appleKeyID || !applePrivateKey ||
@@ -100,7 +109,8 @@ export function createSupabaseAdapter({ configuration, jose, fetcher = fetch }) 
     },
     exchangeCode: async (code, audience) => {
       const result = await apple('token', { client_id: audience, client_secret: await clientSecret(audience),
-        code, grant_type: 'authorization_code' });
+        code, grant_type: 'authorization_code',
+        ...(Object.hasOwn(appleRedirectURIs, audience) ? { redirect_uri: appleRedirectURIs[audience] } : {}) });
       return { idToken: result.id_token, refreshToken: result.refresh_token };
     },
     status: async id => {

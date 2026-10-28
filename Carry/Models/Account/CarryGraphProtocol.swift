@@ -100,3 +100,7 @@ enum CarryReplicaFailure: Error {
 nonisolated enum CarryGraphConflictChoice: Sendable {
     case local, remote, edited(CarryGraphValue)
 }
+
+nonisolated enum CarryGraphParentConflictChoice: Sendable {
+    case local, remote, parent(UUID?)
+}

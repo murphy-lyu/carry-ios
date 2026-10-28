@@ -130,4 +130,63 @@ final class AccountGraphRoundTripTests: XCTestCase {
         XCTAssertEqual(try reopened.localEntities().filter { $0.id == lostID }.count, 1)
         XCTAssertEqual(try reopened.localEntities().first { $0.id == lostID }?.version, 1)
     }
+    func testActualHTTPRejectsAnOfflineMoveAfterPullingAnotherClientsParentChange() async throws {
+        let base = try XCTUnwrap(URL(string: "http://127.0.0.1:8891"))
+        let (bytes, _) = try await URLSession.shared.data(from: base.appendingPathComponent("__fixture"))
+        let fixture = try JSONDecoder().decode(Fixture.self, from: bytes)
+        let transport = CarryGraphTransport(configuration: .init(projectURL: base,
+            publishableKey: "sb_publishable_synthetic_only"), accessToken: { "synthetic-native-qa" })
+        let trip = TripBundle(name: "Synthetic parent race", destinationCity: "Tokyo", days: 3, dateRange: "")
+        let stop = ItineraryStop(name: "Synthetic stop", latitude: 35.7, longitude: 139.7)
+        let first = ItineraryDay(sortOrder: 0, title: "First", note: "", stops: [stop])
+        let mine = ItineraryDay(sortOrder: 1, title: "Mine", note: "", stops: [])
+        let theirs = ItineraryDay(sortOrder: 2, title: "Theirs", note: "", stops: [])
+        trip.itineraryDays = [first, mine, theirs]
+        let exportURL = try XCTUnwrap(DataBackupManager.shared.makeExportFile(trips: [trip], myItems: []))
+        addTeardownBlock { try FileManager.default.removeItem(at: exportURL) }
+        let decoder = JSONDecoder(); decoder.dateDecodingStrategy = .iso8601
+        let backup = try decoder.decode(CarryBackup.self, from: Data(contentsOf: exportURL))
+        let packet = try CarryGraphMigrationCodec.prepare(backup, accountID: fixture.accountID,
+            migrationID: UUID(), tripIDs: [trip.id], includeLibrary: false)
+        let receipt = try await transport.apply(.init(requestID: UUID(), mutations: packet.entities.map {
+            .init(id: $0.id, kind: $0.kind, action: "create", baseVersion: 0, parentID: $0.parentID, fields: $0.fields)
+        }))
+        let original = try XCTUnwrap(receipt.changes.last { $0.entity.id == stop.id }?.entity)
+        let directory = FileManager.default.temporaryDirectory.appendingPathComponent("CarryMoveHTTP-\(UUID().uuidString)")
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        addTeardownBlock { try FileManager.default.removeItem(at: directory) }
+        let replica = try CarryAccountReplica(container: CarryAccountReplica.container(at: directory.appendingPathComponent("cache.store")),
+            accountID: fixture.accountID)
+        let engine = CarryAccountSyncEngine(replica: replica, transport: transport)
+        for _ in 0..<100 { if try await engine.synchronize() { break } }
+        var desired = original; desired.parentID = mine.id; try replica.edit(desired)
+        _ = try await transport.apply(.init(requestID: UUID(), mutations: [.init(id: stop.id, kind: "stop", action: "move",
+            baseVersion: original.version, parentID: theirs.id, fields: [:], fieldVersions: [:])]))
+        // Deliberately pull BEFORE freezing our older unsent move. The old bug
+        // advanced its baseVersion and silently replaced the other parent.
+        for _ in 0..<100 {
+            let page = try await transport.pull(cursor: replica.cursor)
+            try replica.receive(page)
+            if !page.hasMore { break }
+        }
+        let rejectedCommand = try XCTUnwrap(replica.nextCommand())
+        var conflictEntity: CarryGraphEntity?
+        do { _ = try await engine.synchronize(); XCTFail("Must preserve the concurrent move for review") }
+        catch CarryGraphTransportFailure.conflict(let body) {
+            struct Failure: Decodable { let error: String; let conflict: CarryGraphEntity }
+            let response = try JSONDecoder().decode(Failure.self, from: body)
+            XCTAssertEqual(response.error, "move_conflict")
+            conflictEntity = response.conflict
+        }
+        XCTAssertEqual(try replica.localEntities().first { $0.id == stop.id }?.parentID, mine.id)
+        XCTAssertNotNil(try replica.pendingFailure)
+        let conflict = try XCTUnwrap(conflictEntity)
+        XCTAssertEqual(conflict.parentID, theirs.id)
+        try replica.resolveParent(requestID: rejectedCommand.requestID, serverVersion: conflict.version,
+            expectedLocalParentID: mine.id, choice: .local)
+        _ = try await engine.synchronize()
+        XCTAssertNil(try replica.pendingFailure)
+        XCTAssertEqual(try replica.localEntities().first { $0.id == stop.id }?.parentID, mine.id)
+    }
+
 }

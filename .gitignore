@@ -19,3 +19,6 @@ scripts/carry-mcp/node_modules/
 scripts/carry-mcp/.wrangler/
 scripts/carry-account-service/node_modules/
 scripts/carry-account-service/supabase/.temp/
+scripts/carry-account-web/node_modules/
+scripts/carry-account-web/.wrangler/
+scripts/carry-account-web/.dev.vars*

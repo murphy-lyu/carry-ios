@@ -144,3 +144,8 @@ ZStack（全窗口）
 - `SharedSources/PackingActivityAttributes.swift`：打包 LA 共享类型。`ActivityAttributes` 只含 `tripId`；`ContentState` = packedItems / totalItems / isCompleted / tripName / destinationCity / departureDate
 - `SharedSources/TransportActivityAttributes.swift`：交通 LA 共享类型（spec: widget-transit-live-activity.md）。`ActivityAttributes` = tripId + segmentId；`ContentState` = modeRaw / carrierAndNumber / from·to 码·名 / departureDate / arrivalDate（绝对时刻，App 按两端时区算）/ fromTerminal / seat + 预留 `liveStatus`/`gate`/`actualDepartureDate`（未来航班动态，填充即用、不改结构）
 - **桌面组件 snapshot 不走 SharedSources**：`WidgetTripSnapshot`（`TripStore.swift`）与 `WidgetTrip`（`CarryWidget.swift`）是**字段一致的双份镜像**、靠同一 JSON 通信（加字段两处同步改、Widget 侧可选）
+
+## 账户副本与网页登录时序补充（2026-10-28）
+- `CarryAccountReplica` 的结构移动保留独立原版本；`resolveParent` 按被拒请求/服务端版本/本地 parent 处理人工选择。pull 不暗中重新授权旧移动，过期冲突不能覆盖已经拉取的新状态。
+- 本地创建在 ACK 前收到的远端更新保存在 `unconfirmedRemote`；只有自己的创建 ACK 绑定 UUID 后再合并，不因推进 cursor 丢弃后续变化。多实体 edit 与 native projection 共用一次事务。
+- 网页 `scripts/carry-account-web` 由官方 SSR SDK 管 Cookie，会话与十分钟 Apple flow 分开；原生和网页共用生命周期服务，web code exchange 只接受服务端固定回调。范围授权与数据读写仍待实现；入口关闭，不能视为已接通 AI。

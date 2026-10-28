@@ -94,6 +94,7 @@ test('code exchange signs short-lived client secret and validates selected audie
     assert.equal(String(url), 'https://appleid.apple.com/auth/token');
     const values = options.body;
     assert.equal(values.get('grant_type'), 'authorization_code');
+    assert.equal(values.has('redirect_uri'), false, 'Native code exchanges must omit redirect_uri');
     assert.equal(values.get('code'), 'synthetic-code');
     const { payload } = await jose.jwtVerify(values.get('client_secret'), privateKey.publicKey, {
       issuer: 'SYNTHETIC', audience: 'https://appleid.apple.com', algorithms: ['ES256'],
@@ -167,4 +168,26 @@ test('Apple revocation uses encrypted stored token before purge and auth deletio
   await adapter.deleteAccount('internal-account', { subject: 'synthetic-subject', audience: 'app.nevestudio.carry' }, 'synthetic-fresh-refresh');
   assert.deepEqual(paths, ['/rest/v1/rpc/carry_account_begin_delete', '/rest/v1/rpc/carry_account_credentials',
     '/auth/revoke', '/rest/v1/rpc/carry_account_purge_owned_data', '/auth/v1/admin/users/internal-account']);
+});
+
+test('web code exchange binds the exact operator-configured redirect without changing native exchange', async () => {
+  const webID = 'app.nevestudio.carry.web';
+  const webConfig = { ...configuration, appleClientIDs: [configuration.appleClientIDs[0], webID],
+    appleRedirectURIs: { [webID]: 'https://account-qa.invalid/auth/apple/callback' } };
+  const adapter = createSupabaseAdapter({ configuration: webConfig, jose, fetcher: async (url, options) => {
+    assert.equal(String(url), 'https://appleid.apple.com/auth/token');
+    assert.equal(options.body.get('client_id'), webID);
+    assert.equal(options.body.get('redirect_uri'), webConfig.appleRedirectURIs[webID]);
+    const { payload } = await jose.jwtVerify(options.body.get('client_secret'), privateKey.publicKey,
+      { issuer: configuration.appleTeamID, audience: 'https://appleid.apple.com' });
+    assert.equal(payload.sub, webID);
+    return Response.json({ id_token: 'synthetic-web-token', refresh_token: 'synthetic-refresh' });
+  } });
+  assert.equal((await adapter.exchangeCode('synthetic-web-code', webID)).idToken, 'synthetic-web-token');
+  assert.throws(() => createSupabaseAdapter({ configuration: { ...webConfig, appleRedirectURIs: {} }, jose }),
+    /missing_web_redirect_uri/);
+  for (const uri of ['http://account-qa.invalid/auth/apple/callback', 'https://user:pass@account-qa.invalid/path',
+    'https://account-qa.invalid/path?next=evil', 'https://account-qa.invalid/path#fragment']) {
+    assert.throws(() => createSupabaseAdapter({ configuration: { ...webConfig, appleRedirectURIs: { [webID]: uri } }, jose }));
+  }
 });

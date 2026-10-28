@@ -557,3 +557,7 @@ if item.dayOrder == idx, item.order >= 0, item.order < 24 * 60 * 2 {
 ## 列表媒体与备份读取（2026-10-28）
 - 行程照片、附件图标及照片导入预览共用 `PreparedThumbnail`：保持调用方现有尺寸/圆角/占位样式，后台按屏幕密度准备 square-fill 像素，取消过期任务；禁止在列表 body 内解码 UIImage。横向照片条惰性构建。
 - 设置及恢复页异步核对备份时显示原生检查状态，完成前不闪现“无备份”；状态采用九语言 `settings.data.backup.checking`。仍待实体界面/VoiceOver 验收。
+
+## 网页账户入口（2026-10-28，尚未发布）
+- 只保留 Carry、登录标题、简短出发文案、官方 Apple 按钮和隐私入口；系统字体/Canvas/CanvasText/LinkText 随外观适配。按钮支持 Retina 和深色白色版，焦点环可见、触控高度 44px。
+- 已检查桌面和 320px 深浅色，中文采用“让每一次出发更从容。”避免窄屏末尾孤字；九语言同一结构。后续仍需 Safari/VoiceOver/真实授权页面验收。

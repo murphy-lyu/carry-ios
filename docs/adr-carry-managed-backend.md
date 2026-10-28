@@ -53,3 +53,12 @@ Supabase 是当前首选供应商，未通过地区访问、真实身份、恢�
 - [Firebase 价格](https://firebase.google.com/pricing)
 - [Firestore 离线与冲突语义](https://firebase.google.com/docs/firestore/manage-data/enable-offline)
 - [Cloudflare Workers 价格](https://developers.cloudflare.com/workers/platform/pricing/)
+
+## 网页账户实现补充（2026-10-28）
+浏览器同样使用 Supabase 官方 SSR SDK。Apple 采用 REST `form_post` 返回 code/id_token，由服务端 SDK 验证身份，再进入原生共用的 Carry enroll；专用 P8 在既有生命周期服务生成五分钟 client assertion。这样不需要在 Supabase 配置一个人工每六个月更换的长效网页 client secret。只登记已批准的 account 域名/精确回调；web audience 与 redirect 必须服务端配置绑定，不能接受调用者指定任意回调。
+
+Cookie 会话与十分钟认证 flow 分离；flow 单独加密/绑定 state、nonce、发起账户和站内恢复目标。账户服务完成 enroll 前不发布 Cookie。名字为显示 metadata，不能作为授权。浏览器不持有 Apple 私钥或数据库 service key。
+
+Supabase 当前 OAuth 自定义 scope 尚不支持，OIDC scopes 只控制身份字段，**不会限制旅行数据访问**。Carry 仍须实现私有授权表、逐客户端/行程/类别/动作的服务端校验与版本绑定确认，不能把 OAuth 成功或 email/profile scope 视为全账户权限。已部署全账户入口继续拒绝 OAuth token；不得为了接通 AI 放宽它。
+
+实现与验证位置：`scripts/carry-account-web/`、`carry-account-web-qa.md`。网页/生命周期/授权未完成前维持关闭，不将本组件测试当成产品交付。

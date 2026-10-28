@@ -12,8 +12,8 @@ final class AccountReplicaTests: XCTestCase {
         addTeardownBlock { try FileManager.default.removeItem(at: url) }
         return (url, try CarryAccountReplica.container(at: url.appendingPathComponent("account.store")))
     }
-    private func entity(id: UUID = UUID(), version: Int = 0, name: String = "Tokyo") -> CarryGraphEntity {
-        CarryGraphEntity(id: id, kind: "trip", parentID: nil, version: version, subtreeVersion: version,
+    private func entity(id: UUID = UUID(), version: Int = 0, name: String = "Tokyo", kind: String = "trip") -> CarryGraphEntity {
+        CarryGraphEntity(id: id, kind: kind, parentID: nil, version: version, subtreeVersion: version,
             fields: ["name": .string(name)], fieldVersions: version == 0 ? [:] : ["name": version])
     }
     private func receipt(_ command: CarryGraphCommand, entity: CarryGraphEntity) -> CarryGraphReceipt {
@@ -179,6 +179,178 @@ final class AccountReplicaTests: XCTestCase {
         XCTAssertFalse(row.hasPendingChanges)
         let reopened = try CarryAccountReplica(container: container, accountID: owner)
         XCTAssertNil(try reopened.nextCommand())
+    }
+
+    func testUnsentMoveKeepsOriginalVersionAcrossConcurrentRemoteMoveAndReopen() throws {
+        let (_, container) = try database(), owner = UUID()
+        let replica = try CarryAccountReplica(container: container, accountID: owner)
+        let first = UUID(), mine = UUID(), theirs = UUID()
+        var original = entity(version: 1, kind: "stop"); original.parentID = first
+        try replica.receive(CarryGraphPage(changes: [.init(sequence: 1, entity: original)], cursor: 1, hasMore: false))
+        var local = original; local.parentID = mine; try replica.edit(local)
+        var remote = original; remote.parentID = theirs; remote.version = 2; remote.subtreeVersion = 2
+        try replica.receive(CarryGraphPage(changes: [.init(sequence: 2, entity: remote)], cursor: 2, hasMore: false))
+        let reopened = try CarryAccountReplica(container: container, accountID: owner)
+        let move = try XCTUnwrap(reopened.nextCommand()?.mutations.first)
+        XCTAssertEqual(move.action, "move")
+        XCTAssertEqual(move.parentID, mine)
+        XCTAssertEqual(move.baseVersion, 1, "Pulling a concurrent parent must not turn an old move into a force overwrite")
+    }
+
+    func testUndoOfAnInFlightMoveIsSentAfterAcknowledgementInsteadOfBeingLost() throws {
+        let (_, container) = try database()
+        let replica = try CarryAccountReplica(container: container, accountID: UUID())
+        var original = entity(version: 1, kind: "stop"); original.parentID = UUID()
+        try replica.receive(CarryGraphPage(changes: [.init(sequence: 1, entity: original)], cursor: 1, hasMore: false))
+        var moved = original; moved.parentID = UUID(); try replica.edit(moved)
+        let flight = try XCTUnwrap(replica.nextCommand())
+        try replica.edit(original) // Return to the old parent while the move is in flight.
+        var accepted = moved; accepted.version = 2; accepted.subtreeVersion = 2
+        try replica.accept(receipt(flight, entity: accepted))
+        let undo = try XCTUnwrap(replica.nextCommand()?.mutations.first)
+        XCTAssertEqual(undo.action, "move")
+        XCTAssertEqual(undo.parentID, original.parentID)
+        XCTAssertEqual(undo.baseVersion, 2)
+    }
+
+    func testLateMoveAcknowledgementKeepsPostFlightMoveBoundToItsOwnReceiptVersion() throws {
+        let (_, container) = try database()
+        let replica = try CarryAccountReplica(container: container, accountID: UUID())
+        var original = entity(version: 1, kind: "stop"); original.parentID = UUID()
+        try replica.receive(CarryGraphPage(changes: [.init(sequence: 1, entity: original)], cursor: 1, hasMore: false))
+        var moved = original; moved.parentID = UUID(); try replica.edit(moved)
+        let flight = try XCTUnwrap(replica.nextCommand())
+        var accepted = moved; accepted.version = 2; accepted.subtreeVersion = 2
+        var local = moved; local.parentID = UUID(); try replica.edit(local)
+        var latest = accepted; latest.parentID = UUID(); latest.version = 3; latest.subtreeVersion = 3
+        try replica.receive(CarryGraphPage(changes: [.init(sequence: 2, entity: accepted),
+            .init(sequence: 3, entity: latest)], cursor: 3, hasMore: false))
+        try replica.accept(receipt(flight, entity: accepted))
+        let pending = try XCTUnwrap(replica.nextCommand()?.mutations.first)
+        XCTAssertEqual(pending.parentID, local.parentID)
+        XCTAssertEqual(pending.baseVersion, 2, "A newer pull must not silently approve overwriting the third client's move")
+    }
+
+    func testCompoundEditRollsBackEveryQueuedEntityAndNativeProjectionTogether() throws {
+        enum Injected: Error { case failed }
+        let (_, container) = try database()
+        let replica = try CarryAccountReplica(container: container, accountID: UUID())
+        let first = entity(), second = entity()
+        XCTAssertThrowsError(try replica.edit([first, second]) { context in
+            context.insert(TripBundle(name: "Synthetic compound", destinationCity: "Tokyo", days: 3, dateRange: ""))
+            throw Injected.failed
+        })
+        XCTAssertTrue(try replica.localEntities().isEmpty)
+        XCTAssertTrue(try replica.context.fetch(FetchDescriptor<TripBundle>()).isEmpty)
+        XCTAssertNil(try replica.nextCommand())
+        try replica.edit([first, second])
+        XCTAssertEqual(try replica.nextCommand()?.mutations.count, 2)
+    }
+
+    func testPatchAcknowledgementCannotAdvanceAnUnseenConcurrentParentMove() throws {
+        let (_, container) = try database()
+        let replica = try CarryAccountReplica(container: container, accountID: UUID())
+        var original = entity(version: 1, kind: "stop"); original.parentID = UUID()
+        try replica.receive(CarryGraphPage(changes: [.init(sequence: 1, entity: original)], cursor: 1, hasMore: false))
+        var local = original; local.fields["name"] = .string("My name")
+        try replica.edit(local)
+        let patch = try XCTUnwrap(replica.nextCommand())
+        local.parentID = UUID(); try replica.edit(local)
+        // Another client moved the entity before our name-only patch committed.
+        var accepted = local; accepted.parentID = UUID(); accepted.version = 3; accepted.subtreeVersion = 3
+        accepted.fieldVersions["name"] = 3
+        try replica.accept(receipt(patch, entity: accepted))
+        let pending = try XCTUnwrap(replica.nextCommand()?.mutations.first)
+        XCTAssertEqual(pending.parentID, local.parentID)
+        XCTAssertEqual(pending.baseVersion, 1, "An ACK for a name change cannot approve an unseen parent change")
+    }
+
+    func testMoveConflictResolutionBindsRequestLocalParentAndServerVersion() throws {
+        struct Failure: Encodable { let error = "move_conflict"; let conflict: CarryGraphEntity }
+        for chooseLocal in [true, false] {
+            let (_, container) = try database()
+            let replica = try CarryAccountReplica(container: container, accountID: UUID())
+            var original = entity(version: 1, kind: "stop"); original.parentID = UUID()
+            try replica.receive(.init(changes: [.init(sequence: 1, entity: original)], cursor: 1, hasMore: false))
+            var local = original; local.parentID = UUID(); try replica.edit(local)
+            let command = try XCTUnwrap(replica.nextCommand())
+            var remote = original; remote.parentID = UUID(); remote.version = 2; remote.subtreeVersion = 2
+            try replica.blockFlight(details: JSONEncoder().encode(Failure(conflict: remote)))
+            XCTAssertThrowsError(try replica.resolveParent(requestID: UUID(), serverVersion: 2,
+                expectedLocalParentID: local.parentID, choice: .local))
+            XCTAssertThrowsError(try replica.resolveParent(requestID: command.requestID, serverVersion: 3,
+                expectedLocalParentID: local.parentID, choice: .local))
+            XCTAssertThrowsError(try replica.resolveParent(requestID: command.requestID, serverVersion: 2,
+                expectedLocalParentID: UUID(), choice: .local))
+            try replica.resolveParent(requestID: command.requestID, serverVersion: 2,
+                expectedLocalParentID: local.parentID, choice: chooseLocal ? .local : .remote)
+            let followup = try replica.nextCommand()
+            if chooseLocal {
+                XCTAssertNotEqual(followup?.requestID, command.requestID)
+                XCTAssertEqual(followup?.mutations.first?.baseVersion, 2)
+                XCTAssertEqual(followup?.mutations.first?.parentID, local.parentID)
+            } else {
+                XCTAssertNil(followup)
+                XCTAssertEqual(try replica.localEntities().first?.parentID, remote.parentID)
+            }
+            XCTAssertNil(try replica.pendingFailure)
+        }
+    }
+
+    func testFieldResolutionCannotDowngradeAnAlreadyPulledNewerVersion() throws {
+        struct Conflict: Encodable { let current: CarryGraphEntity; let fields: [String] }
+        struct Failure: Encodable { let error = "field_conflict"; let conflict: Conflict }
+        let (_, container) = try database()
+        let replica = try CarryAccountReplica(container: container, accountID: UUID())
+        let original = entity(version: 1)
+        try replica.receive(.init(changes: [.init(sequence: 1, entity: original)], cursor: 1, hasMore: false))
+        var local = original; local.fields["name"] = .string("My local value"); try replica.edit(local)
+        let command = try XCTUnwrap(replica.nextCommand())
+        let rejected = entity(id: original.id, version: 2, name: "Reviewed remote value")
+        try replica.blockFlight(details: JSONEncoder().encode(Failure(conflict: .init(current: rejected, fields: ["name"]))))
+        let latest = entity(id: original.id, version: 3, name: "Newer remote value")
+        try replica.receive(.init(changes: [.init(sequence: 2, entity: rejected), .init(sequence: 3, entity: latest)],
+            cursor: 3, hasMore: false))
+        XCTAssertThrowsError(try replica.resolveFields(requestID: command.requestID, serverVersion: 2, choices: ["name": .remote]))
+        XCTAssertEqual(try replica.localEntities().first?.fields["name"], .string("My local value"))
+        XCTAssertEqual(try replica.localEntities().first?.version, 3)
+        XCTAssertNotNil(try replica.pendingFailure)
+    }
+
+    func testPullBeforeCreateAcknowledgementRetainsNewerRemoteSnapshotAcrossReopen() throws {
+        let (_, container) = try database(), owner = UUID()
+        let replica = try CarryAccountReplica(container: container, accountID: owner)
+        var created = entity(); try replica.edit(created)
+        let command = try XCTUnwrap(replica.nextCommand())
+        created.fields["name"] = .string("My post-flight edit"); try replica.edit(created)
+        let accepted = entity(id: created.id, version: 1)
+        var latest = accepted; latest.version = 2; latest.subtreeVersion = 2
+        latest.fields["destinationCity"] = .string("Remote destination")
+        latest.fieldVersions["destinationCity"] = 2
+        try replica.receive(.init(changes: [.init(sequence: 1, entity: accepted), .init(sequence: 2, entity: latest)],
+            cursor: 2, hasMore: false)) { _, _ in XCTFail("Unacknowledged UUIDs must not replace local creations") }
+        let reopened = try CarryAccountReplica(container: container, accountID: owner)
+        XCTAssertEqual(try reopened.cursor, 2)
+        try reopened.accept(receipt(command, entity: accepted))
+        let local = try XCTUnwrap(reopened.localEntities().first)
+        XCTAssertEqual(local.fields["name"], .string("My post-flight edit"))
+        XCTAssertEqual(local.fields["destinationCity"], .string("Remote destination"))
+        XCTAssertEqual(local.version, 2)
+        XCTAssertEqual(try reopened.nextCommand()?.mutations.first?.fieldVersions, ["name": 1])
+    }
+
+    func testLateCreateAcknowledgementWithoutNewLocalEditsCannotDiscardAlreadyPulledRemoteFields() throws {
+        let (_, container) = try database()
+        let replica = try CarryAccountReplica(container: container, accountID: UUID())
+        let created = entity(); try replica.edit(created)
+        let command = try XCTUnwrap(replica.nextCommand())
+        let accepted = entity(id: created.id, version: 1)
+        let latest = entity(id: created.id, version: 2, name: "Remote edit after creation")
+        try replica.receive(.init(changes: [.init(sequence: 1, entity: accepted), .init(sequence: 2, entity: latest)],
+            cursor: 2, hasMore: false))
+        try replica.accept(receipt(command, entity: accepted))
+        XCTAssertEqual(try replica.localEntities().first, latest)
+        XCTAssertNil(try replica.nextCommand())
     }
 
 }

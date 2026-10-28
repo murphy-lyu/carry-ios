@@ -3,6 +3,13 @@
 ## 最后更新
 2026-10-28
 
+## 上次改动摘要（网页账户适配与离线时序 Review · 2026-10-28）
+
+- 新增官方 Supabase SSR 网页适配，Apple REST 回调共用原生 enroll；独立加密 flow 与 HttpOnly 会话，发起账户/CSRF/nonce/state/回调绑定，九语言及官方 Retina 深浅按钮。尚未部署，无新路由或开放入口，OAuth consent 页面仍待接通。
+- Review 修复跨站回调缺少 Lax Cookie、SDK 异常后会话 Cookie 泄出风险、暂时身份错误误当退出、原始 Cookie 重复键，以及 native 移动基线/在途撤回/晚 ACK 和创建前置 pull 的更新丢失。新增原子批量编辑与版本绑定 parent 冲突解决。
+- 最新组件两轮：原生 96/96、生命周期服务 48/48、网页 20/20、workerd 4/4；Release/签名通过。实际 Chromium 窄屏深浅色检查及保留的工具失败见 `carry-account-web-qa.md`。
+- 完整删除、资产/归属迁移、全部业务写入口、新 OAuth/MCP、真实同账户和设备验收未完成；继续同一草稿 PR，用户要求完成自检后先备份再装其 iPhone，不提前覆盖原 Carry。
+
 ## 上次改动摘要（性能复核与 Apple 外部配置 · 2026-10-28）
 
 - 用户逐项确认后保存 Carry Account Web / `app.nevestudio.carry.web`，重新打开确认 Sign in with Apple 已启用、关联原 Carry，地址列表仅含 `account.nevestudio.app` 及 `https://account.nevestudio.app/auth/apple/callback`。不代表网站已部署或原生/网页登录同一身份已验收。
