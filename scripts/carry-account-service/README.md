@@ -4,6 +4,8 @@
 
 当前已有账户图事务、独立原生副本、完整备份图/文件编解码组件；全 App 写入口路由、实际资产迁移、网页登录同身份、新 AI 权限/执行和完整删除尚未完成。**不能开启 App 账户发布门禁或直接向真实用户发布。**
 
+2026-10-28：新增原生断点传输、服务端流式文件校验及私有文件预留迁移，详见 `../../docs/carry-account-assets-qa.md`。第七份迁移尚未部署，未创建 bucket 或开放 Storage 权限。上传尝试/额度/清理代理尚未完成；对象记录和本地 TUS 夹具不能当作真实文件同步已经接通。
+
 ## 模块
 
 - `lifecycle.mjs` / `supabase-adapter.mjs`：Apple 新授权/代码交换二次绑定、AES-GCM 凭据保管、限流和删除状态；当前 bearer 验证后还核对数据库原生会话，拒绝已撤销及 OAuth 会话。`carry-account/index.ts` 需要 Apple 服务端配置，仍未部署。
@@ -14,6 +16,8 @@
 - `hosted-graph-smoke.sql`：托管库合成事务与 rollback，覆盖实际 service_role、隔离/版本/失败回滚/费用等。
 - `hosted-http-smoke.mjs`：Data API 六项权限负向检查；`hosted-edge-smoke.mjs`：平台与实际 handler 身份拒绝检查。只允许显式开发地址/public key；可选 legacy anon JWT 必须是当前项目的公开 anon 身份，禁止服务 key。
 - `graph-qa-server.mjs`：仅本地真实 HTTP/PostgreSQL QA。必须 `CARRY_GRAPH_QA=synthetic-only`，固定合成身份，监听 127.0.0.1；**不可部署**，不是真实认证替代品。
+- `asset-storage.mjs`：文件响应增量计数与 SHA256；对象路径仅由私有记录及配置构造，不转发客户端 URL。尚未接正式账户/文件 HTTP handler。
+- `asset-qa-server.mjs`：127.0.0.1:8892 合成 TUS 夹具，须 `CARRY_ASSET_QA=synthetic-only`，原生文件测试依赖它；支持断线、地址失效、偏移异常、跨来源与重定向故障，不能部署。
 
 ## 本地验证
 

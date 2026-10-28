@@ -2,6 +2,8 @@
 
 ## 账户数据与独立副本（开发中 · 2026-10-27）
 
+2026-10-28 文件链路补充：`CarryAssetUploader` 为独立 actor，TUS 分块、保护缓存、账户固定及令牌逐请求刷新；`CarryAccountService.assetUploader` 指向尚未部署的 Carry 文件代理。`asset-storage.mjs` 流式读取实际对象并核对 SHA256/尺寸，私有文件迁移尚未部署。对象预留不能覆盖重复/未知的 TUS 会话，必须接完上传尝试持久额度、并发租约及物理清理后再开放 Storage；详情见 `carry-account-assets-qa.md`。没有给客户端直接写文件的权限，不能把合成传输测试当成真实资产迁移。
+
 `CarryAccountService` 为数据传输创建绑定账户 ID 的令牌提供器，刷新后再次核对缓存所属身份。`CarryGraphTransport` 调用开发库的 `carry-data`；`CarryAccountSyncEngine` 串行执行有界发送/拉取，不把 ACK 当作已经接收全部远端变化。
 
 `CarryAccountReplica` 使用独立 `.none` ModelContainer：原有业务模型加 `CarryReplicaRecord/Checkpoint`，**不修改原 iCloud SchemaV1**。投影回调、逐字段意图、冻结请求、冲突与拉取游标共用本地 save/rollback。账户身份固定写在 checkpoint；缓存不得跨账户复用。当前尚未路由原 TripStore 的全部真实写入口，不能用这些组件替代完整原生接入验收。

@@ -183,17 +183,37 @@ final class CarryAccountService: CarryAccountAuthenticating {
     func graphTransport(for accountID: UUID) throws -> CarryGraphTransport {
         guard let configuration else { throw CarryAccountFailure.unavailable }
         return CarryGraphTransport(configuration: configuration, accessToken: { [weak self] in
-            guard let self, let client = self.client else { throw CarryAccountFailure.unavailable }
-            guard self.cachedProfile?.id == accountID else { throw CarryAccountFailure.accountMismatch }
-            do {
-                let session = try await client.session
-                guard session.user.id == accountID, self.cachedProfile?.id == accountID else {
-                    throw CarryAccountFailure.accountMismatch
-                }
-                try self.persistSession(session)
-                return session.accessToken
-            } catch { throw self.classify(error) }
+            guard let self else { throw CarryAccountFailure.unavailable }
+            return try await self.accessToken(for: accountID)
         }, send: send)
+    }
+
+    /// The storage transport uses the same owner-bound, refreshed Keychain
+    /// session as graph requests. It never snapshots a bearer into its cache.
+    func assetUploader(for accountID: UUID, directory: URL) throws -> CarryAssetUploader {
+        guard let configuration else { throw CarryAccountFailure.unavailable }
+        // The broker binds one TUS session to an owned reservation. Granting
+        // clients direct INSERT on Storage would allow repeated TUS creations
+        // against one reservation to bypass partial-upload resource accounting.
+        let endpoint = configuration.projectURL.appendingPathComponent("functions/v1/carry-assets/tus")
+        return try CarryAssetUploader(accountID: accountID, endpoint: endpoint,
+            directory: directory, publishableKey: configuration.publishableKey, accessToken: { [weak self] in
+                guard let self else { throw CarryAccountFailure.unavailable }
+                return try await self.accessToken(for: accountID)
+            })
+    }
+
+    private func accessToken(for accountID: UUID) async throws -> String {
+        guard let client else { throw CarryAccountFailure.unavailable }
+        guard cachedProfile?.id == accountID else { throw CarryAccountFailure.accountMismatch }
+        do {
+            let session = try await client.session
+            guard session.user.id == accountID, cachedProfile?.id == accountID else {
+                throw CarryAccountFailure.accountMismatch
+            }
+            try persistSession(session)
+            return session.accessToken
+        } catch { throw classify(error) }
     }
 
     private func saveProfile(_ user: User, name: String? = nil) throws -> CarryAccountProfile {
