@@ -224,17 +224,22 @@ final class TripStore: ObservableObject {
 
     private var context: ModelContext
     private let automationPersistenceAllowed: Bool
-    private let automationSave: (ModelContext) throws -> Void
+    private let automationSave: CarryPersistence.Save
+    private let persistenceSave: CarryPersistence.Save
     private let defaults = UserDefaults.standard
     private static let sceneCardDismissedGlobalKey = "scene_card_dismissed_global"
     private static let homeEmptyStateMockKey = "home_empty_state_mock_enabled"
     private var didCleanupCorruptedData = false
 
-    init(context: ModelContext? = nil, automationSave: @escaping (ModelContext) throws -> Void = { try $0.save() }) {
+    init(context: ModelContext? = nil, automationSave: CarryPersistence.Save? = nil,
+         persistenceSave: @escaping CarryPersistence.Save = { try $0.save() }) {
         let selectedContext = context ?? ModelContext(CarryApp.container)
+        selectedContext.autosaveEnabled = false
         self.context = selectedContext
         self.automationPersistenceAllowed = selectedContext.container.configurations.allSatisfy { !$0.isStoredInMemoryOnly }
-        self.automationSave = automationSave
+        self.persistenceSave = persistenceSave
+        let automationWriter = automationSave ?? persistenceSave
+        self.automationSave = { try CarryPersistence.commit($0, using: automationWriter) }
         self.isSceneCardDismissedGlobally = defaults.bool(forKey: Self.sceneCardDismissedGlobalKey)
         // 「模拟首页空态」是 DEBUG 预览开关，**仅本次会话有效、不跨启动持久化**——每次启动重置为关。
         // 否则误开后值会存进 UserDefaults，每次启动都模拟空态（看着像白屏），而 Xcode 重装不清
@@ -328,7 +333,7 @@ final class TripStore: ObservableObject {
             if stay.attachments == nil { stay.attachments = [] }
             stay.attachments?.append(att)
         }
-        save()
+        guard save() else { return nil }
         CarryLogger.shared.log(.attachmentAdded, context: kind.rawValue)
         return att.id
     }
@@ -336,10 +341,11 @@ final class TripStore: ObservableObject {
     /// 删除附件：就地删沙盒文件 + 删 model 记录（级联删的孤儿由 reconcileAttachmentFiles 兜底）。
     func removeAttachment(tripId: UUID, attachmentId: UUID) {
         guard let att = allAttachments().first(where: { $0.id == attachmentId }) else { return }
-        if !att.fileName.isEmpty { AttachmentStore.delete(named: att.fileName) }
+        let fileName = att.fileName
         context.delete(att)
         do {
-            try context.save()
+            try persist(context)
+            if !fileName.isEmpty { AttachmentStore.delete(named: fileName) }
             CarryLogger.shared.log(.attachmentDeleted)
         } catch {
             CarryLogger.shared.log(.persistFailed, context: "removeAttachment")
@@ -347,13 +353,15 @@ final class TripStore: ObservableObject {
     }
 
     /// 深拷贝附件（复制行程用）：记录 + **沙盒文件**（新文件名，避免两行程共享一份字节）。
-    private func copyAttachments(_ atts: [ItineraryAttachment]?) -> [ItineraryAttachment] {
+    private func copyAttachments(_ atts: [ItineraryAttachment]?, recoveringDraft: Bool = false) -> [ItineraryAttachment] {
         (atts ?? []).sorted { $0.sortOrder < $1.sortOrder }.map { a in
-            let newFileName = a.fileName.isEmpty ? "" : (AttachmentStore.copy(of: a.fileName) ?? "")
-            return ItineraryAttachment(
+            let newFileName = recoveringDraft ? a.fileName : (a.fileName.isEmpty ? "" : (AttachmentStore.copy(of: a.fileName) ?? ""))
+            let copy = ItineraryAttachment(
                 kind: a.kind, displayName: a.displayName, fileName: newFileName,
                 utiOrExt: a.utiOrExt, urlString: a.urlString, thumbnailData: a.thumbnailData,
                 sortOrder: a.sortOrder, addedAt: a.addedAt)
+            if recoveringDraft { copy.id = a.id }
+            return copy
         }
     }
 
@@ -374,7 +382,7 @@ final class TripStore: ObservableObject {
     @discardableResult
     func restoreFromBackup() throws -> (trips: Int, myItems: Int) {
         try invalidateAutomationConnection()
-        let result = try DataBackupManager.shared.restore(into: context)
+        let result = try DataBackupManager.shared.restore(into: context, save: persist)
         applyPostRestoreSideEffects()
         return result
     }
@@ -383,7 +391,7 @@ final class TripStore: ObservableObject {
     @discardableResult
     func restoreFromData(_ data: Data) throws -> (trips: Int, myItems: Int) {
         try invalidateAutomationConnection()
-        let result = try DataBackupManager.shared.restoreFromData(data, into: context)
+        let result = try DataBackupManager.shared.restoreFromData(data, into: context, save: persist)
         applyPostRestoreSideEffects()
         return result
     }
@@ -392,7 +400,7 @@ final class TripStore: ObservableObject {
     @discardableResult
     func mergeFromData(_ data: Data) throws -> (trips: Int, myItems: Int) {
         let existingIds = Set(trips.map(\.id))   // 记录 merge 前的 trip ID，用于识别新增的
-        let result = try DataBackupManager.shared.mergeFromData(data, into: context)
+        let result = try DataBackupManager.shared.mergeFromData(data, into: context, save: persist)
         applyPostMergeSideEffects(previousTripIds: existingIds)
         return result
     }
@@ -402,7 +410,7 @@ final class TripStore: ObservableObject {
     @discardableResult
     func mergeBackup(_ backup: CarryBackup) throws -> (trips: Int, myItems: Int) {
         let existingIds = Set(trips.map(\.id))
-        let result = try DataBackupManager.shared.merge(backup, into: context)
+        let result = try DataBackupManager.shared.merge(backup, into: context, save: persist)
         applyPostMergeSideEffects(previousTripIds: existingIds)
         return result
     }
@@ -413,7 +421,7 @@ final class TripStore: ObservableObject {
     @discardableResult
     func importSharedTrip(from data: Data) throws -> UUID {
         let existingIds = Set(trips.map(\.id))
-        let id = try DataBackupManager.shared.importSharedTrip(from: data, into: context)
+        let id = try DataBackupManager.shared.importSharedTrip(from: data, into: context, save: persist)
         applyPostMergeSideEffects(previousTripIds: existingIds)
         return id
     }
@@ -462,14 +470,18 @@ final class TripStore: ObservableObject {
         draftTrip = trip
     }
 
-    func commitDraftTrip() {
-        guard let trip = draftTrip else { return }
+    @discardableResult
+    func commitDraftTrip() -> Bool {
+        guard let trip = draftTrip else { return false }
+        let recovery = makeTripCopy(trip, includeTransportAndLodging: true, includePackingList: true, recoveringDraft: true)
         trip.createdAt = Date()
         context.insert(trip)
         do {
-            try context.save()
+            try persist(context)
         } catch {
+            draftTrip = recovery
             CarryLogger.shared.log(.tripSaveFailed)
+            return false
         }
         draftTrip = nil
         fetchTrips()
@@ -478,13 +490,14 @@ final class TripStore: ObservableObject {
             Task { CalendarManager.shared.addTrip(trip) }
         }
         CarryLogger.shared.log(.tripCreated)
+        return true
     }
 
     /// 从行程信息直接建一个**空清单**行程并落库——新创建链路「填完行程信息 → 直接进该行程
     /// （行程规划）」用，不再强制走添加物品。等价于 ItemPicker 的 finalizeEmptyTrip：建 bundle
     /// （含默认提醒档位快照）→ 提交 → 写国家码。返回新行程 id 供落地。
     @discardableResult
-    func createTrip(from info: TripInfo) -> UUID {
+    func createTrip(from info: TripInfo) -> UUID? {
         let bundle = TripBundle(
             name: info.name,
             destinationCity: info.destinationCity,
@@ -497,7 +510,7 @@ final class TripStore: ObservableObject {
         )
         bundle.reminderConfigs = ReminderPreferences.defaultConfigs
         setDraftTrip(bundle)
-        commitDraftTrip()
+        guard commitDraftTrip() else { return nil }
         // 目的地：有 chip（创建页一律传整组，含未解析的自由文本 chip）→ 走结构化写入
         // （保留已选权威码 + 持久化名字 + 仅解析未解析项），跳过整段文本反查。
         // 无 chip 但有文本（非 chip 调用方，如数据导入构造的 TripInfo）→ 文本反查兜底。
@@ -597,7 +610,7 @@ final class TripStore: ObservableObject {
     }
 
     private func persist(caller: String) {
-        do { try context.save() } catch {
+        do { try persist(context) } catch {
             CarryLogger.shared.log(.persistFailed, context: "caller=\(caller)")
         }
     }
@@ -680,7 +693,7 @@ final class TripStore: ObservableObject {
             if !didCleanupCorruptedData {
                 didCleanupCorruptedData = true
                 if cleanupCorruptedData(trips: fetchedTrips, myItems: fetchedMyItems) {
-                    try context.save()
+                    try persist(context)
                     fetchedTrips = try context.fetch(descriptor)
                     fetchedMyItems = try context.fetch(myItemDescriptor)
                 }
@@ -747,11 +760,27 @@ final class TripStore: ObservableObject {
         }
     }
 
-    private func save(_ caller: String = #function, refreshCollections: Bool = true) {
+    private func persist(_ context: ModelContext) throws {
+        do { try CarryPersistence.commit(context, using: persistenceSave) }
+        catch {
+            // A rolled-back SwiftData context may retain stale edited model
+            // instances in its identity map. Use a fresh context for subsequent
+            // commands and republish the actual persisted business graph.
+            let replacement = ModelContext(context.container)
+            replacement.autosaveEnabled = context.autosaveEnabled
+            self.context = replacement
+            fetchTrips()
+            throw error
+        }
+    }
+
+    @discardableResult
+    private func save(_ caller: String = #function, refreshCollections: Bool = true) -> Bool {
         do {
-            try context.save()
+            try persist(context)
         } catch {
             CarryLogger.shared.log(.persistFailed, context: "caller=\(caller)")
+            return false
         }
         if refreshCollections {
             fetchTrips()
@@ -762,6 +791,7 @@ final class TripStore: ObservableObject {
             objectWillChange.send()
             scheduleAutomaticBackup()
         }
+        return true
     }
 
     // MARK: - Trip background image (specs/trip-background-image.md)
@@ -770,21 +800,19 @@ final class TripStore: ObservableObject {
     /// The caller saves the image and passes the stored filename; we delete any prior file.
     func setLocalBackground(fileName: String, crop: BackgroundCrop? = nil, forTripId id: UUID) {
         guard let trip = trips.first(where: { $0.id == id }) else { return }
-        if let old = trip.primaryBackground?.localFileName, old != fileName {
-            BackgroundImageStore.delete(named: old)
-        }
+        let previous = trip.primaryBackground?.localFileName
         trip.backgrounds = [TripBackgroundEntry(source: .local, localFileName: fileName, destinationIndex: 0, crop: crop)]
-        save()
+        guard save() else { return }
+        if let previous, previous != fileName { BackgroundImageStore.delete(named: previous) }
     }
 
     /// Removes the custom background → card falls back to the style's default (monogram/map).
     func clearBackground(forTripId id: UUID) {
         guard let trip = trips.first(where: { $0.id == id }) else { return }
-        if let old = trip.primaryBackground?.localFileName {
-            BackgroundImageStore.delete(named: old)
-        }
+        let previous = trip.primaryBackground?.localFileName
         trip.backgrounds = []
-        save()
+        guard save() else { return }
+        if let previous { BackgroundImageStore.delete(named: previous) }
     }
 
     private let defaultMyItemCollection = "Default"
@@ -801,12 +829,13 @@ final class TripStore: ObservableObject {
     func resetAllData() throws {
         try invalidateAutomationConnection()
         do {
-            try context.delete(model: TripBundle.self)
-            try context.delete(model: MyItem.self)
+            for trip in try context.fetch(FetchDescriptor<TripBundle>()) { context.delete(trip) }
+            for item in try context.fetch(FetchDescriptor<MyItem>()) { context.delete(item) }
             try context.delete(model: AutomationExecutionRecord.self)
-            try context.save()
+            try persist(context)
         } catch {
             CarryLogger.shared.log(.persistFailed, context: "resetAllData")
+            throw error
         }
         if let bundleId = Bundle.main.bundleIdentifier {
             defaults.removePersistentDomain(forName: bundleId)
@@ -831,9 +860,10 @@ final class TripStore: ObservableObject {
     func addTrip(_ bundle: TripBundle) {
         context.insert(bundle)
         do {
-            try context.save()
+            try persist(context)
         } catch {
             CarryLogger.shared.log(.tripSaveFailed)
+            return
         }
         fetchTrips()
         refreshNotifications()
@@ -842,6 +872,9 @@ final class TripStore: ObservableObject {
 
     func removeTrip(withId id: UUID) {
         guard let trip = trips.first(where: { $0.id == id }) else { return }
+        let backgroundNames = trip.backgrounds.compactMap(\.localFileName)
+        context.delete(trip)
+        guard save() else { return }
         NotificationManager.cancelReminders(forTripId: id)
 #if !targetEnvironment(macCatalyst)
         Task { @MainActor in
@@ -858,11 +891,9 @@ final class TripStore: ObservableObject {
         }
         // 清理沙盒里的背景图字节，避免"删行程但图片残留"的孤儿文件（文件名是 UUID，
         // 各 trip 独立不共享，删除安全）。setLocalBackground/clearBackground 已对应处理。
-        for name in trip.backgrounds.compactMap(\.localFileName) {
+        for name in backgroundNames {
             BackgroundImageStore.delete(named: name)
         }
-        context.delete(trip)
-        save()
         CarryLogger.shared.log(.tripDeleted)
     }
 
@@ -884,11 +915,9 @@ final class TripStore: ObservableObject {
         context.insert(newBundle)
         let insertIndex = min(originalIndex + 1, trips.count)
         trips.insert(newBundle, at: insertIndex)
-        do { try context.save() }
+        do { try persist(context) }
         catch {
             CarryLogger.shared.log(.duplicateFailed, context: "context=save_failed")
-            trips.remove(at: insertIndex)
-            context.delete(newBundle)
             return nil
         }
         refreshNotifications()
@@ -900,15 +929,21 @@ final class TripStore: ObservableObject {
     }
 
     /// Shared graph-copy implementation; persistence belongs to the UI or automation caller.
-    private func makeTripCopy(_ original: TripBundle, includeTransportAndLodging: Bool, includePackingList: Bool) -> TripBundle {
+    private func makeTripCopy(_ original: TripBundle, includeTransportAndLodging: Bool, includePackingList: Bool, recoveringDraft: Bool = false) -> TripBundle {
         let newSections = includePackingList ? original.safeSections.map { section -> PackingSection in
             let items = section.sortedItems
-                .filter { !$0.name.isEmpty }
+                .filter { recoveringDraft || !$0.name.isEmpty }
                 .enumerated()
                 .map { idx, item in
-                    PackingItem(name: item.name, quantity: item.quantity, isPacked: false, isAlert: item.isAlert, sortOrder: idx)
+                    let copy = PackingItem(name: item.name, quantity: item.quantity,
+                        isPacked: recoveringDraft ? item.isPacked : false, isAlert: item.isAlert,
+                        sortOrder: recoveringDraft ? item.sortOrder : idx)
+                    if recoveringDraft { copy.id = item.id }
+                    return copy
                 }
-            return PackingSection(title: section.title, items: items, sortOrder: section.sortOrder)
+            let copy = PackingSection(title: section.title, items: items, sortOrder: section.sortOrder)
+            if recoveringDraft { copy.id = section.id; if section.items == nil { copy.items = nil } }
+            return copy
         } : []
         let newBundle = TripBundle(
             name: original.name,
@@ -917,12 +952,13 @@ final class TripStore: ObservableObject {
             dateRange: original.dateRange,
             departureDate: original.departureDate,
             isDateless: original.isDateless,
-            createdAt: Date(),
+            createdAt: recoveringDraft ? original.createdAt : Date(),
             // 清单不带走时场景标记也清空——否则清单是空的，但 App 会以为场景推荐「已应用」而不再提示，
             // 用户没法用场景推荐重新建清单（selectedSceneKeys 语义见 PackingListView.hasScenes 等用法）。
             selectedSceneKeys: includePackingList ? original.selectedSceneKeys : [],
             sections: newSections
         )
+        if recoveringDraft { newBundle.id = original.id }
         // 目的地解析结果直接深拷（主目的地码/坐标 + additionalDestinations 含 name）——否则副本地图不点亮、
         // 不计入到访，且要靠 geocodeMissingTrips 事后文本反查自愈（丢失已存名字、有歧义）。
         newBundle.countryCode = original.countryCode
@@ -944,6 +980,7 @@ final class TripStore: ObservableObject {
         // 文件名，否则删/换任一方都会误伤另一方）。无本地文件的条目（未来在线源）原样带过；
         // 复制失败的条目直接丢弃（副本退回 monogram 兜底），绝不残留共享引用。crop 等元数据保留。
         newBundle.backgrounds = original.backgrounds.compactMap { entry in
+            if recoveringDraft { return entry }
             guard let name = entry.localFileName else { return entry }
             guard let copiedName = BackgroundImageStore.copy(of: name) else { return nil }
             var copied = entry
@@ -969,11 +1006,12 @@ final class TripStore: ObservableObject {
                     costHomeAmount: stop.costHomeAmount,
                     fromPhotos: stop.fromPhotos
                 )
+                if recoveringDraft { copied.id = stop.id; copied.categoryRaw = stop.categoryRaw }
                 copied.phone = stop.phone
                 copied.timeZoneId = stop.timeZoneId
                 // 照片回溯生成的停靠点：深拷贝挂着的照片（新 UUID，含缩略图字节）。
                 copied.photos = stop.sortedPhotos.map { p in
-                    StopPhoto(
+                    let copy = StopPhoto(
                         assetLocalIdentifier: p.assetLocalIdentifier,
                         thumbnailData: p.thumbnailData,
                         timestamp: p.timestamp,
@@ -981,8 +1019,14 @@ final class TripStore: ObservableObject {
                         longitude: p.longitude,
                         sortOrder: p.sortOrder
                     )
+                    if recoveringDraft { copy.id = p.id }
+                    return copy
                 }
-                copied.attachments = copyAttachments(stop.attachments)
+                copied.attachments = copyAttachments(stop.attachments, recoveringDraft: recoveringDraft)
+                if recoveringDraft {
+                    if stop.photos == nil { copied.photos = nil }
+                    if stop.attachments == nil { copied.attachments = nil }
+                }
                 return copied
             }
             let copiedDay = ItineraryDay(sortOrder: day.sortOrder, title: day.title, note: day.note, stops: copiedStops)
@@ -1015,10 +1059,17 @@ final class TripStore: ObservableObject {
                     costAmount: seg.costAmount, costCurrencyCode: seg.costCurrencyCode,
                     costHomeAmount: seg.costHomeAmount
                 )
+                if recoveringDraft { newSeg.id = seg.id; newSeg.modeRaw = seg.modeRaw }
                 newSeg.remindersMuted = seg.remindersMuted
-                newSeg.attachments = copyAttachments(seg.attachments)
+                newSeg.attachments = copyAttachments(seg.attachments, recoveringDraft: recoveringDraft)
+                if recoveringDraft, seg.attachments == nil { newSeg.attachments = nil }
                 return newSeg
             } : []
+            if recoveringDraft {
+                copiedDay.id = day.id
+                if day.stops == nil { copiedDay.stops = nil }
+                if day.segments == nil { copiedDay.segments = nil }
+            }
             return copiedDay
         }
         // 住宿跨度深拷贝（新 UUID），归副本 bundle。includeTransportAndLodging=false 时跳过（同上）。
@@ -1034,11 +1085,19 @@ final class TripStore: ObservableObject {
                 costAmount: stay.costAmount, costCurrencyCode: stay.costCurrencyCode,
                 costHomeAmount: stay.costHomeAmount
             )
+            if recoveringDraft { newStay.id = stay.id }
             newStay.remindersMuted = stay.remindersMuted
             newStay.timeZoneId = stay.timeZoneId
-            newStay.attachments = copyAttachments(stay.attachments)
+            newStay.attachments = copyAttachments(stay.attachments, recoveringDraft: recoveringDraft)
+            if recoveringDraft, stay.attachments == nil { newStay.attachments = nil }
             return newStay
         } : []
+        if recoveringDraft {
+            newBundle.backgroundsData = original.backgroundsData
+            if original.sections == nil { newBundle.sections = nil }
+            if original.itineraryDays == nil { newBundle.itineraryDays = nil }
+            if original.lodgingStays == nil { newBundle.lodgingStays = nil }
+        }
         return newBundle
     }
 
@@ -1053,9 +1112,10 @@ final class TripStore: ObservableObject {
         trip.days = info.isDateless ? 1 : info.durationDays
         trip.dateRange = info.isDateless ? "" : info.dateRangeDisplay
         do {
-            try context.save()
+            try persist(context)
         } catch {
             CarryLogger.shared.log(.tripEditSaveFailed)
+            return
         }
         // 天数随行程日期/天数变化自动对齐（编辑日期 = 天数变化的主路径）。
         syncItineraryDays(tripId: tripId)
@@ -1111,7 +1171,13 @@ final class TripStore: ObservableObject {
     /// （外观/单位/图标/通知默认时间——属配置非用户数据）。覆盖每一处副作用，漏一处即留孤儿。
     func eraseAllData() throws {
         try invalidateAutomationConnection()
-        // 1. 副作用存储（独立于 SwiftData，先清）
+        // 1. 先提交数据库；保存失败时保留文件和系统副作用。
+        for trip in trips { context.delete(trip) }
+        for item in myItems { context.delete(item) }
+        try context.delete(model: AutomationExecutionRecord.self)
+        try persist(context)
+        fetchTrips()
+        // 2. 数据库接受删除后再清理独立的副作用存储。
         NotificationManager.cancelAll()
 #if !targetEnvironment(macCatalyst)
         Task { @MainActor in LiveActivityManager.shared.endAll() }
@@ -1119,12 +1185,6 @@ final class TripStore: ObservableObject {
         CalendarManager.shared.removeAllCarryEvents()       // 内部 guard 权限/日历存在，无则 no-op
         BackgroundImageStore.deleteOrphans(keeping: [])     // 空集 = 删全部背景图
         AttachmentStore.deleteOrphans(keeping: [])          // 空集 = 删全部附件字节
-        // 2. SwiftData：删全部行程 + 自定义物品库
-        for trip in trips { context.delete(trip) }
-        for item in myItems { context.delete(item) }
-        do { try context.delete(model: AutomationExecutionRecord.self) }
-        catch { CarryLogger.shared.log(.persistFailed, context: "eraseAutomationReceipts") }
-        save()   // 内部 context.save() + fetchTrips()（trips/myItems 刷成空、并写一份空备份）
         // 3. 备份文件最后清（连 save→fetchTrips 写的那份空备份也删掉，确保「被遗忘」彻底）
         try DataBackupManager.shared.clearBackup()
         writeWidgetSnapshot()
@@ -1164,7 +1224,7 @@ final class TripStore: ObservableObject {
             if let item = (section.items ?? []).first(where: { $0.id == itemId }) {
                 item.isPacked.toggle()
                 CarryLogger.shared.log(item.isPacked ? .itemChecked : .itemUnchecked)
-                save(refreshCollections: false)
+                guard save(refreshCollections: false) else { return }
                 reschedulePackProgress(trip)
 #if !targetEnvironment(macCatalyst)
                 Task { @MainActor in LiveActivityManager.shared.update(for: trip) }
@@ -1181,7 +1241,7 @@ final class TripStore: ObservableObject {
                 item.isPacked = true
             }
         }
-        save(refreshCollections: false)
+        guard save(refreshCollections: false) else { return }
         CarryLogger.shared.log(.tripCompleted)
         reschedulePackProgress(trip)   // 全打完 → 撤销「还剩 N 件」提醒
 #if !targetEnvironment(macCatalyst)
@@ -1196,7 +1256,7 @@ final class TripStore: ObservableObject {
                 item.isPacked = false
             }
         }
-        save(refreshCollections: false)
+        guard save(refreshCollections: false) else { return }
         CarryLogger.shared.log(.tripUncompleted)
         reschedulePackProgress(trip)
 #if !targetEnvironment(macCatalyst)
@@ -1227,10 +1287,11 @@ final class TripStore: ObservableObject {
                 let wasNew = item.name.isEmpty
                 item.name = name
                 do {
-                    try context.save()
+                    try persist(context)
                 } catch {
                     CarryLogger.shared.log(wasNew ? .itemAddFailed : .persistFailed,
                                            context: "context=updateItemName")
+                    return
                 }
                 fetchTrips()
                 if wasNew && !name.isEmpty {
@@ -1253,7 +1314,7 @@ final class TripStore: ObservableObject {
                 guard item.quantity != clamped else { return }
                 item.quantity = clamped
                 do {
-                    try context.save()
+                    try persist(context)
                 } catch {
                     CarryLogger.shared.log(.persistFailed, context: "updateItemQuantity")
                 }
@@ -1270,9 +1331,10 @@ final class TripStore: ObservableObject {
                 context.delete(item)
                 section.items?.removeAll { $0.id == itemId }
                 do {
-                    try context.save()
+                    try persist(context)
                 } catch {
                     CarryLogger.shared.log(.itemDeleteFailed, context: "context=removeItem")
+                    return
                 }
                 fetchTrips()
                 if wasNamed {
@@ -1307,7 +1369,7 @@ final class TripStore: ObservableObject {
             }
         }
         do {
-            try context.save()
+            try persist(context)
         } catch {
             CarryLogger.shared.log(.reorderSaveFailed, context: "context=reorderItems")
         }
@@ -1327,9 +1389,10 @@ final class TripStore: ObservableObject {
             }
         }
         do {
-            try context.save()
+            try persist(context)
         } catch {
             CarryLogger.shared.log(.reorderSaveFailed, context: "context=reorderSections")
+            return
         }
         fetchTrips()
         CarryLogger.shared.log(.sectionReordered)
@@ -1345,7 +1408,7 @@ final class TripStore: ObservableObject {
         context.insert(section)
         if trip.sections == nil { trip.sections = [] }
         trip.sections?.append(section)
-        save()
+        guard save() else { return nil }
         CarryLogger.shared.log(.sectionAdded)
         return section
     }
@@ -1355,7 +1418,7 @@ final class TripStore: ObservableObject {
               let section = trip.safeSections.first(where: { $0.id == sectionId }) else { return }
         context.delete(section)
         trip.sections?.removeAll { $0.id == sectionId }
-        save()
+        guard save() else { return }
         CarryLogger.shared.log(.sectionDeleted)
 #if !targetEnvironment(macCatalyst)
         Task { @MainActor in LiveActivityManager.shared.update(for: trip) }
@@ -1366,7 +1429,7 @@ final class TripStore: ObservableObject {
         guard let trip = trips.first(where: { $0.id == tripId }),
               let section = trip.safeSections.first(where: { $0.id == sectionId }) else { return }
         section.title = newName
-        save()
+        guard save() else { return }
         CarryLogger.shared.log(.sectionRenamed)
     }
 
@@ -1380,7 +1443,7 @@ final class TripStore: ObservableObject {
             if trip.sections == nil { trip.sections = [] }
             trip.sections?.append(section)
         }
-        save()
+        guard save() else { return }
 #if !targetEnvironment(macCatalyst)
         Task { @MainActor in LiveActivityManager.shared.update(for: trip) }
 #endif
@@ -1395,7 +1458,7 @@ final class TripStore: ObservableObject {
     /// 调用点：编辑行程日期/天数后（updateTripInfo）、打开行程页兜底（ItineraryView.onAppear）。
     func syncItineraryDays(tripId: UUID) {
         guard let trip = trips.first(where: { $0.id == tripId }) else { return }
-        if reconcileItineraryDays(trip) { save() }
+        if reconcileItineraryDays(trip) { guard save() else { return } }
     }
 
     /// Shared by UI edits and automation; callers own their save/transaction boundary.
@@ -1489,7 +1552,7 @@ final class TripStore: ObservableObject {
         context.insert(stop)
         if day.stops == nil { day.stops = [] }
         day.stops?.append(stop)
-        save()
+        guard save() else { return nil }
         CarryLogger.shared.log(.itineraryStopAdded)
         rescheduleDailySummary(trip)
         return stop.id
@@ -1573,7 +1636,7 @@ final class TripStore: ObservableObject {
         }
 
         guard insertedStops > 0 else { return false }
-        save()
+        guard save() else { return false }
         CarryLogger.shared.log(.photoImportSaved,
                                context: "days=\(draft.days.count) stops=\(insertedStops) photos=\(insertedPhotos) dupSkipped=\(skippedDuplicates)")
         return true
@@ -1606,7 +1669,7 @@ final class TripStore: ObservableObject {
         if let address { stop.address = address }
         if let phone { stop.phone = phone }
         if let timeZoneId { stop.timeZoneId = timeZoneId }
-        save()
+        guard save() else { return }
         // 改名/改安排可能动到「当天第一个安排」→ 每日摘要内容（第一个是 X）需刷新（guard 内已判开关，关则零成本）。
         rescheduleDailySummary(trip)
     }
@@ -1618,7 +1681,7 @@ final class TripStore: ObservableObject {
         context.delete(stop)
         day.stops?.removeAll { $0.id == stopId }
         for (index, s) in day.sortedStops.enumerated() { s.sortOrder = index }
-        save()
+        guard save() else { return }
         CarryLogger.shared.log(.itineraryStopRemoved)
         rescheduleDailySummary(trip)
     }
@@ -1638,7 +1701,7 @@ final class TripStore: ObservableObject {
                 stop.sortOrder = index
             }
         }
-        save()
+        guard save() else { return }
         CarryLogger.shared.log(.itineraryStopReordered)
         // 重排改变「当天第一个安排」→ 每日摘要内容需刷新（guard 内已判开关，关则零成本）。
         rescheduleDailySummary(trip)
@@ -1666,7 +1729,7 @@ final class TripStore: ObservableObject {
                 stop.sortOrder = index
             }
         }
-        save()
+        guard save() else { return }
         CarryLogger.shared.log(didCross ? .itineraryStopMovedDay : .itineraryStopReordered)
         rescheduleDailySummary(trip)
     }
@@ -1682,7 +1745,7 @@ final class TripStore: ObservableObject {
         let newOrder = (target.stops?.map(\.sortOrder).max() ?? -1) + 1   // 追加到目标天末尾
         stop.day = target                         // 关系反向自动从旧天移除、加入新天
         stop.sortOrder = newOrder
-        save()
+        guard save() else { return }
         CarryLogger.shared.log(.itineraryStopMovedDay)
         rescheduleDailySummary(trip)
     }
@@ -1783,7 +1846,7 @@ final class TripStore: ObservableObject {
         context.insert(segment)
         if day.segments == nil { day.segments = [] }
         day.segments?.append(segment)
-        save()
+        guard save() else { return nil }
         CarryLogger.shared.log(.transportAdded, context: "mode=\(mode.rawValue)")
         refreshNotifications()
         return segment.id
@@ -1868,7 +1931,7 @@ final class TripStore: ObservableObject {
         if let vehicleModel { seg.vehicleModel = vehicleModel }
         if let licensePlate { seg.licensePlate = licensePlate }
         if let phone { seg.phone = phone }
-        save()
+        guard save() else { return }
         refreshNotifications()
     }
 
@@ -1878,7 +1941,7 @@ final class TripStore: ObservableObject {
               let seg = (day.segments ?? []).first(where: { $0.id == segmentId }) else { return }
         context.delete(seg)
         day.segments?.removeAll { $0.id == segmentId }
-        save()
+        guard save() else { return }
         CarryLogger.shared.log(.transportRemoved)
         refreshNotifications()
     }
@@ -1922,7 +1985,7 @@ final class TripStore: ObservableObject {
         context.insert(stay)
         if trip.lodgingStays == nil { trip.lodgingStays = [] }
         trip.lodgingStays?.append(stay)
-        save()
+        guard save() else { return nil }
         CarryLogger.shared.log(.lodgingAdded)
         refreshNotifications()
         return stay.id
@@ -1959,7 +2022,7 @@ final class TripStore: ObservableObject {
         if let note { stay.note = note }
         if let phone { stay.phone = phone }
         if let timeZoneId { stay.timeZoneId = timeZoneId }
-        save()
+        guard save() else { return }
         refreshNotifications()
     }
 
@@ -1968,7 +2031,7 @@ final class TripStore: ObservableObject {
               let stay = (trip.lodgingStays ?? []).first(where: { $0.id == stayId }) else { return }
         context.delete(stay)
         trip.lodgingStays?.removeAll { $0.id == stayId }
-        save()
+        guard save() else { return }
         CarryLogger.shared.log(.lodgingRemoved)
         refreshNotifications()
     }
@@ -1997,7 +2060,7 @@ final class TripStore: ObservableObject {
               let stop = trip.safeItineraryDays.flatMap({ $0.stops ?? [] }).first(where: { $0.id == stopId }) else { return }
         let had = stop.hasCost
         applyCost(to: stop, amount: amount, currencyCode: currencyCode)
-        save()
+        guard save() else { return }
         logCostChange(had: had, has: stop.hasCost, category: "stop")
     }
 
@@ -2007,7 +2070,7 @@ final class TripStore: ObservableObject {
               let seg = trip.safeItineraryDays.flatMap({ $0.segments ?? [] }).first(where: { $0.id == segmentId }) else { return }
         let had = seg.hasCost
         applyCost(to: seg, amount: amount, currencyCode: currencyCode)
-        save()
+        guard save() else { return }
         logCostChange(had: had, has: seg.hasCost, category: "transport")
     }
 
@@ -2017,7 +2080,7 @@ final class TripStore: ObservableObject {
               let stay = (trip.lodgingStays ?? []).first(where: { $0.id == stayId }) else { return }
         let had = stay.hasCost
         applyCost(to: stay, amount: amount, currencyCode: currencyCode)
-        save()
+        guard save() else { return }
         logCostChange(had: had, has: stay.hasCost, category: "lodging")
     }
 
@@ -2044,7 +2107,7 @@ final class TripStore: ObservableObject {
                 stay.costHomeAmount = mgr.convertToHome(stay.costAmount, from: stay.costCurrencyCode) ?? -1
             }
         }
-        save()
+        guard save() else { return }
     }
 
     /// Adds scene keys to a trip and merges the supplied sections.
@@ -2096,7 +2159,7 @@ final class TripStore: ObservableObject {
             // Force @Published emission for draft preview flows.
             draftTrip = trip
         } else {
-            save()
+            guard save() else { return }
             reschedulePackProgress(trip)
 #if !targetEnvironment(macCatalyst)
             Task { @MainActor in LiveActivityManager.shared.update(for: trip) }
@@ -2108,14 +2171,14 @@ final class TripStore: ObservableObject {
         guard let trip = bundle(for: tripId),
               !trip.dismissedSurpriseNames.contains(itemName) else { return }
         trip.dismissedSurpriseNames.append(itemName)
-        save()
+        guard save() else { return }
     }
 
 
     func setSelectedSceneKeys(tripId: UUID, keys: [String]) {
         guard let trip = trips.first(where: { $0.id == tripId }) else { return }
         trip.selectedSceneKeys = keys
-        save()
+        guard save() else { return }
     }
 
 #if DEBUG
@@ -2125,7 +2188,7 @@ final class TripStore: ObservableObject {
         for trip in trips {
             trip.sceneCardDismissed = false
         }
-        save()
+        guard save() else { return }
     }
 #endif
 
@@ -2149,7 +2212,7 @@ final class TripStore: ObservableObject {
             trip.sections?.append(newSection)
         }
         dismissSurpriseItem(tripId: tripId, itemName: item.name)
-        save()
+        guard save() else { return }
         reschedulePackProgress(trip)
 #if !targetEnvironment(macCatalyst)
         Task { @MainActor in LiveActivityManager.shared.update(for: trip) }
@@ -2176,10 +2239,10 @@ final class TripStore: ObservableObject {
         quantityMode: MyItemQuantityMode = .fixed,
         quantityIntervalDays: Int = 2,
         collectionName: String = "Default"
-    ) -> MyItem {
+    ) -> MyItem? {
         let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else {
-            return MyItem(name: "", collectionName: normalizedCollectionName(collectionName), category: "", defaultQuantity: 1, quantityMode: quantityMode, quantityIntervalDays: quantityIntervalDays)
+            return nil
         }
         let targetCollection = normalizedCollectionName(collectionName)
         if let existing = myItems.first(where: {
@@ -2191,7 +2254,7 @@ final class TripStore: ObservableObject {
             existing.quantityMode = quantityMode
             existing.quantityIntervalDays = max(1, quantityIntervalDays)
             existing.updatedAt = Date()
-            save()
+            guard save() else { return nil }
             return existing
         }
         let nextOrder = (myItems.map(\.sortOrder).max() ?? -1) + 1
@@ -2205,7 +2268,7 @@ final class TripStore: ObservableObject {
             sortOrder: nextOrder
         )
         context.insert(item)
-        save()
+        guard save() else { return nil }
         CarryLogger.shared.log(.myItemAdded)
         return item
     }
@@ -2213,7 +2276,7 @@ final class TripStore: ObservableObject {
     func removeMyItem(id: UUID) {
         guard let item = myItems.first(where: { $0.id == id }) else { return }
         context.delete(item)
-        save()
+        guard save() else { return }
         CarryLogger.shared.log(.myItemDeleted)
     }
 
@@ -2245,7 +2308,7 @@ final class TripStore: ObservableObject {
             item.updatedAt = Date()
             changed = true
         }
-        if changed { save() }
+        if changed { guard save() else { return } }
     }
 
     /// 删除自定义分类：把该 collection 内所有 category == name 的物品 category 清空（物品保留 → 未分类）。
@@ -2258,7 +2321,7 @@ final class TripStore: ObservableObject {
             item.updatedAt = Date()
             changed = true
         }
-        if changed { save() }
+        if changed { guard save() else { return } }
     }
 
     // MARK: - Queries
@@ -3037,7 +3100,7 @@ final class TripStore: ObservableObject {
             bundle.additionalDestinations = localResults.dropFirst().map {
                 DestinationEntry(countryCode: $0.code, latitude: $0.lat, longitude: $0.lon)
             }
-            do { try context.save() } catch {
+            do { try persist(context) } catch {
                 CarryLogger.shared.log(.persistFailed, context: "caller=updateCountryCode")
             }
             CarryLogger.shared.log(.geocodeResolved,
@@ -3087,7 +3150,7 @@ final class TripStore: ObservableObject {
                 bundle.additionalDestinations = Array(resolved.dropFirst()).map {
                     DestinationEntry(countryCode: $0.code, latitude: $0.lat, longitude: $0.lon)
                 }
-                do { try self.context.save() } catch {
+                do { try self.persist(self.context) } catch {
                     CarryLogger.shared.log(.persistFailed, context: "caller=updateCountryCode_async")
                 }
                 CarryLogger.shared.log(.geocodeResolved,
@@ -3117,7 +3180,7 @@ final class TripStore: ObservableObject {
             changed = true
         }
         if changed {
-            do { try context.save() } catch {
+            do { try persist(context) } catch {
                 CarryLogger.shared.log(.persistFailed, context: "caller=correctMisgecodedTrips")
             }
             fetchTrips()
@@ -3187,7 +3250,7 @@ final class TripStore: ObservableObject {
                         bundle.latitude    = local.lat
                         bundle.longitude   = local.lon
                         bundle.additionalDestinations = extras
-                        do { try self.context.save() } catch {
+                        do { try self.persist(self.context) } catch {
                             CarryLogger.shared.log(.persistFailed, context: "caller=geocodeMissingTrips_local")
                         }
                     }
@@ -3213,7 +3276,7 @@ final class TripStore: ObservableObject {
                     bundle.latitude  = primary.lat
                     bundle.longitude = primary.lon
                     bundle.additionalDestinations = extras
-                    do { try self.context.save() } catch {
+                    do { try self.persist(self.context) } catch {
                         CarryLogger.shared.log(.persistFailed, context: "caller=geocodeMissingTrips_geocoder")
                     }
                 }
@@ -3234,7 +3297,7 @@ final class TripStore: ObservableObject {
                 await MainActor.run {
                     guard let bundle = self.bundle(for: trip.id) else { return }
                     bundle.additionalDestinations = extras
-                    do { try self.context.save() } catch {
+                    do { try self.persist(self.context) } catch {
                         CarryLogger.shared.log(.persistFailed, context: "caller=geocodeMissingTrips_extras")
                     }
                 }

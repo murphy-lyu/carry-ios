@@ -560,7 +560,7 @@ struct ItemPickerView: View {
                             collection: selectedMyItemCollection
                         ) { name, category in
                             let normalizedCategory = category.trimmingCharacters(in: CharacterSet.whitespacesAndNewlines).isEmpty ? "Custom" : category
-                            let item = store.addMyItem(name: name, category: normalizedCategory, collectionName: selectedMyItemCollection)
+                            guard let item = store.addMyItem(name: name, category: normalizedCategory, collectionName: selectedMyItemCollection) else { return }
                             selectedMyItemIDs.insert(item.id)
                             showToast(NSLocalizedString("myitems.toast.saved", comment: ""))
                         }
@@ -1582,7 +1582,7 @@ struct ItemPickerView: View {
                         store.removeMyItem(id: id)
                     }
                 } else {
-                    store.addMyItem(name: canonicalName, category: category, defaultQuantity: 1, collectionName: selectedMyItemCollection)
+                    guard store.addMyItem(name: canonicalName, category: category, defaultQuantity: 1, collectionName: selectedMyItemCollection) != nil else { return }
                     showToast(NSLocalizedString("itempicker.preset.saved_to_myitems", comment: ""))
                 }
             } label: {
@@ -1685,7 +1685,7 @@ struct ItemPickerView: View {
     /// 空清单创建：跳过新建预览（那一步无内容可看、且会形成 Add item ↔ Add items 的空跳转循环），
     /// 直接提交行程并进入正式清单页（isNewTrip:false，带 ⋯ 菜单），与预览页 "Save list" 行为一致。
     private func finalizeEmptyTrip(bundle: TripBundle, city: String) {
-        store.commitDraftTrip()
+        guard store.commitDraftTrip() else { return }
         if !city.isEmpty {
             store.updateCountryCode(for: bundle.id, city: city)
         }

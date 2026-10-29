@@ -1432,7 +1432,7 @@ struct PackingListView: View {
                             }
                         }
                         let city = store.bundle(for: tripId)?.destinationCity ?? ""
-                        store.commitDraftTrip()
+                        guard store.commitDraftTrip() else { return }
                         if !city.isEmpty {
                             store.updateCountryCode(for: tripId, city: city)
                         }

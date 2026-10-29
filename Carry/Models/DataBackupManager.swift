@@ -755,6 +755,7 @@ final class DataBackupManager {
     enum BackupError: LocalizedError {
         case fileNotFound
         case decodingFailed
+        case missingAsset
         case unsupportedVersion(Int)
 
         var errorDescription: String? {
@@ -763,6 +764,8 @@ final class DataBackupManager {
                 return NSLocalizedString("settings.data.restore.error.not_found", comment: "")
             case .decodingFailed:
                 return NSLocalizedString("settings.data.restore.error.corrupt", comment: "")
+            case .missingAsset:
+                return NSLocalizedString("settings.data.restore.error.asset", comment: "")
             case .unsupportedVersion(let v):
                 return String(format: NSLocalizedString("settings.data.restore.error.version", comment: ""), v)
             }
@@ -773,13 +776,13 @@ final class DataBackupManager {
 
     /// Restore from the automatic local backup written after every save.
     @discardableResult
-    func restore(into context: ModelContext) throws -> (trips: Int, myItems: Int) {
+    func restore(into context: ModelContext, save: CarryPersistence.Save = { try $0.save() }) throws -> (trips: Int, myItems: Int) {
         guard let url = backupURL,
               FileManager.default.fileExists(atPath: url.path) else {
             throw BackupError.fileNotFound
         }
         let data = try Data(contentsOf: url)
-        return try restoreFromData(data, into: context)
+        return try restoreFromData(data, into: context, allowLocalFileReferences: true, save: save)
     }
 
     // MARK: - Restore (imported file)
@@ -787,7 +790,7 @@ final class DataBackupManager {
     /// Restore from raw JSON data — used when the caller has already read the
     /// file within a security scope (e.g., from the file importer picker).
     @discardableResult
-    func restoreFromData(_ data: Data, into context: ModelContext) throws -> (trips: Int, myItems: Int) {
+    func restoreFromData(_ data: Data, into context: ModelContext, allowLocalFileReferences: Bool = false, save: CarryPersistence.Save = { try $0.save() }) throws -> (trips: Int, myItems: Int) {
         // 关键顺序：必须先用最小 stub 只读 version，再做完整 decode。
         // 否则新版备份含旧版未识别的非可选字段时，完整 decode 会先抛 decodingFailed
         //（"文件损坏"），用户永远看不到 unsupportedVersion 的"请更新 App"提示。
@@ -801,7 +804,7 @@ final class DataBackupManager {
             CarryLogger.shared.log(.backupCorrupted, context: "reason=decode_failed bytes=\(data.count)")
             throw BackupError.decodingFailed
         }
-        let result = try performRestore(from: backup, into: context)
+        let result = try performRestore(from: backup, into: context, allowLocalFileReferences: allowLocalFileReferences, save: save)
         CarryLogger.shared.log(.backupRestored, context: "trips=\(result.trips) items=\(result.myItems)")
         return result
     }
@@ -811,7 +814,7 @@ final class DataBackupManager {
     /// 合并导入：将备份中在本地不存在的行程 / 物品模板插入数据库，
     /// 已存在的（UUID 匹配）跳过，不覆盖本地版本。
     @discardableResult
-    func mergeFromData(_ data: Data, into context: ModelContext) throws -> (trips: Int, myItems: Int) {
+    func mergeFromData(_ data: Data, into context: ModelContext, save: CarryPersistence.Save = { try $0.save() }) throws -> (trips: Int, myItems: Int) {
         struct VersionStub: Decodable { let version: Int }
         if let stub = try? decoder.decode(VersionStub.self, from: data),
            stub.version > Self.currentBackupVersion {
@@ -822,7 +825,7 @@ final class DataBackupManager {
             CarryLogger.shared.log(.backupCorrupted, context: "reason=decode_failed merge bytes=\(data.count)")
             throw BackupError.decodingFailed
         }
-        let result = try performMerge(from: backup, into: context)
+        let result = try performMerge(from: backup, into: context, save: save)
         CarryLogger.shared.log(.backupMerged, context: "trips=\(result.trips) items=\(result.myItems)")
         return result
     }
@@ -831,27 +834,8 @@ final class DataBackupManager {
     /// 与 `mergeFromData` 同一段 `performMerge` 逻辑，但**跳过 JSON 编/解码往返**——避免把
     /// 附件图片字节 base64 编一遍又解一遍的浪费（值已是合法内存对象，无需版本校验）。
     @discardableResult
-    func merge(_ backup: CarryBackup, into context: ModelContext) throws -> (trips: Int, myItems: Int) {
-        try performMerge(from: backup, into: context)
-    }
-
-    /// Rewrite the backed-up background image bytes to the sandbox (filenames are UUIDs, so
-    /// overwriting is safe/idempotent). Trip `backgroundsData` then references them.
-    private func restoreBackgroundImages(from backup: CarryBackup) {
-        for (name, data) in backup.backgroundImages ?? [:] {
-            if !BackgroundImageStore.write(data: data, named: name) {
-                CarryLogger.shared.log(.backupRestoreFailed, context: "reason=bg_image_write_failed name=\(name)")
-            }
-        }
-    }
-
-    /// 写回附件原文件字节（仅 export 备份带；auto-backup 无 attachmentFiles，沙盒文件仍在）。
-    private func restoreAttachmentFiles(from backup: CarryBackup) {
-        for (name, data) in backup.attachmentFiles ?? [:] {
-            if !AttachmentStore.write(data: data, named: name) {
-                CarryLogger.shared.log(.backupRestoreFailed, context: "reason=attachment_write_failed name=\(name)")
-            }
-        }
+    func merge(_ backup: CarryBackup, into context: ModelContext, save: CarryPersistence.Save = { try $0.save() }) throws -> (trips: Int, myItems: Int) {
+        try performMerge(from: backup, into: context, save: save)
     }
 
     /// 重建附件 model（owner 关系由调用方按实体设置）。
@@ -976,13 +960,15 @@ final class DataBackupManager {
         }
     }
 
-    private func performMerge(from backup: CarryBackup, into context: ModelContext) throws -> (trips: Int, myItems: Int) {
-        restoreBackgroundImages(from: backup)
-        restoreAttachmentFiles(from: backup)
-
+    private func performMerge(from source: CarryBackup, into context: ModelContext, save: CarryPersistence.Save) throws -> (trips: Int, myItems: Int) {
         // 取出现有 UUID 集合，用于去重判断
         let existingTripIDs = Set(try context.fetch(FetchDescriptor<TripBundle>()).map(\.id))
         let existingMyItemIDs = Set(try context.fetch(FetchDescriptor<MyItem>()).map(\.id))
+        var selected = source
+        selected.trips = source.trips.filter { !existingTripIDs.contains($0.id) }
+        let fileStage = try CarryBackupFileStage(selected)
+        defer { fileStage.discard() }
+        let backup = fileStage.backup
 
         var newTripCount = 0
 
@@ -1053,7 +1039,8 @@ final class DataBackupManager {
             context.insert(item)
         }
 
-        try context.save()
+        try CarryPersistence.commit(context, using: save)
+        fileStage.commit()
         return (newTripCount, backup.myItems.filter { !existingMyItemIDs.contains($0.id) }.count)
     }
 
@@ -1143,16 +1130,17 @@ final class DataBackupManager {
     /// 导入共享行程：不存在 → 新建；已存在（同 UUID）→ **替换其行程规划**（天/地点 + 行程元信息），
     /// **不动收件方该行程已有的打包清单 / 背景图**。返回行程 id（供导入后跳转）。
     @discardableResult
-    func importSharedTrip(from data: Data, into context: ModelContext) throws -> UUID {
+    func importSharedTrip(from data: Data, into context: ModelContext, save: CarryPersistence.Save = { try $0.save() }) throws -> UUID {
         struct VersionStub: Decodable { let version: Int }
         if let stub = try? decoder.decode(VersionStub.self, from: data),
            stub.version > Self.currentBackupVersion {
             throw BackupError.unsupportedVersion(stub.version)
         }
         guard let backup = try? decoder.decode(CarryBackup.self, from: data),
-              let bt = backup.trips.first else {
+              let incoming = backup.trips.first else {
             throw BackupError.decodingFailed
         }
+        let bt = CarryBackupFileStage.itineraryOnly(incoming)
         let allTrips = try context.fetch(FetchDescriptor<TripBundle>())
 
         if let existing = allTrips.first(where: { $0.id == bt.id }) {
@@ -1195,13 +1183,16 @@ final class DataBackupManager {
             restoreItineraryDays(bt.itineraryDays, for: trip, into: context)
             restoreLodgingStays(bt.lodgingStays, for: trip, into: context)
         }
-        try context.save()
+        try CarryPersistence.commit(context, using: save)
         return bt.id
     }
 
     // MARK: - Core restore
 
-    private func performRestore(from backup: CarryBackup, into context: ModelContext) throws -> (trips: Int, myItems: Int) {
+    private func performRestore(from source: CarryBackup, into context: ModelContext, allowLocalFileReferences: Bool, save: CarryPersistence.Save) throws -> (trips: Int, myItems: Int) {
+        let fileStage = try CarryBackupFileStage(source, allowLocalFileReferences: allowLocalFileReferences)
+        defer { fileStage.discard() }
+        let backup = fileStage.backup
         // 原子化保护：在执行破坏性 delete 前先把当前 backup.json 复制成
         // .pre-restore-{epoch}.json，任一步失败时用户/作者可手动恢复。
         // ⚠️ 用 epoch 时间戳后缀而非固定名 — 用户连续 restore 失败多次时，
@@ -1223,15 +1214,6 @@ final class DataBackupManager {
         // 新建的对象一起，在最终唯一一次 `context.save()` 里同生共死——失败即整体不落盘，旧数据完好无损。
         for t in try context.fetch(FetchDescriptor<TripBundle>()) { context.delete(t) }
         for m in try context.fetch(FetchDescriptor<MyItem>()) { context.delete(m) }
-
-        // Rewrite background image files to the sandbox before relinking trips.
-        restoreBackgroundImages(from: backup)
-        restoreAttachmentFiles(from: backup)
-
-        // 还原默认提醒偏好（旧备份无此字段则保持现状）
-        if let offsets = backup.defaultReminderOffsets {
-            ReminderPreferences.enabledOffsets = Set(offsets)
-        }
 
         // Restore trips
         for bt in backup.trips {
@@ -1304,7 +1286,12 @@ final class DataBackupManager {
             context.insert(item)
         }
 
-        try context.save()
+        try CarryPersistence.commit(context, using: save)
+        fileStage.commit()
+        // Apply global preferences only after the business transaction succeeds.
+        if let offsets = backup.defaultReminderOffsets {
+            ReminderPreferences.enabledOffsets = Set(offsets)
+        }
         // 还原成功：安全副本已完成使命，只留最近几份防线（+ 每次还原都会新建一份，
         // 不清理会无限堆积孤儿文件）。失败路径（本函数抛出）刻意不清——那正是需要它的时候。
         pruneOldSafetyCopies(keepLatest: 3)
