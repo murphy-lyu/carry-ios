@@ -87,6 +87,114 @@ final class AccountReplicaTests: XCTestCase {
         XCTAssertEqual(try replica.nextCommand()?.mutations.first?.fieldVersions, ["name": 1])
     }
 
+    func testNativeDeltaKeepsTheObservedBaselineAndPreservesUnshownRemoteFields() throws {
+        let (_, container) = try database()
+        let replica = try CarryAccountReplica(container: container, accountID: UUID())
+        var original = entity(version: 1)
+        original.fields["destinationCity"] = .string("Old city"); original.fieldVersions["destinationCity"] = 1
+        try replica.receive(CarryGraphPage(changes: [CarryGraphChange(sequence: 1, entity: original)], cursor: 1, hasMore: false))
+        var external = entity(id: original.id, version: 2, name: "Other client")
+        external.fields["destinationCity"] = .string("Unshown city"); external.fieldVersions["destinationCity"] = 2
+        try replica.receive(CarryGraphPage(changes: [CarryGraphChange(sequence: 2, entity: external)], cursor: 2, hasMore: false))
+        try replica.applyObserved([CarryNativeObservedEdit(id: original.id, kind: "trip", isCreation: false,
+            fields: ["name": .string("Native edit")], previousFields: ["name": .string("Tokyo")],
+            parentID: nil, previousParentID: nil, parentChanged: false, observed: original)])
+        XCTAssertEqual(try replica.localEntities().first?.fields["destinationCity"], .string("Unshown city"))
+        let command = try XCTUnwrap(replica.nextCommand())
+        XCTAssertEqual(command.mutations.first?.fieldVersions, ["name": 1])
+        XCTAssertEqual(command.mutations.first?.fields, ["name": .string("Native edit")])
+    }
+
+    func testNativeEditCanUseItsOwnAcceptedValueButCannotAdoptALaterExternalVersion() throws {
+        let (_, container) = try database()
+        let replica = try CarryAccountReplica(container: container, accountID: UUID())
+        let original = entity(version: 1)
+        try replica.receive(CarryGraphPage(changes: [CarryGraphChange(sequence: 1, entity: original)], cursor: 1, hasMore: false))
+        var mine = original; mine.fields["name"] = .string("My first edit"); try replica.edit(mine)
+        let first = try XCTUnwrap(replica.nextCommand())
+        let accepted = entity(id: original.id, version: 2, name: "My first edit")
+        try replica.accept(receipt(first, entity: accepted))
+        let external = entity(id: original.id, version: 3, name: "Other client after my save")
+        try replica.receive(CarryGraphPage(changes: [CarryGraphChange(sequence: 2, entity: accepted),
+            CarryGraphChange(sequence: 3, entity: external)], cursor: 3, hasMore: false))
+        try replica.applyObserved([CarryNativeObservedEdit(id: original.id, kind: "trip", isCreation: false,
+            fields: ["name": .string("Next native edit")], previousFields: ["name": .string("My first edit")],
+            parentID: nil, previousParentID: nil, parentChanged: false, observed: original)])
+        XCTAssertEqual(try replica.nextCommand()?.mutations.first?.fieldVersions, ["name": 2])
+    }
+
+    func testNativeMoveRebasesOnlyAcrossContinuousOwnAcknowledgements() throws {
+        for acceptedVersion in [2, 3] {
+            let (_, container) = try database()
+            let replica = try CarryAccountReplica(container: container, accountID: UUID())
+            var original = entity(version: 1, kind: "stop"); original.parentID = UUID()
+            try replica.receive(CarryGraphPage(changes: [CarryGraphChange(sequence: 1, entity: original)], cursor: 1, hasMore: false))
+            var mine = original; mine.fields["name"] = .string("My own edit"); try replica.edit(mine)
+            let command = try XCTUnwrap(replica.nextCommand())
+            var accepted = entity(id: original.id, version: acceptedVersion, name: "My own edit", kind: "stop")
+            accepted.parentID = original.parentID
+            try replica.accept(receipt(command, entity: accepted))
+            let target = UUID()
+            try replica.applyObserved([CarryNativeObservedEdit(id: original.id, kind: "stop", isCreation: false,
+                fields: [:], previousFields: [:], parentID: target, previousParentID: original.parentID,
+                parentChanged: true, observed: original)])
+            XCTAssertEqual(try replica.nextCommand()?.mutations.first?.baseVersion, acceptedVersion == 2 ? 2 : 1,
+                "Version 3 has an external gap and cannot grant consent to a move based on version 1")
+        }
+    }
+
+    func testConsumingNativeJournalAndEditingReplicaRollBackAsOneTransaction() throws {
+        enum Injected: Error { case failed }
+        let (_, container) = try database()
+        var reject = false
+        let replica = try CarryAccountReplica(container: container, accountID: UUID(), save: { context in
+            if reject { throw Injected.failed }; try context.save()
+        })
+        let original = entity(version: 1)
+        try replica.receive(CarryGraphPage(changes: [CarryGraphChange(sequence: 1, entity: original)], cursor: 1, hasMore: false))
+        let native = CarryNativeTransaction(id: UUID(), sequence: 1, changeCount: 1)
+        replica.context.insert(native); try replica.context.save()
+        reject = true
+        XCTAssertThrowsError(try replica.applyObserved([CarryNativeObservedEdit(id: original.id, kind: "trip", isCreation: false,
+            fields: ["name": .string("Must roll back")], previousFields: ["name": .string("Tokyo")],
+            parentID: nil, previousParentID: nil, parentChanged: false, observed: original)], consume: { $0.delete(native) }))
+        XCTAssertEqual(try ModelContext(container).fetch(FetchDescriptor<CarryNativeTransaction>()).count, 1)
+        XCTAssertEqual(try replica.localEntities().first?.fields["name"], .string("Tokyo"))
+        reject = false
+        XCTAssertNil(try replica.nextCommand())
+    }
+
+    func testPreparedBindingsRollBackWhenObservedEditValidationFails() throws {
+        let (_, container) = try database()
+        let replica = try CarryAccountReplica(container: container, accountID: UUID())
+        let original = entity(version: 1)
+        try replica.receive(CarryGraphPage(changes: [CarryGraphChange(sequence: 1, entity: original)], cursor: 1, hasMore: false))
+        let edit = CarryNativeObservedEdit(id: original.id, kind: "trip", isCreation: false,
+            fields: ["name": .string("Rejected")], previousFields: ["name": .string("Tokyo")],
+            parentID: nil, previousParentID: nil, parentChanged: false, observed: original)
+        XCTAssertThrowsError(try replica.applyObserved(prepare: { context in
+            context.insert(CarryNativeTransaction(id: UUID(), sequence: 99, changeCount: 1))
+            return [edit, edit] // Reject duplicate identities after preparation.
+        }))
+        XCTAssertTrue(try ModelContext(container).fetch(FetchDescriptor<CarryNativeTransaction>()).isEmpty)
+        XCTAssertEqual(try replica.localEntities().first?.fields["name"], .string("Tokyo"))
+        XCTAssertNil(try replica.nextCommand())
+    }
+
+    func testReplicaCannotAdoptAnotherAccountsNativeJournalBeforeCheckpointExists() throws {
+        let (_, container) = try database()
+        let owner = UUID(), context = ModelContext(container)
+        context.insert(CarryNativeJournalOwner(accountID: owner))
+        try context.save()
+        XCTAssertThrowsError(try CarryAccountReplica(container: container, accountID: UUID())) { error in
+            guard case CarryReplicaFailure.accountMismatch = error else { return XCTFail("Unexpected error: \(error)") }
+        }
+        XCTAssertTrue(try ModelContext(container).fetch(FetchDescriptor<CarryReplicaCheckpoint>()).isEmpty)
+        let replica = try CarryAccountReplica(container: container, accountID: owner)
+        XCTAssertEqual(replica.accountID, owner)
+        XCTAssertEqual(try ModelContext(container).fetch(FetchDescriptor<CarryReplicaCheckpoint>()).first?.accountID, owner)
+    }
+
     func testProtocolPreservesBoolIntegersNullAndNestedValues() throws {
         let value: CarryGraphValue = .object(["flag": .bool(true), "quantity": .integer(2), "optional": .null,
             "items": .array([.string("東京"), .number(2.25)])])

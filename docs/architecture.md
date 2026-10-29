@@ -28,7 +28,9 @@ Debug/Release 的 `CARRY_CLOUDKIT_ENVIRONMENT` 分别为 Development/Production�
 
 `CarryPersistence` 为 TripStore 和 DataBackupManager 的显式保存入口；关闭业务 Context 的 autosave，writer 可在同一次 save 捕获账户日志。失败时物化待删除的级联对象后回滚、隔离旧 Context，TripStore 重新加载持久图；普通编辑、草稿与还原均可重试。文件删除等副作用仅在保存成功后执行。
 
-`CarryBackupFileStage` 将外部备份的引用映射到新文件名；提交成功发布引用，失败只清本次文件。外部输入不能借用本机私有文件或导入分享外的附件。自动本地备份才可复用仍存在的本地文件。详见 `carry-native-persistence-qa.md`；日志、协议桥接、投影与账户子库尚待实现，不能把 writer 注入当成已接通同步。
+`CarryBackupFileStage` 将外部备份的引用映射到新文件名；提交成功发布引用，失败只清本次文件。外部输入不能借用本机私有文件或导入分享外的附件。自动本地备份才可复用仍存在的本地文件。详见 `carry-native-persistence-qa.md`。
+
+`CarryNativeSourceCodec` 只快照实际变更的十种业务对象；缩略图以独立二进制保存。`CarryNativeChangeJournal` 与业务状态同次提交，保留实际显示的基线和不可变事务；同 UUID 的还原替换按存活实例计算差异。`CarryAccountReplica.applyObserved` 仅合并变化字段，保留用户编辑时看到的版本及本机已接受值的版本；准备资产绑定与消费日志可置于同一副本事务。同步器在冻结请求、ACK、pull 和补基线合并前可先有界消费日志，未消费完返回待续，不丢请求身份或回执进度。日志桥接、完整投影、删除恢复、资产队列和账户子库产品路由仍未接通，不能把这些组件当作已完成同步。
 
 ## 整体结构
 

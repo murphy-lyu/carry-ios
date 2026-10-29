@@ -35,15 +35,31 @@ enum AttachmentStore {
 
     /// 写入字节，返回沙盒文件名（`<uuid>.<ext>`）。失败返回 nil。
     static func save(_ data: Data, ext: String) -> String? {
-        let safeExt = ext.isEmpty ? "dat" : ext
-        let name = UUID().uuidString + "." + safeExt
         do {
-            try data.write(to: fileURL(named: name), options: .atomic)
-            return name
+            return try writeImportedFile(data, ext: ext).lastPathComponent
         } catch {
             CarryLogger.shared.log(.attachmentSaveFailed, context: "write")
             return nil
         }
+    }
+
+    /// The import worker uses the same UUID namespace and atomic write without
+    /// crossing onto the UI actor. Errors are reported by its caller.
+    nonisolated static func writeImportedFile(_ data: Data, ext: String, directory: URL? = nil) throws -> URL {
+        let target: URL
+        if let directory { target = directory }
+        else {
+            target = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
+                .appendingPathComponent("Attachments", isDirectory: true)
+        }
+        try FileManager.default.createDirectory(at: target, withIntermediateDirectories: true)
+        let safeExt = ext.isEmpty ? "dat" : ext
+        guard !safeExt.contains("/"), !safeExt.contains("\\"), !safeExt.contains("\0") else {
+            throw CocoaError(.fileWriteInvalidFileName)
+        }
+        let url = target.appendingPathComponent(UUID().uuidString + "." + safeExt)
+        try data.write(to: url, options: .atomic)
+        return url
     }
 
     static func data(named name: String) -> Data? {

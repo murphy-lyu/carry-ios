@@ -230,17 +230,28 @@ final class CarryGraphTransport: CarryGraphStreamingTransporting {
 /// immutable flights; rejected input/conflicts require explicit resolution.
 @MainActor
 final class CarryAccountSyncEngine {
+    private enum Continuation: Error { case nativeChangesPending }
     private let replica: CarryAccountReplica
     private let transport: any CarryGraphTransporting
     private let project: ([CarryGraphEntity], ModelContext) throws -> Void
+    private let drainNativeChanges: () throws -> Bool
     private var running = false
 
     /// The projection applies a delta of changed local snapshots in one save.
     init(replica: CarryAccountReplica, transport: any CarryGraphTransporting,
+         drainNativeChanges: @escaping () throws -> Bool = { true },
          project: @escaping ([CarryGraphEntity], ModelContext) throws -> Void = { _, _ in }) {
         self.replica = replica
         self.transport = transport
         self.project = project
+        self.drainNativeChanges = drainNativeChanges
+    }
+
+    /// Drain durable business saves before freezing a command or advancing any
+    /// remote baseline. A bounded drain may defer this pass without losing the
+    /// immutable flight or accepting a response against an unobserved edit.
+    private func prepareReplica() throws {
+        guard try drainNativeChanges() else { throw Continuation.nativeChangesPending }
     }
 
     /// Work is bounded per foreground pass. `false` requests a later continuation;
@@ -252,21 +263,26 @@ final class CarryAccountSyncEngine {
         defer { running = false }
         do {
             for _ in 0..<10 {
+                try prepareReplica()
                 guard let command = try replica.nextCommand() else { break }
                 if let streaming = transport as? any CarryGraphStreamingTransporting {
                     let progress = try replica.receiptProgress(for: command.requestID)
                     try await streaming.applyStreaming(command, progress: progress) { summary, page, _ in
+                        try self.prepareReplica()
                         do { try self.replica.accept(page, summary: summary, project: self.project) }
                         catch CarryReplicaFailure.missingBaseline {
                             try await self.fillBaselines()
+                            try self.prepareReplica()
                             try self.replica.accept(page, summary: summary, project: self.project)
                         }
                     }
                 } else {
                     let receipt = try await transport.apply(command)
+                    try prepareReplica()
                     do { try replica.accept(receipt, project: project) }
                     catch CarryReplicaFailure.missingBaseline {
                         try await fillBaselines()
+                        try prepareReplica()
                         try replica.accept(receipt, project: project)
                     }
                 }
@@ -274,12 +290,16 @@ final class CarryAccountSyncEngine {
             var more = false
             for _ in 0..<10 {
                 let page = try await transport.pull(cursor: replica.cursor)
+                try prepareReplica()
                 try replica.receive(page, project: project)
                 more = page.hasMore
                 if !more { break }
             }
+            try prepareReplica()
             let pending = try replica.nextCommand()
             return !more && pending == nil
+        } catch Continuation.nativeChangesPending {
+            return false
         } catch let error as CarryGraphTransportFailure {
             switch error {
             case .conflict(let details): try replica.blockFlight(details: details)
@@ -293,6 +313,7 @@ final class CarryAccountSyncEngine {
     private func fillBaselines() async throws {
         for _ in 0..<10 {
             let page = try await transport.pull(cursor: replica.cursor)
+            try prepareReplica()
             try replica.receive(page, project: project)
             if !page.hasMore { break }
         }

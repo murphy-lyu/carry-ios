@@ -1,4 +1,5 @@
 import XCTest
+import SwiftData
 @testable import Carry
 
 @MainActor
@@ -36,6 +37,52 @@ final class AccountGraphMigrationTests: XCTestCase {
     private func json(_ backup: CarryBackup) throws -> CarryGraphValue {
         let encoder = JSONEncoder(); encoder.dateEncodingStrategy = .iso8601
         return try JSONDecoder().decode(CarryGraphValue.self, from: encoder.encode(backup))
+    }
+
+    func testIncrementalNativeSourcesCoverEveryBusinessKindAndMatchTheFullBackupContract() throws {
+        let fixture = try backup()
+        let schema = Schema(SchemaV1.models)
+        let container = try ModelContainer(for: schema, configurations: [ModelConfiguration(schema: schema,
+            isStoredInMemoryOnly: true, cloudKitDatabase: .none)])
+        let context = ModelContext(container)
+        _ = try DataBackupManager.shared.merge(fixture, into: context)
+        var models: [any PersistentModel] = []
+        func collect<T: PersistentModel>(_ type: T.Type) throws {
+            models += try context.fetch(FetchDescriptor<T>()).map { $0 as any PersistentModel }
+        }
+        try collect(TripBundle.self); try collect(PackingSection.self); try collect(PackingItem.self)
+        try collect(ItineraryDay.self); try collect(ItineraryStop.self); try collect(TransportSegment.self)
+        try collect(LodgingStay.self); try collect(StopPhoto.self); try collect(ItineraryAttachment.self); try collect(MyItem.self)
+        let sources = try models.map { try XCTUnwrap(CarryNativeSourceCodec.capture($0)) }
+        defer {
+            for source in sources {
+                for (slot, name) in source.metadata.fileReferences {
+                    if slot.hasPrefix("background:") { BackgroundImageStore.delete(named: name) }
+                    else { AttachmentStore.delete(named: name) }
+                }
+            }
+        }
+        let trips = try context.fetch(FetchDescriptor<TripBundle>()), items = try context.fetch(FetchDescriptor<MyItem>())
+        let url = try XCTUnwrap(DataBackupManager.shared.makeExportFile(trips: trips, myItems: items))
+        defer { do { try FileManager.default.removeItem(at: url) } catch { XCTFail("Cannot remove synthetic export") } }
+        let decoder = JSONDecoder(); decoder.dateDecodingStrategy = .iso8601
+        let full = try decoder.decode(CarryBackup.self, from: Data(contentsOf: url))
+        let packet = try CarryGraphMigrationCodec.prepare(full, accountID: UUID(), migrationID: UUID(),
+            tripIDs: Set(full.trips.map(\.id)), includeLibrary: true)
+        XCTAssertEqual(sources.count, packet.entities.count)
+        XCTAssertEqual(Set(sources.map { $0.metadata.kind }), Set(packet.entities.map(\.kind)))
+        for source in sources {
+            let expected = try XCTUnwrap(packet.entities.first { $0.id == source.metadata.id })
+            XCTAssertEqual(source.metadata.parentID, expected.parentID)
+            var fields = expected.fields
+            fields.removeValue(forKey: "thumbnailAssetID"); fields.removeValue(forKey: "fileAssetID")
+            for key in ["additionalDestinationsData", "backgroundsData"] where expected.kind == "trip" && fields[key] == nil {
+                fields[key] = .null
+            }
+            XCTAssertEqual(source.metadata.fields, fields, "Complete scalar contract for \(expected.kind)")
+            let thumbnail = packet.assets.first { $0.entityID == expected.id && $0.slot == "thumbnail" }
+            XCTAssertEqual(source.thumbnailData, thumbnail?.bytes)
+        }
     }
 
     func testCompleteNativeGraphAndPrivateBytesRoundTripOffMainActorWithStableAssetIDs() async throws {

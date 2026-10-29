@@ -7,7 +7,9 @@ import SwiftData
 enum CarryPersistence {
     typealias Save = (ModelContext) throws -> Void
     enum Failure: Error { case invalidatedContext }
-    private static let invalidated = NSHashTable<AnyObject>.weakObjects()
+    // Context quarantine is based on object identity, not ModelContext's Swift
+    // equality. The latter has no compatible Objective-C hash implementation.
+    private static let invalidated = NSHashTable<AnyObject>(options: [.weakMemory, .objectPointerPersonality])
 
     static func commit(_ context: ModelContext, using save: Save) throws {
         guard !invalidated.contains(context) else { throw Failure.invalidatedContext }

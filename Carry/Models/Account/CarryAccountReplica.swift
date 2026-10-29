@@ -43,6 +43,17 @@ final class CarryReplicaReceiptCheckpoint {
     }
 }
 
+private struct CarryReplicaAcceptedField: Codable {
+    let value: CarryGraphValue
+    let version: Int
+}
+
+private struct CarryReplicaAcceptedStructure: Codable {
+    let version: Int
+    let continuousBase: Int
+    let parentID: UUID?
+}
+
 private struct CarryReplicaPayload: Codable {
     var remote: CarryGraphEntity?
     var local: CarryGraphEntity
@@ -52,6 +63,9 @@ private struct CarryReplicaPayload: Codable {
     var structuralAction: String?
     var structuralVersion: Int? = nil
     var unconfirmedRemote: CarryGraphEntity? = nil
+    var localCreation: Bool? = nil
+    var acceptedFields: [String: CarryReplicaAcceptedField]? = nil
+    var acceptedStructure: CarryReplicaAcceptedStructure? = nil
 }
 
 private struct CarryReplicaFlight: Codable {
@@ -73,7 +87,7 @@ final class CarryAccountReplica {
     private var mutationIndex: (requestID: UUID, values: [UUID: CarryGraphMutation])?
 
     static func container(at url: URL) throws -> ModelContainer {
-        let schema = Schema(SchemaV1.models + [CarryReplicaRecord.self, CarryReplicaCheckpoint.self, CarryReplicaReceiptCheckpoint.self])
+        let schema = Schema(SchemaV1.models + [CarryReplicaRecord.self, CarryReplicaCheckpoint.self, CarryReplicaReceiptCheckpoint.self] + CarryNativeChangeJournal.models)
         return try ModelContainer(for: schema, configurations: [
             ModelConfiguration(schema: schema, url: url, cloudKitDatabase: .none)
         ])
@@ -88,6 +102,11 @@ final class CarryAccountReplica {
         self.context.autosaveEnabled = false
         self.accountID = accountID
         self.save = save
+        let journalOwners = try context.fetch(FetchDescriptor<CarryNativeJournalOwner>())
+        guard journalOwners.count <= 1 else { throw CarryReplicaFailure.invalidState }
+        guard journalOwners.allSatisfy({ $0.accountID == accountID }) else {
+            throw CarryReplicaFailure.accountMismatch
+        }
         let state = try checkpoint()
         guard state.accountID == accountID else { throw CarryReplicaFailure.accountMismatch }
         try save(context)
@@ -203,11 +222,82 @@ final class CarryAccountReplica {
             }
         } else {
             guard desired.version == 0, desired.deletedAt == nil else { throw CarryReplicaFailure.invalidState }
-            value = CarryReplicaPayload(remote: nil, local: desired, intents: [:], structuralAction: "create")
+            value = CarryReplicaPayload(remote: nil, local: desired, intents: [:], structuralAction: "create", localCreation: true)
         }
         if let row { try store(value, in: row) }
         else { context.insert(CarryReplicaRecord(id: desired.id, payload: try encoder.encode(value),
                                                  hasPendingChanges: true)) }
+    }
+
+    /// Consume native field deltas and their journal records in one durable
+    /// replica transaction. Caller passes only already-resolved asset references.
+    func applyObserved(_ edits: [CarryNativeObservedEdit],
+                       consume: (ModelContext) throws -> Void = { _ in }) throws {
+        try applyObserved(prepare: { _ in edits }, consume: consume)
+    }
+
+    /// Asset bindings and upload jobs must commit with their graph intentions.
+    /// Preparation is local only; uploads run after this durable transaction.
+    func applyObserved(prepare: (ModelContext) throws -> [CarryNativeObservedEdit],
+                       consume: (ModelContext) throws -> Void = { _ in }) throws {
+        try transaction {
+            let edits = try prepare(context)
+            guard edits.count <= 20000, Set(edits.map(\.id)).count == edits.count else {
+                throw CarryReplicaFailure.invalidState
+            }
+            for edit in edits { try applyObserved(edit) }
+            try consume(context)
+        }
+    }
+
+    private func applyObserved(_ edit: CarryNativeObservedEdit) throws {
+        guard !edit.isCreation || edit.observed == nil else { throw CarryReplicaFailure.invalidState }
+        if let observed = edit.observed {
+            guard observed.id == edit.id, observed.kind == edit.kind, observed.version > 0 else {
+                throw CarryReplicaFailure.invalidState
+            }
+        }
+        guard let existing = try row(id: edit.id) else {
+            guard edit.isCreation, edit.observed == nil else { throw CarryReplicaFailure.missingBaseline }
+            try upsert(CarryGraphEntity(id: edit.id, kind: edit.kind, parentID: edit.parentID,
+                version: 0, subtreeVersion: 0, fields: edit.fields, fieldVersions: [:]))
+            return
+        }
+        let before = try payload(existing)
+        guard before.local.kind == edit.kind, before.local.deletedAt == nil else { throw CarryReplicaFailure.invalidState }
+        if edit.observed == nil {
+            guard before.localCreation == true || before.remote == nil && before.structuralAction == "create" else {
+                throw CarryReplicaFailure.invalidState
+            }
+        }
+        if edit.isCreation {
+            guard before.localCreation == true, before.remote == nil else { throw CarryReplicaFailure.invalidState }
+        }
+        var desired = before.local
+        desired.fields.merge(edit.fields) { _, new in new }
+        if edit.parentChanged { desired.parentID = edit.parentID }
+        try upsert(desired)
+        var value = try payload(existing)
+        for key in edit.fields.keys where before.intents[key] == nil && value.intents[key] != nil {
+            var baseline = edit.observed?.fieldVersions[key] ?? 0
+            if let accepted = before.acceptedFields?[key], accepted.version > baseline,
+               accepted.value == edit.previousFields[key] {
+                // This advances only knowledge of OUR accepted value. A later
+                // external pull is not permission to replace its field version.
+                baseline = accepted.version
+            }
+            value.intents[key] = baseline
+        }
+        if edit.parentChanged, value.structuralAction == "move", before.structuralAction != "move" {
+            var baseline = edit.observed?.version ?? 0
+            if let accepted = before.acceptedStructure, accepted.parentID == edit.previousParentID,
+               baseline >= accepted.continuousBase, baseline < accepted.version {
+                baseline = accepted.version
+            }
+            guard baseline > 0 else { throw CarryReplicaFailure.missingBaseline }
+            value.structuralVersion = baseline
+        }
+        try store(value, in: existing)
     }
 
     /// Freeze one account transaction. Subsequent local edits remain independent
@@ -278,7 +368,7 @@ final class CarryAccountReplica {
             guard flight.command.requestID == receipt.requestID,
                   !receipt.changes.isEmpty,
                   receipt.cursor == receipt.changes.last?.sequence,
-                  Set(flight.command.mutations.map(\.id)).isSubset(of: Set(receipt.changes.map { $0.entity.id })) else {
+                  Set(flight.command.mutations.map(\.id)).isSubset(of: Set(receipt.changes.filter { $0.metadataOnly != true }.map { $0.entity.id })) else {
                 throw CarryReplicaFailure.invalidReceipt
             }
             for (previous, next) in zip(receipt.changes, receipt.changes.dropFirst()) {
@@ -464,7 +554,7 @@ final class CarryAccountReplica {
                 value.unconfirmedRemote = nil
                 var local = remote
                 for (key, baseline) in value.intents {
-                    let ownAccepted = sent?.fields?[key] != nil
+                    let ownAccepted = sent?.fields?[key] != nil && fullAcknowledgements.contains(incoming.id)
                     if ownAccepted {
                         if value.local.fields[key] == sentDesired?.fields[key] {
                             value.intents.removeValue(forKey: key)
@@ -505,8 +595,22 @@ final class CarryAccountReplica {
                 }
                 value.remote = remote
                 value.local = local
-                if let flight, sent != nil, fullAcknowledgements.contains(remote.id) {
+                if let flight, let sent, fullAcknowledgements.contains(incoming.id) {
                     row.acknowledgedRequestID = flight.command.requestID
+                    var accepted = value.acceptedFields ?? [:]
+                    for key in sent.fields?.keys.map({ $0 }) ?? [] {
+                        if let field = incoming.fields[key], let version = incoming.fieldVersions[key],
+                           version > (accepted[key]?.version ?? -1) {
+                            accepted[key] = CarryReplicaAcceptedField(value: field, version: version)
+                        }
+                    }
+                    value.acceptedFields = accepted
+                    if incoming.version > (value.acceptedStructure?.version ?? 0) {
+                        let base = value.acceptedStructure?.version == incoming.version - 1
+                            ? (value.acceptedStructure?.continuousBase ?? incoming.version - 1) : incoming.version - 1
+                        value.acceptedStructure = CarryReplicaAcceptedStructure(version: incoming.version,
+                            continuousBase: base, parentID: incoming.parentID)
+                    }
                 }
                 try store(value, in: row)
                 changed.append(local)

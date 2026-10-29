@@ -50,6 +50,18 @@ function sameOrigin(request, origin) {
     throw new WebFailure(403, 'origin_mismatch');
   }
 }
+function rejectTemporaryIdentityFailure(error) {
+  if (!error) return;
+  // Invalid credentials can end a session, but throttling, request timeouts
+  // and upstream failures cannot prove that an existing identity disappeared.
+  // Never issue an unbound flow or replace browser cookies on those failures.
+  const status = error.status;
+  const invalidSession = status === 401 || status === 403 ||
+    (status >= 400 && status < 500 && (
+      error.name === 'AuthSessionMissingError' ||
+      ['bad_jwt', 'session_not_found', 'refresh_token_not_found', 'refresh_token_already_used'].includes(error.code)));
+  if (!invalidSession) throw new WebFailure(503, 'identity_unavailable');
+}
 async function upstream(fetcher, url, options) {
   const response = await fetcher(url, { ...options, redirect: 'error', signal: AbortSignal.timeout(15000) });
   const bytes = await boundedBytes(response.body, 128 * 1024);
@@ -102,7 +114,7 @@ export function createWebHandler({ makeClient = createServerClient, fetcher = fe
         if (error) {
           // A network/provider outage is not evidence that the browser signed
           // out. Do not start an unbound sign-in flow on a transient failure.
-          if (!(error.status >= 400 && error.status < 500)) throw new WebFailure(503, 'identity_unavailable');
+          rejectTemporaryIdentityFailure(error);
           return null;
         }
         if (!user) return null;
@@ -154,6 +166,7 @@ export function createWebHandler({ makeClient = createServerClient, fetcher = fe
           throw new WebFailure(400, 'invalid_apple_response');
         }
         const previous = await client.auth.getUser();
+        rejectTemporaryIdentityFailure(previous.error);
         const previousCookies = new Map(authCookies);
         let signedInSession;
         try {

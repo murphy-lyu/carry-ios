@@ -128,3 +128,18 @@ nonisolated enum CarryGraphConflictChoice: Sendable {
 nonisolated enum CarryGraphParentConflictChoice: Sendable {
     case local, remote, parent(UUID?)
 }
+
+
+/// Explicit user intent captured against the native values the user saw. Only
+/// changed fields are applied; unshown remote fields are never copied from UI.
+nonisolated struct CarryNativeObservedEdit: Sendable {
+    let id: UUID
+    let kind: String
+    let isCreation: Bool
+    let fields: [String: CarryGraphValue]
+    let previousFields: [String: CarryGraphValue]
+    let parentID: UUID?
+    let previousParentID: UUID?
+    let parentChanged: Bool
+    let observed: CarryGraphEntity?
+}

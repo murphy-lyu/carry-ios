@@ -50,7 +50,7 @@ enum AttachmentThumbnail {
     }
 
     /// 由图片字节生成约 640px JPEG 缩略图（列表/详情快渲；原图存沙盒）。
-    static func make(from imageData: Data, maxPixel: CGFloat = 640) -> Data? {
+    nonisolated static func make(from imageData: Data, maxPixel: CGFloat = 640) -> Data? {
         guard let src = CGImageSourceCreateWithData(imageData as CFData, nil) else { return nil }
         let opts: [CFString: Any] = [
             kCGImageSourceCreateThumbnailFromImageAlways: true,
@@ -264,6 +264,8 @@ private struct AttachmentAddFlow: ViewModifier {
     @State private var linkURL = ""
     @State private var linkName = ""
     @State private var showTooLarge = false
+    @State private var importTask: Task<Void, Never>?
+    @State private var importID: UUID?
 
     private func bind(_ r: AttachmentAddRequest) -> Binding<Bool> {
         Binding(get: { request == r }, set: { if !$0, request == r { request = nil } })
@@ -274,13 +276,28 @@ private struct AttachmentAddFlow: ViewModifier {
             .photosPicker(isPresented: bind(.photo), selection: $photoItem, matching: .images)
             .onChange(of: photoItem) { _, newItem in
                 guard let newItem else { return }
-                Task { await addPhotoItem(newItem); await MainActor.run { photoItem = nil } }
+                let id = beginImport()
+                importTask = Task {
+                    await completeImport(id: id) {
+                        guard let transfer = try await newItem.loadTransferable(type: AttachmentPhotoTransfer.self) else {
+                            throw CocoaError(.fileReadUnknown)
+                        }
+                        try Task.checkCancellation()
+                        return transfer.prepared
+                    }
+                    if importID == id { photoItem = nil }
+                }
             }
             .fileImporter(isPresented: bind(.file), allowedContentTypes: [.item], allowsMultipleSelection: false) { result in
                 handleFileImport(result)
             }
             .fullScreenCover(isPresented: bind(.camera)) {
-                CameraPicker { data in addImageData(data, ext: "jpg") }
+                CameraPicker { data in
+                    let id = beginImport()
+                    importTask = Task {
+                        await completeImport(id: id) { try await AttachmentImportWorker.prepare(data: data, ext: "jpg") }
+                    }
+                }
                     .ignoresSafeArea()
             }
             .onChange(of: request) { _, new in
@@ -292,42 +309,60 @@ private struct AttachmentAddFlow: ViewModifier {
             .alert("itinerary.attachment.too_large", isPresented: $showTooLarge) {
                 Button("common.ok", role: .cancel) {}
             }
+            .onDisappear {
+                importTask?.cancel()
+                importTask = nil
+                importID = nil
+            }
     }
 
-    /// owner 有 → 入库；无 → 缓冲。
-    private func commit(_ data: NewAttachmentData) {
+    /// owner 有 → 入库；无 → 缓冲。Only an accepted model/pending entry takes
+    /// ownership of a prepared file; rejected saves keep the cleanup lease.
+    @discardableResult
+    private func commit(_ data: NewAttachmentData) -> Bool {
         if let owner {
-            _ = store.addAttachment(tripId: tripId, owner: owner, kind: data.kind,
-                                    displayName: data.displayName, fileName: data.fileName,
-                                    utiOrExt: data.utiOrExt, urlString: data.urlString, thumbnailData: data.thumbnailData)
-        } else {
-            pending.append(PendingAttachment(data: data))
+            return store.addAttachment(tripId: tripId, owner: owner, kind: data.kind,
+                displayName: data.displayName, fileName: data.fileName,
+                utiOrExt: data.utiOrExt, urlString: data.urlString, thumbnailData: data.thumbnailData) != nil
         }
+        pending.append(PendingAttachment(data: data))
+        return true
     }
 
-    private func addPhotoItem(_ item: PhotosPickerItem) async {
-        guard let data = try? await item.loadTransferable(type: Data.self) else { return }
-        await MainActor.run { addImageData(data, ext: "jpg") }
+    private func beginImport() -> UUID {
+        importTask?.cancel()
+        let id = UUID()
+        importID = id
+        return id
     }
 
-    /// 拍照 / 选照片共用：校验大小 → 存沙盒 + 缩略图 → 提交。
-    private func addImageData(_ data: Data, ext: String) {
-        guard data.count <= AttachmentStore.maxBytes else { showTooLarge = true; return }
-        let thumb = AttachmentThumbnail.make(from: data) ?? Data()
-        guard let fileName = AttachmentStore.save(data, ext: ext) else { return }
-        commit(NewAttachmentData(kind: .photo, fileName: fileName, utiOrExt: ext, thumbnailData: thumb))
+    private func completeImport(id: UUID, operation: () async throws -> PreparedAttachmentImport) async {
+        do {
+            let prepared = try await operation()
+            guard !Task.isCancelled, importID == id else {
+                try await prepared.discard()
+                return
+            }
+            let data = NewAttachmentData(kind: prepared.isPhoto ? .photo : .file,
+                displayName: prepared.displayName, fileName: prepared.fileURL.lastPathComponent,
+                utiOrExt: prepared.ext, thumbnailData: prepared.thumbnailData)
+            if commit(data) { prepared.adopt() }
+            else { try await prepared.discard() }
+        } catch is CancellationError {
+            // An interrupted import never commits metadata or displays an error.
+        } catch AttachmentImportFailure.tooLarge {
+            if !Task.isCancelled, importID == id { showTooLarge = true }
+        } catch {
+            CarryLogger.shared.log(.attachmentSaveFailed, context: "import")
+        }
     }
 
     private func handleFileImport(_ result: Result<[URL], Error>) {
         guard case .success(let urls) = result, let url = urls.first else { return }
-        let scoped = url.startAccessingSecurityScopedResource()
-        defer { if scoped { url.stopAccessingSecurityScopedResource() } }
-        guard let data = try? Data(contentsOf: url) else { return }
-        guard data.count <= AttachmentStore.maxBytes else { showTooLarge = true; return }
-        let ext = url.pathExtension.isEmpty ? "dat" : url.pathExtension
-        guard let fileName = AttachmentStore.save(data, ext: ext) else { return }
-        let thumb = AttachmentThumbnail.make(from: data) ?? Data()
-        commit(NewAttachmentData(kind: .file, displayName: url.lastPathComponent, fileName: fileName, utiOrExt: ext, thumbnailData: thumb))
+        let id = beginImport()
+        importTask = Task {
+            await completeImport(id: id) { try await AttachmentImportWorker.prepare(fileURL: url) }
+        }
     }
 
     private func addLink() {

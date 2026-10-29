@@ -1363,8 +1363,9 @@ final class TripStore: ObservableObject {
             CarryLogger.shared.log(.sortIndexOutOfBounds,
                                    context: "index=\(newOrder.count) count=\(items.count)")
         }
+        let itemsByID = Dictionary(items.map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
         for (index, id) in newOrder.enumerated() {
-            if let item = items.first(where: { $0.id == id }) {
+            if let item = itemsByID[id], item.sortOrder != index {
                 item.sortOrder = index
             }
         }
@@ -1378,13 +1379,15 @@ final class TripStore: ObservableObject {
 
     func reorderSections(tripId: UUID, newOrder: [UUID]) {
         guard let trip = trips.first(where: { $0.id == tripId }) else { return }
-        let sectionCount = trip.safeSections.count
+        let sections = trip.safeSections
+        let sectionCount = sections.count
         if newOrder.count > sectionCount {
             CarryLogger.shared.log(.sortIndexOutOfBounds,
                                    context: "index=\(newOrder.count) count=\(sectionCount)")
         }
+        let sectionsByID = Dictionary(sections.map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
         for (index, id) in newOrder.enumerated() {
-            if let section = trip.safeSections.first(where: { $0.id == id }) {
+            if let section = sectionsByID[id], section.sortOrder != index {
                 section.sortOrder = index
             }
         }
@@ -1696,8 +1699,9 @@ final class TripStore: ObservableObject {
             CarryLogger.shared.log(.sortIndexOutOfBounds,
                                    context: "index=\(newOrder.count) count=\(stops.count)")
         }
+        let stopsByID = Dictionary(stops.map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
         for (index, id) in newOrder.enumerated() {
-            if let stop = stops.first(where: { $0.id == id }) {
+            if let stop = stopsByID[id], stop.sortOrder != index {
                 stop.sortOrder = index
             }
         }
@@ -3757,17 +3761,31 @@ extension TripStore {
             let ids = try fields.uuids("ids")
             if operation.name == "reorder_stops" {
                 try fields.validate(allowed: ["ids", "dayOrder"])
-                guard let order = try fields.integer("dayOrder", range: 0...3660), let day = trip.safeItineraryDays.first(where: { $0.sortOrder == order }), Set(ids) == Set(day.sortedStops.map(\.id)) else { throw AutomationError.invalidInput }
-                for (index, id) in ids.enumerated() { day.sortedStops.first { $0.id == id }?.sortOrder = index }
+                guard let order = try fields.integer("dayOrder", range: 0...3660), let day = trip.safeItineraryDays.first(where: { $0.sortOrder == order }) else { throw AutomationError.invalidInput }
+                let stops = day.sortedStops
+                guard Set(ids) == Set(stops.map(\.id)) else { throw AutomationError.invalidInput }
+                let stopsByID = Dictionary(stops.map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
+                for (index, id) in ids.enumerated() {
+                    if let stop = stopsByID[id], stop.sortOrder != index { stop.sortOrder = index }
+                }
             } else if operation.name == "reorder_packing_sections" {
                 try fields.validate(allowed: ["ids"])
-                guard Set(ids) == Set(trip.safeSections.map(\.id)) else { throw AutomationError.invalidInput }
-                for (index, id) in ids.enumerated() { trip.safeSections.first { $0.id == id }?.sortOrder = index }
+                let sections = trip.safeSections
+                guard Set(ids) == Set(sections.map(\.id)) else { throw AutomationError.invalidInput }
+                let sectionsByID = Dictionary(sections.map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
+                for (index, id) in ids.enumerated() {
+                    if let section = sectionsByID[id], section.sortOrder != index { section.sortOrder = index }
+                }
             } else {
                 try fields.validate(allowed: ["ids", "sectionId"])
                 let sectionId = try fields.uuid("sectionId")
-                guard let section = trip.safeSections.first(where: { $0.id == sectionId }), Set(ids) == Set(section.sortedItems.map(\.id)) else { throw AutomationError.invalidInput }
-                for (index, id) in ids.enumerated() { section.sortedItems.first { $0.id == id }?.sortOrder = index }
+                guard let section = trip.safeSections.first(where: { $0.id == sectionId }) else { throw AutomationError.invalidInput }
+                let items = section.sortedItems
+                guard Set(ids) == Set(items.map(\.id)) else { throw AutomationError.invalidInput }
+                let itemsByID = Dictionary(items.map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
+                for (index, id) in ids.enumerated() {
+                    if let item = itemsByID[id], item.sortOrder != index { item.sortOrder = index }
+                }
             }
             return trip.id
         case "add_transport", "update_transport":

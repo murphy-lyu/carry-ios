@@ -1454,3 +1454,7 @@ if departIsToday, seg.departLocalMinutes >= 0, seg.departLocalMinutes < sinceMin
 ## 2026-10-29：原生保存失败的 Context 隔离与文件提交边界
 
 原生业务统一显式 writer，autosave 关闭；业务状态和后续账户日志必须同一次 save。失败时先物化级联删除对象再 rollback，随后隔离该 Context，由 TripStore 以同容器新 Context 重载；仅关闭 autosave 无法清除 SwiftData 待处理的失效对象，不能单独作为修复。草稿使用保存前的独立对象图恢复，保留身份与文件名。外部备份只写新分配的文件名，不在数据库提交前覆盖/删除原文件；外部备份不能解析收件设备私有文件引用。依据两次模拟器崩溃堆栈与拒绝/重试回归，见 `carry-native-persistence-qa.md`。
+
+## 2026-10-30：原生编辑保留显示版本与持久日志
+
+业务保存按变化实体写 NativeChangeJournal，与业务同次提交；网络合并前先排空日志。字段冲突基线取用户实际显示版本，仅本机已接受值可以推进相应已知版本，后台尚未显示的外部更新不能推进编辑基线。副本准备资产绑定、写入意图和消费日志同次提交。完整投影与产品路由仍待接通，不能以组件测试代替整体交付。附件使用后台有界导入和新文件 lease，持久化/表单接收成功才转交文件所有权。验证与边界见 `carry-native-journal-parallel-qa.md`。

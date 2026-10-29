@@ -21,7 +21,7 @@ function setup({ enrolled = true, previous = null, signInError = null, upstreamF
       getUser: async () => {
         if (refresh) persist('refreshed-previous-session');
         const callback = values.cookies.getAll().some(value => value.name === '__Host-carry-apple-flow');
-        return { data: { user: noLaxOnCallback && callback ? null : previous }, error: getUserError };
+        return { data: { user: noLaxOnCallback && callback ? null : previous }, error: typeof getUserError === 'function' ? getUserError(callback) : getUserError };
       },
       getSession: async () => ({ data: { session: previous ? { ...session, user: previous } : null }, error: null }),
       signInWithIdToken: async value => {
@@ -295,4 +295,51 @@ test('a transient identity lookup failure is never treated as a signed-out brows
   assert.equal(response.status, 503);
   assert.equal(f.calls.length, 0);
   assert.ok(!response.headers.get('Set-Cookie')?.includes('__Host-carry-apple-flow'));
+});
+
+test('rate limits and request timeouts cannot drop an existing identity binding at login or flow start', async () => {
+  for (const status of [400, 404, 408, 422, 425, 429, 500, 503]) {
+    const f = setup({ previous: user, getUserError: { status, message: 'private-temporary-failure' } });
+    const home = await f.handler(request('/login'), env);
+    assert.equal(home.status, 503);
+    assert.ok(!home.headers.get('Set-Cookie')?.includes('__Host-carry-apple-flow'));
+    const codec = await flowCodec(env.WEB_FLOW_ENCRYPTION_KEY, origin);
+    const csrf = 'synthetic-form-token';
+    const cookie = '__Host-carry-form=' + await codec.seal('form', { value: csrf, expires: Date.now() + 60000 });
+    const started = await f.handler(request('/auth/apple/start', { cookie, body: { csrf } }), env);
+    assert.equal(started.status, 503);
+    assert.equal(started.headers.get('Location'), null);
+    assert.ok(!started.headers.get('Set-Cookie')?.includes('__Host-carry-apple-flow'));
+    assert.deepEqual(f.calls, []);
+  }
+});
+
+test('a temporary callback identity lookup failure cannot replace a session established in another tab', async () => {
+  for (const status of [400, 404, 408, 422, 425, 429, 503]) {
+    const f = setup({ getUserError: callback => callback ? { status, message: 'private-callback-failure' } : null });
+    const flow = await start(f);
+    const result = await f.handler(callback(flow), env);
+    assert.equal(result.status, 503);
+    assert.deepEqual(f.calls, []);
+    assert.ok(!result.headers.get('Set-Cookie')?.includes('__Host-carry-session='));
+    assert.doesNotMatch(await result.text(), /private-callback-failure/);
+  }
+});
+
+
+test('explicit invalid or missing sessions still permit a new sign-in flow', async () => {
+  for (const error of [
+    { status: 400, name: 'AuthSessionMissingError' },
+    { status: 400, code: 'refresh_token_not_found' },
+    { status: 400, code: 'refresh_token_already_used' },
+    { status: 400, code: 'bad_jwt' },
+    { status: 404, code: 'session_not_found' },
+    { status: 401 }, { status: 403 },
+  ]) {
+    const f = setup({ getUserError: error });
+    const flow = await start(f);
+    assert.equal(flow.result.status, 303);
+    assert.equal(flow.authorize.origin, 'https://appleid.apple.com');
+    assert.deepEqual(f.calls, []);
+  }
 });
