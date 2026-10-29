@@ -12,6 +12,7 @@
 | `flight.nevestudio.app` | 航班号查询代理 | Worker `carry-flight` |
 | `config.nevestudio.app` | App 远程配置（roadmap.json 代发） | Worker `carry-config` |
 | `places.nevestudio.app` | 海外地点检索代理 | Worker `carry-places` |
+| `connect.nevestudio.app` | 可选 Codex/MCP 配对、请求及快照 | Worker `carry-mcp` + SQLite Durable Object；2026-10-25 生产合成链路两轮通过，真机与 CloudKit 门禁另验 |
 | `legal.nevestudio.app` | 法务站（每 app 一文件夹，URL `/<app>/<doc>/[zh]`） | Cloudflare Pages 项目（接 `neve-web` 仓库、**Root directory = `legal/`**；原 `carry-legal`） |
 | `nevestudio.app`（规划中） | 工作室官网/落地页 | 同 `neve-web` 仓库另开 Pages 项目、Root directory = `site/` |
 
@@ -24,6 +25,11 @@
 | `carry-flight` | `scripts/flight-proxy/worker.js` | 后台粘贴 | AeroDataBox（经 RapidAPI） | `MARKET_KEY`、`APP_TOKEN` | `KEY_HEADER`/`UPSTREAM_BASE`/`UPSTREAM_HOST`/`CACHE_TTL_SECONDS` |
 | `carry-config` | `scripts/config-proxy/worker.js` | 后台粘贴 | GitHub raw（carry-ios/roadmap.json） | 无 | 无 |
 | `carry-places` | `scripts/places-proxy/`（wrangler 工程） | **wrangler**（打包 tz-lookup） | Mapbox Search Box（主）+ Geoapify（备）+ Azure Translator | `MAPBOX_TOKEN`、`GEOAPIFY_KEY`、`APP_TOKEN`、`AZURE_TRANSLATOR_KEY` | `OVERSEAS_POLICY`、`SEARCH_PROVIDER`、`AZURE_TRANSLATOR_REGION` |
+| `carry-mcp` | `scripts/carry-mcp/` | `npx wrangler deploy --env ''`，Node 22+ | 配对设备的前台命令执行器，无模型上游 | 无静态 App/API key；运行时配对凭据哈希 | `local` 环境仅测试时使用 `LOCAL_TEST=true` |
+
+`carry-mcp` 的配对、授权、保留期限、容量限制与测试方式见其 README。默认关闭，只有用户在 App 明确选择行程并批准后上传。不得把部署成功当作域名可用或 CloudKit Production 已验收。
+
+2026-10-22 核验：`neve-web` Pages 未因本次 Git 推送自动构建；已用 Wrangler 手动发布 `legal/` 到原项目（部署 `4d2e404a`，来源 `7f0aaa2`）。以后更新隐私政策须核对实际部署列表和线上内容，不只检查 Git main。Git 自动触发未生效的配置原因尚未核实，不擅自更改整个站点的 Git 集成。
 
 - `carry-places` 改完重部署：`cd scripts/places-proxy && npx wrangler deploy`（先 `npm install` + `npx wrangler login`）。
 - 设/换 secret：`npx wrangler secret put <NAME>`（值等提示符出现再粘）。
@@ -42,6 +48,12 @@
 | **Azure AI Translator**（F0） | 海外检索的**中文→英文**翻译 | Azure（F0 永久免费 200 万字/月） | region `eastasia`；海外 POI 无中文别名，故中文 query 先翻英文（两源共用） |
 
 > 不用 Google/DeepL/中国源的原因：DeepL 绑卡受限、Google 在华敏感、用户倾向非中国源。provider 都藏在 Worker 后，**换它只改 Worker、App 不动**。
+
+### Carry 账户开发环境（2026-10-27）
+
+Supabase `carry-dev` / `lbxsvguuoqqpctkinpwy`，Neve Studio Free 组织、新加坡，仅开发。六份迁移和 `carry-data` v1 已部署，`carry-account` 未部署；完整状态见 `carry-account-graph-qa.md`，不能据此开启生产账户入口。
+
+Apple 登录发行团队为 Bing Xue / `25RAM7275Z`，原生 Bundle ID `app.nevestudio.carry`。专用 Key `Carry Account Sign In` / `8LRP72FMZY` 只启用 Sign in with Apple 并关联 Carry 主 App。P8 与本地服务端配置位于 `~/Library/Application Support/Carry Development Secrets/`，目录 0700、文件 0600；2026-10-28 经用户逐项确认安装到 carry-dev 服务端 Secrets，五项摘要逐项匹配本机原件；不得进 App/Git/日志或覆盖已存在的 AES 配置。网页 Services ID `app.nevestudio.carry.web` 已保存并关联原生 Carry；仅登记 `account.nevestudio.app` 与 `https://account.nevestudio.app/auth/apple/callback`。网站/回调部署、原生网页同账户和真实身份联调仍未完成，服务端 Client IDs 暂仅含原生 ID。
 
 ## 4. App 内密钥（`Carry/Resources/Secrets.plist`，**gitignored**）
 

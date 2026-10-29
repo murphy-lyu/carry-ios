@@ -1,0 +1,24 @@
+name = "carry-mcp"
+main = "worker.js"
+compatibility_date = "2026-10-01"
+workers_dev = false
+
+routes = [{ pattern = "connect.nevestudio.app", custom_domain = true }]
+
+[durable_objects]
+bindings = [{ name = "RELAY", class_name = "CarryRelay" }]
+
+[[migrations]]
+tag = "v1"
+new_sqlite_classes = ["CarryRelay"]
+
+# Local tests must not inherit the production custom domain as their HTTP Host.
+[env.local]
+routes = []
+workers_dev = false
+
+[env.local.vars]
+LOCAL_TEST = true
+
+[env.local.durable_objects]
+bindings = [{ name = "RELAY", class_name = "CarryRelay" }]

@@ -20,8 +20,37 @@ import SafariServices
 // MARK: - 缩略图
 
 enum AttachmentThumbnail {
+    /// Prepare bounded display pixels off the UI actor, rather than handing a
+    /// lazily compressed UIImage to the first visible draw.
+    nonisolated static func displayImage(from imageData: Data, maxPixel: Int, fillingSquare: Bool = false) -> UIImage? {
+        guard (1...4096).contains(maxPixel),
+              let source = CGImageSourceCreateWithData(imageData as CFData,
+                  [kCGImageSourceShouldCache: false] as CFDictionary) else { return nil }
+        var longestEdge = maxPixel
+        if fillingSquare {
+            guard let properties = CGImageSourceCopyPropertiesAtIndex(source, 0, nil) as? [CFString: Any],
+                  let width = (properties[kCGImagePropertyPixelWidth] as? NSNumber)?.doubleValue,
+                  let height = (properties[kCGImagePropertyPixelHeight] as? NSNumber)?.doubleValue,
+                  width.isFinite, height.isFinite, width > 0, height > 0 else { return nil }
+            let longest = max(width, height), aspect = longest / min(width, height)
+            // A square fill needs enough pixels on the SHORT edge; using only
+            // the box's width as longest edge blurs landscape/portrait crops.
+            // Cap pathological aspect ratios to a 1-Mpixel display allocation.
+            longestEdge = Int(ceil(min(longest, Double(maxPixel) * aspect,
+                                       sqrt(1_048_576 * aspect), 8192)))
+        }
+        let options: [CFString: Any] = [
+            kCGImageSourceCreateThumbnailFromImageAlways: true,
+            kCGImageSourceCreateThumbnailWithTransform: true,
+            kCGImageSourceShouldCacheImmediately: true,
+            kCGImageSourceThumbnailMaxPixelSize: longestEdge
+        ]
+        guard let image = CGImageSourceCreateThumbnailAtIndex(source, 0, options as CFDictionary) else { return nil }
+        return UIImage(cgImage: image)
+    }
+
     /// 由图片字节生成约 640px JPEG 缩略图（列表/详情快渲；原图存沙盒）。
-    static func make(from imageData: Data, maxPixel: CGFloat = 640) -> Data? {
+    nonisolated static func make(from imageData: Data, maxPixel: CGFloat = 640) -> Data? {
         guard let src = CGImageSourceCreateWithData(imageData as CFData, nil) else { return nil }
         let opts: [CFString: Any] = [
             kCGImageSourceCreateThumbnailFromImageAlways: true,
@@ -30,6 +59,57 @@ enum AttachmentThumbnail {
         ]
         guard let cg = CGImageSourceCreateThumbnailAtIndex(src, 0, opts as CFDictionary) else { return nil }
         return UIImage(cgImage: cg).jpegData(compressionQuality: 0.8)
+    }
+}
+
+/// Visible square thumbnails share bounded, cancellable background decoding.
+/// Keep placeholder styling with the caller so attachment glyphs and photo cards
+/// retain their existing visual roles.
+struct PreparedThumbnail<Placeholder: View>: View {
+    private nonisolated struct Request: Equatable {
+        let data: Data
+        let pixels: Int
+    }
+    let data: Data?
+    let size: CGFloat
+    @ViewBuilder var placeholder: () -> Placeholder
+    @Environment(\.displayScale) private var displayScale
+    @State private var image: UIImage?
+    @State private var decodedRequest: Request?
+
+    private var request: Request {
+        Request(data: data ?? Data(), pixels: Int(ceil(size * displayScale)))
+    }
+
+    var body: some View {
+        Group {
+            if let image {
+                Image(uiImage: image).resizable().scaledToFill()
+            } else {
+                placeholder()
+            }
+        }
+        .frame(width: size, height: size)
+        .clipped()
+        .task(id: request) {
+            let current = request
+            guard decodedRequest != current else { return }
+            image = nil
+            guard !current.data.isEmpty else {
+                decodedRequest = current
+                return
+            }
+            let decoding = Task.detached(priority: .utility) {
+                guard !Task.isCancelled else { return nil as UIImage? }
+                return AttachmentThumbnail.displayImage(from: current.data,
+                    maxPixel: current.pixels, fillingSquare: true)
+            }
+            let decoded = await withTaskCancellationHandler(operation: { await decoding.value },
+                                                           onCancel: { decoding.cancel() })
+            guard !Task.isCancelled else { return }
+            image = decoded
+            decodedRequest = current
+        }
     }
 }
 
@@ -184,6 +264,8 @@ private struct AttachmentAddFlow: ViewModifier {
     @State private var linkURL = ""
     @State private var linkName = ""
     @State private var showTooLarge = false
+    @State private var importTask: Task<Void, Never>?
+    @State private var importID: UUID?
 
     private func bind(_ r: AttachmentAddRequest) -> Binding<Bool> {
         Binding(get: { request == r }, set: { if !$0, request == r { request = nil } })
@@ -194,13 +276,28 @@ private struct AttachmentAddFlow: ViewModifier {
             .photosPicker(isPresented: bind(.photo), selection: $photoItem, matching: .images)
             .onChange(of: photoItem) { _, newItem in
                 guard let newItem else { return }
-                Task { await addPhotoItem(newItem); await MainActor.run { photoItem = nil } }
+                let id = beginImport()
+                importTask = Task {
+                    await completeImport(id: id) {
+                        guard let transfer = try await newItem.loadTransferable(type: AttachmentPhotoTransfer.self) else {
+                            throw CocoaError(.fileReadUnknown)
+                        }
+                        try Task.checkCancellation()
+                        return transfer.prepared
+                    }
+                    if importID == id { photoItem = nil }
+                }
             }
             .fileImporter(isPresented: bind(.file), allowedContentTypes: [.item], allowsMultipleSelection: false) { result in
                 handleFileImport(result)
             }
             .fullScreenCover(isPresented: bind(.camera)) {
-                CameraPicker { data in addImageData(data, ext: "jpg") }
+                CameraPicker { data in
+                    let id = beginImport()
+                    importTask = Task {
+                        await completeImport(id: id) { try await AttachmentImportWorker.prepare(data: data, ext: "jpg") }
+                    }
+                }
                     .ignoresSafeArea()
             }
             .onChange(of: request) { _, new in
@@ -212,42 +309,60 @@ private struct AttachmentAddFlow: ViewModifier {
             .alert("itinerary.attachment.too_large", isPresented: $showTooLarge) {
                 Button("common.ok", role: .cancel) {}
             }
+            .onDisappear {
+                importTask?.cancel()
+                importTask = nil
+                importID = nil
+            }
     }
 
-    /// owner 有 → 入库；无 → 缓冲。
-    private func commit(_ data: NewAttachmentData) {
+    /// owner 有 → 入库；无 → 缓冲。Only an accepted model/pending entry takes
+    /// ownership of a prepared file; rejected saves keep the cleanup lease.
+    @discardableResult
+    private func commit(_ data: NewAttachmentData) -> Bool {
         if let owner {
-            _ = store.addAttachment(tripId: tripId, owner: owner, kind: data.kind,
-                                    displayName: data.displayName, fileName: data.fileName,
-                                    utiOrExt: data.utiOrExt, urlString: data.urlString, thumbnailData: data.thumbnailData)
-        } else {
-            pending.append(PendingAttachment(data: data))
+            return store.addAttachment(tripId: tripId, owner: owner, kind: data.kind,
+                displayName: data.displayName, fileName: data.fileName,
+                utiOrExt: data.utiOrExt, urlString: data.urlString, thumbnailData: data.thumbnailData) != nil
         }
+        pending.append(PendingAttachment(data: data))
+        return true
     }
 
-    private func addPhotoItem(_ item: PhotosPickerItem) async {
-        guard let data = try? await item.loadTransferable(type: Data.self) else { return }
-        await MainActor.run { addImageData(data, ext: "jpg") }
+    private func beginImport() -> UUID {
+        importTask?.cancel()
+        let id = UUID()
+        importID = id
+        return id
     }
 
-    /// 拍照 / 选照片共用：校验大小 → 存沙盒 + 缩略图 → 提交。
-    private func addImageData(_ data: Data, ext: String) {
-        guard data.count <= AttachmentStore.maxBytes else { showTooLarge = true; return }
-        let thumb = AttachmentThumbnail.make(from: data) ?? Data()
-        guard let fileName = AttachmentStore.save(data, ext: ext) else { return }
-        commit(NewAttachmentData(kind: .photo, fileName: fileName, utiOrExt: ext, thumbnailData: thumb))
+    private func completeImport(id: UUID, operation: () async throws -> PreparedAttachmentImport) async {
+        do {
+            let prepared = try await operation()
+            guard !Task.isCancelled, importID == id else {
+                try await prepared.discard()
+                return
+            }
+            let data = NewAttachmentData(kind: prepared.isPhoto ? .photo : .file,
+                displayName: prepared.displayName, fileName: prepared.fileURL.lastPathComponent,
+                utiOrExt: prepared.ext, thumbnailData: prepared.thumbnailData)
+            if commit(data) { prepared.adopt() }
+            else { try await prepared.discard() }
+        } catch is CancellationError {
+            // An interrupted import never commits metadata or displays an error.
+        } catch AttachmentImportFailure.tooLarge {
+            if !Task.isCancelled, importID == id { showTooLarge = true }
+        } catch {
+            CarryLogger.shared.log(.attachmentSaveFailed, context: "import")
+        }
     }
 
     private func handleFileImport(_ result: Result<[URL], Error>) {
         guard case .success(let urls) = result, let url = urls.first else { return }
-        let scoped = url.startAccessingSecurityScopedResource()
-        defer { if scoped { url.stopAccessingSecurityScopedResource() } }
-        guard let data = try? Data(contentsOf: url) else { return }
-        guard data.count <= AttachmentStore.maxBytes else { showTooLarge = true; return }
-        let ext = url.pathExtension.isEmpty ? "dat" : url.pathExtension
-        guard let fileName = AttachmentStore.save(data, ext: ext) else { return }
-        let thumb = AttachmentThumbnail.make(from: data) ?? Data()
-        commit(NewAttachmentData(kind: .file, displayName: url.lastPathComponent, fileName: fileName, utiOrExt: ext, thumbnailData: thumb))
+        let id = beginImport()
+        importTask = Task {
+            await completeImport(id: id) { try await AttachmentImportWorker.prepare(fileURL: url) }
+        }
     }
 
     private func addLink() {
@@ -399,16 +514,12 @@ struct SafariView: UIViewControllerRepresentable {
 
 // MARK: - 共用：缩略图或图标
 
-@ViewBuilder
 private func attachmentGlyph(symbol: String, thumbnailData: Data, size: CGFloat) -> some View {
-    if !thumbnailData.isEmpty, let img = UIImage(data: thumbnailData) {
-        Image(uiImage: img).resizable().scaledToFill()
-            .frame(width: size, height: size)
-            .clipShape(RoundedRectangle(cornerRadius: 5, style: .continuous))
-    } else {
+    PreparedThumbnail(data: thumbnailData, size: size) {
         Image(systemName: symbol)
             .font(.system(size: size * 0.62))
             .foregroundStyle(.secondary)
             .frame(width: size, height: size)
     }
+    .clipShape(RoundedRectangle(cornerRadius: 5, style: .continuous))
 }

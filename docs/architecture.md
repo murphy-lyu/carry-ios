@@ -1,5 +1,37 @@
 # Carry 架构说明
 
+## 账户数据与独立副本（开发中 · 2026-10-27）
+
+2026-10-28 文件链路补充：`CarryAssetUploader` 为独立 actor，TUS 分块、保护缓存、账户固定及令牌逐请求刷新；`CarryAccountService.assetUploader` 指向尚未部署的 Carry 文件代理。`asset-storage.mjs` 流式读取实际对象并核对 SHA256/尺寸，私有文件迁移尚未部署。对象预留不能覆盖重复/未知的 TUS 会话，必须接完上传尝试持久额度、并发租约及物理清理后再开放 Storage；详情见 `carry-account-assets-qa.md`。没有给客户端直接写文件的权限，不能把合成传输测试当成真实资产迁移。
+
+`CarryAccountService` 为数据传输创建绑定账户 ID 的令牌提供器，刷新后再次核对缓存所属身份。`CarryGraphTransport` 调用开发库的 `carry-data`；`CarryAccountSyncEngine` 串行执行有界发送/拉取，不把 ACK 当作已经接收全部远端变化。
+
+`CarryAccountReplica` 使用独立 `.none` ModelContainer：原有业务模型加 `CarryReplicaRecord/Checkpoint`，**不修改原 iCloud SchemaV1**。投影回调、逐字段意图、冻结请求、冲突与拉取游标共用本地 save/rollback。账户身份固定写在 checkpoint；缓存不得跨账户复用。当前尚未路由原 TripStore 的全部真实写入口，不能用这些组件替代完整原生接入验收。
+
+副本热路径按对象 UUID 查找，持久 pending 标志筛选待同步记录；旧缓存默认 true 并在队列读取时归一。`accept/receive/resolveFields` 的投影参数是改变后的本地快照增量，包含墓碑，消费者必须在同一 context 原子应用；不得当作完整图替换。空页不重新投影全部业务对象。
+
+服务端是 `carry_private` 中的父子数据图、账户提交序号、变更日志及请求回执；同一账户写入取得事务锁，业务、日志与回执原子提交。独立字段可以合并，同字段冲突保留当前值/提议值。祖先子树版本也作为变更事件同步，用于检测删除预览之后的子项编辑；移动同时更新两条祖先路径。账户管理和数据入口均核对当前数据库中的有效原生会话；登记新账户不预先要求已登记身份，数据写入再核对登记/删除状态。只有读取 Auth 会话的私有谓词使用 definer，其余 public RPC 和图状态检查为 invoker。账户数据入口只接受有效原生用户会话，OAuth 客户端必须另经尚待实现的 AI 权限层。
+
+`CarryGraphMigrationCodec` 在后台以完整 Backup DTO 编解码选中范围，核对文件内容与引用；Photos 资料库原图明确列为待源设备采集。纯值 DTO 显式 nonisolated/Sendable，数据库和 UI 仍按原有 actor 隔离。实际 Storage 上传、源图归属切换、旧设备分叉、完整删除及新 MCP 链路仍在开发中。部署、组件测试与待完成门禁见 `docs/carry-account-graph-qa.md`。
+
+## Codex 受限自动化连接（2026-10-25）
+
+**方向变更**：以下描述分支中的既有实现。用户已确认手机关闭时也应可完成 AI 操作，并同意适合时使用 Apple 登录。新方案为 `specs/carry-cloud-and-ai.md` 的可选账户、首选 Apple 身份、独立数据服务与离线同步；工程选型与风险验证见 `docs/adr-carry-account-and-sync.md`。尚未实现完整账户/同步，不能把下文前台执行当作最终产品约束。
+
+`scripts/carry-mcp/worker.js` 提供 Streamable HTTP MCP、OAuth/PKCE、授权快照与请求队列。`CarryAutomationConnection` 管理 ThisDeviceOnly Keychain 凭据、前台轮询和撤销；`CarryAutomationProtocol`/`CarryAutomationQueries` 校验并调用现有 SwiftData 业务操作。业务数据和 `AutomationExecutionRecord` 在隔离事务中一起保存，成功后发布新的观察图；服务端不直接修改 CloudKit 私人记录。
+
+配对先在 Keychain 保存随机连接 UUID、设备凭据和 `AutomationPendingPair`，再请求批准。服务端只保存凭据及原始授权输入的摘要，精确重复请求返回同一连接；待完成状态不传快照、不执行操作。取消和批准使用同一服务端串行入口，取消未使用的配对码或撤销已创建连接，防止迟到批准重新启用权限。OAuth `/revoke` 与设备撤销共用清理逻辑，删除快照、队列及令牌映射。恢复配对不延长 OAuth 授权码有效期。
+
+Debug/Release 的 `CARRY_CLOUDKIT_ENVIRONMENT` 分别为 Development/Production，实际签名 entitlement 单独核对。完整模型由原生 API 导出并初始化，不能手工猜字段；开发与生产结构快照保存在 `scripts/cloudkit-schema-bootstrap/schema/`。真实跨设备同步、原生线上链路与本地测试分别验收。
+
+## 原生保存边界（2026-10-29）
+
+`CarryPersistence` 为 TripStore 和 DataBackupManager 的显式保存入口；关闭业务 Context 的 autosave，writer 可在同一次 save 捕获账户日志。失败时物化待删除的级联对象后回滚、隔离旧 Context，TripStore 重新加载持久图；普通编辑、草稿与还原均可重试。文件删除等副作用仅在保存成功后执行。
+
+`CarryBackupFileStage` 将外部备份的引用映射到新文件名；提交成功发布引用，失败只清本次文件。外部输入不能借用本机私有文件或导入分享外的附件。自动本地备份才可复用仍存在的本地文件。详见 `carry-native-persistence-qa.md`。
+
+`CarryNativeSourceCodec` 只快照实际变更的十种业务对象；缩略图以独立二进制保存。`CarryNativeChangeJournal` 与业务状态同次提交，保留实际显示的基线和不可变事务；同 UUID 的还原替换按存活实例计算差异。`CarryAccountReplica.applyObserved` 仅合并变化字段，保留用户编辑时看到的版本及本机已接受值的版本；准备资产绑定与消费日志可置于同一副本事务。同步器在冻结请求、ACK、pull 和补基线合并前可先有界消费日志，未消费完返回待续，不丢请求身份或回执进度。日志桥接、完整投影、删除恢复、资产队列和账户子库产品路由仍未接通，不能把这些组件当作已完成同步。
+
 ## 整体结构
 
 ### iOS（2026-06-12 起：根级不再是 TabView，见 `specs/app-navigation-framework.md`，feature 分支未合并）
@@ -76,7 +108,7 @@ ZStack（全窗口）
 - NotificationManager：本地通知（行程提醒）；`tripId(fromIdentifier:)` 从通知 ID 解析行程 UUID
 - CalendarManager（`Managers/CalendarManager.swift`，`@MainActor` 单例）：EventKit 集成。① **写**：把行程写入专属「Carry」日历（事件带 `carry://trip/{uuid}` URL）；② **读（日历叠加层，spec: `itinerary-calendar-overlay.md`）**：`overlayEvents(start:end:calendarIDs:)` 读用户勾选日历在行程区间内的只读事件（排除 `carry://` 自写防回环）、`availableCalendars`/`selectedOrDefaultOverlayIDs`（首次默认勾节假日类只读公共日历）。**叠加事件只活在视图层临时态（`ItineraryView.overlayEventsByDay`），永不入 model/分享/导出/备份**（隐私红线，构造保证）。渲染：`ItineraryReorderCollection` 的 `.calendarEvent(id:day:)` 行 + 点击弹 `CalendarEventDetailView`（Carry 内浮层，不跳系统日历）
 - PackReminderNotificationDelegate：`UNUserNotificationCenterDelegate`，点击打包提醒后解析 tripId 写入 `NavigationRouter.pendingTripId`，实现自动跳转
-- DataBackupManager：数据备份（JSON 镜像 + 还原/合并）。**含非 SwiftData 关联文件**：背景图字节随备份带上（`CarryBackup.backgroundImages` 文件名→base64），还原时写回沙盒；裁剪元数据走 `BackupTrip.backgroundsData`
+- DataBackupManager：数据备份（JSON 镜像 + 还原/合并）。自动备份合并采样、Sendable 镜像 utility 串行编码/原子写入；generation 防抹除后在途写复活。设置/恢复页异步读取一次 metadata；模型读取仍在主 actor，SwiftData 保存不延迟。性能证据见 `performance-review-2026-10-28.md`。**含非 SwiftData 关联文件**：背景图字节随备份带上（`CarryBackup.backgroundImages` 文件名→base64），还原时写回沙盒；裁剪元数据走 `BackupTrip.backgroundsData`
 - 行程背景图（`feature/home-ui-redesign` 分支，Phase 1）：
   - `TripBackground.swift`：`TripBackgroundEntry`（条目，含归一化裁剪框 `BackgroundCrop`，存于 `TripBundle.backgroundsData`）+ `BackgroundImageStore`（沙盒 `Application Support/TripBackgrounds/`，压缩存图/取图/裁剪缓存；存图时烘焙方向+scale 1 以保裁剪坐标正确）
   - `BackgroundPicker.swift`：`PhotoPicker`（PHPicker 封装，`.compatible`，只转发 itemProvider/cancel，不自行 dismiss/加载）
@@ -122,3 +154,8 @@ ZStack（全窗口）
 - `SharedSources/PackingActivityAttributes.swift`：打包 LA 共享类型。`ActivityAttributes` 只含 `tripId`；`ContentState` = packedItems / totalItems / isCompleted / tripName / destinationCity / departureDate
 - `SharedSources/TransportActivityAttributes.swift`：交通 LA 共享类型（spec: widget-transit-live-activity.md）。`ActivityAttributes` = tripId + segmentId；`ContentState` = modeRaw / carrierAndNumber / from·to 码·名 / departureDate / arrivalDate（绝对时刻，App 按两端时区算）/ fromTerminal / seat + 预留 `liveStatus`/`gate`/`actualDepartureDate`（未来航班动态，填充即用、不改结构）
 - **桌面组件 snapshot 不走 SharedSources**：`WidgetTripSnapshot`（`TripStore.swift`）与 `WidgetTrip`（`CarryWidget.swift`）是**字段一致的双份镜像**、靠同一 JSON 通信（加字段两处同步改、Widget 侧可选）
+
+## 账户副本与网页登录时序补充（2026-10-28）
+- `CarryAccountReplica` 的结构移动保留独立原版本；`resolveParent` 按被拒请求/服务端版本/本地 parent 处理人工选择。pull 不暗中重新授权旧移动，过期冲突不能覆盖已经拉取的新状态。
+- 本地创建在 ACK 前收到的远端更新保存在 `unconfirmedRemote`；只有自己的创建 ACK 绑定 UUID 后再合并，不因推进 cursor 丢弃后续变化。多实体 edit 与 native projection 共用一次事务。
+- 网页 `scripts/carry-account-web` 由官方 SSR SDK 管 Cookie，会话与十分钟 Apple flow 分开；原生和网页共用生命周期服务，web code exchange 只接受服务端固定回调。范围授权与数据读写仍待实现；入口关闭，不能视为已接通 AI。

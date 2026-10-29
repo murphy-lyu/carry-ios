@@ -1709,46 +1709,24 @@ struct StopDetailView: View {
 
     private struct ZoomedPhoto: Identifiable { let id = UUID(); let data: Data }
 
-    /// 缩略图异步解码：在后台 `UIImage(data:)` 解出后再上屏，避免主线程同步解码——打开详情时一条图条
-    /// 多张缩略图同步解码会丢帧（缩略图虽 ≤640px 仍累加）。每实例 `.task` 解一次、存 @State，重渲不重复解。
-    private struct AsyncThumbnail: View {
-        let data: Data
-        var size: CGFloat = 76
-        var cornerRadius: CGFloat = 10
-        @State private var image: UIImage?
-
-        var body: some View {
-            Group {
-                if let image {
-                    Image(uiImage: image).resizable().scaledToFill()
-                } else {
-                    Image(systemName: "photo").foregroundStyle(.tertiary)
-                        .frame(maxWidth: .infinity, maxHeight: .infinity)
-                        .background(Color(.tertiarySystemFill))
-                }
-            }
-            .frame(width: size, height: size)
-            .clipShape(RoundedRectangle(cornerRadius: cornerRadius, style: .continuous))
-            .task {
-                guard image == nil else { return }
-                let bytes = data
-                image = await Task.detached(priority: .userInitiated) { UIImage(data: bytes) }.value
-            }
-        }
-    }
-
     /// 该停靠点导入的照片（横向缩略图条，点击放大）。照片回溯生成的地点才有。
     private var photoStrip: some View {
         ScrollView(.horizontal, showsIndicators: false) {
-            HStack(spacing: 8) {
+            LazyHStack(spacing: 8) {
                 ForEach(stop.sortedPhotos, id: \.id) { photo in
                     Button { zoomedPhoto = ZoomedPhoto(data: photo.thumbnailData) } label: {
-                        AsyncThumbnail(data: photo.thumbnailData, size: 76, cornerRadius: 10)
+                        PreparedThumbnail(data: photo.thumbnailData, size: 76) {
+                            Image(systemName: "photo").foregroundStyle(.tertiary)
+                                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                                .background(Color(.tertiarySystemFill))
+                        }
+                        .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
                     }
                     .buttonStyle(.plain)
                 }
             }
         }
+        .frame(height: 76)
     }
 
     // 底部动作（编辑 + 移除）已统一收到 `DetailActionFooter`（详见 ItineraryDetailRows）。

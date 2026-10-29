@@ -180,7 +180,10 @@ struct TripInfoView: View {
                     hideKeyboard()
                     // 新链路：填完行程信息直接建空行程并落到该行程（默认进「行程规划」面），
                     // 用户再按习惯做规划或加打包——不再强制走「添加物品」。物品/智能打包仍可在行程内添加。
-                    let newId = store.createTrip(from: info)
+                    guard let newId = store.createTrip(from: info) else {
+                        isCreating = false
+                        return
+                    }
                     router.finishCreation(landingTripId: newId)
                     Task { await NotificationManager.requestAuthorizationIfNeeded() }
                 }) {

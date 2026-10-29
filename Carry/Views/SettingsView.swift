@@ -12,6 +12,7 @@ import EventKit
 /// Settings 二级页路由。用 value-based 导航把 tab bar 显隐控制提到 ContentView
 /// 外层（settingsPath.isEmpty 驱动），与 Trips 链路同构，消除返回时 tab bar 延迟。
 enum SettingsRoute: Hashable {
+    case account
     case appIcon
     case currency
     case notifications
@@ -21,12 +22,14 @@ enum SettingsRoute: Hashable {
     case cycleReminder
     case dataManagement   // 二级「数据与备份」页（导出/导入/本地备份/抹除）
     case dataRecovery
+    case automation
     case about
     case roadmap
     case developer
 }
 
 struct SettingsView: View {
+    @EnvironmentObject private var account: CarryAccountStore
     @Binding var path: NavigationPath
     // 设置现以 sheet 呈现（根级去 TabView 后），根页需要关闭入口。
     @Environment(\.dismiss) private var dismiss
@@ -70,6 +73,8 @@ struct SettingsView: View {
     private let eraseUndoWindowAccessible: TimeInterval = 20
     // 备份信息缓存：onAppear 时读取一次，避免每次 body 求值触发磁盘 I/O
     @State private var cachedBackupDate: Date? = nil
+    @State private var backupCacheTask: Task<Void, Never>?
+    @State private var isReadingBackup = true
     // 当前 App Icon 显示名：onAppear / 前台激活时刷新（图标切换后同步）
     @State private var currentIconName: String = currentAppIconDisplayName()
     @Environment(\.scenePhase) private var scenePhase
@@ -162,11 +167,19 @@ struct SettingsView: View {
 
     /// 从磁盘刷新备份日期缓存（onAppear / 前台激活时调用一次）
     private func refreshBackupCache() {
-        cachedBackupDate = DataBackupManager.shared.latestBackupDate()
+        backupCacheTask?.cancel()
+        isReadingBackup = true
+        backupCacheTask = Task {
+            let info = await DataBackupManager.shared.latestBackupInfo()
+            guard !Task.isCancelled else { return }
+            cachedBackupDate = info?.date
+            isReadingBackup = false
+        }
     }
 
     /// Value text shown on the Auto-Save navigation row — uses cached date, no disk I/O.
     private var autoSaveValueText: String {
+        if isReadingBackup { return NSLocalizedString("settings.data.backup.checking", comment: "") }
         guard let date = cachedBackupDate else {
             return NSLocalizedString("settings.data.restore.no_backup", comment: "")
         }
@@ -201,9 +214,14 @@ struct SettingsView: View {
             try? await Task.sleep(for: .seconds(eraseWindowSeconds))
             guard !Task.isCancelled else { return }
             withAnimation(.easeInOut(duration: 0.2)) { eraseUndoVisible = false }
-            store.eraseAllData()
-            refreshBackupCache()   // 备份已清 → 同步刷新「上次备份」状态
-            UINotificationFeedbackGenerator().notificationOccurred(.success)
+            do {
+                try store.eraseAllData()
+                refreshBackupCache()   // 备份已清 → 同步刷新「上次备份」状态
+                UINotificationFeedbackGenerator().notificationOccurred(.success)
+            } catch {
+                restoreToastMessage = NSLocalizedString("automation.error.invalidate", comment: "")
+                UINotificationFeedbackGenerator().notificationOccurred(.error)
+            }
             pendingEraseTask = nil
             eraseStartDate = nil
         }
@@ -290,6 +308,16 @@ struct SettingsView: View {
         ZStack {
             ScrollView {
                 LazyVStack(alignment: .leading, spacing: 0) {
+                        if account.showsEntry {
+                            settingsCard {
+                                NavigationLink(value: SettingsRoute.account) {
+                                    CarryAccountEntry()
+                                }
+                                .buttonStyle(.plain)
+                            }
+                            .padding(.horizontal, 16)
+                            .padding(.top, 18)
+                        }
 
                         // 个性化：App 长什么样（外观 · 语言 · 应用图标）
                         Section {
@@ -343,6 +371,14 @@ struct SettingsView: View {
                             .padding(.bottom, 18)
                         } header: {
                             sectionHeader("settings.section.language_region")
+                        }
+
+                        Section {
+                            settingsCard {
+                                settingsNavigationRow(title: "automation.title", route: .automation)
+                            }
+                            .padding(.horizontal, 16)
+                            .padding(.bottom, 18)
                         }
 
                         // 提醒与显示：Carry 在哪儿提醒我 / 出现（通知 · 日历 · 灵动岛 · 小部件 · 经期）
@@ -505,6 +541,7 @@ struct SettingsView: View {
             refreshBackupCache()
             currentIconName = currentAppIconDisplayName()
         }
+        .onDisappear { backupCacheTask?.cancel() }
         .onChange(of: scenePhase) { _, phase in
             if phase == .active {
                 refreshBackupCache()
@@ -957,6 +994,8 @@ struct SettingsView: View {
     @ViewBuilder
     private func settingsDestination(_ route: SettingsRoute) -> some View {
         switch route {
+        case .account:
+            AccountView()
         case .appIcon:
             AppIconView()
         case .currency:
@@ -983,6 +1022,8 @@ struct SettingsView: View {
             dataManagementPage
         case .dataRecovery:
             DataRecoveryView()
+        case .automation:
+            AutomationConnectionView()
         case .about:
             AboutView()
         case .roadmap:
@@ -1010,6 +1051,8 @@ private struct DataRecoveryView: View {
     // 磁盘读取缓存：onAppear 时加载一次，避免每次 body 求值触发 I/O
     @State private var backupDate: Date? = nil
     @State private var backupTripCount: Int? = nil
+    @State private var backupInfoTask: Task<Void, Never>?
+    @State private var isReadingBackup = true
 
     // 静态缓存 DateFormatter，避免重复创建
     private static let recoveryDateFormatter: DateFormatter = {
@@ -1025,8 +1068,15 @@ private struct DataRecoveryView: View {
     }
 
     private func loadBackupInfo() {
-        backupDate = DataBackupManager.shared.latestBackupDate()
-        backupTripCount = DataBackupManager.shared.latestBackupTripCount()
+        backupInfoTask?.cancel()
+        isReadingBackup = true
+        backupInfoTask = Task {
+            let info = await DataBackupManager.shared.latestBackupInfo()
+            guard !Task.isCancelled else { return }
+            backupDate = info?.date
+            backupTripCount = info?.tripCount
+            isReadingBackup = false
+        }
     }
 
     var body: some View {
@@ -1041,7 +1091,14 @@ private struct DataRecoveryView: View {
                         .fixedSize(horizontal: false, vertical: true)
                         .padding(.horizontal, 4)
 
-                    if backupDate != nil {
+                    if isReadingBackup {
+                        ProgressView("settings.data.backup.checking")
+                            .font(.subheadline)
+                            .foregroundStyle(.secondary)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .padding(18)
+                            .background(cardBackground)
+                    } else if backupDate != nil {
                         // Backup snapshot info
                         VStack(spacing: 0) {
                             infoRow(
@@ -1125,6 +1182,7 @@ private struct DataRecoveryView: View {
         }
         .animation(.easeInOut(duration: 0.2), value: toastMessage != nil)
         .onAppear { loadBackupInfo() }
+        .onDisappear { backupInfoTask?.cancel() }
     }
 
     private func infoRow(label: Text, value: String) -> some View {
@@ -1455,6 +1513,7 @@ private struct CalendarSettingsView: View {
 #Preview {
     SettingsView(path: .constant(NavigationPath()))
         .environmentObject(TripStore())
+        .environmentObject(CarryAccountStore(service: CarryAccountService()))
 }
 
 #if DEBUG
@@ -1689,11 +1748,11 @@ private struct DeveloperModeView: View {
             isPresented: $showResetAllConfirm
         ) {
             Button("settings.developer.reset_all_data.confirm.action", role: .destructive) {
-                store.resetAllData()
-                UINotificationFeedbackGenerator().notificationOccurred(.warning)
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) {
-                    exit(0)
-                }
+                do {
+                    try store.resetAllData()
+                    UINotificationFeedbackGenerator().notificationOccurred(.warning)
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) { exit(0) }
+                } catch { toastMessage = "automation.error.invalidate" }
             }
             Button("common.cancel", role: .cancel) {}
         } message: {

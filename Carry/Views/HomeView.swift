@@ -76,6 +76,7 @@ private struct ExchangeRateScope<Content: View>: View {
 // MARK: - HomeView
 
 struct HomeView: View {
+    @EnvironmentObject private var account: CarryAccountStore
 
     @Environment(\.colorScheme) private var colorScheme
     @EnvironmentObject var store: TripStore
@@ -128,7 +129,8 @@ struct HomeView: View {
     }
 
     /// Recomputes both sorted lists in one pass. Called from onAppear and
-    /// onChange(of: store.trips) so sorting never runs during animation frames.
+    /// Observe model instances too: a committed automation transaction publishes
+    /// a fresh context whose models retain the same persistent IDs.
     private func rebuildTripLists() {
         let calendar = Calendar.current
         // Compute today's boundary once and share across all trip evaluations.
@@ -537,7 +539,7 @@ struct HomeView: View {
                 rebuildTripLists()
             }
         }
-        .onChange(of: store.trips) { _, _ in rebuildTripLists() }
+        .onChange(of: store.trips.map { ObjectIdentifier($0) }) { _, _ in rebuildTripLists() }
         .alert(
             String(format: NSLocalizedString("Delete %@?", comment: ""), tripToDelete?.name ?? ""),
             isPresented: $showDeleteConfirmation
@@ -660,7 +662,7 @@ struct HomeView: View {
                     }
                 }
             }
-            .onChange(of: store.trips) { oldTrips, newTrips in
+            .onChange(of: store.trips.map { ObjectIdentifier($0) }) { oldTrips, newTrips in
                 rebuildTripLists()
                 if !hasShownFirstTripShimmer && oldTrips.isEmpty && newTrips.count == 1 {
                     firstTripCreatedAtInterval = Date().timeIntervalSince1970
@@ -850,20 +852,22 @@ struct HomeView: View {
 
             Spacer(minLength: 12)
 
-            // Settings entry — a circular gear (secondary), per design-system.md §124.
-            // 未登录态就是这枚齿轮；登录功能落地后，在此按登录态切换为用户头像
-            // （已登录 → Image(avatar)，未登录 → 本齿轮）。现在不写空壳分支以免留死代码。
+            // A cached account keeps its identity while offline; status belongs in Settings.
             Button {
                 openSettings()
             } label: {
-                Image(systemName: "gearshape.fill")
-                    .font(.system(size: 18, weight: .semibold))
-                    .foregroundStyle(.secondary)
-                    .frame(width: 40, height: 40)
-                    // Soft neutral fill (adaptive light/dark) so it reads clearly as a
-                    // tappable button on the near-white sheet — like Apple's circular
-                    // toolbar buttons. No border/shadow: the fill alone defines the chip.
-                    .background(Circle().fill(Color(UIColor.tertiarySystemFill)))
+                Group {
+                    if account.isAvailable, let profile = account.profile {
+                        CarryAccountAvatar(profile: profile)
+                    } else {
+                        Image(systemName: "gearshape.fill")
+                            .font(.system(size: 18, weight: .semibold))
+                            .foregroundStyle(.secondary)
+                            .frame(width: 40, height: 40)
+                            .background(Circle().fill(Color(UIColor.tertiarySystemFill)))
+                    }
+                }
+                .frame(width: 44, height: 44)
             }
             .buttonStyle(PressableScaleButtonStyle(scale: 0.94, pressedBrightness: -0.02, pressedOpacity: 0.95))
             .accessibilityLabel(Text("Settings"))
@@ -2550,4 +2554,5 @@ struct PresenterRecedeEffect: UIViewControllerRepresentable {
     HomeView()
         .environmentObject(TripStore())
         .environmentObject(NavigationRouter())
+        .environmentObject(CarryAccountStore(service: CarryAccountService()))
 }

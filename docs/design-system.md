@@ -7,6 +7,12 @@ Apple 原生风格，极简、克制、优雅。
 
 ## Color Tokens
 
+### 账户入口（2026-10-26，已确认；待可视验收与服务门禁）
+- 首页右上入口保留 Settings 导航；未登录为中性齿轮，已登录为姓名首字母头像，无姓名用人物符号。40pt 图形、至少 44pt 命中区域，沿用 Sheet 渐隐/空态可达性；状态异常放设置内说明。
+- 设置顶部采用横向紧凑账户卡片，与既有设置边缘对齐；主行姓名或“登录 Carry”，次行仅展示一条有用状态。邮箱移入账户详情，不做大幅个人资料页。
+- Apple 登录使用官方按钮，深浅色对应系统样式；登录/注册共用入口，无首次强制姓名/头像或密码表单。登录、选择同步内容、授权 AI 分开。
+- 同步状态必须来源于实际回执，不能把登录成功显示成“已同步”。当前账户发布门禁关闭；详细交互见 `../specs/account-entry-and-settings.md`。
+
 ### 语义色（优先使用）
 - Background Primary：Color(.systemBackground)
 - Background Secondary：Color(.secondarySystemBackground)
@@ -547,3 +553,11 @@ if item.dayOrder == idx, item.order >= 0, item.order < 24 * 60 * 2 {
 
 ### `AgendaRenderRow` 无 `moreCount` 字段（静默截断）
 `AgendaRenderRow` **不含 `moreCount` 字段**，也没有「+N 更多」渲染分支。超出 `maxSlots` 的条目静默截断——这是有意为之的 UX：小尺寸组件静默截断比显示「+3 more」更整洁，用户知道有更多内容可打开 App 查看。**禁止**重新加入 `moreCount` 或「+N more」行。
+
+## 列表媒体与备份读取（2026-10-28）
+- 行程照片、附件图标及照片导入预览共用 `PreparedThumbnail`：保持调用方现有尺寸/圆角/占位样式，后台按屏幕密度准备 square-fill 像素，取消过期任务；禁止在列表 body 内解码 UIImage。横向照片条惰性构建。
+- 设置及恢复页异步核对备份时显示原生检查状态，完成前不闪现“无备份”；状态采用九语言 `settings.data.backup.checking`。仍待实体界面/VoiceOver 验收。
+
+## 网页账户入口（2026-10-28，尚未发布）
+- 只保留 Carry、登录标题、简短出发文案、官方 Apple 按钮和隐私入口；系统字体/Canvas/CanvasText/LinkText 随外观适配。按钮支持 Retina 和深色白色版，焦点环可见、触控高度 44px。
+- 已检查桌面和 320px 深浅色，中文采用“让每一次出发更从容。”避免窄屏末尾孤字；九语言同一结构。后续仍需 Safari/VoiceOver/真实授权页面验收。

@@ -143,16 +143,11 @@ struct PhotoTripImportView: View {
     }
 
     private func procThumb(_ data: Data?) -> some View {
-        Group {
-            if let data, let image = UIImage(data: data) {
-                Image(uiImage: image).resizable().scaledToFill()
-            } else {
-                Image(systemName: "photo").font(.system(size: 14)).foregroundStyle(.tertiary)
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
-                    .background(Color(.tertiarySystemFill))
-            }
+        PreparedThumbnail(data: data, size: 44) {
+            Image(systemName: "photo").font(.system(size: 14)).foregroundStyle(.tertiary)
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .background(Color(.tertiarySystemFill))
         }
-        .frame(width: 44, height: 44)
         .clipShape(RoundedRectangle(cornerRadius: 7, style: .continuous))
     }
 

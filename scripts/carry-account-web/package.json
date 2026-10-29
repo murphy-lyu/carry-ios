@@ -1,0 +1,21 @@
+{
+  "name": "carry-account-web",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=24"
+  },
+  "scripts": {
+    "test": "node --test *.test.mjs",
+    "check": "wrangler deploy --dry-run",
+    "runtime-test": "node runtime-smoke.mjs"
+  },
+  "dependencies": {
+    "@supabase/ssr": "0.12.7",
+    "@supabase/supabase-js": "2.118.0"
+  },
+  "devDependencies": {
+    "wrangler": "4.154.0",
+    "miniflare": "5.20261023.1-beta"
+  }
+}

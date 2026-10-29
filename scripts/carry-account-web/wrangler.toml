@@ -1,0 +1,12 @@
+name = "carry-account-web-dev"
+main = "worker.mjs"
+compatibility_date = "2026-10-01"
+workers_dev = false
+# No route until complete account lifecycle and consent acceptance.
+# Supabase public URL/key and WEB_FLOW_ENCRYPTION_KEY are environment settings;
+# never copy Apple P8 or service_role here.
+[vars]
+ACCOUNT_WEB_ENABLED = "false"
+ACCOUNT_ORIGIN = "https://account.nevestudio.app"
+APPLE_WEB_CLIENT_ID = "app.nevestudio.carry.web"
+SUPABASE_URL = "https://lbxsvguuoqqpctkinpwy.supabase.co"

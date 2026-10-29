@@ -175,8 +175,18 @@ final class TripBundle {
             $0.sortOrder != $1.sortOrder ? $0.sortOrder < $1.sortOrder : $0.checkInDayOrder < $1.checkInDayOrder
         }
     }
-    var packedCount: Int { safeSections.flatMap { $0.items ?? [] }.filter { $0.isPacked && !$0.name.isEmpty }.count }
-    var totalCount:  Int { safeSections.flatMap { $0.items ?? [] }.filter { !$0.name.isEmpty }.count }
+    // Counts do not depend on display order. Avoid sorting sections and building
+    // two temporary item arrays on every progress/card/animation evaluation.
+    var packedCount: Int {
+        (sections ?? []).reduce(0) { count, section in
+            count + (section.items ?? []).reduce(0) { $0 + ($1.isPacked && !$1.name.isEmpty ? 1 : 0) }
+        }
+    }
+    var totalCount: Int {
+        (sections ?? []).reduce(0) { count, section in
+            count + (section.items ?? []).reduce(0) { $0 + (!$1.name.isEmpty ? 1 : 0) }
+        }
+    }
 
     /// 行程是否已计入"到访"——用于地图点亮（国家/城市）与首页 Trip Overview 的到访国家数。
     /// 规则：出发日期的**次日**起才算到访，出发当天及之前都不计入。
@@ -202,6 +212,8 @@ final class TripBundle {
 // MARK: - TripStore
 
 final class TripStore: ObservableObject {
+    @Published private(set) var automationReady = false
+    private(set) var automationInvalidationVersion = 0
     @Published var trips: [TripBundle] = []
     @Published var myItems: [MyItem] = []
     /// 复制行程后要在首页扫光高亮的新副本 id（行程内复制 → 回首页时由 HomeView 消费一次）。瞬时信号，不持久化。
@@ -210,14 +222,24 @@ final class TripStore: ObservableObject {
     @Published var isHomeEmptyStateMockEnabled: Bool
     @Published private(set) var draftTrip: TripBundle?
 
-    private let context: ModelContext
+    private var context: ModelContext
+    private let automationPersistenceAllowed: Bool
+    private let automationSave: CarryPersistence.Save
+    private let persistenceSave: CarryPersistence.Save
     private let defaults = UserDefaults.standard
     private static let sceneCardDismissedGlobalKey = "scene_card_dismissed_global"
     private static let homeEmptyStateMockKey = "home_empty_state_mock_enabled"
     private var didCleanupCorruptedData = false
 
-    init() {
-        self.context = ModelContext(CarryApp.container)
+    init(context: ModelContext? = nil, automationSave: CarryPersistence.Save? = nil,
+         persistenceSave: @escaping CarryPersistence.Save = { try $0.save() }) {
+        let selectedContext = context ?? ModelContext(CarryApp.container)
+        selectedContext.autosaveEnabled = false
+        self.context = selectedContext
+        self.automationPersistenceAllowed = selectedContext.container.configurations.allSatisfy { !$0.isStoredInMemoryOnly }
+        self.persistenceSave = persistenceSave
+        let automationWriter = automationSave ?? persistenceSave
+        self.automationSave = { try CarryPersistence.commit($0, using: automationWriter) }
         self.isSceneCardDismissedGlobally = defaults.bool(forKey: Self.sceneCardDismissedGlobalKey)
         // 「模拟首页空态」是 DEBUG 预览开关，**仅本次会话有效、不跨启动持久化**——每次启动重置为关。
         // 否则误开后值会存进 UserDefaults，每次启动都模拟空态（看着像白屏），而 Xcode 重装不清
@@ -229,7 +251,8 @@ final class TripStore: ObservableObject {
         defaults.removeObject(forKey: "debugForceWeatherAlertKind")
 #endif
         Task { @MainActor in
-            fetchTrips()
+            guard fetchTrips() else { return }
+            pruneAutomationReceipts()
             reconcileBackgroundFiles()
             reconcileAttachmentFiles()
             // 冷启动滚动补位（spec: notification-budget.md）：必须在 fetchTrips 之后、trips 已加载时跑，
@@ -244,6 +267,7 @@ final class TripStore: ObservableObject {
             // Widget snapshot：冷启动 trips 加载后写一次（spec: widget-trip-companion.md）。**必须在此、不能在
             // App.onAppear**——onAppear 时 trips 可能仍空、会写空 snapshot 覆盖好的那份（Widget 变空白，已踩坑）。
             writeWidgetSnapshot()
+            automationReady = true
         }
     }
 
@@ -309,7 +333,7 @@ final class TripStore: ObservableObject {
             if stay.attachments == nil { stay.attachments = [] }
             stay.attachments?.append(att)
         }
-        save()
+        guard save() else { return nil }
         CarryLogger.shared.log(.attachmentAdded, context: kind.rawValue)
         return att.id
     }
@@ -317,10 +341,11 @@ final class TripStore: ObservableObject {
     /// 删除附件：就地删沙盒文件 + 删 model 记录（级联删的孤儿由 reconcileAttachmentFiles 兜底）。
     func removeAttachment(tripId: UUID, attachmentId: UUID) {
         guard let att = allAttachments().first(where: { $0.id == attachmentId }) else { return }
-        if !att.fileName.isEmpty { AttachmentStore.delete(named: att.fileName) }
+        let fileName = att.fileName
         context.delete(att)
         do {
-            try context.save()
+            try persist(context)
+            if !fileName.isEmpty { AttachmentStore.delete(named: fileName) }
             CarryLogger.shared.log(.attachmentDeleted)
         } catch {
             CarryLogger.shared.log(.persistFailed, context: "removeAttachment")
@@ -328,13 +353,15 @@ final class TripStore: ObservableObject {
     }
 
     /// 深拷贝附件（复制行程用）：记录 + **沙盒文件**（新文件名，避免两行程共享一份字节）。
-    private func copyAttachments(_ atts: [ItineraryAttachment]?) -> [ItineraryAttachment] {
+    private func copyAttachments(_ atts: [ItineraryAttachment]?, recoveringDraft: Bool = false) -> [ItineraryAttachment] {
         (atts ?? []).sorted { $0.sortOrder < $1.sortOrder }.map { a in
-            let newFileName = a.fileName.isEmpty ? "" : (AttachmentStore.copy(of: a.fileName) ?? "")
-            return ItineraryAttachment(
+            let newFileName = recoveringDraft ? a.fileName : (a.fileName.isEmpty ? "" : (AttachmentStore.copy(of: a.fileName) ?? ""))
+            let copy = ItineraryAttachment(
                 kind: a.kind, displayName: a.displayName, fileName: newFileName,
                 utiOrExt: a.utiOrExt, urlString: a.urlString, thumbnailData: a.thumbnailData,
                 sortOrder: a.sortOrder, addedAt: a.addedAt)
+            if recoveringDraft { copy.id = a.id }
+            return copy
         }
     }
 
@@ -345,14 +372,17 @@ final class TripStore: ObservableObject {
 
     // MARK: - Persistence
 
-    func refresh() { fetchTrips() }
+    func refresh() {
+        fetchTrips()
+    }
 
     // MARK: - Backup & Restore
 
     /// Restore all data from the automatic device-local JSON backup.
     @discardableResult
     func restoreFromBackup() throws -> (trips: Int, myItems: Int) {
-        let result = try DataBackupManager.shared.restore(into: context)
+        try invalidateAutomationConnection()
+        let result = try DataBackupManager.shared.restore(into: context, save: persist)
         applyPostRestoreSideEffects()
         return result
     }
@@ -360,7 +390,8 @@ final class TripStore: ObservableObject {
     /// Restore all data from raw JSON data read from a user-selected file.
     @discardableResult
     func restoreFromData(_ data: Data) throws -> (trips: Int, myItems: Int) {
-        let result = try DataBackupManager.shared.restoreFromData(data, into: context)
+        try invalidateAutomationConnection()
+        let result = try DataBackupManager.shared.restoreFromData(data, into: context, save: persist)
         applyPostRestoreSideEffects()
         return result
     }
@@ -369,7 +400,7 @@ final class TripStore: ObservableObject {
     @discardableResult
     func mergeFromData(_ data: Data) throws -> (trips: Int, myItems: Int) {
         let existingIds = Set(trips.map(\.id))   // 记录 merge 前的 trip ID，用于识别新增的
-        let result = try DataBackupManager.shared.mergeFromData(data, into: context)
+        let result = try DataBackupManager.shared.mergeFromData(data, into: context, save: persist)
         applyPostMergeSideEffects(previousTripIds: existingIds)
         return result
     }
@@ -379,7 +410,7 @@ final class TripStore: ObservableObject {
     @discardableResult
     func mergeBackup(_ backup: CarryBackup) throws -> (trips: Int, myItems: Int) {
         let existingIds = Set(trips.map(\.id))
-        let result = try DataBackupManager.shared.merge(backup, into: context)
+        let result = try DataBackupManager.shared.merge(backup, into: context, save: persist)
         applyPostMergeSideEffects(previousTripIds: existingIds)
         return result
     }
@@ -390,7 +421,7 @@ final class TripStore: ObservableObject {
     @discardableResult
     func importSharedTrip(from data: Data) throws -> UUID {
         let existingIds = Set(trips.map(\.id))
-        let id = try DataBackupManager.shared.importSharedTrip(from: data, into: context)
+        let id = try DataBackupManager.shared.importSharedTrip(from: data, into: context, save: persist)
         applyPostMergeSideEffects(previousTripIds: existingIds)
         return id
     }
@@ -439,14 +470,18 @@ final class TripStore: ObservableObject {
         draftTrip = trip
     }
 
-    func commitDraftTrip() {
-        guard let trip = draftTrip else { return }
+    @discardableResult
+    func commitDraftTrip() -> Bool {
+        guard let trip = draftTrip else { return false }
+        let recovery = makeTripCopy(trip, includeTransportAndLodging: true, includePackingList: true, recoveringDraft: true)
         trip.createdAt = Date()
         context.insert(trip)
         do {
-            try context.save()
+            try persist(context)
         } catch {
+            draftTrip = recovery
             CarryLogger.shared.log(.tripSaveFailed)
+            return false
         }
         draftTrip = nil
         fetchTrips()
@@ -455,13 +490,14 @@ final class TripStore: ObservableObject {
             Task { CalendarManager.shared.addTrip(trip) }
         }
         CarryLogger.shared.log(.tripCreated)
+        return true
     }
 
     /// 从行程信息直接建一个**空清单**行程并落库——新创建链路「填完行程信息 → 直接进该行程
     /// （行程规划）」用，不再强制走添加物品。等价于 ItemPicker 的 finalizeEmptyTrip：建 bundle
     /// （含默认提醒档位快照）→ 提交 → 写国家码。返回新行程 id 供落地。
     @discardableResult
-    func createTrip(from info: TripInfo) -> UUID {
+    func createTrip(from info: TripInfo) -> UUID? {
         let bundle = TripBundle(
             name: info.name,
             destinationCity: info.destinationCity,
@@ -474,7 +510,7 @@ final class TripStore: ObservableObject {
         )
         bundle.reminderConfigs = ReminderPreferences.defaultConfigs
         setDraftTrip(bundle)
-        commitDraftTrip()
+        guard commitDraftTrip() else { return nil }
         // 目的地：有 chip（创建页一律传整组，含未解析的自由文本 chip）→ 走结构化写入
         // （保留已选权威码 + 持久化名字 + 仅解析未解析项），跳过整段文本反查。
         // 无 chip 但有文本（非 chip 调用方，如数据导入构造的 TripInfo）→ 文本反查兜底。
@@ -574,7 +610,7 @@ final class TripStore: ObservableObject {
     }
 
     private func persist(caller: String) {
-        do { try context.save() } catch {
+        do { try persist(context) } catch {
             CarryLogger.shared.log(.persistFailed, context: "caller=\(caller)")
         }
     }
@@ -587,6 +623,10 @@ final class TripStore: ObservableObject {
     ///   （组装时用 " & " 拼接，故可逆）；后缀对不上（旧拼接符）则退回 splitCities 首段。
     func resolvedDestinations(forTripId tripId: UUID) -> [ResolvedDestination] {
         guard let trip = trips.first(where: { $0.id == tripId }) else { return [] }
+        return resolvedDestinations(for: trip)
+    }
+
+    private func resolvedDestinations(for trip: TripBundle) -> [ResolvedDestination] {
         let city = trip.destinationCity.trimmingCharacters(in: .whitespacesAndNewlines)
         let extras = trip.additionalDestinations
 
@@ -638,7 +678,8 @@ final class TripStore: ObservableObject {
         }
     }
 
-    private func fetchTrips() {
+    @discardableResult
+    private func fetchTrips() -> Bool {
         let descriptor = FetchDescriptor<TripBundle>(
             sortBy: [SortDescriptor(\.createdAt, order: .reverse)]
         )
@@ -649,19 +690,18 @@ final class TripStore: ObservableObject {
             var fetchedTrips = try context.fetch(descriptor)
             var fetchedMyItems = try context.fetch(myItemDescriptor)
 
-            if !didCleanupCorruptedData && cleanupCorruptedData(trips: fetchedTrips, myItems: fetchedMyItems) {
+            if !didCleanupCorruptedData {
                 didCleanupCorruptedData = true
-                try context.save()
-                fetchedTrips = try context.fetch(descriptor)
-                fetchedMyItems = try context.fetch(myItemDescriptor)
+                if cleanupCorruptedData(trips: fetchedTrips, myItems: fetchedMyItems) {
+                    try persist(context)
+                    fetchedTrips = try context.fetch(descriptor)
+                    fetchedMyItems = try context.fetch(myItemDescriptor)
+                }
             }
 
             trips = fetchedTrips
             myItems = fetchedMyItems
-            // Keep the JSON backup in sync after every data load.
-            // Encoding a few trips worth of JSON is sub-millisecond, so doing it
-            // inline here is safe and ensures the backup is always up-to-date.
-            DataBackupManager.shared.backup(trips: fetchedTrips, myItems: fetchedMyItems)
+            scheduleAutomaticBackup()
             for trip in trips {
                 if trip.sections == nil {
                     CarryLogger.shared.log(.dataCorrupted, context: "context=fetchTrips_nil_sections")
@@ -673,10 +713,12 @@ final class TripStore: ObservableObject {
                     }
                 }
             }
+            return true
         } catch {
             CarryLogger.shared.log(.loadFailed, context: "context=fetchTrips")
             trips = []
             myItems = []
+            return false
         }
     }
 
@@ -701,7 +743,7 @@ final class TripStore: ObservableObject {
                 let remainingItems = (section.items ?? []).filter {
                     !$0.name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
                 }
-                if remainingItems.isEmpty {
+                if remainingItems.isEmpty && section.title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
                     context.delete(section)
                     didDelete = true
                 }
@@ -711,13 +753,45 @@ final class TripStore: ObservableObject {
         return didDelete
     }
 
-    private func save(_ caller: String = #function) {
+    private func scheduleAutomaticBackup() {
+        DataBackupManager.shared.scheduleBackup { [weak self] in
+            guard let self else { return nil }
+            return (self.trips, self.myItems)
+        }
+    }
+
+    private func persist(_ context: ModelContext) throws {
+        do { try CarryPersistence.commit(context, using: persistenceSave) }
+        catch {
+            // A rolled-back SwiftData context may retain stale edited model
+            // instances in its identity map. Use a fresh context for subsequent
+            // commands and republish the actual persisted business graph.
+            let replacement = ModelContext(context.container)
+            replacement.autosaveEnabled = context.autosaveEnabled
+            self.context = replacement
+            fetchTrips()
+            throw error
+        }
+    }
+
+    @discardableResult
+    private func save(_ caller: String = #function, refreshCollections: Bool = true) -> Bool {
         do {
-            try context.save()
+            try persist(context)
         } catch {
             CarryLogger.shared.log(.persistFailed, context: "caller=\(caller)")
+            return false
         }
-        fetchTrips()
+        if refreshCollections {
+            fetchTrips()
+        } else {
+            // Packing flags change existing observed models, not collection
+            // membership/order. Keep immediate persistence without fetching both
+            // complete tables again on every checkbox tap.
+            objectWillChange.send()
+            scheduleAutomaticBackup()
+        }
+        return true
     }
 
     // MARK: - Trip background image (specs/trip-background-image.md)
@@ -726,21 +800,19 @@ final class TripStore: ObservableObject {
     /// The caller saves the image and passes the stored filename; we delete any prior file.
     func setLocalBackground(fileName: String, crop: BackgroundCrop? = nil, forTripId id: UUID) {
         guard let trip = trips.first(where: { $0.id == id }) else { return }
-        if let old = trip.primaryBackground?.localFileName, old != fileName {
-            BackgroundImageStore.delete(named: old)
-        }
+        let previous = trip.primaryBackground?.localFileName
         trip.backgrounds = [TripBackgroundEntry(source: .local, localFileName: fileName, destinationIndex: 0, crop: crop)]
-        save()
+        guard save() else { return }
+        if let previous, previous != fileName { BackgroundImageStore.delete(named: previous) }
     }
 
     /// Removes the custom background → card falls back to the style's default (monogram/map).
     func clearBackground(forTripId id: UUID) {
         guard let trip = trips.first(where: { $0.id == id }) else { return }
-        if let old = trip.primaryBackground?.localFileName {
-            BackgroundImageStore.delete(named: old)
-        }
+        let previous = trip.primaryBackground?.localFileName
         trip.backgrounds = []
-        save()
+        guard save() else { return }
+        if let previous { BackgroundImageStore.delete(named: previous) }
     }
 
     private let defaultMyItemCollection = "Default"
@@ -754,13 +826,16 @@ final class TripStore: ObservableObject {
 
     /// Wipes all SwiftData records, UserDefaults, and pending notifications —
     /// equivalent to a fresh install. Call only from developer mode.
-    func resetAllData() {
+    func resetAllData() throws {
+        try invalidateAutomationConnection()
         do {
-            try context.delete(model: TripBundle.self)
-            try context.delete(model: MyItem.self)
-            try context.save()
+            for trip in try context.fetch(FetchDescriptor<TripBundle>()) { context.delete(trip) }
+            for item in try context.fetch(FetchDescriptor<MyItem>()) { context.delete(item) }
+            try context.delete(model: AutomationExecutionRecord.self)
+            try persist(context)
         } catch {
             CarryLogger.shared.log(.persistFailed, context: "resetAllData")
+            throw error
         }
         if let bundleId = Bundle.main.bundleIdentifier {
             defaults.removePersistentDomain(forName: bundleId)
@@ -772,7 +847,7 @@ final class TripStore: ObservableObject {
 #endif
         // 同 eraseAllData：清掉本地自动备份文件，否则「重置」后下次自动备份写入前，
         // 手动一次「从本地备份还原」会把刚重置掉的数据原样带回来，与「重置」的意图矛盾。
-        DataBackupManager.shared.clearBackup()
+        try DataBackupManager.shared.clearBackup()
         trips = []
         myItems = []
         draftTrip = nil
@@ -785,9 +860,10 @@ final class TripStore: ObservableObject {
     func addTrip(_ bundle: TripBundle) {
         context.insert(bundle)
         do {
-            try context.save()
+            try persist(context)
         } catch {
             CarryLogger.shared.log(.tripSaveFailed)
+            return
         }
         fetchTrips()
         refreshNotifications()
@@ -796,6 +872,9 @@ final class TripStore: ObservableObject {
 
     func removeTrip(withId id: UUID) {
         guard let trip = trips.first(where: { $0.id == id }) else { return }
+        let backgroundNames = trip.backgrounds.compactMap(\.localFileName)
+        context.delete(trip)
+        guard save() else { return }
         NotificationManager.cancelReminders(forTripId: id)
 #if !targetEnvironment(macCatalyst)
         Task { @MainActor in
@@ -812,11 +891,9 @@ final class TripStore: ObservableObject {
         }
         // 清理沙盒里的背景图字节，避免"删行程但图片残留"的孤儿文件（文件名是 UUID，
         // 各 trip 独立不共享，删除安全）。setLocalBackground/clearBackground 已对应处理。
-        for name in trip.backgrounds.compactMap(\.localFileName) {
+        for name in backgroundNames {
             BackgroundImageStore.delete(named: name)
         }
-        context.delete(trip)
-        save()
         CarryLogger.shared.log(.tripDeleted)
     }
 
@@ -834,14 +911,39 @@ final class TripStore: ObservableObject {
             return nil
         }
         let original = trips[originalIndex]
+        let newBundle = makeTripCopy(original, includeTransportAndLodging: includeTransportAndLodging, includePackingList: includePackingList)
+        context.insert(newBundle)
+        let insertIndex = min(originalIndex + 1, trips.count)
+        trips.insert(newBundle, at: insertIndex)
+        do { try persist(context) }
+        catch {
+            CarryLogger.shared.log(.duplicateFailed, context: "context=save_failed")
+            return nil
+        }
+        refreshNotifications()
+        if UserDefaults.standard.bool(forKey: "calendar_sync_enabled") {
+            Task { CalendarManager.shared.addTrip(newBundle) }
+        }
+        CarryLogger.shared.log(.tripDuplicated)
+        return newBundle.id
+    }
+
+    /// Shared graph-copy implementation; persistence belongs to the UI or automation caller.
+    private func makeTripCopy(_ original: TripBundle, includeTransportAndLodging: Bool, includePackingList: Bool, recoveringDraft: Bool = false) -> TripBundle {
         let newSections = includePackingList ? original.safeSections.map { section -> PackingSection in
             let items = section.sortedItems
-                .filter { !$0.name.isEmpty }
+                .filter { recoveringDraft || !$0.name.isEmpty }
                 .enumerated()
                 .map { idx, item in
-                    PackingItem(name: item.name, quantity: item.quantity, isPacked: false, isAlert: item.isAlert, sortOrder: idx)
+                    let copy = PackingItem(name: item.name, quantity: item.quantity,
+                        isPacked: recoveringDraft ? item.isPacked : false, isAlert: item.isAlert,
+                        sortOrder: recoveringDraft ? item.sortOrder : idx)
+                    if recoveringDraft { copy.id = item.id }
+                    return copy
                 }
-            return PackingSection(title: section.title, items: items, sortOrder: section.sortOrder)
+            let copy = PackingSection(title: section.title, items: items, sortOrder: section.sortOrder)
+            if recoveringDraft { copy.id = section.id; if section.items == nil { copy.items = nil } }
+            return copy
         } : []
         let newBundle = TripBundle(
             name: original.name,
@@ -850,12 +952,13 @@ final class TripStore: ObservableObject {
             dateRange: original.dateRange,
             departureDate: original.departureDate,
             isDateless: original.isDateless,
-            createdAt: Date(),
+            createdAt: recoveringDraft ? original.createdAt : Date(),
             // 清单不带走时场景标记也清空——否则清单是空的，但 App 会以为场景推荐「已应用」而不再提示，
             // 用户没法用场景推荐重新建清单（selectedSceneKeys 语义见 PackingListView.hasScenes 等用法）。
             selectedSceneKeys: includePackingList ? original.selectedSceneKeys : [],
             sections: newSections
         )
+        if recoveringDraft { newBundle.id = original.id }
         // 目的地解析结果直接深拷（主目的地码/坐标 + additionalDestinations 含 name）——否则副本地图不点亮、
         // 不计入到访，且要靠 geocodeMissingTrips 事后文本反查自愈（丢失已存名字、有歧义）。
         newBundle.countryCode = original.countryCode
@@ -877,6 +980,7 @@ final class TripStore: ObservableObject {
         // 文件名，否则删/换任一方都会误伤另一方）。无本地文件的条目（未来在线源）原样带过；
         // 复制失败的条目直接丢弃（副本退回 monogram 兜底），绝不残留共享引用。crop 等元数据保留。
         newBundle.backgrounds = original.backgrounds.compactMap { entry in
+            if recoveringDraft { return entry }
             guard let name = entry.localFileName else { return entry }
             guard let copiedName = BackgroundImageStore.copy(of: name) else { return nil }
             var copied = entry
@@ -902,11 +1006,12 @@ final class TripStore: ObservableObject {
                     costHomeAmount: stop.costHomeAmount,
                     fromPhotos: stop.fromPhotos
                 )
+                if recoveringDraft { copied.id = stop.id; copied.categoryRaw = stop.categoryRaw }
                 copied.phone = stop.phone
                 copied.timeZoneId = stop.timeZoneId
                 // 照片回溯生成的停靠点：深拷贝挂着的照片（新 UUID，含缩略图字节）。
                 copied.photos = stop.sortedPhotos.map { p in
-                    StopPhoto(
+                    let copy = StopPhoto(
                         assetLocalIdentifier: p.assetLocalIdentifier,
                         thumbnailData: p.thumbnailData,
                         timestamp: p.timestamp,
@@ -914,8 +1019,14 @@ final class TripStore: ObservableObject {
                         longitude: p.longitude,
                         sortOrder: p.sortOrder
                     )
+                    if recoveringDraft { copy.id = p.id }
+                    return copy
                 }
-                copied.attachments = copyAttachments(stop.attachments)
+                copied.attachments = copyAttachments(stop.attachments, recoveringDraft: recoveringDraft)
+                if recoveringDraft {
+                    if stop.photos == nil { copied.photos = nil }
+                    if stop.attachments == nil { copied.attachments = nil }
+                }
                 return copied
             }
             let copiedDay = ItineraryDay(sortOrder: day.sortOrder, title: day.title, note: day.note, stops: copiedStops)
@@ -948,10 +1059,17 @@ final class TripStore: ObservableObject {
                     costAmount: seg.costAmount, costCurrencyCode: seg.costCurrencyCode,
                     costHomeAmount: seg.costHomeAmount
                 )
+                if recoveringDraft { newSeg.id = seg.id; newSeg.modeRaw = seg.modeRaw }
                 newSeg.remindersMuted = seg.remindersMuted
-                newSeg.attachments = copyAttachments(seg.attachments)
+                newSeg.attachments = copyAttachments(seg.attachments, recoveringDraft: recoveringDraft)
+                if recoveringDraft, seg.attachments == nil { newSeg.attachments = nil }
                 return newSeg
             } : []
+            if recoveringDraft {
+                copiedDay.id = day.id
+                if day.stops == nil { copiedDay.stops = nil }
+                if day.segments == nil { copiedDay.segments = nil }
+            }
             return copiedDay
         }
         // 住宿跨度深拷贝（新 UUID），归副本 bundle。includeTransportAndLodging=false 时跳过（同上）。
@@ -967,34 +1085,20 @@ final class TripStore: ObservableObject {
                 costAmount: stay.costAmount, costCurrencyCode: stay.costCurrencyCode,
                 costHomeAmount: stay.costHomeAmount
             )
+            if recoveringDraft { newStay.id = stay.id }
             newStay.remindersMuted = stay.remindersMuted
             newStay.timeZoneId = stay.timeZoneId
-            newStay.attachments = copyAttachments(stay.attachments)
+            newStay.attachments = copyAttachments(stay.attachments, recoveringDraft: recoveringDraft)
+            if recoveringDraft, stay.attachments == nil { newStay.attachments = nil }
             return newStay
         } : []
-        context.insert(newBundle)
-        // Insert in-memory first to avoid full-list refetch jumpiness in UI.
-        let insertIndex = min(originalIndex + 1, trips.count)
-        trips.insert(newBundle, at: insertIndex)
-        // ⚠️ save 必须同步：原 DispatchQueue.main.async 异步保存 + 紧随的同步
-        // refreshNotifications/calendar addTrip 会产生"DB 里没这行程但通知/日历有"的幽灵
-        // （save 失败时副作用已经执行）。改为同步 save，失败时回滚 in-memory 插入并跳过副作用。
-        do {
-            try context.save()
-        } catch {
-            CarryLogger.shared.log(.duplicateFailed, context: "context=save_failed")
-            trips.remove(at: insertIndex)  // 回滚 in-memory 插入
-            context.delete(newBundle)
-            return nil
+        if recoveringDraft {
+            newBundle.backgroundsData = original.backgroundsData
+            if original.sections == nil { newBundle.sections = nil }
+            if original.itineraryDays == nil { newBundle.itineraryDays = nil }
+            if original.lodgingStays == nil { newBundle.lodgingStays = nil }
         }
-        // 副作用链对齐 commitDraftTrip：排提醒 + 写日历事件（若开启同步）。
-        // Live Activity 不在此激活：复制后行程默认未打开，进入清单页时 startIfNeeded 会判定。
-        refreshNotifications()
-        if UserDefaults.standard.bool(forKey: "calendar_sync_enabled") {
-            Task { CalendarManager.shared.addTrip(newBundle) }
-        }
-        CarryLogger.shared.log(.tripDuplicated)
-        return newBundle.id
+        return newBundle
     }
 
     func updateTripInfo(tripId: UUID, info: TripInfo) {
@@ -1008,9 +1112,10 @@ final class TripStore: ObservableObject {
         trip.days = info.isDateless ? 1 : info.durationDays
         trip.dateRange = info.isDateless ? "" : info.dateRangeDisplay
         do {
-            try context.save()
+            try persist(context)
         } catch {
             CarryLogger.shared.log(.tripEditSaveFailed)
+            return
         }
         // 天数随行程日期/天数变化自动对齐（编辑日期 = 天数变化的主路径）。
         syncItineraryDays(tripId: tripId)
@@ -1064,8 +1169,15 @@ final class TripStore: ObservableObject {
     /// 抹掉所有本地数据（spec: erase-all-data.md）。等同「删 App 重装」的内容部分：清空全部行程 +
     /// 自定义物品库 + 其所有副作用存储（通知/日历/Live Activity/沙盒文件/备份）。**不**重置 App 偏好
     /// （外观/单位/图标/通知默认时间——属配置非用户数据）。覆盖每一处副作用，漏一处即留孤儿。
-    func eraseAllData() {
-        // 1. 副作用存储（独立于 SwiftData，先清）
+    func eraseAllData() throws {
+        try invalidateAutomationConnection()
+        // 1. 先提交数据库；保存失败时保留文件和系统副作用。
+        for trip in trips { context.delete(trip) }
+        for item in myItems { context.delete(item) }
+        try context.delete(model: AutomationExecutionRecord.self)
+        try persist(context)
+        fetchTrips()
+        // 2. 数据库接受删除后再清理独立的副作用存储。
         NotificationManager.cancelAll()
 #if !targetEnvironment(macCatalyst)
         Task { @MainActor in LiveActivityManager.shared.endAll() }
@@ -1073,12 +1185,8 @@ final class TripStore: ObservableObject {
         CalendarManager.shared.removeAllCarryEvents()       // 内部 guard 权限/日历存在，无则 no-op
         BackgroundImageStore.deleteOrphans(keeping: [])     // 空集 = 删全部背景图
         AttachmentStore.deleteOrphans(keeping: [])          // 空集 = 删全部附件字节
-        // 2. SwiftData：删全部行程 + 自定义物品库
-        for trip in trips { context.delete(trip) }
-        for item in myItems { context.delete(item) }
-        save()   // 内部 context.save() + fetchTrips()（trips/myItems 刷成空、并写一份空备份）
         // 3. 备份文件最后清（连 save→fetchTrips 写的那份空备份也删掉，确保「被遗忘」彻底）
-        DataBackupManager.shared.clearBackup()
+        try DataBackupManager.shared.clearBackup()
         writeWidgetSnapshot()
         CarryLogger.shared.log(.allDataErased)
     }
@@ -1116,7 +1224,7 @@ final class TripStore: ObservableObject {
             if let item = (section.items ?? []).first(where: { $0.id == itemId }) {
                 item.isPacked.toggle()
                 CarryLogger.shared.log(item.isPacked ? .itemChecked : .itemUnchecked)
-                save()
+                guard save(refreshCollections: false) else { return }
                 reschedulePackProgress(trip)
 #if !targetEnvironment(macCatalyst)
                 Task { @MainActor in LiveActivityManager.shared.update(for: trip) }
@@ -1133,7 +1241,7 @@ final class TripStore: ObservableObject {
                 item.isPacked = true
             }
         }
-        save()
+        guard save(refreshCollections: false) else { return }
         CarryLogger.shared.log(.tripCompleted)
         reschedulePackProgress(trip)   // 全打完 → 撤销「还剩 N 件」提醒
 #if !targetEnvironment(macCatalyst)
@@ -1148,7 +1256,7 @@ final class TripStore: ObservableObject {
                 item.isPacked = false
             }
         }
-        save()
+        guard save(refreshCollections: false) else { return }
         CarryLogger.shared.log(.tripUncompleted)
         reschedulePackProgress(trip)
 #if !targetEnvironment(macCatalyst)
@@ -1179,10 +1287,11 @@ final class TripStore: ObservableObject {
                 let wasNew = item.name.isEmpty
                 item.name = name
                 do {
-                    try context.save()
+                    try persist(context)
                 } catch {
                     CarryLogger.shared.log(wasNew ? .itemAddFailed : .persistFailed,
                                            context: "context=updateItemName")
+                    return
                 }
                 fetchTrips()
                 if wasNew && !name.isEmpty {
@@ -1205,7 +1314,7 @@ final class TripStore: ObservableObject {
                 guard item.quantity != clamped else { return }
                 item.quantity = clamped
                 do {
-                    try context.save()
+                    try persist(context)
                 } catch {
                     CarryLogger.shared.log(.persistFailed, context: "updateItemQuantity")
                 }
@@ -1222,9 +1331,10 @@ final class TripStore: ObservableObject {
                 context.delete(item)
                 section.items?.removeAll { $0.id == itemId }
                 do {
-                    try context.save()
+                    try persist(context)
                 } catch {
                     CarryLogger.shared.log(.itemDeleteFailed, context: "context=removeItem")
+                    return
                 }
                 fetchTrips()
                 if wasNamed {
@@ -1253,13 +1363,14 @@ final class TripStore: ObservableObject {
             CarryLogger.shared.log(.sortIndexOutOfBounds,
                                    context: "index=\(newOrder.count) count=\(items.count)")
         }
+        let itemsByID = Dictionary(items.map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
         for (index, id) in newOrder.enumerated() {
-            if let item = items.first(where: { $0.id == id }) {
+            if let item = itemsByID[id], item.sortOrder != index {
                 item.sortOrder = index
             }
         }
         do {
-            try context.save()
+            try persist(context)
         } catch {
             CarryLogger.shared.log(.reorderSaveFailed, context: "context=reorderItems")
         }
@@ -1268,20 +1379,23 @@ final class TripStore: ObservableObject {
 
     func reorderSections(tripId: UUID, newOrder: [UUID]) {
         guard let trip = trips.first(where: { $0.id == tripId }) else { return }
-        let sectionCount = trip.safeSections.count
+        let sections = trip.safeSections
+        let sectionCount = sections.count
         if newOrder.count > sectionCount {
             CarryLogger.shared.log(.sortIndexOutOfBounds,
                                    context: "index=\(newOrder.count) count=\(sectionCount)")
         }
+        let sectionsByID = Dictionary(sections.map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
         for (index, id) in newOrder.enumerated() {
-            if let section = trip.safeSections.first(where: { $0.id == id }) {
+            if let section = sectionsByID[id], section.sortOrder != index {
                 section.sortOrder = index
             }
         }
         do {
-            try context.save()
+            try persist(context)
         } catch {
             CarryLogger.shared.log(.reorderSaveFailed, context: "context=reorderSections")
+            return
         }
         fetchTrips()
         CarryLogger.shared.log(.sectionReordered)
@@ -1297,7 +1411,7 @@ final class TripStore: ObservableObject {
         context.insert(section)
         if trip.sections == nil { trip.sections = [] }
         trip.sections?.append(section)
-        save()
+        guard save() else { return nil }
         CarryLogger.shared.log(.sectionAdded)
         return section
     }
@@ -1307,7 +1421,7 @@ final class TripStore: ObservableObject {
               let section = trip.safeSections.first(where: { $0.id == sectionId }) else { return }
         context.delete(section)
         trip.sections?.removeAll { $0.id == sectionId }
-        save()
+        guard save() else { return }
         CarryLogger.shared.log(.sectionDeleted)
 #if !targetEnvironment(macCatalyst)
         Task { @MainActor in LiveActivityManager.shared.update(for: trip) }
@@ -1318,7 +1432,7 @@ final class TripStore: ObservableObject {
         guard let trip = trips.first(where: { $0.id == tripId }),
               let section = trip.safeSections.first(where: { $0.id == sectionId }) else { return }
         section.title = newName
-        save()
+        guard save() else { return }
         CarryLogger.shared.log(.sectionRenamed)
     }
 
@@ -1332,7 +1446,7 @@ final class TripStore: ObservableObject {
             if trip.sections == nil { trip.sections = [] }
             trip.sections?.append(section)
         }
-        save()
+        guard save() else { return }
 #if !targetEnvironment(macCatalyst)
         Task { @MainActor in LiveActivityManager.shared.update(for: trip) }
 #endif
@@ -1347,6 +1461,12 @@ final class TripStore: ObservableObject {
     /// 调用点：编辑行程日期/天数后（updateTripInfo）、打开行程页兜底（ItineraryView.onAppear）。
     func syncItineraryDays(tripId: UUID) {
         guard let trip = trips.first(where: { $0.id == tripId }) else { return }
+        if reconcileItineraryDays(trip) { guard save() else { return } }
+    }
+
+    /// Shared by UI edits and automation; callers own their save/transaction boundary.
+    private func reconcileItineraryDays(_ trip: TripBundle, using suppliedContext: ModelContext? = nil) -> Bool {
+        let context = suppliedContext ?? self.context
         // 行程页的「天」= 含两端的实际天数（见 TripBundle.spanDays）。
         let target = trip.spanDays
         if trip.itineraryDays == nil { trip.itineraryDays = [] }
@@ -1403,7 +1523,7 @@ final class TripStore: ObservableObject {
             stay.checkInDayOrder = lastValidOrder
             changed = true
         }
-        if changed { save() }
+        return changed
     }
 
     /// 在某天末尾新增停靠点。坐标可缺省（手动输名的无坐标点）。返回新 Stop 的 id。
@@ -1435,7 +1555,7 @@ final class TripStore: ObservableObject {
         context.insert(stop)
         if day.stops == nil { day.stops = [] }
         day.stops?.append(stop)
-        save()
+        guard save() else { return nil }
         CarryLogger.shared.log(.itineraryStopAdded)
         rescheduleDailySummary(trip)
         return stop.id
@@ -1519,7 +1639,7 @@ final class TripStore: ObservableObject {
         }
 
         guard insertedStops > 0 else { return false }
-        save()
+        guard save() else { return false }
         CarryLogger.shared.log(.photoImportSaved,
                                context: "days=\(draft.days.count) stops=\(insertedStops) photos=\(insertedPhotos) dupSkipped=\(skippedDuplicates)")
         return true
@@ -1552,7 +1672,7 @@ final class TripStore: ObservableObject {
         if let address { stop.address = address }
         if let phone { stop.phone = phone }
         if let timeZoneId { stop.timeZoneId = timeZoneId }
-        save()
+        guard save() else { return }
         // 改名/改安排可能动到「当天第一个安排」→ 每日摘要内容（第一个是 X）需刷新（guard 内已判开关，关则零成本）。
         rescheduleDailySummary(trip)
     }
@@ -1564,7 +1684,7 @@ final class TripStore: ObservableObject {
         context.delete(stop)
         day.stops?.removeAll { $0.id == stopId }
         for (index, s) in day.sortedStops.enumerated() { s.sortOrder = index }
-        save()
+        guard save() else { return }
         CarryLogger.shared.log(.itineraryStopRemoved)
         rescheduleDailySummary(trip)
     }
@@ -1579,12 +1699,13 @@ final class TripStore: ObservableObject {
             CarryLogger.shared.log(.sortIndexOutOfBounds,
                                    context: "index=\(newOrder.count) count=\(stops.count)")
         }
+        let stopsByID = Dictionary(stops.map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
         for (index, id) in newOrder.enumerated() {
-            if let stop = stops.first(where: { $0.id == id }) {
+            if let stop = stopsByID[id], stop.sortOrder != index {
                 stop.sortOrder = index
             }
         }
-        save()
+        guard save() else { return }
         CarryLogger.shared.log(.itineraryStopReordered)
         // 重排改变「当天第一个安排」→ 每日摘要内容需刷新（guard 内已判开关，关则零成本）。
         rescheduleDailySummary(trip)
@@ -1612,7 +1733,7 @@ final class TripStore: ObservableObject {
                 stop.sortOrder = index
             }
         }
-        save()
+        guard save() else { return }
         CarryLogger.shared.log(didCross ? .itineraryStopMovedDay : .itineraryStopReordered)
         rescheduleDailySummary(trip)
     }
@@ -1628,7 +1749,7 @@ final class TripStore: ObservableObject {
         let newOrder = (target.stops?.map(\.sortOrder).max() ?? -1) + 1   // 追加到目标天末尾
         stop.day = target                         // 关系反向自动从旧天移除、加入新天
         stop.sortOrder = newOrder
-        save()
+        guard save() else { return }
         CarryLogger.shared.log(.itineraryStopMovedDay)
         rescheduleDailySummary(trip)
     }
@@ -1729,7 +1850,7 @@ final class TripStore: ObservableObject {
         context.insert(segment)
         if day.segments == nil { day.segments = [] }
         day.segments?.append(segment)
-        save()
+        guard save() else { return nil }
         CarryLogger.shared.log(.transportAdded, context: "mode=\(mode.rawValue)")
         refreshNotifications()
         return segment.id
@@ -1814,7 +1935,7 @@ final class TripStore: ObservableObject {
         if let vehicleModel { seg.vehicleModel = vehicleModel }
         if let licensePlate { seg.licensePlate = licensePlate }
         if let phone { seg.phone = phone }
-        save()
+        guard save() else { return }
         refreshNotifications()
     }
 
@@ -1824,7 +1945,7 @@ final class TripStore: ObservableObject {
               let seg = (day.segments ?? []).first(where: { $0.id == segmentId }) else { return }
         context.delete(seg)
         day.segments?.removeAll { $0.id == segmentId }
-        save()
+        guard save() else { return }
         CarryLogger.shared.log(.transportRemoved)
         refreshNotifications()
     }
@@ -1868,7 +1989,7 @@ final class TripStore: ObservableObject {
         context.insert(stay)
         if trip.lodgingStays == nil { trip.lodgingStays = [] }
         trip.lodgingStays?.append(stay)
-        save()
+        guard save() else { return nil }
         CarryLogger.shared.log(.lodgingAdded)
         refreshNotifications()
         return stay.id
@@ -1905,7 +2026,7 @@ final class TripStore: ObservableObject {
         if let note { stay.note = note }
         if let phone { stay.phone = phone }
         if let timeZoneId { stay.timeZoneId = timeZoneId }
-        save()
+        guard save() else { return }
         refreshNotifications()
     }
 
@@ -1914,7 +2035,7 @@ final class TripStore: ObservableObject {
               let stay = (trip.lodgingStays ?? []).first(where: { $0.id == stayId }) else { return }
         context.delete(stay)
         trip.lodgingStays?.removeAll { $0.id == stayId }
-        save()
+        guard save() else { return }
         CarryLogger.shared.log(.lodgingRemoved)
         refreshNotifications()
     }
@@ -1943,7 +2064,7 @@ final class TripStore: ObservableObject {
               let stop = trip.safeItineraryDays.flatMap({ $0.stops ?? [] }).first(where: { $0.id == stopId }) else { return }
         let had = stop.hasCost
         applyCost(to: stop, amount: amount, currencyCode: currencyCode)
-        save()
+        guard save() else { return }
         logCostChange(had: had, has: stop.hasCost, category: "stop")
     }
 
@@ -1953,7 +2074,7 @@ final class TripStore: ObservableObject {
               let seg = trip.safeItineraryDays.flatMap({ $0.segments ?? [] }).first(where: { $0.id == segmentId }) else { return }
         let had = seg.hasCost
         applyCost(to: seg, amount: amount, currencyCode: currencyCode)
-        save()
+        guard save() else { return }
         logCostChange(had: had, has: seg.hasCost, category: "transport")
     }
 
@@ -1963,7 +2084,7 @@ final class TripStore: ObservableObject {
               let stay = (trip.lodgingStays ?? []).first(where: { $0.id == stayId }) else { return }
         let had = stay.hasCost
         applyCost(to: stay, amount: amount, currencyCode: currencyCode)
-        save()
+        guard save() else { return }
         logCostChange(had: had, has: stay.hasCost, category: "lodging")
     }
 
@@ -1990,7 +2111,7 @@ final class TripStore: ObservableObject {
                 stay.costHomeAmount = mgr.convertToHome(stay.costAmount, from: stay.costCurrencyCode) ?? -1
             }
         }
-        save()
+        guard save() else { return }
     }
 
     /// Adds scene keys to a trip and merges the supplied sections.
@@ -2042,7 +2163,7 @@ final class TripStore: ObservableObject {
             // Force @Published emission for draft preview flows.
             draftTrip = trip
         } else {
-            save()
+            guard save() else { return }
             reschedulePackProgress(trip)
 #if !targetEnvironment(macCatalyst)
             Task { @MainActor in LiveActivityManager.shared.update(for: trip) }
@@ -2054,14 +2175,14 @@ final class TripStore: ObservableObject {
         guard let trip = bundle(for: tripId),
               !trip.dismissedSurpriseNames.contains(itemName) else { return }
         trip.dismissedSurpriseNames.append(itemName)
-        save()
+        guard save() else { return }
     }
 
 
     func setSelectedSceneKeys(tripId: UUID, keys: [String]) {
         guard let trip = trips.first(where: { $0.id == tripId }) else { return }
         trip.selectedSceneKeys = keys
-        save()
+        guard save() else { return }
     }
 
 #if DEBUG
@@ -2071,7 +2192,7 @@ final class TripStore: ObservableObject {
         for trip in trips {
             trip.sceneCardDismissed = false
         }
-        save()
+        guard save() else { return }
     }
 #endif
 
@@ -2095,7 +2216,7 @@ final class TripStore: ObservableObject {
             trip.sections?.append(newSection)
         }
         dismissSurpriseItem(tripId: tripId, itemName: item.name)
-        save()
+        guard save() else { return }
         reschedulePackProgress(trip)
 #if !targetEnvironment(macCatalyst)
         Task { @MainActor in LiveActivityManager.shared.update(for: trip) }
@@ -2122,10 +2243,10 @@ final class TripStore: ObservableObject {
         quantityMode: MyItemQuantityMode = .fixed,
         quantityIntervalDays: Int = 2,
         collectionName: String = "Default"
-    ) -> MyItem {
+    ) -> MyItem? {
         let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else {
-            return MyItem(name: "", collectionName: normalizedCollectionName(collectionName), category: "", defaultQuantity: 1, quantityMode: quantityMode, quantityIntervalDays: quantityIntervalDays)
+            return nil
         }
         let targetCollection = normalizedCollectionName(collectionName)
         if let existing = myItems.first(where: {
@@ -2137,7 +2258,7 @@ final class TripStore: ObservableObject {
             existing.quantityMode = quantityMode
             existing.quantityIntervalDays = max(1, quantityIntervalDays)
             existing.updatedAt = Date()
-            save()
+            guard save() else { return nil }
             return existing
         }
         let nextOrder = (myItems.map(\.sortOrder).max() ?? -1) + 1
@@ -2151,7 +2272,7 @@ final class TripStore: ObservableObject {
             sortOrder: nextOrder
         )
         context.insert(item)
-        save()
+        guard save() else { return nil }
         CarryLogger.shared.log(.myItemAdded)
         return item
     }
@@ -2159,7 +2280,7 @@ final class TripStore: ObservableObject {
     func removeMyItem(id: UUID) {
         guard let item = myItems.first(where: { $0.id == id }) else { return }
         context.delete(item)
-        save()
+        guard save() else { return }
         CarryLogger.shared.log(.myItemDeleted)
     }
 
@@ -2191,7 +2312,7 @@ final class TripStore: ObservableObject {
             item.updatedAt = Date()
             changed = true
         }
-        if changed { save() }
+        if changed { guard save() else { return } }
     }
 
     /// 删除自定义分类：把该 collection 内所有 category == name 的物品 category 清空（物品保留 → 未分类）。
@@ -2204,7 +2325,7 @@ final class TripStore: ObservableObject {
             item.updatedAt = Date()
             changed = true
         }
-        if changed { save() }
+        if changed { guard save() else { return } }
     }
 
     // MARK: - Queries
@@ -2983,7 +3104,7 @@ final class TripStore: ObservableObject {
             bundle.additionalDestinations = localResults.dropFirst().map {
                 DestinationEntry(countryCode: $0.code, latitude: $0.lat, longitude: $0.lon)
             }
-            do { try context.save() } catch {
+            do { try persist(context) } catch {
                 CarryLogger.shared.log(.persistFailed, context: "caller=updateCountryCode")
             }
             CarryLogger.shared.log(.geocodeResolved,
@@ -3033,7 +3154,7 @@ final class TripStore: ObservableObject {
                 bundle.additionalDestinations = Array(resolved.dropFirst()).map {
                     DestinationEntry(countryCode: $0.code, latitude: $0.lat, longitude: $0.lon)
                 }
-                do { try self.context.save() } catch {
+                do { try self.persist(self.context) } catch {
                     CarryLogger.shared.log(.persistFailed, context: "caller=updateCountryCode_async")
                 }
                 CarryLogger.shared.log(.geocodeResolved,
@@ -3063,7 +3184,7 @@ final class TripStore: ObservableObject {
             changed = true
         }
         if changed {
-            do { try context.save() } catch {
+            do { try persist(context) } catch {
                 CarryLogger.shared.log(.persistFailed, context: "caller=correctMisgecodedTrips")
             }
             fetchTrips()
@@ -3133,7 +3254,7 @@ final class TripStore: ObservableObject {
                         bundle.latitude    = local.lat
                         bundle.longitude   = local.lon
                         bundle.additionalDestinations = extras
-                        do { try self.context.save() } catch {
+                        do { try self.persist(self.context) } catch {
                             CarryLogger.shared.log(.persistFailed, context: "caller=geocodeMissingTrips_local")
                         }
                     }
@@ -3159,7 +3280,7 @@ final class TripStore: ObservableObject {
                     bundle.latitude  = primary.lat
                     bundle.longitude = primary.lon
                     bundle.additionalDestinations = extras
-                    do { try self.context.save() } catch {
+                    do { try self.persist(self.context) } catch {
                         CarryLogger.shared.log(.persistFailed, context: "caller=geocodeMissingTrips_geocoder")
                     }
                 }
@@ -3180,11 +3301,675 @@ final class TripStore: ObservableObject {
                 await MainActor.run {
                     guard let bundle = self.bundle(for: trip.id) else { return }
                     bundle.additionalDestinations = extras
-                    do { try self.context.save() } catch {
+                    do { try self.persist(self.context) } catch {
                         CarryLogger.shared.log(.persistFailed, context: "caller=geocodeMissingTrips_extras")
                     }
                 }
             }
+        }
+    }
+}
+
+// MARK: - Authorized automation transactions
+
+extension TripStore {
+    private func pruneAutomationReceipts() {
+        // Grants last at most 30 days and server requests at most 8. Keep an extra
+        // day for clock skew, then discard local receipts without touching trips.
+        let cutoff = Date().addingTimeInterval(-31 * 86_400)
+        let maintenance = ModelContext(context.container)
+        maintenance.autosaveEnabled = false
+        do {
+            let old = try maintenance.fetch(FetchDescriptor<AutomationExecutionRecord>(predicate: #Predicate { $0.createdAt < cutoff }))
+            for record in old { maintenance.delete(record) }
+            if !old.isEmpty { try maintenance.save() }
+        } catch { CarryLogger.shared.log(.persistFailed, context: "caller=pruneAutomationReceipts") }
+    }
+    private func invalidateAutomationConnection() throws {
+        try CarryAutomationConnection.invalidatePersistedConnection()
+        automationInvalidationVersion += 1
+        NotificationCenter.default.post(name: .carryAutomationInvalidated, object: nil)
+    }
+    @MainActor
+    func automationSnapshots(allowedTripIds: Set<UUID>) throws -> [AutomationTripSnapshot] {
+        guard automationReady, automationPersistenceAllowed else { throw AutomationError.persistenceUnavailable }
+        guard !context.hasChanges else { throw AutomationError.busy }
+        // Read committed storage, including changes imported by CloudKit or another context.
+        let reader = ModelContext(context.container)
+        reader.autosaveEnabled = false
+        return try reader.fetch(FetchDescriptor<TripBundle>()).filter { allowedTripIds.contains($0.id) }.map(automationSnapshot)
+    }
+
+    @MainActor
+    func automationLibrarySnapshot(using suppliedContext: ModelContext? = nil) throws -> AutomationLibrarySnapshot {
+        guard automationReady, automationPersistenceAllowed else { throw AutomationError.persistenceUnavailable }
+        if suppliedContext == nil && context.hasChanges { throw AutomationError.busy }
+        let reader = suppliedContext ?? ModelContext(context.container)
+        let items = try reader.fetch(FetchDescriptor<MyItem>()).sorted {
+            $0.sortOrder != $1.sortOrder ? $0.sortOrder < $1.sortOrder : $0.id.uuidString < $1.id.uuidString
+        }.map { item in
+            AutomationLibraryItem(id: item.id, name: item.name, collectionName: item.collectionName, category: item.category,
+                defaultQuantity: item.defaultQuantity, quantityMode: item.quantityModeRaw, quantityIntervalDays: item.quantityIntervalDays, sortOrder: item.sortOrder)
+        }
+        return AutomationLibrarySnapshot(items: items, revision: try AutomationCodec.digest(items))
+    }
+
+    @MainActor
+    private func automationSnapshot(_ trip: TripBundle) throws -> AutomationTripSnapshot {
+        let days = trip.safeItineraryDays.map { day in
+            AutomationDaySnapshot(id: day.id, dayOrder: day.sortOrder, title: day.title, note: day.note,
+                stops: day.sortedStops.map { stop in
+                    AutomationStopSnapshot(id: stop.id, name: stop.name, address: stop.address, category: stop.category.rawValue,
+                        latitude: stop.latitude, longitude: stop.longitude, timeZoneId: stop.timeZoneId,
+                        plannedStartMinutes: stop.plannedStartMinutes, stayMinutes: stop.stayMinutes,
+                        note: stop.note, sortOrder: stop.sortOrder, costAmount: stop.costAmount, costCurrencyCode: stop.costCurrencyCode)
+                }, transport: day.sortedSegments.map { segment in
+                    ["id": .string(segment.id.uuidString), "mode": .string(segment.modeRaw),
+                     "carrier": .string(segment.carrier), "number": .string(segment.number),
+                     "fromName": .string(segment.fromName), "toName": .string(segment.toName),
+                     "fromCode": .string(segment.fromCode), "toCode": .string(segment.toCode),
+                     "fromAddress": .string(segment.fromAddress), "toAddress": .string(segment.toAddress),
+                     "fromTerminal": .string(segment.fromTerminal), "toTerminal": .string(segment.toTerminal),
+                     "fromLatitude": .number(segment.fromLatitude), "fromLongitude": .number(segment.fromLongitude),
+                     "toLatitude": .number(segment.toLatitude), "toLongitude": .number(segment.toLongitude),
+                     "departDayOrder": .number(Double(segment.departDayOrder)), "arriveDayOrder": .number(Double(segment.arriveDayOrder)),
+                     "departLocalMinutes": .number(Double(segment.departLocalMinutes)), "arriveLocalMinutes": .number(Double(segment.arriveLocalMinutes)),
+                     "fromTimeZoneId": .string(segment.fromTimeZoneId), "toTimeZoneId": .string(segment.toTimeZoneId),
+                     "note": .string(segment.note), "costAmount": .number(segment.costAmount), "costCurrencyCode": .string(segment.costCurrencyCode)]
+                })
+        }
+        let packing = trip.safeSections.map { section in
+            AutomationSectionSnapshot(id: section.id, name: section.title, items: section.sortedItems.filter { !$0.name.isEmpty }.map {
+                AutomationItemSnapshot(id: $0.id, name: $0.name, quantity: $0.quantity, isPacked: $0.isPacked)
+            })
+        }
+        let lodging: [[String: AutomationValue]] = trip.safeLodgingStays.map { stay in
+            ["id": .string(stay.id.uuidString), "name": .string(stay.name), "address": .string(stay.address),
+             "checkInDayOrder": .number(Double(stay.checkInDayOrder)), "nights": .number(Double(stay.nights)),
+             "checkOutDayOrder": .number(Double(stay.checkOutDayOrder)),
+             "latitude": .number(stay.latitude), "longitude": .number(stay.longitude),
+             "checkInMinutes": .number(Double(stay.checkInMinutes)), "checkOutMinutes": .number(Double(stay.checkOutMinutes)),
+             "timeZoneId": .string(stay.timeZoneId), "note": .string(stay.note),
+             "costAmount": .number(stay.costAmount), "costCurrencyCode": .string(stay.costCurrencyCode)]
+        }
+        let end = Calendar.current.date(byAdding: .day, value: trip.days, to: trip.departureDate) ?? trip.departureDate
+        var snapshot = AutomationTripSnapshot(id: trip.id, name: trip.name, destinationCity: trip.destinationCity,
+            isDateless: trip.isDateless, departureDate: trip.isDateless ? nil : AutomationCodec.dateString(trip.departureDate),
+            returnDate: trip.isDateless ? nil : AutomationCodec.dateString(end), days: days, packing: packing, lodging: lodging, revision: "")
+        snapshot.revision = try DataBackupManager.shared.automationRevision(for: trip)
+        snapshot.remindersEnabled = trip.remindersEnabled
+        snapshot.destinations = resolvedDestinations(for: trip).map {
+            ["name": .string($0.name), "countryCode": .string($0.countryCode), "latitude": .number($0.latitude), "longitude": .number($0.longitude)]
+        }
+        return snapshot
+    }
+
+    @MainActor
+    func executeAutomation(_ operation: AutomationOperation, connectionId: UUID, allowedTripIds: Set<UUID>, allowLibrary: Bool = false) throws -> AutomationReceipt {
+        guard automationReady, automationPersistenceAllowed else { throw AutomationError.persistenceUnavailable }
+        guard operation.protocolVersion == 1, operation.connectionId == connectionId,
+              operation.arguments.requestId == operation.requestId else { throw AutomationError.invalidInput }
+        let fingerprint = try operation.fingerprint()
+        // SwiftData rollback does not reliably remove inserted inverse relationships from
+        // already observed model instances. Stage mutations in an isolated context instead.
+        let transaction = ModelContext(context.container)
+        transaction.autosaveEnabled = false
+        let records = try transaction.fetch(FetchDescriptor<AutomationExecutionRecord>())
+        if let record = records.first(where: { $0.connectionId == connectionId && $0.requestId == operation.requestId }) {
+            guard record.fingerprint == fingerprint else { throw AutomationError.requestReused }
+            return try JSONDecoder().decode(AutomationReceipt.self, from: record.receiptData)
+        }
+        // Preserve any local edits waiting for autosave; a later poll will retry.
+        guard !context.hasChanges else { throw AutomationError.busy }
+        guard operation.expiresAt > Date().timeIntervalSince1970 * 1000 else { throw AutomationError.expired }
+        let args = operation.arguments, fields = AutomationFields(values: args.data ?? [:])
+        if ["create_trip", "duplicate_trip"].contains(operation.name) {
+            guard try !transaction.fetch(FetchDescriptor<TripBundle>()).contains(where: { $0.id == operation.entityId }) else { throw AutomationError.invalidInput }
+        }
+        let isLibrary = ["add_my_item", "update_my_item", "remove_my_item"].contains(operation.name)
+        let trip: TripBundle?
+        if isLibrary {
+            guard allowLibrary else { throw AutomationError.unauthorized }
+            guard try automationLibrarySnapshot(using: transaction).revision == args.expectedRevision else { throw AutomationError.conflict }
+            trip = nil
+        } else if operation.name == "create_trip" { trip = nil }
+        else {
+            guard let id = args.tripId, allowedTripIds.contains(id) else { throw AutomationError.unauthorized }
+            guard let current = try transaction.fetch(FetchDescriptor<TripBundle>()).first(where: { $0.id == id }) else { throw AutomationError.notFound }
+            guard try automationSnapshot(current).revision == args.expectedRevision else { throw AutomationError.conflict }
+            trip = current
+        }
+        do {
+            let result = isLibrary ? try applyAutomationLibrary(operation, fields: fields, using: transaction) : try applyAutomation(operation, trip: trip, fields: fields, using: transaction)
+            let isNewTrip = ["create_trip", "duplicate_trip"].contains(operation.name)
+            let changedTripId = isNewTrip ? result : trip?.id ?? result
+            let changedTrip = isNewTrip ? transaction.insertedModelsArray.compactMap { $0 as? TripBundle }.first { $0.id == changedTripId } : trip
+            let revision = isLibrary ? try automationLibrarySnapshot(using: transaction).revision : operation.name == "delete_trip" ? nil : try changedTrip.map(automationSnapshot)?.revision
+            let receipt = AutomationReceipt(requestId: operation.requestId, payloadHash: operation.payloadHash,
+                status: "applied", entityId: result, revision: operation.name == "delete_trip" ? nil : revision)
+            transaction.insert(AutomationExecutionRecord(connectionId: connectionId, requestId: operation.requestId,
+                fingerprint: fingerprint, receiptData: try AutomationCodec.encode(receipt)))
+            try automationSave(transaction)
+            // No UI edits were pending. A fresh context publishes the committed graph without
+            // mutating the old observed graph during a failing or partially validated request.
+            context = ModelContext(transaction.container)
+            if isLibrary { fetchTrips() }
+            else { finishAutomationMutation(operation, tripId: changedTripId) }
+            return receipt
+        } catch {
+            transaction.rollback()
+            if operation.name == "duplicate_trip" { reconcileBackgroundFiles(); reconcileAttachmentFiles() }
+            if let error = error as? AutomationError { throw error }
+            CarryLogger.shared.log(.persistFailed, context: "caller=executeAutomation")
+            throw AutomationError.saveFailed
+        }
+    }
+
+    @MainActor
+    private func applyAutomationLibrary(_ operation: AutomationOperation, fields: AutomationFields, using context: ModelContext) throws -> UUID {
+        try fields.validate(allowed: ["name", "collectionName", "libraryCategory", "defaultQuantity", "quantityMode", "quantityIntervalDays"])
+        let all = try context.fetch(FetchDescriptor<MyItem>())
+        let item: MyItem
+        if operation.name == "add_my_item" {
+            guard let name = try fields.string("name", required: true, max: 500) else { throw AutomationError.invalidInput }
+            let collection = normalizedCollectionName(try fields.string("collectionName", max: 200) ?? defaultMyItemCollection)
+            let category = try fields.string("libraryCategory", max: 200) ?? ""
+            if let existing = all.first(where: {
+                $0.name.trimmingCharacters(in: .whitespacesAndNewlines).localizedCaseInsensitiveCompare(name.trimmingCharacters(in: .whitespacesAndNewlines)) == .orderedSame &&
+                $0.category.localizedCaseInsensitiveCompare(category) == .orderedSame && normalizedCollectionName($0.collectionName) == collection
+            }) { item = existing }
+            else {
+                item = MyItem(id: operation.entityId, name: name, collectionName: collection, category: category,
+                    sortOrder: (all.map(\.sortOrder).max() ?? -1) + 1)
+                context.insert(item)
+            }
+        } else {
+            guard let id = operation.arguments.entityId, let existing = all.first(where: { $0.id == id }) else { throw AutomationError.notFound }
+            item = existing
+        }
+        if operation.name == "remove_my_item" { context.delete(item); return item.id }
+        if let name = try fields.string("name", max: 500) {
+            guard !name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { throw AutomationError.invalidInput }
+            item.name = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        }
+        if let category = try fields.string("libraryCategory", max: 200) { item.category = category }
+        if let collection = try fields.string("collectionName", max: 200) { item.collectionName = normalizedCollectionName(collection) }
+        if let quantity = try fields.integer("defaultQuantity", range: 1...999) { item.defaultQuantity = quantity }
+        if let mode = try fields.string("quantityMode") {
+            guard let parsed = MyItemQuantityMode(rawValue: mode) else { throw AutomationError.invalidInput }
+            item.quantityMode = parsed
+        }
+        if let interval = try fields.integer("quantityIntervalDays", range: 1...3660) { item.quantityIntervalDays = interval }
+        item.updatedAt = Date()
+        return item.id
+    }
+
+    @MainActor
+    func executeAutomationQuery(_ operation: AutomationOperation, connectionId: UUID, allowedTripIds: Set<UUID>) async throws -> AutomationReceipt {
+        guard automationReady, automationPersistenceAllowed else { throw AutomationError.persistenceUnavailable }
+        guard operation.protocolVersion == 1, operation.connectionId == connectionId,
+              operation.arguments.requestId == operation.requestId else { throw AutomationError.invalidInput }
+        let reader = ModelContext(context.container)
+        let fingerprint = try operation.fingerprint()
+        if let record = try reader.fetch(FetchDescriptor<AutomationExecutionRecord>()).first(where: { $0.connectionId == connectionId && $0.requestId == operation.requestId }) {
+            guard record.fingerprint == fingerprint else { throw AutomationError.requestReused }
+            return try JSONDecoder().decode(AutomationReceipt.self, from: record.receiptData)
+        }
+        guard operation.expiresAt > Date().timeIntervalSince1970 * 1000 else { throw AutomationError.expired }
+        if let id = operation.arguments.tripId, !allowedTripIds.contains(id) { throw AutomationError.unauthorized }
+        let version = automationInvalidationVersion
+        let snapshots = ["preview_route", "open_trip"].contains(operation.name) ? try automationSnapshots(allowedTripIds: allowedTripIds) : []
+        let data: [String: AutomationValue]
+        if operation.name == "get_packing_recommendations" {
+            guard let id = operation.arguments.tripId, allowedTripIds.contains(id),
+                  let trip = try reader.fetch(FetchDescriptor<TripBundle>()).first(where: { $0.id == id }) else { throw AutomationError.unauthorized }
+            let fields = AutomationFields(values: operation.arguments.data ?? [:])
+            try fields.validate(allowed: ["sceneKeys"])
+            let sections = try automationRecommendations(trip: trip, fields: fields)
+            data = ["sceneKeys": .array(defaultSceneGroups.flatMap(\.items).map { .string($0) }), "revision": .string(try automationSnapshot(trip).revision),
+                "sections": .array(sections.map { section in .object(["name": .string(section.title), "items": .array(section.sortedItems.map { .object(["name": .string($0.name), "quantity": .number(Double($0.quantity))]) })]) })]
+        } else { data = try await CarryAutomationQueries.run(operation, snapshots: snapshots) }
+        try Task.checkCancellation()
+        guard version == automationInvalidationVersion else { throw AutomationError.unauthorized }
+        return try recordAutomationReceipt(operation, receipt: AutomationReceipt(requestId: operation.requestId,
+            payloadHash: operation.payloadHash, status: "applied", data: data))
+    }
+
+    @MainActor
+    func recordAutomationReceipt(_ operation: AutomationOperation, receipt: AutomationReceipt) throws -> AutomationReceipt {
+        guard automationReady, automationPersistenceAllowed, !context.hasChanges else { throw AutomationError.busy }
+        let fingerprint = try operation.fingerprint()
+        let transaction = ModelContext(context.container)
+        transaction.autosaveEnabled = false
+        let records = try transaction.fetch(FetchDescriptor<AutomationExecutionRecord>())
+        if let existing = records.first(where: { $0.connectionId == operation.connectionId && $0.requestId == operation.requestId }) {
+            guard existing.fingerprint == fingerprint else { throw AutomationError.requestReused }
+            return try JSONDecoder().decode(AutomationReceipt.self, from: existing.receiptData)
+        }
+        transaction.insert(AutomationExecutionRecord(connectionId: operation.connectionId, requestId: operation.requestId,
+            fingerprint: fingerprint, receiptData: try AutomationCodec.encode(receipt)))
+        do { try automationSave(transaction) }
+        catch { transaction.rollback(); throw AutomationError.saveFailed }
+        return receipt
+    }
+
+    @MainActor
+    private func applyAutomation(_ operation: AutomationOperation, trip: TripBundle?, fields: AutomationFields, using context: ModelContext) throws -> UUID {
+        let entityId = operation.arguments.entityId
+        switch operation.name {
+        case "create_trip":
+            try fields.validate(allowed: ["name", "destinationCity", "departureDate", "returnDate", "isDateless", "destinations", "remindersEnabled"])
+            guard let name = try fields.string("name", required: true, max: 200) else { throw AutomationError.invalidInput }
+            let dateless = try fields.bool("isDateless") ?? false
+            let start: Date, end: Date
+            if dateless {
+                guard fields.values["departureDate"] == nil, fields.values["returnDate"] == nil else { throw AutomationError.invalidInput }
+                start = Calendar.current.startOfDay(for: Date()); end = start
+            } else {
+                guard let startRaw = try fields.string("departureDate", required: true), let endRaw = try fields.string("returnDate", required: true) else { throw AutomationError.invalidInput }
+                start = try AutomationCodec.date(startRaw); end = try AutomationCodec.date(endRaw)
+                guard end >= start, let count = Calendar.current.dateComponents([.day], from: start, to: end).day, count <= 3660 else { throw AutomationError.invalidInput }
+            }
+            let info = TripInfo(name: name, destinationCity: try fields.string("destinationCity", max: 500) ?? "", departureDate: start, returnDate: end, isDateless: dateless)
+            let nights = Calendar.current.dateComponents([.day], from: start, to: end).day ?? 0
+            let newTrip = TripBundle(id: operation.entityId, name: info.name, destinationCity: info.destinationCity,
+                days: dateless ? 1 : nights, dateRange: dateless ? "" : info.dateRangeDisplay, departureDate: info.departureDate, isDateless: dateless)
+            newTrip.reminderConfigs = ReminderPreferences.defaultConfigs
+            try applyAutomationDestinations(fields, trip: newTrip)
+            if let enabled = try fields.bool("remindersEnabled") { newTrip.remindersEnabled = enabled }
+            context.insert(newTrip)
+            newTrip.itineraryDays = (0..<newTrip.spanDays).map { order in
+                let day = ItineraryDay(sortOrder: order); context.insert(day); day.bundle = newTrip; return day
+            }
+            return newTrip.id
+        case "update_trip":
+            guard let trip else { throw AutomationError.notFound }
+            try fields.validate(allowed: ["name", "destinationCity", "departureDate", "returnDate", "isDateless", "destinations", "remindersEnabled"])
+            guard !fields.values.isEmpty else { throw AutomationError.invalidInput }
+            if let name = try fields.string("name", max: 200) {
+                guard !name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { throw AutomationError.invalidInput }
+                trip.name = name
+            }
+            if let destination = try fields.string("destinationCity", max: 500), destination != trip.destinationCity {
+                trip.destinationCity = destination
+                trip.countryCode = ""; trip.latitude = 0; trip.longitude = 0; trip.additionalDestinations = []
+            }
+            if fields.values["departureDate"] != nil || fields.values["returnDate"] != nil || fields.values["isDateless"] != nil {
+                let dateless = try fields.bool("isDateless") ?? trip.isDateless
+                if dateless {
+                    guard fields.values["departureDate"] == nil, fields.values["returnDate"] == nil else { throw AutomationError.invalidInput }
+                    trip.isDateless = true; trip.days = 1; trip.dateRange = ""
+                } else {
+                    let startRaw = try fields.string("departureDate"), endRaw = try fields.string("returnDate")
+                    if trip.isDateless && (startRaw == nil || endRaw == nil) { throw AutomationError.invalidInput }
+                    let start = try startRaw.map(AutomationCodec.date) ?? trip.departureDate
+                    let previousEnd = Calendar.current.date(byAdding: .day, value: trip.days, to: trip.departureDate) ?? trip.departureDate
+                    let end = try endRaw.map(AutomationCodec.date) ?? previousEnd
+                    guard end >= start, let count = Calendar.current.dateComponents([.day], from: start, to: end).day, count <= 3660 else { throw AutomationError.invalidInput }
+                    let info = TripInfo(departureDate: start, returnDate: end)
+                    trip.isDateless = false; trip.departureDate = info.departureDate
+                    trip.days = count; trip.dateRange = info.dateRangeDisplay
+                }
+                _ = reconcileItineraryDays(trip, using: context)
+            }
+            try applyAutomationDestinations(fields, trip: trip)
+            if let enabled = try fields.bool("remindersEnabled") { trip.remindersEnabled = enabled }
+            return trip.id
+        case "apply_packing_recommendations":
+            guard let trip else { throw AutomationError.notFound }
+            try fields.validate(allowed: ["sceneKeys", "selectedNames"])
+            let selected = Set(try fields.strings("selectedNames", maxCount: 500))
+            let sections = try automationRecommendations(trip: trip, fields: fields)
+            guard selected.isSubset(of: Set(sections.flatMap(\.sortedItems).map(\.name))) else { throw AutomationError.invalidInput }
+            for generated in sections {
+                let items = generated.sortedItems.filter { selected.contains($0.name) }
+                guard !items.isEmpty else { continue }
+                let section: PackingSection
+                if let existing = trip.safeSections.first(where: { $0.title == generated.title }) { section = existing }
+                else {
+                    section = PackingSection(title: generated.title, sortOrder: (trip.safeSections.map(\.sortOrder).max() ?? -1) + 1)
+                    context.insert(section); section.bundle = trip
+                }
+                var names = Set(section.sortedItems.map { $0.name.lowercased() })
+                for item in items where names.insert(item.name.lowercased()).inserted {
+                    // Detach from the transient preview graph before assigning persistence ownership.
+                    let added = PackingItem(name: item.name, quantity: item.quantity, isAlert: item.isAlert, sortOrder: (section.sortedItems.map(\.sortOrder).max() ?? -1) + 1)
+                    context.insert(added); added.section = section
+                }
+            }
+            if fields.values["sceneKeys"] != nil {
+                let keys = try fields.strings("sceneKeys", maxCount: 30)
+                trip.selectedSceneKeys = Array(Set(trip.selectedSceneKeys + keys)).sorted()
+            }
+            return trip.id
+        case "delete_trip":
+            guard let trip else { throw AutomationError.notFound }
+            context.delete(trip)
+            return trip.id
+        case "duplicate_trip":
+            guard let trip else { throw AutomationError.notFound }
+            try fields.validate(allowed: ["name", "includeTransportAndLodging", "includePackingList"])
+            let includeTransport = try fields.bool("includeTransportAndLodging") ?? true
+            let copied = makeTripCopy(trip, includeTransportAndLodging: includeTransport,
+                includePackingList: try fields.bool("includePackingList") ?? true)
+            func fileCount(_ bundle: TripBundle, transport: Bool) -> Int {
+                let stopFiles = bundle.safeItineraryDays.flatMap(\.sortedStops).flatMap { $0.attachments ?? [] }
+                let otherFiles = transport ? bundle.safeItineraryDays.flatMap(\.sortedSegments).flatMap { $0.attachments ?? [] } + bundle.safeLodgingStays.flatMap { $0.attachments ?? [] } : []
+                return (stopFiles + otherFiles).filter { !$0.fileName.isEmpty }.count
+            }
+            guard fileCount(trip, transport: includeTransport) == fileCount(copied, transport: true),
+                  trip.backgrounds.compactMap(\.localFileName).count == copied.backgrounds.compactMap(\.localFileName).count else { throw AutomationError.saveFailed }
+            copied.id = operation.entityId
+            if let name = try fields.string("name", max: 200) {
+                guard !name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { throw AutomationError.invalidInput }
+                copied.name = name
+            }
+            context.insert(copied)
+            return copied.id
+        case "add_stop", "update_stop":
+            guard let trip else { throw AutomationError.notFound }
+            let allowed: Set<String> = ["name", "dayOrder", "latitude", "longitude", "address", "category", "timeZoneId", "plannedStartMinutes", "stayMinutes", "note"]
+            try fields.validate(allowed: operation.name == "add_stop" ? allowed : allowed.subtracting(["dayOrder"]))
+            let stop: ItineraryStop
+            if operation.name == "add_stop" {
+                guard let order = try fields.integer("dayOrder", range: 0...3660), let day = trip.safeItineraryDays.first(where: { $0.sortOrder == order }),
+                      let name = try fields.string("name", required: true, max: 500) else { throw AutomationError.invalidInput }
+                stop = ItineraryStop(name: name, sortOrder: (day.sortedStops.map(\.sortOrder).max() ?? -1) + 1)
+                stop.id = operation.entityId
+                context.insert(stop); stop.day = day
+                if day.stops == nil { day.stops = [] }
+                if !(day.stops ?? []).contains(where: { $0.id == stop.id }) { day.stops?.append(stop) }
+            } else {
+                guard let entityId, let existing = trip.safeItineraryDays.flatMap(\.sortedStops).first(where: { $0.id == entityId }) else { throw AutomationError.notFound }
+                stop = existing
+            }
+            if let name = try fields.string("name", max: 500) {
+                guard !name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { throw AutomationError.invalidInput }
+                stop.name = name
+            }
+            if let category = try fields.string("category"), let parsed = StopCategory(rawValue: category), StopCategory.placeSelectableCases.contains(parsed) { stop.category = parsed }
+            else if fields.values["category"] != nil { throw AutomationError.invalidInput }
+            let latitude = try fields.number("latitude", range: -90...90), longitude = try fields.number("longitude", range: -180...180)
+            guard (latitude == nil) == (longitude == nil) else { throw AutomationError.invalidInput }
+            if let latitude, let longitude { stop.latitude = latitude; stop.longitude = longitude }
+            if let address = try fields.string("address") { stop.address = address }
+            if let zone = try fields.string("timeZoneId", max: 100) {
+                guard zone.isEmpty || TimeZone(identifier: zone) != nil else { throw AutomationError.invalidInput }
+                stop.timeZoneId = zone // Explicit user override, not an automatically inferred geographic alias.
+            }
+            if let minutes = try fields.integer("plannedStartMinutes", range: -1...1439) { stop.plannedStartMinutes = minutes }
+            if let duration = try fields.integer("stayMinutes", range: 0...10080) { stop.stayMinutes = duration }
+            if let note = try fields.string("note") { stop.note = note }
+            return stop.id
+        case "remove_stop":
+            guard let trip, let entityId, let stop = trip.safeItineraryDays.flatMap(\.sortedStops).first(where: { $0.id == entityId }) else { throw AutomationError.notFound }
+            context.delete(stop)
+            return entityId
+        case "add_packing_section":
+            guard let trip, let name = try fields.string("name", required: true, max: 200) else { throw AutomationError.invalidInput }
+            try fields.validate(allowed: ["name"])
+            let section = PackingSection(title: name, sortOrder: (trip.safeSections.map(\.sortOrder).max() ?? -1) + 1)
+            section.id = operation.entityId
+            context.insert(section); section.bundle = trip
+            if trip.sections == nil { trip.sections = [] }
+            if !(trip.sections ?? []).contains(where: { $0.id == section.id }) { trip.sections?.append(section) }
+            return section.id
+        case "add_packing_item", "update_packing_item":
+            guard let trip else { throw AutomationError.notFound }
+            try fields.validate(allowed: operation.name == "add_packing_item" ? ["name", "sectionId", "quantity", "isPacked"] : ["name", "quantity", "isPacked"])
+            let item: PackingItem
+            if operation.name == "add_packing_item" {
+                let sectionId = try fields.uuid("sectionId")
+                guard let section = trip.safeSections.first(where: { $0.id == sectionId }), let name = try fields.string("name", required: true, max: 500) else { throw AutomationError.notFound }
+                item = PackingItem(name: name, sortOrder: (section.sortedItems.map(\.sortOrder).max() ?? -1) + 1)
+                item.id = operation.entityId
+                context.insert(item); item.section = section
+                if section.items == nil { section.items = [] }
+                if !(section.items ?? []).contains(where: { $0.id == item.id }) { section.items?.append(item) }
+            } else {
+                guard let entityId, let existing = trip.safeSections.flatMap(\.sortedItems).first(where: { $0.id == entityId }) else { throw AutomationError.notFound }
+                item = existing
+            }
+            if let name = try fields.string("name", max: 500) {
+                guard !name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { throw AutomationError.invalidInput }
+                item.name = name
+            }
+            if let quantity = try fields.integer("quantity", range: 1...999) { item.quantity = quantity }
+            if let packed = try fields.bool("isPacked") { item.isPacked = packed }
+            return item.id
+        case "remove_packing_item":
+            guard let trip, let entityId, let item = trip.safeSections.flatMap(\.sortedItems).first(where: { $0.id == entityId }) else { throw AutomationError.notFound }
+            context.delete(item)
+            return entityId
+        case "rename_packing_section", "remove_packing_section":
+            guard let trip, let entityId, let section = trip.safeSections.first(where: { $0.id == entityId }) else { throw AutomationError.notFound }
+            if operation.name == "remove_packing_section" { context.delete(section) }
+            else {
+                try fields.validate(allowed: ["name"])
+                guard let name = try fields.string("name", required: true, max: 200) else { throw AutomationError.invalidInput }
+                section.title = name
+            }
+            return entityId
+        case "move_stop":
+            guard let trip, let entityId, let stop = trip.safeItineraryDays.flatMap(\.sortedStops).first(where: { $0.id == entityId }),
+                  let order = try fields.integer("dayOrder", range: 0...3660), let day = trip.safeItineraryDays.first(where: { $0.sortOrder == order }) else { throw AutomationError.notFound }
+            try fields.validate(allowed: ["dayOrder"])
+            stop.day = day; stop.sortOrder = (day.sortedStops.filter { $0.id != entityId }.map(\.sortOrder).max() ?? -1) + 1
+            return entityId
+        case "reorder_stops", "reorder_packing_sections", "reorder_packing_items":
+            guard let trip else { throw AutomationError.notFound }
+            let ids = try fields.uuids("ids")
+            if operation.name == "reorder_stops" {
+                try fields.validate(allowed: ["ids", "dayOrder"])
+                guard let order = try fields.integer("dayOrder", range: 0...3660), let day = trip.safeItineraryDays.first(where: { $0.sortOrder == order }) else { throw AutomationError.invalidInput }
+                let stops = day.sortedStops
+                guard Set(ids) == Set(stops.map(\.id)) else { throw AutomationError.invalidInput }
+                let stopsByID = Dictionary(stops.map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
+                for (index, id) in ids.enumerated() {
+                    if let stop = stopsByID[id], stop.sortOrder != index { stop.sortOrder = index }
+                }
+            } else if operation.name == "reorder_packing_sections" {
+                try fields.validate(allowed: ["ids"])
+                let sections = trip.safeSections
+                guard Set(ids) == Set(sections.map(\.id)) else { throw AutomationError.invalidInput }
+                let sectionsByID = Dictionary(sections.map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
+                for (index, id) in ids.enumerated() {
+                    if let section = sectionsByID[id], section.sortOrder != index { section.sortOrder = index }
+                }
+            } else {
+                try fields.validate(allowed: ["ids", "sectionId"])
+                let sectionId = try fields.uuid("sectionId")
+                guard let section = trip.safeSections.first(where: { $0.id == sectionId }) else { throw AutomationError.invalidInput }
+                let items = section.sortedItems
+                guard Set(ids) == Set(items.map(\.id)) else { throw AutomationError.invalidInput }
+                let itemsByID = Dictionary(items.map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
+                for (index, id) in ids.enumerated() {
+                    if let item = itemsByID[id], item.sortOrder != index { item.sortOrder = index }
+                }
+            }
+            return trip.id
+        case "add_transport", "update_transport":
+            guard let trip else { throw AutomationError.notFound }
+            return try applyAutomationTransport(operation, trip: trip, fields: fields, using: context)
+        case "remove_transport":
+            guard let trip, let entityId, let segment = trip.safeItineraryDays.flatMap(\.sortedSegments).first(where: { $0.id == entityId }) else { throw AutomationError.notFound }
+            context.delete(segment)
+            return entityId
+        case "add_lodging", "update_lodging":
+            guard let trip else { throw AutomationError.notFound }
+            return try applyAutomationLodging(operation, trip: trip, fields: fields, using: context)
+        case "remove_lodging":
+            guard let trip, let entityId, let stay = trip.safeLodgingStays.first(where: { $0.id == entityId }) else { throw AutomationError.notFound }
+            context.delete(stay)
+            return entityId
+        case "set_cost":
+            guard let trip, let entityId, let type = try fields.string("entityType", required: true),
+                  let amount = try fields.number("amount", range: 0...1e12), let currency = try fields.string("currencyCode", max: 3) else { throw AutomationError.invalidInput }
+            try fields.validate(allowed: ["entityType", "amount", "currencyCode"])
+            guard currency.isEmpty || Locale.commonISOCurrencyCodes.contains(currency.uppercased()) else { throw AutomationError.invalidInput }
+            let entity: CostBearing?
+            switch type {
+            case "stop": entity = trip.safeItineraryDays.flatMap(\.sortedStops).first { $0.id == entityId }
+            case "transport": entity = trip.safeItineraryDays.flatMap(\.sortedSegments).first { $0.id == entityId }
+            case "lodging": entity = trip.safeLodgingStays.first { $0.id == entityId }
+            default: throw AutomationError.invalidInput
+            }
+            guard let entity else { throw AutomationError.notFound }
+            applyCost(to: entity, amount: amount, currencyCode: currency)
+            return entityId
+        default: throw AutomationError.unsupportedOperation
+        }
+    }
+
+    @MainActor
+    private func automationRecommendations(trip: TripBundle, fields: AutomationFields) throws -> [PackingSection] {
+        let keys = fields.values["sceneKeys"] == nil ? [] : try fields.strings("sceneKeys", maxCount: 30)
+        guard Set(keys).isSubset(of: Set(defaultSceneGroups.flatMap(\.items))) else { throw AutomationError.invalidInput }
+        let stored = ([trip.countryCode] + trip.additionalDestinations.map(\.countryCode)).filter { !$0.isEmpty }
+        let codes = stored.isEmpty ? inferCountryCodes(for: trip.destinationCity) : stored
+        return generatePackingSections(selectedScenes: keys, tripDays: max(1, trip.days), isInternational: trip.isInternational ?? inferIsInternational(for: trip.destinationCity), destinationCodes: codes)
+    }
+
+    @MainActor
+    private func applyAutomationDestinations(_ fields: AutomationFields, trip: TripBundle) throws {
+        guard let input = fields.values["destinations"] else { return }
+        guard case .array(let values) = input, !values.isEmpty, values.count <= 20 else { throw AutomationError.invalidInput }
+        let destinations = try values.map { value -> DestinationEntry in
+            guard case .object(let object) = value else { throw AutomationError.invalidInput }
+            let field = AutomationFields(values: object)
+            try field.validate(allowed: ["name", "countryCode", "latitude", "longitude"])
+            guard let name = try field.string("name", required: true, max: 200),
+                  let code = try field.string("countryCode", required: true, max: 2), Locale.Region.isoRegions.contains(where: { $0.identifier == code.uppercased() }),
+                  let lat = try field.number("latitude", range: -90...90), let lon = try field.number("longitude", range: -180...180) else { throw AutomationError.invalidInput }
+            return DestinationEntry(countryCode: code.uppercased(), latitude: lat, longitude: lon, name: name)
+        }
+        trip.destinationCity = destinations.compactMap(\.name).joined(separator: " & ")
+        applyEntries(destinations, to: trip)
+    }
+
+    @MainActor
+    private func applyAutomationTransport(_ operation: AutomationOperation, trip: TripBundle, fields: AutomationFields, using context: ModelContext) throws -> UUID {
+        let stringFields: [String: ReferenceWritableKeyPath<TransportSegment, String>] = [
+            "carrier": \.carrier, "number": \.number, "fromName": \.fromName, "toName": \.toName,
+            "fromCode": \.fromCode, "toCode": \.toCode, "fromAddress": \.fromAddress, "toAddress": \.toAddress,
+            "fromTerminal": \.fromTerminal, "toTerminal": \.toTerminal, "fromTimeZoneId": \.fromTimeZoneId, "toTimeZoneId": \.toTimeZoneId, "note": \.note]
+        try fields.validate(allowed: Set(stringFields.keys).union(["mode", "fromLatitude", "fromLongitude", "toLatitude", "toLongitude", "departDayOrder", "arriveDayOrder", "departLocalMinutes", "arriveLocalMinutes"]))
+        let segment: TransportSegment
+        if operation.name == "add_transport" {
+            guard let modeRaw = try fields.string("mode", required: true), let mode = TransportMode(rawValue: modeRaw),
+                  let departure = try fields.integer("departDayOrder", range: 0...(trip.spanDays - 1)),
+                  let arrival = try fields.integer("arriveDayOrder", range: 0...(trip.spanDays - 1)) else { throw AutomationError.invalidInput }
+            segment = TransportSegment(mode: mode, departDayOrder: departure, arriveDayOrder: arrival)
+            segment.id = operation.entityId; context.insert(segment)
+        } else {
+            guard let id = operation.arguments.entityId, let current = trip.safeItineraryDays.flatMap(\.sortedSegments).first(where: { $0.id == id }) else { throw AutomationError.notFound }
+            segment = current
+        }
+        if let raw = try fields.string("mode") {
+            guard let mode = TransportMode(rawValue: raw) else { throw AutomationError.invalidInput }
+            segment.mode = mode
+        }
+        for (key, path) in stringFields {
+            if let value = try fields.string(key) {
+                if key.hasSuffix("TimeZoneId") && !value.isEmpty && TimeZone(identifier: value) == nil { throw AutomationError.invalidInput }
+                segment[keyPath: path] = value
+            }
+        }
+        if let value = try fields.integer("departDayOrder", range: 0...(trip.spanDays - 1)) { segment.departDayOrder = value }
+        if let value = try fields.integer("arriveDayOrder", range: 0...(trip.spanDays - 1)) { segment.arriveDayOrder = value }
+        if let value = try fields.integer("departLocalMinutes", range: -1...1439) { segment.departLocalMinutes = value }
+        if let value = try fields.integer("arriveLocalMinutes", range: -1...1439) { segment.arriveLocalMinutes = value }
+        for (prefix, latPath, lonPath) in [("from", \TransportSegment.fromLatitude, \TransportSegment.fromLongitude), ("to", \TransportSegment.toLatitude, \TransportSegment.toLongitude)] {
+            let lat = try fields.number(prefix + "Latitude", range: -90...90), lon = try fields.number(prefix + "Longitude", range: -180...180)
+            guard (lat == nil) == (lon == nil) else { throw AutomationError.invalidInput }
+            if let lat, let lon { segment[keyPath: latPath] = lat; segment[keyPath: lonPath] = lon }
+        }
+        // Arrival may have an earlier local day when crossing the date line; compare absolute instants when both zones are known.
+        if !segment.fromTimeZoneId.isEmpty, !segment.toTimeZoneId.isEmpty, !trip.isDateless,
+           let departure = segment.absoluteDeparture(tripDeparture: trip.departureDate),
+           let arrival = segment.absoluteArrival(tripDeparture: trip.departureDate), arrival < departure {
+            throw AutomationError.invalidInput
+        }
+        guard let day = trip.safeItineraryDays.first(where: { $0.sortOrder == segment.departDayOrder }) else { throw AutomationError.invalidInput }
+        if segment.day?.id != day.id {
+            segment.sortOrder = max(day.sortedStops.map(\.sortOrder).max() ?? -1, day.sortedSegments.map(\.sortOrder).max() ?? -1) + 1
+            segment.day = day
+        }
+        if day.segments == nil { day.segments = [] }
+        if !(day.segments ?? []).contains(where: { $0.id == segment.id }) { day.segments?.append(segment) }
+        return segment.id
+    }
+
+    @MainActor
+    private func applyAutomationLodging(_ operation: AutomationOperation, trip: TripBundle, fields: AutomationFields, using context: ModelContext) throws -> UUID {
+        try fields.validate(allowed: ["name", "address", "latitude", "longitude", "timeZoneId", "checkInDayOrder", "checkOutDayOrder", "checkInMinutes", "checkOutMinutes", "note"])
+        let stay: LodgingStay
+        if operation.name == "add_lodging" {
+            guard let name = try fields.string("name", required: true, max: 500),
+                  let checkIn = try fields.integer("checkInDayOrder", range: 0...(trip.spanDays - 1)),
+                  let checkOut = try fields.integer("checkOutDayOrder", range: 0...(trip.spanDays - 1)), checkOut > checkIn else { throw AutomationError.invalidInput }
+            stay = LodgingStay(name: name, checkInDayOrder: checkIn, nights: checkOut - checkIn,
+                sortOrder: (trip.safeLodgingStays.map(\.sortOrder).max() ?? -1) + 1)
+            stay.id = operation.entityId; context.insert(stay); stay.bundle = trip
+            if trip.lodgingStays == nil { trip.lodgingStays = [] }
+            if !(trip.lodgingStays ?? []).contains(where: { $0.id == stay.id }) { trip.lodgingStays?.append(stay) }
+        } else {
+            guard let id = operation.arguments.entityId, let current = trip.safeLodgingStays.first(where: { $0.id == id }) else { throw AutomationError.notFound }
+            stay = current
+        }
+        if let value = try fields.string("name", max: 500) {
+            guard !value.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { throw AutomationError.invalidInput }
+            stay.name = value
+        }
+        if let value = try fields.string("address") { stay.address = value }
+        if let value = try fields.string("note") { stay.note = value }
+        if let value = try fields.string("timeZoneId") {
+            guard value.isEmpty || TimeZone(identifier: value) != nil else { throw AutomationError.invalidInput }
+            stay.timeZoneId = value
+        }
+        let lat = try fields.number("latitude", range: -90...90), lon = try fields.number("longitude", range: -180...180)
+        guard (lat == nil) == (lon == nil) else { throw AutomationError.invalidInput }
+        if let lat, let lon { stay.latitude = lat; stay.longitude = lon }
+        let checkIn = try fields.integer("checkInDayOrder", range: 0...(trip.spanDays - 1)) ?? stay.checkInDayOrder
+        let checkOut = try fields.integer("checkOutDayOrder", range: 0...(trip.spanDays - 1)) ?? stay.checkOutDayOrder
+        guard checkOut > checkIn, checkOut < trip.spanDays else { throw AutomationError.invalidInput }
+        stay.checkInDayOrder = checkIn; stay.nights = checkOut - checkIn
+        if let value = try fields.integer("checkInMinutes", range: -1...1439) { stay.checkInMinutes = value }
+        if let value = try fields.integer("checkOutMinutes", range: -1...1439) { stay.checkOutMinutes = value }
+        return stay.id
+    }
+
+    @MainActor
+    private func finishAutomationMutation(_ operation: AutomationOperation, tripId: UUID) {
+        fetchTrips()
+        refreshNotifications()
+        writeWidgetSnapshot()
+        CarryApp.refreshQuickActions(trips: trips)
+        // Use the same orphan collectors as startup; only run destructive file cleanup after commit.
+        reconcileBackgroundFiles()
+        reconcileAttachmentFiles()
+        if operation.name == "delete_trip" {
+            NotificationManager.cancelReminders(forTripId: tripId)
+            if CalendarManager.shared.hasAccess { Task { CalendarManager.shared.removeTrip(tripId) } }
+#if !targetEnvironment(macCatalyst)
+            LiveActivityManager.shared.end(for: tripId)
+            LiveActivityManager.shared.endTransit(tripId: tripId)
+#endif
+        } else if let trip = bundle(for: tripId) {
+            if ["create_trip", "update_trip", "duplicate_trip"].contains(operation.name) {
+                if operation.arguments.data?["destinations"] == nil && !trip.destinationCity.isEmpty && (operation.name == "create_trip" || operation.arguments.data?["destinationCity"] != nil) {
+                    updateCountryCode(for: tripId, city: trip.destinationCity)
+                }
+                if trip.isDateless, CalendarManager.shared.hasAccess { Task { CalendarManager.shared.removeTrip(tripId) } }
+                else if defaults.bool(forKey: "calendar_sync_enabled") { Task { CalendarManager.shared.updateTrip(trip) } }
+            }
+#if !targetEnvironment(macCatalyst)
+            if trip.isDateless { LiveActivityManager.shared.end(for: tripId) }
+            else {
+                if operation.name != "duplicate_trip" { LiveActivityManager.shared.startIfNeeded(for: trip) }
+                LiveActivityManager.shared.update(for: trip)
+            }
+#endif
         }
     }
 }

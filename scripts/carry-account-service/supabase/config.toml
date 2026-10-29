@@ -1,0 +1,21 @@
+project_id = "carry-account"
+
+[functions.carry-account]
+verify_jwt = true
+
+[functions.carry-data]
+verify_jwt = true
+
+[functions.carry-assets]
+verify_jwt = true
+
+[functions.carry-cleanup]
+verify_jwt = true
+
+# Auth identity may already be gone: the handler authenticates a 256-bit receipt
+# and returns only deletion progress. All account/data routes keep JWT checks.
+[functions.carry-account-status]
+verify_jwt = false
+
+[functions.carry-maintenance]
+verify_jwt = true

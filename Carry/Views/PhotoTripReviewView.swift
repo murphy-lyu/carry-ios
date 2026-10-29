@@ -248,16 +248,11 @@ struct PhotoTripReviewView: View {
     // MARK: 小组件
 
     private func thumb(_ data: Data?, size: CGFloat = 56) -> some View {
-        Group {
-            if let data, let image = UIImage(data: data) {
-                Image(uiImage: image).resizable().scaledToFill()
-            } else {
-                Image(systemName: "photo").font(.system(size: size * 0.3)).foregroundStyle(.tertiary)
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
-                    .background(Color(.tertiarySystemFill))
-            }
+        PreparedThumbnail(data: data, size: size) {
+            Image(systemName: "photo").font(.system(size: size * 0.3)).foregroundStyle(.tertiary)
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .background(Color(.tertiarySystemFill))
         }
-        .frame(width: size, height: size)
         .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
     }
 
