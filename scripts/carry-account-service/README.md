@@ -21,7 +21,7 @@
 
 ## 本地验证
 
-运行需 Node 24+，安装依赖使用 `npm ci --ignore-scripts`。本机运行时：`/Users/murphy/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/bin/node`。在本目录执行 `--test *.test.mjs`，当前测试集 94 项；provider 网络返回为合成夹具，PostgreSQL/PGlite 实际执行。
+运行需 Node 24+，安装依赖使用 `npm ci --ignore-scripts`。本机运行时：`/Users/murphy/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/bin/node`。在本目录执行 `--test *.test.mjs`，当前测试集 96 项；provider 网络返回为合成夹具，PostgreSQL/PGlite 实际执行。
 
 原生实际 HTTP 测试先启动 `graph-qa-server.mjs`，再运行共享 `CarryAutomationTests` scheme，排除需要另一个旧服务的 `RelayRoundTripTests`。`AccountGraphMigrationTests` 的费用集成项与 `AccountGraphRoundTripTests` 都依赖 127.0.0.1:8891；不应在未启本地 QA 服务时把网络失败跳过并算通过。
 
@@ -49,3 +49,8 @@ App 仅从被 gitignore 的 `Carry/Resources/Secrets.plist` 读取 `CarryAccount
 
 ## 持久账户删除（2026-10-29）
 免费开发库已有十四份迁移、账户/私有回执/后台维护接口。Native 删除请求返回 202/deleting，客户端先持久化回执；后台不依赖手机处理，只有全部完成才返回 deleted。status 使用独立回执认证（身份删除后无 JWT），不能读取旅行数据。回执不出现在 URL，服务端只存摘要，诊断身份映射 30 天后清除。两轮实际合成 Auth 删除和全部证据边界见 `../../docs/carry-account-deletion-qa.md`。
+
+## 结构变更事件契约（2026-10-30）
+当前开发库十九份迁移。移动子项时，旧父级及其祖先仅更新 subtreeVersion，事件必须 metadataOnly=true，fields/fieldVersions 均为空；只有实际字段/结构操作的实体才产生完整确认。即使同一命令稍后编辑旧父级，早先的元数据也不能提前确认该编辑。每个独立 delete 根生成独立、不透明的 deletionBatch；同一请求的多个根不得共用 requestID 作为恢复批次。不可变回执仍保证丢响应重放得到原批次，恢复父项不会复活先前独立删除的子项。
+
+新增 helper 保持 private/invoker，仅 service_role 可调用，没有扩大客户端权限。本地服务端两轮各 96/96；`hosted-graph-structural-smoke.sql` 在真实开发库按 service_role 验证后 rollback，不接触真实用户。原生当前完整组件测试两轮各 157/157，产品接入仍未完成，详见 `../../docs/carry-native-journal-parallel-qa.md`。

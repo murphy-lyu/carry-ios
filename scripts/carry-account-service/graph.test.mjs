@@ -237,3 +237,40 @@ test('native account lifecycle requires an active non-OAuth session before enrol
     assert.deepEqual((await db.query("select p.proname from pg_proc p join pg_namespace n on n.oid=p.pronamespace where n.nspname='carry_private' and p.prosecdef order by p.proname")).rows.map(row=>row.proname),["account_require_native_session","deletion_identity_exists"]);
   }finally{await db.close();}
 });
+
+test('moving before patching the old parent publishes only metadata until the actual parent edit',async()=>{
+  const db=await database();try{
+    const t=trip(),first=child('day',t.id),second=child('day',t.id),stop=child('stop',first.id);
+    second.fields.sortOrder=1;
+    await apply(db,[t,first,second,stop]);
+    const previous=await entity(db,first.id),moving=await entity(db,stop.id);
+    const result=await apply(db,[{...patch(moving,{}),action:'move',parentID:second.id},patch(previous,{title:'Actual parent edit'})]);
+    const events=result.changes.filter(c=>c.entity.id===first.id);
+    assert.ok(events.length>=2);
+    for(const event of events.slice(0,-1)){
+      assert.equal(event.metadataOnly,true,'An unchanged old parent cannot acknowledge its later edit');
+      assert.deepEqual(event.entity.fields,{});assert.deepEqual(event.entity.fieldVersions,{});
+    }
+    assert.equal(events.at(-1).metadataOnly,false);
+    assert.equal(events.at(-1).entity.fields.title,'Actual parent edit');
+  }finally{await db.close();}
+});
+
+test('independent child and parent deletes in one command keep separate restore batches',async()=>{
+  const db=await database();try{
+    const t=trip(),section=child('section',t.id),item=child('packingItem',section.id);
+    await apply(db,[t,section,item]);
+    const rootBefore=await entity(db,t.id),itemBefore=await entity(db,item.id),requestID=id();
+    const deleted=await apply(db,[remove(itemBefore),remove(rootBefore)],{requestID});
+    const root=await entity(db,t.id),leaf=await entity(db,item.id);
+    assert.notEqual(root.deletionBatch,leaf.deletionBatch);
+    assert.deepEqual(await apply(db,[remove(itemBefore),remove(rootBefore)],{requestID}),deleted);
+    await apply(db,[{...remove(root),action:'restore'}]);
+    assert.equal((await entity(db,t.id)).deletedAt,null);
+    assert.equal((await entity(db,section.id)).deletedAt,null);
+    assert.ok((await entity(db,item.id)).deletedAt,'Restoring the parent must preserve an earlier independent delete');
+    const remaining=await entity(db,item.id);
+    await apply(db,[{...remove(remaining),action:'restore'}]);
+    assert.equal((await entity(db,item.id)).deletedAt,null);
+  }finally{await db.close();}
+});

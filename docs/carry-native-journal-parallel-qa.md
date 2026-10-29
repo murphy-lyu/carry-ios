@@ -26,3 +26,12 @@
 
 ## 交付边界
 原生日志消费桥接、完整原子投影、删除/恢复、账户资产下载与保留、账户子库路由、迁移归属、网页登录部署及真实双端同身份、新账户 OAuth/MCP 仍须完成。现有 MCP 仍属于旧配对前台链路，不能宣称手机关闭也已可用。上述缺口接通后才进行最终两轮产品验收与物理 iPhone 安装；当前门禁保持关闭，没有上传真实行程或覆盖手机。
+
+## 后续结构事务修复
+原生删除恢复接入前，以新增失败测试复现两个现有服务端缺口：移动子项时旧父级被写为完整事件，可能在稍后父级字段操作确认前被误认；同请求中的独立子项/父项删除共用 requestID 批次，恢复父项会误复活子项。
+
+追加十九号迁移 `20261029233857_graph_structural_event_identity.sql`：显式区分祖先元数据事件，保持连续序号；每个 delete 根分配独立批次，幂等回执保存原结果。新 helper 继续 private/security invoker，只授 service_role，原 public/客户端权限未增加。本地先失败再修复，两轮服务端各 96/96：`/tmp/carry-structural-service-r1.log`、`/tmp/carry-structural-service-r2.log`。
+
+开发库迁移已应用，`hosted-graph-structural-smoke.sql` 两次按真实 service_role 验证事件、独立删除、父项恢复、重放及权限后全部 rollback；检查合成 subject 残留为 0。安全 advisor 无 WARN/ERROR，十八张私有表的无策略 INFO 是现有默认拒绝边界，未添加客户端策略（[规则说明](https://supabase.com/docs/guides/database/database-linter?lint=0008_rls_enabled_no_policy)）。重启本线程本地 graph QA 后，真实 URLSession/HTTP/数据库十项回归通过：`/tmp/carry-structural-native-http.log`，结果 `/tmp/CarryStructuralNativeHTTP.xcresult`。
+
+额外 Postman CLI 1.80.0 冒烟在请求构造阶段两次返回 415/json_required，未计作通过，日志 `/tmp/carry-structural-postman-create.log`；请求限本地合成夹具、关闭 report-events。没有调整产品 Content-Type 校验以迁就 CLI；当前正向传输证据来自上述真实原生 HTTP 测试。
