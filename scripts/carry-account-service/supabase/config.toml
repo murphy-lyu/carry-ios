@@ -5,3 +5,9 @@ verify_jwt = true
 
 [functions.carry-data]
 verify_jwt = true
+
+[functions.carry-assets]
+verify_jwt = true
+
+[functions.carry-cleanup]
+verify_jwt = true

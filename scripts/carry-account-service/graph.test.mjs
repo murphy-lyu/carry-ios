@@ -1,6 +1,6 @@
+import { applyPortableMigrations } from './migration-fixture.mjs';
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { readFile, readdir } from 'node:fs/promises';
 import { randomUUID } from 'node:crypto';
 import { PGlite } from '@electric-sql/pglite';
 import { graphSchema } from './graph-schema.mjs';
@@ -23,8 +23,7 @@ async function database() {
     create table auth.sessions(id uuid primary key,user_id uuid references auth.users(id),not_after timestamptz,oauth_client_id uuid);
     insert into auth.users values('${account}'),('${other}');
     insert into auth.sessions values('${session}','${account}',null,null),('${otherSession}','${other}',null,null);`);
-  const directory = new URL('./supabase/migrations/', import.meta.url);
-  for (const name of (await readdir(directory)).filter(n=>n.endsWith('.sql')).sort()) await db.exec(await readFile(new URL(name,directory),'utf8'));
+  await applyPortableMigrations(db);
   await db.exec('set role service_role');
   for (const key of [account,other]) await db.query('select public.carry_account_enroll($1,$2,$3,$4)',[key,'subject-'+key,'app.nevestudio.carry','test-encrypted']);
   return db;

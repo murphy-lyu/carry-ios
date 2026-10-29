@@ -242,4 +242,48 @@ final class AssetUploadTests: XCTestCase {
         XCTAssertEqual(result["heads"] as? Int, 0)
         XCTAssertEqual(result["creations"] as? Int, 1)
     }
+
+    private func transfer(_ fixture: Fixture) throws -> CarryAssetTransfer {
+        try CarryAssetTransfer(accountID: fixture.asset.accountID,
+            projectURL: XCTUnwrap(URL(string: "http://127.0.0.1:8892")),
+            directory: fixture.folder.appendingPathComponent("uploads"),
+            publishableKey: "sb_publishable_synthetic_asset_qa", accessToken: { "synthetic-asset-token-a" })
+    }
+
+    private func descriptor(_ fixture: Fixture) -> CarryAssetDescriptor {
+        .init(id: fixture.asset.id, entityID: UUID(), entityKind: "attachment", slot: "file",
+              sha256: fixture.asset.sha256, byteCount: fixture.asset.byteCount)
+    }
+
+    func testTransferRequiresServerVerificationAndReusesAnAlreadyVerifiedFile() async throws {
+        let fixture = try await fixture(), transfer = try transfer(fixture), descriptor = descriptor(fixture)
+        try await transfer.transfer(descriptor, from: fixture.source)
+        try await transfer.transfer(descriptor, from: fixture.source)
+        await transfer.close()
+        let result = try await stats(fixture)
+        XCTAssertEqual(result["verified"] as? Bool, true)
+        XCTAssertEqual(result["reserves"] as? Int, 2)
+        XCTAssertEqual(result["verifications"] as? Int, 2)
+        XCTAssertEqual(result["creations"] as? Int, 1)
+        XCTAssertEqual(result["chunks"] as? [Int], [6 * 1024 * 1024, 1024 * 1024])
+        XCTAssertTrue(FileManager.default.fileExists(atPath: fixture.source.path))
+    }
+
+    func testVerificationOutageNeverReportsSuccessAndRetryDoesNotReuploadBytes() async throws {
+        let fixture = try await fixture(mode: "verify_outage"), transfer = try transfer(fixture), descriptor = descriptor(fixture)
+        do { try await transfer.transfer(descriptor, from: fixture.source); XCTFail("Upload alone is not verified") }
+        catch let error as CarryAssetTransferFailure { XCTAssertEqual(error, .unavailable) }
+        let incomplete = try await stats(fixture)
+        XCTAssertNotEqual(incomplete["verified"] as? Bool, true)
+        var recover = URLRequest(url: try XCTUnwrap(URL(string: "http://127.0.0.1:8892/__recover/\(fixture.asset.id.uuidString)")))
+        recover.httpMethod = "POST"
+        let (_, response) = try await URLSession.shared.data(for: recover)
+        XCTAssertEqual((response as? HTTPURLResponse)?.statusCode, 200)
+        try await transfer.transfer(descriptor, from: fixture.source)
+        await transfer.close()
+        let complete = try await stats(fixture)
+        XCTAssertEqual(complete["verified"] as? Bool, true)
+        XCTAssertEqual(complete["creations"] as? Int, 1)
+        XCTAssertEqual(complete["chunks"] as? [Int], [6 * 1024 * 1024, 1024 * 1024])
+    }
 }

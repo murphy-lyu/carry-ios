@@ -18,13 +18,33 @@ const server = http.createServer(async (req, res) => {
     const prefix = prefixes.find(value => path === value || path.startsWith(value + '/'));
     if (path === '/__fixture' && req.method === 'POST') {
       const { id, mode = 'normal' } = JSON.parse(await body(req, 1024));
-      if (!/^[0-9a-f-]{36}$/i.test(id) || !['normal', 'drop_once', 'expired_once', 'bad_location', 'redirect', 'bad_offset_once'].includes(mode)) return reply(res, 400);
+      if (!/^[0-9a-f-]{36}$/i.test(id) || !['normal', 'drop_once', 'expired_once', 'bad_location', 'redirect', 'bad_offset_once', 'verify_outage'].includes(mode)) return reply(res, 400);
       fixtures.set(id.toLowerCase(), { mode, creations: 0, heads: 0, chunks: [], offset: 0, dropped: false, expired: false, trap: 0, tokenARequests: 0, tokenBRequests: 0 });
       return reply(res, 201);
     }
     if (path.startsWith('/__stats/')) {
       const fixture = fixtures.get(path.slice('/__stats/'.length).toLowerCase());
       return reply(res, fixture ? 200 : 404, { 'Content-Type': 'application/json' }, JSON.stringify(fixture ?? {}));
+    }
+    if (path.startsWith('/__recover/') && req.method === 'POST') {
+      const fixture=fixtures.get(path.slice('/__recover/'.length).toLowerCase());
+      if(!fixture)return reply(res,404);fixture.mode='normal';return reply(res,200);
+    }
+    if (['/functions/v1/carry-assets/reserve','/functions/v1/carry-assets/verify'].includes(path) && req.method==='POST') {
+      if (!['Bearer synthetic-asset-token-a', 'Bearer synthetic-asset-token-b'].includes(req.headers.authorization)) return reply(res,401);
+      const input=JSON.parse(await body(req,8192)),fixture=fixtures.get(String(input.id).toLowerCase());
+      if(!fixture)return reply(res,404);
+      const json=value=>reply(res,200,{'Content-Type':'application/json'},JSON.stringify(value));
+      if(path.endsWith('/reserve')) {
+        if(fixture.metadata&&(Object.keys(fixture.metadata).length!==Object.keys(input).length||
+          Object.keys(fixture.metadata).some(key=>fixture.metadata[key]!==input[key])))return reply(res,409);
+        fixture.metadata=input;fixture.reserves=(fixture.reserves??0)+1;
+        return json({id:input.id,status:fixture.verified?'verified':'pending'});
+      }
+      fixture.verifications=(fixture.verifications??0)+1;
+      if(fixture.mode==='verify_outage')return reply(res,503);
+      if(!fixture.metadata||fixture.offset!==fixture.metadata.byteCount||fixture.sha256!==fixture.metadata.sha256)return reply(res,422);
+      fixture.verified=true;return json({id:input.id,status:'verified'});
     }
     if (path === '/__trap') { for (const f of fixtures.values()) f.trap++; return reply(res, 500); }
     if (!prefix) return reply(res, 404);

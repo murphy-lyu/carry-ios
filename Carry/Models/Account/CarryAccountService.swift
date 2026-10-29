@@ -216,6 +216,15 @@ final class CarryAccountService: CarryAccountAuthenticating {
         } catch { throw classify(error) }
     }
 
+    func assetTransfer(for accountID: UUID, directory: URL) throws -> CarryAssetTransfer {
+        guard let configuration else { throw CarryAccountFailure.unavailable }
+        return try CarryAssetTransfer(accountID: accountID, projectURL: configuration.projectURL,
+            directory: directory, publishableKey: configuration.publishableKey, accessToken: { [weak self] in
+                guard let self else { throw CarryAccountFailure.unavailable }
+                return try await self.accessToken(for: accountID)
+            })
+    }
+
     private func saveProfile(_ user: User, name: String? = nil) throws -> CarryAccountProfile {
         let profile = CarryAccountProfile(id: user.id,
             displayName: name ?? user.userMetadata["full_name"]?.stringValue

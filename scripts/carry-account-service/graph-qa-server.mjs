@@ -1,8 +1,8 @@
+import { applyPortableMigrations } from './migration-fixture.mjs';
 // LOCAL TEST HARNESS ONLY. Fixed synthetic identities are deliberately not real
 // authentication. Never bundle this module into a deployed function.
 import {createServer} from 'node:http';
 import {PGlite} from '@electric-sql/pglite';
-import {readFile,readdir} from 'node:fs/promises';
 import {graphSchema} from './graph-schema.mjs';
 import {createGraphHandler,GraphRequestError} from './graph-http.mjs';
 if(process.env.CARRY_GRAPH_QA!=='synthetic-only')throw new Error('explicit_synthetic_qa_required');
@@ -12,8 +12,7 @@ await db.exec(`create role anon;create role authenticated;create role service_ro
   create schema auth;create table auth.users(id uuid primary key);
   create table auth.sessions(id uuid primary key,user_id uuid,not_after timestamptz,oauth_client_id uuid);
   insert into auth.users values('${account}');insert into auth.sessions values('${session}','${account}',null,null);`);
-const directory=new URL('./supabase/migrations/',import.meta.url);
-for(const name of (await readdir(directory)).filter(n=>n.endsWith('.sql')).sort())await db.exec(await readFile(new URL(name,directory),'utf8'));
+await applyPortableMigrations(db);
 await db.exec('set role service_role');
 await db.query('select public.carry_account_enroll($1,$2,$3,$4)',[account,'synthetic-subject','app.nevestudio.carry','synthetic-encrypted']);
 async function rpc(name,args){try{

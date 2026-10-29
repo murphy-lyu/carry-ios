@@ -5,14 +5,42 @@ export class GraphRequestError extends Error {
 }
 const UUID=/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 export const isUUID = value => typeof value==='string' && UUID.test(value);
+export async function readBoundedBytes(message,maximum,signal=message.signal) {
+  const declared=message.headers.get('content-length');
+  if(declared!==null&&(!/^[0-9]+$/.test(declared)||Number(declared)>maximum)) {
+    await message.body?.cancel();throw new GraphRequestError(413,'body_too_large');
+  }
+  const reader=message.body?.getReader();
+  if(!reader)return new Uint8Array();
+  const deadline=signal?AbortSignal.any([signal,AbortSignal.timeout(20000)]):AbortSignal.timeout(20000);
+  const chunks=[];let size=0,complete=false;
+  try {
+    while(true) {
+      deadline.throwIfAborted();
+      const {done,value}=await new Promise((resolve,reject)=>{
+        const abort=()=>reject(deadline.reason);
+        deadline.addEventListener('abort',abort,{once:true});
+        reader.read().then(value=>{deadline.removeEventListener('abort',abort);resolve(value);},
+          error=>{deadline.removeEventListener('abort',abort);reject(error);});
+      });
+      if(done){complete=true;break;}
+      size+=value.byteLength;
+      if(size>maximum)throw new GraphRequestError(413,'body_too_large');
+      chunks.push(value);
+    }
+    const bytes=new Uint8Array(size);let offset=0;
+    for(const chunk of chunks){bytes.set(chunk,offset);offset+=chunk.length;}
+    return bytes;
+  }catch(error) {
+    if(deadline.aborted)throw new GraphRequestError(408,'request_cancelled_or_timed_out');
+    throw error;
+  }finally {
+    try{if(!complete)await reader.cancel();}finally{reader.releaseLock();}
+  }
+}
 export async function boundedJSON(request, maximum=2097152) {
   if (request.headers.get('content-type')?.split(';')[0].trim()!=='application/json') throw new GraphRequestError(415,'json_required');
-  if (Number(request.headers.get('content-length'))>maximum) throw new GraphRequestError(413,'body_too_large');
-  const reader=request.body?.getReader(); if (!reader) throw new GraphRequestError(400,'invalid_request');
-  const chunks=[];let size=0;
-  while(true){const {done,value}=await reader.read();if(done)break;size+=value.byteLength;
-    if(size>maximum){await reader.cancel();throw new GraphRequestError(413,'body_too_large');}chunks.push(value);}
-  const bytes=new Uint8Array(size);let offset=0;for(const chunk of chunks){bytes.set(chunk,offset);offset+=chunk.length;}
+  const bytes=await readBoundedBytes(request,maximum);
   try{return JSON.parse(new TextDecoder('utf-8',{fatal:true}).decode(bytes));}catch{throw new GraphRequestError(400,'invalid_request');}
 }
 

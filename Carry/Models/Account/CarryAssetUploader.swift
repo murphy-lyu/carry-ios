@@ -31,7 +31,7 @@ private nonisolated struct CarryAssetUploadCheckpoint: Codable, Sendable {
 }
 
 /// Never forward a bearer or a private file body through an HTTP redirect.
-private nonisolated final class CarryAssetNoRedirect: NSObject, URLSessionTaskDelegate, Sendable {
+nonisolated final class CarryAssetNoRedirect: NSObject, URLSessionTaskDelegate, Sendable {
     func urlSession(_ session: URLSession, task: URLSessionTask,
                     willPerformHTTPRedirection response: HTTPURLResponse,
                     newRequest request: URLRequest,

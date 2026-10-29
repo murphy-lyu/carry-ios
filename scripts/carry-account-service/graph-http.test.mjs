@@ -25,6 +25,12 @@ test('HTTP bounds bytes while streaming without trusting Content-Length',async()
   const response=await h(new Request('https://test.invalid',{method:'POST',headers:{authorization:'Bearer synthetic','content-type':'application/json'},body,duplex:'half'}));
   assert.equal(response.status,413);assert.deepEqual(await response.json(),{error:'body_too_large'});
 });
+test('HTTP cancellation interrupts a stalled body read and releases its reader',async()=>{
+  const abort=new AbortController();let cancelled=false;
+  const body=new ReadableStream({pull(){queueMicrotask(()=>abort.abort());return new Promise(()=>{});},cancel(){cancelled=true;}},{highWaterMark:0});
+  const response=await handler()(new Request('https://test.invalid',{method:'POST',headers:{authorization:'Bearer synthetic','content-type':'application/json'},body,signal:abort.signal,duplex:'half'}));
+  assert.equal(response.status,408);assert.equal(cancelled,true);assert.equal(body.locked,false);
+});
 test('HTTP rejects invalid cursor, content, absent identity and exhausted budget',async()=>{
   const h=handler();for(const cursor of [-1,0.5,'0',null])assert.equal((await h(request({action:'pull',cursor}))).status,400);
   assert.equal((await h(request({action:'pull',cursor:0,limit:501}))).status,400);

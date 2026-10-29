@@ -1,6 +1,6 @@
+import { applyPortableMigrations } from './migration-fixture.mjs';
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { readFile, readdir } from 'node:fs/promises';
 import { PGlite } from '@electric-sql/pglite';
 
 test('PostgreSQL lifecycle migration enforces RLS, account lock, rate budget and purge gate', async () => {
@@ -15,10 +15,7 @@ test('PostgreSQL lifecycle migration enforces RLS, account lock, rate budget and
       create table auth.sessions (id uuid primary key, user_id uuid references auth.users(id), not_after timestamptz, oauth_client_id uuid);
       insert into auth.users values ('00000000-0000-0000-0000-000000000001'), ('00000000-0000-0000-0000-000000000002');
     `);
-    const directory = new URL('./supabase/migrations/', import.meta.url);
-    for (const name of (await readdir(directory)).filter(value => value.endsWith('.sql')).sort()) {
-      await database.exec(await readFile(new URL(name, directory), 'utf8'));
-    }
+    await applyPortableMigrations(database);
     const id = '00000000-0000-0000-0000-000000000001';
     await database.exec(`set role service_role`);
     await database.query('select public.carry_account_enroll($1, $2, $3, $4)', [id, 'subject', 'app.nevestudio.carry', 'encrypted-only']);
