@@ -1,6 +1,6 @@
 # Carry 云同步与对话操作
 
-Status: 产品目标与 Apple 首选身份已确认；账户 UI/身份、网页登录适配、数据图、离线副本、备份编解码及文件断点/校验已有组件验证，免费开发库/数据接口已部署。全业务接入、真实身份/资产迁移/AI 账户执行和完整验收尚未完成。2026-10-28。证据见 `../docs/carry-account-graph-qa.md`、`../docs/carry-account-assets-qa.md`。
+Status: 产品目标与 Apple 首选身份已确认；账户 UI/身份、网页登录适配、数据图、离线副本、备份编解码及文件断点/校验已有组件验证，免费开发库/数据/文件/后台删除接口已部署并做合成验收。全业务接入、真实身份/资产迁移/AI 账户执行和完整验收尚未完成。2026-10-29。证据见 `../docs/carry-account-graph-qa.md`、`../docs/carry-account-assets-qa.md`。
 
 用户已明确：「手机不打开也能通过 Codex 完成操作」是非常确定的长期目标，并要求最好的产品设计。本 spec 取代 `codex-mcp-integration.md` 中配对手机作为写入执行器的最终产品方案。原方案的代码、测试和故障记录保留作复用与回归依据，不能直接合并成最终功能发布。
 
@@ -175,3 +175,7 @@ AI 操作指引集中描述：每个真实停靠点独立建项、酒店和交�
 - [Tripsy 官方 CLI/MCP 实现说明](https://github.com/tripsyapp/cli/blob/main/README.md)、[Tripsy 账户 API](https://docs.api.tripsy.app/)；只证明公开接口与结构，未作为手机关闭实测结果。
 - [Cloudflare Durable Objects 存储说明](https://developers.cloudflare.com/durable-objects/best-practices/access-durable-objects-storage/)：现有技术可提供持久事务存储，但不等于已经具备账户同步、冲突解决或完整恢复产品。
 - 历史验收和已部署结果保留在 `docs/codex-integration-qa.md`，不因方向变更改写为“没有做过”。
+
+### 删除流程的执行契约（已批准范围内的实现细化，2026-10-29）
+账户删除通过后台持久任务完成。原生在发起请求前将随机删除回执保存在 Keychain；服务端只保存摘要。用户完成一次新鲜 Apple 验证后，事务将账户设为 deleting，阻断数据写入并登记任务。返回 deleting 只表示受理，界面继续展示进度；服务端完成全部清理后才显示 deleted。App 关闭或网络中断不取消后台任务。
+步骤依次为撤销所有已保存 Apple 凭据、确认账户文件清理、清除业务图与授权、删除 Auth 身份。每个外部步骤都有租约和已完成记录，响应丢失可重试；不能先删除 Auth 用户再寻找文件。删除回执只查询粗粒度进度，不读取行程或重新登录。完整流程完成前保留原本地行程，退出与删除云账户分开；最终本机缓存处理必须与未同步编辑/导出入口一同验收。

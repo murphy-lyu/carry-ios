@@ -69,7 +69,7 @@ test('authentication derives account and Apple subjects from server user lookup'
       { provider: 'other', identity_data: { sub: 'must-not-match' } },
     ] });
   });
-  assert.deepEqual(await adapter.authenticate(bearer), { id: accountID, appleSubjects: ['apple-subject'] });
+  assert.deepEqual(await adapter.authenticate(bearer), { id: accountID, sessionID, appleSubjects: ['apple-subject'] });
   assert.deepEqual(paths, ['/auth/v1/user', '/rest/v1/rpc/carry_account_require_session']);
 });
 test('account lifecycle rejects OAuth, mismatched and expired claims before credential access', async () => {
@@ -127,47 +127,35 @@ test('enrollment encrypts refresh credentials with authenticated account binding
   await assert.rejects(crypto.subtle.decrypt({ name: 'AES-GCM', iv,
     additionalData: new TextEncoder().encode('different-account:synthetic-subject:app.nevestudio.carry') }, key, cipher));
 });
-test('incomplete data purge cannot delete auth identity or claim completion', async () => {
-  const paths = [];
-  const adapter = setup(async (url, options) => {
-    const path = new URL(url).pathname; paths.push(path);
-    if (path.endsWith('carry_account_begin_delete')) return new Response(null, { status: 204 });
-    if (path.endsWith('carry_account_credentials')) return Response.json([]);
-    if (path.endsWith('carry_account_purge_owned_data')) return Response.json({ error: 'not_implemented' }, { status: 500 });
-    throw new Error('must_not_reach_auth_deletion');
+test('deletion request only persists a durable job and never calls Auth deletion inline',async()=>{
+  const paths=[];
+  const adapter=setup(async(url,options)=>{
+    paths.push(url.pathname);assert.equal(url.pathname,'/rest/v1/rpc/carry_account_request_deletion');
+    const value=JSON.parse(options.body);assert.equal(value.p_account,accountID);assert.equal(value.p_session,sessionID);
+    assert.equal(value.p_ticket,'a'.repeat(64));assert.equal(value.p_encrypted_token.includes('refresh'),false);
+    return Response.json({status:'deleting'});
   });
-  await assert.rejects(adapter.deleteAccount('internal-account', { subject: 'synthetic-subject', audience: 'app.nevestudio.carry' }, 'token'));
-  assert.equal(paths.some(path => path.includes('/admin/users/')), false);
+  assert.deepEqual(await adapter.requestDeletion({id:accountID,sessionID},{subject:'synthetic-subject',audience:'app.nevestudio.carry'},'refresh','a'.repeat(64)),{status:'deleting'});
+  assert.equal(paths.length,1);
 });
 test('a deleting account is never restored as active', async () => {
   const adapter = setup(async () => Response.json([{ status: 'deleting' }]));
   assert.equal(await adapter.status('internal-account'), false);
 });
 
-test('Apple revocation uses encrypted stored token before purge and auth deletion', async () => {
-  let record;
-  const paths = [];
-  const adapter = setup(async (url, options) => {
-    const path = new URL(url).pathname; paths.push(path);
-    if (path.endsWith('carry_account_begin_delete')) {
-      const value = JSON.parse(options.body);
-      record = { account_id: value.p_account_id, apple_subject: value.p_subject,
-        audience: value.p_audience, encrypted_token: value.p_encrypted_token, status: 'deleting' };
-      return new Response(null, { status: 204 });
+test('Apple revocation decrypts the bound stored credential without touching Auth identity',async()=>{
+  let row;
+  const adapter=setup(async(url,options)=>{
+    if(new URL(url).pathname.endsWith('carry_account_enroll')) {
+      const value=JSON.parse(options.body);row={account_id:value.p_account_id,apple_subject:value.p_subject,audience:value.p_audience,encrypted_token:value.p_encrypted_token};
+      return new Response(null,{status:204});
     }
-    if (path.endsWith('carry_account_credentials')) return Response.json([record]);
-    if (path === '/auth/revoke') {
-      assert.equal(options.body.get('token'), 'synthetic-fresh-refresh');
-      assert.equal(options.body.get('token_type_hint'), 'refresh_token');
-      return new Response(null, { status: 200 });
-    }
-    if (path.endsWith('carry_account_purge_owned_data')) return new Response(null, { status: 204 });
-    if (path.includes('/auth/v1/admin/users/')) return Response.json({});
-    throw new Error('unexpected_route');
+    assert.equal(String(url),'https://appleid.apple.com/auth/revoke');
+    assert.equal(options.body.get('token'),'synthetic-refresh');assert.equal(options.body.get('token_type_hint'),'refresh_token');
+    return new Response(null,{status:200});
   });
-  await adapter.deleteAccount('internal-account', { subject: 'synthetic-subject', audience: 'app.nevestudio.carry' }, 'synthetic-fresh-refresh');
-  assert.deepEqual(paths, ['/rest/v1/rpc/carry_account_begin_delete', '/rest/v1/rpc/carry_account_credentials',
-    '/auth/revoke', '/rest/v1/rpc/carry_account_purge_owned_data', '/auth/v1/admin/users/internal-account']);
+  await adapter.enroll(accountID,{subject:'synthetic-subject',audience:'app.nevestudio.carry'},'synthetic-refresh');
+  await adapter.revokeCredential(row);
 });
 
 test('web code exchange binds the exact operator-configured redirect without changing native exchange', async () => {
@@ -189,5 +177,20 @@ test('web code exchange binds the exact operator-configured redirect without cha
   for (const uri of ['http://account-qa.invalid/auth/apple/callback', 'https://user:pass@account-qa.invalid/path',
     'https://account-qa.invalid/path?next=evil', 'https://account-qa.invalid/path#fragment']) {
     assert.throws(() => createSupabaseAdapter({ configuration: { ...webConfig, appleRedirectURIs: { [webID]: uri } }, jose }));
+  }
+});
+
+test('Auth deletion accepts only confirmed success or the provider user-not-found response',async()=>{
+  for(const body of [{code:'user_not_found'},{code:404,error_code:'user_not_found'}]) {
+    const adapter=setup(async(url,options)=>{
+      assert.equal(new URL(url).pathname,'/auth/v1/admin/users/'+accountID);
+      assert.equal(options.headers['X-Supabase-Api-Version'],'2024-01-01');
+      return Response.json(body,{status:404});
+    });
+    await adapter.deleteAuthIdentity(accountID);
+  }
+  for(const status of [401,403,404,500]) {
+    const adapter=setup(async()=>Response.json({message:'unknown error'},{status}));
+    await assert.rejects(adapter.deleteAuthIdentity(accountID),/auth_deletion_unconfirmed/);
   }
 });

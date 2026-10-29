@@ -1,4 +1,5 @@
 import { AccountRequestError } from './lifecycle.mjs';
+import { readBoundedBytes } from './graph-http.mjs';
 
 const encode = value => new TextEncoder().encode(value);
 const base64 = bytes => btoa(String.fromCharCode(...new Uint8Array(bytes)));
@@ -30,15 +31,21 @@ export function createSupabaseAdapter({ configuration, jose, fetcher = fetch }) 
   async function api(path, options = {}, userToken) {
     const response = await send(new URL(path, project), { ...options, headers: {
       apikey: serviceKey, Authorization: `Bearer ${userToken ?? serviceKey}`,
+      ...(path.startsWith('/auth/')?{'X-Supabase-Api-Version':'2024-01-01'}:{}),
       'Content-Type': 'application/json', ...options.headers,
     } });
+    let value=null;
+    if(response.status!==204) {
+      try { value=JSON.parse(new TextDecoder('utf-8',{fatal:true}).decode(await readBoundedBytes(response,65536))); }
+      catch { throw new Error('backend_response_invalid'); }
+    }
     if (!response.ok) {
       if (userToken && [401, 403].includes(response.status)) throw new AccountRequestError(401, 'unauthorized');
-      const error = await response.json().catch(() => null);
+      const error = value;
       if (error?.code === '28000') throw new AccountRequestError(401, 'session_expired');
       throw new Error('backend_request_failed');
     }
-    return response.status === 204 ? null : response.json();
+    return value;
   }
   async function rpc(name, body) {
     return api(`/rest/v1/rpc/${name}`, { method: 'POST', body: JSON.stringify(body) });
@@ -67,8 +74,14 @@ export function createSupabaseAdapter({ configuration, jose, fetcher = fetch }) 
       method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
       body: new URLSearchParams(body),
     });
-    if (!response.ok) throw new AccountRequestError(401, 'invalid_apple_code');
-    return path === 'revoke' ? null : response.json();
+    if(path==='revoke') {
+      await response.body?.cancel();
+      if(response.status!==200)throw new Error('apple_revocation_failed');
+      return null;
+    }
+    if (!response.ok) {await response.body?.cancel();throw new AccountRequestError(401, 'invalid_apple_code');}
+    try{return JSON.parse(new TextDecoder('utf-8',{fatal:true}).decode(await readBoundedBytes(response,24000)));}
+    catch{throw new AccountRequestError(503,'apple_response_invalid');}
   }
   async function rows(id) {
     return rpc('carry_account_credentials', { p_account_id: id });
@@ -89,7 +102,7 @@ export function createSupabaseAdapter({ configuration, jose, fetcher = fetch }) 
         throw new AccountRequestError(401, 'unauthorized');
       }
       await rpc('carry_account_require_session', { p_account: user.id, p_session: claims.session_id });
-      return { id: user.id, appleSubjects: (user.identities ?? []).filter(value => value.provider === 'apple')
+      return { id: user.id, sessionID:claims.session_id, appleSubjects: (user.identities ?? []).filter(value => value.provider === 'apple')
         .map(value => value.identity_data?.sub).filter(value => typeof value === 'string') };
     },
     rateLimit: id => rpc('carry_account_rate_limit', { p_account_id: id }),
@@ -122,23 +135,31 @@ export function createSupabaseAdapter({ configuration, jose, fetcher = fetch }) 
       await rpc('carry_account_enroll', { p_account_id: id, p_subject: identity.subject,
         p_audience: identity.audience, p_encrypted_token: await seal(id, identity, token) });
     },
-    deleteAccount: async (id, identity, token) => {
-      // Durable tombstone and token save happen before external revocation. A failed/retried
-      // purge remains blocked. A fresh login must never reset 'deleting' to 'active'.
-      await rpc('carry_account_begin_delete', { p_account_id: id, p_subject: identity.subject,
-        p_audience: identity.audience, p_encrypted_token: await seal(id, identity, token) });
-      const records = await rows(id);
-      if (!records.length || records.some(row => row.status !== 'deleting')) {
-        throw new Error('deletion_not_durable');
-      }
-      for (const row of records) {
-        await apple('revoke', { client_id: row.audience, client_secret: await clientSecret(row.audience),
-          token: await open(row), token_type_hint: 'refresh_token' });
-      }
-      // This function intentionally refuses to run until the complete account-owned graph,
-      // files and AI grants are implemented. It is not a successful empty purge placeholder.
-      await rpc('carry_account_purge_owned_data', { p_account_id: id });
-      await api(`/auth/v1/admin/users/${encodeURIComponent(id)}`, { method: 'DELETE' });
+    requestDeletion:async(account,identity,token,ticket)=>rpc('carry_account_request_deletion',{
+      p_account:account.id,p_session:account.sessionID,p_subject:identity.subject,p_audience:identity.audience,
+      p_encrypted_token:await seal(account.id,identity,token),p_ticket:ticket,
+    }),
+    deletionStatus:ticket=>rpc('carry_account_deletion_status',{p_ticket:ticket}),
+    deletionAccounts:token=>rpc('carry_account_deletion_accounts',{p_token:token}),
+    claimDeletion:(id,operation)=>rpc('carry_account_deletion_claim',{p_account:id,p_operation:operation}),
+    deletionCredential:(id,operation)=>rpc('carry_account_deletion_credential',{p_account:id,p_operation:operation}),
+    revokeCredential:async row=>apple('revoke',{client_id:row.audience,client_secret:await clientSecret(row.audience),
+      token:await open(row),token_type_hint:'refresh_token'}),
+    recordRevocation:(id,operation,row,hash)=>rpc('carry_account_deletion_revoked',{
+      p_account:id,p_operation:operation,p_subject:row.apple_subject,p_audience:row.audience,p_token_hash:hash,
+    }),
+    advanceDeletion:(id,operation,stage)=>rpc('carry_account_deletion_advance',{p_account:id,p_operation:operation,p_stage:stage}),
+    releaseDeletion:(id,operation,failed)=>rpc('carry_account_deletion_release',{p_account:id,p_operation:operation,p_failed:failed}),
+    deleteAuthIdentity:async id=>{
+      const response=await send(new URL(`/auth/v1/admin/users/${encodeURIComponent(id)}`,project),{
+        method:'DELETE',headers:{apikey:serviceKey,Authorization:`Bearer ${serviceKey}`,'X-Supabase-Api-Version':'2024-01-01'},
+      });
+      const bytes=await readBoundedBytes(response,65536);
+      if(response.status===200||response.status===204)return;
+      let body;try{body=JSON.parse(new TextDecoder('utf-8',{fatal:true}).decode(bytes));}catch{throw new Error('auth_deletion_unconfirmed');}
+      if(response.status===404&&(body?.code==='user_not_found'||body?.error_code==='user_not_found'))return;
+      throw new Error('auth_deletion_unconfirmed');
     },
+
   };
 }

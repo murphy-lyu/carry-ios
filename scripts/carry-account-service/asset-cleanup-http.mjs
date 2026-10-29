@@ -1,12 +1,12 @@
 import { GraphRequestError, isUUID, readBoundedBytes } from './graph-http.mjs';
 
 // The internal capability cannot choose accounts, disclose data or issue sessions.
-export function createAssetCleanupHandler(adapter) {
+export function createAssetCleanupHandler(adapter,{credentialHeader='x-carry-cleanup'}={}) {
   return async request => {
     const reply=(body,status=200)=>Response.json(body,{status,headers:{'Cache-Control':'no-store'}});
     try {
       if(request.method!=='POST')return reply({error:'method_not_allowed'},405);
-      const token=request.headers.get('x-carry-cleanup');
+      const token=request.headers.get(credentialHeader);
       if(!token||!/^[0-9a-f]{64}$/.test(token))return reply({error:'unauthorized'},401);
       const body=await readBoundedBytes(request,2);
       if(body.length&&new TextDecoder().decode(body)!=='{}')return reply({error:'invalid_request'},400);

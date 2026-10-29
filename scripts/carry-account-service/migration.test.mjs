@@ -29,7 +29,7 @@ test('PostgreSQL lifecycle migration enforces RLS, account lock, rate budget and
     await assert.rejects(database.query('select public.carry_account_enroll($1, $2, $3, $4)', [id, 'subject', 'app.nevestudio.carry', 'must-not-revive']), /account_deletion_pending/);
     data = await database.query('select status, encrypted_token from carry_private.carry_apple_credentials');
     assert.deepEqual(data.rows, [{ status: 'deleting', encrypted_token: 'encrypted-new' }]);
-    await assert.rejects(database.query('select public.carry_account_purge_owned_data($1)', [id]), /account_data_purge_not_implemented/);
+    await assert.rejects(database.query('select public.carry_account_purge_owned_data($1)', [id]), /account_deletion_not_authorized/);
     await database.exec('reset role; set role authenticated');
     await assert.rejects(database.query('select * from carry_private.carry_apple_credentials'), /permission denied/);
     await assert.rejects(database.query('select public.carry_account_credentials($1)', [id]), /permission denied/);

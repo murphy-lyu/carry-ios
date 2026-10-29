@@ -59,6 +59,7 @@ extension CarryAccountStore {
         case .offline: return "account.status.offline"
         case .temporarilyUnavailable: return "account.status.unavailable"
         case .needsReauthentication: return "account.status.expired"
+        case .deleting: return "account.delete.pending.title"
         }
     }
 
@@ -81,10 +82,11 @@ struct AccountView: View {
 
     var body: some View {
         Group {
-            if let profile = account.profile { accountDetails(profile) }
+            if account.isDeleting { deletionProgress }
+            else if let profile = account.profile { accountDetails(profile) }
             else { signInPage }
         }
-        .navigationTitle(account.profile == nil ? Text("account.sign_in") : Text("account.title"))
+        .navigationTitle(account.profile == nil && !account.isDeleting ? Text("account.sign_in") : Text("account.title"))
         .navigationBarTitleDisplayMode(.inline)
         .background(Color.carryCanvas)
         .confirmationDialog("account.sign_out.confirm", isPresented: $showSignOut, titleVisibility: .visible) {
@@ -95,6 +97,26 @@ struct AccountView: View {
         } message: { Text("account.delete.detail") }
         .onChange(of: account.state) { _, state in
             if state == .signedOut { reauthorizingDeletion = false }
+        }
+    }
+
+    private var deletionProgress: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 20) {
+                CarryAccountAvatar(profile: account.profile, size: 64)
+                    .padding(.top, 32)
+                Text("account.delete.pending.title")
+                    .font(.system(.title, design: .rounded).weight(.bold))
+                    .accessibilityAddTraits(.isHeader)
+                Text("account.delete.pending.detail")
+                    .font(.body).foregroundStyle(.secondary)
+                Button("account.delete.pending.refresh") { Task { await account.refresh() } }
+                    .buttonStyle(.bordered).controlSize(.large).frame(minHeight: 44).disabled(account.isBusy)
+                if account.isBusy { ProgressView() }
+                errorMessage
+            }
+            .padding(.horizontal, 24).padding(.bottom, 32)
+            .frame(maxWidth: .infinity, alignment: .leading)
         }
     }
 

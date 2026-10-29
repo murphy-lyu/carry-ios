@@ -34,8 +34,20 @@ const fixture=Object.fromEntries(Object.entries(graphSchema.trip.fields).filter(
   rule.type==='string'?(rule.format==='date-time'?'2026-11-01T00:00:00Z':''):rule.type==='number'?Math.max(0,rule.min):rule.type==='array'?[]:false]));
 fixture.name='Synthetic native HTTP QA';fixture.days=3;
 const responseProbes=new Map();
+const redirectProbes=new Map();
 const server=createServer(async(incoming,outgoing)=>{
   try{
+    const redirect=incoming.url?.match(/^\/__redirect\/([0-9a-f-]{36})\/functions\/v1\/carry-data$/i);
+    if(redirect){
+      if(redirectProbes.size>=32)redirectProbes.delete(redirectProbes.keys().next().value);
+      redirectProbes.set(redirect[1],false);
+      outgoing.writeHead(307,{location:'/__redirect_sink/'+redirect[1],'content-type':'application/json'});
+      outgoing.end('{"error":"unexpected_redirect"}');return;
+    }
+    const sink=incoming.url?.match(/^\/__redirect_sink\/([0-9a-f-]{36})$/i);
+    if(sink){redirectProbes.set(sink[1],true);outgoing.writeHead(200);outgoing.end('{}');return;}
+    const redirectStats=incoming.url?.match(/^\/__redirect_stats\/([0-9a-f-]{36})$/i);
+    if(redirectStats){outgoing.writeHead(200,{'content-type':'application/json'});outgoing.end(JSON.stringify({forwarded:redirectProbes.get(redirectStats[1])??null}));return;}
     const probe=incoming.url?.match(/^\/__response_limit\/(declared|chunked)\/([0-9a-f-]{36})\/functions\/v1\/carry-data$/i);
     if(probe){
       const [,mode,id]=probe,total=64*1024*1024,state={sent:0,closed:false,total};

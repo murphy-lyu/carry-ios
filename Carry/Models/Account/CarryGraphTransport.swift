@@ -16,6 +16,14 @@ protocol CarryGraphTransporting {
 @MainActor
 final class CarryGraphTransport: CarryGraphTransporting {
     private nonisolated static let responseLimit = 16 * 1024 * 1024
+    private nonisolated static let httpSession: URLSession = {
+        let configuration = URLSessionConfiguration.ephemeral
+        configuration.httpCookieStorage = nil
+        configuration.urlCache = nil
+        configuration.timeoutIntervalForRequest = 20
+        configuration.timeoutIntervalForResource = 60
+        return URLSession(configuration: configuration)
+    }()
     private struct Body: Encodable {
         let action: String
         var command: CarryGraphCommand?
@@ -42,7 +50,10 @@ final class CarryGraphTransport: CarryGraphTransporting {
     // Reject while receiving, not after data(for:) has already buffered an
     // unbounded response. Byte processing stays off the UI actor.
     @concurrent nonisolated static func boundedResponse(_ request: URLRequest) async throws -> (Data, URLResponse) {
-        let (bytes, response) = try await URLSession.shared.bytes(for: request)
+        var request = request
+        request.httpShouldHandleCookies = false
+        request.cachePolicy = .reloadIgnoringLocalCacheData
+        let (bytes, response) = try await httpSession.bytes(for: request, delegate: CarryAccountNoRedirect())
         defer { bytes.task.cancel() }
         guard response.expectedContentLength <= responseLimit else {
             throw CarryGraphTransportFailure.invalidResponse

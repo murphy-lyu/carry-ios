@@ -14,6 +14,13 @@ private final class AccountServiceDouble: CarryAccountAuthenticating {
     var signOutCalls = 0
     var deleteCalls = 0
     var pauseSignIn: (() async -> Void)?
+    var deletionProgress: CarryAccountDeletionProgress = .none
+    var deleteCreatesPending = false
+    var pendingDeletion: Bool { deletionProgress == .pending }
+    func refreshDeletion() async throws -> CarryAccountDeletionProgress {
+        if deletionProgress == .pending, let failure { throw failure }
+        return deletionProgress
+    }
     func restore() async throws -> CarryAccountProfile? {
         restoreCalls += 1
         if let failure { throw failure }
@@ -32,11 +39,44 @@ private final class AccountServiceDouble: CarryAccountAuthenticating {
     func deleteAccount(_ credential: CarryAppleCredential, nonce: String) async throws {
         deleteCalls += 1
         if let failure { throw failure }
+        if deleteCreatesPending { deletionProgress = .pending }
     }
 }
 
 @MainActor
 final class AccountTests: XCTestCase {
+    func testAcceptedDeletionRemainsPendingAcrossOfflineRefreshAndBlocksOtherAccountActions() async throws {
+        let service = AccountServiceDouble()
+        service.cachedProfile = service.signedIn
+        service.deletionProgress = .pending
+        let store = CarryAccountStore(service: service)
+        XCTAssertTrue(store.isDeleting)
+        XCTAssertFalse(store.hasVerifiedSession)
+        service.failure = .offline
+        await store.refresh()
+        XCTAssertTrue(store.isDeleting)
+        XCTAssertEqual(store.error, .offline)
+        XCTAssertThrowsError(try store.beginAppleAction())
+        await store.signOut()
+        XCTAssertEqual(service.signOutCalls, 0)
+        service.failure = nil
+        service.deletionProgress = .completed
+        await store.refresh()
+        XCTAssertEqual(store.state, .signedOut)
+        XCTAssertNil(store.error)
+    }
+
+    func testDeletionAcceptanceDoesNotPretendTheBackendHasFinished() async throws {
+        let service = AccountServiceDouble()
+        service.cachedProfile = service.signedIn
+        service.deleteCreatesPending = true
+        let store = CarryAccountStore(service: service)
+        let challenge = try store.beginAppleAction(.deleteAccount)
+        await store.completeAppleAction(credential(challenge))
+        XCTAssertTrue(store.isDeleting)
+        XCTAssertEqual(store.profile, service.signedIn)
+        XCTAssertFalse(store.isBusy)
+    }
     private func credential(_ challenge: CarrySignInChallenge, state: String? = nil) -> CarryAppleCredential {
         CarryAppleCredential(idToken: "synthetic-token", authorizationCode: "synthetic-code",
             appleUserID: "synthetic-subject", fullName: nil, state: state ?? challenge.state)

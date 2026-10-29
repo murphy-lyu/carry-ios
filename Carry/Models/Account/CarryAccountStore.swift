@@ -41,6 +41,8 @@ struct CarryAppleCredential: Sendable {
     let state: String?
 }
 
+enum CarryAccountDeletionProgress: Equatable { case none, pending, completed }
+
 struct CarrySignInChallenge: Equatable, Sendable {
     let nonce: String
     let state: String
@@ -69,6 +71,13 @@ protocol CarryAccountAuthenticating: AnyObject {
     func signIn(_ credential: CarryAppleCredential, nonce: String) async throws -> CarryAccountProfile
     func signOut() async throws
     func deleteAccount(_ credential: CarryAppleCredential, nonce: String) async throws
+    var pendingDeletion: Bool { get throws }
+    func refreshDeletion() async throws -> CarryAccountDeletionProgress
+}
+
+extension CarryAccountAuthenticating {
+    var pendingDeletion: Bool { get throws { false } }
+    func refreshDeletion() async throws -> CarryAccountDeletionProgress { .none }
 }
 
 @MainActor
@@ -80,11 +89,13 @@ final class CarryAccountStore: ObservableObject {
         case offline(CarryAccountProfile)
         case temporarilyUnavailable(CarryAccountProfile)
         case needsReauthentication(CarryAccountProfile)
+        case deleting(CarryAccountProfile?)
 
         var profile: CarryAccountProfile? {
             switch self {
             case .signedOut: return nil
             case .checking(let p), .signedIn(let p), .offline(let p), .temporarilyUnavailable(let p), .needsReauthentication(let p): return p
+            case .deleting(let p): return p
             }
         }
     }
@@ -105,10 +116,16 @@ final class CarryAccountStore: ObservableObject {
         if case .signedIn = state { return true }
         return false
     }
+    var isDeleting: Bool {
+        if case .deleting = state { return true }
+        return false
+    }
 
     init(service: any CarryAccountAuthenticating) {
         self.service = service
         state = service.cachedProfile.map(State.checking) ?? .signedOut
+        do { if try service.pendingDeletion { state = .deleting(service.cachedProfile) } }
+        catch { self.error = .storage }
     }
 
     func restoreIfNeeded() async {
@@ -121,6 +138,11 @@ final class CarryAccountStore: ObservableObject {
         isBusy = true
         defer { isBusy = false; hasRestored = true }
         do {
+            switch try await service.refreshDeletion() {
+            case .pending: state = .deleting(profile); error = nil; return
+            case .completed: state = .signedOut; error = nil; return
+            case .none: break
+            }
             if let restored = try await service.restore() {
                 guard profile == nil || profile?.id == restored.id else {
                     throw CarryAccountFailure.accountMismatch
@@ -139,7 +161,7 @@ final class CarryAccountStore: ObservableObject {
 
     /// Holds the operation lock across Apple's native prompt and the token exchange.
     func beginAppleAction(_ action: AppleAction = .signIn) throws -> CarrySignInChallenge {
-        guard isAvailable, !isBusy else { throw CarryAccountFailure.unavailable }
+        guard isAvailable, !isBusy, !isDeleting else { throw CarryAccountFailure.unavailable }
         if action == .deleteAccount, profile == nil { throw CarryAccountFailure.sessionExpired }
         let generated = try CarrySignInChallenge.generate()
         challenge = generated
@@ -184,8 +206,12 @@ final class CarryAccountStore: ObservableObject {
                 CarryLogger.shared.log(.accountSignInSucceeded)
             case .deleteAccount:
                 try await service.deleteAccount(credential, nonce: challenge.nonce)
-                state = .signedOut // only a confirmed backend deletion can reach this branch
-                CarryLogger.shared.log(.accountDeleted)
+                if try service.pendingDeletion {
+                    state = .deleting(profile)
+                } else {
+                    state = .signedOut
+                    CarryLogger.shared.log(.accountDeleted)
+                }
             }
             error = nil
         } catch {
@@ -203,7 +229,7 @@ final class CarryAccountStore: ObservableObject {
     }
 
     func signOut() async {
-        guard !isBusy else { return }
+        guard !isBusy, !isDeleting else { return }
         isBusy = true
         defer { isBusy = false }
         do {
@@ -218,6 +244,7 @@ final class CarryAccountStore: ObservableObject {
         let failure = cause as? CarryAccountFailure ?? .service
         if error != failure { CarryLogger.shared.log(.accountOperationFailed, context: "reason=\(failure.messageKey)") }
         error = failure
+        if isDeleting { return }
         guard let profile else { return }
         switch failure {
         case .offline: state = .offline(profile)

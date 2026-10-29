@@ -70,7 +70,7 @@ private actor CarryAssetControl {
     private let publishableKey: String
     private let accessToken: @Sendable () async throws -> String
     private let session: URLSession
-    private let noRedirect = CarryAssetNoRedirect()
+    private let noRedirect = CarryAccountNoRedirect()
     private var closed = false
 
     init(projectURL: URL, publishableKey: String, accessToken: @escaping @Sendable () async throws -> String) throws {

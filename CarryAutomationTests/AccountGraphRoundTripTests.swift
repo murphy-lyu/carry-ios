@@ -8,6 +8,19 @@ import Auth
 /// synthetic fixture. This does not claim Apple/Supabase production acceptance.
 @MainActor
 final class AccountGraphRoundTripTests: XCTestCase {
+    func testAccountHTTPNeverForwardsTokensOrBodiesThroughRedirects() async throws {
+        struct Probe: Decodable { let forwarded: Bool }
+        let id = UUID().uuidString.lowercased()
+        let base = try XCTUnwrap(URL(string: "http://127.0.0.1:8891"))
+        var request = URLRequest(url: base.appendingPathComponent("__redirect/\(id)/functions/v1/carry-data"))
+        request.httpMethod = "POST"
+        request.httpBody = Data("synthetic-private-request".utf8)
+        request.setValue("Bearer synthetic-private-token", forHTTPHeaderField: "Authorization")
+        let (_, response) = try await CarryGraphTransport.boundedResponse(request)
+        XCTAssertEqual((response as? HTTPURLResponse)?.statusCode, 307)
+        let (data, _) = try await URLSession.shared.data(from: base.appendingPathComponent("__redirect_stats/\(id)"))
+        XCTAssertFalse(try JSONDecoder().decode(Probe.self, from: data).forwarded)
+    }
     func testOversizedDeclaredAndChunkedResponsesCancelBeforeDownloadingTheCompleteBody() async throws {
         struct Probe: Decodable { let sent: Int; let total: Int }
         let base = try XCTUnwrap(URL(string: "http://127.0.0.1:8891"))

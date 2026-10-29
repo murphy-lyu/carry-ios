@@ -31,15 +31,6 @@ private nonisolated struct CarryAssetUploadCheckpoint: Codable, Sendable {
 }
 
 /// Never forward a bearer or a private file body through an HTTP redirect.
-nonisolated final class CarryAssetNoRedirect: NSObject, URLSessionTaskDelegate, Sendable {
-    func urlSession(_ session: URLSession, task: URLSessionTask,
-                    willPerformHTTPRedirection response: HTTPURLResponse,
-                    newRequest request: URLRequest,
-                    completionHandler: @escaping (URLRequest?) -> Void) {
-        completionHandler(nil)
-    }
-}
-
 /// Small TUS core adapter. Only opaque upload location/offset and immutable file
 /// identity are persisted. Authentication is obtained afresh for every request;
 /// no SDK custom/applied headers, bearer or refresh token can enter checkpoints.
@@ -55,7 +46,7 @@ actor CarryAssetUploader {
     private let session: URLSession
     nonisolated let updates: AsyncStream<CarryAssetUploadProgress>
     private let progress: AsyncStream<CarryAssetUploadProgress>.Continuation
-    private let noRedirect = CarryAssetNoRedirect()
+    private let noRedirect = CarryAccountNoRedirect()
     private var acceptsUploads = true
     private var closed = false
     private var pauseWaiters = 0

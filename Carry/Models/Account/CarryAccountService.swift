@@ -67,12 +67,19 @@ struct CarryAccountSecureStorage: AuthLocalStorage {
 
 @MainActor
 final class CarryAccountService: CarryAccountAuthenticating {
+    private struct DeletionReceipt: Codable {
+        let accountID: UUID
+        let appleUserID: String
+        let token: String
+        var accepted: Bool
+    }
     private let configuration: CarryAccountConfiguration?
     private let client: AuthClient?
     private let storage: CarryAccountSecureStorage
     private let send: AuthClient.FetchHandler
 
     var isConfigured: Bool { configuration != nil }
+    var pendingDeletion: Bool { get throws { try receipt() != nil } }
     var cachedProfile: CarryAccountProfile? {
         guard let data = try? storage.retrieve(key: "profile") else { return nil }
         return try? JSONDecoder().decode(CarryAccountProfile.self, from: data)
@@ -113,6 +120,7 @@ final class CarryAccountService: CarryAccountAuthenticating {
 
     func signIn(_ credential: CarryAppleCredential, nonce: String) async throws -> CarryAccountProfile {
         guard let client else { throw CarryAccountFailure.unavailable }
+        guard try receipt() == nil else { throw CarryAccountFailure.unavailable }
         // Persist the name before the first exchange; Apple may never return it again after a failure.
         let nameKey = "apple-name-\(credential.appleUserID)"
         if let name = credential.fullName, !name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
@@ -142,6 +150,9 @@ final class CarryAccountService: CarryAccountAuthenticating {
 
     func signOut() async throws {
         guard let client, let configuration else { throw CarryAccountFailure.unavailable }
+        // A timed-out deletion request may still commit remotely. Do not lose
+        // its owner/receipt through logout or silently switch accounts mid-flight.
+        guard try receipt() == nil else { throw CarryAccountFailure.unavailable }
         do {
             if let session = client.currentSession {
                 var request = URLRequest(url: configuration.projectURL.appendingPathComponent("auth/v1/logout")
@@ -166,15 +177,74 @@ final class CarryAccountService: CarryAccountAuthenticating {
     func deleteAccount(_ credential: CarryAppleCredential, nonce: String) async throws {
         guard let client, let expected = cachedProfile else { throw CarryAccountFailure.sessionExpired }
         do {
-            let session = try await client.session
+            if try await refreshDeletion() != .none { return }
+            let session = try await client.signInWithIdToken(credentials: .init(provider: .apple,
+                idToken: credential.idToken, nonce: nonce))
             let user = try await client.user(jwt: session.accessToken)
             guard user.id == expected.id else { throw CarryAccountFailure.accountMismatch }
+            try persistSession(session)
+            var saved: DeletionReceipt
+            if let existing = try receipt() {
+                guard existing.accountID == expected.id else { throw CarryAccountFailure.accountMismatch }
+                saved = existing
+            } else {
+                var bytes = [UInt8](repeating: 0, count: 32)
+                guard SecRandomCopyBytes(kSecRandomDefault, bytes.count, &bytes) == errSecSuccess else {
+                    throw CarryAccountFailure.storage
+                }
+                saved = DeletionReceipt(accountID: expected.id, appleUserID: credential.appleUserID,
+                    token: bytes.map { String(format: "%02x", $0) }.joined(), accepted: false)
+                // Persist before the HTTP request. A lost response is recovered by
+                // the receipt, without replaying Apple's one-use code.
+                try storage.store(key: "deletion-receipt", value: JSONEncoder().encode(saved))
+            }
             try await lifecycle(action: "delete", credential: credential, nonce: nonce,
-                                accessToken: session.accessToken, expectedStatus: "deleted")
-            try? await client.signOut(scope: .local)
+                                accessToken: session.accessToken, expectedStatus: "deleting", deletionReceipt: saved.token)
+            saved.accepted = true
+            try storage.store(key: "deletion-receipt", value: JSONEncoder().encode(saved))
+        } catch { throw classify(error) }
+    }
+
+    private func receipt() throws -> DeletionReceipt? {
+        guard let data = try storage.retrieve(key: "deletion-receipt") else { return nil }
+        let value = try JSONDecoder().decode(DeletionReceipt.self, from: data)
+        guard value.token.count == 64, value.token.allSatisfy({ "0123456789abcdef".contains($0) }) else {
+            throw CarryAccountFailure.storage
+        }
+        return value
+    }
+
+    func refreshDeletion() async throws -> CarryAccountDeletionProgress {
+        guard var saved = try receipt() else { return .none }
+        guard let configuration else { throw CarryAccountFailure.unavailable }
+        if let cachedProfile, cachedProfile.id != saved.accountID { throw CarryAccountFailure.accountMismatch }
+        var request = URLRequest(url: configuration.projectURL.appendingPathComponent("functions/v1/carry-account-status"))
+        request.httpMethod = "POST"
+        request.setValue(configuration.publishableKey, forHTTPHeaderField: "apikey")
+        request.setValue("Bearer \(saved.token)", forHTTPHeaderField: "Authorization")
+        do {
+            let (data, response) = try await send(request)
+            guard let http = response as? HTTPURLResponse else { throw CarryAccountFailure.service }
+            // An unaccepted receipt may never have reached the server. Keep it
+            // for a fresh Apple retry; do not claim this is a finished deletion.
+            if http.statusCode == 401, !saved.accepted { return .none }
+            guard http.statusCode == 200,
+                  let body = try JSONSerialization.jsonObject(with: data) as? [String: Any],
+                  let status = body["status"] as? String else { throw CarryAccountFailure.service }
+            if status == "deleting" {
+                if !saved.accepted {
+                    saved.accepted = true
+                    try storage.store(key: "deletion-receipt", value: JSONEncoder().encode(saved))
+                }
+                return .pending
+            }
+            guard status == "deleted" else { throw CarryAccountFailure.service }
+            if let client { try await client.signOut(scope: .local) }
             try storage.remove(key: "session")
             try storage.remove(key: "profile")
-            try storage.remove(key: "apple-name-\(credential.appleUserID)")
+            try storage.remove(key: "apple-name-\(saved.appleUserID)")
+            try storage.remove(key: "deletion-receipt") // clear last, after confirmed local cleanup
+            return .completed
         } catch { throw classify(error) }
     }
 
@@ -257,21 +327,23 @@ final class CarryAccountService: CarryAccountAuthenticating {
     }
 
     private func lifecycle(action: String, credential: CarryAppleCredential, nonce: String,
-                           accessToken: String, expectedStatus: String) async throws {
+                           accessToken: String, expectedStatus: String, deletionReceipt: String? = nil) async throws {
         guard let configuration else { throw CarryAccountFailure.unavailable }
         var request = URLRequest(url: configuration.projectURL.appendingPathComponent("functions/v1/carry-account"))
         request.httpMethod = "POST"
         request.setValue(configuration.publishableKey, forHTTPHeaderField: "apikey")
         request.setValue("Bearer \(accessToken)", forHTTPHeaderField: "Authorization")
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        request.httpBody = try JSONEncoder().encode([
+        var payload = [
             "action": action, "idToken": credential.idToken,
             "authorizationCode": credential.authorizationCode, "nonce": nonce
-        ])
+        ]
+        if let deletionReceipt { payload["deletionReceipt"] = deletionReceipt }
+        request.httpBody = try JSONEncoder().encode(payload)
         let (data, response) = try await send(request)
         guard let http = response as? HTTPURLResponse else { throw CarryAccountFailure.service }
         if http.statusCode == 401 { throw CarryAccountFailure.sessionExpired }
-        guard http.statusCode == 200,
+        guard http.statusCode == (expectedStatus == "deleting" ? 202 : 200),
               let body = try JSONSerialization.jsonObject(with: data) as? [String: Any],
               body["status"] as? String == expectedStatus else { throw CarryAccountFailure.service }
     }

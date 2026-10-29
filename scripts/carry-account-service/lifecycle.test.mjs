@@ -12,7 +12,7 @@ function setup(overrides = {}) {
     exchangeCode: async () => ({ idToken: 'exchanged-apple-token', refreshToken: 'synthetic-refresh' }),
     enroll: async (...args) => calls.push(['enroll', ...args]),
     status: async () => true,
-    deleteAccount: async (...args) => calls.push(['delete', ...args]),
+    requestDeletion: async (...args) => { calls.push(['delete', ...args]); return {status:'deleting'}; },
     rateLimit: async () => true,
     ...overrides,
   }) };
@@ -42,7 +42,7 @@ test('authentication failure cannot reach Apple or storage', async () => {
 test('wrong Apple subject cannot enroll or delete another identity', async () => {
   const { calls, handler } = setup({ verifyApple: async () => ({ subject: 'other-user', audience: 'app.nevestudio.carry' }) });
   assert.equal((await handler(request())).status, 403);
-  assert.equal((await handler(request({ ...body, action: 'delete' }))).status, 403);
+  assert.equal((await handler(request({ ...body, action: 'delete',deletionReceipt:'a'.repeat(64) }))).status, 403);
   assert.equal(calls.length, 0);
 });
 test('forged owner, unknown action, bad nonce and malformed body are rejected', async () => {
@@ -65,17 +65,18 @@ test('failed or replayed Apple code never reports successful enrollment', async 
   assert.equal(calls.length, 0);
 });
 test('deletion failure returns no success and leaks no dependency error details', async () => {
-  const { handler } = setup({ deleteAccount: async () => { throw new Error('sensitive-token'); } });
-  const response = await handler(request({ ...body, action: 'delete' }));
+  const { handler } = setup({ requestDeletion: async () => { throw new Error('sensitive-token'); } });
+  const response = await handler(request({ ...body, action: 'delete',deletionReceipt:'a'.repeat(64) }));
   assert.equal(response.status, 503);
   assert.deepEqual(await response.json(), { error: 'service_unavailable' });
 });
-test('deletion success is returned only after adapter completes', async () => {
+test('deletion acceptance never claims a completed purge', async () => {
   const { calls, handler } = setup();
-  const response = await handler(request({ ...body, action: 'delete' }));
-  assert.deepEqual(await response.json(), { status: 'deleted' });
+  const response = await handler(request({ ...body, action: 'delete',deletionReceipt:'a'.repeat(64) }));
+  assert.equal(response.status,202);
+  assert.deepEqual(await response.json(), { status: 'deleting' });
   assert.equal(calls[0][0], 'delete');
-  assert.equal(calls[0][1], 'internal-account');
+  assert.equal(calls[0][1].id, 'internal-account');
 });
 test('GET status requires authentication and does not expose profile details', async () => {
   const { handler } = setup({ status: async () => false });
