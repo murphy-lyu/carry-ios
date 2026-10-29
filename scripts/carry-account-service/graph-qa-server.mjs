@@ -27,8 +27,12 @@ async function rpc(name,args){try{
 const handler=createGraphHandler({
   authenticate:async bearer=>bearer==='synthetic-native-qa'?{accountID:account,sessionID:session}:null,
   rateLimit:async()=>true,
-  apply:(identity,command)=>rpc('carry_graph_apply',[identity.accountID,identity.sessionID,command]),
+  writeLimit:async()=>true,
+  apply:(identity,command,paged)=>rpc(paged?'carry_graph_apply_compact':'carry_graph_apply',[identity.accountID,identity.sessionID,command]),
   pull:(identity,cursor,limit)=>rpc('carry_graph_pull',[identity.accountID,identity.sessionID,cursor,limit]),
+  stage:(identity,body)=>rpc('carry_graph_stage',[identity.accountID,identity.sessionID,body.requestID,body.chunkIndex,body.totalChunks,body.mutationCount,body.mutations]),
+  commitStage:(identity,id)=>rpc('carry_graph_commit_stage',[identity.accountID,identity.sessionID,id]),
+  receiptPage:(identity,id,offset,limit)=>rpc('carry_graph_receipt_page',[identity.accountID,identity.sessionID,id,offset,limit]),
 });
 const fixture=Object.fromEntries(Object.entries(graphSchema.trip.fields).filter(([,rule])=>!rule.optional).map(([key,rule])=>[key,
   rule.type==='string'?(rule.format==='date-time'?'2026-11-01T00:00:00Z':''):rule.type==='number'?Math.max(0,rule.min):rule.type==='array'?[]:false]));

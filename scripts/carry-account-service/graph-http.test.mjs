@@ -5,7 +5,7 @@ import {createGraphHandler} from './graph-http.mjs';
 import {createGraphAdapter} from './graph-adapter.mjs';
 const account='00000000-0000-0000-0000-000000000001',session='00000000-0000-0000-0000-000000000002';
 const identity={accountID:account,sessionID:session};
-function handler(overrides={}){return createGraphHandler({authenticate:async()=>identity,rateLimit:async()=>true,
+function handler(overrides={}){return createGraphHandler({authenticate:async()=>identity,rateLimit:async()=>true,writeLimit:async()=>true,
   apply:async(i,c)=>({identity:i,command:c}),pull:async(i,c,l)=>({identity:i,cursor:c,limit:l}),...overrides});}
 function request(body,options={}){return new Request('https://test.invalid/functions/v1/carry-data',{
   method:'POST',headers:{authorization:'Bearer synthetic','content-type':'application/json',...options.headers},body:JSON.stringify(body),...options});}
@@ -61,4 +61,29 @@ test('adapter returns bounded conflict details and hides unexpected backend erro
     const a=adapter(async()=>Response.json(data,{status:400}));
     await assert.rejects(a.pull(identity,0,100),e=>e.code!==data.message||['session_expired','trip_date_impact'].includes(e.code));
   }
+});
+
+test('staged HTTP validates every control field and spends write budget before dispatch',async()=>{
+  const calls=[];const h=handler({stage:async(i,b)=>{calls.push(['stage',i,b]);return {status:'staged'};},
+    commitStage:async(i,id)=>{calls.push(['commit',i,id]);return {};},
+    receiptPage:async(i,id,o,l)=>{calls.push(['page',i,id,o,l]);return {};}});
+  const body={action:'stage',requestID:account,chunkIndex:0,totalChunks:2,mutationCount:501,mutations:[{}]};
+  assert.equal((await h(request(body))).status,200);
+  assert.equal((await h(request({action:'commitStage',requestID:account}))).status,200);
+  assert.equal((await h(request({action:'receiptPage',requestID:account,offset:500,limit:500}))).status,200);
+  assert.deepEqual(calls.map(x=>x[0]),['stage','commit','page']);assert.deepEqual(calls[0][1],identity);
+  for(const delta of [{chunkIndex:-1},{chunkIndex:2},{totalChunks:41},{mutationCount:20001},{mutations:[]},{accountID:account}])
+    assert.equal((await h(request({...body,...delta}))).status,400);
+  for(const delta of [{offset:-1},{offset:1.5},{limit:501},{accountID:account}])
+    assert.equal((await h(request({action:'receiptPage',requestID:account,offset:0,limit:100,...delta}))).status,400);
+  assert.equal(calls.length,3);
+  assert.equal((await handler({writeLimit:async()=>false,stage:async()=>{assert.fail('must not dispatch');}})(request(body))).status,429);
+});
+
+test('compact commit failure preserves conflict semantics without exposing SQL details',async()=>{
+  const detail={current:{id:account},fields:['name']};
+  const a=adapter(async()=>Response.json({failure:{code:'P0001',message:'field_conflict',details:JSON.stringify(detail)}}));
+  await assert.rejects(a.commitStage(identity,account),e=>e.status===409&&e.conflict.fields[0]==='name');
+  const invalid=adapter(async()=>Response.json({failure:{code:'22023',message:'invalid_parent',details:'internal SQL'}}));
+  await assert.rejects(invalid.commitStage(identity,account),e=>e.status===422&&e.code==='invalid_parent'&&e.conflict===undefined);
 });

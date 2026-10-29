@@ -21,7 +21,7 @@
 
 ## 本地验证
 
-运行需 Node 24+，安装依赖使用 `npm ci --ignore-scripts`。本机运行时：`/Users/murphy/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/bin/node`。在本目录执行 `--test *.test.mjs`，当前测试集 88 项；provider 网络返回为合成夹具，PostgreSQL/PGlite 实际执行。
+运行需 Node 24+，安装依赖使用 `npm ci --ignore-scripts`。本机运行时：`/Users/murphy/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/bin/node`。在本目录执行 `--test *.test.mjs`，当前测试集 94 项；provider 网络返回为合成夹具，PostgreSQL/PGlite 实际执行。
 
 原生实际 HTTP 测试先启动 `graph-qa-server.mjs`，再运行共享 `CarryAutomationTests` scheme，排除需要另一个旧服务的 `RelayRoundTripTests`。`AccountGraphMigrationTests` 的费用集成项与 `AccountGraphRoundTripTests` 都依赖 127.0.0.1:8891；不应在未启本地 QA 服务时把网络失败跳过并算通过。
 

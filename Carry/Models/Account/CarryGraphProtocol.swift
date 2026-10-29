@@ -78,6 +78,7 @@ nonisolated struct CarryGraphCommand: Codable, Equatable, Sendable {
 nonisolated struct CarryGraphChange: Codable, Equatable, Sendable {
     let sequence: Int
     let entity: CarryGraphEntity
+    var metadataOnly: Bool? = nil
 }
 
 nonisolated struct CarryGraphPage: Codable, Sendable {
@@ -93,8 +94,31 @@ nonisolated struct CarryGraphReceipt: Codable, Sendable {
     let cursor: Int
 }
 
+nonisolated struct CarryGraphReceiptSummary: Codable, Equatable, Sendable {
+    let status: String
+    let requestID: UUID
+    let cursor: Int
+    let changeCount: Int
+}
+
+nonisolated struct CarryGraphReceiptPage: Codable, Sendable {
+    let requestID: UUID
+    let cursor: Int
+    let changes: [CarryGraphChange]
+    let nextOffset: Int
+    let hasMore: Bool
+    let changeCount: Int
+}
+
+nonisolated struct CarryGraphReceiptProgress: Sendable {
+    let requestID: UUID
+    let cursor: Int
+    let changeCount: Int
+    let nextOffset: Int
+}
+
 enum CarryReplicaFailure: Error {
-    case accountMismatch, invalidState, invalidReceipt, invalidCursor, blocked, tooManyChanges
+    case accountMismatch, invalidState, invalidReceipt, invalidCursor, missingBaseline, blocked, tooManyChanges
 }
 
 nonisolated enum CarryGraphConflictChoice: Sendable {

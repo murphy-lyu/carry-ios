@@ -8,6 +8,56 @@ import Auth
 /// synthetic fixture. This does not claim Apple/Supabase production acceptance.
 @MainActor
 final class AccountGraphRoundTripTests: XCTestCase {
+    func testLargeStagedHTTPReceiptResumesAcrossDatabaseReopen() async throws {
+        enum Interrupted: Error { case disconnected }
+        let base = try XCTUnwrap(URL(string: "http://127.0.0.1:8891"))
+        let (bytes, _) = try await URLSession.shared.data(from: base.appendingPathComponent("__fixture"))
+        let fixture = try JSONDecoder().decode(Fixture.self, from: bytes)
+        let transport = CarryGraphTransport(configuration: CarryAccountConfiguration(projectURL: base,
+            publishableKey: "sb_publishable_synthetic_only"), accessToken: { "synthetic-native-qa" }, send: { request in
+                let body = try JSONDecoder().decode([String: CarryGraphValue].self, from: XCTUnwrap(request.httpBody))
+                XCTAssertEqual(request.timeoutInterval, body["action"] == .string("commitStage") ? 60 : 20)
+                return try await CarryGraphTransport.boundedResponse(request)
+            })
+        let directory = FileManager.default.temporaryDirectory.appendingPathComponent("CarryStagedHTTP-\(UUID().uuidString)")
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        addTeardownBlock { try FileManager.default.removeItem(at: directory) }
+        let container = try CarryAccountReplica.container(at: directory.appendingPathComponent("account.store"))
+        let replica = try CarryAccountReplica(container: container, accountID: fixture.accountID)
+        let tripID = UUID(), sectionID = UUID()
+        var fields = fixture.fields
+        fields["selectedSceneKeys"] = .array((0..<1000).map { .string("synthetic-scene-\($0)-" + String(repeating: "x", count: 30)) })
+        var entities = [CarryGraphEntity(id: tripID, kind: "trip", parentID: nil, version: 0, subtreeVersion: 0,
+            fields: fields, fieldVersions: [:]), CarryGraphEntity(id: sectionID, kind: "section", parentID: tripID,
+            version: 0, subtreeVersion: 0, fields: ["title": .string("Synthetic"), "sortOrder": .integer(0)], fieldVersions: [:])]
+        entities += (0..<501).map { index in CarryGraphEntity(id: UUID(), kind: "packingItem", parentID: sectionID,
+            version: 0, subtreeVersion: 0, fields: ["name": .string("Synthetic \(index)"), "quantity": .integer(1),
+                "isPacked": .bool(false), "isAlert": .bool(false), "sortOrder": .integer(Int64(index))], fieldVersions: [:]) }
+        try replica.edit(entities)
+        let command = try XCTUnwrap(replica.nextCommand())
+        do {
+            try await transport.applyStreaming(command, progress: nil) { summary, page, _ in
+                try replica.accept(page, summary: summary)
+                throw Interrupted.disconnected
+            }
+            XCTFail("Expected interruption after first durable page")
+        } catch Interrupted.disconnected { }
+        let reopened = try CarryAccountReplica(container: container, accountID: fixture.accountID)
+        let progress = try XCTUnwrap(reopened.receiptProgress(for: command.requestID))
+        XCTAssertEqual(progress.nextOffset, 500)
+        XCTAssertEqual(try reopened.nextCommand(), command)
+        var resumedBytes = 0
+        try await transport.applyStreaming(command, progress: progress) { summary, page, byteCount in
+            resumedBytes += byteCount
+            try reopened.accept(page, summary: summary)
+        }
+        XCTAssertLessThan(resumedBytes, 2 * 1024 * 1024)
+        XCTAssertNil(try reopened.nextCommand())
+        XCTAssertEqual(try reopened.localEntities().count, 503)
+        XCTAssertEqual(try reopened.localEntities().first { $0.id == tripID }?.fields["selectedSceneKeys"], fields["selectedSceneKeys"])
+        XCTAssertEqual(try reopened.cursor, 0)
+    }
+
     func testAccountHTTPNeverForwardsTokensOrBodiesThroughRedirects() async throws {
         struct Probe: Decodable { let forwarded: Bool }
         let id = UUID().uuidString.lowercased()
@@ -138,8 +188,7 @@ final class AccountGraphRoundTripTests: XCTestCase {
         catch let error as URLError { XCTAssertEqual(error.code, .timedOut) }
         let reopened = try replica("lost-response")
         XCTAssertEqual(try reopened.nextCommand(), frozen)
-        let recovered = try await CarryAccountSyncEngine(replica: reopened, transport: transport).synchronize()
-        XCTAssertTrue(recovered)
+        try await drain(CarryAccountSyncEngine(replica: reopened, transport: transport))
         XCTAssertEqual(try reopened.localEntities().filter { $0.id == lostID }.count, 1)
         XCTAssertEqual(try reopened.localEntities().first { $0.id == lostID }?.version, 1)
     }

@@ -44,7 +44,7 @@ export async function boundedJSON(request, maximum=2097152) {
   try{return JSON.parse(new TextDecoder('utf-8',{fatal:true}).decode(bytes));}catch{throw new GraphRequestError(400,'invalid_request');}
 }
 
-export function createGraphHandler({authenticate,apply,pull,rateLimit}) {
+export function createGraphHandler({authenticate,apply,pull,rateLimit,writeLimit,stage,commitStage,receiptPage}) {
   return async request => {
     const reply=(body,status=200)=>new Response(JSON.stringify(body),{status,headers:{'Content-Type':'application/json','Cache-Control':'no-store'}});
     try{
@@ -57,15 +57,37 @@ export function createGraphHandler({authenticate,apply,pull,rateLimit}) {
       const body=await boundedJSON(request);
       if(!body||Array.isArray(body)||typeof body!=='object')throw new GraphRequestError(400,'invalid_request');
       if(body.action==='apply'){
-        if(Object.keys(body).some(k=>!['action','command'].includes(k))||!body.command||typeof body.command!=='object'||Array.isArray(body.command)||
+        if(Object.keys(body).some(k=>!['action','command','receiptMode'].includes(k))||
+          (body.receiptMode!==undefined&&body.receiptMode!=='paged')||!body.command||typeof body.command!=='object'||Array.isArray(body.command)||
           !isUUID(body.command.requestID)||!Array.isArray(body.command.mutations)||body.command.mutations.length<1||body.command.mutations.length>500)
           throw new GraphRequestError(400,'invalid_request');
-        return reply(await apply(identity,body.command));
+        if(!await writeLimit(identity))throw new GraphRequestError(429,'rate_limited');
+        return reply(await apply(identity,body.command,body.receiptMode==='paged'));
       }
       if(body.action==='pull'){
         if(Object.keys(body).some(k=>!['action','cursor','limit'].includes(k))||!Number.isSafeInteger(body.cursor)||body.cursor<0||
           (body.limit!==undefined&&(!Number.isInteger(body.limit)||body.limit<1||body.limit>500)))throw new GraphRequestError(400,'invalid_request');
         return reply(await pull(identity,body.cursor,body.limit??100));
+      }
+      if(body.action==='stage'){
+        if(Object.keys(body).some(k=>!['action','requestID','chunkIndex','totalChunks','mutationCount','mutations'].includes(k))||
+          !isUUID(body.requestID)||!Number.isInteger(body.chunkIndex)||!Number.isInteger(body.totalChunks)||
+          body.totalChunks<1||body.totalChunks>40||body.chunkIndex<0||body.chunkIndex>=body.totalChunks||
+          !Number.isInteger(body.mutationCount)||body.mutationCount<1||body.mutationCount>20000||
+          !Array.isArray(body.mutations)||body.mutations.length<1||body.mutations.length>500)throw new GraphRequestError(400,'invalid_request');
+        if(!await writeLimit(identity))throw new GraphRequestError(429,'rate_limited');
+        return reply(await stage(identity,body));
+      }
+      if(body.action==='commitStage'){
+        if(Object.keys(body).some(k=>!['action','requestID'].includes(k))||!isUUID(body.requestID))throw new GraphRequestError(400,'invalid_request');
+        if(!await writeLimit(identity))throw new GraphRequestError(429,'rate_limited');
+        return reply(await commitStage(identity,body.requestID));
+      }
+      if(body.action==='receiptPage'){
+        if(Object.keys(body).some(k=>!['action','requestID','offset','limit'].includes(k))||!isUUID(body.requestID)||
+          !Number.isSafeInteger(body.offset)||body.offset<0||!Number.isInteger(body.limit)||body.limit<1||body.limit>500)
+          throw new GraphRequestError(400,'invalid_request');
+        return reply(await receiptPage(identity,body.requestID,body.offset,body.limit));
       }
       throw new GraphRequestError(400,'invalid_request');
     }catch(error){

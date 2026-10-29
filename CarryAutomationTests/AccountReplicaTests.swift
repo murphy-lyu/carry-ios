@@ -21,6 +21,72 @@ final class AccountReplicaTests: XCTestCase {
             changes: [CarryGraphChange(sequence: entity.subtreeVersion, entity: entity)], cursor: entity.subtreeVersion)
     }
 
+    func testPagedReceiptSurvivesReopenAndPreservesEditsAfterFirstPage() throws {
+        let (_, container) = try database()
+        let owner = UUID(), replica = try CarryAccountReplica(container: container, accountID: owner)
+        let first = entity(), second = entity()
+        try replica.edit([first, second])
+        let command = try XCTUnwrap(replica.nextCommand())
+        let summary = CarryGraphReceiptSummary(status: "saved_to_account", requestID: command.requestID, cursor: 2, changeCount: 2)
+        try replica.accept(CarryGraphReceiptPage(requestID: command.requestID, cursor: 2,
+            changes: [CarryGraphChange(sequence: 1, entity: entity(id: first.id, version: 1))],
+            nextOffset: 1, hasMore: true, changeCount: 2), summary: summary)
+        var edited = try XCTUnwrap(replica.localEntities().first { $0.id == first.id })
+        edited.fields["name"] = .string("Edited while receipt was incomplete")
+        try replica.edit(edited)
+        let reopened = try CarryAccountReplica(container: container, accountID: owner)
+        XCTAssertEqual(try reopened.receiptProgress(for: command.requestID)?.nextOffset, 1)
+        XCTAssertEqual(try reopened.nextCommand(), command)
+        try reopened.accept(CarryGraphReceiptPage(requestID: command.requestID, cursor: 2,
+            changes: [CarryGraphChange(sequence: 2, entity: CarryGraphEntity(id: second.id, kind: "trip", parentID: nil, version: 1, subtreeVersion: 2, fields: ["name": .string("Tokyo")], fieldVersions: ["name": 1]))],
+            nextOffset: 2, hasMore: false, changeCount: 2), summary: summary)
+        XCTAssertNil(try reopened.receiptProgress(for: command.requestID))
+        let next = try XCTUnwrap(reopened.nextCommand())
+        XCTAssertNotEqual(next.requestID, command.requestID)
+        XCTAssertEqual(next.mutations.count, 1)
+        XCTAssertEqual(next.mutations.first?.id, first.id)
+        XCTAssertEqual(next.mutations.first?.fields?["name"], .string("Edited while receipt was incomplete"))
+        XCTAssertEqual(try reopened.cursor, 0)
+    }
+
+    func testPagedReceiptProjectionFailureRollsBackProgressAndRejectsMissingAcknowledgement() throws {
+        enum Injected: Error { case failed }
+        let (_, container) = try database()
+        let replica = try CarryAccountReplica(container: container, accountID: UUID())
+        let first = entity(), second = entity()
+        try replica.edit([first, second])
+        let command = try XCTUnwrap(replica.nextCommand())
+        let summary = CarryGraphReceiptSummary(status: "saved_to_account", requestID: command.requestID, cursor: 2, changeCount: 2)
+        let page = CarryGraphReceiptPage(requestID: command.requestID, cursor: 2,
+            changes: [CarryGraphChange(sequence: 1, entity: entity(id: first.id, version: 1))],
+            nextOffset: 1, hasMore: true, changeCount: 2)
+        XCTAssertThrowsError(try replica.accept(page, summary: summary) { _, _ in throw Injected.failed })
+        XCTAssertNil(try replica.receiptProgress(for: command.requestID))
+        try replica.accept(page, summary: summary)
+        let duplicate = CarryGraphReceiptPage(requestID: command.requestID, cursor: 2,
+            changes: [CarryGraphChange(sequence: 2, entity: CarryGraphEntity(id: first.id, kind: "trip", parentID: nil,
+                version: 1, subtreeVersion: 2, fields: [:], fieldVersions: [:]), metadataOnly: true)],
+            nextOffset: 2, hasMore: false, changeCount: 2)
+        XCTAssertThrowsError(try replica.accept(duplicate, summary: summary))
+        XCTAssertEqual(try replica.receiptProgress(for: command.requestID)?.nextOffset, 1)
+        XCTAssertEqual(try replica.nextCommand(), command)
+    }
+
+    func testMetadataRequiresTrustedBaselineAndNeverUsesUnsentLocalFields() throws {
+        let (_, container) = try database()
+        let replica = try CarryAccountReplica(container: container, accountID: UUID())
+        let original = entity(version: 1)
+        let metadata = CarryGraphChange(sequence: 2, entity: CarryGraphEntity(id: original.id, kind: "trip", parentID: nil,
+            version: 1, subtreeVersion: 2, fields: [:], fieldVersions: [:]), metadataOnly: true)
+        XCTAssertThrowsError(try replica.receive(CarryGraphPage(changes: [metadata], cursor: 2, hasMore: false)))
+        try replica.receive(CarryGraphPage(changes: [CarryGraphChange(sequence: 1, entity: original)], cursor: 1, hasMore: false))
+        var edited = original; edited.fields["name"] = .string("Unsent local name")
+        try replica.edit(edited)
+        try replica.receive(CarryGraphPage(changes: [metadata], cursor: 2, hasMore: false))
+        XCTAssertEqual(try replica.localEntities().first?.fields["name"], .string("Unsent local name"))
+        XCTAssertEqual(try replica.nextCommand()?.mutations.first?.fieldVersions, ["name": 1])
+    }
+
     func testProtocolPreservesBoolIntegersNullAndNestedValues() throws {
         let value: CarryGraphValue = .object(["flag": .bool(true), "quantity": .integer(2), "optional": .null,
             "items": .array([.string("東京"), .number(2.25)])])

@@ -10,6 +10,7 @@ final class CarryReplicaRecord {
     // Default true also repairs caches written before this materialized queue
     // flag existed. The next queue pass normalizes those records once.
     var hasPendingChanges: Bool = true
+    var acknowledgedRequestID: UUID? = nil
     init(id: UUID, payload: Data, hasPendingChanges: Bool) {
         self.id = id; self.payload = payload; self.hasPendingChanges = hasPendingChanges
     }
@@ -21,10 +22,24 @@ final class CarryReplicaCheckpoint {
     var accountID: UUID
     var cursor: Int
     var flight: Data?
+    var flightID: UUID? = nil
     var failureData: Data?
     var blocked: Bool
     init(accountID: UUID) {
         key = "account"; self.accountID = accountID; cursor = 0; blocked = false
+    }
+}
+
+@Model
+final class CarryReplicaReceiptCheckpoint {
+    @Attribute(.unique) var requestID: UUID
+    var cursor: Int
+    var changeCount: Int
+    var nextOffset: Int
+    var lastSequence: Int
+    init(summary: CarryGraphReceiptSummary) {
+        requestID = summary.requestID; cursor = summary.cursor; changeCount = summary.changeCount
+        nextOffset = 0; lastSequence = 0
     }
 }
 
@@ -54,9 +69,11 @@ final class CarryAccountReplica {
     private let save: (ModelContext) throws -> Void
     private let encoder = JSONEncoder()
     private let decoder = JSONDecoder()
+    private var cachedFlight: CarryReplicaFlight?
+    private var mutationIndex: (requestID: UUID, values: [UUID: CarryGraphMutation])?
 
     static func container(at url: URL) throws -> ModelContainer {
-        let schema = Schema(SchemaV1.models + [CarryReplicaRecord.self, CarryReplicaCheckpoint.self])
+        let schema = Schema(SchemaV1.models + [CarryReplicaRecord.self, CarryReplicaCheckpoint.self, CarryReplicaReceiptCheckpoint.self])
         return try ModelContainer(for: schema, configurations: [
             ModelConfiguration(schema: schema, url: url, cloudKitDatabase: .none)
         ])
@@ -111,6 +128,15 @@ final class CarryAccountReplica {
         try decoder.decode(CarryReplicaPayload.self, from: row.payload)
     }
 
+    private func frozenFlight(_ state: CarryReplicaCheckpoint) throws -> CarryReplicaFlight? {
+        if let cachedFlight, state.flightID == cachedFlight.command.requestID { return cachedFlight }
+        guard let bytes = state.flight else { return nil }
+        let flight = try decoder.decode(CarryReplicaFlight.self, from: bytes)
+        state.flightID = flight.command.requestID
+        cachedFlight = flight
+        return flight
+    }
+
     private func transaction<T>(_ body: () throws -> T) throws -> T {
         do {
             let result = try body()
@@ -118,6 +144,8 @@ final class CarryAccountReplica {
             return result
         } catch {
             context.rollback()
+            cachedFlight = nil
+            mutationIndex = nil
             throw error
         }
     }
@@ -141,7 +169,7 @@ final class CarryAccountReplica {
     /// Callers must never build a plan through separately committed edit calls.
     func edit(_ desired: [CarryGraphEntity],
               project: (ModelContext) throws -> Void = { _ in }) throws {
-        guard desired.count <= 500 else { throw CarryReplicaFailure.tooManyChanges }
+        guard desired.count <= 20000 else { throw CarryReplicaFailure.tooManyChanges }
         guard Set(desired.map(\.id)).count == desired.count else { throw CarryReplicaFailure.invalidState }
         try transaction {
             _ = try checkpoint()
@@ -188,7 +216,7 @@ final class CarryAccountReplica {
         try transaction {
             let state = try checkpoint()
             if state.blocked { throw CarryReplicaFailure.blocked }
-            if let bytes = state.flight { return try decoder.decode(CarryReplicaFlight.self, from: bytes).command }
+            if let flight = try frozenFlight(state) { return flight.command }
             var mutations: [CarryGraphMutation] = []
             var desired: [UUID: CarryGraphEntity] = [:]
             let order = ["trip": 0, "libraryItem": 0, "section": 1, "day": 1, "lodging": 1,
@@ -228,10 +256,13 @@ final class CarryAccountReplica {
                     fields: changes, fieldVersions: action == "create" ? nil : value.intents))
                 desired[value.local.id] = value.local
             }
-            guard mutations.count <= 500 else { throw CarryReplicaFailure.tooManyChanges }
+            guard mutations.count <= 20000 else { throw CarryReplicaFailure.tooManyChanges }
             if mutations.isEmpty { return nil }
             let command = CarryGraphCommand(requestID: UUID(), mutations: mutations)
-            state.flight = try encoder.encode(CarryReplicaFlight(command: command, desired: desired))
+            let flight = CarryReplicaFlight(command: command, desired: desired)
+            state.flight = try encoder.encode(flight)
+            state.flightID = command.requestID
+            cachedFlight = flight
             return command
         }
     }
@@ -255,10 +286,84 @@ final class CarryAccountReplica {
             }
             let changed = try merge(receipt.changes, flight: flight)
             state.flight = nil
+            state.flightID = nil
+            cachedFlight = nil
+            mutationIndex = nil
             state.failureData = nil
             state.blocked = false
             // A receipt can start after unseen edits by another client. Only a
             // contiguous pull advances the durable cursor, never an upload ACK.
+            if !changed.isEmpty { try project(changed, context) }
+        }
+    }
+
+    func receiptProgress(for requestID: UUID) throws -> CarryGraphReceiptProgress? {
+        guard let progress = try receiptCheckpoint(requestID) else { return nil }
+        return CarryGraphReceiptProgress(requestID: requestID, cursor: progress.cursor,
+            changeCount: progress.changeCount, nextOffset: progress.nextOffset)
+    }
+
+    private func receiptCheckpoint(_ requestID: UUID) throws -> CarryReplicaReceiptCheckpoint? {
+        var query = FetchDescriptor<CarryReplicaReceiptCheckpoint>(predicate: #Predicate { $0.requestID == requestID })
+        query.fetchLimit = 1
+        return try context.fetch(query).first
+    }
+
+    /// Each page and its durable offset commit together. The original command
+    /// remains frozen until every changed entity has an authenticated ACK.
+    func accept(_ page: CarryGraphReceiptPage, summary: CarryGraphReceiptSummary,
+                project: ([CarryGraphEntity], ModelContext) throws -> Void = { _, _ in }) throws {
+        try transaction {
+            let state = try checkpoint()
+            guard summary.status == "saved_to_account", summary.changeCount > 0, summary.changeCount <= 1_000_000,
+                  summary.cursor >= summary.changeCount,
+                  summary.requestID == page.requestID, summary.cursor == page.cursor,
+                  summary.changeCount == page.changeCount, let flight = try frozenFlight(state) else {
+                throw CarryReplicaFailure.invalidReceipt
+            }
+            guard flight.command.requestID == summary.requestID else { throw CarryReplicaFailure.invalidReceipt }
+            let progress: CarryReplicaReceiptCheckpoint
+            if let previous = try receiptCheckpoint(summary.requestID) {
+                guard previous.cursor == summary.cursor, previous.changeCount == summary.changeCount else {
+                    throw CarryReplicaFailure.invalidReceipt
+                }
+                progress = previous
+            } else {
+                progress = CarryReplicaReceiptCheckpoint(summary: summary)
+                context.insert(progress)
+            }
+            guard progress.nextOffset >= 0, progress.nextOffset <= summary.changeCount,
+                  !page.changes.isEmpty, page.changes.count <= 500,
+                  page.changes.count <= summary.changeCount - progress.nextOffset,
+                  page.nextOffset == progress.nextOffset + page.changes.count,
+                  page.nextOffset <= summary.changeCount, page.hasMore == (page.nextOffset < summary.changeCount) else {
+                throw CarryReplicaFailure.invalidReceipt
+            }
+            var last = progress.lastSequence
+            for change in page.changes {
+                guard change.sequence > 0 else { throw CarryReplicaFailure.invalidReceipt }
+                if progress.nextOffset == 0 && last == 0 { last = change.sequence - 1 }
+                guard last < Int.max, change.sequence == last + 1 else { throw CarryReplicaFailure.invalidReceipt }
+                last = change.sequence
+            }
+            let changed = try merge(page.changes, flight: flight)
+            progress.nextOffset = page.nextOffset
+            progress.lastSequence = last
+            if !page.hasMore {
+                guard last == summary.cursor else { throw CarryReplicaFailure.invalidReceipt }
+                let requestID = summary.requestID
+                let acknowledged = try context.fetch(FetchDescriptor<CarryReplicaRecord>(
+                    predicate: #Predicate { $0.acknowledgedRequestID == requestID }))
+                let ids = Set(acknowledged.map(\.id))
+                guard Set(flight.command.mutations.map(\.id)).isSubset(of: ids) else { throw CarryReplicaFailure.invalidReceipt }
+                state.flight = nil
+                state.flightID = nil
+                cachedFlight = nil
+                mutationIndex = nil
+                state.failureData = nil
+                state.blocked = false
+                context.delete(progress)
+            }
             if !changed.isEmpty { try project(changed, context) }
         }
     }
@@ -283,23 +388,55 @@ final class CarryAccountReplica {
 
     private func merge(_ changes: [CarryGraphChange], flight: CarryReplicaFlight?) throws -> [CarryGraphEntity] {
         var changed: [CarryGraphEntity] = []
+        let sentByID: [UUID: CarryGraphMutation]
+        if let flight {
+            if let mutationIndex, mutationIndex.requestID == flight.command.requestID {
+                sentByID = mutationIndex.values
+            } else {
+                sentByID = Dictionary(uniqueKeysWithValues: flight.command.mutations.map { ($0.id, $0) })
+                mutationIndex = (flight.command.requestID, sentByID)
+            }
+        } else { sentByID = [:] }
+        let fullAcknowledgements = Set(changes.filter { $0.metadataOnly != true }.map { $0.entity.id })
         // Process only the newest snapshot of each entity within this response.
         // Ancestor metadata updates can repeat an entity without a field revision.
         var latest: [UUID: CarryGraphEntity] = [:]
         for change in changes {
             guard change.entity.version > 0, change.sequence > 0,
                   change.entity.subtreeVersion == change.sequence else { throw CarryReplicaFailure.invalidReceipt }
-            if let previous = latest[change.entity.id], previous.version > change.entity.version {
+            var incoming = change.entity
+            if change.metadataOnly == true {
+                guard incoming.fields.isEmpty, incoming.fieldVersions.isEmpty else { throw CarryReplicaFailure.invalidReceipt }
+                var known = latest[incoming.id]
+                if let known, known.version > incoming.version { throw CarryReplicaFailure.invalidReceipt }
+                if known == nil || (known?.version ?? 0) < incoming.version,
+                   let row = try row(id: incoming.id) {
+                    let stored = try payload(row)
+                    if let remote = stored.remote ?? stored.unconfirmedRemote,
+                       known == nil || remote.version > (known?.version ?? 0) { known = remote }
+                }
+                // A later acknowledged field revision already includes this
+                // older metadata-only event. It must never roll fields back.
+                if let known, known.version > incoming.version { continue }
+                guard let known, known.version == incoming.version else { throw CarryReplicaFailure.missingBaseline }
+                guard known.kind == incoming.kind, known.parentID == incoming.parentID,
+                      known.deletedAt == incoming.deletedAt, known.deletionBatch == incoming.deletionBatch else {
+                    throw CarryReplicaFailure.invalidReceipt
+                }
+                incoming.fields = known.fields
+                incoming.fieldVersions = known.fieldVersions
+            }
+            if let previous = latest[incoming.id], previous.version > incoming.version {
                 throw CarryReplicaFailure.invalidReceipt
             }
-            latest[change.entity.id] = change.entity
+            latest[incoming.id] = incoming
         }
         for incoming in latest.values {
             var remote = incoming
             if let row = try row(id: remote.id) {
                 var value = try payload(row)
                 guard value.local.kind == remote.kind else { throw CarryReplicaFailure.invalidReceipt }
-                let sent = flight?.command.mutations.first { $0.id == remote.id }
+                let sent = sentByID[remote.id]
                 let sentDesired = flight?.desired[remote.id]
                 if value.remote == nil && value.structuralAction == "create" && sent?.action != "create" {
                     // Bind a UUID to our creation only through its own ACK, but
@@ -368,6 +505,9 @@ final class CarryAccountReplica {
                 }
                 value.remote = remote
                 value.local = local
+                if let flight, sent != nil, fullAcknowledgements.contains(remote.id) {
+                    row.acknowledgedRequestID = flight.command.requestID
+                }
                 try store(value, in: row)
                 changed.append(local)
             } else {
@@ -446,6 +586,9 @@ final class CarryAccountReplica {
             value.local.fieldVersions = remote.fieldVersions
             try store(value, in: row)
             state.flight = nil
+            state.flightID = nil
+            cachedFlight = nil
+            mutationIndex = nil
             state.failureData = nil
             state.blocked = false
             try project([value.local], context)
@@ -492,6 +635,9 @@ final class CarryAccountReplica {
             value.local.fieldVersions = remote.fieldVersions
             try store(value, in: row)
             state.flight = nil
+            state.flightID = nil
+            cachedFlight = nil
+            mutationIndex = nil
             state.failureData = nil
             state.blocked = false
             try project([value.local], context)
