@@ -20,6 +20,8 @@
 XCTest 原型还发现删除仍被 SwiftData 持有的 SQLite 文件会产生 vnode/API violation 日志。新增持久夹具保留在模拟器临时目录，交给进程退出/系统清理，不在 XCTest teardown 强行 unlink 活跃数据库。
 
 ## 验证边界
-新增十余项检查覆盖业务/待同步标记同次提交、四条备份入口、拒绝后数据与偏好保留、原文件保护、路径校验、外部引用隔离及草稿/还原重试。完整日志以最终 round 为准；早期失败日志保留，不计入通过。
+新增十二项检查覆盖业务/待同步标记同次提交、四条备份入口、拒绝后数据与偏好保留、原文件保护、路径校验、外部引用隔离及草稿/还原重试。完整日志以最终 round 为准；早期失败日志保留，不计入通过。
 
 尚未实现 NativeChangeJournal、实际字段捕获与协议桥接、完整投影、资产队列/归属迁移及账户子库路由；当前 writer 注入本身不能代表云同步已经接通。账户文件仍需待同步与在途操作期间的保留策略，账户门禁继续关闭。用户级保存错误展示、子库副作用聚合、真实账户/双设备/界面/流畅性也要进入整体验收。
+
+最终两轮原生各 132/132：`/tmp/carry-native-save-files-final-r1.log`、`/tmp/carry-native-save-files-final-r2.log`，结果 `/tmp/CarryNativeSaveFilesFinalR1.xcresult`、`/tmp/CarryNativeSaveFilesFinalR2.xcresult`。Release `/tmp/carry-native-save-files-release.log` 与 strict codesign 通过；缺资产文案在构建完成后手动补齐九语言并直接提交，后续最终安装构建需包含该资源。没有新增真实账户/设备验收结论。

@@ -24,6 +24,12 @@
 
 Debug/Release 的 `CARRY_CLOUDKIT_ENVIRONMENT` 分别为 Development/Production，实际签名 entitlement 单独核对。完整模型由原生 API 导出并初始化，不能手工猜字段；开发与生产结构快照保存在 `scripts/cloudkit-schema-bootstrap/schema/`。真实跨设备同步、原生线上链路与本地测试分别验收。
 
+## 原生保存边界（2026-10-29）
+
+`CarryPersistence` 为 TripStore 和 DataBackupManager 的显式保存入口；关闭业务 Context 的 autosave，writer 可在同一次 save 捕获账户日志。失败时物化待删除的级联对象后回滚、隔离旧 Context，TripStore 重新加载持久图；普通编辑、草稿与还原均可重试。文件删除等副作用仅在保存成功后执行。
+
+`CarryBackupFileStage` 将外部备份的引用映射到新文件名；提交成功发布引用，失败只清本次文件。外部输入不能借用本机私有文件或导入分享外的附件。自动本地备份才可复用仍存在的本地文件。详见 `carry-native-persistence-qa.md`；日志、协议桥接、投影与账户子库尚待实现，不能把 writer 注入当成已接通同步。
+
 ## 整体结构
 
 ### iOS（2026-06-12 起：根级不再是 TabView，见 `specs/app-navigation-framework.md`，feature 分支未合并）

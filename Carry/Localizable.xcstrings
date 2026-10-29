@@ -65357,6 +65357,65 @@
         }
       }
     },
+    "settings.data.restore.error.asset" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Einige Fotos oder Anhänge fehlen. Wähle ein Backup, das die zugehörigen Dateien enthält."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Some photos or attachments are missing. Choose a backup that includes their files."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Faltan algunas fotos o archivos adjuntos. Elige una copia de seguridad que incluya sus archivos."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Certaines photos ou pièces jointes sont manquantes. Choisissez une sauvegarde contenant leurs fichiers."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "一部の写真や添付ファイルが見つからない。元のファイルを含むバックアップを選択。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "일부 사진이나 첨부 파일이 없어요. 원본 파일이 포함된 백업을 선택해 주세요."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Algumas fotos ou anexos estão faltando. Escolha um backup que inclua esses arquivos."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "备份缺少部分照片或附件，请选择包含原文件的备份。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "備份缺少部分照片或附件，請選擇包含原始檔案的備份。"
+          }
+        }
+      }
+    },
     "settings.data.restore.error.corrupt" : {
       "extractionState" : "manual",
       "localizations" : {

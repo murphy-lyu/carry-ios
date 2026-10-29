@@ -1449,3 +1449,8 @@ if departIsToday, seg.departLocalMinutes >= 0, seg.departLocalMinutes < sinceMin
 ### Widget 侧租车状态判断：用 flag 取代时间推断（2026-07-01）
 原因：旧 Widget 用 `Date() >= state.departureDate` 推断「已取车」——但 `departureDate` 日期计算在某些情况下会错误（如今日日期已过 18:30），导致 LA 认为已取车、显示「En route」到几十小时后的还车时间。
 决定：Widget 完全依赖 `state.isCarRentalDropoff` flag（由 App 侧在创建 LA 时设定），不做任何时间推断。取车 LA 始终显示取车地，还车 LA 始终显示还车地，逻辑清晰无歧义。
+
+
+## 2026-10-29：原生保存失败的 Context 隔离与文件提交边界
+
+原生业务统一显式 writer，autosave 关闭；业务状态和后续账户日志必须同一次 save。失败时先物化级联删除对象再 rollback，随后隔离该 Context，由 TripStore 以同容器新 Context 重载；仅关闭 autosave 无法清除 SwiftData 待处理的失效对象，不能单独作为修复。草稿使用保存前的独立对象图恢复，保留身份与文件名。外部备份只写新分配的文件名，不在数据库提交前覆盖/删除原文件；外部备份不能解析收件设备私有文件引用。依据两次模拟器崩溃堆栈与拒绝/重试回归，见 `carry-native-persistence-qa.md`。
