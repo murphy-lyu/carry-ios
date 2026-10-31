@@ -146,6 +146,7 @@ struct ContentView: View {
                 HomeView()
                     .navigationDestination(for: UUID.self) { id in
                         PackingListView(tripId: id)
+                            .environmentObject(store.owningStore(for: id) ?? store)
                     }
                     .navigationDestination(for: CreationRoute.self) { route in
                         routeDestination(route)
@@ -198,6 +199,7 @@ struct ContentView: View {
             HomeView()
                 .navigationDestination(for: UUID.self) { id in
                     PackingListView(tripId: id)
+                            .environmentObject(store.owningStore(for: id) ?? store)
                 }
                 .navigationDestination(for: CreationRoute.self) { route in
                     routeDestination(route)
@@ -211,6 +213,7 @@ struct ContentView: View {
             if let seed = router.creationSeed {
                 NavigationStack(path: $router.creationPath) {
                     TripInfoView(routeID: seed.id)
+                        .environmentObject(store.creationStore)
                         .navigationDestination(for: CreationRoute.self) { route in
                             routeDestination(route)
                         }
@@ -248,8 +251,10 @@ struct ContentView: View {
         switch route {
         case .tripInfo(let routeID):
             TripInfoView(routeID: routeID)
+                .environmentObject(store.creationStore)
         case .packingList(let id):
             PackingListView(tripId: id, isNewTrip: true)
+                .environmentObject(store.owningStore(for: id) ?? store)
         case .autoPackPicker(let info, let sceneKeys):
             ItemPickerView(
                 autoPackTripInfo: info,
@@ -258,6 +263,7 @@ struct ContentView: View {
                 destinationCodes: store.inferCountryCodes(for: info.destinationCity)
             )
             .id(sceneKeys.sorted().joined(separator: ","))
+            .environmentObject(store.creationStore)
         }
     }
 

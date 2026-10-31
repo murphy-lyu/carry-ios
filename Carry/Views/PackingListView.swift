@@ -499,6 +499,16 @@ struct PackingListView: View {
         }
         .sheet(item: $repositionProvider) { picked in
             BackgroundRepositionView(provider: picked.provider) { finalImage, crop in
+                if let importer = store.assetImporter {
+                    Task {
+                        do {
+                            let prepared = try await importer.background(image: finalImage, tripID: tripId)
+                            store.setLocalBackground(fileName: prepared.fileURL.lastPathComponent, crop: crop, forTripId: tripId)
+                            if store.bundle(for: tripId)?.primaryBackground?.localFileName == prepared.fileURL.lastPathComponent { prepared.adopt() }
+                        } catch { CarryLogger.shared.log(.attachmentSaveFailed, context: "account_background_import") }
+                    }
+                    return
+                }
                 if let name = BackgroundImageStore.save(finalImage) {
                     store.setLocalBackground(fileName: name, crop: crop, forTripId: tripId)
                     // The cover shows on the home card, not here — a success haptic confirms

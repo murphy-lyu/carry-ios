@@ -229,6 +229,26 @@ final class AccountTests: XCTestCase {
         XCTAssertEqual(store.error, .accountMismatch)
     }
 
+    func testIdentityRemovalWaitsForWorkspaceAndDoesNotRevokeOnFailure() async {
+        let service = AccountServiceDouble(); service.cachedProfile = service.signedIn
+        let store = CarryAccountStore(service: service)
+        store.prepareForIdentityRemoval = {
+            XCTAssertTrue(store.isBusy)
+            XCTAssertEqual(service.signOutCalls, 0)
+            throw CarryAccountFailure.storage
+        }
+        await store.signOut()
+        XCTAssertEqual(service.signOutCalls, 0)
+        XCTAssertEqual(store.profile, service.cachedProfile)
+        XCTAssertEqual(store.error, .storage)
+        var prepared = false
+        store.prepareForIdentityRemoval = { prepared = true }
+        await store.signOut()
+        XCTAssertTrue(prepared)
+        XCTAssertEqual(service.signOutCalls, 1)
+        XCTAssertEqual(store.state, .signedOut)
+    }
+
     func testLogoutFailureKeepsIdentityAndCanRetry() async {
         let service = AccountServiceDouble(); service.cachedProfile = service.signedIn; service.failure = .offline
         let store = CarryAccountStore(service: service)

@@ -1,12 +1,15 @@
 import { boundedJSON, GraphRequestError, isUUID } from './graph-http.mjs';
 import { createAssetUploadHandler } from './asset-upload-http.mjs';
 import { AssetInspectionError } from './asset-storage.mjs';
+import { createAssetDownloadHandler, createAssetManifestHandler } from './asset-download.mjs';
 
 export function createAssetHandler(adapter) {
-  const upload=createAssetUploadHandler(adapter);
+  const upload=createAssetUploadHandler(adapter),download=createAssetDownloadHandler(adapter),manifest=createAssetManifestHandler(adapter);
   return async request=>{
     const url=new URL(request.url);
     const path=url.pathname.startsWith('/carry-assets/')?'/functions/v1'+url.pathname:url.pathname;
+    if(path.startsWith('/functions/v1/carry-assets/download/'))return download(request,path.slice('/functions/v1/carry-assets/download/'.length));
+    if(path.startsWith('/functions/v1/carry-assets/manifest/'))return manifest(request,path.slice('/functions/v1/carry-assets/manifest/'.length));
     if(path==='/functions/v1/carry-assets/tus'||path.startsWith('/functions/v1/carry-assets/tus/'))return upload(request);
     const reply=(body,status=200)=>new Response(JSON.stringify(body),{status,headers:{'Content-Type':'application/json','Cache-Control':'no-store'}});
     let identity,authorized=false;

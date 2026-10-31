@@ -147,17 +147,19 @@ enum AttachmentAddRequest: Identifiable {
 
 /// 新附件数据（沙盒/缩略图已就绪，待入库或缓冲）。
 struct NewAttachmentData {
+    var id: UUID = UUID()
     var kind: AttachmentKind
     var displayName: String = ""
     var fileName: String = ""
     var utiOrExt: String = ""
     var urlString: String = ""
     var thumbnailData: Data = Data()
+    var preparedImport: PreparedAttachmentImport? = nil
 }
 
 /// 新建实体时的缓冲附件（保存后再入库）。
 struct PendingAttachment: Identifiable {
-    let id = UUID()
+    var id: UUID { data.id }
     var data: NewAttachmentData
 }
 
@@ -236,7 +238,7 @@ struct AttachmentEditSection: View {
             store.removeAttachment(tripId: tripId, attachmentId: id)
         } else if let idx = pending.firstIndex(where: { $0.id == id }) {
             let fileName = pending[idx].data.fileName
-            if !fileName.isEmpty { AttachmentStore.delete(named: fileName) }
+            if !fileName.isEmpty, pending[idx].data.preparedImport == nil { AttachmentStore.delete(named: fileName) }
             pending.remove(at: idx)
         }
     }
@@ -295,7 +297,8 @@ private struct AttachmentAddFlow: ViewModifier {
                 CameraPicker { data in
                     let id = beginImport()
                     importTask = Task {
-                        await completeImport(id: id) { try await AttachmentImportWorker.prepare(data: data, ext: "jpg") }
+                        let directory = store.assetImporter == nil ? nil : FileManager.default.temporaryDirectory.appendingPathComponent("CarryAttachmentImports", isDirectory: true)
+                        await completeImport(id: id) { try await AttachmentImportWorker.prepare(data: data, ext: "jpg", directory: directory) }
                     }
                 }
                     .ignoresSafeArea()
@@ -321,9 +324,11 @@ private struct AttachmentAddFlow: ViewModifier {
     @discardableResult
     private func commit(_ data: NewAttachmentData) -> Bool {
         if let owner {
-            return store.addAttachment(tripId: tripId, owner: owner, kind: data.kind,
+            let accepted = store.addAttachment(tripId: tripId, owner: owner, kind: data.kind, id: data.id,
                 displayName: data.displayName, fileName: data.fileName,
                 utiOrExt: data.utiOrExt, urlString: data.urlString, thumbnailData: data.thumbnailData) != nil
+            if accepted { data.preparedImport?.adopt() }
+            return accepted
         }
         pending.append(PendingAttachment(data: data))
         return true
@@ -338,16 +343,26 @@ private struct AttachmentAddFlow: ViewModifier {
 
     private func completeImport(id: UUID, operation: () async throws -> PreparedAttachmentImport) async {
         do {
-            let prepared = try await operation()
+            let temporary = try await operation()
+            let prepared: PreparedAttachmentImport
+            if let importer = store.assetImporter {
+                prepared = try await importer.attachment(from: temporary)
+            } else {
+                // Photos imports arrive as a temporary lease too. Guest files
+                // are copied into their original namespace only at this point.
+                if temporary.fileURL.path.hasPrefix(FileManager.default.temporaryDirectory.path) {
+                    prepared = try await AttachmentImportWorker.prepare(fileURL: temporary.fileURL, isPhoto: temporary.isPhoto)
+                    try await temporary.discard()
+                } else { prepared = temporary }
+            }
             guard !Task.isCancelled, importID == id else {
                 try await prepared.discard()
                 return
             }
-            let data = NewAttachmentData(kind: prepared.isPhoto ? .photo : .file,
+            let data = NewAttachmentData(id: prepared.entityID ?? UUID(), kind: prepared.isPhoto ? .photo : .file,
                 displayName: prepared.displayName, fileName: prepared.fileURL.lastPathComponent,
-                utiOrExt: prepared.ext, thumbnailData: prepared.thumbnailData)
-            if commit(data) { prepared.adopt() }
-            else { try await prepared.discard() }
+                utiOrExt: prepared.ext, thumbnailData: prepared.thumbnailData, preparedImport: prepared)
+            if !commit(data) { try await prepared.discard() }
         } catch is CancellationError {
             // An interrupted import never commits metadata or displays an error.
         } catch AttachmentImportFailure.tooLarge {
@@ -361,7 +376,8 @@ private struct AttachmentAddFlow: ViewModifier {
         guard case .success(let urls) = result, let url = urls.first else { return }
         let id = beginImport()
         importTask = Task {
-            await completeImport(id: id) { try await AttachmentImportWorker.prepare(fileURL: url) }
+            let directory = store.assetImporter == nil ? nil : FileManager.default.temporaryDirectory.appendingPathComponent("CarryAttachmentImports", isDirectory: true)
+            await completeImport(id: id) { try await AttachmentImportWorker.prepare(fileURL: url, directory: directory) }
         }
     }
 
@@ -444,6 +460,9 @@ struct AttachmentDetailCard: View {
     let attachments: [ItineraryAttachment]
 
     @State private var previewURL: URL?
+    @State private var previewLease: PreparedAttachmentImport?
+    @State private var previewTask: Task<Void, Never>?
+    @State private var previewRequest: UUID?
     @State private var webLink: WebLink?
 
     private struct WebLink: Identifiable { let id = UUID(); let url: URL }
@@ -480,6 +499,8 @@ struct AttachmentDetailCard: View {
                 )
             })
             .quickLookPreview($previewURL)
+            .onChange(of: previewURL) { _, value in if value == nil { previewLease = nil } }
+            .onDisappear { previewTask?.cancel(); previewTask = nil; previewRequest = nil; previewURL = nil; previewLease = nil }
             .sheet(item: $webLink) { link in
                 SafariView(url: link.url).ignoresSafeArea()
             }
@@ -497,7 +518,19 @@ struct AttachmentDetailCard: View {
             }
         case .file, .photo:
             guard !att.fileName.isEmpty else { return }
-            previewURL = AttachmentStore.fileURL(named: att.fileName)
+            let source = AttachmentStore.fileURL(named: att.fileName)
+            if CarryAccountFileAccess.isAccountReference(att.fileName) {
+                previewTask?.cancel()
+                let request = UUID(), ext = att.utiOrExt
+                previewRequest = request
+                previewTask = Task {
+                    do {
+                        let alias = try await CarryAccountAttachmentPreview.prepare(url: source, ext: ext)
+                        guard !Task.isCancelled, previewRequest == request else { try await alias.discard(); return }
+                        previewLease = alias; previewURL = alias.fileURL
+                    } catch is CancellationError {} catch { CarryLogger.shared.log(.attachmentSaveFailed, context: "account_preview") }
+                }
+            } else { previewURL = source }
         }
         CarryLogger.shared.log(.attachmentOpened, context: att.kindRaw)
     }

@@ -264,7 +264,15 @@ final class CarryAccountSyncEngine {
         do {
             for _ in 0..<10 {
                 try prepareReplica()
-                guard let command = try replica.nextCommand() else { break }
+                let command: CarryGraphCommand
+                do {
+                    guard let pending = try replica.nextCommand() else { break }
+                    command = pending
+                } catch CarryReplicaFailure.blocked {
+                    // Keep receiving authenticated state while a draft awaits
+                    // review; a conflict must not freeze the remote cursor.
+                    break
+                }
                 if let streaming = transport as? any CarryGraphStreamingTransporting {
                     let progress = try replica.receiptProgress(for: command.requestID)
                     try await streaming.applyStreaming(command, progress: progress) { summary, page, _ in
@@ -296,6 +304,7 @@ final class CarryAccountSyncEngine {
                 if !more { break }
             }
             try prepareReplica()
+            guard try replica.pendingFailure == nil else { return false }
             let pending = try replica.nextCommand()
             return !more && pending == nil
         } catch Continuation.nativeChangesPending {

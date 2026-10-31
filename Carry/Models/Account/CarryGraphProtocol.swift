@@ -79,6 +79,8 @@ nonisolated struct CarryGraphChange: Codable, Equatable, Sendable {
     let sequence: Int
     let entity: CarryGraphEntity
     var metadataOnly: Bool? = nil
+    var previousVersion: Int? = nil
+    var previousSubtreeVersion: Int? = nil
 }
 
 nonisolated struct CarryGraphPage: Codable, Sendable {
@@ -118,7 +120,7 @@ nonisolated struct CarryGraphReceiptProgress: Sendable {
 }
 
 enum CarryReplicaFailure: Error {
-    case accountMismatch, invalidState, invalidReceipt, invalidCursor, missingBaseline, blocked, tooManyChanges
+    case accountMismatch, invalidState, invalidReceipt, invalidCursor, missingBaseline, blocked, tooManyChanges, projectionChanged
 }
 
 nonisolated enum CarryGraphConflictChoice: Sendable {
@@ -142,4 +144,31 @@ nonisolated struct CarryNativeObservedEdit: Sendable {
     let previousParentID: UUID?
     let parentChanged: Bool
     let observed: CarryGraphEntity?
+}
+
+/// A destructive preview is the version the user actually saw, never a later
+/// pull. Members come from the native cascade in this one business transaction.
+nonisolated struct CarryNativeObservedTreeChange: Sendable {
+    let id: UUID
+    let kind: String
+    let isDeleted: Bool
+    let observed: CarryGraphEntity?
+    let memberIDs: [UUID]
+    var memberBaselines: [UUID: CarryGraphEntity] = [:]
+}
+
+nonisolated struct CarryNativeReplicaTransaction: Sendable {
+    var edits: [CarryNativeObservedEdit] = []
+    var trees: [CarryNativeObservedTreeChange] = []
+}
+
+/// A review-bound local draft blocked by deletion on another device.
+nonisolated struct CarryGraphDeletionConflict: Codable, Equatable, Sendable {
+    let local: CarryGraphEntity
+    let remote: CarryGraphEntity?
+    let fieldBaselines: [String: Int]
+    let parentBaseline: Int?
+    let action: String?
+    let deletedAncestors: [CarryGraphEntity]
+    let restoreImpact: [CarryGraphEntity]
 }

@@ -52,10 +52,12 @@ struct CarryApp: App {
         }
     }()
 
-    @StateObject private var store = TripStore()
-    @StateObject private var router = NavigationRouter()
+    @StateObject private var store: TripStore
+    @StateObject private var workspaceLibrary: CarryWorkspaceLibrary
+    @StateObject private var router: NavigationRouter
     @StateObject private var automation = CarryAutomationConnection()
-    @StateObject private var account = CarryAccountStore(service: CarryAccountService())
+    @StateObject private var account: CarryAccountStore
+    @StateObject private var accountWorkspace: CarryAccountWorkspaceController
 
     @AppStorage("appearance_mode") private var appearanceModeRaw = AppearanceMode.system.rawValue
 
@@ -66,6 +68,28 @@ struct CarryApp: App {
     }
 
     init() {
+        let local = TripStore()
+        _store = StateObject(wrappedValue: local)
+        let library = CarryWorkspaceLibrary(local: local)
+        _workspaceLibrary = StateObject(wrappedValue: library)
+        let navigation = NavigationRouter()
+        _router = StateObject(wrappedValue: navigation)
+        let service = CarryAccountService()
+        let workspace = CarryAccountWorkspaceController(library: library, service: service) {
+            navigation.path = NavigationPath()
+            navigation.showCreation = false
+            navigation.creationPath = NavigationPath()
+            navigation.creationSeed = nil
+            navigation.pendingSharedTrip = nil
+            navigation.pendingTrip = nil
+            navigation.pendingFaceApply = nil
+            navigation.pendingItineraryAnchor = nil
+            navigation.rootModalDismissalRequest += 1
+        }
+        _accountWorkspace = StateObject(wrappedValue: workspace)
+        let identity = CarryAccountStore(service: service)
+        identity.prepareForIdentityRemoval = { [weak workspace] in try await workspace?.close() }
+        _account = StateObject(wrappedValue: identity)
         // App-wide UIKit tint so system-presented UI (confirmationDialogs, alerts, context
         // menus) uses the single accent too — SwiftUI's `.tint()` doesn't reach these.
         UIWindow.appearance().tintColor = CarryAccent.uiColor
@@ -78,13 +102,38 @@ struct CarryApp: App {
                 .environmentObject(router)
                 .environmentObject(automation)
                 .environmentObject(account)
+                .environmentObject(accountWorkspace)
                 .task { await account.restoreIfNeeded() }
+                .onChange(of: account.state) { _, state in
+                    Task {
+                        guard account.state == state else { return }
+                        if case .signedIn(let profile) = state,
+                           UserDefaults.standard.bool(forKey: "carry_account_sync_" + profile.id.uuidString.lowercased()) {
+                            do { try await accountWorkspace.enable(accountID: profile.id) }
+                            catch { CarryLogger.shared.log(.persistFailed, context: "account_workspace_restore") }
+                        } else if state == .signedOut || account.isDeleting {
+                            do { try await accountWorkspace.close() }
+                            catch { CarryLogger.shared.log(.persistFailed, context: "account_workspace_close") }
+                        } else {
+                            await accountWorkspace.suspend()
+                            guard account.state == state else { return }
+                            if let profile = state.profile,
+                               UserDefaults.standard.bool(forKey: "carry_account_sync_" + profile.id.uuidString.lowercased()) {
+                                do { _ = try await accountWorkspace.openCached(accountID: profile.id) }
+                                catch { CarryLogger.shared.log(.persistFailed, context: "account_workspace_offline_restore") }
+                            }
+                        }
+                    }
+                }
                 .onReceive(store.$automationReady) { ready in
                     if ready { automation.start(store: store, router: router) }
                 }
                 .onReceive(NotificationCenter.default.publisher(for: UIApplication.didBecomeActiveNotification)) { _ in
                     automation.start(store: store, router: router)
-                    Task { await account.refresh() }
+                    Task {
+                        await account.refresh()
+                        if account.hasVerifiedSession { accountWorkspace.requestSynchronization() }
+                    }
                 }
                 .onReceive(NotificationCenter.default.publisher(for: UIApplication.didEnterBackgroundNotification)) { _ in
                     automation.stop()
@@ -143,7 +192,7 @@ struct CarryApp: App {
                     Task { await DataBackupManager.shared.flushPendingBackup() }
                     // Refresh the home-screen widget + phase-aware Quick Actions with the latest trip data.
                     store.writeWidgetSnapshot()
-                    Self.refreshQuickActions(trips: store.trips)
+                    Self.refreshQuickActions(trips: store.visibleTrips)
                 }
                 .onReceive(NotificationCenter.default.publisher(
                     for: UIApplication.willEnterForegroundNotification)
@@ -158,7 +207,7 @@ struct CarryApp: App {
                         // 交通「下一程」LA（spec: widget-transit-live-activity.md）：已抵达则结束、
                         // 再按当下扫一遍是否该为最临近的一程自动起（A）。
                         LiveActivityManager.shared.endTransitIfArrived()
-                        LiveActivityManager.shared.startTransitIfNeeded(trips: store.trips)
+                        LiveActivityManager.shared.startTransitIfNeeded(trips: store.visibleTrips)
                     }
 #endif
                 }

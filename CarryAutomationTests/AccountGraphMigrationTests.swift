@@ -75,7 +75,7 @@ final class AccountGraphMigrationTests: XCTestCase {
             let expected = try XCTUnwrap(packet.entities.first { $0.id == source.metadata.id })
             XCTAssertEqual(source.metadata.parentID, expected.parentID)
             var fields = expected.fields
-            fields.removeValue(forKey: "thumbnailAssetID"); fields.removeValue(forKey: "fileAssetID")
+            fields.removeValue(forKey: "thumbnailAssetID"); fields.removeValue(forKey: "fileAssetID"); fields.removeValue(forKey: "backgroundAssetIDs")
             for key in ["additionalDestinationsData", "backgroundsData"] where expected.kind == "trip" && fields[key] == nil {
                 fields[key] = .null
             }
@@ -148,8 +148,14 @@ final class AccountGraphMigrationTests: XCTestCase {
             tripIDs: Set(source.trips.map(\.id)), includeLibrary: true)
         let configuration = CarryAccountConfiguration(projectURL: try XCTUnwrap(URL(string: "http://127.0.0.1:8891")), publishableKey: "sb_publishable_synthetic_only")
         let transport = CarryGraphTransport(configuration: configuration, accessToken: { "synthetic-native-qa" })
-        let mutations = packet.entities.map { CarryGraphMutation(id: $0.id, kind: $0.kind, action: "create", baseVersion: 0,
-            parentID: $0.parentID, fields: $0.fields) }
+        // This test isolates cost semantics. Unverified file references are
+        // rejected by the actual graph guard and cannot be sent as placeholders.
+        let mutations = packet.entities.filter { !["photo", "attachment"].contains($0.kind) }.map { entity in
+            var fields = entity.fields
+            if entity.kind == "trip" { fields["backgroundsData"] = .null; fields["backgroundAssetIDs"] = .object([:]) }
+            return CarryGraphMutation(id: entity.id, kind: entity.kind, action: "create", baseVersion: 0,
+                parentID: entity.parentID, fields: fields)
+        }
         let receipt = try await transport.apply(CarryGraphCommand(requestID: UUID(), mutations: mutations))
         XCTAssertEqual(receipt.status, "saved_to_account")
         XCTAssertTrue(receipt.changes.contains { $0.entity.kind == "stop" && $0.entity.fields["costAmount"] == .integer(0) && $0.entity.fields["costCurrencyCode"] == .string("JPY") })

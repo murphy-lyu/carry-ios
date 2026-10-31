@@ -26,6 +26,7 @@ struct PhotoTripImportView: View {
     @State private var totalCount = 0
     @State private var processedThumbnails: [Data?] = []   // 已读到的缩略图，加载态逐张浮现
     @State private var processingTask: Task<Void, Never>?
+    @State private var showStorageError = false
 
     private var bundle: TripBundle? { store.trips.first { $0.id == tripId } }
 
@@ -58,6 +59,9 @@ struct PhotoTripImportView: View {
                 process(items: items)
             }
             .onDisappear { processingTask?.cancel() }   // 下滑关闭也停掉后台解析
+            .alert("account.error.storage", isPresented: $showStorageError) {
+                Button("common.ok", role: .cancel) {}
+            }
         }
     }
 
@@ -199,13 +203,27 @@ struct PhotoTripImportView: View {
         phase = .processing
         CarryLogger.shared.log(.photoImportStarted, context: "selected=\(items.count)")
         processingTask = Task {
-            let photos = await PhotoTripReconstructor.extract(items: items, isChinaStorefront: china) { done, thumb in
-                await MainActor.run {
-                    processedCount = done
-                    withAnimation(.spring(duration: 0.3, bounce: 0.2)) {
-                        processedThumbnails.append(thumb)
+            let importer = store.assetImporter
+            let prepareOriginal: (@Sendable (UUID, Data) async throws -> PreparedAttachmentImport)?
+            if let importer {
+                prepareOriginal = { @Sendable id, data in try await importer.originalPhoto(data: data, entityID: id) }
+            } else { prepareOriginal = nil }
+            let photos: [PhotoDraft]
+            do {
+                photos = try await PhotoTripReconstructor.extract(items: items, isChinaStorefront: china, prepareOriginal: prepareOriginal) { done, thumb in
+                    await MainActor.run {
+                        processedCount = done
+                        withAnimation(.spring(duration: 0.3, bounce: 0.2)) {
+                            processedThumbnails.append(thumb)
+                        }
                     }
                 }
+            } catch is CancellationError { return }
+            catch {
+                guard !Task.isCancelled else { return }
+                phase = .intro; showStorageError = true
+                CarryLogger.shared.log(.photoImportFailed, context: "account_original_prepare")
+                return
             }
             if Task.isCancelled { return }   // 用户中途退出 → 不再落状态
             // 完成节拍：让「N/N 全部读取」这一帧真正显示出来再进预览。并发读图后，最后一张处理完会
@@ -255,8 +273,8 @@ struct PhotoTripImportView: View {
     }
 
     private func save() {
-        store.importItineraryFromPhotos(tripId: tripId, draft: draft)
-        dismiss()
+        if store.importItineraryFromPhotos(tripId: tripId, draft: draft) { dismiss() }
+        else { showStorageError = true }
     }
 
     private func cancel() {

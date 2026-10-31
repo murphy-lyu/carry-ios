@@ -211,6 +211,14 @@ final class TripBundle {
 
 // MARK: - TripStore
 
+/// Account child stores own business persistence only. The root observes their
+/// change signal and schedules system effects using ALL visible origins.
+enum TripStoreScope {
+    case local
+    case account(didChange: () -> Void)
+}
+enum TripStoreScopeFailure: Error { case accountOperationUnavailable }
+
 final class TripStore: ObservableObject {
     @Published private(set) var automationReady = false
     private(set) var automationInvalidationVersion = 0
@@ -223,6 +231,12 @@ final class TripStore: ObservableObject {
     @Published private(set) var draftTrip: TripBundle?
 
     private var context: ModelContext
+    private let scope: TripStoreScope
+    var businessContext: ModelContext { context }
+    var assetImporter: CarryAccountImportService?
+    private var usesSharedEffects: Bool { if case .local = scope { return true }; return false }
+    private func sharedEffect(_ effect: () -> Void) { if usesSharedEffects { effect() } }
+    private func publishAccountChange() { if case .account(let didChange) = scope { didChange() } }
     private let automationPersistenceAllowed: Bool
     private let automationSave: CarryPersistence.Save
     private let persistenceSave: CarryPersistence.Save
@@ -231,12 +245,31 @@ final class TripStore: ObservableObject {
     private static let homeEmptyStateMockKey = "home_empty_state_mock_enabled"
     private var didCleanupCorruptedData = false
 
+    // Read-only aggregation is separate from this Context's mutable models.
+    // Only the root store installs these providers; child stores remain scoped.
+    var visibleTripsProvider: (() -> [TripBundle])?
+    var owningStoreProvider: ((UUID) -> TripStore?)?
+    var creationStoreProvider: (() -> TripStore)?
+    var visibleTrips: [TripBundle] { visibleTripsProvider?() ?? trips }
+    var creationStore: TripStore { creationStoreProvider?() ?? self }
+    func owningStore(for id: UUID) -> TripStore? {
+        if let owningStoreProvider { return owningStoreProvider(id) }
+        return trips.contains(where: { $0.id == id }) ? self : nil
+    }
+    func visibleBundle(for id: UUID) -> TripBundle? { owningStore(for: id)?.bundle(for: id) }
+    func refreshVisibleEffects() {
+        guard usesSharedEffects else { return }
+        refreshNotifications(); writeWidgetSnapshot()
+        CarryApp.refreshQuickActions(trips: visibleTrips)
+    }
+
     init(context: ModelContext? = nil, automationSave: CarryPersistence.Save? = nil,
-         persistenceSave: @escaping CarryPersistence.Save = { try $0.save() }) {
+         persistenceSave: @escaping CarryPersistence.Save = { try $0.save() }, scope: TripStoreScope = .local) {
         let selectedContext = context ?? ModelContext(CarryApp.container)
         selectedContext.autosaveEnabled = false
         self.context = selectedContext
-        self.automationPersistenceAllowed = selectedContext.container.configurations.allSatisfy { !$0.isStoredInMemoryOnly }
+        self.scope = scope
+        self.automationPersistenceAllowed = { if case .account = scope { return false }; return selectedContext.container.configurations.allSatisfy { !$0.isStoredInMemoryOnly } }()
         self.persistenceSave = persistenceSave
         let automationWriter = automationSave ?? persistenceSave
         self.automationSave = { try CarryPersistence.commit($0, using: automationWriter) }
@@ -245,13 +278,14 @@ final class TripStore: ObservableObject {
         // 否则误开后值会存进 UserDefaults，每次启动都模拟空态（看着像白屏），而 Xcode 重装不清
         // UserDefaults → 重装也不好（已踩坑）。预览是一次性操作，本就不该跨启动留存。
         self.isHomeEmptyStateMockEnabled = false
-        defaults.removeObject(forKey: Self.homeEmptyStateMockKey)
+        sharedEffect { defaults.removeObject(forKey: Self.homeEmptyStateMockKey) }
 #if DEBUG
         // 「Simulate weather alert」同为 DEBUG 模拟开关，仅本次会话有效——每次启动清掉，避免误留后每次冷启动强制预警。
-        defaults.removeObject(forKey: "debugForceWeatherAlertKind")
+        sharedEffect { defaults.removeObject(forKey: "debugForceWeatherAlertKind") }
 #endif
         Task { @MainActor in
             guard fetchTrips() else { return }
+            guard usesSharedEffects else { publishAccountChange(); return }
             pruneAutomationReceipts()
             reconcileBackgroundFiles()
             reconcileAttachmentFiles()
@@ -260,10 +294,10 @@ final class TripStore: ObservableObject {
             refreshNotifications()
             // 交通「下一程」LA 自动起（A，spec: widget-transit-live-activity.md）：同样依赖 trips 已加载。
 #if !targetEnvironment(macCatalyst)
-            LiveActivityManager.shared.startTransitIfNeeded(trips: trips)
+            LiveActivityManager.shared.startTransitIfNeeded(trips: visibleTrips)
 #endif
             // 相位感知 Quick Actions 中间槽（spec: quick-actions-phase-aware.md）：冷启动 trips 加载后刷一次。
-            CarryApp.refreshQuickActions(trips: trips)
+            CarryApp.refreshQuickActions(trips: visibleTrips)
             // Widget snapshot：冷启动 trips 加载后写一次（spec: widget-trip-companion.md）。**必须在此、不能在
             // App.onAppear**——onAppear 时 trips 可能仍空、会写空 snapshot 覆盖好的那份（Widget 变空白，已踩坑）。
             writeWidgetSnapshot()
@@ -276,6 +310,7 @@ final class TripStore: ObservableObject {
     /// covers full-wipe restores (where trips are deleted without going through `removeTrip`).
     /// Runs on launch and after each restore/merge — robust to every trip-removal path.
     private func reconcileBackgroundFiles() {
+        guard usesSharedEffects else { return }
         let referenced = Set(trips.flatMap { $0.backgrounds.compactMap(\.localFileName) })
         BackgroundImageStore.deleteOrphans(keeping: referenced)
     }
@@ -283,6 +318,7 @@ final class TripStore: ObservableObject {
     /// 回收不再被任何附件引用的孤儿沙盒文件（同 `reconcileBackgroundFiles` 的生命周期兜底：
     /// 启动 + 每次 restore/merge）。`removeAttachment` 的就地删处理常规路径；这里兜整库 wipe / 级联删。
     private func reconcileAttachmentFiles() {
+        guard usesSharedEffects else { return }
         let referenced = Set(allAttachments().map(\.fileName).filter { !$0.isEmpty })
         AttachmentStore.deleteOrphans(keeping: referenced)
     }
@@ -304,12 +340,13 @@ final class TripStore: ObservableObject {
 
     /// 新增附件到指定实体。沙盒写入由调用方先完成（拿到 fileName/thumbnail），此处只建 model 记录。
     @discardableResult
-    func addAttachment(tripId: UUID, owner: AttachmentOwner, kind: AttachmentKind,
+    func addAttachment(tripId: UUID, owner: AttachmentOwner, kind: AttachmentKind, id: UUID = UUID(),
                        displayName: String, fileName: String = "", utiOrExt: String = "",
                        urlString: String = "", thumbnailData: Data = Data()) -> UUID? {
         guard let trip = trips.first(where: { $0.id == tripId }) else { return nil }
         let att = ItineraryAttachment(kind: kind, displayName: displayName, fileName: fileName,
                                       utiOrExt: utiOrExt, urlString: urlString, thumbnailData: thumbnailData)
+        att.id = id
         switch owner {
         case .stop(let id):
             guard let stop = trip.safeItineraryDays.flatMap({ $0.sortedStops }).first(where: { $0.id == id }) else { return nil }
@@ -345,7 +382,7 @@ final class TripStore: ObservableObject {
         context.delete(att)
         do {
             try persist(context)
-            if !fileName.isEmpty { AttachmentStore.delete(named: fileName) }
+            sharedEffect { if !fileName.isEmpty { AttachmentStore.delete(named: fileName) } }
             CarryLogger.shared.log(.attachmentDeleted)
         } catch {
             CarryLogger.shared.log(.persistFailed, context: "removeAttachment")
@@ -355,7 +392,7 @@ final class TripStore: ObservableObject {
     /// 深拷贝附件（复制行程用）：记录 + **沙盒文件**（新文件名，避免两行程共享一份字节）。
     private func copyAttachments(_ atts: [ItineraryAttachment]?, recoveringDraft: Bool = false) -> [ItineraryAttachment] {
         (atts ?? []).sorted { $0.sortOrder < $1.sortOrder }.map { a in
-            let newFileName = recoveringDraft ? a.fileName : (a.fileName.isEmpty ? "" : (AttachmentStore.copy(of: a.fileName) ?? ""))
+            let newFileName = (recoveringDraft || !usesSharedEffects) ? a.fileName : (a.fileName.isEmpty ? "" : (AttachmentStore.copy(of: a.fileName) ?? ""))
             let copy = ItineraryAttachment(
                 kind: a.kind, displayName: a.displayName, fileName: newFileName,
                 utiOrExt: a.utiOrExt, urlString: a.urlString, thumbnailData: a.thumbnailData,
@@ -367,7 +404,7 @@ final class TripStore: ObservableObject {
 
     func setHomeEmptyStateMockEnabled(_ enabled: Bool) {
         isHomeEmptyStateMockEnabled = enabled
-        defaults.set(enabled, forKey: Self.homeEmptyStateMockKey)
+        sharedEffect { defaults.set(enabled, forKey: Self.homeEmptyStateMockKey) }
     }
 
     // MARK: - Persistence
@@ -381,6 +418,7 @@ final class TripStore: ObservableObject {
     /// Restore all data from the automatic device-local JSON backup.
     @discardableResult
     func restoreFromBackup() throws -> (trips: Int, myItems: Int) {
+        guard usesSharedEffects else { throw TripStoreScopeFailure.accountOperationUnavailable }
         try invalidateAutomationConnection()
         let result = try DataBackupManager.shared.restore(into: context, save: persist)
         applyPostRestoreSideEffects()
@@ -430,6 +468,7 @@ final class TripStore: ObservableObject {
     /// "通知 ID 指向已不存在的 trip" 或"灵动岛挂着旧行程"等幽灵。然后按新还原的 trip
     /// 重排所有提醒，并触发 widget snapshot 重写。
     private func applyPostRestoreSideEffects() {
+        guard usesSharedEffects else { fetchTrips(); publishAccountChange(); return }
         // 1. 全清旧通知
         UNUserNotificationCenter.current().removeAllPendingNotificationRequests()
         // 2. 全结束旧 Live Activity（含可能孤立的）
@@ -486,7 +525,7 @@ final class TripStore: ObservableObject {
         draftTrip = nil
         fetchTrips()
         refreshNotifications()
-        if defaults.bool(forKey: "calendar_sync_enabled") {
+        if usesSharedEffects && defaults.bool(forKey: "calendar_sync_enabled") {
             Task { CalendarManager.shared.addTrip(trip) }
         }
         CarryLogger.shared.log(.tripCreated)
@@ -690,7 +729,7 @@ final class TripStore: ObservableObject {
             var fetchedTrips = try context.fetch(descriptor)
             var fetchedMyItems = try context.fetch(myItemDescriptor)
 
-            if !didCleanupCorruptedData {
+            if usesSharedEffects && !didCleanupCorruptedData {
                 didCleanupCorruptedData = true
                 if cleanupCorruptedData(trips: fetchedTrips, myItems: fetchedMyItems) {
                     try persist(context)
@@ -754,6 +793,7 @@ final class TripStore: ObservableObject {
     }
 
     private func scheduleAutomaticBackup() {
+        guard usesSharedEffects else { return }
         DataBackupManager.shared.scheduleBackup { [weak self] in
             guard let self else { return nil }
             return (self.trips, self.myItems)
@@ -761,7 +801,10 @@ final class TripStore: ObservableObject {
     }
 
     private func persist(_ context: ModelContext) throws {
-        do { try CarryPersistence.commit(context, using: persistenceSave) }
+        do {
+            try CarryPersistence.commit(context, using: persistenceSave)
+            publishAccountChange()
+        }
         catch {
             // A rolled-back SwiftData context may retain stale edited model
             // instances in its identity map. Use a fresh context for subsequent
@@ -803,7 +846,7 @@ final class TripStore: ObservableObject {
         let previous = trip.primaryBackground?.localFileName
         trip.backgrounds = [TripBackgroundEntry(source: .local, localFileName: fileName, destinationIndex: 0, crop: crop)]
         guard save() else { return }
-        if let previous, previous != fileName { BackgroundImageStore.delete(named: previous) }
+        sharedEffect { if let previous, previous != fileName { BackgroundImageStore.delete(named: previous) } }
     }
 
     /// Removes the custom background → card falls back to the style's default (monogram/map).
@@ -812,7 +855,7 @@ final class TripStore: ObservableObject {
         let previous = trip.primaryBackground?.localFileName
         trip.backgrounds = []
         guard save() else { return }
-        if let previous { BackgroundImageStore.delete(named: previous) }
+        sharedEffect { if let previous { BackgroundImageStore.delete(named: previous) } }
     }
 
     private let defaultMyItemCollection = "Default"
@@ -827,6 +870,7 @@ final class TripStore: ObservableObject {
     /// Wipes all SwiftData records, UserDefaults, and pending notifications —
     /// equivalent to a fresh install. Call only from developer mode.
     func resetAllData() throws {
+        guard usesSharedEffects else { throw TripStoreScopeFailure.accountOperationUnavailable }
         try invalidateAutomationConnection()
         do {
             for trip in try context.fetch(FetchDescriptor<TripBundle>()) { context.delete(trip) }
@@ -875,6 +919,7 @@ final class TripStore: ObservableObject {
         let backgroundNames = trip.backgrounds.compactMap(\.localFileName)
         context.delete(trip)
         guard save() else { return }
+        guard usesSharedEffects else { CarryLogger.shared.log(.tripDeleted); return }
         NotificationManager.cancelReminders(forTripId: id)
 #if !targetEnvironment(macCatalyst)
         Task { @MainActor in
@@ -921,7 +966,7 @@ final class TripStore: ObservableObject {
             return nil
         }
         refreshNotifications()
-        if UserDefaults.standard.bool(forKey: "calendar_sync_enabled") {
+        if usesSharedEffects && UserDefaults.standard.bool(forKey: "calendar_sync_enabled") {
             Task { CalendarManager.shared.addTrip(newBundle) }
         }
         CarryLogger.shared.log(.tripDuplicated)
@@ -980,7 +1025,7 @@ final class TripStore: ObservableObject {
         // 文件名，否则删/换任一方都会误伤另一方）。无本地文件的条目（未来在线源）原样带过；
         // 复制失败的条目直接丢弃（副本退回 monogram 兜底），绝不残留共享引用。crop 等元数据保留。
         newBundle.backgrounds = original.backgrounds.compactMap { entry in
-            if recoveringDraft { return entry }
+            if recoveringDraft || !usesSharedEffects { return entry }
             guard let name = entry.localFileName else { return entry }
             guard let copiedName = BackgroundImageStore.copy(of: name) else { return nil }
             var copied = entry
@@ -1143,15 +1188,15 @@ final class TripStore: ObservableObject {
         // 同步更新日历事件：退回规划中（无日期）→ 删除（只看权限，不看当前同步开关——
         // 开关只管"要不要新建"，不该拦"清理曾经建过的"，理由同 removeTrip）；
         // 否则按当前数据重写（新写入沿用既有的"同步开关"语义）。
-        if info.isDateless {
+        if usesSharedEffects && info.isDateless {
             if CalendarManager.shared.hasAccess {
                 Task { CalendarManager.shared.removeTrip(tripId) }
             }
-        } else if UserDefaults.standard.bool(forKey: "calendar_sync_enabled") {
+        } else if usesSharedEffects && UserDefaults.standard.bool(forKey: "calendar_sync_enabled") {
             Task { CalendarManager.shared.updateTrip(trip) }
         }
 #if !targetEnvironment(macCatalyst)
-        Task { @MainActor in
+        sharedEffect { Task { @MainActor in
             // 退回规划中：结束 Live Activity；否则先按当前条件尝试启动（覆盖"规划中→有日期"
             // 或改期后重新进入激活窗口——这两种情况原来的 update(for:) 是空操作，因为没有
             // 已在跑的 activity 可更新），再刷新一次内容（覆盖"本就在跑、只是改名/目的地"这种
@@ -1162,7 +1207,7 @@ final class TripStore: ObservableObject {
                 LiveActivityManager.shared.startIfNeeded(for: trip)
                 LiveActivityManager.shared.update(for: trip)
             }
-        }
+        } }
 #endif
     }
 
@@ -1177,6 +1222,7 @@ final class TripStore: ObservableObject {
         try context.delete(model: AutomationExecutionRecord.self)
         try persist(context)
         fetchTrips()
+        guard usesSharedEffects else { return }
         // 2. 数据库接受删除后再清理独立的副作用存储。
         NotificationManager.cancelAll()
 #if !targetEnvironment(macCatalyst)
@@ -1198,12 +1244,13 @@ final class TripStore: ObservableObject {
     /// 通知重排统一入口：跨**所有行程**全局重排（卡 iOS 64 挂起上限的全局预算，spec: notification-budget.md）。
     /// 任何会影响通知的变更（建/改/删行程、增删交通/住宿、改设置、打包进度、回前台）都走这里。
     func refreshNotifications() {
-        NotificationManager.reschedule(trips: trips)
+        guard usesSharedEffects else { return }
+        NotificationManager.reschedule(trips: visibleTrips)
         // 天气预警（spec: weather-aware-packing.md, Part 2）：异步评估即将出发行程的天气，
         // 结论落 WeatherAlertStore 后回主线程再排一次（节流：cache 新鲜的行程跳过）。
-        WeatherAlertEvaluator.refresh(trips: trips) { [weak self] in
+        WeatherAlertEvaluator.refresh(trips: visibleTrips) { [weak self] in
             guard let self else { return }
-            NotificationManager.reschedule(trips: self.trips)
+            NotificationManager.reschedule(trips: self.visibleTrips)
         }
     }
 
@@ -1227,7 +1274,7 @@ final class TripStore: ObservableObject {
                 guard save(refreshCollections: false) else { return }
                 reschedulePackProgress(trip)
 #if !targetEnvironment(macCatalyst)
-                Task { @MainActor in LiveActivityManager.shared.update(for: trip) }
+                sharedEffect { Task { @MainActor in LiveActivityManager.shared.update(for: trip) } }
 #endif
                 return
             }
@@ -1245,7 +1292,7 @@ final class TripStore: ObservableObject {
         CarryLogger.shared.log(.tripCompleted)
         reschedulePackProgress(trip)   // 全打完 → 撤销「还剩 N 件」提醒
 #if !targetEnvironment(macCatalyst)
-        Task { @MainActor in LiveActivityManager.shared.update(for: trip) }
+        sharedEffect { Task { @MainActor in LiveActivityManager.shared.update(for: trip) } }
 #endif
     }
 
@@ -1260,7 +1307,7 @@ final class TripStore: ObservableObject {
         CarryLogger.shared.log(.tripUncompleted)
         reschedulePackProgress(trip)
 #if !targetEnvironment(macCatalyst)
-        Task { @MainActor in LiveActivityManager.shared.update(for: trip) }
+        sharedEffect { Task { @MainActor in LiveActivityManager.shared.update(for: trip) } }
 #endif
     }
 
@@ -1298,7 +1345,7 @@ final class TripStore: ObservableObject {
                     CarryLogger.shared.log(.itemAdded)
                     reschedulePackProgress(trip)
 #if !targetEnvironment(macCatalyst)
-                    Task { @MainActor in LiveActivityManager.shared.update(for: trip) }
+                    sharedEffect { Task { @MainActor in LiveActivityManager.shared.update(for: trip) } }
 #endif
                 }
                 return
@@ -1341,7 +1388,7 @@ final class TripStore: ObservableObject {
                     CarryLogger.shared.log(.itemDeleted)
                     reschedulePackProgress(trip)
 #if !targetEnvironment(macCatalyst)
-                    Task { @MainActor in LiveActivityManager.shared.update(for: trip) }
+                    sharedEffect { Task { @MainActor in LiveActivityManager.shared.update(for: trip) } }
 #endif
                 }
                 return
@@ -1424,7 +1471,7 @@ final class TripStore: ObservableObject {
         guard save() else { return }
         CarryLogger.shared.log(.sectionDeleted)
 #if !targetEnvironment(macCatalyst)
-        Task { @MainActor in LiveActivityManager.shared.update(for: trip) }
+        sharedEffect { Task { @MainActor in LiveActivityManager.shared.update(for: trip) } }
 #endif
     }
 
@@ -1448,7 +1495,7 @@ final class TripStore: ObservableObject {
         }
         guard save() else { return }
 #if !targetEnvironment(macCatalyst)
-        Task { @MainActor in LiveActivityManager.shared.update(for: trip) }
+        sharedEffect { Task { @MainActor in LiveActivityManager.shared.update(for: trip) } }
 #endif
     }
 
@@ -1624,13 +1671,14 @@ final class TripStore: ObservableObject {
                 if stop.photos == nil { stop.photos = [] }
                 for (photoOrder, p) in freshPhotos.enumerated() {
                     let photo = StopPhoto(
-                        assetLocalIdentifier: p.assetLocalIdentifier,
+                        assetLocalIdentifier: p.preparedOriginal?.fileURL.lastPathComponent ?? p.assetLocalIdentifier,
                         thumbnailData: p.thumbnailData ?? Data(),
                         timestamp: p.timestamp,
                         latitude: p.coordinate?.latitude ?? 0,
                         longitude: p.coordinate?.longitude ?? 0,
                         sortOrder: photoOrder
                     )
+                    photo.id = p.id
                     context.insert(photo)
                     stop.photos?.append(photo)
                     insertedPhotos += 1
@@ -1638,8 +1686,11 @@ final class TripStore: ObservableObject {
             }
         }
 
-        guard insertedStops > 0 else { return false }
+        // Re-importing only known photos is a successful no-op. Keep genuine
+        // persistence failures distinct so the preview remains available.
+        guard insertedStops > 0 else { return skippedDuplicates > 0 }
         guard save() else { return false }
+        for day in draft.days { for place in day.places { for photo in place.photos { photo.preparedOriginal?.adopt() } } }
         CarryLogger.shared.log(.photoImportSaved,
                                context: "days=\(draft.days.count) stops=\(insertedStops) photos=\(insertedPhotos) dupSkipped=\(skippedDuplicates)")
         return true
@@ -2166,7 +2217,7 @@ final class TripStore: ObservableObject {
             guard save() else { return }
             reschedulePackProgress(trip)
 #if !targetEnvironment(macCatalyst)
-            Task { @MainActor in LiveActivityManager.shared.update(for: trip) }
+            sharedEffect { Task { @MainActor in LiveActivityManager.shared.update(for: trip) } }
 #endif
         }
     }
@@ -2188,7 +2239,7 @@ final class TripStore: ObservableObject {
 #if DEBUG
     func debugResetSceneCardDismissState() {
         isSceneCardDismissedGlobally = false
-        defaults.set(false, forKey: Self.sceneCardDismissedGlobalKey)
+        sharedEffect { defaults.set(false, forKey: Self.sceneCardDismissedGlobalKey) }
         for trip in trips {
             trip.sceneCardDismissed = false
         }
@@ -2219,7 +2270,7 @@ final class TripStore: ObservableObject {
         guard save() else { return }
         reschedulePackProgress(trip)
 #if !targetEnvironment(macCatalyst)
-        Task { @MainActor in LiveActivityManager.shared.update(for: trip) }
+        sharedEffect { Task { @MainActor in LiveActivityManager.shared.update(for: trip) } }
 #endif
     }
 
@@ -3326,6 +3377,7 @@ extension TripStore {
         } catch { CarryLogger.shared.log(.persistFailed, context: "caller=pruneAutomationReceipts") }
     }
     private func invalidateAutomationConnection() throws {
+        guard usesSharedEffects else { return }
         try CarryAutomationConnection.invalidatePersistedConnection()
         automationInvalidationVersion += 1
         NotificationCenter.default.post(name: .carryAutomationInvalidated, object: nil)
@@ -3942,9 +3994,10 @@ extension TripStore {
     @MainActor
     private func finishAutomationMutation(_ operation: AutomationOperation, tripId: UUID) {
         fetchTrips()
+        guard usesSharedEffects else { return }
         refreshNotifications()
         writeWidgetSnapshot()
-        CarryApp.refreshQuickActions(trips: trips)
+        CarryApp.refreshQuickActions(trips: visibleTrips)
         // Use the same orphan collectors as startup; only run destructive file cleanup after commit.
         reconcileBackgroundFiles()
         reconcileAttachmentFiles()
@@ -4232,6 +4285,7 @@ extension TripStore {
     /// nearest upcoming) to the widget and reloads timelines. Called from CarryApp lifecycle
     /// hooks (launch / background) and after itinerary/packing data changes.
     func writeWidgetSnapshot() {
+        guard usesSharedEffects else { return }
         let cal = Calendar.current
         let now = Date()
         let today = cal.startOfDay(for: now)
@@ -4240,7 +4294,7 @@ extension TripStore {
         let nowMinutes = (nowComponents.hour ?? 0) * 60 + (nowComponents.minute ?? 0)
 
         // 「未结束」= returnDate ≥ today（纳入进行中行程）；排除无日期；按出发日升序、上限 3。
-        let active = trips
+        let active = visibleTrips
             .filter { trip in
                 guard !trip.isDateless else { return false }
                 let ret = cal.date(byAdding: .day, value: trip.days, to: trip.departureDate) ?? trip.departureDate
@@ -4286,7 +4340,7 @@ extension TripStore {
         // 因为规划中行程没有"今天"概念、spanDays 恒为 1（TripBundle.spanDays），只有唯一一天，不需要也
         // 不能做任何"已过滤过去时刻"的判断（那是给有日期行程用的，用在这里会把某个时段的地点误判成"已过"）。
         if snapshots.isEmpty,
-           let planning = trips.filter({ $0.isDateless }).sorted(by: TripBundle.planningSortDescending).first {
+           let planning = visibleTrips.filter({ $0.isDateless }).sorted(by: TripBundle.planningSortDescending).first {
             snapshots = [WidgetTripSnapshot(
                 tripId: planning.id.uuidString,
                 name: planning.name,

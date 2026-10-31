@@ -112,7 +112,7 @@ struct HomeView: View {
     private let listRevealThreshold: Double = 0.58
     private let pastRevealThreshold: Double = 0.78
 
-    // Cached sorted trip lists — recomputed only when store.trips changes,
+    // Cached sorted trip lists — recomputed only when store.visibleTrips changes,
     // not on every body re-evaluation (e.g. initialRevealProgress animation ticks).
     @State private var cachedUpcoming: [TripBundle] = []
     @State private var cachedPlanning: [TripBundle] = []
@@ -121,7 +121,7 @@ struct HomeView: View {
     /// True when the list should appear empty — either no real trips exist,
     /// or the developer mock is active.
     private var isEffectivelyEmpty: Bool {
-        store.trips.isEmpty || store.isHomeEmptyStateMockEnabled
+        store.visibleTrips.isEmpty || store.isHomeEmptyStateMockEnabled
     }
 
     private func returnDate(for trip: TripBundle) -> Date {
@@ -146,7 +146,7 @@ struct HomeView: View {
             cachedUpcoming = []
         } else {
             struct Decorated { let trip: TripBundle; let isComplete: Bool }
-            let decorated = store.trips
+            let decorated = store.visibleTrips
                 .filter { !$0.isDateless && !isPast($0) }
                 .map { Decorated(trip: $0, isComplete: $0.totalCount > 0 && $0.packedCount == $0.totalCount) }
             cachedUpcoming = decorated
@@ -163,7 +163,7 @@ struct HomeView: View {
         if store.isHomeEmptyStateMockEnabled {
             cachedPlanning = []
         } else {
-            cachedPlanning = store.trips
+            cachedPlanning = store.visibleTrips
                 .filter { $0.isDateless }
                 .sorted(by: TripBundle.planningSortDescending)
         }
@@ -172,7 +172,7 @@ struct HomeView: View {
         if store.isHomeEmptyStateMockEnabled {
             cachedPastByYear = []
         } else {
-            let grouped = Dictionary(grouping: store.trips.filter { !$0.isDateless && isPast($0) }) {
+            let grouped = Dictionary(grouping: store.visibleTrips.filter { !$0.isDateless && isPast($0) }) {
                 calendar.component(.year, from: returnDate(for: $0))
             }
             cachedPastByYear = grouped.keys.sorted(by: >).map { year in
@@ -191,7 +191,7 @@ struct HomeView: View {
     private var upcomingTrips: [TripBundle] { cachedUpcoming }
     private var planningTrips: [TripBundle] { cachedPlanning }
     private var pastTripsByYear: [(year: Int, trips: [TripBundle])] { cachedPastByYear }
-    private var searchableTrips: [TripBundle] { store.trips }
+    private var searchableTrips: [TripBundle] { store.visibleTrips }
     private var filteredSearchTrips: [TripBundle] {
         let query = searchText.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !query.isEmpty else { return searchableTrips }
@@ -309,7 +309,7 @@ struct HomeView: View {
     /// stored for multi-city trips.
     private var visitedCountriesCount: Int {
         var codes = Set<String>()
-        for trip in store.trips where trip.countsAsVisited {
+        for trip in store.visibleTrips where trip.countsAsVisited {
             if !trip.countryCode.isEmpty { codes.insert(normalizedCountryCode(trip.countryCode)) }
             for dest in trip.additionalDestinations where !dest.countryCode.isEmpty {
                 codes.insert(normalizedCountryCode(dest.countryCode))
@@ -321,7 +321,7 @@ struct HomeView: View {
     /// 已发生（已出发 + 进行中）的行程数。与行程册口径一致（同 `countsAsVisited`），
     /// 使首页 Trip Book 胶囊副标题与行程册内的「旅行」数对齐，不再「胶囊 16 / 册内 13」打架。
     private var visitedTripsCount: Int {
-        store.trips.filter { $0.countsAsVisited }.count
+        store.visibleTrips.filter { $0.countsAsVisited }.count
     }
 
     /// Deduplicated city dots for departed trips with valid coordinates.
@@ -354,7 +354,7 @@ struct HomeView: View {
             }
         }
 
-        for trip in store.trips where trip.countsAsVisited {
+        for trip in store.visibleTrips where trip.countsAsVisited {
             // Split using the same separators as geocoding so token[n] aligns with destination[n]
             var raw = [trip.destinationCity]
             for sep in [" and ", " And ", " AND ", " 和 "] {
@@ -397,7 +397,7 @@ struct HomeView: View {
             }
         }
 
-        for trip in store.trips where trip.countsAsVisited {
+        for trip in store.visibleTrips where trip.countsAsVisited {
             consider(code: trip.countryCode, lat: trip.latitude, lon: trip.longitude, date: trip.departureDate)
             for dest in trip.additionalDestinations {
                 consider(code: dest.countryCode, lat: dest.latitude, lon: dest.longitude, date: trip.departureDate)
@@ -467,7 +467,7 @@ struct HomeView: View {
             // sheet 已完全收起，此刻压栈不会与关闭动画相互打断。
             if let id = pendingSearchTrip {
                 pendingSearchTrip = nil
-                if let trip = store.bundle(for: id) { openTrip(trip) }
+                if let trip = store.visibleBundle(for: id) { openTrip(trip) }
             }
         }) {
             NavigationStack {
@@ -539,13 +539,13 @@ struct HomeView: View {
                 rebuildTripLists()
             }
         }
-        .onChange(of: store.trips.map { ObjectIdentifier($0) }) { _, _ in rebuildTripLists() }
+        .onChange(of: store.visibleTrips.map { ObjectIdentifier($0) }) { _, _ in rebuildTripLists() }
         .alert(
             String(format: NSLocalizedString("Delete %@?", comment: ""), tripToDelete?.name ?? ""),
             isPresented: $showDeleteConfirmation
         ) {
             Button("Delete", role: .destructive) {
-                if let trip = tripToDelete { store.removeTrip(withId: trip.id) }
+                if let trip = tripToDelete { store.owningStore(for: trip.id)?.removeTrip(withId: trip.id) }
             }
             Button("Cancel", role: .cancel) { }
         } message: {
@@ -656,13 +656,13 @@ struct HomeView: View {
                     if !hasShownFirstTripShimmer,
                        firstTripCreatedAtInterval > 0,
                        Date().timeIntervalSince1970 - firstTripCreatedAtInterval <= Self.shimmerWindowSeconds,
-                       let first = store.trips.first {
+                       let first = store.visibleTrips.first {
                         hasShownFirstTripShimmer = true
                         shimmerTripId = first.id
                     }
                 }
             }
-            .onChange(of: store.trips.map { ObjectIdentifier($0) }) { oldTrips, newTrips in
+            .onChange(of: store.visibleTrips.map { ObjectIdentifier($0) }) { oldTrips, newTrips in
                 rebuildTripLists()
                 if !hasShownFirstTripShimmer && oldTrips.isEmpty && newTrips.count == 1 {
                     firstTripCreatedAtInterval = Date().timeIntervalSince1970
@@ -697,7 +697,7 @@ struct HomeView: View {
                 isPresented: $showDeleteConfirmation
             ) {
                 Button("Delete", role: .destructive) {
-                    if let trip = tripToDelete { store.removeTrip(withId: trip.id) }
+                    if let trip = tripToDelete { store.owningStore(for: trip.id)?.removeTrip(withId: trip.id) }
                 }
                 Button("Cancel", role: .cancel) { }
             } message: {
@@ -997,7 +997,7 @@ struct HomeView: View {
 
 
     private var tripBookSheet: some View {
-        let stats = TripBookStats.from(trips: store.trips)
+        let stats = TripBookStats.from(trips: store.visibleTrips)
         return NavigationStack {
             ScrollView {
                 VStack(spacing: 14) {
@@ -1025,7 +1025,7 @@ struct HomeView: View {
                     // 汇率异步到达时仅此 scope 内重算刷新，根首页/底栏不受牵连。
                     ExchangeRateScope { rate in
                         let spend = TripSpendStats.compute(
-                            trips: store.trips,
+                            trips: store.visibleTrips,
                             homeCode: rate.baseCurrencyCode,
                             convert: { rate.convertToHome($0, from: $1) }
                         )

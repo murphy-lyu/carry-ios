@@ -14,17 +14,25 @@ nonisolated final class PreparedAttachmentImport: Sendable {
     let displayName: String
     let ext: String
     let isPhoto: Bool
+    let entityID: UUID?
+    private let ownsPhysicalFile: Bool
+    private let release: (@Sendable () -> Void)?
     private let owned = OSAllocatedUnfairLock(initialState: true)
 
-    init(fileURL: URL, thumbnailData: Data, displayName: String, ext: String, isPhoto: Bool) {
+    init(fileURL: URL, thumbnailData: Data, displayName: String, ext: String, isPhoto: Bool,
+         entityID: UUID? = nil, ownsPhysicalFile: Bool = true, release: (@Sendable () -> Void)? = nil) {
         self.fileURL = fileURL; self.thumbnailData = thumbnailData
         self.displayName = displayName; self.ext = ext; self.isPhoto = isPhoto
+        self.entityID = entityID; self.ownsPhysicalFile = ownsPhysicalFile; self.release = release
     }
 
-    func adopt() { owned.withLock { $0 = false } }
+    func adopt() {
+        if owned.withLock({ value in let previous = value; value = false; return previous }) { release?() }
+    }
 
     func discard() async throws {
         guard owned.withLock({ value in let result = value; value = false; return result }) else { return }
+        if !ownsPhysicalFile { release?(); return }
         let url = fileURL
         do { try await Task.detached(priority: .utility) { try FileManager.default.removeItem(at: url) }.value }
         catch {
@@ -36,6 +44,7 @@ nonisolated final class PreparedAttachmentImport: Sendable {
 
     deinit {
         guard owned.withLock({ $0 }) else { return }
+        if !ownsPhysicalFile { release?(); return }
         let url = fileURL
         DispatchQueue.global(qos: .utility).async {
             do { try FileManager.default.removeItem(at: url) }
@@ -124,7 +133,8 @@ nonisolated struct AttachmentPhotoTransfer: Transferable, Sendable {
     let prepared: PreparedAttachmentImport
     static var transferRepresentation: some TransferRepresentation {
         FileRepresentation(importedContentType: .image) { received in
-            AttachmentPhotoTransfer(prepared: try await AttachmentImportWorker.prepare(fileURL: received.file, isPhoto: true))
+            AttachmentPhotoTransfer(prepared: try await AttachmentImportWorker.prepare(fileURL: received.file, isPhoto: true,
+                directory: FileManager.default.temporaryDirectory.appendingPathComponent("CarryAttachmentImports", isDirectory: true)))
         }
     }
 }

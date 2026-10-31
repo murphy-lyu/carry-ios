@@ -24,7 +24,10 @@ export const graphSchema = {
     sceneCardDismissed: boolean, remindersEnabled: boolean,
     // Small versioned native configuration payloads; full bytes stay lossless.
     reminderConfigData: string(32000), additionalDestinationsData: optional(string(64000)),
-    backgroundsData: optional(string(64000)), countryCode: string(2), ...geo,
+    backgroundsData: optional(string(64000)),
+    // Slot identities bind each native background entry to immutable bytes.
+    backgroundAssetIDs: optional({ type: 'object', max: 256, keyPattern: '^background:[0-9]{1,4}:[0-9]{1,4}$', item: asset }),
+    countryCode: string(2), ...geo,
   } },
   section: { parents: ['trip'], fields: { title: string(500), ...position } },
   packingItem: { parents: ['section'], fields: { name: string(500), quantity: integer(1), isPacked: boolean, isAlert: boolean, ...position } },
@@ -52,7 +55,7 @@ export const graphSchema = {
     ...position, ...cost, phone: optional(string(100)), timeZoneId: optional(zone), remindersMuted: optional(boolean),
   } },
   photo: { parents: ['stop'], fields: {
-    assetLocalIdentifier: string(), thumbnailAssetID: asset, timestamp: date, ...geo, ...position,
+    assetLocalIdentifier: string(), thumbnailAssetID: optional(asset), originalAssetID: optional(asset), timestamp: date, ...geo, ...position,
   } },
   attachment: { parents: ['stop', 'transport', 'lodging'], fields: {
     ...text('kindRaw displayName fileName utiOrExt urlString'),

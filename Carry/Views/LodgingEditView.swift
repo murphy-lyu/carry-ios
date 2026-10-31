@@ -351,10 +351,11 @@ struct LodgingEditView: View {
                                      amount: costAmountValue, currencyCode: costCurrencyToSave)
                 // 新建住宿：把缓冲的附件落到刚建好的住宿。
                 for p in pendingAttachments {
-                    _ = store.addAttachment(tripId: tripId, owner: .lodging(newId), kind: p.data.kind,
+                    let saved = store.addAttachment(tripId: tripId, owner: .lodging(newId), kind: p.data.kind, id: p.data.id,
                                             displayName: p.data.displayName, fileName: p.data.fileName,
                                             utiOrExt: p.data.utiOrExt, urlString: p.data.urlString,
                                             thumbnailData: p.data.thumbnailData)
+                    if saved != nil { p.data.preparedImport?.adopt() }
                 }
             }
         }

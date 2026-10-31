@@ -66,7 +66,12 @@ enum BackgroundImageStore {
         return dir
     }
 
-    static func fileURL(named name: String) -> URL { directory.appendingPathComponent(name) }
+    static func fileURL(named name: String) -> URL {
+        if CarryAccountFileAccess.isAccountReference(name) {
+            return CarryAccountFileAccess.shared.url(named: name) ?? directory.appendingPathComponent(".account-file-unavailable")
+        }
+        return directory.appendingPathComponent(name)
+    }
 
     /// Compresses + saves an image; returns the stored filename (or nil on failure).
     static func save(_ image: UIImage) -> String? {
@@ -84,6 +89,7 @@ enum BackgroundImageStore {
     }
 
     static func image(named name: String) -> UIImage? {
+        if CarryAccountFileAccess.isAccountReference(name), CarryAccountFileAccess.shared.url(named: name) == nil { return nil }
         if let cached = decodedCache.object(forKey: name as NSString) { return cached }
         guard let img = UIImage(contentsOfFile: fileURL(named: name).path) else { return nil }
         decodedCache.setObject(img, forKey: name as NSString)
@@ -91,6 +97,7 @@ enum BackgroundImageStore {
     }
 
     static func delete(named name: String) {
+        guard !CarryAccountFileAccess.isAccountReference(name) else { return }
         decodedCache.removeObject(forKey: name as NSString)
         try? FileManager.default.removeItem(at: fileURL(named: name))
     }
@@ -119,6 +126,7 @@ enum BackgroundImageStore {
     /// Write bytes under a name — for backup restore.
     @discardableResult
     static func write(data: Data, named name: String) -> Bool {
+        guard !CarryAccountFileAccess.isAccountReference(name) else { return false }
         do { try data.write(to: fileURL(named: name), options: .atomic); return true } catch { return false }
     }
 

@@ -105,6 +105,8 @@ final class CarryAccountService: CarryAccountAuthenticating {
         } else { client = nil }
     }
 
+    var workspaceConfiguration: CarryAccountConfiguration? { configuration }
+
     func restore() async throws -> CarryAccountProfile? {
         guard let client else { throw CarryAccountFailure.unavailable }
         guard client.currentSession != nil else { return nil }
@@ -273,9 +275,12 @@ final class CarryAccountService: CarryAccountAuthenticating {
             })
     }
 
-    private func accessToken(for accountID: UUID) async throws -> String {
+    /// Fresh native token, bound to this workspace identity. Account deletion
+    /// prevents new graph/asset requests before cached credentials are removed.
+    func accessToken(for accountID: UUID) async throws -> String {
         guard let client else { throw CarryAccountFailure.unavailable }
         guard cachedProfile?.id == accountID else { throw CarryAccountFailure.accountMismatch }
+        guard try receipt() == nil else { throw CarryAccountFailure.sessionExpired }
         do {
             let session = try await client.session
             guard session.user.id == accountID, cachedProfile?.id == accountID else {

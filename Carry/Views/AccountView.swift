@@ -55,7 +55,7 @@ extension CarryAccountStore {
         switch state {
         case .signedOut: return "account.entry.detail"
         case .checking: return "account.status.checking"
-        case .signedIn: return "account.status.no_trips"
+        case .signedIn: return "account.status.signed_in"
         case .offline: return "account.status.offline"
         case .temporarilyUnavailable: return "account.status.unavailable"
         case .needsReauthentication: return "account.status.expired"
@@ -75,8 +75,10 @@ extension CarryAccountStore {
 
 struct AccountView: View {
     @EnvironmentObject private var account: CarryAccountStore
+    @EnvironmentObject private var workspaceController: CarryAccountWorkspaceController
     @Environment(\.colorScheme) private var colorScheme
     @State private var showSignOut = false
+    @State private var syncEnableFailed = false
     @State private var showDelete = false
     @State private var reauthorizingDeletion = false
 
@@ -169,9 +171,25 @@ struct AccountView: View {
                 }
             }
             Section {
-                // Data migration and the new account API have their own release gates.
-                // Never route this identity to the legacy device executor or auto-upload old trips.
-                Text("account.sync.not_enabled").foregroundStyle(.secondary)
+                if let workspace = workspaceController.workspace, workspace.accountID == profile.id {
+                    CarryAccountSyncStatusView(workspace: workspace)
+                } else {
+                    Text("account.sync.not_enabled").foregroundStyle(.secondary)
+                    Button("account.sync.enable") {
+                        Task {
+                            syncEnableFailed = false
+                            do {
+                                try await workspaceController.enable(accountID: profile.id)
+                                UserDefaults.standard.set(true, forKey: "carry_account_sync_" + profile.id.uuidString.lowercased())
+                            } catch { syncEnableFailed = true }
+                        }
+                    }
+                    .disabled(!account.hasVerifiedSession || account.isBusy)
+                }
+                if workspaceController.failure != nil || syncEnableFailed {
+                    Text("account.error.service").foregroundStyle(.secondary)
+                    Button("account.retry") { workspaceController.requestSynchronization() }
+                }
             } header: { Text("account.sync.title") }
               footer: { Text("account.sync.consent") }
             Section {

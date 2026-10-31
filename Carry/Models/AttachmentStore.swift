@@ -30,7 +30,10 @@ enum AttachmentStore {
     }
 
     static func fileURL(named name: String) -> URL {
-        directory.appendingPathComponent(name)
+        if CarryAccountFileAccess.isAccountReference(name) {
+            return CarryAccountFileAccess.shared.url(named: name) ?? directory.appendingPathComponent(".account-file-unavailable")
+        }
+        return directory.appendingPathComponent(name)
     }
 
     /// 写入字节，返回沙盒文件名（`<uuid>.<ext>`）。失败返回 nil。
@@ -70,6 +73,7 @@ enum AttachmentStore {
     /// 还原备份时按原文件名写回字节。
     @discardableResult
     static func write(data: Data, named name: String) -> Bool {
+        guard !CarryAccountFileAccess.isAccountReference(name) else { return false }
         do {
             try data.write(to: fileURL(named: name), options: .atomic)
             return true
@@ -80,7 +84,7 @@ enum AttachmentStore {
     }
 
     static func delete(named name: String) {
-        guard !name.isEmpty else { return }
+        guard !name.isEmpty, !CarryAccountFileAccess.isAccountReference(name) else { return }
         do {
             try FileManager.default.removeItem(at: fileURL(named: name))
         } catch {

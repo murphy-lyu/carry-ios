@@ -3,6 +3,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { createHash, randomUUID } from 'node:crypto';
 import { PGlite } from '@electric-sql/pglite';
+import { graphSchema } from './graph-schema.mjs';
 import { createAssetUploadAdapter } from './asset-upload-adapter.mjs';
 import { createAssetUploadHandler } from './asset-upload-http.mjs';
 import { createAssetHandler } from './asset-http.mjs';
@@ -26,7 +27,7 @@ async function fixture() {
   await db.query('select public.carry_account_enroll($1,$2,$3,$4)',[account,'synthetic-subject','app.nevestudio.carry','encrypted']);
   await db.query('insert into carry_private.asset_budgets values($1,$2,20)',[account,1000*1024*1024]);
   const uploads=new Map(),calls={creates:0,transfers:0},fault={};
-  const allowedRPC=new Set(['carry_asset_cleanup_empty','carry_asset_cleanup_accounts','carry_asset_cleanup_claim','carry_asset_cleanup_finish','carry_asset_reserve','carry_asset_inspection_target','carry_asset_inspection_finish','carry_asset_rate_limit','carry_asset_descriptor','carry_asset_upload_begin','carry_asset_upload_created','carry_asset_upload_claim','carry_asset_upload_finish']);
+  const allowedRPC=new Set(['carry_asset_cleanup_empty','carry_asset_cleanup_accounts','carry_asset_cleanup_claim','carry_asset_cleanup_finish','carry_asset_reserve','carry_asset_inspection_target','carry_asset_inspection_finish','carry_asset_rate_limit','carry_asset_descriptor','carry_asset_download_manifest','carry_asset_upload_begin','carry_asset_upload_created','carry_asset_upload_claim','carry_asset_upload_finish']);
   const fetcher=async(input,options={})=>{
     const url=new URL(input);
     if(url.origin===project&&url.pathname==='/auth/v1/user') {
@@ -56,6 +57,7 @@ async function fixture() {
     if(url.pathname.startsWith('/storage/v1/object/authenticated/carry-account-assets/')&&options.method==='GET') {
       const object=url.pathname.slice('/storage/v1/object/authenticated/carry-account-assets/'.length);
       const row=(await db.query('select version from storage.objects where bucket_id=$1 and name=$2 and archived_at is null and not is_delete_marker',['carry-account-assets',object])).rows[0];
+      if(url.searchParams.has('versionId'))assert.equal(url.searchParams.get('versionId'),row?.version);
       const upload=[...uploads.values()].find(x=>x.version===row?.version);
       if(!upload)return new Response(null,{status:404});
       if(fault.verifyOutage)return new Response(null,{status:503});
@@ -122,7 +124,16 @@ async function fixture() {
     assert.equal((await handler(request(asset,{method:'PATCH',url:location,body:raw}))).status,204);
     return location;
   };
-  return {account,session,db,uploads,calls,fault,adapter,handler,control,controlRequest,complete,asset,request};
+  async function publish(asset) {
+    const defaults=kind=>Object.fromEntries(Object.entries(graphSchema[kind].fields).filter(([,rule])=>!rule.optional).map(([key,rule])=>[key,
+      rule.values?.[0]??(rule.type==='string'?(rule.format==='date-time'?'2026-11-01T00:00:00Z':''):rule.type==='number'?Math.max(0,rule.min):rule.type==='array'?[]:false)]));
+    const trip=randomUUID(),day=randomUUID(),stop=randomUUID();
+    const create=(id,kind,parentID,fields)=>({id,kind,action:'create',baseVersion:0,...(parentID?{parentID}:{}),fields:{...defaults(kind),...fields}});
+    await db.query('select public.carry_graph_apply($1,$2,$3)',[account,session,{requestID:randomUUID(),mutations:[
+      create(trip,'trip',null,{days:3}),create(day,'day',trip),create(stop,'stop',day),
+      create(asset.entityID,'attachment',stop,{fileAssetID:asset.id,fileName:'synthetic.bin'})]}]);
+  }
+  return {account,session,db,uploads,calls,fault,adapter,handler,control,controlRequest,complete,asset,request,publish};
 }
 
 test('real PostgreSQL broker creates once, streams bytes, and exposes only its own opaque location',async()=>{
@@ -383,4 +394,45 @@ test('scheduled cleanup retains failed jobs and exposes no account or provider d
   }});
   const response=await handler(new Request(project+'/functions/v1/carry-cleanup',{method:'POST',headers:{'x-carry-cleanup':'a'.repeat(64)}}));
   assert.equal(response.status,200);assert.deepEqual(await response.json(),{processed:1,deferred:1});assert.deepEqual(seen,accounts);
+});
+
+
+test('real PostgreSQL verified download repeats native session authorization and rejects revoked or OAuth readers',async()=>{
+  const f=await fixture();
+  try {
+    const asset=await f.asset();await f.complete(asset);
+    const download=token=>new Request(project+'/functions/v1/carry-assets/download/'+asset.id,
+      {headers:{Authorization:'Bearer '+token}});
+    assert.equal((await f.control(download('synthetic-native'))).status,409);
+    assert.equal((await f.control(f.controlRequest(asset))).status,200);
+    assert.equal((await f.control(download('synthetic-native'))).status,404,'verified orphan is not a published graph asset');
+    await f.publish(asset);
+    const response=await f.control(download('synthetic-native'));
+    assert.equal(response.status,200);assert.equal(response.headers.get('X-Carry-Asset-SHA256'),hash);
+    assert.deepEqual(Buffer.from(await response.arrayBuffer()),Buffer.from(raw));
+    assert.equal((await f.control(download('synthetic-ai'))).status,401);
+    await f.db.exec('reset role');await f.db.query('delete from auth.sessions where id=$1',[session]);await f.db.exec('set role service_role');
+    assert.equal((await f.control(download('synthetic-native'))).status,401);
+  }finally{await f.db.close();}
+});
+
+test('native manifest reveals only a published exact-slot descriptor and validates current session and storage',async()=>{
+  const f=await fixture();try{
+    const asset=await f.asset(),path=project+'/functions/v1/carry-assets/manifest/'+asset.id;
+    const request=token=>new Request(path,{headers:{Authorization:'Bearer '+token}});
+    assert.equal((await f.control(request('synthetic-native'))).status,409);
+    await f.complete(asset);assert.equal((await f.control(f.controlRequest(asset))).status,200);
+    assert.equal((await f.control(request('synthetic-native'))).status,404);
+    await f.publish(asset);
+    const response=await f.control(request('synthetic-native')),body=await response.json();
+    assert.equal(response.status,200);assert.deepEqual(Object.keys(body).sort(),['accountID','assetID','byteCount','entityID','kind','providerVersion','sha256','slot']);
+    assert.equal(body.accountID,account);assert.equal(body.assetID,asset.id);assert.equal(body.entityID,asset.entityID);
+    assert.equal(body.kind,'attachment');assert.equal(body.slot,'file');assert.equal(body.sha256,hash);assert.equal(body.byteCount,raw.length);
+    assert.match(body.providerVersion,/^[0-9a-f-]{36}$/);
+    assert.equal((await f.control(request('synthetic-ai'))).status,401);
+    await f.db.query("update storage.objects set archived_at=now() where bucket_id='carry-account-assets'");
+    assert.equal((await f.control(request('synthetic-native'))).status,409);
+    await f.db.exec('reset role');await f.db.query('delete from auth.sessions where id=$1',[session]);await f.db.exec('set role service_role');
+    assert.equal((await f.control(request('synthetic-native'))).status,401);
+  }finally{await f.db.close();}
 });

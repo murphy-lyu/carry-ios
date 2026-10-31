@@ -133,7 +133,7 @@ nonisolated enum CarryGraphMigrationCodec {
                 guard let raw = string(fields.removeValue(forKey: "thumbnailData")), let bytes = Data(base64Encoded: raw) else {
                     throw CarryGraphMigrationFailure.invalidAsset
                 }
-                if kind == "photo" || !bytes.isEmpty {
+                if !bytes.isEmpty {
                     fields["thumbnailAssetID"] = .string(try addAsset(entity: id, slot: "thumbnail", bytes: bytes).uuidString)
                 }
             }
@@ -144,10 +144,14 @@ nonisolated enum CarryGraphMigrationCodec {
             if kind == "trip", let raw = string(fields["backgroundsData"]), !raw.isEmpty {
                 guard let data = Data(base64Encoded: raw) else { throw CarryGraphMigrationFailure.invalidAsset }
                 let backgrounds = try JSONDecoder().decode([TripBackgroundEntry].self, from: data)
-                for name in Set(backgrounds.compactMap(\.localFileName)) {
+                var references: [String: CarryGraphValue] = [:]
+                for (index, entry) in backgrounds.enumerated() {
+                    guard let name = entry.localFileName else { continue }
                     guard let bytes = backup.backgroundImages?[name] else { throw CarryGraphMigrationFailure.missingAsset }
-                    _ = try addAsset(entity: id, slot: "background:\(name)", name: name, bytes: bytes)
+                    let slot = "background:\(entry.destinationIndex):\(index)"
+                    references[slot] = .string(try addAsset(entity: id, slot: slot, name: name, bytes: bytes).uuidString)
                 }
+                fields["backgroundAssetIDs"] = .object(references)
             }
             entities.append(CarryGraphEntity(id: id, kind: kind, parentID: parent, version: 0, subtreeVersion: 0,
                 fields: fields, fieldVersions: [:]))
@@ -237,12 +241,20 @@ nonisolated enum CarryGraphMigrationCodec {
             if entity.kind == "trip", let raw = string(object["backgroundsData"]), !raw.isEmpty {
                 guard let data = Data(base64Encoded: raw) else { throw CarryGraphMigrationFailure.invalidAsset }
                 let backgrounds = try JSONDecoder().decode([TripBackgroundEntry].self, from: data)
-                for name in Set(backgrounds.compactMap(\.localFileName)) {
-                    guard let asset = assetsBySlot[entity.id]?["background:\(name)"] else {
+                guard case .object(let references) = object.removeValue(forKey: "backgroundAssetIDs") else {
+                    throw CarryGraphMigrationFailure.missingAsset
+                }
+                var expected = Set<String>()
+                for (index, entry) in backgrounds.enumerated() {
+                    guard let name = entry.localFileName else { continue }
+                    let slot = "background:\(entry.destinationIndex):\(index)"; expected.insert(slot)
+                    guard let rawID = string(references[slot]), let assetID = UUID(uuidString: rawID),
+                          let asset = assetsBySlot[entity.id]?[slot], asset.id == assetID else {
                         throw CarryGraphMigrationFailure.missingAsset
                     }
-                    try put(bytes(entity: entity.id, id: asset.id, slot: "background:\(name)"), name: name, into: &backgroundImages)
+                    try put(bytes(entity: entity.id, id: asset.id, slot: slot), name: name, into: &backgroundImages)
                 }
+                guard Set(references.keys) == expected else { throw CarryGraphMigrationFailure.invalidAsset }
             }
             return .object(object)
         }

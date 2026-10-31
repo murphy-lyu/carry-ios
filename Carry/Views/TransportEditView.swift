@@ -884,10 +884,11 @@ struct TransportEditView: View {
     /// 把新建态缓冲的附件入库到刚持久化的实体（文件已在沙盒）。
     private func flushPendingAttachments(owner: AttachmentOwner) {
         for p in pendingAttachments {
-            _ = store.addAttachment(tripId: tripId, owner: owner, kind: p.data.kind,
+            let saved = store.addAttachment(tripId: tripId, owner: owner, kind: p.data.kind, id: p.data.id,
                                     displayName: p.data.displayName, fileName: p.data.fileName,
                                     utiOrExt: p.data.utiOrExt, urlString: p.data.urlString,
                                     thumbnailData: p.data.thumbnailData)
+            if saved != nil { p.data.preparedImport?.adopt() }
         }
         pendingAttachments.removeAll()
     }

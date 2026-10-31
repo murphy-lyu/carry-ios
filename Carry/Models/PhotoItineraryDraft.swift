@@ -23,6 +23,7 @@ nonisolated struct PhotoDraft: Identifiable, Equatable, Sendable {
     /// 已按 storefront 归一坐标系（境内 GCJ-02 / 境外 WGS-84）；nil = 无位置。
     let coordinate: CLLocationCoordinate2D?
     var thumbnailData: Data?
+    var preparedOriginal: PreparedAttachmentImport? = nil
 
     init(id: UUID = UUID(), assetLocalIdentifier: String, timestamp: Date, coordinate: CLLocationCoordinate2D?, thumbnailData: Data? = nil) {
         self.id = id

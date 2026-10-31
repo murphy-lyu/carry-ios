@@ -7,6 +7,8 @@ nonisolated struct CarryNativeSourceMetadata: Codable, Equatable, Sendable {
     let parentID: UUID?
     var fields: [String: CarryGraphValue]
     var fileReferences: [String: String]
+    /// Nil only for older snapshots whose thumbnail presence is unproven.
+    var thumbnailPresent: Bool? = nil
 }
 
 /// Small scalar snapshot plus an optional binary thumbnail. Reading an edited
@@ -129,7 +131,7 @@ enum CarryNativeSourceCodec {
             parent = value.stop?.id
             fields = ["assetLocalIdentifier": .string(value.assetLocalIdentifier), "timestamp": date(value.timestamp),
                 "latitude": .number(value.latitude), "longitude": .number(value.longitude), "sortOrder": integer(value.sortOrder)]
-            thumbnail = value.thumbnailData
+            thumbnail = value.thumbnailData.isEmpty ? nil : value.thumbnailData
         case let value as ItineraryAttachment:
             let parents = [value.stop?.id, value.segment?.id, value.stay?.id].compactMap { $0 }
             guard parents.count == 1 else { throw CarryNativeSourceFailure.missingParent }
@@ -147,6 +149,6 @@ enum CarryNativeSourceCodec {
         }
         guard identity.kind == "trip" || identity.kind == "libraryItem" || parent != nil else { throw CarryNativeSourceFailure.missingParent }
         return CarryNativeEntitySource(metadata: CarryNativeSourceMetadata(id: identity.id, kind: identity.kind,
-            parentID: parent, fields: fields, fileReferences: files), thumbnailData: thumbnail)
+            parentID: parent, fields: fields, fileReferences: files, thumbnailPresent: thumbnail != nil), thumbnailData: thumbnail)
     }
 }

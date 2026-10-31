@@ -2,6 +2,7 @@ import { applyPortableMigrations } from './migration-fixture.mjs';
 // LOCAL TEST HARNESS ONLY. Fixed synthetic identities are deliberately not real
 // authentication. Never bundle this module into a deployed function.
 import {createServer} from 'node:http';
+import {randomUUID} from 'node:crypto';
 import {PGlite} from '@electric-sql/pglite';
 import {graphSchema} from './graph-schema.mjs';
 import {createGraphHandler,GraphRequestError} from './graph-http.mjs';
@@ -24,8 +25,9 @@ async function rpc(name,args){try{
   if(error.code==='28000')throw new GraphRequestError(401,'session_expired');
   throw error;
 }}
+const identities=new Map([['synthetic-native-qa',{accountID:account,sessionID:session}]]);
 const handler=createGraphHandler({
-  authenticate:async bearer=>bearer==='synthetic-native-qa'?{accountID:account,sessionID:session}:null,
+  authenticate:async bearer=>identities.get(bearer)??null,
   rateLimit:async()=>true,
   writeLimit:async()=>true,
   apply:(identity,command,paged)=>rpc(paged?'carry_graph_apply_compact':'carry_graph_apply',[identity.accountID,identity.sessionID,command]),
@@ -73,6 +75,20 @@ const server=createServer(async(incoming,outgoing)=>{
     const stats=incoming.url?.match(/^\/__response_limit_stats\/([0-9a-f-]{36})$/i);
     if(stats){outgoing.writeHead(200,{'content-type':'application/json','cache-control':'no-store'});
       outgoing.end(JSON.stringify(responseProbes.get(stats[1])??null));return;}
+    if(incoming.method==='POST'&&incoming.url==='/__fixture'){
+      // Each new native test owns isolated synthetic account history. A GET
+      // retains the legacy shared fixture for protocol tests that need it.
+      const owner=randomUUID(),sessionID=randomUUID(),bearer='synthetic-native-'+randomUUID();
+      await db.exec('reset role');
+      try {
+        await db.query('insert into auth.users(id) values($1)',[owner]);
+        await db.query('insert into auth.sessions(id,user_id) values($1,$2)',[sessionID,owner]);
+      } finally { await db.exec('set role service_role'); }
+      await db.query('select public.carry_account_enroll($1,$2,$3,$4)',[owner,'synthetic-'+owner,'app.nevestudio.carry','synthetic-encrypted']);
+      identities.set(bearer,{accountID:owner,sessionID});
+      outgoing.writeHead(201,{'content-type':'application/json','cache-control':'no-store'});
+      outgoing.end(JSON.stringify({accountID:owner,fields:fixture,bearer}));return;
+    }
     if(incoming.url==='/__fixture'){outgoing.writeHead(200,{'content-type':'application/json','cache-control':'no-store'});outgoing.end(JSON.stringify({accountID:account,fields:fixture}));return;}
     if(incoming.url!=='/functions/v1/carry-data'){outgoing.writeHead(404);outgoing.end();return;}
     const request=new Request('http://127.0.0.1:8891'+incoming.url,{method:incoming.method,headers:incoming.headers,

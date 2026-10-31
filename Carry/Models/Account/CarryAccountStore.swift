@@ -107,6 +107,9 @@ final class CarryAccountStore: ObservableObject {
     private var challenge: CarrySignInChallenge?
     private var action: AppleAction?
     private var hasRestored = false
+    // Installed by the application workspace owner. Identity removal waits for
+    // transfers and navigation to stop before revoking/clearing auth credentials.
+    var prepareForIdentityRemoval: () async throws -> Void = {}
 
     enum AppleAction { case signIn, deleteAccount }
 
@@ -205,6 +208,7 @@ final class CarryAccountStore: ObservableObject {
                 state = .signedIn(signedIn)
                 CarryLogger.shared.log(.accountSignInSucceeded)
             case .deleteAccount:
+                try await prepareForIdentityRemoval()
                 try await service.deleteAccount(credential, nonce: challenge.nonce)
                 if try service.pendingDeletion {
                     state = .deleting(profile)
@@ -233,6 +237,7 @@ final class CarryAccountStore: ObservableObject {
         isBusy = true
         defer { isBusy = false }
         do {
+            try await prepareForIdentityRemoval()
             try await service.signOut()
             state = .signedOut
             CarryLogger.shared.log(.accountSignedOut)

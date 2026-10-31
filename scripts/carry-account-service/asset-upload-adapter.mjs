@@ -2,6 +2,7 @@ import { Buffer } from 'node:buffer';
 import { createGraphAdapter } from './graph-adapter.mjs';
 import { GraphRequestError, isUUID, readBoundedBytes } from './graph-http.mjs';
 import { inspectStoredAsset } from './asset-storage.mjs';
+import { openStoredAsset } from './asset-download.mjs';
 const limit=6*1024*1024;
 
 export function createAssetUploadAdapter({configuration,jose,fetcher=fetch}) {
@@ -44,11 +45,13 @@ export function createAssetUploadAdapter({configuration,jose,fetcher=fetch}) {
   }
   return {
     publicURL:project.origin,
+    openDownload:(manifest,signal)=>openStoredAsset({projectURL:project.href,serviceKey:key,manifest,fetcher,signal}),
     cleanupAccounts:token=>rpc('carry_asset_cleanup_accounts',{p_token:token}),
     authenticate:auth.authenticate,
     rateLimit:identity=>rpc('carry_asset_rate_limit',{p_account:identity.accountID,p_session:identity.sessionID}),
     reserve:(identity,asset)=>rpc('carry_asset_reserve',{p_account:identity.accountID,p_session:identity.sessionID,p_asset:asset}),
     descriptor:(identity,id)=>rpc('carry_asset_descriptor',{p_account:identity.accountID,p_session:identity.sessionID,p_id:id}),
+    downloadManifest:(identity,id)=>rpc('carry_asset_download_manifest',{p_account:identity.accountID,p_session:identity.sessionID,p_id:id}),
     begin:(identity,id)=>rpc('carry_asset_upload_begin',{p_account:identity.accountID,p_session:identity.sessionID,p_asset:id}),
     created:(identity,attempt,url)=>rpc('carry_asset_upload_created',{p_account:identity.accountID,p_id:attempt.id,p_creation:attempt.creationID,p_location:url}),
     claim:(identity,id,operation,method,offset)=>rpc('carry_asset_upload_claim',{p_account:identity.accountID,p_session:identity.sessionID,p_id:id,p_operation:operation,p_method:method,p_offset:offset}),

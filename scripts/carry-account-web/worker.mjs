@@ -1,3 +1,6 @@
+import { createAccountWebAIBridge } from '../carry-account-ai/account-web-bridge.mjs';
+import { accountAIPage } from '../carry-account-ai/web-pages.mjs';
+import { aiWebStrings } from '../carry-account-ai/web-strings.mjs';
 import { createServerClient } from '@supabase/ssr';
 import { strings, language } from './strings.mjs';
 import { WebFailure, randomToken, sha256, cookieMap, setCookie, flowCodec,
@@ -125,17 +128,24 @@ export function createWebHandler({ makeClient = createServerClient, fetcher = fe
         await lifecycle(session);
         return { user, session };
       };
-      const formToken = async () => {
+      const formToken = async (accountID = null) => {
         const value = randomToken();
-        setCookie(headers, FORM, await codec.seal('form', { value, expires: now() + ttl }),
+        setCookie(headers, FORM, await codec.seal('form', { value, accountID, expires: now() + ttl }),
           { sameSite: 'strict', maxAge: ttl / 1000 });
         return value;
       };
-      const checkForm = async form => {
+      const checkForm = async (form, accountID = null) => {
         sameOrigin(request, config.origin);
         const expected = await codec.open('form', cookie(FORM), now());
-        if (form.get('csrf') !== expected.value) throw new WebFailure(403, 'invalid_form');
+        if (form.get('csrf') !== expected.value || (accountID !== null && expected.accountID !== accountID)) throw new WebFailure(403, 'invalid_form');
       };
+      if (url.pathname === '/oauth/consent' || url.pathname.startsWith('/ai/plans/') || url.pathname === '/connections' || url.pathname.startsWith('/connections/')) {
+        if (env.ACCOUNT_AI_ENABLED !== 'true') throw new WebFailure(503, 'ai_not_available');
+        const bridge = createAccountWebAIBridge({ origin: env.CARRY_AI_ORIGIN, accountOrigin: config.origin,
+          secret: env.CARRY_OWNER_BRIDGE_SECRET, fetcher, now });
+        const result = await accountAIPage({ request, checkedSession, formToken, checkForm, bridge, headers, text, htmlPage, finish });
+        if (result) return result;
+      }
       if (request.method === 'POST' && url.pathname === '/auth/apple/start') {
         const form = await formValues(request, ['csrf', 'continue']);
         await checkForm(form);
@@ -226,11 +236,12 @@ export function createWebHandler({ makeClient = createServerClient, fetcher = fe
         const content = current
           ? `<p>${htmlEscape(current.user.user_metadata?.full_name ?? current.user.email ?? 'Carry')}</p><form method="post" action="/logout"><input type="hidden" name="csrf" value="${csrf}"><button class="text-button">${htmlEscape(text.signOut)}</button></form>`
           : `<p>${htmlEscape(text.intro)}</p>${url.searchParams.has('cancelled') ? `<p role="status">${htmlEscape(text.cancelled)}</p>` : ''}<form method="post" action="/auth/apple/start"><input type="hidden" name="csrf" value="${csrf}"><input type="hidden" name="continue" value="${htmlEscape(next)}"><button aria-label="${htmlEscape(text.appleLabel)}">${appleButton(text)}</button></form>`;
-        return finish(htmlPage(text, title, content, headers));
+        const aiLink = current && env.ACCOUNT_AI_ENABLED === 'true' ? `<p><a href="/connections">${htmlEscape(aiWebStrings[text.lang]?.connections ?? aiWebStrings.en.connections)}</a></p>` : '';
+        return finish(htmlPage(text, title, content + aiLink, headers));
       }
       if (request.method === 'GET' && url.pathname === '/account.css') {
         headers.set('Content-Type', 'text/css; charset=utf-8');
-        return new Response('html{color-scheme:light dark;font:17px -apple-system,BlinkMacSystemFont,system-ui,sans-serif}body{margin:0;background:Canvas;color:CanvasText}main{max-width:30rem;margin:12vh auto;padding:24px}h1{font-size:2rem;letter-spacing:-.04em}p{line-height:1.5;text-wrap:pretty}button{font:inherit;min-height:44px;cursor:pointer;border-radius:8px;padding:0;border:0;background:transparent}a{color:LinkText}.text-button{color:LinkText;padding:8px 12px;border:1px solid ButtonBorder}img{display:block;max-width:100%}button:focus-visible,a:focus-visible{outline:3px solid Highlight;outline-offset:4px}', { headers });
+        return new Response('table{border-collapse:collapse;width:100%;font-size:.9rem}th,td{border-bottom:1px solid ButtonBorder;text-align:start;vertical-align:top;padding:10px;overflow-wrap:anywhere}fieldset{border:1px solid ButtonBorder;border-radius:12px;margin:20px 0;padding:16px}label{line-height:1.7}input[type=checkbox]{width:18px;height:18px;vertical-align:middle}code{overflow-wrap:anywhere}li{margin:20px 0}.review-table{overflow-x:auto}ol{padding-inline-start:20px}h2{font-size:1.1rem}html{color-scheme:light dark;font:17px -apple-system,BlinkMacSystemFont,system-ui,sans-serif}body{margin:0;background:Canvas;color:CanvasText}main{max-width:30rem;margin:12vh auto;padding:24px}h1{font-size:2rem;letter-spacing:-.04em}p{line-height:1.5;text-wrap:pretty}button{font:inherit;min-height:44px;cursor:pointer;border-radius:8px;padding:0;border:0;background:transparent}a{color:LinkText}.text-button{color:LinkText;padding:8px 12px;border:1px solid ButtonBorder}img{display:block;max-width:100%}button:focus-visible,a:focus-visible{outline:3px solid Highlight;outline-offset:4px}', { headers });
       }
       throw new WebFailure(404, 'not_found');
     } catch (failure) {

@@ -38,14 +38,15 @@ nonisolated enum PhotoTripReconstructor {
     static func extract(
         items: [PhotosPickerItem],
         isChinaStorefront: Bool,
+        prepareOriginal: (@Sendable (UUID, Data) async throws -> PreparedAttachmentImport)? = nil,
         onItem: (Int, Data?) async -> Void = { _, _ in }
-    ) async -> [PhotoDraft] {
+    ) async throws -> [PhotoDraft] {
         guard !items.isEmpty else { return [] }
-        let maxConcurrent = min(6, max(2, ProcessInfo.processInfo.activeProcessorCount))
+        let maxConcurrent = prepareOriginal == nil ? min(6, max(2, ProcessInfo.processInfo.activeProcessorCount)) : 2
         var ordered = [PhotoDraft?](repeating: nil, count: items.count)   // 按所选顺序回填（待整理列表保持原序）
         var processed = 0
 
-        await withTaskGroup(of: (index: Int, draft: PhotoDraft?, thumbnail: Data?).self) { group in
+        try await withThrowingTaskGroup(of: (index: Int, draft: PhotoDraft?, thumbnail: Data?).self) { group in
             var next = 0
             func addTask(_ idx: Int) {
                 let item = items[idx]
@@ -53,21 +54,26 @@ nonisolated enum PhotoTripReconstructor {
                     if Task.isCancelled { return (idx, nil, nil) }
                     // loadTransferable 拿到所选图原始字节（HEIC/JPEG 等）；本张处理完即释放。
                     guard let data = try? await item.loadTransferable(type: Data.self) else {
+                        if prepareOriginal != nil { throw CocoaError(.fileReadUnknown) }
                         return (idx, nil, nil)
                     }
                     let meta = exifMetadata(from: data, isChinaStorefront: isChinaStorefront)
-                    let draft = PhotoDraft(
+                    let photoID = UUID()
+                    let original = try await prepareOriginal?(photoID, data)
+                    var draft = PhotoDraft(
+                        id: photoID,
                         assetLocalIdentifier: item.itemIdentifier ?? "",   // 仅作未来「回相册看原图」的尽力引用
                         timestamp: meta.timestamp ?? .distantPast,         // 无拍摄时间 → 落「不在行程日期」
                         coordinate: meta.coordinate,
                         thumbnailData: meta.thumbnail
                     )
+                    draft.preparedOriginal = original
                     return (idx, draft, meta.thumbnail)
                 }
             }
             // 预热并发窗口，之后每完成一张补一张——滑动窗口维持 N 并发、内存有界。
             while next < min(maxConcurrent, items.count) { addTask(next); next += 1 }
-            for await result in group {
+            for try await result in group {
                 ordered[result.index] = result.draft
                 processed += 1
                 await onItem(processed, result.thumbnail)
