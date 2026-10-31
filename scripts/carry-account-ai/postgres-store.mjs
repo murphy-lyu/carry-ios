@@ -1,15 +1,18 @@
-import { AIFailure, fail, hash } from "./security.mjs";
+import { assetReferences, exportFingerprint, prepareBackup, streamBackup, backupSerializedByteCount } from "./exports.mjs";
+import { AIFailure, fail, hash, has, canonical } from "./security.mjs";
 import {
   assertMutationAccess,
   graphIndex,
   planContentHash,
   assertPlanPreconditions,
+  authorizeEntity,
+  rootOf,
 } from "./domain.mjs";
 
 /** driver.transaction(fn) pins one PostgreSQL connection and commits only when
  * fn resolves. A callback failure rolls back. core methods use THAT connection:
  * no HTTP call, second pool connection, native-session forgery or async job. */
-export function postgresStore({ driver, core }) {
+export function postgresStore({ driver, core, assets }) {
   const required = [
     "assertOwner",
     "assertAccount",
@@ -110,6 +113,63 @@ export function postgresStore({ driver, core }) {
         )
       ).rows[0]?.value ?? null
     );
+  }
+  async function authorizedAsset(tx, p, g, id) {
+    has(g, "attachments:read");
+    if (g.accountID !== p.accountID) fail("invalid_token", 401);
+    const row = (await tx.query(`select id,account_id,entity_id,entity_kind,slot,sha256,byte_count,state,verified_version
+      from carry_private.assets where account_id=$1 and id=$2`, [p.accountID,id])).rows[0];
+    if (!row || row.state !== "verified" || !row.verified_version || Number(row.byte_count) > 50*1024*1024)
+      fail("asset_not_found",404);
+    // Fetch only the bounded ancestor chain, never every large trip field for
+    // each 64 KiB file read. Its root must remain in the current grant.
+    const chain = (await tx.query(`with recursive parents as (
+      select e.*,array[e.id] as visited from carry_private.graph_entities e where account_id=$1 and id=$2
+      union all select e.*,p.visited||e.id from carry_private.graph_entities e join parents p on e.id=p.parent_id
+        where e.account_id=$1 and not e.id=any(p.visited) and cardinality(p.visited)<8
+    ) select carry_private.graph_snapshot(e) as entity from parents p join carry_private.graph_entities e on e.id=p.id and e.account_id=$1`,[p.accountID,row.entity_id])).rows.map(r=>r.entity);
+    const map = graphIndex(chain), entity = authorizeEntity(map,row.entity_id,g);
+    if (chain.some(e=>e.deletedAt) || (p.entityID && entity.id!==p.entityID) ||
+        (p.tripID && rootOf(map,entity.id).id!==p.tripID) || entity.kind!==row.entity_kind ||
+        !assetReferences(entity).some(ref=>ref.id===id&&ref.slot===row.slot)) fail("asset_not_authorized",403);
+    const object = (await tx.query(`select 1 from storage.objects where bucket_id='carry-account-assets'
+      and name collate "C"=$1 and version=$2 and archived_at is null and not is_delete_marker`,
+      [p.accountID.toLowerCase()+"/"+id.toLowerCase()+"/"+row.sha256,String(row.verified_version)])).rows[0];
+    if (!object) fail("asset_not_verified",409);
+    return { id:row.id,accountID:row.account_id,entityID:row.entity_id,entityKind:row.entity_kind,
+      slot:row.slot,sha256:row.sha256,byteCount:Number(row.byte_count),status:"verified",storageVersion:row.verified_version };
+  }
+  async function exportState(tx,p,{approve=false,download=false}={}) {
+    await owner(tx,p);
+    const record = await get(tx,"export",p.id);
+    if (!record || record.accountID!==p.accountID || record.expiresAt<=p.now) fail("export_not_found",404);
+    const g = await grant(tx,record.grantID,p.now);
+    has(g,"exports:read"); has(g,"trips:read");
+    const roots=(await tx.query("select carry_private.graph_snapshot(e) as entity from carry_private.graph_entities e where account_id=$1 and id=$2 and kind='trip'",[p.accountID,record.tripID])).rows.map(row=>row.entity);
+    authorizeEntity(graphIndex(roots),record.tripID,g);
+    if (record.mode==="export_backup") for(const scope of ["attachments:read","private:read","preferences:read"]) has(g,scope);
+    if (download&&!record.approvedAt) fail("export_not_approved",403);
+    if ((approve||download)&&p.contentHash && p.contentHash!==record.contentHash) fail("export_changed",409);
+    return {record,g};
+  }
+  function exportByteBudget(manifests) {
+    let total=0;
+    for(const file of manifests) {
+      if(file.entityKind==='attachment'&&file.slot==='file'&&file.byteCount>25*1024*1024)fail('export_file_too_large',413);
+      total+=file.byteCount;
+      if(total>128*1024*1024)fail('export_too_large',413);
+    }
+  }
+  async function exportSnapshot(tx,p,record,g) {
+    const graph=await core.readGraph(tx,{...p,grant:g});
+    authorizeEntity(graphIndex(graph),record.tripID,g);
+    if(await exportFingerprint(graph,record.tripID)!==record.graphHash) fail("export_changed",409);
+    const prepared=prepareBackup(graph,{tripID:record.tripID,mode:record.mode,now:record.createdAt});
+    const manifests=[];
+    for(const reference of prepared.files) manifests.push(await authorizedAsset(tx,{...p,tripID:record.tripID,entityID:reference.entityID},g,reference.id));
+    exportByteBudget(manifests);backupSerializedByteCount(prepared,manifests);
+    if(JSON.stringify(canonical(manifests))!==JSON.stringify(canonical(record.manifests))) fail("export_changed",409);
+    return prepared;
   }
   const store = {
     durability: "transactional",
@@ -487,6 +547,72 @@ export function postgresStore({ driver, core }) {
         }
         return record;
       }),
+    readAsset: async p => {
+      if(!assets?.read)fail("capability_unavailable",503);
+      const started=Date.now();
+      const first=await transaction(async tx=>authorizedAsset(tx,p,await grant(tx,p.grantID,p.now),p.assetID));
+      const result=await assets.read(first,{offset:p.offset,limit:p.limit,signal:p.signal});
+      await transaction(async tx=>{
+        const fresh={...p,now:p.now+Date.now()-started};
+        const current=await authorizedAsset(tx,fresh,await grant(tx,p.grantID,fresh.now),p.assetID);
+        if(JSON.stringify(current)!==JSON.stringify(first))fail("asset_changed",409);
+      });
+      return {bytes:result,hasMore:p.offset+result.length<first.byteCount};
+    },
+    prepareExport: p => transaction(async tx=>{
+      const g=await grant(tx,p.grantID,p.now);
+      if(g.accountID!==p.accountID)fail("invalid_token",401);
+      has(g,"exports:read");has(g,"trips:read");
+      if(p.mode==="export_backup")for(const scope of ["attachments:read","private:read","preferences:read"])has(g,scope);
+      const prior=(await tx.query("select value from carry_ai.records where bucket='export' and grant_id=$1 and request_id=$2 for update",[g.id,p.requestID])).rows[0]?.value;
+      if(prior){if(prior.tripID!==p.tripID||prior.mode!==p.mode)fail("request_id_reused",409);return {id:prior.id};}
+      const graph=await core.readGraph(tx,{...p,grant:g});authorizeEntity(graphIndex(graph),p.tripID,g);
+      const prepared=prepareBackup(graph,p),manifests=[];
+      for(const ref of prepared.files)manifests.push(await authorizedAsset(tx,{...p,entityID:ref.entityID},g,ref.id));
+      exportByteBudget(manifests);backupSerializedByteCount(prepared,manifests);
+      const graphHash=await exportFingerprint(graph,p.tripID),id=crypto.randomUUID(),
+        contentHash=await hash(JSON.stringify(canonical({graphHash,manifests,mode:p.mode}))),
+        record={id,accountID:g.accountID,grantID:g.id,requestID:p.requestID,tripID:p.tripID,mode:p.mode,
+          createdAt:p.now,expiresAt:p.now+10*60*1000,approvedAt:null,graphHash,contentHash,manifests,
+          summary:{...prepared.summary,byteCount:manifests.reduce((n,m)=>n+m.byteCount,0),
+            files:manifests.slice(0,100).map((m,i)=>({name:prepared.files[i].label,slot:m.slot,byteCount:m.byteCount}))}};
+      await put(tx,"export",id,record);return {id};
+    }),
+    getExport: p => transaction(async tx=>{
+      const {record}=await exportState(tx,p);
+      return {id:record.id,summary:record.summary,contentHash:record.contentHash,approvedAt:record.approvedAt,expiresAt:record.expiresAt};
+    }),
+    approveExport: p => transaction(async tx=>{
+      const {record,g}=await exportState(tx,p,{approve:true});
+      if(record.contentHash!==p.contentHash)fail("export_changed",409);
+      await exportSnapshot(tx,p,record,g);record.approvedAt=p.now;await put(tx,"export",record.id,record);
+    }),
+    downloadExport: async p => {
+      if(!assets?.stream)fail("capability_unavailable",503);
+      const {record,prepared}=await transaction(async tx=>{
+        const {record,g}=await exportState(tx,p,{download:true});
+        return {record,prepared:await exportSnapshot(tx,p,record,g)};
+      });
+      prepared.backup.assetManifest=record.manifests.map(m=>({entityID:m.entityID,assetID:m.id,slot:m.slot,sha256:m.sha256,byteCount:m.byteCount}));
+      const started=Date.now(),fresh=()=>({...p,now:p.now+Date.now()-started});
+      const authorize=async()=>transaction(async tx=>{await exportState(tx,fresh(),{download:true});});
+      const open=async (ref,{signal}={})=>{
+        const current=await transaction(async tx=>{
+          const request=fresh(),{g}=await exportState(tx,request,{download:true});
+          const manifest=await authorizedAsset(tx,{...request,tripID:record.tripID,entityID:ref.entityID},g,ref.id);
+          const expected=record.manifests.find(m=>m.id===ref.id);
+          if(JSON.stringify(canonical(manifest))!==JSON.stringify(canonical(expected)))fail("export_changed",409);
+          return manifest;
+        });
+        return assets.stream(current,{signal:signal??p.signal,authorize:async()=>transaction(async tx=>{
+          const request=fresh(),{g}=await exportState(tx,request,{download:true});
+          const latest=await authorizedAsset(tx,{...request,tripID:record.tripID,entityID:ref.entityID},g,ref.id);
+          if(JSON.stringify(canonical(latest))!==JSON.stringify(canonical(current)))fail("export_changed",409);
+        })});
+      };
+      return {body:streamBackup(prepared,{open,authorize,signal:p.signal}),
+        fileName:`Carry-${record.tripID}.${record.mode==='share_trip'?'carrytrip':'json'}`};
+    },
     prepareUndo: (p) =>
       transaction(async (tx) => {
         const g = await grant(tx, p.grantID, p.now);

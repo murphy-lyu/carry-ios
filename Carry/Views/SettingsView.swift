@@ -41,6 +41,8 @@ struct SettingsView: View {
     @State private var showBackupImporter = false
     @State private var showImportConfirmation = false
     @State private var pendingImportData: Data?
+    @State private var isProcessingBackup = false
+    @State private var backupWorkTask: Task<Void, Never>?
     // 从 Tripsy 导入的预览会话（spec: tripsy-import.md）
     @State private var tripsyImportSession: TripsyImportSession?
     // 本位币（费用记录用，spec: itinerary-cost-tracking.md）；空 = 用设备 locale 默认。
@@ -260,18 +262,24 @@ struct SettingsView: View {
         )
     }
 
-    private func shareBackupFile() {
-        // Build a self-contained export file on demand (WITH embedded background-image bytes).
-        // The auto-backup on disk is text-only — images are embedded here, only when the user
-        // actually exports — so a shared file restores intact on another device / after reinstall.
-        guard let exportURL = DataBackupManager.shared.makeExportFile(trips: store.trips, myItems: store.myItems) else {
-            showToast(NSLocalizedString("settings.data.restore.error.not_found", comment: ""))
-            return
+    private func runBackupTask(_ work: @escaping @MainActor () async -> Void) {
+        guard !isProcessingBackup else { return }
+        isProcessingBackup = true
+        backupWorkTask = Task { @MainActor in
+            defer { isProcessingBackup = false; backupWorkTask = nil }
+            await work()
         }
-        // Settings 以 sheet 呈现，rootViewController 已有 presentation——必须从最顶层 presenter 呈现，
-        // 否则系统会静默吞掉这次 present（表现为「点了没反应」）。统一走 presentActivitySheet。
-        UIApplication.shared.presentActivitySheet(items: [exportURL])
-        CarryLogger.shared.log(.backupExported)
+    }
+    private func shareBackupFile() {
+        runBackupTask {
+            do {
+                let exportURL = try await DataBackupManager.shared.makeExportFileAsync(trips: store.trips, myItems: store.myItems)
+                if Task.isCancelled { await DataBackupManager.discardExportFileAsync(exportURL); return }
+                UIApplication.shared.presentActivitySheet(items: [exportURL])
+                CarryLogger.shared.log(.backupExported)
+            } catch is CancellationError { }
+            catch { showToast(error.localizedDescription) }
+        }
     }
 
     private var settingsGroupFill: Color {
@@ -480,34 +488,24 @@ struct SettingsView: View {
                     CarryLogger.shared.log(.backupRestoreFailed, context: "reason=unsupported_file ext=\(ext)")
                     return
                 }
-                // Read within the security scope before it expires
-                let accessing = url.startAccessingSecurityScopedResource()
-                defer { if accessing { url.stopAccessingSecurityScopedResource() } }
-                guard let data = try? Data(contentsOf: url) else {
-                    showToast(NSLocalizedString(isTripsy ? "tripsy_import.error.not_tripsy" : "settings.data.restore.error.corrupt", comment: ""))
-                    CarryLogger.shared.log(isTripsy ? .tripsyImportFailed : .backupRestoreFailed, context: "reason=file_unreadable")
-                    return
-                }
-                if isTripsy {
-                    // 解析含 SQLite + 图片解码，放后台线程，完成后回主线程弹预览。
-                    Task.detached(priority: .userInitiated) {
-                        do {
-                            let parsed = try TripsyImporter.parse(zipData: data)
-                            await MainActor.run {
-                                tripsyImportSession = TripsyImportSession(drafts: parsed.drafts)
-                            }
-                        } catch {
-                            let msg = (error as? LocalizedError)?.errorDescription
-                                ?? NSLocalizedString("tripsy_import.error.not_tripsy", comment: "")
-                            await MainActor.run {
-                                showToast(msg)
-                                CarryLogger.shared.log(.tripsyImportFailed, context: "reason=parse")
-                            }
+                runBackupTask {
+                    do {
+                        let data = try await DataBackupManager.readImportData(at: url)
+                        if isTripsy {
+                            let worker = Task.detached(priority: .userInitiated) { try TripsyImporter.parse(zipData: data) }
+                            let parsed = try await withTaskCancellationHandler(operation: { try await worker.value }, onCancel: { worker.cancel() })
+                            try Task.checkCancellation()
+                            tripsyImportSession = TripsyImportSession(drafts: parsed.drafts)
+                        } else {
+                            try Task.checkCancellation()
+                            pendingImportData = data
+                            showImportConfirmation = true
                         }
+                    } catch is CancellationError { }
+                    catch {
+                        showToast(error.localizedDescription)
+                        CarryLogger.shared.log(isTripsy ? .tripsyImportFailed : .backupRestoreFailed, context: "reason=read_or_parse")
                     }
-                } else {
-                    pendingImportData = data
-                    showImportConfirmation = true
                 }
             case .failure(let error):
                 // 选择器失败时无 URL 可判别来源，统一归到备份还原失败（入口即「Import Backup」）。
@@ -526,6 +524,11 @@ struct SettingsView: View {
         .navigationDestination(for: SettingsRoute.self) { route in
             settingsDestination(route)
         }
+        .disabled(isProcessingBackup)
+        .overlay {
+            if isProcessingBackup { BackupOperationOverlay { backupWorkTask?.cancel() } }
+        }
+        .interactiveDismissDisabled(isProcessingBackup)
         .navigationTitle(Text("settings.title"))
         .navigationBarTitleDisplayMode(.large)
         .toolbar {
@@ -811,42 +814,48 @@ struct SettingsView: View {
                 }
                 .padding(.horizontal, 16)
                 .padding(.bottom, 18)
-                .disabled(eraseUndoVisible)   // 抹除撤销窗口期锁住备份操作，杜绝「导入后又被抹除」冲突 + 双吐司叠压
+                .disabled(eraseUndoVisible || isProcessingBackup)   // 抹除撤销窗口期锁住备份操作，杜绝「导入后又被抹除」冲突 + 双吐司叠压
                 .alert(
                     Text("settings.data.import.confirm.title"),
                     isPresented: $showImportConfirmation
                 ) {
                     Button {
                         guard let data = pendingImportData else { return }
+                        pendingImportData = nil
+                        runBackupTask {
                         do {
-                            let result = try store.mergeFromData(data)
+                            let result = try await store.mergeFromDataAsync(data)
                             refreshBackupCache()   // 导入会重写磁盘备份 → 同步刷新「上次备份」日期
                             showToast(mergeSuccessMessage(count: result.trips))
                             CarryLogger.shared.log(.backupMerged,
                                 context: "trips=\(result.trips) myItems=\(result.myItems)")
-                        } catch {
+                        } catch is CancellationError { }
+                        catch {
                             showToast(error.localizedDescription)
                             CarryLogger.shared.log(.backupRestoreFailed,
                                 context: "source=merge error=\(error.localizedDescription)")
                         }
-                        pendingImportData = nil
+                        }
                     } label: {
                         Text("settings.data.import.action.merge")
                     }
                     Button(role: .destructive) {
                         guard let data = pendingImportData else { return }
+                        pendingImportData = nil
+                        runBackupTask {
                         do {
-                            let result = try store.restoreFromData(data)
+                            let result = try await store.restoreFromDataAsync(data)
                             refreshBackupCache()   // 导入会重写磁盘备份 → 同步刷新「上次备份」日期
                             showToast(restoreSuccessMessage(count: result.trips))
                             CarryLogger.shared.log(.backupRestored,
                                 context: "trips=\(result.trips) myItems=\(result.myItems)")
-                        } catch {
+                        } catch is CancellationError { }
+                        catch {
                             showToast(error.localizedDescription)
                             CarryLogger.shared.log(.backupRestoreFailed,
                                 context: "source=replace error=\(error.localizedDescription)")
                         }
-                        pendingImportData = nil
+                        }
                     } label: {
                         Text("settings.data.import.action")
                     }
@@ -921,6 +930,10 @@ struct SettingsView: View {
             .padding(.bottom, 20)
         }
         .background(Color(.systemGroupedBackground).ignoresSafeArea())
+        .disabled(isProcessingBackup)
+        .overlay {
+            if isProcessingBackup { BackupOperationOverlay { backupWorkTask?.cancel() } }
+        }
         .navigationTitle(Text("settings.data.title"))
         .navigationBarTitleDisplayMode(.inline)
         // 导入/导出结果 toast（动作在本页发生，overlay 须挂本页才可见，不能留在根页被本页盖住）。
@@ -1045,6 +1058,8 @@ private struct DataRecoveryView: View {
     @EnvironmentObject private var store: TripStore
     @Environment(\.colorScheme) private var colorScheme
 
+    @State private var isRestoring = false
+    @State private var restoreTask: Task<Void, Never>?
     @State private var showConfirmation = false
     @State private var toastMessage: String?
 
@@ -1146,6 +1161,13 @@ private struct DataRecoveryView: View {
                 .padding(.bottom, 40)
             }
         }
+        .disabled(isRestoring)
+        .overlay {
+            if isRestoring {
+                BackupOperationOverlay { restoreTask?.cancel() }
+            }
+        }
+        .interactiveDismissDisabled(isRestoring)
         .navigationTitle(Text("settings.data.local_backup"))
         .navigationBarTitleDisplayMode(.inline)
         .alert(
@@ -1153,12 +1175,16 @@ private struct DataRecoveryView: View {
             isPresented: $showConfirmation
         ) {
             Button(role: .destructive) {
-                do {
-                    let result = try store.restoreFromBackup()
-                    loadBackupInfo()
-                    showRecoveryToast(count: result.trips)
-                } catch {
-                    showRecoveryToast(message: error.localizedDescription)
+                guard !isRestoring else { return }
+                isRestoring = true
+                restoreTask = Task { @MainActor in
+                    defer { isRestoring = false; restoreTask = nil }
+                    do {
+                        let result = try await store.restoreFromBackupAsync()
+                        loadBackupInfo()
+                        showRecoveryToast(count: result.trips)
+                    } catch is CancellationError { }
+                    catch { showRecoveryToast(message: error.localizedDescription) }
                 }
             } label: {
                 Text("settings.data.restore.action")
@@ -1797,3 +1823,22 @@ private struct DeveloperModeView: View {
     }
 }
 #endif
+
+
+/// Shared by pushed data management and recovery screens so a running file
+/// operation stays visible and cancellable above their disabled content.
+private struct BackupOperationOverlay: View {
+    let cancel: () -> Void
+    var body: some View {
+        ZStack {
+            Color.clear.contentShape(Rectangle()).accessibilityHidden(true)
+            VStack(spacing: 12) {
+                ProgressView()
+                Button("common.cancel", action: cancel)
+            }
+            .padding(24)
+            .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 16))
+            .accessibilityAddTraits(.isModal)
+        }
+    }
+}

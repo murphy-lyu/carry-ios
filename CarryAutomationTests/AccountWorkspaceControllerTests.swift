@@ -7,20 +7,24 @@ final class AccountWorkspaceControllerTests: XCTestCase {
     private final class Transport: CarryGraphTransporting {
         var applications: [CarryGraphCommand] = []
         var pulls = 0
+        var keepsHistory = false
+        var history: [CarryGraphChange] = []
         var onPull: () -> Void = {}
         func apply(_ command: CarryGraphCommand) async throws -> CarryGraphReceipt {
             applications.append(command)
+            let offset = keepsHistory ? history.count : 0
             let changes = command.mutations.enumerated().map { index, mutation in
-                CarryGraphChange(sequence: index + 1, entity: CarryGraphEntity(id: mutation.id, kind: mutation.kind,
+                CarryGraphChange(sequence: offset + index + 1, entity: CarryGraphEntity(id: mutation.id, kind: mutation.kind,
                     parentID: mutation.parentID, version: 1, subtreeVersion: index + 1,
                     fields: mutation.fields ?? [:], fieldVersions: (mutation.fields ?? [:]).mapValues { _ in 1 }))
             }
-            return CarryGraphReceipt(status: "saved_to_account", requestID: command.requestID, changes: changes, cursor: changes.count)
+            if keepsHistory { history += changes }
+            return CarryGraphReceipt(status: "saved_to_account", requestID: command.requestID, changes: changes, cursor: keepsHistory ? history.count : changes.count)
         }
         func pull(cursor: Int) async throws -> CarryGraphPage {
             pulls += 1
             onPull()
-            return CarryGraphPage(changes: [], cursor: cursor, hasMore: false)
+            return CarryGraphPage(changes: keepsHistory ? history.filter { $0.sequence > cursor } : [], cursor: keepsHistory ? history.count : cursor, hasMore: false)
         }
     }
     private func fixture() throws -> (URL, TripStore, CarryWorkspaceLibrary) {
@@ -195,4 +199,92 @@ final class AccountWorkspaceControllerTests: XCTestCase {
         let nonexistent = try await controller.openCached(accountID: UUID())
         XCTAssertFalse(nonexistent); XCTAssertNil(library.account)
     }
+    func testInvalidMigrationSelectionRestoresOrdinarySynchronization() async throws {
+        let (directory, _, library) = try fixture(), transport = Transport(), owner = UUID()
+        let controller = CarryAccountWorkspaceController(library: library, rootDirectory: directory.appendingPathComponent("accounts"),
+            access: CarryAccountFileAccess(), factory: { _, _ in self.dependencies(transport) })
+        try await controller.enable(accountID: owner)
+        do { try await controller.migrate(tripIDs: [UUID()], includeLibrary: false); XCTFail("Invalid selection must fail") }
+        catch { }
+        XCTAssertFalse(controller.migrationBusy)
+        let workspace = try XCTUnwrap(controller.workspace)
+        let synchronized = try await workspace.synchronize()
+        XCTAssertTrue(synchronized, "Validation failure must not leave synchronization paused")
+        try await controller.close()
+    }
+    func testMissingMigrationResumeRestoresOrdinarySynchronization() async throws {
+        let (directory, _, library) = try fixture(), transport = Transport(), owner = UUID()
+        let controller = CarryAccountWorkspaceController(library: library, rootDirectory: directory.appendingPathComponent("accounts"),
+            access: CarryAccountFileAccess(), factory: { _, _ in self.dependencies(transport) })
+        try await controller.enable(accountID: owner)
+        do { try await controller.resumeMigration(batchID: UUID()); XCTFail("Missing batch must fail") }
+        catch { }
+        XCTAssertFalse(controller.migrationBusy)
+        let workspace = try XCTUnwrap(controller.workspace)
+        let synchronized = try await workspace.synchronize()
+        XCTAssertTrue(synchronized, "Even failure after pause must resume ordinary synchronization")
+        try await controller.close()
+    }
+    func testDirtyMigrationSourceIsNotUploadedOrLeftSuspended() async throws {
+        let (directory, local, library) = try fixture(), transport = Transport(), owner = UUID()
+        let controller = CarryAccountWorkspaceController(library: library, rootDirectory: directory.appendingPathComponent("accounts"),
+            access: CarryAccountFileAccess(), factory: { _, _ in self.dependencies(transport) })
+        try await controller.enable(accountID: owner)
+        let trip = try XCTUnwrap(local.trips.first); trip.name = "Unsaved edit"
+        do { try await controller.migrate(tripIDs: [trip.id], includeLibrary: false); XCTFail("Dirty source must not migrate") }
+        catch { }
+        XCTAssertTrue(transport.applications.isEmpty)
+        XCTAssertEqual(trip.name, "Unsaved edit")
+        local.businessContext.rollback()
+        let workspace = try XCTUnwrap(controller.workspace)
+        let synchronized = try await workspace.synchronize()
+        XCTAssertTrue(synchronized)
+        try await controller.close()
+    }
+
+    func testExplicitMigrationMaterializesNativeGraphBeforeRoutingAndCompletion() async throws {
+        let (directory, local, library) = try fixture(), transport = Transport(), owner = UUID()
+        transport.keepsHistory = true
+        let source = try XCTUnwrap(local.trips.first), originalID = source.id
+        let original = try CarryMigrationSourceSnapshot.capture(trip: source)
+        let controller = CarryAccountWorkspaceController(library: library, rootDirectory: directory.appendingPathComponent("accounts"),
+            access: CarryAccountFileAccess(), factory: { _, _ in self.dependencies(transport) })
+        try await controller.enable(accountID: owner)
+        XCTAssertTrue(transport.applications.isEmpty)
+        try await controller.migrate(tripIDs: [originalID], includeLibrary: false)
+        XCTAssertTrue(controller.migrationFinished)
+        let account = try XCTUnwrap(library.account)
+        XCTAssertEqual(account.trips.map(\.id), [originalID])
+        XCTAssertTrue(library.owningStore(for: originalID) === account)
+        XCTAssertEqual(library.visibleTrips.map(\.id), [originalID])
+        XCTAssertEqual(try CarryMigrationSourceSnapshot.capture(trip: source), original)
+        XCTAssertTrue(local.migrationWriteGuard.isProtected(originalID))
+        let batch = try XCTUnwrap(controller.migrationBatches().first)
+        XCTAssertTrue(controller.isMigrationMaterialized(batchID: batch.id))
+        do { try await controller.migrate(tripIDs: [originalID], includeLibrary: false); XCTFail("An owned source must not be migrated again") }
+        catch { }
+        XCTAssertEqual(try controller.migrationBatches().count, 1)
+        try await controller.close()
+        XCTAssertEqual(local.trips.map(\.id), [originalID])
+        XCTAssertTrue(library.visibleTrips.isEmpty)
+    }
+
+    func testControllerClosePermanentlyRevokesARetainedBusinessWriterButSuspendDoesNot() async throws {
+        let (directory, _, library) = try fixture(), owner = UUID(), transport = Transport()
+        let controller = CarryAccountWorkspaceController(library: library, rootDirectory: directory.appendingPathComponent("accounts"),
+            access: CarryAccountFileAccess(), factory: { _, _ in self.dependencies(transport) })
+        try await controller.enable(accountID: owner)
+        await controller.suspend()
+        let retainedStore = try XCTUnwrap(library.account), retainedWorkspace = try XCTUnwrap(controller.workspace)
+        let writer = retainedWorkspace.businessSave
+        retainedStore.addTrip(TripBundle(name: "Offline before close", destinationCity: "", days: 1, sections: []))
+        XCTAssertEqual(retainedStore.trips.count, 1)
+        try await controller.close()
+        let context = retainedStore.businessContext
+        context.insert(TripBundle(name: "Must not survive close", destinationCity: "", days: 1, sections: []))
+        XCTAssertThrowsError(try CarryPersistence.commit(context, using: writer))
+        XCTAssertEqual(try ModelContext(context.container).fetch(FetchDescriptor<TripBundle>()).map(\.name), ["Offline before close"])
+        XCTAssertTrue(transport.applications.isEmpty)
+    }
+
 }

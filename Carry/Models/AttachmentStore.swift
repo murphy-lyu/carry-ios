@@ -73,6 +73,7 @@ enum AttachmentStore {
     /// 还原备份时按原文件名写回字节。
     @discardableResult
     static func write(data: Data, named name: String) -> Bool {
+        guard !CarryMigrationSourceFileRetention.contains(named: name) else { return false }
         guard !CarryAccountFileAccess.isAccountReference(name) else { return false }
         do {
             try data.write(to: fileURL(named: name), options: .atomic)
@@ -84,6 +85,7 @@ enum AttachmentStore {
     }
 
     static func delete(named name: String) {
+        guard !CarryMigrationSourceFileRetention.contains(named: name) else { return }
         guard !name.isEmpty, !CarryAccountFileAccess.isAccountReference(name) else { return }
         do {
             try FileManager.default.removeItem(at: fileURL(named: name))

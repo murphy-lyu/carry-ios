@@ -1694,27 +1694,23 @@ struct StopDetailView: View {
             guard newMinutes != stop.plannedStartMinutes else { return }
             store.updateItineraryStop(tripId: tripId, stopId: stop.id, plannedStartMinutes: newMinutes)
         }
-        // 点缩略图放大看（存的是约 640px 缩略图；零授权不取系统原图）。
-        .fullScreenCover(item: $zoomedPhoto) { z in
-            ZStack {
-                Color.black.ignoresSafeArea()
-                if let image = UIImage(data: z.data) {
-                    Image(uiImage: image).resizable().scaledToFit()
-                }
-            }
-            .contentShape(Rectangle())
-            .onTapGesture { zoomedPhoto = nil }
+        .fullScreenCover(item: $zoomedPhoto) { photo in
+            CarryAccountPhotoPreview(thumbnail: photo.data, originalToken: photo.originalToken) { zoomedPhoto = nil }
         }
     }
 
-    private struct ZoomedPhoto: Identifiable { let id = UUID(); let data: Data }
+    private struct ZoomedPhoto: Identifiable {
+        let id = UUID()
+        let data: Data
+        let originalToken: String
+    }
 
     /// 该停靠点导入的照片（横向缩略图条，点击放大）。照片回溯生成的地点才有。
     private var photoStrip: some View {
         ScrollView(.horizontal, showsIndicators: false) {
             LazyHStack(spacing: 8) {
                 ForEach(stop.sortedPhotos, id: \.id) { photo in
-                    Button { zoomedPhoto = ZoomedPhoto(data: photo.thumbnailData) } label: {
+                    Button { zoomedPhoto = ZoomedPhoto(data: photo.thumbnailData, originalToken: photo.assetLocalIdentifier) } label: {
                         PreparedThumbnail(data: photo.thumbnailData, size: 76) {
                             Image(systemName: "photo").foregroundStyle(.tertiary)
                                 .frame(maxWidth: .infinity, maxHeight: .infinity)

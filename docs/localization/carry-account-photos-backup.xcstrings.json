@@ -1,0 +1,238 @@
+{
+  "sourceLanguage": "en",
+  "strings": {
+    "account.photo.original_unavailable": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The original is unavailable. Showing the preview."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "原图暂不可用，当前显示预览图。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "原圖暫不可用，目前顯示預覽圖。"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "元の写真を表示できません。プレビューを表示しています。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "원본을 사용할 수 없어 미리보기를 표시합니다."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "L’original est indisponible. L’aperçu est affiché."
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Das Original ist nicht verfügbar. Die Vorschau wird angezeigt."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "El original no está disponible. Se muestra la vista previa."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "O original está indisponível. A prévia é exibida."
+          }
+        }
+      }
+    },
+    "settings.data.export.error": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Could not export a complete backup. Download all files first. Files and originals must total no more than 128 MB."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "无法导出完整备份。请先下载所有文件，附件和原图等文件总量需在 128 MB 以内。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "無法匯出完整備份。請先下載所有檔案，附件和原圖等檔案總量需在 128 MB 以內。"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "完全なバックアップを書き出せませんでした。すべてのファイルをダウンロードしてください。添付や元の写真などの合計上限は128 MBです。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "전체 백업을 내보내지 못했습니다. 먼저 모든 파일을 다운로드하세요. 첨부 파일과 원본 등의 총용량은 128 MB 이하여야 합니다."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Impossible d’exporter une sauvegarde complète. Téléchargez tous les fichiers. Pièces jointes et originaux ne doivent pas dépasser 128 Mo au total."
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ein vollständiges Backup konnte nicht exportiert werden. Laden Sie alle Dateien herunter. Dateien und Originale dürfen insgesamt höchstens 128 MB belegen."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No se pudo exportar una copia completa. Descarga todos los archivos. Los archivos y originales no deben superar los 128 MB en total."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Não foi possível exportar um backup completo. Baixe todos os arquivos. Arquivos e originais não podem ultrapassar 128 MB no total."
+          }
+        }
+      }
+    },
+    "settings.data.backup.too_large": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This backup exceeds the safe limit. Reduce the files or number of trips and try again."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "备份超过安全上限，请缩小文件或减少行程后重试。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "備份超過安全上限，請縮小檔案或減少行程後重試。"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "バックアップが安全な上限を超えています。ファイルサイズや旅行数を減らして再試行してください。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "백업이 안전 한도를 초과했습니다. 파일 크기나 여행 수를 줄이고 다시 시도하세요."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cette sauvegarde dépasse la limite sûre. Réduisez la taille des fichiers ou le nombre de voyages, puis réessayez."
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dieses Backup überschreitet die sichere Grenze. Verkleinern Sie Dateien oder wählen Sie weniger Reisen und versuchen Sie es erneut."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "La copia supera el límite seguro. Reduce el tamaño de los archivos o el número de viajes e inténtalo de nuevo."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "O backup excede o limite seguro. Reduza o tamanho dos arquivos ou o número de viagens e tente novamente."
+          }
+        }
+      }
+    },
+    "settings.data.backup.changed": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Your data changed during preparation. Please try again."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "准备期间数据发生了变化，请重试。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "準備期間資料發生了變化，請重試。"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "準備中にデータが変更されました。もう一度お試しください。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "준비 중에 데이터가 변경되었습니다. 다시 시도하세요."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Vos données ont changé pendant la préparation. Veuillez réessayer."
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ihre Daten wurden während der Vorbereitung geändert. Bitte versuchen Sie es erneut."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tus datos cambiaron durante la preparación. Inténtalo de nuevo."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Os dados mudaram durante a preparação. Tente novamente."
+          }
+        }
+      }
+    }
+  },
+  "version": "1.0"
+}

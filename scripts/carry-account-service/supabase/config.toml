@@ -19,3 +19,10 @@ verify_jwt = false
 
 [functions.carry-maintenance]
 verify_jwt = true
+
+# OAuth metadata/code exchange and opaque MCP bearers use the handler's own
+# verification. The new runtime additionally defaults ACCOUNT_AI_ENABLED off.
+[functions.carry-ai]
+verify_jwt = false
+entrypoint = "./functions/carry-ai/index.ts"
+import_map = "./functions/carry-ai/deno.json"

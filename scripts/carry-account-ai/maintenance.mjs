@@ -24,6 +24,7 @@ export async function maintainAIRecords(
     (bucket='code' and (value->>'codeExpiresAt')::bigint<$1) or
     (bucket='access' and (value->>'expiresAt')::bigint<$1) or
     (bucket='preview' and (value->>'expiresAt')::bigint<$1-86400000) or
+    (bucket='export' and (value->>'expiresAt')::bigint<$1) or
     (bucket='undo' and (value->>'createdAt')::bigint<$1-2592000000) or
     (bucket='refresh' and (value->>'expiresAt')::bigint<$1)
    order by bucket,id limit $2 for update skip locked

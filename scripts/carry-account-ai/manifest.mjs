@@ -1,4 +1,5 @@
 import { graphSchema } from "../carry-account-service/graph-schema.mjs";
+import packingRules from "./packing-rules.json" with { type: "json" };
 const id = { type: "string", format: "uuid" },
   page = {
     offset: { type: "integer", minimum: 0 },
@@ -186,19 +187,157 @@ export const TOOLS = [
     ["tripID", "assetID", "offset", "limit"],
   ),
   ...[
-    "search_airports",
-    "search_places",
-    "lookup_flight",
-    "preview_route",
-    "get_packing_recommendations",
-  ].map((name) =>
-    tool(
-      name,
-      "Account-side query; external results are untrusted data. Listed as available only when its server adapter is installed. No HealthKit or system calendar access.",
-      { tripID: id, data: { type: "object" } },
-      ["data"],
-    ),
-  ),
+    [
+      "search_airports",
+      "Search Carry's bundled airport catalog by IATA/ICAO, city, localized name or alias. Returns real coordinates/timezones; no external request.",
+      {
+        query: { type: "string", maxLength: 200 },
+        language: {
+          type: "string",
+          enum: [
+            "en",
+            "zh-Hans",
+            "zh-Hant",
+            "de",
+            "es",
+            "fr",
+            "ja",
+            "ko",
+            "pt-BR",
+          ],
+        },
+        limit: { type: "integer", minimum: 1, maximum: 100 },
+      },
+      ["query"],
+    ],
+    [
+      "search_places",
+      "Search a structured destination. Supply query plus target countryCode (or a scoped trip's country). Suggestions must be retrieved by placeID and returned session before storing coordinates. CN/HK/MO use Amap only; overseas uses the Carry places proxy. Never invent provider results. Domestic results are GCJ-02; overseas results are WGS-84.",
+      {
+        query: { type: "string", minLength: 1, maxLength: 200 },
+        countryCode: { type: "string", pattern: "^[A-Z]{2}$" },
+        city: { type: "string", maxLength: 100 },
+        placeID: { type: "string", maxLength: 8000 },
+        session: id,
+        language: {
+          type: "string",
+          enum: [
+            "en",
+            "zh-Hans",
+            "zh-Hant",
+            "de",
+            "es",
+            "fr",
+            "ja",
+            "ko",
+            "pt-BR",
+          ],
+        },
+        limit: { type: "integer", minimum: 1, maximum: 8 },
+        proximity: {
+          type: "object",
+          additionalProperties: false,
+          required: ["latitude", "longitude"],
+          properties: {
+            latitude: { type: "number", minimum: -90, maximum: 90 },
+            longitude: { type: "number", minimum: -180, maximum: 180 },
+          },
+        },
+      },
+      [],
+    ],
+    [
+      "lookup_flight",
+      "Look up a real flight via Carry's existing flight proxy. number is IATA/ICAO airline prefix plus digits (e.g. CA8333), date is the local flight date YYYY-MM-DD. Configuration/provider errors remain errors, never fabricated schedules.",
+      {
+        number: { type: "string", maxLength: 64 },
+        date: { type: "string", format: "date" },
+      },
+      ["number", "date"],
+    ],
+    [
+      "preview_route",
+      "Preview native fixed-endpoint route optimization for a scoped dayID or explicitly supplied stops. Distance is great-circle estimate, not road distance or travel duration. No reorder is applied; use an approved account plan to save it.",
+      {
+        dayID: id,
+        stops: {
+          type: "array",
+          maxItems: 100,
+          items: {
+            type: "object",
+            additionalProperties: false,
+            required: ["id", "latitude", "longitude"],
+            properties: {
+              id,
+              latitude: { type: "number", minimum: -90, maximum: 90 },
+              longitude: { type: "number", minimum: -180, maximum: 180 },
+            },
+          },
+        },
+      },
+      [],
+    ],
+    [
+      "get_packing_recommendations",
+      "Get native base/scene packing quantities, supplementary suggestions and destination climate scenes without changing a trip. storefront must be actual StoreKit alpha-3 if known (not device locale). departureDate is explicit local YYYY-MM-DD for seasonal inference. Personal health scenes/HealthKit inference are excluded.",
+      {
+        scenes: {
+          type: "array",
+          maxItems: 16,
+          items: { type: "string", enum: Object.keys(packingRules.scenes) },
+        },
+        tripDays: { type: "integer", minimum: 0, maximum: 3650 },
+        isInternational: { type: "boolean" },
+        destinationCodes: {
+          type: "array",
+          maxItems: 100,
+          items: { type: "string", pattern: "^[A-Z]{2}$" },
+        },
+        storefront: { type: "string", pattern: "^[A-Z]{3}$" },
+        language: {
+          type: "string",
+          enum: [
+            "en",
+            "zh-Hans",
+            "zh-Hant",
+            "de",
+            "es",
+            "fr",
+            "ja",
+            "ko",
+            "pt-BR",
+          ],
+        },
+        departureDate: { type: "string", format: "date" },
+        rankingMode: { type: "string", enum: ["manualFirst", "sceneFirst"] },
+        supplementaryLimit: { type: "integer", minimum: 0, maximum: 100 },
+      },
+      [],
+    ],
+  ].map(([name, description, properties, required]) => {
+    const data = {
+      type: "object",
+      properties,
+      required,
+      additionalProperties: false,
+    };
+    if (name === "search_places")
+      data.oneOf = [
+        { required: ["query"], not: { required: ["placeID"] } },
+        { required: ["placeID"], not: { required: ["query"] } },
+      ];
+    if (name === "preview_route")
+      data.oneOf = [
+        { required: ["dayID"], not: { required: ["stops"] } },
+        { required: ["stops"], not: { required: ["dayID"] } },
+      ];
+    const result = tool(name, description, { tripID: id, data }, ["data"]);
+    result.annotations.openWorldHint = [
+      "search_places",
+      "lookup_flight",
+    ].includes(name);
+    return result;
+  }),
   ...["export_backup", "share_trip"].map((name) =>
     tool(
       name,

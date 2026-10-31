@@ -2,7 +2,7 @@ import Foundation
 import SwiftData
 import Combine
 
-enum CarryAccountWorkspaceFailure: Error { case synchronizationDisabled, wrongBusinessContainer, assetsUnavailable }
+enum CarryAccountWorkspaceFailure: Error { case synchronizationDisabled, wrongBusinessContainer, assetsUnavailable, writerClosed }
 
 /// One immutable identity owns one local database and one synchronization lease.
 /// Creating a workspace never uploads, imports or removes any guest/iCloud data.
@@ -43,6 +43,7 @@ final class CarryAccountWorkspace: ObservableObject {
     private let transport: any CarryGraphTransporting
     private let hooks: Hooks
     private let projector: CarryNativeGraphProjector
+    private var writerOpen = true
     private var synchronizationEnabled = false
     private var lease = UUID()
     private var active: (id: UUID, task: Task<Bool, Error>)?
@@ -67,6 +68,7 @@ final class CarryAccountWorkspace: ObservableObject {
     var businessSave: CarryPersistence.Save {
         { [weak self] context in
             guard let self, context.container === self.container else { throw CarryAccountWorkspaceFailure.wrongBusinessContainer }
+            guard self.writerOpen else { throw CarryAccountWorkspaceFailure.writerClosed }
             try self.journal.captureAndSave(context)
             if self.state != .paused && self.state != .synchronizing { self.state = .pending }
         }
@@ -74,7 +76,10 @@ final class CarryAccountWorkspace: ObservableObject {
 
     /// Only call after the user has enabled account synchronization. It does not
     /// migrate existing trips or grant access to guest/local file namespaces.
-    func enableSynchronization() { synchronizationEnabled = true; state = .pending }
+    func enableSynchronization() { guard writerOpen else { return }; synchronizationEnabled = true; state = .pending }
+
+    /// Permanent writer revocation is distinct from offline synchronization pause.
+    func revokeWriterLease() { writerOpen = false }
 
     /// Await before removing account navigation, switching identity or deleting
     /// its cache. The invalidated lease rejects even cancellation-ignoring I/O.
@@ -91,6 +96,7 @@ final class CarryAccountWorkspace: ObservableObject {
     @discardableResult
     func synchronize() async throws -> Bool {
         try Task.checkCancellation()
+        guard writerOpen else { throw CarryAccountWorkspaceFailure.writerClosed }
         guard synchronizationEnabled else { throw CarryAccountWorkspaceFailure.synchronizationDisabled }
         if let running = active { return try await running.task.value }
         let id = UUID(), generation = lease

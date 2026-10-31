@@ -9,7 +9,7 @@ test('wire schema covers every native backup field or an explicit relation/asset
   const relations={trip:['sections','itineraryDays','lodgingStays'],section:['items'],day:['stops','segments'],stop:['photos','attachments'],transport:['attachments'],lodging:['attachments']};
   const replacements={photo:{thumbnailData:'thumbnailAssetID'},attachment:{thumbnailData:'thumbnailAssetID'}};
   for(const [kind,model]of Object.entries(models)){
-    const body=source.match(new RegExp(`struct ${model}: Codable, Sendable \\{([\\s\\S]*?)\\n\\}`))?.[1];assert.ok(body,model);
+    const body=source.match(new RegExp(`struct ${model}: [^{]+\\{([\\s\\S]*?)\\n\\}`))?.[1];assert.ok(body,model);
     const fields=[...body.matchAll(/var (\w+):/g)].map(m=>m[1]);
     for(const key of fields){if(key==='id'||relations[kind]?.includes(key))continue;
       assert.ok(graphSchema[kind].fields[replacements[kind]?.[key]??key],`${model}.${key} must not silently disappear from account sync`);}

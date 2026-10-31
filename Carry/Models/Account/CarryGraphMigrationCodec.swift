@@ -27,8 +27,7 @@ nonisolated struct CarryGraphMigrationPacket: Codable, Sendable {
     /// Passing the backup round-trip alone is not a completed photo migration.
     var photosRequiringOriginalCollection: [UUID] {
         entities.compactMap { entity in
-            guard entity.kind == "photo", case .string(let identifier) = entity.fields["assetLocalIdentifier"],
-                  !identifier.isEmpty else { return nil }
+            guard entity.kind == "photo" else { return nil }
             return entity.id
         }
     }
@@ -77,6 +76,10 @@ nonisolated enum CarryGraphMigrationCodec {
         SHA256.hash(data: data).map { String(format: "%02x", $0) }.joined()
     }
 
+    private static func maximumBytes(slot: String) -> Int {
+        slot == "file" ? AttachmentStore.maxBytes : CarryAccountAssetCache.maximumBytes
+    }
+
     private static func assetID(account: UUID, entity: UUID, slot: String, sha256: String) throws -> UUID {
         let input = "\(account.uuidString.lowercased())/\(entity.uuidString.lowercased())/\(slot)/\(sha256)"
         let hash = Array(digest(Data(input.utf8)).prefix(32))
@@ -103,7 +106,7 @@ nonisolated enum CarryGraphMigrationCodec {
         var relations: [UUID: [String]] = [:]
 
         func addAsset(entity: UUID, slot: String, name: String? = nil, bytes: Data) throws -> UUID {
-            guard bytes.count <= AttachmentStore.maxBytes, name == nil || safeName(name ?? "") else {
+            guard bytes.count <= maximumBytes(slot: slot), name == nil || safeName(name ?? "") else {
                 throw CarryGraphMigrationFailure.invalidAsset
             }
             let sha256 = digest(bytes)
@@ -185,7 +188,7 @@ nonisolated enum CarryGraphMigrationCodec {
         var assetsBySlot: [UUID: [String: CarryGraphMigrationAsset]] = [:]
         for asset in packet.assets {
             guard entities[asset.entityID] != nil, digest(asset.bytes) == asset.sha256,
-                  asset.bytes.count <= AttachmentStore.maxBytes,
+                  asset.bytes.count <= maximumBytes(slot: asset.slot),
                   try assetID(account: accountID, entity: asset.entityID, slot: asset.slot, sha256: asset.sha256) == asset.id,
                   assetMap.updateValue(asset, forKey: asset.id) == nil else { throw CarryGraphMigrationFailure.invalidAsset }
             guard assetsBySlot[asset.entityID, default: [:]].updateValue(asset, forKey: asset.slot) == nil else {
@@ -229,8 +232,7 @@ nonisolated enum CarryGraphMigrationCodec {
             if entity.kind == "photo" || entity.kind == "attachment" {
                 if let raw = string(object.removeValue(forKey: "thumbnailAssetID")), let id = UUID(uuidString: raw) {
                     object["thumbnailData"] = .string(try bytes(entity: entity.id, id: id, slot: "thumbnail").base64EncodedString())
-                } else if entity.kind == "photo" { throw CarryGraphMigrationFailure.missingAsset }
-                else { object["thumbnailData"] = .string("") }
+                } else { object["thumbnailData"] = .string("") }
             }
             if entity.kind == "attachment", let name = string(object["fileName"]), !name.isEmpty {
                 guard let raw = string(object.removeValue(forKey: "fileAssetID")), let id = UUID(uuidString: raw) else {
@@ -268,7 +270,7 @@ nonisolated enum CarryGraphMigrationCodec {
             "attachmentFiles": .object(attachmentFiles.mapValues { .string($0.base64EncodedString()) })
         ]
         if let offsets = packet.defaultReminderOffsets { object["defaultReminderOffsets"] = .array(offsets.map { .integer(Int64($0)) }) }
-        let decoder = JSONDecoder(); decoder.dateDecodingStrategy = .iso8601
+        let decoder = CarryBackupDates.decoder()
         let restored = try decoder.decode(CarryBackup.self, from: encoder().encode(CarryGraphValue.object(object)))
         let checked = try prepare(restored, accountID: accountID, migrationID: packet.migrationID,
             tripIDs: Set(restored.trips.map(\.id)), includeLibrary: true, includeReminderPreferences: true)

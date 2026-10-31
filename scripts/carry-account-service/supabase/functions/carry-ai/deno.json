@@ -1,0 +1,5 @@
+{
+  "imports": {
+    "tz-lookup": "npm:tz-lookup@6.1.25"
+  }
+}

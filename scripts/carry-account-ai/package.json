@@ -10,5 +10,8 @@
   },
   "devDependencies": {
     "@electric-sql/pglite": "0.5.12"
+  },
+  "dependencies": {
+    "tz-lookup": "6.1.25"
   }
 }

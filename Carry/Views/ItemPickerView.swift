@@ -164,14 +164,14 @@ struct ItemPickerView: View {
         cachedSceneRecommendedNames.isEmpty ? appliedSceneRecommendedNames : cachedSceneRecommendedNames
     }
 
-    private var myItemsCount: Int { store.myItems.count }
+    private var myItemsCount: Int { store.visibleMyItems.count }
 
     private var savedMyItemNames: Set<String> {
-        Set(store.myItems.map { normalizedItemName($0.name) })
+        Set(store.visibleMyItems.map { normalizedItemName($0.name) })
     }
 
     private func savedMyItemID(for name: String) -> UUID? {
-        store.myItems.first {
+        store.visibleMyItems.first {
             normalizedItemName($0.name) == normalizedItemName(name)
         }?.id
     }
@@ -1694,7 +1694,7 @@ struct ItemPickerView: View {
     }
 
     private func buildMyItemSections() -> [PackingSection] {
-        let selected = store.myItems.filter { selectedMyItemIDs.contains($0.id) }
+        let selected = store.visibleMyItems.filter { selectedMyItemIDs.contains($0.id) }
         var sectionsByTitle: [String: [MyItem]] = [:]
         for item in selected {
             let title = item.category.isEmpty ? "Essentials" : item.category

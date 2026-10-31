@@ -132,6 +132,9 @@ final class CarryAccountAssetRetention {
         for photo in try context.fetch(FetchDescriptor<StopPhoto>()) where CarryAccountFileAccess.isAccountReference(photo.assetLocalIdentifier) {
             tokens.insert(try Self.token(photo.assetLocalIdentifier, accountID: accountID))
         }
+        let migrations = try context.fetch(FetchDescriptor<CarryAccountMigrationBatch>())
+        guard migrations.allSatisfy({ $0.accountID == accountID }) else { throw CarryAccountAssetRetentionFailure.wrongAccount }
+        tokens.formUnion(try await CarryAccountTripMigration.retainedTokens(payloads: migrations.map(\.payload)))
         let extra = try pins()
         guard extra.tokens.allSatisfy({ $0.accountID == accountID }) else { throw CarryAccountAssetRetentionFailure.wrongAccount }
         tokens.formUnion(extra.tokens); ids.formUnion(extra.assetIDs); ids.formUnion(tokens.map(\.assetID))

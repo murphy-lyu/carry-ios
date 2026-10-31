@@ -194,7 +194,7 @@ export function createAccountAIHandler({
       approvalURL: accountOrigin + "/ai/plans/" + result.id,
     };
   }
-  async function runTool(grant, name, args) {
+  async function runTool(grant, name, args, signal) {
     const tool = TOOLS.find((t) => t.name === name);
     if (!tool) fail("unknown_tool", 404);
     object(
@@ -441,8 +441,7 @@ export function createAccountAIHandler({
     }
     if (name === "read_attachment") {
       has(grant, "attachments:read");
-      identifier(args.tripID);
-      identifier(args.assetID);
+      args={...args,tripID:identifier(args.tripID),assetID:identifier(args.assetID)};
       if (
         !Number.isSafeInteger(args.offset) ||
         args.offset < 0 ||
@@ -456,13 +455,13 @@ export function createAccountAIHandler({
       const member = [...map.values()].find(
         (e) =>
           !e.deletedAt &&
-          ["attachment", "photo"].includes(e.kind) &&
-          Object.entries(e.fields ?? {}).some(
+          ["attachment", "photo", "trip"].includes(e.kind) &&
+          (Object.values(e.fields?.backgroundAssetIDs ?? {}).some(value=>typeof value==="string"&&value.toLowerCase()===args.assetID) || Object.entries(e.fields ?? {}).some(
             ([k, v]) =>
               ["fileAssetID", "thumbnailAssetID", "originalAssetID"].includes(
                 k,
-              ) && v === args.assetID,
-          ),
+              ) && typeof v === "string" && v.toLowerCase() === args.assetID,
+          )),
       );
       if (!member || rootOf(map, member.id).id !== args.tripID)
         fail("asset_not_authorized", 403);
@@ -472,10 +471,11 @@ export function createAccountAIHandler({
         accountID: grant.accountID,
         grantID: grant.id,
         assetID: args.assetID,
+        tripID: args.tripID,
         entityID: member.id,
         offset: args.offset,
         limit: args.limit,
-        now: now(),
+        now: now(), signal,
       });
       if (
         !(result?.bytes instanceof Uint8Array) ||
@@ -492,8 +492,7 @@ export function createAccountAIHandler({
     }
     if (name === "export_backup" || name === "share_trip") {
       has(grant, "exports:read");
-      identifier(args.tripID);
-      identifier(args.requestID);
+      args={...args,tripID:identifier(args.tripID),requestID:identifier(args.requestID)};
       const map = graphIndex(await snapshot(grant, { tripID: args.tripID }));
       authorizeEntity(map, args.tripID, grant);
       if (!store.prepareExport) fail("capability_unavailable", 503);
@@ -513,6 +512,7 @@ export function createAccountAIHandler({
     }
     if (!queries[name]) fail("capability_unavailable", 503);
     has(grant, "trips:read");
+    if(args.tripID!==undefined)args={...args,tripID:identifier(args.tripID)};
     if (args.tripID)
       authorizeEntity(
         graphIndex(await snapshot(grant, { tripID: identifier(args.tripID) })),
@@ -526,7 +526,7 @@ export function createAccountAIHandler({
       input: args.data,
       tripID: args.tripID ?? null,
       entities: graphForGrant(await snapshot(grant), grant),
-      signal: undefined,
+      signal,
     });
   }
   return async (request) => {
@@ -895,6 +895,30 @@ export function createAccountAIHandler({
         });
         return json({ status: "revoked" });
       }
+      const exportRoute = /^\/exports\/([0-9a-f-]{36})(?:\/(approve|download))?$/.exec(url.pathname);
+      if (exportRoute && ["GET","POST"].includes(request.method)) {
+        if(url.search)fail("invalid_request");
+        const session=await owner(request,{mutating:request.method==="POST"}),id=identifier(exportRoute[1]);
+        if(exportRoute[2]==="download"&&request.method==="GET") {
+          if(!store.downloadExport)fail("capability_unavailable",503);
+          const download=await store.downloadExport({...session,id,now:now(),signal:request.signal});
+          if(!(download?.body instanceof ReadableStream)||!/^Carry-[0-9a-f-]{36}\.(json|carrytrip)$/.test(download.fileName))fail("invalid_export_response",503);
+          return new Response(download.body,{headers:{"Content-Type":"application/json; charset=utf-8",
+            "Content-Disposition":`attachment; filename="${download.fileName}"`,"Cache-Control":"private, no-store, max-age=0",
+            "X-Content-Type-Options":"nosniff","Referrer-Policy":"no-referrer"}});
+        }
+        if(!exportRoute[2]&&request.method==="GET") {
+          if(!store.getExport)fail("capability_unavailable",503);
+          return json(await store.getExport({...session,id,now:now()}));
+        }
+        if(exportRoute[2]==="approve"&&request.method==="POST") {
+          const body=object(await jsonBody(request,4096),["contentHash","csrf"],["contentHash","csrf"]);
+          if(!store.approveExport)fail("capability_unavailable",503);
+          await store.approveExport({...session,id,contentHash:body.contentHash,now:now()});
+          return json({status:"approved",id});
+        }
+        fail("method_not_allowed",405);
+      }
       const plan = /^\/plans\/([0-9a-f-]{36})(\/approve)?$/.exec(url.pathname);
       if (plan && ["GET", "POST"].includes(request.method)) {
         const session = await owner(request, {
@@ -995,6 +1019,7 @@ export function createAccountAIHandler({
           grant,
           params.name,
           params.arguments ?? {},
+          request.signal,
         );
         return json({
           jsonrpc: "2.0",

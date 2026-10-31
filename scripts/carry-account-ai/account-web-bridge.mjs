@@ -18,7 +18,7 @@ export function createAccountWebAIBridge({
   if (thisAccountOrigin !== accountOrigin)
     throw new Error("invalid_account_origin");
   if (new URL(origin).origin !== origin) throw new Error("invalid_ai_origin");
-  return async ({ session, path, method = "GET", body }) => {
+  return async ({ session, path, method = "GET", body, signal }) => {
     if (
       !/^Bearer [A-Za-z0-9_.-]+$/.test("Bearer " + session?.access_token) ||
       !session?.user?.id
@@ -30,7 +30,7 @@ export function createAccountWebAIBridge({
       /^\/owner\/trips(?:\?(?:q=[^&]*&)?offset=\d+&limit=\d+)?$/.test(path);
     if (
       !tripChoices &&
-      !/^(?:\/oauth\/requests\/[0-9a-f-]{36}|\/plans\/[0-9a-f-]{36}(?:\/approve)?|\/connections(?:\/[0-9a-f-]{36}\/revoke)?)$/.test(
+      !/^(?:\/oauth\/requests\/[0-9a-f-]{36}|\/exports\/[0-9a-f-]{36}(?:\/(?:approve|download))?|\/plans\/[0-9a-f-]{36}(?:\/approve)?|\/connections(?:\/[0-9a-f-]{36}\/revoke)?)$/.test(
         path,
       )
     )
@@ -54,7 +54,7 @@ export function createAccountWebAIBridge({
       request.headers.set(k, v);
     const response = await fetcher(request, {
       redirect: "manual",
-      signal: AbortSignal.timeout(15000),
+      signal: AbortSignal.any([signal??new AbortController().signal,AbortSignal.timeout(path.endsWith("/download")?120000:15000)]),
     });
     if (response.status === 303) {
       // Only OAuth approval/denial is allowed to yield a client redirect. The AI
@@ -65,6 +65,12 @@ export function createAccountWebAIBridge({
       if (!location || location.length > 4096)
         fail("invalid_owner_response", 503);
       return { status: 303, location };
+    }
+    if(/^\/exports\/[0-9a-f-]{36}\/download$/.test(path)&&method==="GET"&&response.ok) {
+      const disposition=response.headers.get("Content-Disposition"),type=response.headers.get("Content-Type");
+      if(!response.body||!/^attachment; filename="Carry-[0-9a-f-]{36}\.(json|carrytrip)"$/.test(disposition??"")||
+        !type?.startsWith("application/json"))fail("invalid_owner_response",503);
+      return {status:200,body:response.body,fileName:disposition.slice('attachment; filename="'.length,-1)};
     }
     let data;
     try {

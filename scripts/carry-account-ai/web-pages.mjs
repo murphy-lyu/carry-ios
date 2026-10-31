@@ -1,3 +1,4 @@
+import { exportWebStrings } from "./export-web-strings.mjs";
 import { previewActions } from "./web-preview.mjs";
 import { aiWebStrings, scopeLabels } from "./web-strings.mjs";
 import {
@@ -48,8 +49,9 @@ export async function accountAIPage({
   const consent = path === "/oauth/consent",
     plan = /^\/ai\/plans\/([0-9a-f-]{36})$/.exec(path),
     connections = path === "/connections",
+    exportRoute = /^\/ai\/exports\/([0-9a-f-]{36})(?:\/(download))?$/.exec(path),
     revoke = /^\/connections\/([0-9a-f-]{36})\/revoke$/.exec(path);
-  if (!consent && !plan && !connections && !revoke) return null;
+  if (!consent && !plan && !connections && !revoke && !exportRoute) return null;
   const querySeen = new Set();
   for (const [key] of url.searchParams) {
     if (
@@ -147,6 +149,31 @@ export async function accountAIPage({
       t.connect,
       `<dl><dt>${esc(t.client)}</dt><dd>${esc(r.client.name)}<br><code>${esc(r.client.id)}</code></dd><dt>${esc(t.destination)}</dt><dd><code>${esc(r.client.redirectURI)}</code></dd></dl><p>${esc(t.unverified)}</p><form method="get">${hidden("authorization_id", id)}<label>${esc(t.search)} <input type="search" name="q" value="${esc(q)}"></label><button class="text-button">${esc(t.search)}</button></form><form method="post">${hidden("csrf", csrf)}<fieldset><legend>${esc(t.permissions)}</legend>${permissions}</fieldset><label><input type="checkbox" name="onlyCreated" value="true" checked> ${esc(t.newOnly)}</label><fieldset><legend>${esc(t.trips)}</legend>${trips}${choices.hasMore ? `<p>${esc(t.more)}</p>` : ""}</fieldset><button class="text-button" name="decision" value="approve">${esc(t.approve)}</button> <button class="text-button" name="decision" value="deny">${esc(t.deny)}</button></form>`,
     );
+  }
+  if(exportRoute) {
+    const id=exportRoute[1],e=exportWebStrings[text.lang]??exportWebStrings.en;
+    if(!uuid(id))throw new WebFailure(400,"invalid_export");
+    if(exportRoute[2]==="download") {
+      if(request.method!=="GET")throw new WebFailure(405,"method_not_allowed");
+      const result=await call({path:"/exports/"+id+"/download",signal:request.signal});
+      if(result.status!==200||!result.body)throw new WebFailure(503,"invalid_export_response");
+      headers.set("Content-Type","application/json; charset=utf-8");
+      headers.set("Content-Disposition",`attachment; filename="${result.fileName}"`);
+      return finish(new Response(result.body,{headers}));
+    }
+    if(request.method==="POST") {
+      const f=await form(request,["csrf","contentHash"]);await checkForm(f,current.user.id);
+      await call({path:"/exports/"+id+"/approve",method:"POST",body:{csrf:f.get("csrf"),contentHash:f.get("contentHash")}});
+    }
+    const record=(await call({path:"/exports/"+id})).data,s=record.summary;
+    if(!s||typeof s.name!=="string"||!Number.isSafeInteger(s.entityCount)||!Number.isSafeInteger(s.fileCount)||!Number.isSafeInteger(s.byteCount))
+      throw new WebFailure(503,"invalid_export_response");
+    const includes=[s.containsPrivateFields?e.private:null,s.containsOriginalPhotos?e.originals:null,s.containsPackingList?e.packing:null].filter(Boolean);
+    const content=Array.isArray(s.contents)?s.contents:[],files=Array.isArray(s.files)?s.files:[];
+    const details=`<p>${esc(s.name)}</p><p>${esc(s.destinationCity??"")} · ${esc(s.departureDate??"")}</p><p>${esc(e.detail)}</p><dl><dt>${esc(e.items)}</dt><dd>${s.entityCount}</dd><dt>${esc(e.files)}</dt><dd>${s.fileCount}</dd><dt>${esc(e.size)}</dt><dd>${s.byteCount}</dd></dl><details><summary>${esc(e.items)} (${content.length}/${s.entityCount})</summary><ol>${content.map(item=>`<li>${esc(item)}</li>`).join("")}</ol></details><details><summary>${esc(e.files)} (${files.length}/${s.fileCount})</summary><ul>${files.map(file=>`<li>${esc(file.name)} · ${file.byteCount}</li>`).join("")}</ul></details><ul>${includes.map(item=>`<li>${esc(item)}</li>`).join("")}</ul>`;
+    if(record.approvedAt)return page(e.title,details+`<p role="status">${esc(e.approved)}</p><p><a href="/ai/exports/${esc(id)}/download">${esc(e.download)}</a></p>`);
+    const csrf=await formToken(current.user.id);
+    return page(e.title,details+`<form method="post">${hidden("csrf",csrf)}${hidden("contentHash",record.contentHash)}<button class="text-button">${esc(e.approve)}</button></form>`);
   }
   if (plan) {
     const id = plan[1];

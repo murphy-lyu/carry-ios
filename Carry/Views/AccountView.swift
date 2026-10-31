@@ -192,6 +192,11 @@ struct AccountView: View {
                 }
             } header: { Text("account.sync.title") }
               footer: { Text("account.sync.consent") }
+            if workspaceController.workspace?.accountID == profile.id {
+                Section {
+                    NavigationLink { CarryAccountMigrationView() } label: { Text("account.migration.title") }
+                }
+            }
             Section {
                 Button("account.sign_out", role: .destructive) { showSignOut = true }
                     .disabled(account.isBusy)

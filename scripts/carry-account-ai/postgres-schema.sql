@@ -2,7 +2,7 @@
 create schema if not exists carry_ai;
 revoke all on schema carry_ai from public;
 create table if not exists carry_ai.records (
-  bucket text not null check (bucket in ('client','authorization','grant','code','access','refresh','preview','receipt','undo')),
+  bucket text not null check (bucket in ('client','authorization','grant','code','access','refresh','preview','receipt','undo','export')),
   id text not null,
   account_id uuid,
   grant_id uuid,

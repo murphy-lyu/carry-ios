@@ -139,7 +139,7 @@ export function createWebHandler({ makeClient = createServerClient, fetcher = fe
         const expected = await codec.open('form', cookie(FORM), now());
         if (form.get('csrf') !== expected.value || (accountID !== null && expected.accountID !== accountID)) throw new WebFailure(403, 'invalid_form');
       };
-      if (url.pathname === '/oauth/consent' || url.pathname.startsWith('/ai/plans/') || url.pathname === '/connections' || url.pathname.startsWith('/connections/')) {
+      if (url.pathname === '/oauth/consent' || url.pathname.startsWith('/ai/plans/') || url.pathname.startsWith('/ai/exports/') || url.pathname === '/connections' || url.pathname.startsWith('/connections/')) {
         if (env.ACCOUNT_AI_ENABLED !== 'true') throw new WebFailure(503, 'ai_not_available');
         const bridge = createAccountWebAIBridge({ origin: env.CARRY_AI_ORIGIN, accountOrigin: config.origin,
           secret: env.CARRY_OWNER_BRIDGE_SECRET, fetcher, now });

@@ -97,6 +97,7 @@ enum BackgroundImageStore {
     }
 
     static func delete(named name: String) {
+        guard !CarryMigrationSourceFileRetention.contains(named: name) else { return }
         guard !CarryAccountFileAccess.isAccountReference(name) else { return }
         decodedCache.removeObject(forKey: name as NSString)
         try? FileManager.default.removeItem(at: fileURL(named: name))
@@ -126,6 +127,7 @@ enum BackgroundImageStore {
     /// Write bytes under a name — for backup restore.
     @discardableResult
     static func write(data: Data, named name: String) -> Bool {
+        guard !CarryMigrationSourceFileRetention.contains(named: name) else { return false }
         guard !CarryAccountFileAccess.isAccountReference(name) else { return false }
         do { try data.write(to: fileURL(named: name), options: .atomic); return true } catch { return false }
     }

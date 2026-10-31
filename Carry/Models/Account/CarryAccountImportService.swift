@@ -19,6 +19,12 @@ final class CarryAccountImportService {
     }
     var preparedTokens: Set<CarryAccountAssetToken> { Set(pins.values) }
     func close() { closed = true }
+    /// Empty publication validates this exact lease without exposing or adding
+    /// any file. Closing an account invalidates even metadata-only operations.
+    func assertActive() throws {
+        guard !closed else { throw CarryNativeAssetCoordinatorFailure.closed }
+        try access.publish([:], lease: lease)
+    }
 
     private func prepare(snapshot: CarryAccountAssetSnapshot, entityID: UUID, thumbnail: Data,
                          name: String, ext: String, isPhoto: Bool) async throws -> PreparedAttachmentImport {

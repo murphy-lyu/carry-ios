@@ -224,6 +224,8 @@ final class TripStore: ObservableObject {
     private(set) var automationInvalidationVersion = 0
     @Published var trips: [TripBundle] = []
     @Published var myItems: [MyItem] = []
+    var visibleMyItemsProvider: (() -> [MyItem])?
+    var visibleMyItems: [MyItem] { visibleMyItemsProvider?() ?? myItems }
     /// 复制行程后要在首页扫光高亮的新副本 id（行程内复制 → 回首页时由 HomeView 消费一次）。瞬时信号，不持久化。
     var pendingShimmerTripId: UUID?
     @Published var isSceneCardDismissedGlobally: Bool
@@ -231,9 +233,11 @@ final class TripStore: ObservableObject {
     @Published private(set) var draftTrip: TripBundle?
 
     private var context: ModelContext
+    private var backupOperationRunning = false
     private let scope: TripStoreScope
     var businessContext: ModelContext { context }
     var assetImporter: CarryAccountImportService?
+    let migrationWriteGuard: CarryMigrationSourceWriteGuard
     private var usesSharedEffects: Bool { if case .local = scope { return true }; return false }
     private func sharedEffect(_ effect: () -> Void) { if usesSharedEffects { effect() } }
     private func publishAccountChange() { if case .account(let didChange) = scope { didChange() } }
@@ -264,15 +268,21 @@ final class TripStore: ObservableObject {
     }
 
     init(context: ModelContext? = nil, automationSave: CarryPersistence.Save? = nil,
-         persistenceSave: @escaping CarryPersistence.Save = { try $0.save() }, scope: TripStoreScope = .local) {
+         persistenceSave: @escaping CarryPersistence.Save = { try $0.save() }, scope: TripStoreScope = .local,
+         migrationWriteGuard: CarryMigrationSourceWriteGuard? = nil) {
         let selectedContext = context ?? ModelContext(CarryApp.container)
         selectedContext.autosaveEnabled = false
         self.context = selectedContext
         self.scope = scope
         self.automationPersistenceAllowed = { if case .account = scope { return false }; return selectedContext.container.configurations.allSatisfy { !$0.isStoredInMemoryOnly } }()
         self.persistenceSave = persistenceSave
+        let sourceProtection = migrationWriteGuard ?? CarryMigrationSourceWriteGuard()
+        self.migrationWriteGuard = sourceProtection
         let automationWriter = automationSave ?? persistenceSave
-        self.automationSave = { try CarryPersistence.commit($0, using: automationWriter) }
+        self.automationSave = { try CarryPersistence.commit($0, using: { transaction in
+            try sourceProtection.validate(transaction)
+            try automationWriter(transaction)
+        }) }
         self.isSceneCardDismissedGlobally = defaults.bool(forKey: Self.sceneCardDismissedGlobalKey)
         // 「模拟首页空态」是 DEBUG 预览开关，**仅本次会话有效、不跨启动持久化**——每次启动重置为关。
         // 否则误开后值会存进 UserDefaults，每次启动都模拟空态（看着像白屏），而 Xcode 重装不清
@@ -319,7 +329,16 @@ final class TripStore: ObservableObject {
     /// 启动 + 每次 restore/merge）。`removeAttachment` 的就地删处理常规路径；这里兜整库 wipe / 级联删。
     private func reconcileAttachmentFiles() {
         guard usesSharedEffects else { return }
-        let referenced = Set(allAttachments().map(\.fileName).filter { !$0.isEmpty })
+        var referenced = Set(allAttachments().map(\.fileName).filter { !$0.isEmpty })
+        for trip in trips {
+            for day in trip.safeItineraryDays {
+                for stop in day.sortedStops {
+                    for photo in stop.sortedPhotos where photo.assetLocalIdentifier.hasPrefix("carryphoto1_") {
+                        referenced.insert(photo.assetLocalIdentifier)
+                    }
+                }
+            }
+        }
         AttachmentStore.deleteOrphans(keeping: referenced)
     }
 
@@ -414,6 +433,60 @@ final class TripStore: ObservableObject {
     }
 
     // MARK: - Backup & Restore
+
+    private func assertBackupScopeActive() throws {
+        guard !usesSharedEffects else { return }
+        guard let importer = assetImporter else { throw TripStoreScopeFailure.accountOperationUnavailable }
+        try importer.assertActive()
+        guard context.container.schema.entities.contains(where: { $0.name == String(describing: CarryReplicaCheckpoint.self) }) else { throw TripStoreScopeFailure.accountOperationUnavailable }
+        let owners = try ModelContext(context.container).fetch(FetchDescriptor<CarryReplicaCheckpoint>())
+        guard owners.count == 1, owners.first?.accountID == importer.accountID else { throw TripStoreScopeFailure.accountOperationUnavailable }
+    }
+
+    /// File/JSON work yields the actor; commit rejects target changes and a
+    /// switched workspace rather than overwriting edits made while preparing.
+    @discardableResult
+    func restoreFromBackupAsync() async throws -> (trips: Int, myItems: Int) {
+        try assertBackupScopeActive()
+        guard usesSharedEffects else { throw TripStoreScopeFailure.accountOperationUnavailable }
+        guard !backupOperationRunning else { throw DataBackupManager.BackupError.targetChanged }
+        backupOperationRunning = true; defer { backupOperationRunning = false }
+        try invalidateAutomationConnection()
+        let target = context
+        let result = try await DataBackupManager.shared.restoreFromBackupAsync(into: target, preCommit: {
+            guard self.context === target else { throw DataBackupManager.BackupError.targetChanged }
+            try self.assertBackupScopeActive()
+        }, save: persist)
+        if context === target { applyPostRestoreSideEffects() }
+        return result
+    }
+    @discardableResult
+    func restoreFromDataAsync(_ data: Data) async throws -> (trips: Int, myItems: Int) {
+        try assertBackupScopeActive()
+        guard !backupOperationRunning else { throw DataBackupManager.BackupError.targetChanged }
+        backupOperationRunning = true; defer { backupOperationRunning = false }
+        try invalidateAutomationConnection()
+        let target = context
+        let result = try await DataBackupManager.shared.restoreFromDataAsync(data, into: target, preCommit: {
+            guard self.context === target else { throw DataBackupManager.BackupError.targetChanged }
+            try self.assertBackupScopeActive()
+        }, save: persist)
+        if context === target { applyPostRestoreSideEffects() }
+        return result
+    }
+    @discardableResult
+    func mergeFromDataAsync(_ data: Data) async throws -> (trips: Int, myItems: Int) {
+        try assertBackupScopeActive()
+        guard !backupOperationRunning else { throw DataBackupManager.BackupError.targetChanged }
+        backupOperationRunning = true; defer { backupOperationRunning = false }
+        let target = context, existing = Set(trips.map(\.id))
+        let result = try await DataBackupManager.shared.mergeFromDataAsync(data, into: target, preCommit: {
+            guard self.context === target else { throw DataBackupManager.BackupError.targetChanged }
+            try self.assertBackupScopeActive()
+        }, save: persist)
+        if context === target { applyPostMergeSideEffects(previousTripIds: existing) }
+        return result
+    }
 
     /// Restore all data from the automatic device-local JSON backup.
     @discardableResult
@@ -764,12 +837,12 @@ final class TripStore: ObservableObject {
     private func cleanupCorruptedData(trips: [TripBundle], myItems: [MyItem]) -> Bool {
         var didDelete = false
 
-        for item in myItems where item.name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+        for item in myItems where !migrationWriteGuard.isProtected(item.id) && item.name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
             context.delete(item)
             didDelete = true
         }
 
-        for trip in trips {
+        for trip in trips where !migrationWriteGuard.isProtected(trip.id) {
             for section in trip.safeSections {
                 let invalidItems = (section.items ?? []).filter {
                     $0.name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
@@ -802,7 +875,10 @@ final class TripStore: ObservableObject {
 
     private func persist(_ context: ModelContext) throws {
         do {
-            try CarryPersistence.commit(context, using: persistenceSave)
+            try CarryPersistence.commit(context, using: { transaction in
+                try migrationWriteGuard.validate(transaction)
+                try persistenceSave(transaction)
+            })
             publishAccountChange()
         }
         catch {
@@ -971,6 +1047,107 @@ final class TripStore: ObservableObject {
         }
         CarryLogger.shared.log(.tripDuplicated)
         return newBundle.id
+    }
+
+    /// Explicit migration fork recovery preserves every business value while
+    /// allocating a completely new identity graph. Read-only source files stay
+    /// pinned by the ownership index; editing the copy cannot delete them.
+    func recoverMigrationSourceCopies(tripIDs: Set<UUID>, libraryIDs: Set<UUID>, batchID: UUID = UUID(), expectedSources: [CarryMigrationSourceSnapshot]? = nil) throws -> [CarryMigrationRecoveryEvidence] {
+        guard !context.hasChanges else { throw CarryMigrationOwnershipFailure.sourceChanged }
+        if let expectedSources {
+            guard Set(expectedSources.map(\.rootID)) == tripIDs.union(libraryIDs), Set(expectedSources.map(\.rootID)).count == expectedSources.count else {
+                throw CarryMigrationOwnershipFailure.invalidScope
+            }
+        }
+        let expected = expectedSources.map { Dictionary(uniqueKeysWithValues: $0.map { ($0.rootID, $0) }) }
+        let savedTrips = try context.fetch(FetchDescriptor<TripBundle>()), savedItems = try context.fetch(FetchDescriptor<MyItem>())
+        let selectedTrips = savedTrips.filter { tripIDs.contains($0.id) }, selectedItems = savedItems.filter { libraryIDs.contains($0.id) }
+        guard Set(selectedTrips.map(\.id)).count == selectedTrips.count, Set(selectedItems.map(\.id)).count == selectedItems.count else { throw CarryMigrationOwnershipFailure.invalidScope }
+        var occupiedIDs = Set<UUID>()
+        func collectIDs<T: PersistentModel>(_ type: T.Type) throws {
+            for model in try context.fetch(FetchDescriptor<T>()) {
+                guard let identity = try CarryNativeSourceCodec.identity(of: model) else { throw CarryMigrationOwnershipFailure.invalidState }
+                occupiedIDs.insert(identity.id)
+            }
+        }
+        try collectIDs(TripBundle.self); try collectIDs(MyItem.self); try collectIDs(PackingSection.self); try collectIDs(PackingItem.self)
+        try collectIDs(ItineraryDay.self); try collectIDs(ItineraryStop.self); try collectIDs(TransportSegment.self)
+        try collectIDs(LodgingStay.self); try collectIDs(StopPhoto.self); try collectIDs(ItineraryAttachment.self)
+        var evidence: [CarryMigrationRecoveryEvidence] = []
+        for id in tripIDs.subtracting(selectedTrips.map(\.id)) {
+            let deleted = CarryMigrationSourceSnapshot(rootID: id, kind: "trip", entities: [])
+            guard expected == nil || expected?[id] == deleted else { throw CarryMigrationOwnershipFailure.sourceChanged }
+            evidence.append(CarryMigrationRecoveryEvidence(source: deleted, copy: deleted, identityMap: [:]))
+        }
+        for id in libraryIDs.subtracting(selectedItems.map(\.id)) {
+            let deleted = CarryMigrationSourceSnapshot(rootID: id, kind: "libraryItem", entities: [])
+            guard expected == nil || expected?[id] == deleted else { throw CarryMigrationOwnershipFailure.sourceChanged }
+            evidence.append(CarryMigrationRecoveryEvidence(source: deleted, copy: deleted, identityMap: [:]))
+        }
+        do {
+            for original in selectedTrips {
+                let source = try CarryMigrationSourceSnapshot.capture(trip: original)
+                guard expected == nil || expected?[source.rootID] == source else { throw CarryMigrationOwnershipFailure.sourceChanged }
+                let digest = try source.fingerprint()
+                let mapping = Dictionary(uniqueKeysWithValues: source.entityIDs.map { ($0, CarryMigrationSourceSnapshot.recoveryID(batchID: batchID, sourceFingerprint: digest, entityID: $0)) })
+                guard let rootID = mapping[source.rootID] else { throw CarryMigrationOwnershipFailure.invalidState }
+                let existingCopies = savedTrips.filter { $0.id == rootID }
+                guard existingCopies.count <= 1 else { throw CarryMigrationOwnershipFailure.invalidScope }
+                if let existing = existingCopies.first {
+                    let item = CarryMigrationRecoveryEvidence(source: source, copy: try CarryMigrationSourceSnapshot.capture(trip: existing), identityMap: mapping)
+                    try item.validate(); evidence.append(item); continue
+                }
+                guard occupiedIDs.isDisjoint(with: Set(mapping.values)) else { throw CarryMigrationOwnershipFailure.invalidState }
+                let copy = makeTripCopy(original, includeTransportAndLodging: true, includePackingList: true, recoveringDraft: true)
+                for model in CarryMigrationSourceSnapshot.models(trip: copy) {
+                    guard let old = try CarryNativeSourceCodec.identity(of: model)?.id, let id = mapping[old] else { throw CarryMigrationOwnershipFailure.invalidState }
+                    switch model {
+                    case let value as TripBundle: value.id = id
+                    case let value as PackingSection: value.id = id
+                    case let value as PackingItem: value.id = id
+                    case let value as ItineraryDay: value.id = id
+                    case let value as ItineraryStop: value.id = id
+                    case let value as TransportSegment: value.id = id
+                    case let value as LodgingStay: value.id = id
+                    case let value as StopPhoto: value.id = id
+                    case let value as ItineraryAttachment: value.id = id
+                    default: throw CarryMigrationOwnershipFailure.invalidState
+                    }
+                }
+                let item = CarryMigrationRecoveryEvidence(source: source, copy: try CarryMigrationSourceSnapshot.capture(trip: copy), identityMap: mapping)
+                try item.validate(); evidence.append(item)
+                context.insert(copy)
+            }
+            for original in selectedItems {
+                let source = try CarryMigrationSourceSnapshot.capture(item: original)
+                guard expected == nil || expected?[source.rootID] == source else { throw CarryMigrationOwnershipFailure.sourceChanged }
+                let rootID = CarryMigrationSourceSnapshot.recoveryID(batchID: batchID, sourceFingerprint: try source.fingerprint(), entityID: source.rootID)
+                let existingCopies = savedItems.filter { $0.id == rootID }
+                guard existingCopies.count <= 1 else { throw CarryMigrationOwnershipFailure.invalidScope }
+                if let existing = existingCopies.first {
+                    let item = CarryMigrationRecoveryEvidence(source: source, copy: try CarryMigrationSourceSnapshot.capture(item: existing), identityMap: [source.rootID: rootID])
+                    try item.validate(); evidence.append(item); continue
+                }
+                guard !occupiedIDs.contains(rootID) else { throw CarryMigrationOwnershipFailure.invalidState }
+                let copy = MyItem(name: original.name, collectionName: original.collectionName, category: original.category,
+                    defaultQuantity: original.defaultQuantity, quantityMode: original.quantityMode, quantityIntervalDays: original.quantityIntervalDays,
+                    sortOrder: original.sortOrder, createdAt: original.createdAt, updatedAt: original.updatedAt)
+                copy.id = rootID
+                copy.collectionName = original.collectionName; copy.defaultQuantity = original.defaultQuantity
+                copy.quantityModeRaw = original.quantityModeRaw; copy.quantityIntervalDays = original.quantityIntervalDays
+                let item = CarryMigrationRecoveryEvidence(source: source, copy: try CarryMigrationSourceSnapshot.capture(item: copy), identityMap: [original.id: copy.id])
+                try item.validate(); evidence.append(item)
+                context.insert(copy)
+            }
+            if context.hasChanges { try persist(context) }
+            fetchTrips()
+            refreshVisibleEffects()
+            return evidence
+        } catch {
+            context.rollback()
+            let fresh = ModelContext(context.container); fresh.autosaveEnabled = false; context = fresh; fetchTrips()
+            throw error
+        }
     }
 
     /// Shared graph-copy implementation; persistence belongs to the UI or automation caller.
@@ -2277,13 +2454,13 @@ final class TripStore: ObservableObject {
     // MARK: - My Items
 
     func myItemCollections() -> [String] {
-        let names = Set(myItems.map { normalizedCollectionName($0.collectionName) })
+        let names = Set(visibleMyItems.map { normalizedCollectionName($0.collectionName) })
         return [defaultMyItemCollection] + names.filter { $0 != defaultMyItemCollection }.sorted()
     }
 
     func myItems(in collectionName: String? = nil) -> [MyItem] {
         let target = normalizedCollectionName(collectionName ?? defaultMyItemCollection)
-        return myItems.filter { normalizedCollectionName($0.collectionName) == target }
+        return visibleMyItems.filter { normalizedCollectionName($0.collectionName) == target }
     }
 
     @discardableResult
@@ -2300,7 +2477,7 @@ final class TripStore: ObservableObject {
             return nil
         }
         let targetCollection = normalizedCollectionName(collectionName)
-        if let existing = myItems.first(where: {
+        if let existing = visibleMyItems.first(where: {
             $0.name.trimmingCharacters(in: .whitespacesAndNewlines).localizedCaseInsensitiveCompare(trimmed) == .orderedSame
             && $0.category.trimmingCharacters(in: .whitespacesAndNewlines).localizedCaseInsensitiveCompare(category.trimmingCharacters(in: .whitespacesAndNewlines)) == .orderedSame
             && normalizedCollectionName($0.collectionName) == targetCollection
@@ -2312,7 +2489,7 @@ final class TripStore: ObservableObject {
             guard save() else { return nil }
             return existing
         }
-        let nextOrder = (myItems.map(\.sortOrder).max() ?? -1) + 1
+        let nextOrder = (visibleMyItems.map(\.sortOrder).max() ?? -1) + 1
         let item = MyItem(
             name: trimmed,
             collectionName: targetCollection,
@@ -2329,7 +2506,7 @@ final class TripStore: ObservableObject {
     }
 
     func removeMyItem(id: UUID) {
-        guard let item = myItems.first(where: { $0.id == id }) else { return }
+        guard let item = visibleMyItems.first(where: { $0.id == id }) else { return }
         context.delete(item)
         guard save() else { return }
         CarryLogger.shared.log(.myItemDeleted)
@@ -2343,7 +2520,7 @@ final class TripStore: ObservableObject {
         let target = normalizedCollectionName(collection)
         let catalog = Set(itemPickerCatalog.map { $0.name })
         var latest: [String: Date] = [:]
-        for item in myItems where normalizedCollectionName(item.collectionName) == target {
+        for item in visibleMyItems where normalizedCollectionName(item.collectionName) == target {
             let cat = item.category.trimmingCharacters(in: .whitespacesAndNewlines)
             guard !cat.isEmpty, !catalog.contains(cat) else { continue }
             latest[cat] = max(latest[cat] ?? .distantPast, item.updatedAt)
@@ -2357,7 +2534,7 @@ final class TripStore: ObservableObject {
         let trimmedNew = new.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmedNew.isEmpty, trimmedNew != old else { return }
         var changed = false
-        for item in myItems
+        for item in visibleMyItems
         where normalizedCollectionName(item.collectionName) == target && item.category == old {
             item.category = trimmedNew
             item.updatedAt = Date()
@@ -2370,7 +2547,7 @@ final class TripStore: ObservableObject {
     func deleteMyItemCategory(_ name: String, in collection: String) {
         let target = normalizedCollectionName(collection)
         var changed = false
-        for item in myItems
+        for item in visibleMyItems
         where normalizedCollectionName(item.collectionName) == target && item.category == name {
             item.category = ""
             item.updatedAt = Date()

@@ -27,6 +27,8 @@ final class BackupFileStageTests: XCTestCase {
         let stage = try CarryBackupFileStage(packet(background: name, bytes: incoming))
         let allocated = try backgroundName(stage.backup)
         XCTAssertNotEqual(allocated, name)
+        XCTAssertNil(BackgroundImageStore.data(named: allocated), "Unpublished bytes belong only to the independent staging directory")
+        try stage.publish()
         XCTAssertEqual(BackgroundImageStore.data(named: allocated), incoming)
         XCTAssertEqual(BackgroundImageStore.data(named: name), original)
         stage.discard()

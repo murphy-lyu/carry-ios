@@ -1,6 +1,6 @@
 # Carry 账户 AI 服务组件
 
-该目录实现新账户协议和领域编译器，取代“配对手机前台执行”作为最终架构。已有 `edge-entry.ts` 与 PostgreSQL 运行时，尚未部署，也不会连接旧 relay。生产不使用内存存储；实际部署、查询/文件/导出适配及完整产品验收仍未完成。详细原子边界见 `store-contract.md`。
+该目录实现新账户协议和领域编译器，取代“配对手机前台执行”作为最终架构。已有 `edge-entry.ts` 与 PostgreSQL 运行时，尚未部署，也不会连接旧 relay。生产实现使用持久化 SQL store；查询、私有文件及完整备份/分享导出适配已接入并完成本地验证。托管部署、真实身份及设备验收仍是独立门禁。详细原子边界见 `store-contract.md`。
 
 ## 已实现
 
@@ -11,22 +11,32 @@
 - 确定性行程/子项身份与计划内 `@ref/day/N` 引用；一整套计划编译成一个逻辑事务。字段校验复用账户 Graph manifest，最终领域规则仍由同一个 Graph core 在事务内判断。
 - 不可变预览、具体修改前后值、版本与影响范围；第一方用户批准 contentHash 后同请求原子提交。任何 `confirmed:true` 或相同 requestID 的普通写入都不能跳过已建立的预览。
 - 撤销由 store 依据已接受的 before/after image 生成带版本的反向计划，再经预览/确认。后续编辑产生冲突，不能整库覆盖回旧快照。
-- 私有资产最多64KiB分块读取，每次重新核验 grant，必须在本次所选行程中找到对应资产引用。不返回 provider/signed URL。Native资产服务本身不接受OAuth；实际适配必须走经过授权的共同核心。
+- 私有附件、原图及封面最多64KiB分块读取，实际适配绑定当前账户/grant/所选行程、活跃实体槽位、verified ledger 和不可变 Storage version；网络读取前后重新授权，不返回 provider/signed URL。Native资产服务继续单独验证原生会话。
+- 完整选定行程导出为可还原的 CarryBackup，保留关系、原币/时区、打包状态、封面裁剪、附件、缩略图及照片原图；缺失原图明确拒绝。完整导出与原生恢复共用128MiB总文件预算（含缩略图）、附件原文件25MiB/其他资产50MiB上限；包含metadata、manifest、base64和JSON结构的最终文件上限256MiB，AI生成前精确估算，原生写出后与读入前均检查；原生恢复最多20,000个全局唯一业务实体；超限明确报错，保留按行程导出，不截断文件。分享导出为脱敏 .carrytrip，排除打包、照片、附件、背景、私密预订字段及提醒设置。
+- 导出生成、第一方具体内容预览/批准、私人下载与发送分开。10分钟有效期，真实 owner 会话、CSRF及HMAC桥接；每个至多64KiB输出块重新授权，取消立即停止上游，完整文件流检查字节数/SHA-256，失败不完成可解析的残缺备份。
+- 本地机场目录、境内高德/境外地点代理、真实航班代理、固定端点路线预览及原生打包规则已接入运行时。地点按声明国家及坐标地理范围复核，CN/HK/MO不会交给境外地点查询；路线明确为大圆距离估计。生成规则包含原生数量、九语言、补充推荐和气候场景，排除 personal_ 健康场景与HealthKit推断。
 - 行程/物品库读取有数量和1MiB页面边界，行程后续页面可绑定 expectedSubtreeVersion，版本变化要求重新读取。
 
-## 尚需主线接入
+## 本地发布入口
 
-1. 将已实现的 PostgreSQL 事务 store、共享 Graph core 适配器接入托管连接池；不伪造原生 auth.sessions。`postgres-store.mjs` 已持久保存 code/token/grant/preview/receipt，Graph 验证/执行/撤销回调必须使用相同事务连接；`postgres-schema.sql` 是私有 schema；已通过 CLI 生成迁移 `20261031013432_account_ai_shared_graph_core.sql`，尚未托管部署。`postgres-graph-core.mjs` 在同一事务连接调用私有业务 core，原生入口继续单独验证真实 session。
-2. 已接入账户网站的真实会话、CSRF、HMAC 服务端桥接、授权/连接/计划对照页面，并完成本地 HTTP/SQL 联调。原生与网页登录的实际 Apple 身份一致性、托管部署与域名仍待验收。动态客户端名称只作未认证显示文字，同时展示精确 client ID/redirect 目的地。
-3. 服务端机场/境内外地点查询、航班、路线与推荐适配。没有安装的查询明确 capability_unavailable，不能调用手机MapKit或健康数据充数。
-4. 附件/原图/封面实际ledger读取与导出生成器，保持账户同步和AI文件权限分离。当前clone默认不复制私有文件/照片/背景和预订凭据，完整私有复制不是默许能力。
-5. 全场景迁移、原生/网页同账户、手机关闭与两设备、失败恢复/撤销、两轮整体验收和Review。原生 `carry://packing/{id}` 现可明确打开打包；通用 `carry://trip/{id}` 保持上次显示页面，本组件不声称能强制打开行程脸或已打开手机。
+现有 Supabase service 项目已准备 `scripts/carry-account-service/supabase/functions/carry-ai/index.ts`，导入本目录的 `edge-entry.ts`；函数自己的 `deno.json` 显式将 `tz-lookup` 映射到固定版本 `npm:tz-lookup@6.1.25`。`supabase/config.toml` 已指定该 entrypoint/import_map，并设置 `verify_jwt=false`，由新协议自行验证 OAuth bearer 和第一方 owner proof，而非使用原生 JWT 网关。功能仍以 `ACCOUNT_AI_ENABLED` 默认关闭；配置准备不会自动部署或开启服务。
+
+从实际 service 项目根、使用该函数 import map 的 Deno check 已通过。此证据覆盖本地模块解析，不能代替托管打包上传、真实凭据、生产网络或设备验收。
+
+## 外部门禁
+
+1. 托管部署 SQL 共享核心及私有导出记录迁移（`20261031013432_account_ai_shared_graph_core.sql`、`20261031145924_account_ai_private_exports.sql`），配置真实连接池、owner bridge secret、服务端查询凭据、域名和运行时；当前均未由本组件自动部署。`postgres-schema.sql` 是结构参考，运行时 Graph/回执使用同一事务连接，不创建原生 auth.sessions。
+2. 用真实 Apple 身份核验原生与网页同账户、连接授权/撤销，以及托管私有 Storage 的 Range、不可变 version、较大文件时延和取消行为。本地 provider 合成测试不能代替这些验收。
+3. 完成原生旧行程迁移、手机关闭、两设备同步、失败恢复/撤销的整体验收。原生 `carry://packing/{id}` 可明确打开打包；通用 `carry://trip/{id}` 保持上次显示页面，返回 `deviceState:not_observed` 不代表已验证手机界面。
+4. 配置托管过期记录维护任务；当前实现已包含导出记录清理，但未在托管环境调度。clone继续默认排除私有文件/照片/背景及预订凭据。
 
 ## 本地验证
 
 Node24；Graph manifest 复用账户服务，SQL 测试依赖固定版本的 PGlite，运行前在本目录执行 `npm ci --ignore-scripts`。网页集成测试还需在相邻 `carry-account-web` 目录安装其锁定依赖。运行 `npm test`。生产 Deno 入口的 pg/jose 使用显式固定版本，不把 Node 测试依赖打入应用。
 
 `synthetic-store.mjs` 是明确非持久的测试夹具，handler必须显式 `synthetic:true` 才接受。不能将其赋值 durability=transactional 冒充生产实现。`http.test.mjs` 在临时loopback端口建立真实HTTP边界，完成注册、授权、PKCE、账户写入/读回、撤销；无手机或任何上游网络/真实账户/私人文件。它证明协议运行路径，不能证明真实PostgreSQL持久化、Apple身份、托管接口或生产分发。
+
+最近同版本地全套两轮均为96/96；账户网站23/23。`files-exports.test.mjs` 运行真实本地SQL迁移、ledger和provider协议，并产出纯合成原生备份契约夹具；该输出已用当前 Swift CarryBackup DTO + `.iso8601` 解码验证。旧 loopback 协议夹具、真实SQL测试、原生解码和托管/设备验收分别提供不同证据。
 
 安全审查修正记录：
 
@@ -44,3 +54,6 @@ PostgreSQL 适配器验证：`postgres-store.test.mjs` 使用真实 PGlite SQL�
 
 
 共享 core 审查修正：AI restore 的 deletionBatch 是用户预览绑定，需在锁内与真实当前批次一致后剥离，传给既有 Graph 字段白名单。Native wrapper 的 session 检查保持独立；AI 账户执行不依赖原生 session 是否仍活跃。已接受的 commit 在预览过期后的重试、已接受的 undo 重试均先核对不可变回执，不重新编译旧草稿。随机未知路径统一限流分组，防止通过变路径制造无界 SQL bucket。
+
+- 交叉Review补齐导出普通JSON metadata的逐块授权、撤销后首次读取零敏感字节、行程授权范围缩小，以及挂起provider读取时立即取消；不只检查附件字节。
+- 地点国内分支按CN/HK/MO分别核验坐标地理时区，避免把上海地点发布为HK国家；查询UUID统一大小写，多目的地打包推荐读取结构化次目的地，港澳与其他国际目的地混合保留护照。

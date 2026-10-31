@@ -319,7 +319,7 @@ struct SuggestionPreviewView: View {
             bundle.safeSections.flatMap { $0.items ?? [] }.map { $0.name.lowercased() }
         )
         let myItemLower = Set(
-            store.myItems.map { canonicalItemName($0.name).lowercased() }
+            store.visibleMyItems.map { canonicalItemName($0.name).lowercased() }
         )
         let excludedLower = existingLower.union(myItemLower)
 

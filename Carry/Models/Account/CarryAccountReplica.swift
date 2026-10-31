@@ -33,6 +33,7 @@ final class CarryReplicaCheckpoint {
     var flightID: UUID? = nil
     var failureData: Data?
     var blocked: Bool
+    var localRecoveryNamespace: UUID? = nil
     var relationshipMetadataVersion: Int = 0
     var revision: Int64 = 0
     var abandonedRequests: [UUID] = []
@@ -120,9 +121,14 @@ final class CarryAccountReplica {
     private var cachedFlight: CarryReplicaFlight?
     private var mutationIndex: (requestID: UUID, values: [UUID: CarryGraphMutation])?
 
+    static var schema: Schema {
+        Schema(SchemaV1.models + [CarryReplicaRecord.self, CarryReplicaCheckpoint.self, CarryReplicaReceiptCheckpoint.self]
+            + CarryNativeChangeJournal.models + CarryAccountAssetQueue.models + CarryNativeGraphProjector.models
+            + CarryAccountTripMigration.models + CarryAccountMigrationOwnership.models + CarryAccountLocalAdoption.models)
+    }
+
     static func container(at url: URL) throws -> ModelContainer {
-        let schema = Schema(SchemaV1.models + [CarryReplicaRecord.self, CarryReplicaCheckpoint.self, CarryReplicaReceiptCheckpoint.self]
-            + CarryNativeChangeJournal.models + CarryAccountAssetQueue.models + CarryNativeGraphProjector.models)
+        let schema = Self.schema
         return try ModelContainer(for: schema, configurations: [
             ModelConfiguration(schema: schema, url: url, cloudKitDatabase: .none)
         ])
@@ -235,6 +241,31 @@ final class CarryAccountReplica {
     func projectionSnapshot() throws -> [CarryNativeProjectionEntity] {
         guard try deletionConflicts().isEmpty else { throw CarryReplicaFailure.blocked }
         return try rows().map { let value = try payload($0); return CarryNativeProjectionEntity(local: value.local, observed: value.remote) }
+    }
+
+    /// Review one native root without decoding unrelated account payloads.
+    /// Both indexed parent relations are traversed so an unsent move cannot
+    /// conceal a child from the later exact local/observed equality check.
+    func projectionSnapshot(rootID: UUID) throws -> [CarryNativeProjectionEntity] {
+        guard try deletionConflicts().isEmpty, let root = try row(id: rootID) else { throw CarryReplicaFailure.blocked }
+        var selected: [UUID: CarryReplicaRecord] = [rootID: root], pending = [rootID]
+        while !pending.isEmpty {
+            try Task.checkCancellation()
+            let count = min(256, pending.count)
+            let parents: [UUID?] = pending.prefix(count).map { Optional($0) }
+            pending.removeFirst(count)
+            let query = FetchDescriptor<CarryReplicaRecord>(predicate: #Predicate {
+                parents.contains($0.localParentID) || parents.contains($0.remoteParentID)
+            })
+            for record in try context.fetch(query) where selected[record.id] == nil {
+                selected[record.id] = record; pending.append(record.id)
+            }
+            guard selected.count <= 20000 else { throw CarryReplicaFailure.invalidState }
+        }
+        return try selected.values.map {
+            let value = try payload($0)
+            return CarryNativeProjectionEntity(local: value.local, observed: value.remote)
+        }
     }
 
     /// Snapshot only immutable Data while on the persistence actor. Decoding

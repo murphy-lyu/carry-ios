@@ -1,4 +1,6 @@
 import { createAccountAIHandler } from "./worker.mjs";
+import { createAccountQueries } from "./queries.mjs";
+import { createAccountAssets } from "./assets.mjs";
 import { postgresStore } from "./postgres-store.mjs";
 import { postgresDriver } from "./postgres-driver.mjs";
 import { postgresGraphCore } from "./postgres-graph-core.mjs";
@@ -14,7 +16,7 @@ export function createAccountAIRuntime({
   jose,
   configuration,
   fetcher = fetch,
-  queries = {},
+  queries = null,
   trustedAddress = () => null,
   now = Date.now,
 }) {
@@ -23,7 +25,11 @@ export function createAccountAIRuntime({
   if (!ownerBridgeSecret) throw new Error("missing_owner_bridge_secret");
   const driver = postgresDriver(pool, { role: "service_role" }),
     core = postgresGraphCore(),
-    store = postgresStore({ driver, core });
+    store = postgresStore({
+      driver,
+      core,
+      assets: createAccountAssets({ projectURL, serviceKey, fetcher }),
+    });
   const identity = createGraphAdapter({
     configuration: { projectURL, serviceKey },
     jose,
@@ -61,7 +67,12 @@ export function createAccountAIRuntime({
     firstParty,
     origin,
     accountOrigin,
-    queries,
+    queries:
+      queries ??
+      createAccountQueries({
+        fetcher,
+        configuration: configuration.queries ?? {},
+      }),
     trustedAddress,
     now,
   });
