@@ -94,7 +94,7 @@ test('cross-origin start and mismatched form CSRF make no identity request', asy
   const f = setup();
   const login = await f.handler(request('/login'), env);
   const text = await login.text(), csrf = /name="csrf" value="([^"]+)"/.exec(text)[1];
-  for (const values of [{ csrf: 'wrong' }, { csrf, originHeader: 'https://evil.invalid' }]) {
+  for (const values of [{ csrf: 'wrong' }, { csrf, originHeader: 'null' }, { csrf, originHeader: 'https://evil.invalid' }]) {
     const result = await f.handler(request('/auth/apple/start', { cookie: cookies(login),
       body: { csrf: values.csrf }, originHeader: values.originHeader ?? origin }), env);
     assert.equal(result.status, 403);
@@ -194,12 +194,12 @@ test('stream limits and duplicate form parameters cannot bypass rejection', asyn
   await assert.rejects(boundedBytes(stream, 128), { status: 413 });
   assert.equal(f.calls.length, 0);
 });
-test('HTML escapes profile text and all responses forbid cache/frame/referrer exposure', async () => {
+test('HTML escapes profile text and forbids cache/frames/cross-origin referrer exposure', async () => {
   const f = setup({ previous: { ...user, user_metadata: { full_name: '<script>private</script>' } } });
   const result = await f.handler(request('/'), env);
   assert.match(result.headers.get('Cache-Control'), /no-store/);
   assert.match(result.headers.get('Content-Security-Policy'), /frame-ancestors 'none'/);
-  assert.equal(result.headers.get('Referrer-Policy'), 'no-referrer');
+  assert.equal(result.headers.get('Referrer-Policy'), 'same-origin');
   assert.match(await result.text(), /&lt;script&gt;private&lt;\/script&gt;/);
 });
 

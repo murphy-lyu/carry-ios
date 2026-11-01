@@ -3,6 +3,11 @@
 ## 最后更新
 2026-11-01
 
+## 当前修复（网页 Apple 登录发起失败 · 2026-11-01）
+
+- 修正页面 no-referrer 导致浏览器表单 Origin=null 与 CSRF 来源校验冲突；统一使用 same-origin，跨站不泄露 Referer，null/恶意来源继续拒绝。
+- 两轮网站23/23、workerd检查通过；已部署并在线核对新表单正确来源303到Apple、null来源403。真实网页登录完成及同账户回调仍待验收，AI入口保持关闭。详见 `carry-account-email-deletion-qa-2026-11-01.md`。
+
 ## 当前改动（账户 AI 公共网关 · 2026-11-01）
 
 - 新旧协议分流已实现：账户路径固定转发 carry-dev，新 MCP 不向旧 relay 回退；精确旧凭据、设备路径和 Durable Object 保留。默认门禁关闭，未进行公共域名切换。

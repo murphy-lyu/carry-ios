@@ -6,6 +6,9 @@ const mf = await fixtureRuntime();
 try {
   const login = await mf.dispatchFetch(origin + '/login', { headers: { 'Accept-Language': 'zh-CN' } });
   assert.equal(login.status, 200);
+  // Fetch Standard: navigate-mode POST with no-referrer serializes Origin as
+  // null. Keep a same-origin policy so the real HTML form passes exact CSRF.
+  assert.equal(login.headers.get('Referrer-Policy'), 'same-origin');
   const html = await login.text();
   assert.ok(html.includes('登录启程'));
   const csrf = /name="csrf" value="([^"]+)"/.exec(html)[1];

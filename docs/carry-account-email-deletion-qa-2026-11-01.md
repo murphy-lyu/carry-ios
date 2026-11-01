@@ -34,3 +34,11 @@
 ## Apple 通知中的应用名称
 
 Apple Developer 原生 App ID（`app.nevestudio.carry`）的 Description 原为 `XC app nevestudio carry`，与用户撤销通知一致。已改为 `Carry` 并保存，重新读取标识列表确认名称与 Bundle ID 对应正确。保存前后逐项比较 capability 控件，值完全一致；未修改 Bundle ID、能力、签名或 App Store 本地化名称。历史邮件不会更新，新生成通知的最终显示仍待 Apple 实际通知验证，未为此再次撤销用户授权。
+
+## 网页发起 Apple 登录失败
+
+用户截图停在 `/auth/apple/start`，尚未进入 Apple。代码中的 `Referrer-Policy: no-referrer` 与精确 Origin 的 CSRF 校验冲突：Fetch Standard 的非 CORS 表单 POST 会按此策略将 Origin 设为 `null`。原测试手工提供正确 Origin，未覆盖真实浏览器的来源策略行为。参见 https://fetch.spec.whatwg.org/#append-a-request-origin-header 。
+
+页面策略改为 `same-origin`，保留同站来源，跨站 Apple/第三方不发送 Referer；不接受 null Origin、不放宽 CSRF 或 Cookie。原生、注销和 AI 表单共用的响应头一并修复。两轮网站各23/23，workerd四项检查通过，并增加策略断言及 null Origin 拒绝回归。
+
+已发布账户网站版本 `cf93274f-c40c-43f1-bd18-20c0d12843bf`，AI 入口仍关闭。线上新取表单与 Cookie 后，null Origin 返回403 `origin_mismatch`；正确同站 Origin 返回303且目标为 `appleid.apple.com`。这只证明发起步骤，用户真实 Apple 网页回调仍需验收。本机直连探针最初超时，改用 Node24 的系统代理环境后完成检查，未改网络设置或 TLS 验证。

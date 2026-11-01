@@ -26,7 +26,10 @@ function settings(env) {
 function baseHeaders() {
   return new Headers({ 'Cache-Control': 'private, no-store, max-age=0', Pragma: 'no-cache', Expires: '0',
     'Content-Security-Policy': "default-src 'none'; style-src 'self'; img-src https://appleid.cdn-apple.com; form-action 'self' https://appleid.apple.com; frame-ancestors 'none'; base-uri 'none'",
-    'X-Content-Type-Options': 'nosniff', 'Referrer-Policy': 'no-referrer',
+    // Native HTML form POST uses navigate mode: no-referrer turns its Origin
+    // into "null", breaking our exact-origin CSRF gate. same-origin preserves
+    // that origin locally while still suppressing referrers to Apple/clients.
+    'X-Content-Type-Options': 'nosniff', 'Referrer-Policy': 'same-origin',
     'Permissions-Policy': 'camera=(), microphone=(), geolocation=()',
     'Strict-Transport-Security': 'max-age=31536000', Vary: 'Cookie, Accept-Language' });
 }
