@@ -77,10 +77,10 @@ final class CarryAccountImportService {
 }
 
 nonisolated enum CarryAccountAttachmentPreview {
-    /// Quick Look receives an extension-bearing private alias, while graph and
-    /// cache identity retain the immutable .blob token. The alias lease removes
-    /// only its own link/copy; it never deletes the original cache snapshot.
-    static func prepare(url: URL, ext: String) async throws -> PreparedAttachmentImport {
+    /// Quick Look receives an extension-bearing private copy, while graph and
+    /// cache identity retain the immutable .blob token. A preview can be opened
+    /// in an editor, so never hard-link it to the immutable account snapshot.
+    static func prepare(url: URL, ext: String, displayName: String = "") async throws -> PreparedAttachmentImport {
         let work = Task.detached(priority: .utility) {
             let token = try CarryAccountAssetToken(rawValue: url.lastPathComponent)
             let info = try url.resourceValues(forKeys: [.isRegularFileKey, .isSymbolicLinkKey, .fileSizeKey])
@@ -93,12 +93,28 @@ nonisolated enum CarryAccountAttachmentPreview {
             }
             let folder = FileManager.default.temporaryDirectory.appendingPathComponent("CarryAccountPreviews", isDirectory: true)
                 .appendingPathComponent(token.accountID.uuidString.lowercased(), isDirectory: true)
+                .appendingPathComponent(UUID().uuidString, isDirectory: true)
             try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true,
                 attributes: [.posixPermissions: 0o700])
-            let alias = folder.appendingPathComponent(UUID().uuidString + "." + safe)
-            do { try FileManager.default.linkItem(at: url, to: alias) }
-            catch { try FileManager.default.copyItem(at: url, to: alias) }
-            let result = PreparedAttachmentImport(fileURL: alias, thumbnailData: Data(), displayName: "", ext: safe, isPhoto: false)
+            var transferredOwnership = false
+            defer {
+                if !transferredOwnership {
+                    do { try FileManager.default.removeItem(at: folder) }
+                    catch { Task { @MainActor in CarryLogger.shared.log(.attachmentDeleteFailed, context: "preview_prepare_cleanup") } }
+                }
+            }
+            // Quick Look uses the leaf as its title. Keep identity in a unique
+            // private directory and expose only a bounded, path-safe display name.
+            var name = String(displayName.prefix(120))
+                .components(separatedBy: .controlCharacters.union(CharacterSet(charactersIn: "/\\:")))
+                .joined(separator: "_").trimmingCharacters(in: CharacterSet(charactersIn: ". "))
+            while name.utf8.count > 180 { name.removeLast() }
+            if name.isEmpty { name = "Attachment" }
+            if (name as NSString).pathExtension.lowercased() != safe { name += "." + safe }
+            let alias = folder.appendingPathComponent(name, isDirectory: false)
+            try FileManager.default.copyItem(at: url, to: alias)
+            let result = PreparedAttachmentImport(fileURL: alias, thumbnailData: Data(), displayName: displayName, ext: safe, isPhoto: false, ownedDirectory: folder)
+            transferredOwnership = true
             try Task.checkCancellation()
             return result
         }

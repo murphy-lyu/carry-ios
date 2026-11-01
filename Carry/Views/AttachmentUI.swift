@@ -545,11 +545,11 @@ struct AttachmentDetailCard: View {
             let source = AttachmentStore.fileURL(named: att.fileName)
             if CarryAccountFileAccess.isAccountReference(att.fileName) {
                 previewTask?.cancel()
-                let request = UUID(), ext = att.utiOrExt
+                let request = UUID(), ext = att.utiOrExt, displayName = att.resolvedName
                 previewRequest = request
                 previewTask = Task {
                     do {
-                        let alias = try await CarryAccountAttachmentPreview.prepare(url: source, ext: ext)
+                        let alias = try await CarryAccountAttachmentPreview.prepare(url: source, ext: ext, displayName: displayName)
                         guard !Task.isCancelled, previewRequest == request else { try await alias.discard(); return }
                         previewLease = alias; previewURL = alias.fileURL
                     } catch is CancellationError {} catch { CarryLogger.shared.log(.attachmentSaveFailed, context: "account_preview") }

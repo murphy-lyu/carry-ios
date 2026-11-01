@@ -54,6 +54,9 @@ struct CarryAccountSyncStatusView: View {
         do {
             try workspace.replica.resolveDeletion(conflict, restore: restore)
             try loadConflicts(); review = nil
+            // The reviewed resolution creates durable pending work. Resume the
+            // normal controller pipeline without requiring another Sync tap.
+            retry()
         } catch { failed = true; review = nil }
     }
     private func reviewSheet(_ conflict: CarryGraphDeletionConflict) -> some View {

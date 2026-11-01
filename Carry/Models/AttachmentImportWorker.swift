@@ -16,14 +16,16 @@ nonisolated final class PreparedAttachmentImport: Sendable {
     let isPhoto: Bool
     let entityID: UUID?
     private let ownsPhysicalFile: Bool
+    private let ownedRemovalURL: URL
     private let release: (@Sendable () -> Void)?
     private let owned = OSAllocatedUnfairLock(initialState: true)
 
     init(fileURL: URL, thumbnailData: Data, displayName: String, ext: String, isPhoto: Bool,
-         entityID: UUID? = nil, ownsPhysicalFile: Bool = true, release: (@Sendable () -> Void)? = nil) {
+         entityID: UUID? = nil, ownsPhysicalFile: Bool = true, ownedDirectory: URL? = nil, release: (@Sendable () -> Void)? = nil) {
         self.fileURL = fileURL; self.thumbnailData = thumbnailData
         self.displayName = displayName; self.ext = ext; self.isPhoto = isPhoto
         self.entityID = entityID; self.ownsPhysicalFile = ownsPhysicalFile; self.release = release
+        self.ownedRemovalURL = ownedDirectory ?? fileURL
     }
 
     func adopt() {
@@ -33,7 +35,7 @@ nonisolated final class PreparedAttachmentImport: Sendable {
     func discard() async throws {
         guard owned.withLock({ value in let result = value; value = false; return result }) else { return }
         if !ownsPhysicalFile { release?(); return }
-        let url = fileURL
+        let url = ownedRemovalURL
         do { try await Task.detached(priority: .utility) { try FileManager.default.removeItem(at: url) }.value }
         catch {
             // Keep the fallback armed if explicit cleanup could not complete.
@@ -45,7 +47,7 @@ nonisolated final class PreparedAttachmentImport: Sendable {
     deinit {
         guard owned.withLock({ $0 }) else { return }
         if !ownsPhysicalFile { release?(); return }
-        let url = fileURL
+        let url = ownedRemovalURL
         DispatchQueue.global(qos: .utility).async {
             do { try FileManager.default.removeItem(at: url) }
             catch {

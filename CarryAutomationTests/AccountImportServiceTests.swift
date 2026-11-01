@@ -41,6 +41,41 @@ final class AccountImportServiceTests: XCTestCase {
         XCTAssertEqual(try Data(contentsOf: original), bytes)
     }
 
+    func testPreviewPreservesDisplayNameWithIsolatedSafePathsAndCleanup() async throws {
+        let root = FileManager.default.temporaryDirectory.appendingPathComponent("NamedPreview-\(UUID())")
+        let cache = try CarryAccountAssetCache(root: root, accountID: UUID())
+        let bytes = Data("Synthetic preview".utf8)
+        let snapshot = try await cache.snapshot(data: bytes, entityID: UUID(), slot: "file")
+        let original = try await cache.verify(snapshot)
+        let first = try await CarryAccountAttachmentPreview.prepare(url: original, ext: "txt", displayName: "旅行安排.txt")
+        let second = try await CarryAccountAttachmentPreview.prepare(url: original, ext: "txt", displayName: "旅行安排.txt")
+        XCTAssertEqual(first.fileURL.lastPathComponent, "旅行安排.txt")
+        XCTAssertNotEqual(first.fileURL, second.fileURL)
+        XCTAssertEqual(try Data(contentsOf: first.fileURL), bytes)
+        // Quick Look may hand its URL to an editor; changing the temporary
+        // preview must never mutate the immutable account cache or other leases.
+        try FileManager.default.setAttributes([.posixPermissions: 0o600], ofItemAtPath: first.fileURL.path)
+        let editor = try FileHandle(forWritingTo: first.fileURL)
+        try editor.truncate(atOffset: 0)
+        try editor.write(contentsOf: Data("Edited preview only".utf8))
+        try editor.close()
+        XCTAssertEqual(try Data(contentsOf: original), bytes)
+        XCTAssertEqual(try Data(contentsOf: second.fileURL), bytes)
+        let directory = first.fileURL.deletingLastPathComponent()
+        try await first.discard()
+        XCTAssertFalse(FileManager.default.fileExists(atPath: directory.path))
+        XCTAssertEqual(try Data(contentsOf: second.fileURL), bytes)
+        let unsafe = try await CarryAccountAttachmentPreview.prepare(url: original, ext: "txt", displayName: "../a/b\\c:\n" + String(repeating: "旅", count: 200))
+        XCTAssertFalse(unsafe.fileURL.lastPathComponent.contains("/"))
+        XCTAssertFalse(unsafe.fileURL.lastPathComponent.contains("\\"))
+        XCTAssertFalse(unsafe.fileURL.lastPathComponent.contains("\n"))
+        XCTAssertLessThanOrEqual(unsafe.fileURL.lastPathComponent.utf8.count, 184)
+        XCTAssertEqual(unsafe.fileURL.deletingLastPathComponent().deletingLastPathComponent(), second.fileURL.deletingLastPathComponent().deletingLastPathComponent())
+        try await unsafe.discard()
+        try await second.discard()
+        XCTAssertEqual(try Data(contentsOf: original), bytes)
+    }
+
     func testClosedImporterAndWrongAccountLeaseCannotPublishNewFiles() async throws {
         let root = FileManager.default.temporaryDirectory.appendingPathComponent("AccountImportClosed-\(UUID())")
         let account = UUID(), access = CarryAccountFileAccess(), lease = try access.begin(accountID: UUID())
