@@ -16,6 +16,7 @@ struct PhotoTripImportView: View {
     let tripId: UUID
     @EnvironmentObject var store: TripStore
     @Environment(\.dismiss) private var dismiss
+    @StateObject private var nativeEditors = CarryNativeEditorPresentations()
 
     private enum Phase: Equatable { case intro, processing, review, empty }
     @State private var phase: Phase = .intro
@@ -26,7 +27,6 @@ struct PhotoTripImportView: View {
     @State private var totalCount = 0
     @State private var processedThumbnails: [Data?] = []   // 已读到的缩略图，加载态逐张浮现
     @State private var processingTask: Task<Void, Never>?
-    @State private var showStorageError = false
 
     private var bundle: TripBundle? { store.trips.first { $0.id == tripId } }
 
@@ -59,9 +59,7 @@ struct PhotoTripImportView: View {
                 process(items: items)
             }
             .onDisappear { processingTask?.cancel() }   // 下滑关闭也停掉后台解析
-            .alert("account.error.storage", isPresented: $showStorageError) {
-                Button("common.ok", role: .cancel) {}
-            }
+            .nativeEditorErrors(nativeEditors)
         }
     }
 
@@ -192,18 +190,20 @@ struct PhotoTripImportView: View {
     }
 
     private func process(items: [PhotosPickerItem]) {
+        guard nativeEditors.save(store: store, {}) else { return }
         guard let bundle else { return }
         guard !items.isEmpty else { return }
         let depart = bundle.departureDate
         let ret = Calendar.current.date(byAdding: .day, value: bundle.days, to: bundle.departureDate) ?? bundle.departureDate
         let china = isChinaStorefront
+        let importingStore = store
         processedCount = 0
         totalCount = items.count
         processedThumbnails = []
         phase = .processing
         CarryLogger.shared.log(.photoImportStarted, context: "selected=\(items.count)")
         processingTask = Task {
-            let importer = store.assetImporter
+            let importer = importingStore.assetImporter
             let prepareOriginal: (@Sendable (UUID, Data) async throws -> PreparedAttachmentImport)?
             if let importer {
                 prepareOriginal = { @Sendable id, data in try await importer.originalPhoto(data: data, entityID: id) }
@@ -221,7 +221,8 @@ struct PhotoTripImportView: View {
             } catch is CancellationError { return }
             catch {
                 guard !Task.isCancelled else { return }
-                phase = .intro; showStorageError = true
+                phase = .intro
+                nativeEditors.fail(busy: false)
                 CarryLogger.shared.log(.photoImportFailed, context: "account_original_prepare")
                 return
             }
@@ -273,8 +274,12 @@ struct PhotoTripImportView: View {
     }
 
     private func save() {
-        if store.importItineraryFromPhotos(tripId: tripId, draft: draft) { dismiss() }
-        else { showStorageError = true }
+        var imported = false
+        let saved = nativeEditors.save(store: store) {
+            imported = store.importItineraryFromPhotos(tripId: tripId, draft: draft)
+        }
+        if saved, imported { dismiss() }
+        else if saved { nativeEditors.fail(busy: false) }
     }
 
     private func cancel() {

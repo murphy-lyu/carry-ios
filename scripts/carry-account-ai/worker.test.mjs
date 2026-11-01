@@ -321,6 +321,22 @@ test("scope escalation, unowned trips and invalid only-created selection fail", 
     );
   assert.equal(f.store.db.grants.size, 0);
 });
+test("Codex refresh omits resource and repeats the original scope without broadening it", async () => {
+  const f = await fixture(), s = await f.connect();
+  const refresh = (extra = {}) => f.handler(new Request(origin + "/oauth/token", {
+    method: "POST", headers: { "Content-Type": "application/x-www-form-urlencoded" },
+    body: new URLSearchParams({ grant_type: "refresh_token", client_id: f.client,
+      refresh_token: s.refresh_token, scope: s.scope, ...extra }),
+  }));
+  assert.equal((await refresh({resource:origin+'/wrong'})).status,400);
+  assert.equal((await refresh({scope:'trips:read library:read'})).status,400);
+  assert.equal((await refresh({scope:'trips:read'})).status,400);
+  const response = await refresh();
+  assert.equal(response.status,200);
+  const next = await response.json();
+  assert.equal(next.scope,s.scope);
+  assert.equal((await f.tool(next.access_token,'list_trips')).response.status,200);
+});
 test("refresh rotates once and reuse revokes old and replacement access tokens", async () => {
   const f = await fixture(),
     s = await f.connect();
@@ -405,6 +421,27 @@ test("only-created connection binds new complete trip atomically without exposin
     (await f.tool(s.access_token, "get_trip", { tripID })).response.status,
     403,
   );
+});
+test("Codex MCP transport metadata is bounded and cannot grant access to existing trips", async () => {
+  const f = await fixture(), s = await f.connect({ onlyCreated: true, tripIDs: [] });
+  const call = async (meta, name = "list_trips", args = {}) => {
+    const r = await f.handler(f.req("/mcp", {
+      method: "POST", token: s.access_token,
+      body: { jsonrpc: "2.0", id: 42, method: "tools/call",
+        params: { name, arguments: args, _meta: meta } },
+    }));
+    return { status: r.status, body: await r.json() };
+  };
+  const meta = { threadId: "synthetic-codex-thread", progressToken: 0,
+    scopes: ["trips:read"], tripIDs: [tripID], onlyCreated: false,
+    accountID: "spoofed-account" };
+  const list = await call(meta);
+  assert.equal(list.status, 200);
+  assert.deepEqual(list.body.result.structuredContent.entities, []);
+  assert.equal((await call(meta, "get_trip", { tripID })).status, 403);
+  for (const invalid of [null, [], "metadata", Object.fromEntries(Array.from({length:65},(_,i)=>[String(i),0])), {x:"x".repeat(16384)}]) {
+    assert.equal((await call(invalid)).status, 400);
+  }
 });
 test("ordinary account writes are exactly once without any phone, with changed reuse rejected", async () => {
   const f = await fixture(),

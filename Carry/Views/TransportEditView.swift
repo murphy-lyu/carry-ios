@@ -33,6 +33,9 @@ struct TransportEditView: View {
     @Environment(\.dismiss) private var dismiss
 
     // 表单状态
+    @Environment(\.nativeEditorOwner) private var inheritedNativeEditorOwner
+    @Environment(\.nativeEditorGroup) private var inheritedNativeEditorGroup
+    @StateObject private var nativeEditors = CarryNativeEditorPresentations()
     @State private var mode: TransportMode = .flight
     @State private var carrier = ""
     @State private var number = ""
@@ -146,7 +149,7 @@ struct TransportEditView: View {
                         .disabled(!canSave)
                 }
             }
-            .sheet(item: $activeSheet) { sheet in
+            .nativeEditorSheet(item: $activeSheet, presentations: nativeEditors) { sheet in
                 switch sheet {
                 case .search(let isFrom):
                     // 航班：走内置机场数据库（全球可搜 + 回填 IATA / 时区）；
@@ -198,6 +201,7 @@ struct TransportEditView: View {
                         showZone: zoneRowVisible(zoneId: isFrom ? fromTimeZoneId : toTimeZoneId))
                 }
             }
+            .nativeEditorErrors(nativeEditors)
             .onAppear(perform: loadIfNeeded)
     }
 
@@ -830,54 +834,56 @@ struct TransportEditView: View {
         let savedFromAddress = mode == .flight ? "" : fromAddress
         let savedToAddressFinal = mode == .flight ? "" : savedToAddress
 
-        if let segmentId {
-            store.updateTransportSegment(
-                tripId: tripId, segmentId: segmentId,
-                mode: mode, carrier: carrier, number: savedNumber,
-                fromName: fromName, fromCode: savedFromCode,
-                fromLatitude: fromLatitude, fromLongitude: fromLongitude,
-                fromTimeZoneId: savedFromTZ, fromTerminal: savedFromTerminal,
-                fromAddress: savedFromAddress,
-                toName: savedToName, toCode: savedToCode,
-                toLatitude: savedToLat, toLongitude: savedToLon,
-                toTimeZoneId: savedToTZ, toTerminal: savedToTerminal,
-                toAddress: savedToAddressFinal,
-                departDayOrder: departDayOrder, departLocalMinutes: departMinutes,
-                arriveDayOrder: safeArriveDay, arriveLocalMinutes: arriveMinutes,
-                seat: savedSeat, confirmationCode: confirmationCode, eticketNumber: savedEticket,
-                routeName: savedRouteName, coachNumber: savedCoach, seatClass: savedSeatClass, serviceType: savedServiceType,
-                note: note,
-                aircraftType: savedAircraft, cabinClass: savedCabin, distanceMeters: savedDistance, durationMinutes: savedDuration,
-                vehicleModel: savedVehicleModel, licensePlate: savedLicensePlate, phone: savedPhone
-            )
-            store.setTransportCost(tripId: tripId, segmentId: segmentId,
-                                   amount: costAmountValue, currencyCode: costCurrencyToSave)
-        } else if let dayId {
-            if let newId = store.addTransportSegment(
-                tripId: tripId, dayId: dayId,
-                mode: mode, carrier: carrier, number: savedNumber,
-                fromName: fromName, fromCode: savedFromCode,
-                fromLatitude: fromLatitude, fromLongitude: fromLongitude,
-                fromTimeZoneId: savedFromTZ, fromTerminal: savedFromTerminal,
-                fromAddress: savedFromAddress,
-                toName: savedToName, toCode: savedToCode,
-                toLatitude: savedToLat, toLongitude: savedToLon,
-                toTimeZoneId: savedToTZ, toTerminal: savedToTerminal,
-                toAddress: savedToAddressFinal,
-                departDayOrder: departDayOrder, departLocalMinutes: departMinutes,
-                arriveDayOrder: safeArriveDay, arriveLocalMinutes: arriveMinutes,
-                seat: savedSeat, confirmationCode: confirmationCode, eticketNumber: savedEticket,
-                routeName: savedRouteName, coachNumber: savedCoach, seatClass: savedSeatClass, serviceType: savedServiceType,
-                note: note,
-                aircraftType: savedAircraft, cabinClass: savedCabin, distanceMeters: savedDistance, durationMinutes: savedDuration,
-                vehicleModel: savedVehicleModel, licensePlate: savedLicensePlate, phone: savedPhone
-            ) {
-                store.setTransportCost(tripId: tripId, segmentId: newId,
+        guard nativeEditors.save(store: store, {
+            if let segmentId {
+                store.updateTransportSegment(
+                    tripId: tripId, segmentId: segmentId,
+                    mode: mode, carrier: carrier, number: savedNumber,
+                    fromName: fromName, fromCode: savedFromCode,
+                    fromLatitude: fromLatitude, fromLongitude: fromLongitude,
+                    fromTimeZoneId: savedFromTZ, fromTerminal: savedFromTerminal,
+                    fromAddress: savedFromAddress,
+                    toName: savedToName, toCode: savedToCode,
+                    toLatitude: savedToLat, toLongitude: savedToLon,
+                    toTimeZoneId: savedToTZ, toTerminal: savedToTerminal,
+                    toAddress: savedToAddressFinal,
+                    departDayOrder: departDayOrder, departLocalMinutes: departMinutes,
+                    arriveDayOrder: safeArriveDay, arriveLocalMinutes: arriveMinutes,
+                    seat: savedSeat, confirmationCode: confirmationCode, eticketNumber: savedEticket,
+                    routeName: savedRouteName, coachNumber: savedCoach, seatClass: savedSeatClass, serviceType: savedServiceType,
+                    note: note,
+                    aircraftType: savedAircraft, cabinClass: savedCabin, distanceMeters: savedDistance, durationMinutes: savedDuration,
+                    vehicleModel: savedVehicleModel, licensePlate: savedLicensePlate, phone: savedPhone
+                )
+                store.setTransportCost(tripId: tripId, segmentId: segmentId,
                                        amount: costAmountValue, currencyCode: costCurrencyToSave)
-                // 新建段：把缓冲的附件落到刚建好的段。
-                flushPendingAttachments(owner: .segment(newId))
+            } else if let dayId {
+                if let newId = store.addTransportSegment(
+                    tripId: tripId, dayId: dayId,
+                    mode: mode, carrier: carrier, number: savedNumber,
+                    fromName: fromName, fromCode: savedFromCode,
+                    fromLatitude: fromLatitude, fromLongitude: fromLongitude,
+                    fromTimeZoneId: savedFromTZ, fromTerminal: savedFromTerminal,
+                    fromAddress: savedFromAddress,
+                    toName: savedToName, toCode: savedToCode,
+                    toLatitude: savedToLat, toLongitude: savedToLon,
+                    toTimeZoneId: savedToTZ, toTerminal: savedToTerminal,
+                    toAddress: savedToAddressFinal,
+                    departDayOrder: departDayOrder, departLocalMinutes: departMinutes,
+                    arriveDayOrder: safeArriveDay, arriveLocalMinutes: arriveMinutes,
+                    seat: savedSeat, confirmationCode: confirmationCode, eticketNumber: savedEticket,
+                    routeName: savedRouteName, coachNumber: savedCoach, seatClass: savedSeatClass, serviceType: savedServiceType,
+                    note: note,
+                    aircraftType: savedAircraft, cabinClass: savedCabin, distanceMeters: savedDistance, durationMinutes: savedDuration,
+                    vehicleModel: savedVehicleModel, licensePlate: savedLicensePlate, phone: savedPhone
+                ) {
+                    store.setTransportCost(tripId: tripId, segmentId: newId,
+                                           amount: costAmountValue, currencyCode: costCurrencyToSave)
+                    // 新建段：把缓冲的附件落到刚建好的段。
+                    flushPendingAttachments(owner: .segment(newId))
+                }
             }
-        }
+        }) else { return }
         finish()
     }
 

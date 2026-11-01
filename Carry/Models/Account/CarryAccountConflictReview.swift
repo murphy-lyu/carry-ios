@@ -68,7 +68,7 @@ enum CarryAccountConflictPresentation {
         case .number(let number): return number.formatted()
         case .string(let text):
             if text.isEmpty { return empty }
-            if field == "departureDate" || field == "timestamp", let date = ISO8601DateFormatter().date(from: text) {
+            if field == "departureDate" || field == "timestamp", let date = CarryBackupDates.parse(text) {
                 return date.formatted(date: .abbreviated, time: .omitted)
             }
             // A UUID string in a generic field is an opaque identifier, too.

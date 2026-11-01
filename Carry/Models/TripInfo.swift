@@ -71,7 +71,8 @@ struct TripInfo: Hashable {
     }
 
     var durationDays: Int {
-        max(1, Calendar.current.dateComponents([.day], from: departureDate, to: returnDate).day ?? 1)
+        // Stored days are elapsed calendar days (nights); a same-day trip is 0.
+        max(0, Calendar.current.dateComponents([.day], from: departureDate, to: returnDate).day ?? 0)
     }
 
     var dateRangeDisplay: String {

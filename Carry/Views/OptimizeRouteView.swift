@@ -21,6 +21,9 @@ struct OptimizeRouteView: View {
     @AppStorage("distance_unit") private var distanceUnitRaw = DistanceUnit.automatic.rawValue
     private var distanceUnit: DistanceUnit { DistanceUnit(rawValue: distanceUnitRaw) ?? .automatic }
 
+    @Environment(\.nativeEditorOwner) private var inheritedNativeEditorOwner
+    @Environment(\.nativeEditorGroup) private var inheritedNativeEditorGroup
+    @StateObject private var nativeEditors = CarryNativeEditorPresentations()
     @State private var result: RouteOptimizer.Result?
     @State private var didCompute = false
 
@@ -68,6 +71,7 @@ struct OptimizeRouteView: View {
                 }
             }
         }
+        .nativeEditorErrors(nativeEditors)
         .task {
             guard !didCompute else { return }
             didCompute = true
@@ -421,7 +425,9 @@ struct OptimizeRouteView: View {
     private func apply(_ result: RouteOptimizer.Result) {
         // 坐标点按优化顺序 + 无坐标点按原序追加末尾，构成完整新顺序。
         let nonCoord = stops.filter { !$0.hasCoordinate }.map(\.id)
-        store.reorderItineraryStops(tripId: tripId, dayId: dayId, newOrder: result.orderedStopIDs + nonCoord)
+        guard nativeEditors.save(store: store, {
+            store.reorderItineraryStops(tripId: tripId, dayId: dayId, newOrder: result.orderedStopIDs + nonCoord)
+        }) else { return }
         CarryLogger.shared.log(.itineraryOptimizeApplied, context: "saved_m=\(Int(result.savedMeters))")
         dismiss()
     }

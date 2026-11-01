@@ -56,7 +56,8 @@ struct ReorderableItemCollection: UIViewRepresentable {
     /// 松手提交一次：sectionId + 该 section 重排后的完整 itemID 顺序。
     let onReorder: (UUID, [UUID]) -> Void
     /// 拖拽开始：上层借此提交在编辑的行 + 触感准备。
-    let onReorderBegan: () -> Void
+    let onReorderBegan: () -> Bool
+    var onReorderEnded: () -> Void = {}
     /// 滚动方向 → 是否隐藏底部「行程/打包」切换器（下滑隐藏让位、上滑/近顶显示）。与行程列表同一套，spec: 3+2。
     var onScrollHideChange: (Bool) -> Void = { _ in }
 
@@ -128,6 +129,7 @@ struct ReorderableItemCollection: UIViewRepresentable {
 
         /// 拖拽起点所在 section，用于把目标位置夹断在同一 section 内。
         private var movingFromSection: Int?
+        private var reorderGeneration: UUID?
         private let liftHaptic = UIImpactFeedbackGenerator(style: .medium)
         /// 逐格重排触感（每跨一行一次），还原旧实现的手感。
         private let stepHaptic = UISelectionFeedbackGenerator()
@@ -204,8 +206,20 @@ struct ReorderableItemCollection: UIViewRepresentable {
                 guard case .item(let id) = rowID else { return false }
                 return id != self?.parent.editingItemId
             }
+            ds.reorderingHandlers.willReorder = { [weak self] _ in
+                guard let self, self.reorderGeneration == nil else { return }
+                guard self.parent.onReorderBegan() else { return }
+                self.reorderGeneration = UUID()
+            }
             ds.reorderingHandlers.didReorder = { [weak self] transaction in
                 guard let self else { return }
+                guard self.reorderGeneration != nil else {
+                    Task { @MainActor [weak self] in
+                        guard let self, self.reorderGeneration == nil else { return }
+                        self.applySnapshot(animated: false, previousEditing: self.parent.editingItemId)
+                    }
+                    return
+                }
                 // 受影响的 section（拖拽起点）的新 itemID 顺序。
                 let snapshot = transaction.finalSnapshot
                 let affected: [UUID]
@@ -222,6 +236,7 @@ struct ReorderableItemCollection: UIViewRepresentable {
                     }
                     self.parent.onReorder(sectionID, ids)
                 }
+                self.finishReorderSession()
             }
 
             self.dataSource = ds
@@ -303,10 +318,12 @@ struct ReorderableItemCollection: UIViewRepresentable {
                 // 若此刻正有别的行在内联编辑：先提交它，并放弃本次拖拽——让快照刷新、空编辑行
                 // 先消失，避免拖拽期间（update 被 guard 跳过）残留一行。用户再次长按即可拖。
                 if parent.editingItemId != nil {
-                    parent.onReorderBegan()
+                    guard parent.onReorderBegan() else { return }
+                    parent.onReorderEnded()
                     return
                 }
-                parent.onReorderBegan()
+                guard parent.onReorderBegan() else { return }
+                reorderGeneration = UUID()
                 movingFromSection = indexPath.section
                 lastHapticIndexPath = indexPath
                 stepHaptic.prepare()
@@ -314,6 +331,7 @@ struct ReorderableItemCollection: UIViewRepresentable {
                 liftHaptic.impactOccurred()
                 if !collectionView.beginInteractiveMovementForItem(at: indexPath) {
                     movingFromSection = nil
+                    finishReorderSession()
                 }
             case .changed:
                 guard let from = movingFromSection else { return }
@@ -323,13 +341,33 @@ struct ReorderableItemCollection: UIViewRepresentable {
                 fireStepHapticIfCrossed(at: clamped, in: collectionView)
             case .ended:
                 guard movingFromSection != nil else { return }
+                let ending = reorderGeneration
+                CATransaction.begin()
+                // A no-op movement may have no diffable transaction. UIKit's
+                // animation transaction completion is the authoritative end,
+                // rather than an arbitrary delay or a held editor forever.
+                CATransaction.setCompletionBlock { [weak self] in
+                    Task { @MainActor in
+                        guard let self, self.reorderGeneration == ending else { return }
+                        self.finishReorderSession()
+                    }
+                }
                 collectionView.endInteractiveMovement()
+                CATransaction.commit()
                 endDrag()
             default:
                 guard movingFromSection != nil else { return }
                 collectionView.cancelInteractiveMovement()
                 endDrag()
+                finishReorderSession()
             }
+        }
+
+        private func finishReorderSession() {
+            guard reorderGeneration != nil else { return }
+            reorderGeneration = nil
+            // The parent retains a failed pending order until retry succeeds.
+            parent.onReorderEnded()
         }
 
         private func endDrag() {

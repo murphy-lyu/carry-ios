@@ -92,6 +92,27 @@ final class NativeJournalTests: XCTestCase {
         XCTAssertTrue(try XCTUnwrap(fresh.fetch(FetchDescriptor<CarryNativeMaterialization>(predicate: #Predicate { $0.id == id })).first).locallyDeleted)
     }
 
+    func testProductionBackupExportRestoresMillisecondsWithoutInventingJournalEdits() throws {
+        let container = try database(), context = ModelContext(container)
+        let journal = CarryNativeChangeJournal(accountID: UUID())
+        let (original, _) = trip()
+        original.createdAt = Date(timeIntervalSince1970: 1_793_528_430.123)
+        original.departureDate = Date(timeIntervalSince1970: 1_793_528_430.987)
+        context.insert(original); try journal.captureAndSave(context)
+        let previousTransactions = try transactions(context).count
+        let url = try XCTUnwrap(DataBackupManager.shared.makeExportFile(trips: [original], myItems: []))
+        defer { try? FileManager.default.removeItem(at: url) }
+        let bytes = try Data(contentsOf: url)
+        let packet = try CarryBackupDates.decoder().decode(CarryBackup.self, from: bytes)
+        XCTAssertEqual(packet.trips.first?.createdAt.timeIntervalSince1970 ?? 0, original.createdAt.timeIntervalSince1970, accuracy: 0.000_01)
+        XCTAssertEqual(packet.trips.first?.departureDate.timeIntervalSince1970 ?? 0, original.departureDate.timeIntervalSince1970, accuracy: 0.000_01)
+        _ = try DataBackupManager.shared.restoreFromData(bytes, into: context, save: journal.captureAndSave)
+        let restored = try XCTUnwrap(ModelContext(container).fetch(FetchDescriptor<TripBundle>()).first)
+        XCTAssertEqual(restored.createdAt.timeIntervalSince1970, 1_793_528_430.123, accuracy: 0.000_01)
+        XCTAssertEqual(restored.departureDate.timeIntervalSince1970, 1_793_528_430.987, accuracy: 0.000_01)
+        XCTAssertEqual(try transactions(context).count, previousTransactions)
+    }
+
     func testFullBackupRestoreWithTheSameUUIDsCapturesSurvivingReplacementsAsEdits() throws {
         let container = try database(), context = ModelContext(container), journal = CarryNativeChangeJournal(accountID: UUID())
         let (original, item) = trip()
@@ -109,7 +130,7 @@ final class NativeJournalTests: XCTestCase {
             sections: [BackupPackingSection(id: sectionID, title: section.title, sortOrder: section.sortOrder,
                 items: [BackupPackingItem(id: itemID, name: item.name, quantity: 3, isPacked: true,
                     isAlert: item.isAlert, sortOrder: item.sortOrder)])], itineraryDays: [], lodgingStays: [])], myItems: [])
-        let encoder = JSONEncoder(); encoder.dateEncodingStrategy = .iso8601
+        let encoder = CarryBackupDates.encoder()
         _ = try DataBackupManager.shared.restoreFromData(encoder.encode(packet), into: context, save: journal.captureAndSave)
         let reopened = ModelContext(container)
         let restored = try XCTUnwrap(reopened.fetch(FetchDescriptor<TripBundle>()).first)

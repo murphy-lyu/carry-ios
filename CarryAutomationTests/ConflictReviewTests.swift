@@ -27,6 +27,39 @@ final class ConflictReviewTests: XCTestCase {
         try replica.blockFlight(details: JSONEncoder().encode(Failure(conflict: .init(current: remote))))
     }
 
+    func testCanonicalWireDateRoundingHandlesMillisecondCarryAndNegativeEpoch() throws {
+        let cases: [(Double, String)] = [
+            (0, "1970-01-01T00:00:00Z"),
+            (-0.001, "1969-12-31T23:59:59.999Z"),
+            (0.9996, "1970-01-01T00:00:01Z"),
+            (86_399.9996, "1970-01-02T00:00:00Z"),
+            (1_793_528_430.123, "2026-11-01T10:20:30.123Z")
+        ]
+        for (seconds, expected) in cases {
+            let date = Date(timeIntervalSince1970: seconds)
+            let encoded = CarryBackupDates.string(from: date)
+            XCTAssertEqual(encoded, expected)
+            let decoded = try XCTUnwrap(CarryBackupDates.parse(encoded))
+            XCTAssertEqual(decoded.timeIntervalSince1970, (seconds * 1000).rounded() / 1000, accuracy: 0.000_01)
+        }
+        for invalid in ["invalid-date", "2026-02-30T00:00:00.123Z", "2026-11-01T10:20:30.123Zgarbage", "2026-11-01T10:20:30Z\n", "2026-13-01T00:00:00Z", "2026-11-01T10:20:30+24:00"] {
+            XCTAssertNil(CarryBackupDates.parse(invalid))
+        }
+    }
+
+    func testFractionalAndLegacyDatesUseTheSameReadableConflictPresentation() throws {
+        let date = try XCTUnwrap(CarryBackupDates.parse("2026-11-01T10:20:30.123Z"))
+        let expected = date.formatted(date: .abbreviated, time: .omitted)
+        for field in ["departureDate", "timestamp"] {
+            for raw in ["2026-11-01T10:20:30.123Z", "2026-11-01T10:20:30Z", "2026-11-01T18:20:30.123+08:00"] {
+                XCTAssertEqual(CarryAccountConflictPresentation.value(.string(raw), field: field), expected)
+            }
+        }
+        XCTAssertEqual(CarryBackupDates.string(from: Date(timeIntervalSince1970: 1_793_528_430)), "2026-11-01T10:20:30Z")
+        XCTAssertEqual(CarryBackupDates.string(from: date), "2026-11-01T10:20:30.123Z")
+        XCTAssertNil(CarryBackupDates.parse("invalid-date"))
+    }
+
     func testReviewRefreshesBothLocalDraftAndRemoteInsteadOfPermanentlyUsingOldFailure() throws {
         let replica = try replica(), original = entity()
         try receive([original], in: replica, starting: 1)

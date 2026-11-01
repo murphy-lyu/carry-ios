@@ -12,7 +12,16 @@ import {
 /** driver.transaction(fn) pins one PostgreSQL connection and commits only when
  * fn resolves. A callback failure rolls back. core methods use THAT connection:
  * no HTTP call, second pool connection, native-session forgery or async job. */
-export function postgresStore({ driver, core, assets }) {
+export const clientRegistryCapacity = Object.freeze({ maximumClients: 1024, maximumBytes: 16 * 1024 * 1024 });
+export function postgresStore({ driver, core, assets, clientRegistryLimits = clientRegistryCapacity }) {
+  const limits = { ...clientRegistryCapacity, ...clientRegistryLimits };
+  for (const key of Object.keys(clientRegistryCapacity)) {
+    if (!Number.isSafeInteger(limits[key]) || limits[key] < 1 || limits[key] > clientRegistryCapacity[key])
+      throw new Error("invalid_client_registry_capacity");
+  }
+  // Shared with retention and pending creation: count + insert is atomic across
+  // all Edge isolates. Operator limits may be lowered, never made unbounded.
+  const registryLock = tx => tx.query("select pg_advisory_xact_lock(hashtextextended('carry-ai-client-registry',0))");
   const required = [
     "assertOwner",
     "assertAccount",
@@ -210,12 +219,20 @@ export function postgresStore({ driver, core, assets }) {
       }),
     registerClient: (p) =>
       transaction(async (tx) => {
+        await registryLock(tx);
         if (await get(tx, "client", p.id)) fail("request_id_reused", 409);
-        await put(tx, "client", p.id, p);
+        const registered = { ...p, registryVersion: 1 };
+        const usage = (await tx.query(`select count(*)::integer as clients,
+          coalesce(sum(octet_length(value::text) + case when value->>'usedAt' is null then 40 else 0 end),0)::bigint as bytes,
+          octet_length($1::jsonb::text) + 40 as incoming from carry_ai.records where bucket='client'`, [registered])).rows[0];
+        if (usage.clients >= limits.maximumClients || Number(usage.bytes) + usage.incoming > limits.maximumBytes)
+          fail("client_registration_capacity_exhausted", 503);
+        await put(tx, "client", p.id, registered);
       }),
     getClient: (p) => transaction((tx) => get(tx, "client", p.id)),
     createAuthorization: (p) =>
       transaction(async (tx) => {
+        await registryLock(tx);
         const c = await get(tx, "client", p.clientID);
         if (!c || c.disabledAt || !c.redirectURIs.includes(p.redirectURI))
           fail("invalid_client");
@@ -251,6 +268,12 @@ export function postgresStore({ driver, core, assets }) {
         )
           fail("invalid_scope");
         if (!(await core.ownsTrips(tx, p))) fail("trip_not_authorized", 403);
+        // A used client must survive retention even after account deletion has
+        // removed its grants. No token or refresh binding is changed.
+        if (!c.usedAt) {
+          c.usedAt = p.now;
+          await put(tx, "client", r.clientID, c);
+        }
         const g = {
           id: p.grantID,
           accountID: p.accountID,
@@ -329,6 +352,13 @@ export function postgresStore({ driver, core, assets }) {
           await put(tx, "grant", g.id, g);
           return { reuse: true };
         }
+        // Refresh never changes the owner's grant. Check only after spent-token
+        // replay detection, so invalid scope cannot suppress family revocation.
+        if (p.requestedScopes !== undefined && (
+          !Array.isArray(p.requestedScopes) ||
+          new Set(p.requestedScopes).size !== new Set(g.scopes).size ||
+          g.scopes.some(scope => !p.requestedScopes.includes(scope))
+        )) fail("invalid_scope");
         t.spent = true;
         await put(tx, "refresh", p.refreshHash, t);
         await bindTokens(tx, g, p.tokens);

@@ -47,8 +47,8 @@ final class LocalAdoptionTests: XCTestCase {
         local.addTrip(source)
         let item = try XCTUnwrap(local.addMyItem(name: "Local item", defaultQuantity: 4))
         let backup = DataBackupManager.shared.migrationSnapshot(trips: [source], myItems: [item]), owner = UUID()
-        let encoder = JSONEncoder(); encoder.dateEncodingStrategy = .iso8601
-        let decoder = JSONDecoder(); decoder.dateDecodingStrategy = .iso8601
+        let encoder = CarryBackupDates.encoder()
+        let decoder = CarryBackupDates.decoder()
         let portable = try decoder.decode(CarryBackup.self, from: encoder.encode(backup))
         let packet = try CarryGraphMigrationCodec.prepare(portable, accountID: owner, migrationID: UUID(), tripIDs: [source.id], includeLibrary: true)
         var entities = packet.entities
@@ -326,7 +326,7 @@ final class LocalAdoptionTests: XCTestCase {
         let retried = try await CarryLocalAdoptionArchive.create(second, root: root, review: review)
         XCTAssertEqual(original, retried)
         _ = try await retried.verify(in: root, review: review)
-        let decoder = JSONDecoder(); decoder.dateDecodingStrategy = .iso8601
+        let decoder = CarryBackupDates.decoder()
         let saved = try decoder.decode(CarryBackup.self, from: Data(contentsOf: root.appendingPathComponent(original.relativeDirectory).appendingPathComponent("source.json")))
         XCTAssertEqual(saved.createdAt, Date(timeIntervalSince1970: 1000))
         try await fixture.controller.close()

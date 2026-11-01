@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import { PGlite } from '@electric-sql/pglite';
 const routine = await readFile(new URL('./maintenance.sql', import.meta.url), 'utf8');
-const migration = await readFile(new URL('../carry-account-service/supabase/migrations/20261101081026_account_ai_bounded_retention.sql', import.meta.url), 'utf8');
+const migration = await readFile(new URL('../carry-account-service/supabase/migrations/20261101101210_bounded_ai_client_registry.sql', import.meta.url), 'utf8');
 
 test('hosted retention installs the exact tested routine and keeps client roles denied', async () => {
   assert.ok(migration.startsWith(routine));
@@ -34,7 +34,7 @@ test('retention is bounded, preserves receipt identities and live replay evidenc
       {expiresAt:now+1,usedAt:now-1}]);
     for (const key of ['a','b','c']) await db.query('insert into carry_ai.rate_limits values($1,null,0,1)',[key]);
     const result=(await db.query('select carry_ai.maintain_records($1,1) as result',[now])).rows[0].result;
-    assert.deepEqual(result,{records:1,compactedReceipts:1,rateBuckets:1});
+    assert.deepEqual(result,{records:1,compactedReceipts:1,rateBuckets:1,unusedClients:0});
     assert.equal((await db.query("select count(*) from carry_ai.records where bucket='access'")).rows[0].count,2);
     assert.deepEqual((await db.query("select value from carry_ai.records where id='stable-request'")).rows[0].value,{createdAt:0,contentHash:'preserved',undoExpired:true});
     assert.equal((await db.query("select count(*) from carry_ai.records where id='live-spent'")).rows[0].count,1);
@@ -42,5 +42,30 @@ test('retention is bounded, preserves receipt identities and live replay evidenc
     await assert.rejects(db.query('select carry_ai.maintain_records(null,1)'),/invalid_maintenance_input/);
     await db.query('select carry_ai.maintain_records($1,1000)',[now]);
     assert.equal((await db.query("select count(*) from carry_ai.records where bucket='access'")).rows[0].count,0);
+  } finally { await db.close(); }
+});
+
+test('client cleanup is bounded and preserves pending, used, historical and legacy registrations', async () => {
+  const db=new PGlite(), now=3*86400000;
+  try {
+    await db.exec(await readFile(new URL('./postgres-schema.sql',import.meta.url),'utf8'));
+    await db.exec(routine);
+    for (const id of ['unused-a','unused-b','pending','used','historical','legacy','recent','no-date']) {
+      const value={createdAt:0,registryVersion:1};
+      if(id==='used') value.usedAt=1;
+      if(id==='legacy') delete value.registryVersion;
+      if(id==='recent') value.createdAt=now-1000;
+      if(id==='no-date') delete value.createdAt;
+      await db.query("insert into carry_ai.records(bucket,id,value) values('client',$1,$2)",[id,value]);
+    }
+    await db.query("insert into carry_ai.records(bucket,id,value) values('authorization','valid-pending',$1),('grant','old-grant',$2)",[{clientID:'pending',expiresAt:now+10000},{clientID:'historical',expiresAt:1,revokedAt:2}]);
+    const first=(await db.query('select carry_ai.maintain_records($1,1) result',[now])).rows[0].result;
+    assert.equal(first.unusedClients,1);
+    await db.query('select carry_ai.maintain_records($1,1000)',[now]);
+    assert.deepEqual((await db.query("select id from carry_ai.records where bucket='client' order by id")).rows.map(r=>r.id),['historical','legacy','no-date','pending','recent','used']);
+    await db.query('select carry_ai.maintain_records($1,1000)',[now+10001]);
+    assert.equal((await db.query("select count(*) from carry_ai.records where bucket='client' and id='pending'")).rows[0].count,1);
+    await db.query('select carry_ai.maintain_records($1,1000)',[now+10002]);
+    assert.equal((await db.query("select count(*) from carry_ai.records where bucket='client' and id='pending'")).rows[0].count,0);
   } finally { await db.close(); }
 });

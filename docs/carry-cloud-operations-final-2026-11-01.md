@@ -1,6 +1,6 @@
 # 账户文件预算与供应商运行准备
 
-日期：2026-11-01。承接已确认的账户/云同步/AI spec（附件要求配额与清理）；本轮只处理配额机制与供应商准备，不制定正式收费方案，不购买或部署服务。
+日期：2026-11-01。承接已确认的账户/云同步/AI spec（附件要求配额与清理）。前几节为方案与本地验证记录，实际部署以末尾收尾记录为准；不制定正式收费方案，不购买套餐。
 
 ## 文件预算根因与实现
 
@@ -43,4 +43,13 @@ where singleton;
 
 - 实际调用链：`edge-entry.ts` 从服务端环境读取 `CARRY_AMAP_WEB_KEY`，传入 `queries.mjs` 的境内地点查询；固定上游为 `https://restapi.amap.com`，缺配置会返回 `domestic_places_configuration_required`，没有返回空成功或转发境内查询到海外提供商。
 - 对受限配置目录仅检索键名/文件位置，未读取或打印值：`/Users/murphy/Library/Application Support/Carry Development Secrets/*.json` 与 `*.env` 未找到 `CARRY_AMAP_WEB_KEY` / `AMAP_WEB_KEY` / `AMAP_API_KEY` / `GAODE...KEY`。这不能证明云端不存在该 Secret；主 agent 需在已登录管理台核对键名。
-- 现有 App SDK Key 不能自动认定为高德 Web 服务 Key。需要合法可用的 Web 服务凭据后才能进行真实境内 AI 查询验收；本 agent 未新建高德账户、接受条款、创建密钥、购买或发起真实付费供应商请求。
+- App现有地点搜索走Apple MapKit，没有独立高德SDK接入。新增云端AI查询才需要单独服务选型及合法Web服务凭据；不能让用户误以为现有手机搜索依赖这次高德注册。本 agent 未新建高德账户、接受条款、创建密钥、购买或发起真实付费供应商请求。
+
+## 实际 carry-dev 收尾（主任务，2026-11-01）
+- 已只读核对全部Storage：1个合成对象，131072 bytes，未知大小0；既有人工预算157286400 bytes。
+- 安装20261101084027迁移后读回默认false/0/0/0。空白SQL查询完整执行hosted-budget-policy-smoke.sql等价合成事务，返回hosted_budget_policy_rollback_passed，现有实体/文件7/1（包含Codex新建测试trip的3个实体），未留下合成账户或manifest。首次编辑器粘贴未完全替换旧SQL导致语法错误，未当通过；只读活动查询无锁等待，重建空白输入后通过。
+- 已显式启用carry-dev受限策略：enabled=true，per_account_bytes=157286400，maximum_pending=3，total_allocated_bytes=471859200，当前assigned=157286400。
+- 预算write_lock与guard均启用；anon/authenticated不能执行ensure_asset_budget，service_role可以。未购买服务或改变正式收费政策。
+- 原retention唯一active job，近2小时自然成功7次。用户当次确认后已安装20261101101210临时注册清理，维护body MD5 17f5839f0cddf2ed4766cadd49032e58与本地原文一致，引用索引存在；客户端数8，无扩大客户端权限。
+- Supabase Edge Secrets完整名称清单已检查：包含现有Apple/bridge/flight/places等配置，但没有CARRY_AMAP_WEB_KEY。仅检查名称，未读取/输出值或digest。境内AI地点查询仍需合法的高德Web服务Key，现有海外places代理明确排除境内，不能转去境外或复用iOS SDK Key冒充Web Key。
+- 用户后续自行完成高德个人支付宝认证，已从控制台只读确认成功。未创建Key或购买套餐；正式产品用途、新加坡后端及全球用户的许可仍需单独核实，详见AI registry报告的服务选型待办。手机MapKit搜索不受该待办影响。

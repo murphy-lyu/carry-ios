@@ -184,6 +184,7 @@ struct AttachmentEditSection: View {
     @Binding var request: AttachmentAddRequest?
 
     @EnvironmentObject var store: TripStore
+    @StateObject private var nativeEditors = CarryNativeEditorPresentations()
 
     private var rows: [AttachmentRowItem] {
         if owner != nil {
@@ -231,15 +232,18 @@ struct AttachmentEditSection: View {
         }
         // 不带 Section 标题——与 Total cost / Note 一致（单一功能卡，回形针图标即说明，无需分组标题）。
         // 「Pick-up / Drop-off / More」那类多字段分组才要标题。
+        .nativeEditorErrors(nativeEditors)
     }
 
     private func delete(_ id: UUID) {
-        if owner != nil {
-            store.removeAttachment(tripId: tripId, attachmentId: id)
-        } else if let idx = pending.firstIndex(where: { $0.id == id }) {
-            let fileName = pending[idx].data.fileName
-            if !fileName.isEmpty, pending[idx].data.preparedImport == nil { AttachmentStore.delete(named: fileName) }
-            pending.remove(at: idx)
+        nativeEditors.save(store: store) {
+            if owner != nil {
+                store.removeAttachment(tripId: tripId, attachmentId: id)
+            } else if let idx = pending.firstIndex(where: { $0.id == id }) {
+                let fileName = pending[idx].data.fileName
+                if !fileName.isEmpty, pending[idx].data.preparedImport == nil { AttachmentStore.delete(named: fileName) }
+                pending.remove(at: idx)
+            }
         }
     }
 }
@@ -262,6 +266,7 @@ private struct AttachmentAddFlow: ViewModifier {
     @Binding var request: AttachmentAddRequest?
 
     @EnvironmentObject var store: TripStore
+    @StateObject private var nativeEditors = CarryNativeEditorPresentations()
     @State private var photoItem: PhotosPickerItem?
     @State private var linkURL = ""
     @State private var linkName = ""
@@ -306,9 +311,10 @@ private struct AttachmentAddFlow: ViewModifier {
             .onChange(of: request) { _, new in
                 if new == .link { linkURL = ""; linkName = "" }
             }
-            .sheet(isPresented: bind(.link)) {
-                LinkInputSheet(url: $linkURL, name: $linkName) { addLink() }
+            .nativeEditorSheet(isPresented: bind(.link), presentations: nativeEditors) {
+                LinkInputSheet(url: $linkURL, name: $linkName) { editor in addLink(using: editor) }
             }
+            .nativeEditorErrors(nativeEditors)
             .alert("itinerary.attachment.too_large", isPresented: $showTooLarge) {
                 Button("common.ok", role: .cancel) {}
             }
@@ -322,15 +328,24 @@ private struct AttachmentAddFlow: ViewModifier {
     /// owner 有 → 入库；无 → 缓冲。Only an accepted model/pending entry takes
     /// ownership of a prepared file; rejected saves keep the cleanup lease.
     @discardableResult
-    private func commit(_ data: NewAttachmentData) -> Bool {
-        if let owner {
-            let accepted = store.addAttachment(tripId: tripId, owner: owner, kind: data.kind, id: data.id,
-                displayName: data.displayName, fileName: data.fileName,
-                utiOrExt: data.utiOrExt, urlString: data.urlString, thumbnailData: data.thumbnailData) != nil
-            if accepted { data.preparedImport?.adopt() }
-            return accepted
+    private func commit(_ data: NewAttachmentData, using editor: CarryNativeEditorPresentations? = nil) -> Bool {
+        let editor = editor ?? nativeEditors
+        var accepted = false
+        let saved = editor.save(store: store) {
+            if let owner {
+                accepted = store.addAttachment(tripId: tripId, owner: owner, kind: data.kind, id: data.id,
+                    displayName: data.displayName, fileName: data.fileName,
+                    utiOrExt: data.utiOrExt, urlString: data.urlString, thumbnailData: data.thumbnailData) != nil
+            } else {
+                pending.append(PendingAttachment(data: data))
+                accepted = true
+            }
         }
-        pending.append(PendingAttachment(data: data))
+        guard saved, accepted else {
+            if saved { editor.fail(busy: false) }
+            return false
+        }
+        if owner != nil { data.preparedImport?.adopt() }
         return true
     }
 
@@ -342,10 +357,12 @@ private struct AttachmentAddFlow: ViewModifier {
     }
 
     private func completeImport(id: UUID, operation: () async throws -> PreparedAttachmentImport) async {
+        let importingStore = store
+        guard nativeEditors.save(store: importingStore, {}) else { return }
         do {
             let temporary = try await operation()
             let prepared: PreparedAttachmentImport
-            if let importer = store.assetImporter {
+            if let importer = importingStore.assetImporter {
                 prepared = try await importer.attachment(from: temporary)
             } else {
                 // Photos imports arrive as a temporary lease too. Guest files
@@ -357,6 +374,11 @@ private struct AttachmentAddFlow: ViewModifier {
             }
             guard !Task.isCancelled, importID == id else {
                 try await prepared.discard()
+                return
+            }
+            guard store.nativeEditorIdentity == importingStore.nativeEditorIdentity else {
+                try await prepared.discard()
+                nativeEditors.fail(busy: false)
                 return
             }
             let data = NewAttachmentData(id: prepared.entityID ?? UUID(), kind: prepared.isPhoto ? .photo : .file,
@@ -381,11 +403,11 @@ private struct AttachmentAddFlow: ViewModifier {
         }
     }
 
-    private func addLink() {
+    private func addLink(using editor: CarryNativeEditorPresentations) -> Bool {
         var raw = linkURL.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !raw.isEmpty else { return }
+        guard !raw.isEmpty else { return false }
         if !raw.contains("://") { raw = "https://" + raw }
-        commit(NewAttachmentData(kind: .link, displayName: linkName.trimmingCharacters(in: .whitespaces), urlString: raw))
+        return commit(NewAttachmentData(kind: .link, displayName: linkName.trimmingCharacters(in: .whitespaces), urlString: raw), using: editor)
     }
 }
 
@@ -425,7 +447,8 @@ private struct CameraPicker: UIViewControllerRepresentable {
 private struct LinkInputSheet: View {
     @Binding var url: String
     @Binding var name: String
-    let onAdd: () -> Void
+    let onAdd: (CarryNativeEditorPresentations) -> Bool
+    @StateObject private var nativeEditors = CarryNativeEditorPresentations()
     @Environment(\.dismiss) private var dismiss
 
     var body: some View {
@@ -439,12 +462,13 @@ private struct LinkInputSheet: View {
             }
             .navigationTitle("itinerary.attachment.add_link")
             .navigationBarTitleDisplayMode(.inline)
+            .nativeEditorErrors(nativeEditors)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("common.cancel") { dismiss() }
                 }
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("common.add") { onAdd(); dismiss() }
+                    Button("common.add") { if onAdd(nativeEditors) { dismiss() } }
                         .disabled(url.trimmingCharacters(in: .whitespaces).isEmpty)
                 }
             }

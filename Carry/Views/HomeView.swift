@@ -82,7 +82,15 @@ struct HomeView: View {
     @EnvironmentObject var store: TripStore
     @EnvironmentObject var router: NavigationRouter
 
-    @State private var tripToDelete: TripBundle?
+    private struct PendingTripDeletion {
+        let tripID: UUID
+        let name: String
+        let owner: TripStore
+        let groupID: UUID
+        let lease: CarryNativeEditorLease?
+    }
+    @StateObject private var deletionErrors = CarryNativeEditorPresentations()
+    @State private var tripToDelete: PendingTripDeletion?
     @State private var showDeleteConfirmation = false
     @State private var showSettings = false
     @State private var settingsPath = NavigationPath()
@@ -545,12 +553,14 @@ struct HomeView: View {
             isPresented: $showDeleteConfirmation
         ) {
             Button("Delete", role: .destructive) {
-                if let trip = tripToDelete { store.owningStore(for: trip.id)?.removeTrip(withId: trip.id) }
+                confirmTripDeletion()
             }
             Button("Cancel", role: .cancel) { }
         } message: {
             Text("This will permanently delete your packing list and all progress.")
         }
+        .onChange(of: showDeleteConfirmation) { _, showing in if !showing { clearTripDeletion() } }
+        .nativeEditorErrors(deletionErrors)
     }
     #endif
 
@@ -697,12 +707,14 @@ struct HomeView: View {
                 isPresented: $showDeleteConfirmation
             ) {
                 Button("Delete", role: .destructive) {
-                    if let trip = tripToDelete { store.owningStore(for: trip.id)?.removeTrip(withId: trip.id) }
+                    confirmTripDeletion()
                 }
                 Button("Cancel", role: .cancel) { }
             } message: {
                 Text("This will permanently delete your packing list and all progress.")
             }
+            .onChange(of: showDeleteConfirmation) { _, showing in if !showing { clearTripDeletion() } }
+            .nativeEditorErrors(deletionErrors)
         }
         .frame(maxWidth: .infinity)
         // 空态 + 深色：背景留透明，让卡片表面由 FX 的磨砂玻璃层提供（地球从卡后透/糊上来，有真实景深）。
@@ -2045,6 +2057,41 @@ struct HomeView: View {
         // Sheet drag in empty-state area handled by SheetViewController.sheetPan
     }
 
+    private func requestTripDeletion(_ trip: TripBundle) {
+        let id = trip.id
+        guard let owner = store.owningStore(for: id), owner.nativeEditing?.isInvalidated != true else {
+            deletionErrors.fail(busy: false)
+            return
+        }
+        let group = UUID()
+        let lease = owner.beginNativeEditing(groupID: group)
+        guard owner.nativeEditing == nil || lease != nil else {
+            deletionErrors.fail(busy: true)
+            return
+        }
+        clearTripDeletion()
+        tripToDelete = PendingTripDeletion(tripID: id, name: trip.name, owner: owner, groupID: group, lease: lease)
+        showDeleteConfirmation = true
+    }
+
+    private func confirmTripDeletion() {
+        guard let draft = tripToDelete else { return }
+        defer { clearTripDeletion() }
+        guard store.owningStore(for: draft.tripID) === draft.owner else {
+            deletionErrors.fail(busy: false)
+            return
+        }
+        let saved = draft.owner.performEditorSave(groupID: draft.groupID) {
+            draft.owner.removeTrip(withId: draft.tripID)
+        }
+        if !saved { deletionErrors.fail(busy: draft.owner.lastEditorSaveWasBusy) }
+    }
+
+    private func clearTripDeletion() {
+        tripToDelete?.lease?.close()
+        tripToDelete = nil
+    }
+
     @ViewBuilder
     private func tripRow(bundle: TripBundle, isPast: Bool) -> some View {
         Button {
@@ -2058,8 +2105,7 @@ struct HomeView: View {
         // SwiftUI 无法平滑收起该行而出现空白闪烁（详见复制流程：在行程内复制后回首页 + 扫光高亮副本）。
         .swipeActions(edge: .trailing, allowsFullSwipe: false) {
             Button(role: .none) {
-                tripToDelete = bundle
-                showDeleteConfirmation = true
+                requestTripDeletion(bundle)
             } label: {
                 Label("Delete", systemImage: "trash")
             }

@@ -110,7 +110,8 @@ struct ItineraryReorderCollection: UIViewRepresentable {
     /// 松手提交：落定后每天的完整 stopID 顺序（跨天则改归属）。
     let onArrange: ([(dayID: UUID, stopIDs: [UUID])]) -> Void
     /// 拖拽开始（触感准备 / 上层可借此收键盘等）。
-    let onReorderBegan: () -> Void
+    let onReorderBegan: () -> Bool
+    var onReorderEnded: () -> Void = {}
     /// 用户手动滚动列表 → 当前吸顶的那天（反向联动：回写上方日历选中态）。
     let onFocusDay: (UUID) -> Void
     /// 滚动方向 → 是否隐藏底部「行程/打包」切换器：下滑读列表→隐藏让位、上滑/近顶→显示（iOS 原生工具栏套路）。
@@ -195,6 +196,7 @@ struct ItineraryReorderCollection: UIViewRepresentable {
         private var isProgrammaticScroll = false
 
         private var isDragging = false
+        private var reorderGeneration: UUID?
         /// 底部切换器隐藏状态（滚动方向驱动）：上次 offset + 当前隐藏态，只在翻转时回调上层，避免每帧抖动。
         private var lastScrollHideY: CGFloat = 0
         private var switcherHidden = false
@@ -295,8 +297,20 @@ struct ItineraryReorderCollection: UIViewRepresentable {
                 return false
             }
             // 松手：提交**所有**天的新 stop 顺序（跨天会改两天归属）。
+            ds.reorderingHandlers.willReorder = { [weak self] _ in
+                guard let self, self.reorderGeneration == nil else { return }
+                guard self.parent.onReorderBegan() else { return }
+                self.reorderGeneration = UUID()
+            }
             ds.reorderingHandlers.didReorder = { [weak self] transaction in
                 guard let self else { return }
+                guard self.reorderGeneration != nil else {
+                    Task { @MainActor [weak self] in
+                        guard let self, self.reorderGeneration == nil else { return }
+                        self.applySnapshot(animated: false)
+                    }
+                    return
+                }
                 let snapshot = transaction.finalSnapshot
                 var dayOrders: [(dayID: UUID, stopIDs: [UUID])] = []
                 for dayID in snapshot.sectionIdentifiers {
@@ -307,6 +321,7 @@ struct ItineraryReorderCollection: UIViewRepresentable {
                     dayOrders.append((dayID: dayID, stopIDs: stopIDs))
                 }
                 self.parent.onArrange(dayOrders)
+                self.finishReorderSession()
             }
 
             self.dataSource = ds
@@ -524,7 +539,8 @@ struct ItineraryReorderCollection: UIViewRepresentable {
                 guard let indexPath = collectionView.indexPathForItem(at: location),
                       let rowID = dataSource.itemIdentifier(for: indexPath),
                       case .stop = rowID else { return }
-                parent.onReorderBegan()
+                guard parent.onReorderBegan() else { return }
+                reorderGeneration = UUID()
                 isDragging = true
                 lastHapticIndexPath = indexPath
                 stepHaptic.prepare()
@@ -537,6 +553,7 @@ struct ItineraryReorderCollection: UIViewRepresentable {
                     ?? autoScrollFallbackRowHeight
                 if !collectionView.beginInteractiveMovementForItem(at: indexPath) {
                     isDragging = false
+                    finishReorderSession()
                 } else {
                     // 我接管 contentOffset：以当前偏移为权威基线，自滚只由本类 displayLink 推进；
                     // UIKit 内置交互移动自滚（不可关/不可调速）的任何写入，都会在 scrollViewDidScroll 里被回正。
@@ -549,13 +566,33 @@ struct ItineraryReorderCollection: UIViewRepresentable {
                 fireStepHapticIfCrossed(at: location, in: collectionView)
             case .ended:
                 guard isDragging else { return }
+                let ending = reorderGeneration
+                CATransaction.begin()
+                // A no-op movement may have no diffable transaction. UIKit's
+                // animation transaction completion is the authoritative end,
+                // rather than an arbitrary delay or a held editor forever.
+                CATransaction.setCompletionBlock { [weak self] in
+                    Task { @MainActor in
+                        guard let self, self.reorderGeneration == ending else { return }
+                        self.finishReorderSession()
+                    }
+                }
                 collectionView.endInteractiveMovement()
+                CATransaction.commit()
                 endDrag()
             default:
                 guard isDragging else { return }
                 collectionView.cancelInteractiveMovement()
                 endDrag()
+                finishReorderSession()
             }
+        }
+
+        private func finishReorderSession() {
+            guard reorderGeneration != nil else { return }
+            reorderGeneration = nil
+            // The parent retains a failed pending order until retry succeeds.
+            parent.onReorderEnded()
         }
 
         private func endDrag() {

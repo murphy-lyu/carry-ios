@@ -48,9 +48,26 @@ nonisolated enum CarryGraphMigrationCodec {
         "transport": ["attachments": "attachment"], "lodging": ["attachments": "attachment"]
     ]
 
+    // Only schema date-time fields may differ by representational precision
+    // or UTC offset after native decoding. Every other field remains exact.
+    private static let dateFields: [String: Set<String>] = [
+        "trip": ["departureDate", "createdAt"], "photo": ["timestamp"],
+        "attachment": ["addedAt"], "libraryItem": ["createdAt", "updatedAt"]
+    ]
+
+    private static func equivalentFields(_ actual: CarryGraphEntity, _ original: CarryGraphEntity) -> Bool {
+        guard Set(actual.fields.keys) == Set(original.fields.keys) else { return false }
+        return original.fields.allSatisfy { key, value in
+            if actual.fields[key] == value { return true }
+            guard dateFields[original.kind]?.contains(key) == true,
+                  case .string(let input) = value, case .string(let output) = actual.fields[key],
+                  let inputDate = CarryBackupDates.parse(input), let outputDate = CarryBackupDates.parse(output) else { return false }
+            return CarryBackupDates.string(from: inputDate) == CarryBackupDates.string(from: outputDate)
+        }
+    }
+
     private static func encoder() -> JSONEncoder {
-        let encoder = JSONEncoder()
-        encoder.dateEncodingStrategy = .iso8601
+        let encoder = CarryBackupDates.encoder()
         encoder.outputFormatting = .sortedKeys
         return encoder
     }
@@ -264,7 +281,7 @@ nonisolated enum CarryGraphMigrationCodec {
         let library = try packet.entities.filter { $0.kind == "libraryItem" && $0.parentID == nil }.map(rebuild)
         guard visited.count == packet.entities.count, used.count == packet.assets.count else { throw CarryGraphMigrationFailure.invalidGraph }
         var object: [String: CarryGraphValue] = [
-            "version": .integer(Int64(packet.backupVersion)), "createdAt": .string(ISO8601DateFormatter().string(from: packet.createdAt)),
+            "version": .integer(Int64(packet.backupVersion)), "createdAt": .string(CarryBackupDates.string(from: packet.createdAt)),
             "trips": .array(trips), "myItems": .array(library),
             "backgroundImages": .object(backgroundImages.mapValues { .string($0.base64EncodedString()) }),
             "attachmentFiles": .object(attachmentFiles.mapValues { .string($0.base64EncodedString()) })
@@ -278,7 +295,7 @@ nonisolated enum CarryGraphMigrationCodec {
         let checkedAssets = Dictionary(uniqueKeysWithValues: checked.assets.map { ($0.id, $0) })
         guard checkedEntities.count == entities.count, packet.entities.allSatisfy({ entity in
             guard let checked = checkedEntities[entity.id] else { return false }
-            return checked.kind == entity.kind && checked.parentID == entity.parentID && checked.fields == entity.fields
+            return checked.kind == entity.kind && checked.parentID == entity.parentID && equivalentFields(checked, entity)
         }) else { throw CarryGraphMigrationFailure.invalidGraph }
         guard checkedAssets.count == packet.assets.count, packet.assets.allSatisfy({ asset in
             guard let checked = checkedAssets[asset.id] else { return false }

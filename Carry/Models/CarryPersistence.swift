@@ -30,6 +30,14 @@ enum CarryPersistence {
         }
     }
 
+    /// A trusted admission gate rejected the mutation before calling a writer.
+    /// Roll back pending UI edits without quarantining a context that has not
+    /// attempted persistence; retain cascade objects just as on a failed save.
+    static func rollbackRejectedMutation(_ context: ModelContext) {
+        let deleting = context.deletedModelsArray.flatMap(materializeCascade)
+        withExtendedLifetime(deleting) { context.rollback() }
+    }
+
     private static func materializeCascade(_ model: any PersistentModel) -> [any PersistentModel] {
         var children: [any PersistentModel] = []
         switch model {

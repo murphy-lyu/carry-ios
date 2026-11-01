@@ -38,6 +38,7 @@ final class CarryAccountWorkspace: ObservableObject {
     let replica: CarryAccountReplica
     let journal: CarryNativeChangeJournal
     let bridge: CarryNativeJournalBridge
+    let editing = CarryNativeEditingCoordinator()
     @Published private(set) var state: State = .paused
     private let currentBusinessContext: () -> ModelContext
     private let transport: any CarryGraphTransporting
@@ -69,6 +70,7 @@ final class CarryAccountWorkspace: ObservableObject {
         { [weak self] context in
             guard let self, context.container === self.container else { throw CarryAccountWorkspaceFailure.wrongBusinessContainer }
             guard self.writerOpen else { throw CarryAccountWorkspaceFailure.writerClosed }
+            try self.editing.validateBusinessWrite()
             try self.journal.captureAndSave(context)
             if self.state != .paused && self.state != .synchronizing { self.state = .pending }
         }
@@ -79,7 +81,7 @@ final class CarryAccountWorkspace: ObservableObject {
     func enableSynchronization() { guard writerOpen else { return }; synchronizationEnabled = true; state = .pending }
 
     /// Permanent writer revocation is distinct from offline synchronization pause.
-    func revokeWriterLease() { writerOpen = false }
+    func revokeWriterLease() { writerOpen = false; editing.invalidate() }
 
     /// Await before removing account navigation, switching identity or deleting
     /// its cache. The invalidated lease rejects even cancellation-ignoring I/O.
@@ -180,6 +182,10 @@ final class CarryAccountWorkspace: ObservableObject {
                 try checkLease(generation)
                 guard try replica.pendingFailure == nil else { state = .conflict; return false }
                 guard complete else { continue }
+                // Draft fields and their observed versions must stay paired.
+                // A pull is durable already; do not make unseen values the
+                // native journal's baseline while an editor owns its draft.
+                guard !editing.hasActiveSessions else { state = .pending; return false }
                 let candidates = try replica.projectionCandidates()
                 let preparationSnapshot = try await replica.projectionSnapshotAsync()
                 try await hooks.prepareProjection(preparationSnapshot, candidates)
@@ -191,6 +197,9 @@ final class CarryAccountWorkspace: ObservableObject {
                 let projectionSnapshot = try await replica.projectionSnapshotAsync()
                 try checkLease(generation)
                 guard try bridge.nextBatch() == nil else { continue }
+                // Asset preparation and snapshot decoding may suspend. An
+                // editor could have opened since the first projection check.
+                guard !editing.hasActiveSessions else { state = .pending; return false }
                 let context = currentBusinessContext()
                 guard context.container === container else { throw CarryAccountWorkspaceFailure.wrongBusinessContainer }
                 let projected = try projector.project(snapshot: projectionSnapshot, candidateIDs: currentCandidates,
@@ -217,6 +226,28 @@ final class CarryAccountWorkspace: ObservableObject {
             return false
         } catch {
             if lease != generation || !synchronizationEnabled || Task.isCancelled { throw CancellationError() }
+            let reason: String
+            switch error {
+            case is CarryGraphTransportFailure: reason = "graph_transport"
+            case is CarryAccountFailure: reason = "account_session"
+            case let failure as CarryNativeProjectionFailure:
+                switch failure {
+                case .invalidGraph: reason = "native_projection_invalid_graph"
+                case .pendingNativeChanges: reason = "native_projection_pending_changes"
+                case .dirtyContext: reason = "native_projection_dirty_context"
+                case .accountMismatch: reason = "native_projection_account_mismatch"
+                case .assetUnavailable: reason = "native_projection_asset_unavailable"
+                }
+            case is CarryReplicaFailure: reason = "replica"
+            case is CarryNativeJournalFailure: reason = "native_journal"
+            case is CarryNativeJournalBridgeFailure: reason = "native_bridge"
+            case is CarryNativeAssetCoordinatorFailure: reason = "native_assets"
+            case is DecodingError: reason = "decode"
+            case is EncodingError: reason = "encode"
+            case let failure as URLError: reason = "url_\(failure.errorCode)"
+            default: reason = "other"
+            }
+            CarryLogger.shared.log(.accountOperationFailed, context: "stage=workspace_sync reason=\(reason)")
             state = .failed
             throw error
         }

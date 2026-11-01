@@ -185,6 +185,11 @@ final class CarryAccountWorkspaceController: ObservableObject {
                 self?.library.local.refreshVisibleEffects()
                 self?.requestSynchronization()
             }))
+            store.nativeEditing = workspace.editing
+            workspace.editing.didReleaseLastSession = { [weak self, weak workspace] in
+                guard let self, let workspace, self.runtime?.workspace === workspace else { return }
+                self.requestSynchronization()
+            }
             reference.store = store; store.assetImporter = importer; store.refresh()
             let value = Runtime(accountID: accountID, container: container, workspace: workspace, store: store,
                 cache: cache, uploads: uploads, assets: assets, importer: importer, lease: lease, dependencies: dependencies)

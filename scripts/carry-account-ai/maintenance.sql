@@ -2,12 +2,24 @@
 -- replay evidence; only expired content and old rate windows are removed.
 create or replace function carry_ai.maintain_records(p_now bigint, p_limit integer)
 returns jsonb language plpgsql security invoker set search_path='' as $$
-declare removed integer; compacted integer; rates integer;
+declare removed integer; compacted integer; rates integer; clients integer;
 begin
   if p_now is null or p_now not between -9007199254740991 and 9007199254740991
     or p_limit is null or p_limit not between 1 and 1000 then
     raise exception 'invalid_maintenance_input';
   end if;
+  -- Match registration / pending-authorization creation before taking row
+  -- locks. Retain every referenced or ever-used client, including expired grants.
+  perform pg_catalog.pg_advisory_xact_lock(pg_catalog.hashtextextended('carry-ai-client-registry',0));
+  with old as (
+    select c.bucket,c.id from carry_ai.records c
+    where c.bucket='client' and c.value->>'registryVersion'='1' and c.value->>'usedAt' is null
+      and (c.value->>'createdAt')::bigint<p_now-86400000
+      and not exists (select 1 from carry_ai.records r
+        where r.bucket in ('authorization','code','grant') and r.value->>'clientID'=c.id)
+    order by c.id limit p_limit for update of c skip locked
+  ) delete from carry_ai.records c using old where c.bucket=old.bucket and c.id=old.id;
+  get diagnostics clients = row_count;
   with candidates as (
     select bucket,id from carry_ai.records where
       (bucket='authorization' and (value->>'expiresAt')::bigint<p_now) or
@@ -32,7 +44,7 @@ begin
     order by key limit p_limit for update skip locked
   ) delete from carry_ai.rate_limits r using old where r.key=old.key;
   get diagnostics rates = row_count;
-  return jsonb_build_object('records',removed,'compactedReceipts',compacted,'rateBuckets',rates);
+  return jsonb_build_object('records',removed,'compactedReceipts',compacted,'rateBuckets',rates,'unusedClients',clients);
 end;
 $$;
 revoke all on function carry_ai.maintain_records(bigint,integer) from public;

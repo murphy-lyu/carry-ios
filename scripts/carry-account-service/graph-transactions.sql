@@ -53,7 +53,7 @@ $$;
 
 create function carry_private.graph_validate_value(v jsonb, rule jsonb) returns boolean
 language plpgsql stable security invoker set search_path = '' as $$
-declare item jsonb; s text; n numeric;
+declare item jsonb; s text; n numeric; date_parts text[]; date_instant timestamptz;
 begin
   if v = 'null'::jsonb then return coalesce((rule->>'optional')::boolean,false); end if;
   if v is null or jsonb_typeof(v) <> rule->>'type' then return false; end if;
@@ -65,7 +65,18 @@ begin
     if rule->>'format' = 'uuid' and s !~* '^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$' then return false; end if;
     if rule->>'format' = 'date-time' then
       if s !~ '^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:\d{2})$' then return false; end if;
-      perform s::timestamptz;
+      -- timestamptz normalizes 24:00 and second 60; native wire decoding
+      -- deliberately rejects both. Validate wall-clock components first.
+      if substring(s from 12 for 2)::int > 23
+        or substring(s from 15 for 2)::int > 59
+        or substring(s from 18 for 2)::int > 59 then return false; end if;
+      -- Truncate fractional text to JS milliseconds before checking the UTC
+      -- year. PostgreSQL otherwise rounds .999999999 across the year boundary.
+      date_parts := regexp_match(s,'^(.{19})([.]([0-9]+))?(Z|[+-][0-9]{2}:[0-9]{2})$');
+      if date_parts is null then return false; end if;
+      date_instant := (date_parts[1] || case when date_parts[3] is null then ''
+        else '.' || rpad(left(date_parts[3],3),3,'0') end || date_parts[4])::timestamptz;
+      if date_instant is null or extract(year from date_instant at time zone 'UTC') not between 1 and 9999 then return false; end if;
     end if;
     if rule->>'format' = 'timezone' and s <> '' and not exists (
       select 1 from pg_catalog.pg_timezone_names where name=s
@@ -81,7 +92,7 @@ begin
     end loop;
   end if;
   return true;
-exception when invalid_datetime_format or datetime_field_overflow or numeric_value_out_of_range then return false;
+exception when invalid_datetime_format or datetime_field_overflow or invalid_time_zone_displacement_value or numeric_value_out_of_range then return false;
 end;
 $$;
 

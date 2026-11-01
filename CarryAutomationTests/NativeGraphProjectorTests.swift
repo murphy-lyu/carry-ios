@@ -42,6 +42,104 @@ final class NativeGraphProjectorTests: XCTestCase {
         return result
     }
 
+    /// Full required field shape from carry-account-ai/domain.mjs defaults and
+    /// create_trip (dateless trips still create a day at sortOrder zero).
+    private func aiTrip(timestamp: String) -> [CarryNativeProjectionEntity] {
+        let tripID = UUID()
+        let fields: [String: CarryGraphValue] = [
+            "name": .string("Synthetic AI trip"), "destinationCity": .string(""),
+            "days": .integer(0), "dateRange": .string(""),
+            "departureDate": .string(timestamp), "createdAt": .string(timestamp),
+            "isDateless": .bool(true), "selectedSceneKeys": .array([]),
+            "dismissedSurpriseNames": .array([]), "sceneCardDismissed": .bool(false),
+            "remindersEnabled": .bool(false), "reminderConfigData": .string(""),
+            "countryCode": .string(""), "latitude": .integer(0), "longitude": .integer(0)
+        ]
+        let trip = CarryGraphEntity(id: tripID, kind: "trip", version: 1, subtreeVersion: 1,
+            fields: fields, fieldVersions: fields.mapValues { _ in 1 })
+        let day = CarryGraphEntity(id: UUID(), kind: "day", parentID: tripID, version: 1, subtreeVersion: 2,
+            fields: ["title": .string(""), "note": .string(""), "sortOrder": .integer(0)],
+            fieldVersions: ["title": 1, "note": 1, "sortOrder": 1])
+        return [trip, day].map { .init(local: $0, observed: $0) }
+    }
+
+    func testAITripFractionalDatesProjectExactInstantsAndPreserveDefaultsAndObservedBaseline() throws {
+        let container = try database(), context = ModelContext(container)
+        let snapshot = aiTrip(timestamp: "2026-11-01T10:20:30.123Z")
+        let owner = UUID(), projector = CarryNativeGraphProjector(accountID: owner)
+        let replica = try CarryAccountReplica(container: container, accountID: owner)
+        try replica.receive(CarryGraphPage(changes: snapshot.enumerated().map {
+            .init(sequence: $0.offset + 1, entity: $0.element.local)
+        }, cursor: snapshot.count, hasMore: false))
+        _ = try projector.project(snapshot: replica.projectionSnapshot(), in: context)
+        let native = try XCTUnwrap(context.fetch(FetchDescriptor<TripBundle>()).first)
+        let expected = 1_793_528_430.123
+        XCTAssertEqual(native.departureDate.timeIntervalSince1970, expected, accuracy: 0.000_01)
+        XCTAssertEqual(native.createdAt.timeIntervalSince1970, expected, accuracy: 0.000_01)
+        let source = try XCTUnwrap(CarryNativeSourceCodec.capture(native))
+        for (key, value) in snapshot[0].local.fields {
+            XCTAssertEqual(source.metadata.fields[key], value, "Default field: \(key)")
+        }
+        XCTAssertEqual(native.safeItineraryDays.count, 1)
+        XCTAssertEqual(native.safeItineraryDays.first?.sortOrder, 0)
+        let materialization = try XCTUnwrap(context.fetch(FetchDescriptor<CarryNativeMaterialization>()).first { $0.id == native.id })
+        let observed = try JSONDecoder().decode(CarryGraphEntity.self, from: XCTUnwrap(materialization.observedGraphData))
+        XCTAssertEqual(observed, snapshot[0].observed)
+        let again = try projector.project(snapshot: snapshot, in: context)
+        XCTAssertTrue(again.changedTripIDs.isEmpty)
+        XCTAssertEqual(native.createdAt.timeIntervalSince1970, expected, accuracy: 0.000_01)
+        let journal = CarryNativeChangeJournal(accountID: owner)
+        try journal.captureAndSave(context)
+        XCTAssertTrue(try context.fetch(FetchDescriptor<CarryNativeChange>()).isEmpty)
+        native.name = "Synthetic rename after AI projection"
+        try journal.captureAndSave(context)
+        let changes = try context.fetch(FetchDescriptor<CarryNativeChange>())
+        XCTAssertEqual(changes.count, 1)
+        XCTAssertEqual(changes.first?.changedFields, ["name"])
+        let bridge = CarryNativeJournalBridge(replica: replica)
+        XCTAssertEqual(try bridge.apply(batch: XCTUnwrap(bridge.nextBatch())), .consumed)
+        let command = try XCTUnwrap(replica.nextCommand())
+        XCTAssertEqual(command.mutations.count, 1)
+        XCTAssertEqual(Set(command.mutations[0].fields?.keys.map { $0 } ?? []), ["name"])
+        XCTAssertEqual(try CarryNativeSourceCodec.capture(native)?.metadata.fields["createdAt"], snapshot[0].local.fields["createdAt"])
+        XCTAssertEqual(try CarryNativeSourceCodec.capture(native)?.metadata.fields["departureDate"], snapshot[0].local.fields["departureDate"])
+    }
+
+    func testLegacyAndOffsetISO8601DatesRemainCompatible() throws {
+        let expected = 1_793_528_430.0
+        for timestamp in ["2026-11-01T10:20:30Z", "2026-11-01T18:20:30+08:00", "2026-11-01T18:20:30.000+08:00"] {
+            let context = ModelContext(try database())
+            _ = try CarryNativeGraphProjector(accountID: UUID()).project(snapshot: aiTrip(timestamp: timestamp), in: context)
+            let native = try XCTUnwrap(context.fetch(FetchDescriptor<TripBundle>()).first)
+            XCTAssertEqual(native.createdAt.timeIntervalSince1970, expected, accuracy: 0.000_01)
+            XCTAssertEqual(native.departureDate.timeIntervalSince1970, expected, accuracy: 0.000_01)
+            let captured = try XCTUnwrap(CarryNativeSourceCodec.capture(native))
+            XCTAssertEqual(captured.metadata.fields["createdAt"], .string("2026-11-01T10:20:30Z"))
+            XCTAssertEqual(captured.metadata.fields["departureDate"], .string("2026-11-01T10:20:30Z"))
+        }
+    }
+
+    func testMalformedAIDateRejectsWholeProjectionWithoutPollutingContextOrStoredGraph() throws {
+        let container = try database(), context = ModelContext(container)
+        let projector = CarryNativeGraphProjector(accountID: UUID())
+        let snapshot = aiTrip(timestamp: "2026-11-01T10:20:30.123Z")
+        _ = try projector.project(snapshot: snapshot, in: context)
+        let original = try XCTUnwrap(context.fetch(FetchDescriptor<TripBundle>()).first)
+        let before = try XCTUnwrap(CarryNativeSourceCodec.capture(original))
+        var bad = try changing(snapshot, kind: "trip", field: "createdAt", value: .string("invalid-date"))
+        bad = try changing(bad, kind: "trip", field: "name", value: .string("Must not be applied"))
+        XCTAssertThrowsError(try projector.project(snapshot: bad, in: context)) { error in
+            guard case CarryNativeProjectionFailure.invalidGraph = error else { return XCTFail("Wrong failure type") }
+        }
+        XCTAssertFalse(context.hasChanges)
+        XCTAssertEqual(try CarryNativeSourceCodec.capture(original)?.metadata, before.metadata)
+        let fresh = ModelContext(container)
+        XCTAssertEqual(try fresh.fetch(FetchDescriptor<TripBundle>()).count, 1)
+        XCTAssertEqual(try CarryNativeSourceCodec.capture(XCTUnwrap(fresh.fetch(FetchDescriptor<TripBundle>()).first))?.metadata, before.metadata)
+        XCTAssertEqual(try fresh.fetch(FetchDescriptor<CarryNativeProjectionCheckpoint>()).count, 2)
+        XCTAssertTrue(try fresh.fetch(FetchDescriptor<CarryNativeChange>()).isEmpty)
+    }
+
     func testOriginalPhotoProjectionUsesVerifiedLocalTokenAndKeepsItAcrossScalarEdits() throws {
         let owner = UUID(), container = try database(), context = ModelContext(container)
         var snapshot = try graph()
@@ -276,4 +374,41 @@ final class NativeGraphProjectorTests: XCTestCase {
         XCTAssertEqual(result.changedTripIDs, [parentID])
         XCTAssertTrue(try fresh.fetch(FetchDescriptor<CarryNativeChange>()).isEmpty)
     }
+
+    func testHighPrecisionProjectionKeepsRawObservedDatesAndNoOpJournalWhileOnlyNameChanges() throws {
+        for timestamp in ["2026-11-01T10:20:30.123456789Z", "2026-11-01T10:20:30.999999999Z",
+                          "2026-11-01T10:20:59.999999999Z", "2026-12-31T23:59:59.999999999Z",
+                          "2026-11-01T18:20:30.999999999+08:00", "2026-11-01T10:20:30.000000001Z"] {
+            let container = try database(), context = ModelContext(container), owner = UUID()
+            let snapshot = aiTrip(timestamp: timestamp), projector = CarryNativeGraphProjector(accountID: owner)
+            let replica = try CarryAccountReplica(container: container, accountID: owner)
+            try replica.receive(CarryGraphPage(changes: snapshot.enumerated().map {
+                .init(sequence: $0.offset + 1, entity: $0.element.local)
+            }, cursor: snapshot.count, hasMore: false))
+            _ = try projector.project(snapshot: replica.projectionSnapshot(), in: context)
+            let native = try XCTUnwrap(context.fetch(FetchDescriptor<TripBundle>()).first)
+            let row = try XCTUnwrap(context.fetch(FetchDescriptor<CarryNativeMaterialization>()).first { $0.id == native.id })
+            let raw = try JSONDecoder().decode(CarryGraphEntity.self, from: XCTUnwrap(row.observedGraphData))
+            XCTAssertEqual(raw.fields["departureDate"], .string(timestamp), "Never rewrite the trusted raw observation")
+            let source = try XCTUnwrap(CarryNativeSourceCodec.capture(native))
+            let baseline = try JSONDecoder().decode(CarryNativeSourceMetadata.self, from: row.sourceData)
+            XCTAssertEqual(baseline, source.metadata)
+            let expectedDate = CarryBackupDates.string(from: try XCTUnwrap(CarryBackupDates.parse(timestamp)))
+            XCTAssertEqual(source.metadata.fields["departureDate"], .string(expectedDate))
+            let journal = CarryNativeChangeJournal(accountID: owner)
+            try journal.captureAndSave(context)
+            XCTAssertTrue(try context.fetch(FetchDescriptor<CarryNativeChange>()).isEmpty)
+            XCTAssertTrue(try projector.project(snapshot: replica.projectionSnapshot(), in: context).changedTripIDs.isEmpty)
+            native.name = "Synthetic name-only edit"
+            try journal.captureAndSave(context)
+            let changes = try context.fetch(FetchDescriptor<CarryNativeChange>())
+            XCTAssertEqual(changes.count, 1)
+            XCTAssertEqual(changes.first?.changedFields, ["name"])
+            let bridge = CarryNativeJournalBridge(replica: replica)
+            XCTAssertEqual(try bridge.apply(batch: XCTUnwrap(bridge.nextBatch())), .consumed)
+            let command = try XCTUnwrap(replica.nextCommand())
+            XCTAssertEqual(Set(command.mutations[0].fields?.keys.map { $0 } ?? []), ["name"])
+        }
+    }
+
 }

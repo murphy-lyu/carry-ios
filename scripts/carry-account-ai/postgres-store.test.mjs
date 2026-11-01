@@ -424,3 +424,38 @@ test("bounded maintenance expires content without erasing still-valid refresh re
     await f.db.close();
   }
 });
+
+test("client registry enforces count/byte capacity while existing grants and refresh keep working", async () => {
+  const f = await fixture();
+  try {
+    const limited = postgresStore({ driver:f.driver,core:f.core,clientRegistryLimits:{maximumClients:1} });
+    await rejects(limited.registerClient({id:crypto.randomUUID(),name:'New',createdAt:now}), 'client_registration_capacity_exhausted');
+    await rejects(limited.registerClient({id:clientID}), 'request_id_reused');
+    const byteLimited = postgresStore({driver:f.driver,core:f.core,clientRegistryLimits:{maximumBytes:1}});
+    await rejects(byteLimited.registerClient({id:crypto.randomUUID(),name:'New'}), 'client_registration_capacity_exhausted');
+    const {g,t} = await f.grant();
+    const rotated = await tokens('registry-full');
+    assert.equal((await limited.rotateRefresh({refreshHash:t.refreshHash,clientID,resource,tokens:rotated,now})).id,g.id);
+    assert.equal((await f.store.getClient({id:clientID})).usedAt,now);
+    assert.equal((await f.db.query("select count(*) from carry_ai.records where bucket='client'")).rows[0].count,1);
+    for (const maximumClients of [0,NaN,Infinity,1025]) assert.throws(() => postgresStore({driver:f.driver,core:f.core,clientRegistryLimits:{maximumClients}}), /invalid_client_registry_capacity/);
+  } finally { await f.db.close(); }
+});
+
+test('refresh scope must equal the owner grant and invalid scope does not consume the token or suppress reuse revocation', async () => {
+  const f=await fixture();
+  try {
+    const {g,t}=await f.grant();
+    const base={refreshHash:t.refreshHash,clientID,resource,now,tokens:await tokens('scope-rotation')};
+    for(const requestedScopes of [[],['trips:read'],['trips:read','trips:write','attachments:read'],['unknown'],null,'trips:read trips:write']) {
+      await rejects(f.store.rotateRefresh({...base,requestedScopes}), 'invalid_scope');
+      assert.equal((await f.db.query("select value from carry_ai.records where bucket='refresh' and id=$1",[t.refreshHash])).rows[0].value.spent,false);
+    }
+    const result=await f.store.rotateRefresh({...base,requestedScopes:[...g.scopes].reverse()});
+    assert.deepEqual(result.scopes,g.scopes);
+    await rejects(f.store.rotateRefresh({...base,requestedScopes:['invalid']}),'invalid_grant');
+    const reopened=postgresStore({driver:f.driver,core:f.core});
+    await rejects(reopened.resolveAccess({tokenHash:base.tokens.accessHash,resource,now}),'invalid_token');
+    assert.ok((await f.db.query("select value from carry_ai.records where bucket='grant' and id=$1",[g.id])).rows[0].value.revokedAt);
+  } finally { await f.db.close(); }
+});

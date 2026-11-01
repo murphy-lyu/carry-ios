@@ -34,7 +34,7 @@ nonisolated enum CarryMigrationBackupPreparation {
         backup.attachmentFiles = files; backup.backgroundImages = images
         // The engine archives these originals alongside source.json and checks
         // each file's exact digest before any graph ownership can be activated.
-        let encoder = JSONEncoder(); encoder.outputFormatting = .sortedKeys; encoder.dateEncodingStrategy = .iso8601
+        let encoder = CarryBackupDates.encoder(); encoder.outputFormatting = .sortedKeys
         let bytes = try encoder.encode(backup)
         try Task.checkCancellation()
         let url = directory.appendingPathComponent("source.json")

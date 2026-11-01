@@ -102,7 +102,7 @@ final class BackupPerformanceTests: XCTestCase {
         await manager.flushPendingBackup()
         XCTAssertEqual(reads, 1)
         let data = try Data(contentsOf: url)
-        let decoder = JSONDecoder(); decoder.dateDecodingStrategy = .iso8601
+        let decoder = CarryBackupDates.decoder()
         XCTAssertEqual(try decoder.decode(CarryBackup.self, from: data).trips.count, 0)
     }
 
@@ -184,7 +184,7 @@ final class BackupPerformanceTests: XCTestCase {
         trip.itineraryDays = [ItineraryDay(sortOrder: 0, title: "Arrival", note: "", stops: [stop])]
         manager.scheduleBackup { ([trip], []) }
         await manager.flushPendingBackup()
-        let decoder = JSONDecoder(); decoder.dateDecodingStrategy = .iso8601
+        let decoder = CarryBackupDates.decoder()
         let backup = try decoder.decode(CarryBackup.self, from: Data(contentsOf: url))
         let saved = try XCTUnwrap(backup.trips.first?.itineraryDays?.first?.stops.first)
         XCTAssertEqual(saved.photos?.first?.thumbnailData, photoBytes)

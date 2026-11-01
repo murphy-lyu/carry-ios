@@ -340,7 +340,10 @@ final class CarryNativeGraphProjector {
         guard let bytes = Data(base64Encoded: try string(value)) else { throw CarryNativeProjectionFailure.invalidGraph }; return bytes
     }
     private static func date(_ value: CarryGraphValue) throws -> Date {
-        guard let date = ISO8601DateFormatter().date(from: try string(value)) else { throw CarryNativeProjectionFailure.invalidGraph }; return date
+        guard let date = CarryBackupDates.parse(try string(value)) else {
+            throw CarryNativeProjectionFailure.invalidGraph
+        }
+        return date
     }
     private static func strings(_ value: CarryGraphValue) throws -> [String] {
         guard case .array(let array) = value else { throw CarryNativeProjectionFailure.invalidGraph }; return try array.map(string)

@@ -150,6 +150,13 @@ export function syntheticStore({ accountID, sessionID, entities = [], time }) {
         g.revokedAt = p.now;
         fail("invalid_grant");
       }
+      // Refresh never changes the owner's grant. Check only after spent-token
+      // replay detection, so invalid scope cannot suppress family revocation.
+      if (p.requestedScopes !== undefined && (
+        !Array.isArray(p.requestedScopes) ||
+        new Set(p.requestedScopes).size !== new Set(g.scopes).size ||
+        g.scopes.some(scope => !p.requestedScopes.includes(scope))
+      )) fail("invalid_scope");
       t.spent = true;
       bindTokens(g, p.tokens);
       return structuredClone(g);

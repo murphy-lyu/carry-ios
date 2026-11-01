@@ -22,8 +22,7 @@ enum CarryNativeSourceFailure: Error { case missingParent, invalidFileReference,
 
 @MainActor
 enum CarryNativeSourceCodec {
-    private static let dateFormatter = ISO8601DateFormatter()
-    private static func date(_ value: Date) -> CarryGraphValue { .string(dateFormatter.string(from: value)) }
+    private static func date(_ value: Date) -> CarryGraphValue { .string(CarryBackupDates.string(from: value)) }
     private static func integer(_ value: Int) -> CarryGraphValue { .integer(Int64(value)) }
     private static func data(_ value: Data, optional: Bool = false) -> CarryGraphValue {
         optional && value.isEmpty ? .null : .string(value.base64EncodedString())

@@ -206,7 +206,7 @@ final class AccountGraphRoundTripTests: XCTestCase {
         trip.itineraryDays = [first, mine, theirs]
         let exportURL = try XCTUnwrap(DataBackupManager.shared.makeExportFile(trips: [trip], myItems: []))
         addTeardownBlock { try FileManager.default.removeItem(at: exportURL) }
-        let decoder = JSONDecoder(); decoder.dateDecodingStrategy = .iso8601
+        let decoder = CarryBackupDates.decoder()
         let backup = try decoder.decode(CarryBackup.self, from: Data(contentsOf: exportURL))
         let packet = try CarryGraphMigrationCodec.prepare(backup, accountID: fixture.accountID,
             migrationID: UUID(), tripIDs: [trip.id], includeLibrary: false)

@@ -144,7 +144,7 @@ final class CarryGraphTransport: CarryGraphStreamingTransporting {
         }
         while offset < summary.changeCount {
             let bytes = try await sendRequest(Body(action: "receiptPage", limit: 500, requestID: command.requestID, offset: offset))
-            let page = try await Self.decode(CarryGraphReceiptPage.self, from: bytes)
+            let page = try await decodeResponse(CarryGraphReceiptPage.self, from: bytes, action: "receiptPage")
             guard page.requestID == command.requestID, page.cursor == summary.cursor,
                   page.changeCount == summary.changeCount, !page.changes.isEmpty, page.changes.count <= 500,
                   page.nextOffset == offset + page.changes.count, page.nextOffset <= summary.changeCount,
@@ -191,7 +191,24 @@ final class CarryGraphTransport: CarryGraphStreamingTransporting {
 
     private func request<Result: Decodable & Sendable>(_ body: Body, encoded: Data? = nil) async throws -> Result {
         let bytes = try await sendRequest(body, encoded: encoded)
-        return try await Self.decode(Result.self, from: bytes)
+        return try await decodeResponse(Result.self, from: bytes, action: body.action)
+    }
+
+    // All diagnostic values originate from this fixed local vocabulary. Never
+    // forward server error strings, request/response data or token descriptions.
+    private func diagnose(action: String, reason: String) {
+        let allowed = ["apply", "pull", "stage", "commitStage", "receiptPage"]
+        let action = allowed.contains(action) ? action : "unknown"
+        CarryLogger.shared.log(.accountOperationFailed, context: "stage=graph action=\(action) reason=\(reason)")
+    }
+
+    private func decodeResponse<Value: Decodable & Sendable>(_ type: Value.Type, from bytes: Data,
+                                                            action: String) async throws -> Value {
+        do { return try await Self.decode(type, from: bytes) }
+        catch {
+            diagnose(action: action, reason: "decode_failed")
+            throw error
+        }
     }
 
     private func sendRequest(_ body: Body, encoded: Data? = nil) async throws -> Data {
@@ -202,19 +219,35 @@ final class CarryGraphTransport: CarryGraphStreamingTransporting {
         request.cachePolicy = .reloadIgnoringLocalCacheData
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.setValue(publishableKey, forHTTPHeaderField: "apikey")
-        request.setValue("Bearer \(try await accessToken())", forHTTPHeaderField: "Authorization")
+        let token: String
+        do { token = try await accessToken() }
+        catch {
+            diagnose(action: body.action, reason: "token_failed")
+            throw error
+        }
+        request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
         try Task.checkCancellation()
         if let encoded { request.httpBody = encoded }
         else { request.httpBody = try await Self.encode(body) }
-        let (data, response) = try await send(request)
+        let data: Data, response: URLResponse
+        do { (data, response) = try await send(request) }
+        catch let failure as URLError {
+            diagnose(action: body.action, reason: "url_\(failure.errorCode)")
+            throw failure
+        } catch {
+            diagnose(action: body.action, reason: "send_failed")
+            throw error
+        }
         try Task.checkCancellation()
         guard let http = response as? HTTPURLResponse, data.count <= Self.responseLimit else {
+            diagnose(action: body.action, reason: "invalid_response")
             throw CarryGraphTransportFailure.invalidResponse
         }
+        if http.statusCode != 200 { diagnose(action: body.action, reason: "http_\(http.statusCode)") }
         if http.statusCode == 401 { throw CarryGraphTransportFailure.sessionExpired }
         if http.statusCode == 409 { throw CarryGraphTransportFailure.conflict(data) }
         if http.statusCode == 422 {
-            let failure = try await Self.decode(Failure.self, from: data)
+            let failure = try await decodeResponse(Failure.self, from: data, action: body.action)
             if ["stage_unavailable", "stage_incomplete", "receipt_not_found", "invalid_receipt_page"].contains(failure.error) {
                 throw CarryGraphTransportFailure.unavailable
             }

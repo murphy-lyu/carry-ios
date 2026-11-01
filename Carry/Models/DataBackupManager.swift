@@ -273,8 +273,7 @@ nonisolated final class CarryBackupWriter: Sendable {
     }
 
     init(encode: @escaping @Sendable (CarryBackup) throws -> Data = { snapshot in
-        let encoder = JSONEncoder()
-        encoder.dateEncodingStrategy = .iso8601
+        let encoder = CarryBackupDates.encoder()
         encoder.outputFormatting = .prettyPrinted
         return try encoder.encode(snapshot)
     }, report: @escaping @Sendable (Error) -> Void = { error in
@@ -738,8 +737,7 @@ final class DataBackupManager {
     }
 
     private static func encode(_ backup: CarryBackup) -> Data? {
-        let e = JSONEncoder()
-        e.dateEncodingStrategy = .iso8601
+        let e = CarryBackupDates.encoder()
         e.outputFormatting = .prettyPrinted
         return try? e.encode(backup)
     }
@@ -1578,7 +1576,7 @@ extension DataBackupManager {
         backup.attachmentFiles = attachments.isEmpty ? nil : attachments
         backup.photoOriginals = originals.isEmpty ? nil : originals
         try Task.checkCancellation()
-        let encoder = JSONEncoder(); encoder.dateEncodingStrategy = .iso8601; encoder.outputFormatting = .prettyPrinted
+        let encoder = CarryBackupDates.encoder(); encoder.outputFormatting = .prettyPrinted
         let data = try encoder.encode(backup)
         guard data.count <= 256 * 1024 * 1024 else { throw BackupError.tooLarge }
         try Task.checkCancellation()

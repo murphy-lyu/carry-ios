@@ -7,6 +7,7 @@ import { createAccountAIRuntime } from "./runtime.mjs";
 import { opaque, challenge } from "./security.mjs";
 import { aiWebStrings } from "./web-strings.mjs";
 import { TOOLS } from "./manifest.mjs";
+import { consentFormPolicy } from "./web-pages.mjs";
 const accountOrigin = "https://account-qa.invalid",
   origin = "https://connect-qa.invalid",
   project = "https://project-qa.invalid",
@@ -123,14 +124,14 @@ async function fixture() {
     );
   const csrf = (response) => response.headers.get("Set-Cookie").split(";")[0];
   const formToken = (html) => /name="csrf" value="([^"]+)"/.exec(html)[1];
-  async function flow() {
+  async function flow(redirectURI = "https://codex.invalid/callback") {
     const registered = await handler(
       new Request(origin + "/oauth/register", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           client_name: "<img src=x onerror=alert(1)>",
-          redirect_uris: ["https://codex.invalid/callback"],
+          redirect_uris: [redirectURI],
         }),
       }),
     );
@@ -138,7 +139,7 @@ async function fixture() {
       verifier = "v".repeat(43),
       params = new URLSearchParams({
         client_id: clientID,
-        redirect_uri: "https://codex.invalid/callback",
+        redirect_uri: redirectURI,
         response_type: "code",
         code_challenge: await challenge(verifier),
         code_challenge_method: "S256",
@@ -151,6 +152,7 @@ async function fixture() {
     );
     return {
       clientID,
+      redirectURI,
       verifier,
       path:
         new URL(authorized.headers.get("Location")).pathname +
@@ -172,6 +174,8 @@ async function fixture() {
         ["onlyCreated", "true"],
       ],
     });
+    assert.equal(post.status, 303);
+    assert.equal(post.headers.get("Content-Security-Policy"), get.headers.get("Content-Security-Policy"));
     const code = new URL(post.headers.get("Location")).searchParams.get("code");
     const response = await handler(
       new Request(origin + "/oauth/token", {
@@ -180,7 +184,7 @@ async function fixture() {
         body: new URLSearchParams({
           grant_type: "authorization_code",
           client_id: flow.clientID,
-          redirect_uri: "https://codex.invalid/callback",
+          redirect_uri: flow.redirectURI,
           code_verifier: flow.verifier,
           code,
           resource: origin + "/mcp",
@@ -223,12 +227,36 @@ async function fixture() {
     env,
   };
 }
+test("consent CSP allows only the registered callback origin without directive injection", () => {
+  const policy = "default-src 'none'; form-action 'self' https://appleid.apple.com; frame-ancestors 'none';";
+  for (const uri of ["http://127.0.0.1:59732/callback/test", "http://[::1]:59732/callback", "https://codex.invalid/callback"]) {
+    assert.equal(consentFormPolicy(policy, uri), policy.replace("appleid.apple.com;", `appleid.apple.com ${new URL(uri).origin};`));
+  }
+  for (const uri of ["http://attacker.invalid/callback", "https://x;script-src/callback", "javascript:alert(1)", "https://user@codex.invalid/callback"]) {
+    assert.throws(() => consentFormPolicy(policy, uri));
+  }
+});
+test("native loopback consent keeps exact redirect and PKCE token exchange working", async () => {
+  const f = await fixture();
+  try {
+    const flow = await f.flow("http://127.0.0.1:59732/callback/native-test");
+    const get = await f.page(flow.path);
+    assert.equal(get.status, 200);
+    assert.match(get.headers.get("Content-Security-Policy"), /form-action 'self' https:\/\/appleid.apple.com http:\/\/127.0.0.1:59732;/);
+    const access = await f.approve(flow);
+    assert.equal(typeof access, "string");
+    assert.ok(access.length > 20);
+  } finally {
+    await f.db.close();
+  }
+});
 test("real web→signed owner bridge→Auth validation→PostgreSQL consent and plan approval persists without phone", async () => {
   const f = await fixture();
   try {
     const flow = await f.flow(),
       get = await f.page(flow.path);
     assert.equal(get.status, 200);
+    assert.match(get.headers.get("Content-Security-Policy"), /form-action 'self' https:\/\/appleid.apple.com https:\/\/codex.invalid;/);
     const cookie = f.csrf(get),
       html = await get.text();
     assert.ok(html.includes("&lt;img src=x onerror=alert(1)&gt;"));

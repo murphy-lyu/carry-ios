@@ -10,11 +10,14 @@ import SwiftUI
 struct QuickCostSheet: View {
     let existingAmount: Double
     let existingCurrencyCode: String
-    let onSave: (Double, String) -> Void
+    let onSave: (Double, String) -> Bool
 
     @Environment(\.dismiss) private var dismiss
     @AppStorage(ExchangeRateManager.preferredCurrencyDefaultsKey) private var preferredCurrencyRaw = ""
 
+    @Environment(\.nativeEditorOwner) private var inheritedNativeEditorOwner
+    @Environment(\.nativeEditorGroup) private var inheritedNativeEditorGroup
+    @StateObject private var nativeEditors = CarryNativeEditorPresentations()
     @State private var amountText: String = ""
     @State private var currencyCode: String = ""
     @State private var showCurrencyPicker = false
@@ -97,7 +100,7 @@ struct QuickCostSheet: View {
                     }
                 }
             }
-            .sheet(isPresented: $showCurrencyPicker) {
+            .nativeEditorSheet(isPresented: $showCurrencyPicker, presentations: nativeEditors) {
                 NavigationStack {
                     CurrencyPickerView(
                         onPick: { currencyCode = $0 },
@@ -106,6 +109,7 @@ struct QuickCostSheet: View {
                 }
             }
         }
+        .nativeEditorErrors(nativeEditors)
         .presentationDetents([.medium])
         .presentationDragIndicator(.visible)
         .onAppear {
@@ -119,11 +123,11 @@ struct QuickCostSheet: View {
 
     private func save() {
         numpadFocused = false
-        commitSave()
+        guard commitSave() else { nativeEditors.saveFailed = true; return }
         dismiss()
     }
 
-    private func commitSave() {
+    private func commitSave() -> Bool {
         let amount = CurrencyCatalog.parseAmount(amountText)
         let code: String
         if amountText.trimmingCharacters(in: .whitespaces).isEmpty {
@@ -131,6 +135,6 @@ struct QuickCostSheet: View {
         } else {
             code = currencyCode.isEmpty ? homeCode : currencyCode.uppercased()
         }
-        onSave(amount, code)
+        return onSave(amount, code)
     }
 }

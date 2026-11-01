@@ -30,13 +30,50 @@ final class AccountGraphMigrationTests: XCTestCase {
         let custom = MyItem(name: "Lens", collectionName: "Camera", category: "Electronics", quantityMode: .everyNDays, quantityIntervalDays: 2)
         let url = try XCTUnwrap(DataBackupManager.shared.makeExportFile(trips: [trip], myItems: [custom]))
         defer { try? FileManager.default.removeItem(at: url) }
-        let decoder = JSONDecoder(); decoder.dateDecodingStrategy = .iso8601
+        let decoder = CarryBackupDates.decoder()
         return try decoder.decode(CarryBackup.self, from: Data(contentsOf: url))
     }
 
     private func json(_ backup: CarryBackup) throws -> CarryGraphValue {
-        let encoder = JSONEncoder(); encoder.dateEncodingStrategy = .iso8601
+        let encoder = CarryBackupDates.encoder()
         return try JSONDecoder().decode(CarryGraphValue.self, from: encoder.encode(backup))
+    }
+
+    func testMigrationGraphRoundTripPreservesPacketAndNativeMilliseconds() throws {
+        var source = try backup()
+        source.createdAt = Date(timeIntervalSince1970: 1_793_528_430.123)
+        source.trips[0].createdAt = Date(timeIntervalSince1970: 1_793_528_430.456)
+        source.trips[0].departureDate = Date(timeIntervalSince1970: 1_793_528_430.789)
+        let owner = UUID(), packet = try CarryGraphMigrationCodec.prepare(source, accountID: owner,
+            migrationID: UUID(), tripIDs: Set(source.trips.map(\.id)), includeLibrary: true, includeReminderPreferences: true)
+        let restored = try CarryGraphMigrationCodec.restore(packet, accountID: owner)
+        XCTAssertEqual(restored.createdAt.timeIntervalSince1970, source.createdAt.timeIntervalSince1970, accuracy: 0.000_01)
+        XCTAssertEqual(restored.trips[0].createdAt.timeIntervalSince1970, source.trips[0].createdAt.timeIntervalSince1970, accuracy: 0.000_01)
+        XCTAssertEqual(restored.trips[0].departureDate.timeIntervalSince1970, source.trips[0].departureDate.timeIntervalSince1970, accuracy: 0.000_01)
+        XCTAssertEqual(try json(restored), try json(source))
+    }
+
+    func testPreparedMigrationSourcePreservesMillisecondsAndLegacyWholeSecondBytes() async throws {
+        for seconds in [1_793_528_430.0, 1_793_528_430.123] {
+            let date = Date(timeIntervalSince1970: seconds)
+            let trip = TripBundle(name: "Synthetic date migration", destinationCity: "", days: 0, dateRange: "", isDateless: true)
+            trip.createdAt = date; trip.departureDate = date
+            var source = DataBackupManager.shared.migrationSnapshot(trips: [trip], myItems: [])
+            source.createdAt = date
+            let root = FileManager.default.temporaryDirectory.appendingPathComponent("CarryMigrationPreparation-" + UUID().uuidString)
+            let prepared = try await CarryMigrationBackupPreparation.prepare(source, attachments: [:], backgrounds: [:], originalPhotos: [:], directory: root)
+            let bytes = try Data(contentsOf: prepared.url)
+            let restored = try CarryBackupDates.decoder().decode(CarryBackup.self, from: bytes)
+            XCTAssertEqual(restored.createdAt.timeIntervalSince1970, seconds, accuracy: 0.000_01)
+            XCTAssertEqual(restored.trips[0].createdAt.timeIntervalSince1970, seconds, accuracy: 0.000_01)
+            XCTAssertEqual(restored.trips[0].departureDate.timeIntervalSince1970, seconds, accuracy: 0.000_01)
+            if seconds.rounded() == seconds {
+                let legacy = JSONEncoder(); legacy.outputFormatting = .sortedKeys; legacy.dateEncodingStrategy = .iso8601
+                // Existing whole-second source bytes and therefore SHA256 remain identical.
+                XCTAssertEqual(bytes, try legacy.encode(prepared.backup))
+            }
+            try await CarryMigrationBackupPreparation.discard(root)
+        }
     }
 
     func testIncrementalNativeSourcesCoverEveryBusinessKindAndMatchTheFullBackupContract() throws {
@@ -65,7 +102,7 @@ final class AccountGraphMigrationTests: XCTestCase {
         let trips = try context.fetch(FetchDescriptor<TripBundle>()), items = try context.fetch(FetchDescriptor<MyItem>())
         let url = try XCTUnwrap(DataBackupManager.shared.makeExportFile(trips: trips, myItems: items))
         defer { do { try FileManager.default.removeItem(at: url) } catch { XCTFail("Cannot remove synthetic export") } }
-        let decoder = JSONDecoder(); decoder.dateDecodingStrategy = .iso8601
+        let decoder = CarryBackupDates.decoder()
         let full = try decoder.decode(CarryBackup.self, from: Data(contentsOf: url))
         let packet = try CarryGraphMigrationCodec.prepare(full, accountID: UUID(), migrationID: UUID(),
             tripIDs: Set(full.trips.map(\.id)), includeLibrary: true)
@@ -163,4 +200,49 @@ final class AccountGraphMigrationTests: XCTestCase {
         // Files are verified locally above. This test does not upload them to
         // Supabase Storage or count as completed production asset migration.
     }
+
+    func testHighPrecisionPacketDatesRestoreSemanticallyWithoutChangingRawFieldsOrAssetDigests() throws {
+        let source = try backup(), owner = UUID()
+        let original = try CarryGraphMigrationCodec.prepare(source, accountID: owner, migrationID: UUID(),
+            tripIDs: Set(source.trips.map { $0.id }), includeLibrary: true)
+        let dateFields: [String: [String]] = ["trip": ["createdAt", "departureDate"], "photo": ["timestamp"],
+            "attachment": ["addedAt"], "libraryItem": ["createdAt", "updatedAt"]]
+        for raw in ["2026-11-01T10:20:30.123456789Z", "2026-11-01T18:20:59.999999999+08:00", "2026-12-31T23:59:59.999999999Z"] {
+            var entities = original.entities
+            for index in entities.indices {
+                for key in dateFields[entities[index].kind] ?? [] where entities[index].fields[key] != nil {
+                    entities[index].fields[key] = .string(raw)
+                }
+                if entities[index].kind == "trip" { entities[index].fields["name"] = .string(raw) }
+            }
+            func packet(_ values: [CarryGraphEntity]) -> CarryGraphMigrationPacket {
+                .init(accountID: owner, migrationID: original.migrationID, backupVersion: original.backupVersion,
+                    createdAt: original.createdAt, defaultReminderOffsets: original.defaultReminderOffsets,
+                    entities: values, assets: original.assets, relations: original.relations)
+            }
+            let input = packet(entities), encoder = JSONEncoder()
+            encoder.outputFormatting = .sortedKeys
+            let originalBytes = try encoder.encode(input), digests = input.assets.map { $0.sha256 }
+            let restored = try CarryGraphMigrationCodec.restore(input, accountID: owner)
+            XCTAssertEqual(restored.trips[0].name, raw, "Date-looking ordinary text stays byte-exact")
+            let checked = try CarryGraphMigrationCodec.prepare(restored, accountID: owner, migrationID: input.migrationID,
+                tripIDs: Set(restored.trips.map { $0.id }), includeLibrary: true)
+            let canonical = CarryBackupDates.string(from: try XCTUnwrap(CarryBackupDates.parse(raw)))
+            for entity in checked.entities {
+                for key in dateFields[entity.kind] ?? [] where entity.fields[key] != nil {
+                    XCTAssertEqual(entity.fields[key], .string(canonical))
+                }
+            }
+            XCTAssertEqual(try encoder.encode(input), originalBytes)
+            XCTAssertEqual(input.assets.map { $0.sha256 }, digests)
+            var unknown = entities
+            unknown[0].fields["unexpectedDate"] = .string(raw)
+            XCTAssertThrowsError(try CarryGraphMigrationCodec.restore(packet(unknown), accountID: owner), "Unknown fields must never bypass round-trip validation")
+            var invalid = entities
+            let trip = try XCTUnwrap(invalid.firstIndex { $0.kind == "trip" })
+            invalid[trip].fields["createdAt"] = .string("2026-02-30T10:20:30.999999999Z")
+            XCTAssertThrowsError(try CarryGraphMigrationCodec.restore(packet(invalid), accountID: owner))
+        }
+    }
+
 }

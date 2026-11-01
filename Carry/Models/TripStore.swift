@@ -237,6 +237,42 @@ final class TripStore: ObservableObject {
     private let scope: TripStoreScope
     var businessContext: ModelContext { context }
     var assetImporter: CarryAccountImportService?
+    var nativeEditing: CarryNativeEditingCoordinator?
+    let nativeEditorIdentity = UUID()
+    private var editorSaveFailureSequence: UInt64 = 0
+    private(set) var lastEditorSaveWasBusy = false
+
+    /// Presenters acquire before reading a draft, not in the editor onAppear.
+    /// Guest/local stores require no account projection gate.
+    func beginNativeEditing(groupID: UUID, readOnly: Bool = false) -> CarryNativeEditorLease? {
+        nativeEditing?.acquire(groupID: groupID, readOnly: readOnly)
+    }
+
+    /// Existing mutation APIs may handle persistence errors internally. Editors
+    /// still need an explicit result before showing success or discarding draft.
+    @discardableResult
+    func performEditorSave(groupID: UUID? = nil, _ operation: () -> Void) -> Bool {
+        lastEditorSaveWasBusy = false
+        guard nativeEditing?.isInvalidated != true else { return false }
+        let failures = editorSaveFailureSequence
+        let outcome = CarryNativeEditorWriteContext.outcome ?? CarryNativeEditorWriteOutcome()
+        let previousFailures = outcome.failures
+        let group = groupID ?? CarryNativeEditorWriteContext.groupID
+        do {
+            try CarryNativeEditorWriteContext.$groupID.withValue(group) {
+                try CarryNativeEditorWriteContext.$outcome.withValue(outcome) {
+                    if let nativeEditing, let group { try nativeEditing.withEditorWrite(groupID: group, operation) }
+                    else if nativeEditing?.hasEditingSessions == true { throw CarryNativeEditingFailure.busy }
+                    else { operation() }
+                }
+            }
+        } catch {
+            outcome.failures += 1
+            if error is CarryNativeEditingFailure { outcome.wasBusy = true }
+        }
+        lastEditorSaveWasBusy = outcome.wasBusy
+        return editorSaveFailureSequence == failures && outcome.failures == previousFailures
+    }
     let migrationWriteGuard: CarryMigrationSourceWriteGuard
     private var usesSharedEffects: Bool { if case .local = scope { return true }; return false }
     private func sharedEffect(_ effect: () -> Void) { if usesSharedEffects { effect() } }
@@ -875,6 +911,9 @@ final class TripStore: ObservableObject {
 
     private func persist(_ context: ModelContext) throws {
         do {
+            // Admission is distinct from an I/O/journal failure: do not enter
+            // CarryPersistence's quarantine when another UI group owns editing.
+            try nativeEditing?.validateBusinessWrite()
             try CarryPersistence.commit(context, using: { transaction in
                 try migrationWriteGuard.validate(transaction)
                 try persistenceSave(transaction)
@@ -882,6 +921,16 @@ final class TripStore: ObservableObject {
             publishAccountChange()
         }
         catch {
+            editorSaveFailureSequence &+= 1
+            CarryNativeEditorWriteContext.outcome?.failures += 1
+            if error is CarryNativeEditingFailure {
+                CarryNativeEditorWriteContext.outcome?.wasBusy = true
+                // Busy is a pre-save refusal, not a failed disk transaction.
+                // Keep the current identity map used by the owning editor.
+                CarryPersistence.rollbackRejectedMutation(context)
+                fetchTrips()
+                throw error
+            }
             // A rolled-back SwiftData context may retain stale edited model
             // instances in its identity map. Use a fresh context for subsequent
             // commands and republish the actual persisted business graph.
@@ -3318,6 +3367,26 @@ final class TripStore: ObservableObject {
     /// Approximate country centroids used as a fallback when CLGeocoder returns
     /// a valid isoCountryCode but a nil CLLocation (can happen for broad queries).
 
+    /// Apply a late lookup only to the exact city that requested it and only
+    /// when no unrelated native editor owns a mutable draft.
+    func applyCountryResolution(tripID: UUID, expectedCity: String,
+                                primary: (code: String, lat: Double, lon: Double)?,
+                                extras: [DestinationEntry], caller: String) {
+        let apply: (TripStore) -> Void = { store in
+            guard let trip = store.bundle(for: tripID), trip.destinationCity == expectedCity else { return }
+            if let primary {
+                if !primary.code.isEmpty { trip.countryCode = primary.code }
+                trip.latitude = primary.lat; trip.longitude = primary.lon
+            }
+            trip.additionalDestinations = extras
+            do { try store.persist(store.context) }
+            catch { CarryLogger.shared.log(.persistFailed, context: "caller=\(caller)") }
+        }
+        if let nativeEditing {
+            nativeEditing.performMaintenance { [weak self] in guard let self else { return }; apply(self) }
+        } else { apply(self) }
+    }
+
     func updateCountryCode(for tripId: UUID, city: String) {
         let tokens = splitCities(city)
         guard !tokens.isEmpty else { return }
@@ -3325,16 +3394,9 @@ final class TripStore: ObservableObject {
         // Fast path: every token resolves from local table, no network needed.
         let localResults = tokens.compactMap { lookupCity($0) }
         if localResults.count == tokens.count {
-            guard let bundle = bundle(for: tripId) else { return }
-            bundle.countryCode = localResults[0].code
-            bundle.latitude    = localResults[0].lat
-            bundle.longitude   = localResults[0].lon
-            bundle.additionalDestinations = localResults.dropFirst().map {
-                DestinationEntry(countryCode: $0.code, latitude: $0.lat, longitude: $0.lon)
-            }
-            do { try persist(context) } catch {
-                CarryLogger.shared.log(.persistFailed, context: "caller=updateCountryCode")
-            }
+            applyCountryResolution(tripID: tripId, expectedCity: city, primary: localResults[0],
+                extras: localResults.dropFirst().map { DestinationEntry(countryCode: $0.code, latitude: $0.lat, longitude: $0.lon) },
+                caller: "updateCountryCode")
             CarryLogger.shared.log(.geocodeResolved,
                 context: "tokens=\(tokens.count) resolved=\(localResults.count) city=\(city)")
             return
@@ -3375,16 +3437,9 @@ final class TripStore: ObservableObject {
 
             guard !resolved.isEmpty else { return }
             await MainActor.run {
-                guard let bundle = self.bundle(for: tripId) else { return }
-                bundle.countryCode = resolved[0].code
-                bundle.latitude    = resolved[0].lat
-                bundle.longitude   = resolved[0].lon
-                bundle.additionalDestinations = Array(resolved.dropFirst()).map {
-                    DestinationEntry(countryCode: $0.code, latitude: $0.lat, longitude: $0.lon)
-                }
-                do { try self.persist(self.context) } catch {
-                    CarryLogger.shared.log(.persistFailed, context: "caller=updateCountryCode_async")
-                }
+                self.applyCountryResolution(tripID: tripId, expectedCity: city, primary: resolved[0],
+                    extras: resolved.dropFirst().map { DestinationEntry(countryCode: $0.code, latitude: $0.lat, longitude: $0.lon) },
+                    caller: "updateCountryCode_async")
                 CarryLogger.shared.log(.geocodeResolved,
                     context: "tokens=\(tokens.count) resolved=\(resolved.count) city=\(city)")
             }
@@ -3426,7 +3481,7 @@ final class TripStore: ObservableObject {
         // and permanently hiding the country from the map.
         let missing = trips.filter {
             !$0.destinationCity.isEmpty && ($0.countryCode.isEmpty || $0.latitude == 0)
-        }
+        }.map { (id: $0.id, destinationCity: $0.destinationCity) }
         // Also pick up multi-destination trips whose extras haven't been resolved yet.
         let missingExtras = trips.filter {
             !$0.destinationCity.isEmpty &&
@@ -3434,7 +3489,7 @@ final class TripStore: ObservableObject {
             $0.latitude != 0 &&
             $0.additionalDestinationsData.isEmpty &&
             splitCities($0.destinationCity).count > 1
-        }
+        }.map { (id: $0.id, destinationCity: $0.destinationCity) }
 
         guard !missing.isEmpty || !missingExtras.isEmpty else { return }
 
@@ -3477,14 +3532,8 @@ final class TripStore: ObservableObject {
                         return DestinationEntry(countryCode: r.code, latitude: r.lat, longitude: r.lon)
                     }
                     await MainActor.run {
-                        guard let bundle = self.bundle(for: trip.id) else { return }
-                        bundle.countryCode = local.code
-                        bundle.latitude    = local.lat
-                        bundle.longitude   = local.lon
-                        bundle.additionalDestinations = extras
-                        do { try self.persist(self.context) } catch {
-                            CarryLogger.shared.log(.persistFailed, context: "caller=geocodeMissingTrips_local")
-                        }
+                        self.applyCountryResolution(tripID: trip.id, expectedCity: trip.destinationCity,
+                            primary: local, extras: extras, caller: "geocodeMissingTrips_local")
                     }
                     continue
                 }
@@ -3503,14 +3552,8 @@ final class TripStore: ObservableObject {
                 }
 
                 await MainActor.run {
-                    guard let bundle = self.bundle(for: trip.id) else { return }
-                    if !primary.code.isEmpty { bundle.countryCode = primary.code }
-                    bundle.latitude  = primary.lat
-                    bundle.longitude = primary.lon
-                    bundle.additionalDestinations = extras
-                    do { try self.persist(self.context) } catch {
-                        CarryLogger.shared.log(.persistFailed, context: "caller=geocodeMissingTrips_geocoder")
-                    }
+                    self.applyCountryResolution(tripID: trip.id, expectedCity: trip.destinationCity,
+                        primary: primary, extras: extras, caller: "geocodeMissingTrips_geocoder")
                 }
             }
 
@@ -3527,11 +3570,8 @@ final class TripStore: ObservableObject {
                 }
                 guard !extras.isEmpty else { continue }
                 await MainActor.run {
-                    guard let bundle = self.bundle(for: trip.id) else { return }
-                    bundle.additionalDestinations = extras
-                    do { try self.persist(self.context) } catch {
-                        CarryLogger.shared.log(.persistFailed, context: "caller=geocodeMissingTrips_extras")
-                    }
+                    self.applyCountryResolution(tripID: trip.id, expectedCity: trip.destinationCity,
+                        primary: nil, extras: extras, caller: "geocodeMissingTrips_extras")
                 }
             }
         }

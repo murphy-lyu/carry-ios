@@ -74,10 +74,10 @@ final class TripMigrationTests: XCTestCase {
         if embeddedOriginal, let photo = trip.safeItineraryDays.first?.stops?.first?.photos?.first {
             backup.photoOriginals = [photo.id.uuidString.lowercased(): Data("Synthetic original bytes".utf8)]
         }
-        let encoder = JSONEncoder(); encoder.dateEncodingStrategy = .iso8601
+        let encoder = CarryBackupDates.encoder()
         let backupURL = folder.appendingPathComponent("source-backup.json"); try encoder.encode(backup).write(to: backupURL)
         // The portable DTO is decoded exactly as a real persisted JSON backup.
-        let decoder = JSONDecoder(); decoder.dateDecodingStrategy = .iso8601
+        let decoder = CarryBackupDates.decoder()
         let portable = try decoder.decode(CarryBackup.self, from: Data(contentsOf: backupURL))
         let packet = try CarryGraphMigrationCodec.prepare(portable, accountID: owner, migrationID: UUID(), tripIDs: [trip.id], includeLibrary: false)
         let snapshot = try CarryMigrationSourceSnapshot.capture(trip: trip)

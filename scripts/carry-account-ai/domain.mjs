@@ -109,6 +109,24 @@ export function authorizeEntity(
     has(grant, write ? "attachments:write" : "attachments:read");
   return entity;
 }
+// Match the existing account wire contract, not Date.parse's normalization
+// of impossible calendar days / 24:00, or its timezone-less local-time fallback.
+function wireDateValid(value) {
+  const match = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})(?:\.\d+)?(Z|([+-])(\d{2}):(\d{2}))$/.exec(value);
+  if (!match || match[0] !== value) return false;
+  const [, y, m, d, h, minute, second, zone, , offsetHour, offsetMinute] = match;
+  const year = Number(y), month = Number(m), day = Number(d);
+  const leap = year % 4 === 0 && (year % 100 !== 0 || year % 400 === 0);
+  const days = [31, leap ? 29 : 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
+  if (year < 1 || month < 1 || month > 12 || day < 1 || day > days[month - 1] ||
+      Number(h) > 23 || Number(minute) > 59 || Number(second) > 59) return false;
+  // PostgreSQL's existing timestamptz contract rejects displacement >=16h.
+  if (zone !== "Z" && (Number(offsetHour) > 15 || Number(offsetMinute) > 59)) return false;
+  const instant = Date.parse(value);
+  if (!Number.isFinite(instant)) return false;
+  const utcYear = new Date(instant).getUTCFullYear();
+  return utcYear >= 1 && utcYear <= 9999;
+}
 function valueValid(value, rule) {
   if (value === null) return rule.optional === true;
   if (rule.type === "string") {
@@ -122,9 +140,7 @@ function valueValid(value, rule) {
     if (rule.pattern && !new RegExp(rule.pattern).test(value)) return false;
     if (rule.format === "uuid") return /^[0-9a-f-]{36}$/i.test(value);
     if (rule.format === "date-time")
-      return (
-        /^\d{4}-\d\d-\d\dT/.test(value) && Number.isFinite(Date.parse(value))
-      );
+      return wireDateValid(value);
     if (rule.format === "timezone" && value) {
       try {
         new Intl.DateTimeFormat("en", { timeZone: value }).format();

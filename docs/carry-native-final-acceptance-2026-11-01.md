@@ -42,3 +42,14 @@
 - 两次都是 `EXC_BREAKPOINT`，主线程 `EnvironmentObject.error → StopDetailView.store.getter → stopScheduleSubtitle → header`。可确定详情缺少 `TripStore` 环境对象，与登录/同步接口无关。
 - `ItineraryView` 统一 sheet 内容此前依赖外层导航环境的继承。改为在统一呈现根显式注入当前 `store` 和 `router`，覆盖地点、交通、住宿详情及添加/编辑/路线等所有分支，并保留账户行程所属 store。
 - 本地编译和主任务 Mac 实际点击回归另行记录；代码通过编译仍不代表 Catalyst 呈现问题已验收。
+
+## AI 创建行程日期互操作修复
+
+- 原 Mac 的安全固定码将失败定位为 `native_projection`，无 Graph 传输失败日志。随后只读快照确认新增 AI 行程已在 replica 中，3 条候选待投影；待投影记录的 2 个日期字段均带小数秒。没有对真实记录输出内容或执行写入。
+- AI `domain.mjs` 默认日期来自 JavaScript `toISOString()`，包含毫秒；原生 `ISO8601DateFormatter()` 默认选项只接受无毫秒。纯合成 Foundation 验证：无毫秒解析成功，`.000Z` 解析失败。
+- 投影器现在接受 ISO 8601 有/无小数秒及合法时区偏移，解析失败仍抛 `invalidGraph`，不填入当前时间。Source 编码器保留整秒的旧无毫秒表示，有小数的时间输出 Foundation 标准三位毫秒，避免 AI `.123Z` 经原生模型后截秒。
+- 新增完整 AI `create_trip` 必填默认字段与 day 形状的 replica → 原生 → capture → journal → wire 回归：日期精确到毫秒、默认字段往返一致、重复投影不产生变更，显式改名后仅发送 name；另验证旧格式/时区兼容，以及坏日期拒绝整轮投影、不污染工作 context 或持久化模型。
+- 扩大到必要的备份链路：统一 `CarryBackupDates` 日期解析、规范化编码和 JSON encoder；三个生产备份输出点均使用同一 encoder，现有同 UUID 恢复测试改用生产 encoder，保留非整秒输入及“仅 name 改动”的原断言。新增实际 `makeExportFile → restoreFromData` 毫秒保真且不新增日志事务的回归。冲突日期展示也使用同一 parser。
+- Foundation 的 fractional FormatStyle 在合成 `.123` 上可能截为 `.122`，统一编码显式四舍五入到三位毫秒，整秒仍输出旧格式；补跨秒/跨日进位、负 epoch、普通整秒的解析往返验证。parser 对完整 ISO 时间形状和日历组件执行检查，拒绝不存在日期、非法偏移和尾随文本，避免 Foundation 的宽松解析静默接受错误时间。
+- 中间定向回归：49/49 通过（含完整原生投影、journal、bridge、Workspace、冲突复核）；初版新增 receipt 夹具的 subtreeVersion 不符 sequence 已按协议修正。初版旧备份测试揭示的截秒由生产 encoder 修复，没有将其输入改为整秒或放宽断言。最终定向双轮结果另记。
+- 日期修复最终定向两轮各 50/50、零失败；完整范围、逐项证据和最后绝对结束锚点/尾随换行测试的执行边界见 `docs/carry-ai-native-date-interop-review-2026-11-01.md`。源码稳定，专用夹具/测试进程已释放。

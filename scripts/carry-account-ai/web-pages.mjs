@@ -11,6 +11,18 @@ const uuid = (value) =>
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value);
 const hidden = (name, value) =>
   `<input type="hidden" name="${name}" value="${esc(value)}">`;
+export function consentFormPolicy(policy, redirectURI) {
+  const target = new URL(redirectURI);
+  // The owner bridge already checked the exact registered callback. Only its
+  // origin belongs in CSP; never interpolate raw client metadata/directives.
+  if (!(target.protocol === "https:" || (target.protocol === "http:" &&
+      ["127.0.0.1", "localhost", "[::1]"].includes(target.hostname))) ||
+      target.username || target.password ||
+      !/^https?:\/\/(?:[a-z0-9.-]+|\[[a-f0-9:]+\])(?::[0-9]+)?$/i.test(target.origin))
+    throw new WebFailure(503, "invalid_owner_response");
+  return policy.replace(/form-action ([^;]+);/, (_, sources) =>
+    `form-action ${sources} ${target.origin};`);
+}
 async function form(request, allowed, repeated = []) {
   if (
     request.headers.get("Content-Type")?.split(";")[0].trim() !==
@@ -119,6 +131,8 @@ export async function accountAIPage({
       });
       if (result.status !== 303)
         throw new WebFailure(503, "invalid_owner_response");
+      headers.set("Content-Security-Policy", consentFormPolicy(
+        headers.get("Content-Security-Policy"), result.location));
       headers.set("Location", result.location);
       return finish(new Response(null, { status: 303, headers }));
     }
@@ -145,6 +159,10 @@ export async function accountAIPage({
           `<label><input type="checkbox" name="tripIDs" value="${esc(trip.id)}"> ${esc(trip.name)}</label><br>`,
       )
       .join("");
+    // Chromium checks form-action again at the POST's external 303 destination.
+    // Permit only this verified client's callback origin on its consent page.
+    headers.set("Content-Security-Policy", consentFormPolicy(
+      headers.get("Content-Security-Policy"), r.client.redirectURI));
     return page(
       t.connect,
       `<dl><dt>${esc(t.client)}</dt><dd>${esc(r.client.name)}<br><code>${esc(r.client.id)}</code></dd><dt>${esc(t.destination)}</dt><dd><code>${esc(r.client.redirectURI)}</code></dd></dl><p>${esc(t.unverified)}</p><form method="get">${hidden("authorization_id", id)}<label>${esc(t.search)} <input type="search" name="q" value="${esc(q)}"></label><button class="text-button">${esc(t.search)}</button></form><form method="post">${hidden("csrf", csrf)}<fieldset><legend>${esc(t.permissions)}</legend>${permissions}</fieldset><label><input type="checkbox" name="onlyCreated" value="true" checked> ${esc(t.newOnly)}</label><fieldset><legend>${esc(t.trips)}</legend>${trips}${choices.hasMore ? `<p>${esc(t.more)}</p>` : ""}</fieldset><button class="text-button" name="decision" value="approve">${esc(t.approve)}</button> <button class="text-button" name="decision" value="deny">${esc(t.deny)}</button></form>`,

@@ -243,7 +243,7 @@ struct TripInfoView: View {
                 onSkipDates: { hasDates = false }   // 选择器内「暂不设置日期」→ 规划中行程
             ) { start, end in
                 departureDate = start
-                returnDate = max(end, Calendar.current.date(byAdding: .day, value: 1, to: start) ?? start)
+                returnDate = max(end, start)
                 hasDates = true   // 选定日期 = 有日期行程
             }
         }

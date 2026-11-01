@@ -789,10 +789,15 @@ export function createAccountAIHandler({
             "code_verifier",
             "resource",
             "refresh_token",
+            "scope",
           ],
-          ["grant_type", "client_id", "resource"],
+          ["grant_type", "client_id"],
         );
-        if (p.resource !== resource) fail("invalid_target");
+        // A refresh is already bound to this single server resource in storage.
+        // Codex's OAuth client omits resource and repeats its original scope.
+        // Initial code exchange still requires the exact explicit resource.
+        if ((p.grant_type === "authorization_code" && p.resource !== resource) ||
+            (p.resource !== undefined && p.resource !== resource)) fail("invalid_target");
         const set = tokenSet(now()),
           tokens = {
             accessHash: await hash(set.access),
@@ -802,6 +807,7 @@ export function createAccountAIHandler({
           };
         let grant;
         if (p.grant_type === "authorization_code") {
+          if (p.scope !== undefined) fail("invalid_request");
           if (
             !/^[A-Za-z0-9._~-]{43,128}$/.test(p.code_verifier ?? "") ||
             !/^[A-Za-z0-9_-]{43}$/.test(p.code ?? "")
@@ -823,6 +829,9 @@ export function createAccountAIHandler({
             refreshHash: await hash(p.refresh_token),
             clientID: p.client_id,
             resource,
+            // Validate against the stored grant inside the transaction, after
+            // spent-token replay handling and before consuming a live refresh.
+            requestedScopes: p.scope === undefined ? undefined : p.scope.split(" ").filter(Boolean),
             tokens,
             now: now(),
           });
@@ -1026,7 +1035,15 @@ export function createAccountAIHandler({
         if (call.method === "tools/list")
           return json({ jsonrpc: "2.0", id: rpcID, result: { tools: TOOLS } });
         if (call.method !== "tools/call") fail("method_not_found", 404);
-        const params = object(call.params, ["name", "arguments"], ["name"]);
+        const params = object(call.params, ["name", "arguments", "_meta"], ["name"]);
+        // MCP clients attach transport metadata (Codex threadId/progressToken).
+        // Bound and discard it: identity, scopes and operations come exclusively
+        // from the verified grant and validated tool arguments.
+        if (params._meta !== undefined &&
+            (!params._meta || typeof params._meta !== "object" ||
+             Array.isArray(params._meta) || Object.keys(params._meta).length > 64 ||
+             new TextEncoder().encode(JSON.stringify(params._meta)).byteLength > 16384))
+          fail("invalid_request");
         const result = await runTool(
           grant,
           params.name,

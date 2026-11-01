@@ -96,6 +96,10 @@ struct PackingListView: View {
 
     @StateObject private var weatherManager = WeatherManager()
 
+    @Environment(\.nativeEditorOwner) private var inheritedNativeEditorOwner
+    @Environment(\.nativeEditorGroup) private var inheritedNativeEditorGroup
+    @StateObject private var nativeEditors = CarryNativeEditorPresentations()
+    @State private var pendingItemReorder: (sectionId: UUID, order: [UUID])?
     @State private var editingItemId: UUID? = nil
     @State private var editingText: String = ""
 
@@ -238,7 +242,7 @@ struct PackingListView: View {
                         // 打包专属「清单操作」成组置顶（本页主任务）：加物品 → 标记 → 编辑分区 → 分享清单。
                         if detailTab == .packing {
                             Button {
-                                showAddItemsSheet = true
+                                guard nativeEditors.begin(key: "showAddItemsSheet", store: store, owner: inheritedNativeEditorOwner, group: inheritedNativeEditorGroup) else { return }; showAddItemsSheet = true
                             } label: {
                                 Label("packing.menu.add_from_library", systemImage: "shippingbox")
                             }
@@ -254,7 +258,7 @@ struct PackingListView: View {
                                 }
                             }
                             Button {
-                                showReorderSheet = true
+                                guard nativeEditors.begin(key: "showReorderSheet", store: store, owner: inheritedNativeEditorOwner, group: inheritedNativeEditorGroup) else { return }; showReorderSheet = true
                             } label: {
                                 Label("Edit sections", systemImage: "arrow.up.arrow.down")
                             }
@@ -272,13 +276,13 @@ struct PackingListView: View {
                         // 通知配置已统一收进 设置 → 行程提醒（Settings 唯一真相源，spec: notification-center.md），
                         // 故此处不再有「行程提醒」入口；逐航班/住宿静音在各自详情页就近放。
                         Button {
-                            showEditSheet = true
+                            guard nativeEditors.begin(key: "showEditSheet", store: store, owner: inheritedNativeEditorOwner, group: inheritedNativeEditorGroup) else { return }; showEditSheet = true
                         } label: {
                             Label("Edit trip", systemImage: "pencil")
                         }
                         if bundle?.primaryBackground?.localFileName != nil {
                             Button(role: .destructive) {
-                                store.clearBackground(forTripId: tripId)
+                                guard nativeEditors.save(store: store, { store.clearBackground(forTripId: tripId) }) else { return }
                             } label: {
                                 Label("trip.background.remove", systemImage: "trash")
                             }
@@ -293,6 +297,7 @@ struct PackingListView: View {
                         // 仅有日期行程可用（需日期区间过滤照片）。
                         if detailTab == .itinerary, !(bundle?.isDateless ?? true) {
                             Button {
+                                guard nativeEditors.begin(key: "showPhotoImport", store: store, owner: inheritedNativeEditorOwner, group: inheritedNativeEditorGroup) else { return }
                                 showPhotoImport = true
                             } label: {
                                 Label("phototrip.entry.label", systemImage: "photo.badge.plus")
@@ -311,6 +316,7 @@ struct PackingListView: View {
                         // spec: copy-trip-options.md）→ 确认后记下副本 id 让首页扫光高亮 → 返回首页根。
                         Button {
                             UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                            guard nativeEditors.begin(key: "showCopyOptions", store: store, owner: inheritedNativeEditorOwner, group: inheritedNativeEditorGroup) else { return }
                             showCopyOptions = true
                         } label: {
                             Label("trip.swipe.duplicate", systemImage: "doc.on.doc")
@@ -421,15 +427,14 @@ struct PackingListView: View {
         .onDisappear {
             store.refresh()
         }
+        .nativeEditorErrors(nativeEditors, retry: editorRetry)
         .animation(.easeInOut(duration: 0.25), value: isComplete)
-        .sheet(isPresented: $showEditSheet, onDismiss: {
-            store.refresh()
-        }) {
+        .nativeEditorSheet(isPresented: $showEditSheet, presentations: nativeEditors, onDismiss: nativeEditors.dismissal(key: "showEditSheet", after: { store.refresh() })) {
             if let bundle {
                 EditTripView(trip: bundle)
             }
         }
-        .sheet(isPresented: $showSuggestSheet) {
+        .nativeEditorSheet(isPresented: $showSuggestSheet, presentations: nativeEditors, onDismiss: nativeEditors.dismissal(key: "showSuggestSheet")) {
             ScenePickerView(suggestForTripId: tripId)
                 .presentationDragIndicator(.visible)
         }
@@ -437,7 +442,7 @@ struct PackingListView: View {
             guard !isShowing, isNewTrip else { return }
             loadSurpriseItems()
         }
-        .sheet(isPresented: $showReorderSheet) {
+        .nativeEditorSheet(isPresented: $showReorderSheet, presentations: nativeEditors, onDismiss: nativeEditors.dismissal(key: "showReorderSheet")) {
             NavigationStack {
                 ReorderSectionsView(tripId: tripId) { newOrder in
                     store.reorderSections(tripId: tripId, newOrder: newOrder)
@@ -455,14 +460,14 @@ struct PackingListView: View {
         }
         // 快速添加物品：自包含子任务（挑完回到清单），用 sheet 而非 push——与编辑场景/分类/
         // 提醒等行程内子任务一致（spec: app-navigation-framework.md「Carry Modal Convention」）。
-        .sheet(isPresented: $showAddItemsSheet) {
+        .nativeEditorSheet(isPresented: $showAddItemsSheet, presentations: nativeEditors, onDismiss: nativeEditors.dismissal(key: "showAddItemsSheet")) {
             NavigationStack {
                 ItemPickerView(tripId: tripId)
             }
             .tint(CarryAccent.color)
         }
         // 分享行程：先预览海报（含路线地图开关）再分享。
-        .sheet(isPresented: $showSharePreview) {
+        .nativeEditorSheet(isPresented: $showSharePreview, presentations: nativeEditors) {
             if let bundle {
                 SharePreviewSheet(trip: bundle)
                     .tint(CarryAccent.color)
@@ -470,7 +475,7 @@ struct PackingListView: View {
         }
         // 复制行程：新日期 + 交通/住宿开关（spec: copy-trip-options.md）。确认后关闭本 sheet、
         // 记下副本 id 让首页扫光高亮、回首页根——与旧的「点了立即复制」收尾一致。
-        .sheet(isPresented: $showCopyOptions) {
+        .nativeEditorSheet(isPresented: $showCopyOptions, presentations: nativeEditors, onDismiss: nativeEditors.dismissal(key: "showCopyOptions")) {
             if let bundle {
                 CopyTripOptionsSheet(trip: bundle) { newId in
                     showCopyOptions = false
@@ -480,10 +485,11 @@ struct PackingListView: View {
                 .tint(CarryAccent.color)
             }
         }
-        .sheet(isPresented: $showBackgroundPicker, onDismiss: {
+        .nativeEditorSheet(isPresented: $showBackgroundPicker, presentations: nativeEditors, onDismiss: {
             // Present the reposition sheet only after the picker fully dismisses (avoids the
             // two-sheets-at-once race). The image then loads INSIDE the reposition sheet.
             if let provider = pendingPickedProvider {
+                guard nativeEditors.begin(key: "reposition", store: store, owner: inheritedNativeEditorOwner, group: inheritedNativeEditorGroup) else { return }
                 pendingPickedProvider = nil
                 repositionProvider = PickedBackgroundProvider(provider: provider)
             }
@@ -497,31 +503,36 @@ struct PackingListView: View {
             )
             .ignoresSafeArea()
         }
-        .sheet(item: $repositionProvider) { picked in
+        .nativeEditorSheet(item: $repositionProvider, presentations: nativeEditors, onDismiss: nativeEditors.dismissal(key: "reposition")) { picked in
             BackgroundRepositionView(provider: picked.provider) { finalImage, crop in
                 if let importer = store.assetImporter {
-                    Task {
-                        do {
-                            let prepared = try await importer.background(image: finalImage, tripID: tripId)
+                    do {
+                        let prepared = try await importer.background(image: finalImage, tripID: tripId)
+                        guard nativeEditors.save(store: store, {
                             store.setLocalBackground(fileName: prepared.fileURL.lastPathComponent, crop: crop, forTripId: tripId)
-                            if store.bundle(for: tripId)?.primaryBackground?.localFileName == prepared.fileURL.lastPathComponent { prepared.adopt() }
-                        } catch { CarryLogger.shared.log(.attachmentSaveFailed, context: "account_background_import") }
+                        }) else { return false }
+                        guard store.bundle(for: tripId)?.primaryBackground?.localFileName == prepared.fileURL.lastPathComponent else { return false }
+                        prepared.adopt()
+                        return true
+                    } catch {
+                        nativeEditors.fail(busy: false)
+                        return false
                     }
-                    return
                 }
-                if let name = BackgroundImageStore.save(finalImage) {
+                guard let name = BackgroundImageStore.save(finalImage) else { nativeEditors.fail(busy: false); return false }
+                guard nativeEditors.save(store: store, {
                     store.setLocalBackground(fileName: name, crop: crop, forTripId: tripId)
-                    // The cover shows on the home card, not here — a success haptic confirms
-                    // the save registered (the detail screen otherwise doesn't visibly change).
-                    UINotificationFeedbackGenerator().notificationOccurred(.success)
-                }
+                }) else { return false }
+                UINotificationFeedbackGenerator().notificationOccurred(.success)
+                return true
             }
         }
-        .sheet(isPresented: $showPhotoImport) {
+
+        .nativeEditorSheet(isPresented: $showPhotoImport, presentations: nativeEditors, onDismiss: nativeEditors.dismissal(key: "showPhotoImport")) {
             PhotoTripImportView(tripId: tripId)
                 .environmentObject(store)
         }
-        .sheet(isPresented: $showSpend) {
+        .nativeEditorSheet(isPresented: $showSpend, presentations: nativeEditors) {
             TripSpendView(tripId: tripId)
                 .environmentObject(store)
         }
@@ -530,7 +541,7 @@ struct PackingListView: View {
             isPresented: $showDeleteConfirmation
         ) {
             Button("Delete", role: .destructive) {
-                store.removeTrip(withId: tripId)
+                guard nativeEditors.save(store: store, { store.removeTrip(withId: tripId) }) else { return }
                 router.path = NavigationPath()
             }
             Button("Cancel", role: .cancel) { }
@@ -745,11 +756,18 @@ struct PackingListView: View {
             headerContent: { model in AnyView(sectionTitle(model.title, isFirst: model.isFirst)) },
             onDelete: { deleteItem(itemId: $0) },
             onEdit: { beginRename(itemId: $0) },
-            onReorder: { sid, ids in store.reorderItems(tripId: tripId, sectionId: sid, newOrder: ids) },
+            onReorder: { sid, ids in
+                pendingItemReorder = (sid, ids)
+                savePendingItemReorder()
+            },
             onReorderBegan: {
+                guard nativeEditors.begin(key: "itemDrag", store: store, owner: inheritedNativeEditorOwner, group: inheritedNativeEditorGroup) else { return false }
                 // 起拖前提交在编辑的行；起拖触感由 collection 的 liftHaptic 负责。
                 if let id = editingItemId { commitEdit(itemId: id) }
+                guard editingItemId == nil else { nativeEditors.end(key: "itemDrag"); return false }
+                return true
             },
+            onReorderEnded: { if pendingItemReorder == nil { nativeEditors.end(key: "itemDrag") } },
             onScrollHideChange: { scrollHideRelay.setHidden($0) }
         )
         .ignoresSafeArea(.container, edges: .bottom)
@@ -865,12 +883,16 @@ struct PackingListView: View {
     }
 
     private func addWeatherItem(_ item: SceneItem) {
-        store.addSurpriseItem(tripId: tripId, item: SurpriseItem(name: item.name, note: "", category: item.category))
+        guard nativeEditors.save(store: store, {
+            store.addSurpriseItem(tripId: tripId, item: SurpriseItem(name: item.name, note: "", category: item.category))
+        }) else { return }
         CarryLogger.shared.log(.weatherNudgeAccepted, context: "item=\(item.name)")
     }
 
     private func dismissWeatherSuggestions(_ items: [SceneItem]) {
-        for item in items { store.dismissSurpriseItem(tripId: tripId, itemName: item.name) }
+        guard nativeEditors.save(store: store, {
+            for item in items { store.dismissSurpriseItem(tripId: tripId, itemName: item.name) }
+        }) else { return }
         CarryLogger.shared.log(.weatherNudgeDismissed, context: "items=\(items.count)")
     }
 
@@ -884,8 +906,12 @@ struct PackingListView: View {
                 onTap: { toggleItem(itemId: id) },
                 onDecrement: { decrementItemQuantity(itemId: id, current: item.quantity) },
                 onIncrement: { incrementItemQuantity(itemId: id, current: item.quantity) },
-                onSetQuantity: { store.updateItemQuantity(tripId: tripId, itemId: id, quantity: $0) }
+                onSetQuantity: { quantity in
+                    nativeEditors.save(store: store) { store.updateItemQuantity(tripId: tripId, itemId: id, quantity: quantity) }
+                }
             )
+            .environmentObject(store)
+            .nativeEditorScope(nativeEditors)
             .padding(.horizontal, 22)
             .padding(.vertical, 8)
         }
@@ -958,7 +984,7 @@ struct PackingListView: View {
 
     private func toggleItem(itemId: UUID) {
         guard !isNewTrip else { return }
-        store.toggleItem(tripId: tripId, itemId: itemId)
+        guard nativeEditors.save(store: store, { store.toggleItem(tripId: tripId, itemId: itemId) }) else { return }
         if totalCount > 0, packedCount == totalCount {
             UINotificationFeedbackGenerator().notificationOccurred(.success)
         } else {
@@ -967,10 +993,10 @@ struct PackingListView: View {
     }
 
     private func deleteItem(itemId: UUID) {
-        store.removeItem(tripId: tripId, itemId: itemId)
+        _ = nativeEditors.save(store: store) { store.removeItem(tripId: tripId, itemId: itemId) }
     }
     private func markTripCompleted() {
-        store.markTripCompleted(tripId: tripId)
+        guard nativeEditors.save(store: store, { store.markTripCompleted(tripId: tripId) }) else { return }
         hasTriggeredCompletion = true
         UINotificationFeedbackGenerator().notificationOccurred(.success)
         showConfetti = true
@@ -986,7 +1012,7 @@ struct PackingListView: View {
     }
 
     private func markTripUncompleted() {
-        store.markTripUncompleted(tripId: tripId)
+        guard nativeEditors.save(store: store, { store.markTripUncompleted(tripId: tripId) }) else { return }
         hasTriggeredCompletion = false
         showConfetti = false
         showCompletionBanner = false
@@ -1004,14 +1030,14 @@ struct PackingListView: View {
 
     private func incrementItemQuantity(itemId: UUID, current: Int) {
         let next = min(current + 1, 9_999)
-        store.updateItemQuantity(tripId: tripId, itemId: itemId, quantity: next)
+        guard nativeEditors.save(store: store, { store.updateItemQuantity(tripId: tripId, itemId: itemId, quantity: next) }) else { return }
         UIImpactFeedbackGenerator(style: .light).impactOccurred()
     }
 
     private func decrementItemQuantity(itemId: UUID, current: Int) {
         let next = max(current - 1, 1)
         guard next != current else { return }
-        store.updateItemQuantity(tripId: tripId, itemId: itemId, quantity: next)
+        guard nativeEditors.save(store: store, { store.updateItemQuantity(tripId: tripId, itemId: itemId, quantity: next) }) else { return }
         UIImpactFeedbackGenerator(style: .light).impactOccurred()
     }
 
@@ -1170,7 +1196,7 @@ struct PackingListView: View {
 
     private var scenePromptCard: some View {
         Button {
-            showSuggestSheet = true
+            guard nativeEditors.begin(key: "showSuggestSheet", store: store, owner: inheritedNativeEditorOwner, group: inheritedNativeEditorGroup) else { return }; showSuggestSheet = true
         } label: {
             HStack(spacing: 12) {
                 Image(systemName: "sparkles")
@@ -1305,7 +1331,7 @@ struct PackingListView: View {
 
             // CTA：全 App 空态统一胶囊（与首页/行程空态共用 CarryEmptyStatePrimaryButtonStyle）。
             Button {
-                showAddItemsSheet = true
+                guard nativeEditors.begin(key: "showAddItemsSheet", store: store, owner: inheritedNativeEditorOwner, group: inheritedNativeEditorGroup) else { return }; showAddItemsSheet = true
             } label: {
                 HStack(spacing: 8) {
                     Image(systemName: "plus")
@@ -1388,7 +1414,7 @@ struct PackingListView: View {
     private func addSectionFromEmptyState() {
         let name = newSectionName.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !name.isEmpty else { return }
-        _ = store.addSection(tripId: tripId, name: name)
+        guard nativeEditors.save(store: store, { _ = store.addSection(tripId: tripId, name: name) }) else { return }
         newSectionName = ""
     }
 
@@ -1493,23 +1519,44 @@ struct PackingListView: View {
     // MARK: Editing
 
     /// 左滑「编辑」重命名：复用行内编辑——该行就地切成 InlineEditRow（出现即自动聚焦），预填当前名。
+    private var editorRetry: (() -> Void)? {
+        guard pendingItemReorder != nil else { return nil }
+        return { savePendingItemReorder() }
+    }
+
+    private func savePendingItemReorder() {
+        guard let pendingItemReorder else { return }
+        guard nativeEditors.save(store: store, {
+            store.reorderItems(tripId: tripId, sectionId: pendingItemReorder.sectionId, newOrder: pendingItemReorder.order)
+        }) else { return }
+        self.pendingItemReorder = nil
+        nativeEditors.end(key: "itemDrag")
+    }
+
     private func beginRename(itemId: UUID) {
-        if let current = editingItemId, current != itemId { commitEdit(itemId: current) }
+        if let current = editingItemId, current != itemId {
+            commitEdit(itemId: current)
+            guard editingItemId == nil else { return }
+        }
         guard let item = packingItem(itemId) else { return }
+        guard nativeEditors.begin(key: "itemName", store: store, owner: inheritedNativeEditorOwner, group: inheritedNativeEditorGroup) else { return }
         editingText = item.name
         editingItemId = itemId
     }
 
     private func commitEdit(itemId: UUID) {
-        let trimmed = editingText.trimmingCharacters(in: .whitespaces)
-        if trimmed.isEmpty {
-            // 新建空行（从未命名）→ 清掉；已命名物品被清空 → 视作取消、保留原名，避免改名误删。
-            if packingItem(itemId)?.name.isEmpty ?? true {
-                store.removeItem(tripId: tripId, itemId: itemId)
+        guard nativeEditors.save(store: store, {
+            let trimmed = editingText.trimmingCharacters(in: .whitespaces)
+            if trimmed.isEmpty {
+                // 新建空行（从未命名）→ 清掉；已命名物品被清空 → 视作取消、保留原名，避免改名误删。
+                if packingItem(itemId)?.name.isEmpty ?? true {
+                    store.removeItem(tripId: tripId, itemId: itemId)
+                }
+            } else {
+                store.updateItemName(tripId: tripId, itemId: itemId, name: trimmed)
             }
-        } else {
-            store.updateItemName(tripId: tripId, itemId: itemId, name: trimmed)
-        }
+        }) else { return }
+        nativeEditors.end(key: "itemName")
         editingItemId = nil
         editingText = ""
     }
@@ -1531,8 +1578,15 @@ struct PackingListView: View {
     private func appendNewItem(sectionId: UUID) {
         guard let sectionIndex = sections.firstIndex(where: { $0.id == sectionId }) else { return }
         // 先提交当前在编辑的行，再插入新空行；新行的 InlineEditRow 出现即自动聚焦。
-        if let id = editingItemId { commitEdit(itemId: id) }
-        let newId = store.addItem(tripId: tripId, sectionIndex: sectionIndex)
+        if let id = editingItemId {
+            commitEdit(itemId: id)
+            guard editingItemId == nil else { return }
+        }
+        guard nativeEditors.begin(key: "itemName", store: store, owner: inheritedNativeEditorOwner, group: inheritedNativeEditorGroup) else { return }
+        var newId: UUID?
+        guard nativeEditors.save(store: store, {
+            newId = store.addItem(tripId: tripId, sectionIndex: sectionIndex)
+        }) else { return }
         editingItemId = newId
         editingText = ""
     }
@@ -1601,12 +1655,16 @@ struct PackingItemRow: View {
     let onTap: () -> Void
     var onDecrement: (() -> Void)? = nil
     var onIncrement: (() -> Void)? = nil
-    var onSetQuantity: ((Int) -> Void)? = nil
+    var onSetQuantity: ((Int) -> Bool)? = nil
 
     @Environment(\.colorScheme) private var colorScheme
     @State private var checkScale: CGFloat = 1.0
     @State private var checkmarkOpacity: Double
     @State private var checkmarkScale: CGFloat
+    @EnvironmentObject private var store: TripStore
+    @Environment(\.nativeEditorOwner) private var inheritedNativeEditorOwner
+    @Environment(\.nativeEditorGroup) private var inheritedNativeEditorGroup
+    @StateObject private var nativeEditors = CarryNativeEditorPresentations()
     @State private var isEditingQuantity = false
     @State private var quantityText = ""
     @FocusState private var focusedQuantityField: Bool
@@ -1618,7 +1676,7 @@ struct PackingItemRow: View {
         onTap: @escaping () -> Void,
         onDecrement: (() -> Void)? = nil,
         onIncrement: (() -> Void)? = nil,
-        onSetQuantity: ((Int) -> Void)? = nil,
+        onSetQuantity: ((Int) -> Bool)? = nil,
     ) {
         self.item = item
         self.showCheckmark = showCheckmark
@@ -1777,11 +1835,13 @@ struct PackingItemRow: View {
                 )
         )
         .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+        .nativeEditorErrors(nativeEditors)
         .opacity(item.isPacked ? 0.72 : 1.0)
     }
 
     private func beginQuantityEdit() {
         guard !isEditingQuantity else { return }
+        guard nativeEditors.begin(key: "quantity", store: store, owner: inheritedNativeEditorOwner, group: inheritedNativeEditorGroup) else { return }
         isEditingQuantity = true
         quantityText = String(displayedQuantity)
         DispatchQueue.main.async {
@@ -1793,7 +1853,11 @@ struct PackingItemRow: View {
         let trimmed = quantityText.trimmingCharacters(in: .whitespacesAndNewlines)
         let value = Int(trimmed) ?? displayedQuantity
         let clamped = max(1, min(9_999, value))
-        onSetQuantity?(clamped)
+        guard onSetQuantity?(clamped) ?? true else {
+            nativeEditors.saveFailed = true
+            return
+        }
+        nativeEditors.end(key: "quantity")
         isEditingQuantity = false
         focusedQuantityField = false
         quantityText = ""
@@ -1803,6 +1867,56 @@ struct PackingItemRow: View {
 // MARK: - Reorder Sections Sheet
 
 struct ReorderSectionsView: View {
+    /// Value snapshots remain detached even when a failed save replaces ModelContext.
+    private struct ItemDraft {
+        let id: UUID
+        let name: String
+        let quantity: Int
+        let isPacked: Bool
+        let isAlert: Bool
+        let sortOrder: Int
+
+        init(_ item: PackingItem) {
+            id = item.id; name = item.name; quantity = item.quantity
+            isPacked = item.isPacked; isAlert = item.isAlert; sortOrder = item.sortOrder
+        }
+
+        init(blankAt sortOrder: Int) {
+            id = UUID(); name = ""; quantity = 1
+            isPacked = false; isAlert = false; self.sortOrder = sortOrder
+        }
+
+        func materialize() -> PackingItem {
+            let item = PackingItem(name: name, quantity: quantity, isPacked: isPacked,
+                                   isAlert: isAlert, sortOrder: sortOrder)
+            item.id = id
+            return item
+        }
+    }
+
+    private struct SectionDraft: Identifiable {
+        let id: UUID
+        let title: String
+        let sortOrder: Int
+        let items: [ItemDraft]
+
+        init(_ section: PackingSection) {
+            id = section.id; title = section.title; sortOrder = section.sortOrder
+            items = (section.items ?? []).map { ItemDraft($0) }
+        }
+
+        init(title: String, sortOrder: Int) {
+            id = UUID(); self.title = title; self.sortOrder = sortOrder
+            items = [ItemDraft(blankAt: 0)]
+        }
+
+        func materialize(title: String) -> PackingSection {
+            let section = PackingSection(title: title, items: items.map { $0.materialize() }, sortOrder: sortOrder)
+            section.id = id
+            return section
+        }
+    }
+
 
     let tripId: UUID
     let onDone: ([UUID]) -> Void
@@ -1811,10 +1925,14 @@ struct ReorderSectionsView: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(\.colorScheme) private var colorScheme
 
-    @State private var ordered: [PackingSection] = []
+    @Environment(\.nativeEditorOwner) private var inheritedNativeEditorOwner
+    @Environment(\.nativeEditorGroup) private var inheritedNativeEditorGroup
+    @StateObject private var nativeEditors = CarryNativeEditorPresentations()
+    @State private var ordered: [SectionDraft] = []
+    @State private var didLoadSections = false
     @State private var showAddAlert = false
     @State private var newSectionName = ""
-    @State private var renamingSection: PackingSection? = nil
+    @State private var renamingSection: SectionDraft? = nil
     @State private var renameName = ""
     @State private var pendingNewIds: Set<UUID> = []
     @State private var pendingRenames: [UUID: String] = [:]
@@ -1881,6 +1999,7 @@ struct ReorderSectionsView: View {
         }
         .scrollDisabled(draggingId != nil)
         .background(CarrySubtleBackground())
+        .nativeEditorErrors(nativeEditors)
         .navigationTitle("Edit sections")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
@@ -1910,14 +2029,16 @@ struct ReorderSectionsView: View {
             Button("Cancel", role: .cancel) { renamingSection = nil }
         }
         .onAppear {
-            ordered = store.bundle(for: tripId)?.safeSections ?? []
+            guard !didLoadSections else { return }
+            didLoadSections = true
+            ordered = (store.bundle(for: tripId)?.safeSections ?? []).map { SectionDraft($0) }
         }
     }
 
     // MARK: - Row
 
     @ViewBuilder
-    private func rowView(section: PackingSection) -> some View {
+    private func rowView(section: SectionDraft) -> some View {
         let isDragging = draggingId == section.id
         HStack(spacing: 0) {
             Button {
@@ -1982,7 +2103,7 @@ struct ReorderSectionsView: View {
         .offset(y: isDragging ? displayedDragOffset : 0)
     }
 
-    private func dragGesture(for section: PackingSection) -> some Gesture {
+    private func dragGesture(for section: SectionDraft) -> some Gesture {
         DragGesture(minimumDistance: 1, coordinateSpace: .global)
             .onChanged { value in
                 if draggingId == nil {
@@ -2042,8 +2163,7 @@ struct ReorderSectionsView: View {
         let name = newSectionName.trimmingCharacters(in: .whitespaces)
         guard !name.isEmpty else { return }
         let nextOrder = (ordered.map(\.sortOrder).max() ?? -1) + 1
-        let blankItem = PackingItem(name: "", isAlert: false, sortOrder: 0)
-        let section = PackingSection(title: name, items: [blankItem], sortOrder: nextOrder)
+        let section = SectionDraft(title: name, sortOrder: nextOrder)
         ordered.append(section)
         pendingNewIds.insert(section.id)
         newSectionName = ""
@@ -2057,7 +2177,7 @@ struct ReorderSectionsView: View {
         renamingSection = nil
     }
 
-    private func deleteSection(_ section: PackingSection) {
+    private func deleteSection(_ section: SectionDraft) {
         ordered.removeAll { $0.id == section.id }
         if pendingNewIds.contains(section.id) {
             pendingNewIds.remove(section.id)
@@ -2067,20 +2187,22 @@ struct ReorderSectionsView: View {
     }
 
     private func commitDone() {
-        for sectionId in pendingDeleteIds {
-            store.removeSection(tripId: tripId, sectionId: sectionId)
-        }
-        for (sectionId, newName) in pendingRenames where !pendingNewIds.contains(sectionId) {
-            store.renameSection(tripId: tripId, sectionId: sectionId, newName: newName)
-        }
-        let newSections = ordered.filter { pendingNewIds.contains($0.id) }
-        for section in newSections {
-            if let rename = pendingRenames[section.id] { section.title = rename }
-        }
-        if !newSections.isEmpty {
-            store.insertPendingSections(tripId: tripId, sections: newSections)
-        }
-        onDone(ordered.map(\.id))
+        guard nativeEditors.save(store: store, {
+            for sectionId in pendingDeleteIds {
+                store.removeSection(tripId: tripId, sectionId: sectionId)
+            }
+            let existingIds = Set((store.bundle(for: tripId)?.safeSections ?? []).map(\.id))
+            for (sectionId, newName) in pendingRenames where existingIds.contains(sectionId) {
+                store.renameSection(tripId: tripId, sectionId: sectionId, newName: newName)
+            }
+            let newSections = ordered
+                .filter { pendingNewIds.contains($0.id) && !existingIds.contains($0.id) }
+                .map { $0.materialize(title: pendingRenames[$0.id] ?? $0.title) }
+            if !newSections.isEmpty {
+                store.insertPendingSections(tripId: tripId, sections: newSections)
+            }
+            onDone(ordered.map(\.id))
+        }) else { return }
         dismiss()
     }
 }

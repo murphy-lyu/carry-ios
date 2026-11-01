@@ -1,6 +1,6 @@
 # Carry 账户 AI 服务组件
 
-该目录实现新账户协议和领域编译器，取代“配对手机前台执行”作为最终架构。2026-11-01已部署到既有carry-dev并完成实际元数据/合成注册与数据库事务检查；公共connect域名仍为旧relay，不代表Codex已接通。查询、私有文件及完整备份/分享导出已完成本地验证；真实身份、文件、双设备与完整授权链路仍需验收。最新状态见 `../../docs/carry-account-hosted-acceptance-2026-11-01.md`。
+该目录实现新账户协议和领域编译器，取代“配对手机前台执行”作为最终架构。2026-11-01，carry-dev及公共connect账户网关已明确启用用于验收，旧设备relay保留。真实Apple原生/网页同账户、Codex OAuth、当前对话创建/改名/读回及一次真实自动续期已通过；合成行程已到Mac/iPhone，附件上传、核验下载及Mac Quick Look通过。这些证据不代表已正式发布。最新状态见 `../../docs/carry-cross-device-final-qa-2026-11-01.md`；剩余物理场景及原生并发编辑修复以该报告和progress为准。
 
 ## 已实现
 
@@ -23,12 +23,19 @@
 
 从实际 service 项目根、使用该函数 import map 的 Deno check 已通过。此证据覆盖本地模块解析，不能代替托管打包上传、真实凭据、生产网络或设备验收。
 
+Supabase网页编辑器无法解析跨目录入口时，不能直接粘贴上述import stub。使用本仓库既有锁定的esbuild依赖打包完整入口（在仓库根运行，Node24）：
+```sh
+node scripts/carry-account-web/node_modules/esbuild/bin/esbuild scripts/carry-account-ai/edge-entry.ts --bundle --format=esm --platform=node '--external:npm:*' --outfile=/tmp/carry-ai-deploy.mjs
+deno check /tmp/carry-ai-deploy.mjs
+```
+该产物包含实际领域代码及静态机场/时区数据，保留固定版本的npm导入，不包含环境变量值。部署时用完整产物替换函数index.ts，保留服务器Secrets；校验网关元数据、未认证401及真实授权后的拒绝/成功路径。不要把浏览器卡在Deploying、单独Deno check或旧实例仍可请求视为最终产物已生效；必要时用只在新版拒绝的无效preview输入区分新版编译器与数据库验证。当前部署SHA及核验见日期专项报告。
+
 ## 外部门禁
 
-1. 托管部署 SQL 共享核心及私有导出记录迁移（`20261101041529_account_ai_shared_graph_core.sql`、`20261101041536_account_ai_private_exports.sql`），配置真实连接池、owner bridge secret、服务端查询凭据、域名和运行时；SQL已部署到carry-dev；开发入口可使用专用 `CARRY_AI_DATABASE_URL`，缺省读取平台服务端 `SUPABASE_DB_URL`，TLS校验保持开启。其余域名和真实身份验收仍未完成。`postgres-schema.sql` 是结构参考，运行时 Graph/回执使用同一事务连接，不创建原生 auth.sessions。
+1. 托管SQL共享核心、私有导出、预算策略、注册维护和严格日期迁移已部署到carry-dev，域名及原生/网页真实身份已验。开发入口可使用专用 `CARRY_AI_DATABASE_URL`，缺省读取平台服务端 `SUPABASE_DB_URL`，TLS校验保持开启。`postgres-schema.sql` 是结构参考，运行时Graph/回执使用同一事务连接，不创建原生auth.sessions。独立高德Web Key尚未配置，需先核实公开产品/境外服务器许可；已有App MapKit查询不需要该Key。
 2. 用真实 Apple 身份核验原生与网页同账户、连接授权/撤销，以及托管私有 Storage 的 Range、不可变 version、较大文件时延和取消行为。本地 provider 合成测试不能代替这些验收。
 3. 完成原生旧行程迁移、手机关闭、两设备同步、失败恢复/撤销的整体验收。原生 `carry://packing/{id}` 可明确打开打包；通用 `carry://trip/{id}` 保持上次显示页面，返回 `deviceState:not_observed` 不代表已验证手机界面。
-4. 配置托管过期记录维护任务；当前实现已包含导出记录清理，但未在托管环境调度。clone继续默认排除私有文件/照片/背景及预订凭据。
+4. 托管唯一维护任务已启用，每15分钟有界处理过期记录；自然调度成功已观察。用户确认后新增未使用注册记录清理，保留活跃授权、已用客户端和有效刷新重放证据。开发保护参数仍需在生产前评估。clone继续默认排除私有文件/照片/背景及预订凭据。
 
 ## 本地验证
 
@@ -36,7 +43,7 @@ Node24；Graph manifest 复用账户服务，SQL 测试依赖固定版本的 PGl
 
 `synthetic-store.mjs` 是明确非持久的测试夹具，handler必须显式 `synthetic:true` 才接受。不能将其赋值 durability=transactional 冒充生产实现。`http.test.mjs` 在临时loopback端口建立真实HTTP边界，完成注册、授权、PKCE、账户写入/读回、撤销；无手机或任何上游网络/真实账户/私人文件。它证明协议运行路径，不能证明真实PostgreSQL持久化、Apple身份、托管接口或生产分发。
 
-最近同版本地全套两轮均为96/96；账户网站23/23。`files-exports.test.mjs` 运行真实本地SQL迁移、ledger和provider协议，并产出纯合成原生备份契约夹具；该输出已用当前 Swift CarryBackup DTO + `.iso8601` 解码验证。旧 loopback 协议夹具、真实SQL测试、原生解码和托管/设备验收分别提供不同证据。
+日期契约修复后的AI全套两轮各114/114，账户服务各128/128；账户网站24/24。`files-exports.test.mjs` 运行实际本地SQL迁移、ledger和provider协议，产出纯合成原生备份契约夹具；原生备份、迁移和投影共用CarryBackupDates编解码，兼容原整秒和服务器毫秒。loopback协议、SQL、原生自动测试和托管/实体机验收分别提供不同证据，最终数量以各报告对应源码为准。
 
 安全审查修正记录：
 

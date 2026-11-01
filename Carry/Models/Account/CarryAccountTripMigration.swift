@@ -466,7 +466,7 @@ final class CarryAccountTripMigration {
         SHA256.hash(data: data).map { String(format: "%02x", $0) }.joined()
     }
     private nonisolated static func encoded<T: Encodable>(_ value: T) throws -> Data {
-        let encoder = JSONEncoder(); encoder.outputFormatting = .sortedKeys; encoder.dateEncodingStrategy = .iso8601
+        let encoder = CarryBackupDates.encoder(); encoder.outputFormatting = .sortedKeys
         return try encoder.encode(value)
     }
     @concurrent nonisolated private static func graphDigest(_ values: [CarryGraphEntity]) async throws -> String {
