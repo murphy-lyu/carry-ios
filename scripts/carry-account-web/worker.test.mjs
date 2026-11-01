@@ -22,8 +22,10 @@ test('Apple identity diagnostics classify failures without retaining provider de
     ]) {
       const fixture = setup({ signInError: error }), flow = await start(fixture);
       const response = await fixture.handler(callback(flow), env);
-      assert.equal(response.status, 401);
-      assert.equal(response.headers.get('X-Carry-Error-Code'), 'invalid_apple_identity');
+      const expectedStatus = error.status === 503 ? 503 : error.status === 429 ? 429 : 401;
+      assert.equal(response.status, expectedStatus);
+      assert.equal(response.headers.get('X-Carry-Error-Code'), expectedStatus === 503 ? 'identity_unavailable'
+        : expectedStatus === 429 ? 'identity_rate_limited' : 'invalid_apple_identity');
       assert.equal(JSON.parse(logs.at(-1)).phase, phase);
       assert.equal(fixture.calls.some(call => call[0] === 'lifecycle'), false);
     }

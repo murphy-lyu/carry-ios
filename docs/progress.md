@@ -3,6 +3,11 @@
 ## 最后更新
 2026-11-01
 
+## 当前修复（网页回调传输根因 · 2026-11-01）
+
+- 纯合成回调复现：Workers不支持redirect:error，请求发出前TypeError被SDK包装并误报成Apple身份401。改为manual且主动拒绝3xx，传输错误改503、限流429。
+- 新增实际SDK fetch的workerd成功/拒绝/重定向回归；旧bundle零上游请求明确复现，新版两轮通过，Node两轮24/24。修复网站已部署；真实本人网页登录仍需最后核验。详见 `carry-account-email-deletion-qa-2026-11-01.md`。
+
 ## 当前修复（网页 Apple 登录发起失败 · 2026-11-01）
 
 - 修正页面 no-referrer 导致浏览器表单 Origin=null 与 CSRF 来源校验冲突；统一使用 same-origin，跨站不泄露 Referer，null/恶意来源继续拒绝。

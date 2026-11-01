@@ -52,3 +52,14 @@ Apple Developer 原生 App ID（`app.nevestudio.carry`）的 Description 原为 
 用户下一次截图为 `invalid_apple_identity`；结构化实时日志确认 phase=`apple_identity`、401，失败发生在Supabase signInWithIdToken，尚未调用生命周期登记。独立只读检查使用现存网站publishable key请求Auth settings，返回200且Apple enabled=true，排除key无效或provider关闭。尚不能区分audience、nonce或上游错误；未宣称修复。
 
 进一步只在内存分类provider错误，日志仅输出固定枚举，保留原始消息与身份隐私；新增nonce/audience/限流/上游异常分类及不泄露秘密的回归，两轮24/24。分类版本 `587de073-27e0-495c-a1a9-ef53b2fc03dd` 已部署，等待新的本人授权。浏览器原生操作出现ScreenCaptureKit -3812，扩展返回Work settings禁用，无法读取现存Supabase详细日志；未绕过浏览器权限提取会话。404扫描噪声不再记录。
+
+### 根因确认与修复：Workers 不支持 redirect:error
+
+用户再次授权仍失败。改用纯合成回调（加密flow与假令牌，绝不重放用户的token/code）复现，细分类显示 `apple_identity_transport`；未向Apple交换假code或创建账户。Cloudflare官方文档明确：Workers构建 `redirect: "error"` 的Request时即抛TypeError，尚未发出网络请求。原上游包装使用此选项；SDK将异常作为Auth错误返回，原分支又统一标成401 `invalid_apple_identity`。参考 https://developers.cloudflare.com/workers/runtime-apis/request/ 。
+
+上游统一改为 `redirect: "manual"`，收到3xx立即取消响应并拒绝，不跟随并携带凭据；同时修正错误语义，传输/服务不可用返回503，限流429，不再伪称身份无效。覆盖Auth、资料更新、账户登记和注销等共同路径。临时响应体格式诊断已移除，未记录任何真实上游内容。
+
+- 新workerd回归实际运行Supabase SDK的fetch，而非只检查登录页和Apple跳转：合成认证成功并恢复Cookie、无效token拒绝、上游302拒绝且仅请求一次，均通过；外网完全拦截，只允许固定QA项目与合成身份。
+- 对旧bundle执行相同回归，实际Auth请求次数0、期望1，明确复现旧缺陷。新bundle两轮均通过，加上原4项页面/CSRF检查。Node两轮各24/24。
+- 最终网站版本 `7ad0cefb-5d24-41bd-8e50-7beb892049d1` 已部署。中间修复版本的线上纯合成回调不再出现transport，进入provider对假token的正常拒绝；一次网络探针超时已单列，未算通过。
+- 用户真实网页授权仍需最终验证；本轮不声称已登录同账户、不启用AI、不上传真实行程或发布App。

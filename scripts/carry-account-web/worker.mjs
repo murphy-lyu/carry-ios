@@ -73,6 +73,9 @@ function appleIdentityFailurePhase(error) {
   // Provider messages can contain claims/identity values. Classify in memory;
   // never include their contents, arbitrary codes or exception objects in logs.
   const detail = typeof error?.message === 'string' ? error.message.toLowerCase() : '';
+  if (detail.includes('api key')) return 'apple_identity_api_key';
+  if (error?.name === 'AuthRetryableFetchError' || error?.name === 'AuthUnknownError') return 'apple_identity_transport';
+  if (detail.includes('bad id token')) return 'apple_identity_token_invalid';
   if (error?.code === 'unexpected_audience' || detail.includes('audience')) return 'apple_identity_audience';
   if (detail.includes('nonce')) return 'apple_identity_nonce';
   if (detail.includes('expired')) return 'apple_identity_expired';
@@ -82,7 +85,13 @@ function appleIdentityFailurePhase(error) {
   return error ? 'apple_identity_provider_rejected' : 'apple_identity_session_missing';
 }
 async function upstream(fetcher, url, options) {
-  const response = await fetcher(url, { ...options, redirect: 'error', signal: AbortSignal.timeout(15000) });
+  // Workers rejects redirect:error before sending any request. Inspect manual
+  // responses instead, retaining the rule that credentials never follow a 3xx.
+  const response = await fetcher(url, { ...options, redirect: 'manual', signal: AbortSignal.timeout(15000) });
+  if (response.status >= 300 && response.status < 400) {
+    await response.body?.cancel().catch(() => {});
+    throw new WebFailure(503, 'upstream_redirect');
+  }
   const bytes = await boundedBytes(response.body, 128 * 1024);
   return new Response([204, 205, 304].includes(response.status) ? null : bytes, {
     status: response.status, statusText: response.statusText, headers: response.headers });
@@ -203,7 +212,10 @@ export function createWebHandler({ makeClient = createServerClient, fetcher = fe
           signedInSession = data?.session;
           if (error || !data?.user || !data?.session || !uuid(data.user.id) || data.session.user.id !== data.user.id) {
             phase = appleIdentityFailurePhase(error);
-            throw new WebFailure(401, 'invalid_apple_identity');
+            const temporary = ['apple_identity_transport', 'apple_identity_provider_unavailable',
+              'apple_identity_provider_disabled', 'apple_identity_api_key'].includes(phase);
+            throw new WebFailure(temporary ? 503 : error?.status === 429 ? 429 : 401,
+              temporary ? 'identity_unavailable' : error?.status === 429 ? 'identity_rate_limited' : 'invalid_apple_identity');
           }
           // Lax session cookies are deliberately absent on Apple's cross-site
           // POST. Bind the verified initiating account in the encrypted flow;

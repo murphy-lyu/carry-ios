@@ -27,3 +27,48 @@ try {
   assert.equal(denied.status, 403);
   console.log('workerd login, encrypted cookies, exact Apple redirect and CSRF rejection: 4/4 passed; no outbound traffic');
 } finally { await mf.dispose(); }
+
+// Exercise the actual Supabase SDK fetch in workerd, not just /login and the
+// Apple redirect. The original redirect:error failed before this stub was hit.
+for (const mode of ['invalid-token', 'redirect', 'success']) {
+  const redirectUpstream = mode === 'redirect', success = mode === 'success';
+  const user = { id: '00000000-0000-4000-8000-000000000001', email: 'synthetic@example.invalid',
+    aud: 'authenticated', app_metadata: { provider: 'apple', providers: ['apple'] }, user_metadata: {},
+    created_at: '2026-01-01T00:00:00Z', identities: [], is_anonymous: false };
+  const token = [ { alg: 'none' }, { sub: user.id, exp: Math.floor(Date.now() / 1000) + 3600 } ]
+    .map(value => Buffer.from(JSON.stringify(value)).toString('base64url')).join('.') + '.synthetic';
+  let calls = 0;
+  const runtime = await fixtureRuntime({ onAuthRequest: () => { calls++; },
+    enrollmentFixture: success ? user : null,
+    authTokenResponse: () => redirectUpstream
+      ? new Response(null, { status: 302, headers: { Location: 'https://must-never-follow.invalid' } })
+      : success ? Response.json({ access_token: token, refresh_token: 'synthetic-refresh', token_type: 'bearer', expires_in: 3600, user })
+      : Response.json({ error: 'invalid_request', error_description: 'Bad ID token' }, { status: 400 }),
+  });
+  try {
+    const login = await runtime.dispatchFetch(origin + '/login');
+    const csrf = /name="csrf" value="([^"]+)"/.exec(await login.text())[1];
+    const started = await runtime.dispatchFetch(origin + '/auth/apple/start', { method: 'POST', redirect: 'manual',
+      headers: { Cookie: login.headers.getSetCookie().map(v => v.split(';')[0]).join('; '), Origin: origin,
+        'Content-Type': 'application/x-www-form-urlencoded' }, body: new URLSearchParams({ csrf }).toString() });
+    const state = new URL(started.headers.get('Location')).searchParams.get('state');
+    const result = await runtime.dispatchFetch(origin + '/auth/apple/callback', { method: 'POST', redirect: 'manual',
+      headers: { Cookie: started.headers.getSetCookie().map(v => v.split(';')[0]).join('; '),
+        'Content-Type': 'application/x-www-form-urlencoded', Accept: 'application/json' },
+      body: new URLSearchParams({ state, code: 'synthetic-never-exchanged', id_token: 'synthetic-invalid-apple-token' }).toString() });
+    assert.equal(calls, 1, 'the actual SDK must reach the fixed upstream once, without following redirects');
+    if (success) {
+      assert.equal(result.status, 303);
+      const cookies = result.headers.getSetCookie().map(v => v.split(';')[0]).join('; ');
+      assert.ok(cookies.includes('__Host-carry-session'));
+      const home = await runtime.dispatchFetch(origin + '/', { headers: { Cookie: cookies } });
+      assert.equal(home.status, 200);
+      assert.ok((await home.text()).includes(user.email));
+    } else {
+      assert.equal(result.status, redirectUpstream ? 503 : 401);
+      assert.equal((await result.json()).error, redirectUpstream ? 'identity_unavailable' : 'invalid_apple_identity');
+      assert.ok(!result.headers.getSetCookie().some(v => v.startsWith('__Host-carry-session')));
+    }
+    console.log(`workerd actual SDK ${mode}: passed; only synthetic provider traffic`);
+  } finally { await runtime.dispose(); }
+}
