@@ -383,7 +383,8 @@ struct SettingsView: View {
 
                         Section {
                             settingsCard {
-                                settingsNavigationRow(title: "automation.title", route: .automation)
+                                settingsNavigationRow(title: CarryAccountAIConfiguration.bundled == nil
+                                    ? "automation.title" : "account.ai.title", route: .automation)
                             }
                             .padding(.horizontal, 16)
                             .padding(.bottom, 18)
@@ -1036,7 +1037,11 @@ struct SettingsView: View {
         case .dataRecovery:
             DataRecoveryView()
         case .automation:
-            AutomationConnectionView()
+            if let configuration = CarryAccountAIConfiguration.bundled {
+                CarryAccountAIConnectionView(configuration: configuration)
+            } else {
+                AutomationConnectionView()
+            }
         case .about:
             AboutView()
         case .roadmap:

@@ -19,7 +19,7 @@
 ## 验证
 Node 24+；所有依赖精确固定并有 lockfile。`npm ci --ignore-scripts`，`node --test *.test.mjs`。包含实际 Supabase SSR Cookie 持久化/读回（网络为合成），不等于真实 Apple 登录。
 
-`wrangler deploy --dry-run --outdir /tmp/CarryAccountWebBundle` 后运行 `CARRY_WEB_QA=synthetic-only node runtime-smoke.mjs`，真实 workerd 验证页面/加密 Cookie/回调/CSRF，所有 worker 出站 IO 禁止。
+`wrangler deploy --dry-run --outdir /tmp/CarryAccountWebBundle` 后运行 `CARRY_WEB_QA=synthetic-only node runtime-smoke.mjs`，真实 workerd 验证页面/加密Cookie/CSRF与实际SDK认证请求、成功登记及会话恢复、无效token和重定向拒绝。出站IO全部拦截，仅允许固定QA项目的合成身份响应，不访问真实账户或外网。Workers上游使用manual并主动拒绝3xx，不能使用该运行时不支持的redirect:error；页面使用same-origin来源策略以保留原生表单Origin。
 
 `CARRY_WEB_QA=synthetic-only node preview-server.mjs` 只监听 loopback，允许 GET 登录/样式、禁止身份交换/授权/退出；输出的临时 URL 可用 CUA 截图。不是可用账户服务，也不能部署。
 

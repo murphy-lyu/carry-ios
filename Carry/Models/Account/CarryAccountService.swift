@@ -26,6 +26,28 @@ struct CarryAccountConfiguration {
     }
 }
 
+/// Account sign-in alone cannot publish the new AI flow. These are public,
+/// fixed first-party URLs; no bearer or account identifier goes into a link.
+struct CarryAccountAIConfiguration: Sendable {
+    let connectionsURL: URL
+    let mcpURL: URL
+
+    static func load(values: [String: Any]) -> Self? {
+        guard values["CarryAccountAIReleaseReady"] as? Bool == true,
+              CarryAccountConfiguration.load(values: values) != nil,
+              let connections = URL(string: "https://account.nevestudio.app/connections"),
+              let mcp = URL(string: "https://connect.nevestudio.app/mcp") else { return nil }
+        return Self(connectionsURL: connections, mcpURL: mcp)
+    }
+
+    static let bundled: Self? = {
+        guard let url = Bundle.main.url(forResource: "Secrets", withExtension: "plist"),
+              let data = try? Data(contentsOf: url),
+              let values = try? PropertyListSerialization.propertyList(from: data, format: nil) as? [String: Any] else { return nil }
+        return load(values: values)
+    }()
+}
+
 /// Sessions, first-authorization name and cached identity share a per-project Keychain namespace.
 /// They are not iCloud-synchronizable and never stored in UserDefaults or event logs.
 struct CarryAccountSecureStorage: AuthLocalStorage {

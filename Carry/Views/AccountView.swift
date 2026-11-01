@@ -207,6 +207,13 @@ struct AccountView: View {
                     NavigationLink { CarryAccountMigrationView() } label: { Text("account.migration.title") }
                 }
             }
+            if let configuration = CarryAccountAIConfiguration.bundled {
+                Section {
+                    NavigationLink { CarryAccountAIConnectionView(configuration: configuration) } label: {
+                        Text("account.ai.title")
+                    }
+                }
+            }
             Section {
                 Button("account.sign_out", role: .destructive) { showSignOut = true }
                     .disabled(account.isBusy)

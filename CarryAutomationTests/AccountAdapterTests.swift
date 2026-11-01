@@ -3,6 +3,24 @@ import XCTest
 
 @MainActor
 final class AccountAdapterTests: XCTestCase {
+    func testAccountAIEntryRequiresBothReleaseGatesAndUsesFixedCredentialFreeURLs() throws {
+        let accountValues: [String: Any] = ["CarryAccountReleaseReady": true,
+            "CarryAccountProjectURL": "https://project-qa.invalid",
+            "CarryAccountPublishableKey": "sb_publishable_synthetic_only"]
+        XCTAssertNil(CarryAccountAIConfiguration.load(values: accountValues))
+        var values = accountValues
+        values["CarryAccountAIReleaseReady"] = "true"
+        XCTAssertNil(CarryAccountAIConfiguration.load(values: values))
+        values["CarryAccountAIReleaseReady"] = true
+        let configuration = try XCTUnwrap(CarryAccountAIConfiguration.load(values: values))
+        XCTAssertEqual(configuration.connectionsURL.absoluteString, "https://account.nevestudio.app/connections")
+        XCTAssertEqual(configuration.mcpURL.absoluteString, "https://connect.nevestudio.app/mcp")
+        values["CarryAccountReleaseReady"] = false
+        XCTAssertNil(CarryAccountAIConfiguration.load(values: values))
+        values["CarryAccountReleaseReady"] = true
+        values["CarryAccountPublishableKey"] = nil
+        XCTAssertNil(CarryAccountAIConfiguration.load(values: values))
+    }
     private var storage: CarryAccountSecureStorage!
     private let userID = UUID(uuidString: "00000000-0000-0000-0000-000000000123")!
 

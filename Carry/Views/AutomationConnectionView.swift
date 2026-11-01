@@ -1,5 +1,50 @@
 import SwiftUI
 
+struct CarryAccountAIConnectionView: View {
+    let configuration: CarryAccountAIConfiguration
+    @EnvironmentObject private var connection: CarryAutomationConnection
+    @State private var copied = false
+
+    var body: some View {
+        Form {
+            Section {
+                Text("account.ai.detail").foregroundStyle(.secondary)
+                Link(destination: configuration.connectionsURL) {
+                    Label("account.ai.manage", systemImage: "arrow.up.right.square")
+                        .frame(minHeight: 44)
+                }
+            } footer: {
+                Text("account.ai.web_account")
+            }
+            Section {
+                Text(verbatim: configuration.mcpURL.absoluteString)
+                    .font(.footnote.monospaced()).textSelection(.enabled)
+                    .fixedSize(horizontal: false, vertical: true)
+                Button {
+                    UIPasteboard.general.string = configuration.mcpURL.absoluteString
+                    copied = true
+                } label: {
+                    Label {
+                        Text(LocalizedStringKey(copied ? "account.ai.copied" : "account.ai.copy"))
+                    } icon: {
+                        Image(systemName: copied ? "checkmark" : "doc.on.doc")
+                    }
+                    .frame(minHeight: 44)
+                }
+            } header: { Text("account.ai.address") }
+            if connection.credentials != nil {
+                Section {
+                    NavigationLink { AutomationConnectionView() } label: { Text("automation.title") }
+                }
+            }
+        }
+        .navigationTitle("account.ai.title")
+        .navigationBarTitleDisplayMode(.inline)
+        .scrollContentBackground(.hidden)
+        .background(Color.carryCanvas)
+    }
+}
+
 struct AutomationConnectionView: View {
     @EnvironmentObject private var store: TripStore
     @EnvironmentObject private var router: NavigationRouter
