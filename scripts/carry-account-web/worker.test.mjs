@@ -9,6 +9,28 @@ const env = { ACCOUNT_ORIGIN: origin, SUPABASE_URL: 'https://project-qa.invalid'
   WEB_FLOW_ENCRYPTION_KEY: Buffer.alloc(32, 7).toString('base64url'), ACCOUNT_WEB_ENABLED: 'true' };
 const user = { id: '00000000-0000-0000-0000-000000000001', email: 'synthetic@example.invalid', user_metadata: {} };
 const session = { access_token: 'synthetic-access', user };
+test('Apple identity diagnostics classify failures without retaining provider details or credentials', async () => {
+  const oldWarn = console.warn, logs = [];
+  console.warn = value => logs.push(value);
+  try {
+    for (const [error, phase] of [
+      [{ code: 'unexpected_audience', message: 'private-token synthetic@example.invalid' }, 'apple_identity_audience'],
+      [{ message: 'Nonce mismatch private-token synthetic@example.invalid' }, 'apple_identity_nonce'],
+      [{ status: 429, message: 'private-token' }, 'apple_identity_rate_limited'],
+      [{ status: 503, message: 'private-token' }, 'apple_identity_provider_unavailable'],
+      [{ message: 'other private-token' }, 'apple_identity_provider_rejected'],
+    ]) {
+      const fixture = setup({ signInError: error }), flow = await start(fixture);
+      const response = await fixture.handler(callback(flow), env);
+      assert.equal(response.status, 401);
+      assert.equal(response.headers.get('X-Carry-Error-Code'), 'invalid_apple_identity');
+      assert.equal(JSON.parse(logs.at(-1)).phase, phase);
+      assert.equal(fixture.calls.some(call => call[0] === 'lifecycle'), false);
+    }
+    assert.ok(!JSON.stringify(logs).includes('private-token'));
+    assert.ok(!JSON.stringify(logs).includes('synthetic@example.invalid'));
+  } finally { console.warn = oldWarn; }
+});
 function setup({ enrolled = true, previous = null, signInError = null, upstreamFailure = false, refresh = false, noLaxOnCallback = false, throwAfterPersist = false, getUserError = null } = {}) {
   const calls = [];
   let options;

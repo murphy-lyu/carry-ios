@@ -48,3 +48,7 @@ Apple Developer 原生 App ID（`app.nevestudio.carry`）的 Description 原为 
 用户随后截图已到 `/auth/apple/callback`，仍显示通用错误，不能宣称网页登录完成。既有页面未展示错误码、Worker未记录失败阶段，无法从截图区分flow cookie、Supabase身份或生命周期登记。新增固定错误码响应头/页面标识，以及仅包含固定阶段、静态错误码和HTTP状态的结构化日志；绝不记录请求、URL、Cookie、令牌、Apple code、邮箱、账户ID或原始异常。
 
 23项回归通过，诊断版本 `c43e16e0-245b-4511-8347-5279f49014df` 已部署。该版本只是增加可诊断性，尚未修复未知的回调问题；等待一次新的本人Apple授权获取失败码。不刷新或重放已有callback，不擅自删除账号、重建密钥或更改Apple配置。
+
+用户下一次截图为 `invalid_apple_identity`；结构化实时日志确认 phase=`apple_identity`、401，失败发生在Supabase signInWithIdToken，尚未调用生命周期登记。独立只读检查使用现存网站publishable key请求Auth settings，返回200且Apple enabled=true，排除key无效或provider关闭。尚不能区分audience、nonce或上游错误；未宣称修复。
+
+进一步只在内存分类provider错误，日志仅输出固定枚举，保留原始消息与身份隐私；新增nonce/audience/限流/上游异常分类及不泄露秘密的回归，两轮24/24。分类版本 `587de073-27e0-495c-a1a9-ef53b2fc03dd` 已部署，等待新的本人授权。浏览器原生操作出现ScreenCaptureKit -3812，扩展返回Work settings禁用，无法读取现存Supabase详细日志；未绕过浏览器权限提取会话。404扫描噪声不再记录。

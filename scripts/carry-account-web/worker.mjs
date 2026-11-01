@@ -69,6 +69,18 @@ function rejectTemporaryIdentityFailure(error) {
       ['bad_jwt', 'session_not_found', 'refresh_token_not_found', 'refresh_token_already_used'].includes(error.code)));
   if (!invalidSession) throw new WebFailure(503, 'identity_unavailable');
 }
+function appleIdentityFailurePhase(error) {
+  // Provider messages can contain claims/identity values. Classify in memory;
+  // never include their contents, arbitrary codes or exception objects in logs.
+  const detail = typeof error?.message === 'string' ? error.message.toLowerCase() : '';
+  if (error?.code === 'unexpected_audience' || detail.includes('audience')) return 'apple_identity_audience';
+  if (detail.includes('nonce')) return 'apple_identity_nonce';
+  if (detail.includes('expired')) return 'apple_identity_expired';
+  if (error?.code === 'provider_disabled') return 'apple_identity_provider_disabled';
+  if (error?.status === 429) return 'apple_identity_rate_limited';
+  if (error?.status >= 500) return 'apple_identity_provider_unavailable';
+  return error ? 'apple_identity_provider_rejected' : 'apple_identity_session_missing';
+}
 async function upstream(fetcher, url, options) {
   const response = await fetcher(url, { ...options, redirect: 'error', signal: AbortSignal.timeout(15000) });
   const bytes = await boundedBytes(response.body, 128 * 1024);
@@ -190,6 +202,7 @@ export function createWebHandler({ makeClient = createServerClient, fetcher = fe
           const { data, error } = await client.auth.signInWithIdToken({ provider: 'apple', token, nonce: flow.nonce });
           signedInSession = data?.session;
           if (error || !data?.user || !data?.session || !uuid(data.user.id) || data.session.user.id !== data.user.id) {
+            phase = appleIdentityFailurePhase(error);
             throw new WebFailure(401, 'invalid_apple_identity');
           }
           // Lax session cookies are deliberately absent on Apple's cross-site
@@ -256,7 +269,7 @@ export function createWebHandler({ makeClient = createServerClient, fetcher = fe
     } catch (failure) {
       // No request URL/body, cookies, identity, provider message or exception
       // object: only our fixed stage/code/status are safe for hosted diagnosis.
-      console.warn(JSON.stringify({ event: 'carry_web_failure', phase,
+      if (!(failure instanceof WebFailure && failure.code === 'not_found')) console.warn(JSON.stringify({ event: 'carry_web_failure', phase,
         code: failure instanceof WebFailure ? failure.code : 'service_unavailable',
         status: failure instanceof WebFailure ? failure.status : 503 }));
       return finish(message(failure instanceof WebFailure ? failure.code : 'service_unavailable', headers,
