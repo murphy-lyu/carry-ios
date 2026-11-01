@@ -170,56 +170,62 @@ struct ItineraryView: View {
             dayList
         }
         .sheet(item: $activeSheet) { sheet in
-            switch sheet {
-            case .addStop(let dayId, let category):
-                AddStopView(
-                    tripId: tripId,
-                    dayId: dayId,
-                    initialCategory: category,
-                    biasLatitude: bundle?.latitude ?? 0,
-                    biasLongitude: bundle?.longitude ?? 0
-                )
-            case .stopDetail(let stop):
-                StopDetailView(
-                    tripId: tripId,
-                    stop: stop,
-                    distanceToNext: distanceToNextStop(stop),
-                    navApps: navApps,
-                    dayColor: dayColor(forStop: stop)
-                )
-            case .editStop(let stop):
-                StopEditView(tripId: tripId, stop: stop)
-            case .optimize(let dayId):
-                OptimizeRouteView(tripId: tripId, dayId: dayId)
-            case .searchFlight(let dayId):
-                FlightSearchSheet(tripId: tripId, dayId: dayId)
-            case .addTransport(let dayId, let mode):
-                TransportEditView(tripId: tripId, dayId: dayId, initialMode: mode)
-            case .transportDetail(let seg, let focus):
-                TransportDetailView(
-                    tripId: tripId,
-                    segment: seg,
-                    focus: focus,
-                    navApps: navApps,
-                    dayColor: ItineraryDayPalette.color(forDayIndex: focus == .dropoff ? seg.arriveDayOrder : seg.departDayOrder)
-                )
-            case .editTransport(let id):
-                TransportEditView(tripId: tripId, segmentId: id)
-            case .addLodging(let order):
-                // 「+」住宿走搜索优先（与添加地点/航班一致）：搜到选中即直接加，底部「手动添加」push 进表单。
-                LodgingSearchSheet(tripId: tripId, initialCheckInDayOrder: order)
-            case .lodgingDetail(let stay, let dayOrder):
-                LodgingDetailView(
-                    tripId: tripId,
-                    stay: stay,
-                    navApps: navApps,
-                    dayColor: ItineraryDayPalette.color(forDayIndex: dayOrder)
-                )
-            case .editLodging(let id):
-                LodgingEditView(tripId: tripId, stayId: id)
-            case .calendarEvent(let event):
-                CalendarEventDetailView(event: event)
+            Group {
+                switch sheet {
+                case .addStop(let dayId, let category):
+                    AddStopView(
+                        tripId: tripId,
+                        dayId: dayId,
+                        initialCategory: category,
+                        biasLatitude: bundle?.latitude ?? 0,
+                        biasLongitude: bundle?.longitude ?? 0
+                    )
+                case .stopDetail(let stop):
+                    StopDetailView(
+                        tripId: tripId,
+                        stop: stop,
+                        distanceToNext: distanceToNextStop(stop),
+                        navApps: navApps,
+                        dayColor: dayColor(forStop: stop)
+                    )
+                case .editStop(let stop):
+                    StopEditView(tripId: tripId, stop: stop)
+                case .optimize(let dayId):
+                    OptimizeRouteView(tripId: tripId, dayId: dayId)
+                case .searchFlight(let dayId):
+                    FlightSearchSheet(tripId: tripId, dayId: dayId)
+                case .addTransport(let dayId, let mode):
+                    TransportEditView(tripId: tripId, dayId: dayId, initialMode: mode)
+                case .transportDetail(let seg, let focus):
+                    TransportDetailView(
+                        tripId: tripId,
+                        segment: seg,
+                        focus: focus,
+                        navApps: navApps,
+                        dayColor: ItineraryDayPalette.color(forDayIndex: focus == .dropoff ? seg.arriveDayOrder : seg.departDayOrder)
+                    )
+                case .editTransport(let id):
+                    TransportEditView(tripId: tripId, segmentId: id)
+                case .addLodging(let order):
+                    // 「+」住宿走搜索优先（与添加地点/航班一致）：搜到选中即直接加，底部「手动添加」push 进表单。
+                    LodgingSearchSheet(tripId: tripId, initialCheckInDayOrder: order)
+                case .lodgingDetail(let stay, let dayOrder):
+                    LodgingDetailView(
+                        tripId: tripId,
+                        stay: stay,
+                        navApps: navApps,
+                        dayColor: ItineraryDayPalette.color(forDayIndex: dayOrder)
+                    )
+                case .editLodging(let id):
+                    LodgingEditView(tripId: tripId, stayId: id)
+                case .calendarEvent(let event):
+                    CalendarEventDetailView(event: event)
+                }
             }
+            // Catalyst presents this content in a separate hosting boundary.
+            // Preserve the exact trip owner, including account-scoped stores.
+            .environmentObject(store)
+            .environmentObject(router)
         }
         // 照片回溯生成的入口已收进行程详情页共享「…」菜单（PackingListView），不在此另起工具栏图标。
         .toolbarBackground(Color(UIColor.systemBackground), for: .navigationBar)

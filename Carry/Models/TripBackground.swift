@@ -8,6 +8,27 @@
 //
 
 import UIKit
+import ImageIO
+
+/// One decode at a time avoids a burst of cold list cells allocating full-size
+/// photos concurrently. No SwiftData or account lease is accessed off its actor.
+private actor BackgroundImageDecoder {
+    func image(at url: URL, maxPixel: Int) -> UIImage? {
+        guard !Task.isCancelled,
+              let values = try? url.resourceValues(forKeys: [.isRegularFileKey, .isSymbolicLinkKey, .fileSizeKey]),
+              values.isRegularFile == true, values.isSymbolicLink != true,
+              let bytes = values.fileSize, (1...50 * 1024 * 1024).contains(bytes),
+              let source = CGImageSourceCreateWithURL(url as CFURL,
+                [kCGImageSourceShouldCache: false] as CFDictionary),
+              let image = CGImageSourceCreateThumbnailAtIndex(source, 0, [
+                kCGImageSourceCreateThumbnailFromImageAlways: true,
+                kCGImageSourceCreateThumbnailWithTransform: true,
+                kCGImageSourceShouldCacheImmediately: true,
+                kCGImageSourceThumbnailMaxPixelSize: maxPixel
+              ] as CFDictionary), !Task.isCancelled else { return nil }
+        return UIImage(cgImage: image)
+    }
+}
 
 /// Non-destructive framing: the visible sub-rect of the stored image, in normalized image
 /// coordinates (0…1). Lets the user choose which region of a tall/wide photo shows on the
@@ -55,7 +76,14 @@ enum BackgroundImageStore {
     static let maxLongEdge: CGFloat = 1400
     static let jpegQuality: CGFloat = 0.72
 
-    private static let decodedCache = NSCache<NSString, UIImage>()
+    private static let decodedCache: NSCache<NSString, UIImage> = {
+        let cache = NSCache<NSString, UIImage>()
+        cache.totalCostLimit = 32 * 1024 * 1024
+        cache.countLimit = 32
+        return cache
+    }()
+    private static let decoder = BackgroundImageDecoder()
+    private static var activeLoads: [UUID: String] = [:]
 
     private static var directory: URL {
         let base = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
@@ -80,7 +108,7 @@ enum BackgroundImageStore {
         let name = UUID().uuidString + ".jpg"
         do {
             try data.write(to: fileURL(named: name), options: .atomic)
-            decodedCache.setObject(resized, forKey: name as NSString)
+            cache(resized, named: name)
             return name
         } catch {
             CarryLogger.shared.log(.dataCorrupted, context: "bg image save failed")
@@ -88,18 +116,46 @@ enum BackgroundImageStore {
         }
     }
 
-    static func image(named name: String) -> UIImage? {
-        if CarryAccountFileAccess.isAccountReference(name), CarryAccountFileAccess.shared.url(named: name) == nil { return nil }
-        if let cached = decodedCache.object(forKey: name as NSString) { return cached }
-        guard let img = UIImage(contentsOfFile: fileURL(named: name).path) else { return nil }
-        decodedCache.setObject(img, forKey: name as NSString)
-        return img
+    static func canReadImage(named name: String) -> Bool {
+        guard !name.isEmpty, name != ".", name != "..", !name.contains("/"), !name.utf8.contains(0) else { return false }
+        return !CarryAccountFileAccess.isAccountReference(name) || CarryAccountFileAccess.shared.url(named: name) != nil
+    }
+
+    /// The only image lookup allowed during a SwiftUI body evaluation. No IO or
+    /// decompression occurs; account access is still checked on every lookup.
+    static func cachedImage(named name: String) -> UIImage? {
+        guard canReadImage(named: name) else { return nil }
+        return decodedCache.object(forKey: name as NSString)
+    }
+
+    static func preparedImage(named name: String) async -> UIImage? {
+        guard !Task.isCancelled, canReadImage(named: name) else { return nil }
+        if let image = cachedImage(named: name) { return image }
+        let url = fileURL(named: name), request = UUID(), decoder = decoder, maxPixel = Int(maxLongEdge)
+        activeLoads[request] = name
+        defer { activeLoads.removeValue(forKey: request) }
+        let work = Task.detached(priority: .utility) { await decoder.image(at: url, maxPixel: maxPixel) }
+        let image = await withTaskCancellationHandler(operation: { await work.value }, onCancel: { work.cancel() })
+        guard !Task.isCancelled, activeLoads[request] == name,
+              canReadImage(named: name), fileURL(named: name) == url, let image else { return nil }
+        cache(image, named: name)
+        return image
+    }
+
+    private static func cache(_ image: UIImage, named name: String) {
+        let cost = image.cgImage.map { $0.bytesPerRow * $0.height } ?? 0
+        decodedCache.setObject(image, forKey: name as NSString, cost: cost)
+    }
+
+    private static func invalidateImage(named name: String) {
+        decodedCache.removeObject(forKey: name as NSString)
+        activeLoads = activeLoads.filter { $0.value != name }
     }
 
     static func delete(named name: String) {
         guard !CarryMigrationSourceFileRetention.contains(named: name) else { return }
         guard !CarryAccountFileAccess.isAccountReference(name) else { return }
-        decodedCache.removeObject(forKey: name as NSString)
+        invalidateImage(named: name)
         try? FileManager.default.removeItem(at: fileURL(named: name))
     }
 
@@ -129,7 +185,11 @@ enum BackgroundImageStore {
     static func write(data: Data, named name: String) -> Bool {
         guard !CarryMigrationSourceFileRetention.contains(named: name) else { return false }
         guard !CarryAccountFileAccess.isAccountReference(name) else { return false }
-        do { try data.write(to: fileURL(named: name), options: .atomic); return true } catch { return false }
+        do {
+            try data.write(to: fileURL(named: name), options: .atomic)
+            invalidateImage(named: name)
+            return true
+        } catch { return false }
     }
 
     /// Copies a stored image to a NEW filename and returns it — used when duplicating a trip so

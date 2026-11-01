@@ -276,7 +276,7 @@ struct PackingListView: View {
                         } label: {
                             Label("Edit trip", systemImage: "pencil")
                         }
-                        if backgroundImage != nil {
+                        if bundle?.primaryBackground?.localFileName != nil {
                             Button(role: .destructive) {
                                 store.clearBackground(forTripId: tripId)
                             } label: {
@@ -642,11 +642,6 @@ struct PackingListView: View {
     private var contentSurface: some View {
         Color(UIColor.systemBackground)
             .ignoresSafeArea()
-    }
-
-    private var backgroundImage: UIImage? {
-        guard let entry = bundle?.primaryBackground, let name = entry.localFileName else { return nil }
-        return BackgroundImageStore.image(named: name)
     }
 
     /// 新建预览模式：纯展示内容（件数行 / chips / surprise / scenePrompt），无重排需求，沿用 List。

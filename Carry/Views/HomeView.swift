@@ -2081,6 +2081,9 @@ struct TripCard: View {
     let bundle: TripBundle
     var isPast: Bool = false
     var shimmer: Bool = false
+    @State private var preparedPhoto: UIImage?
+    @State private var preparedName: String?
+    @State private var failedPhotoName: String?
 
     /// The trip's background entry (photo + chosen crop), if the user set one.
     private var featuredEntry: TripBackgroundEntry? {
@@ -2091,12 +2094,15 @@ struct TripCard: View {
 
     /// The full (uncropped) photo — framing is applied at display by PositionedImage.
     private var featuredPhoto: UIImage? {
-        guard let name = featuredEntry?.localFileName else { return nil }
-        return BackgroundImageStore.image(named: name)
+        guard let name = featuredEntry?.localFileName, BackgroundImageStore.canReadImage(named: name) else { return nil }
+        return preparedName == name ? preparedPhoto : BackgroundImageStore.cachedImage(named: name)
     }
 
     /// True when the card is rendered over a filled photo → text/chips switch to light.
-    private var onPhoto: Bool { featuredPhoto != nil }
+    private var onPhoto: Bool {
+        guard let name = featuredEntry?.localFileName else { return false }
+        return failedPhotoName != name && BackgroundImageStore.canReadImage(named: name)
+    }
 
     @State private var shimmerProgress: CGFloat = 0
     @State private var didPlayShimmer = false
@@ -2204,12 +2210,18 @@ struct TripCard: View {
     /// card, else the normal style surface. Photo gets a dark scrim so the text stays legible.
     @ViewBuilder
     private var cardBackground: some View {
-        if let photo = featuredPhoto {
+        if onPhoto {
             RoundedRectangle(cornerRadius: 18, style: .continuous)
                 .fill(Color(UIColor.secondarySystemBackground))
-                .overlay(
-                    PositionedImage(image: photo, crop: featuredEntry?.crop)
-                )
+                .overlay {
+                    if let photo = featuredPhoto {
+                        PositionedImage(image: photo, crop: featuredEntry?.crop)
+                    } else {
+                        // Preserve the final card geometry and white-label
+                        // contrast while cold bytes are prepared off the UI actor.
+                        Color.black.opacity(0.72)
+                    }
+                }
                 .overlay(
                     LinearGradient(
                         colors: [.black.opacity(0.14), .black.opacity(0.28), .black.opacity(0.66)],
@@ -2299,6 +2311,24 @@ struct TripCard: View {
     /// upcoming/planning trips with a coordinate). Past trips stay compact thumbnail rows.
     var body: some View {
         compactCard
+            .task(id: featuredEntry?.localFileName) {
+                guard let name = featuredEntry?.localFileName else {
+                    preparedPhoto = nil; preparedName = nil; failedPhotoName = nil
+                    return
+                }
+                if preparedName != name {
+                    preparedPhoto = nil; preparedName = nil; failedPhotoName = nil
+                }
+                let image = await BackgroundImageStore.preparedImage(named: name)
+                guard !Task.isCancelled else { return }
+                preparedName = name
+                preparedPhoto = image
+                failedPhotoName = image == nil ? name : nil
+            }
+            .onDisappear {
+                preparedPhoto = nil
+                preparedName = nil
+            }
     }
 
     private var cardInner: some View {

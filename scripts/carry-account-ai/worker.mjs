@@ -572,15 +572,23 @@ export function createAccountAIHandler({
           scopes_supported: SCOPES,
         });
       if (request.method === "POST" && url.pathname === "/oauth/register") {
-        const body = object(
-          await jsonBody(request, 16384),
-          [
+        const input = await jsonBody(request, 16384);
+        if (!input || typeof input !== "object" || Array.isArray(input))
+          fail("invalid_request");
+        const supported = [
             "client_name",
             "redirect_uris",
             "grant_types",
             "response_types",
             "token_endpoint_auth_method",
-          ],
+            "application_type",
+          ];
+        // RFC 7591 requires ignoring unknown registration metadata. Select
+        // known fields before validation; never persist or interpret extras
+        // as client IDs, permissions, owner identity, or consent.
+        const body = object(
+          Object.fromEntries(Object.entries(input).filter(([key]) => supported.includes(key))),
+          supported,
           ["client_name", "redirect_uris"],
         );
         text(body.client_name, 100);
@@ -594,7 +602,9 @@ export function createAccountAIHandler({
           fail("invalid_client_metadata");
         body.redirect_uris.forEach((uri) => exactURL(uri, { loopback: true }));
         if (
-          (body.token_endpoint_auth_method &&
+          (body.application_type !== undefined &&
+            !["native", "web"].includes(body.application_type)) ||
+          (body.token_endpoint_auth_method !== undefined &&
             body.token_endpoint_auth_method !== "none") ||
           (body.grant_types !== undefined &&
             (!Array.isArray(body.grant_types) ||
@@ -611,6 +621,7 @@ export function createAccountAIHandler({
           id,
           name: body.client_name,
           redirectURIs: body.redirect_uris,
+          ...(body.application_type !== undefined ? { applicationType: body.application_type } : {}),
           createdAt: now(),
         });
         return json(
@@ -618,6 +629,7 @@ export function createAccountAIHandler({
             client_id: id,
             client_name: body.client_name,
             redirect_uris: body.redirect_uris,
+            ...(body.application_type !== undefined ? { application_type: body.application_type } : {}),
             token_endpoint_auth_method: "none",
             grant_types: ["authorization_code", "refresh_token"],
             response_types: ["code"],

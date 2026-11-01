@@ -958,7 +958,7 @@ test("one preview cannot be committed through a different connection even for th
   );
   assert.equal(f.store.db.graph.get(tripID).fields.name, "Tokyo");
 });
-test("registration/form duplicates and unknown fields reject rather than permitting parameter smuggling", async () => {
+test("registration rejects unsafe redirects and token forms reject duplicate fields", async () => {
   const f = await fixture();
   for (const redirectURI of [
     "https://evil.invalid/#fragment",
@@ -985,6 +985,42 @@ test("registration/form duplicates and unknown fields reject rather than permitt
     }),
   );
   assert.equal(response.status, 400);
+});
+test("captured Codex native registration metadata is accepted without issuing a grant", async () => {
+  const f = await fixture();
+  const result = await f.handler(f.req("/oauth/register", { method: "POST", body: {
+    client_name: "Codex", redirect_uris: ["http://127.0.0.1:49321/callback/synthetic"],
+    grant_types: ["authorization_code", "refresh_token"],
+    token_endpoint_auth_method: "none", response_types: ["code"], application_type: "native",
+  } }));
+  assert.equal(result.status, 201);
+  const metadata = await result.json();
+  assert.equal(metadata.application_type, "native");
+  assert.equal(metadata.token_endpoint_auth_method, "none");
+  assert.equal(f.store.db.clients.get(metadata.client_id).applicationType, "native");
+  assert.equal(f.store.db.grants.size, 0);
+});
+test("unknown registration metadata is discarded and cannot select identity or grant access", async () => {
+  const f = await fixture(), suppliedID = randomUUID();
+  const result = await f.handler(f.req("/oauth/register", { method: "POST", body: {
+    client_name: "Unverified client", redirect_uris: [redirect], application_type: "web",
+    client_id: suppliedID, owner: accountID, confirmed: true, scopes: ["private:read"],
+    client_uri: "http://127.0.0.1/private", arbitrary_extension: { unsafe: true },
+  } }));
+  assert.equal(result.status, 201);
+  const metadata = await result.json(), stored = f.store.db.clients.get(metadata.client_id);
+  assert.notEqual(metadata.client_id, suppliedID);
+  for (const key of ["owner", "confirmed", "scopes", "client_uri", "arbitrary_extension"])
+    assert.equal(Object.hasOwn(stored, key), false);
+  assert.equal(f.store.db.grants.size, 0);
+});
+test("supported registration metadata still rejects invalid application and authentication values", async () => {
+  const f = await fixture();
+  for (const extra of [{application_type:"other"},{application_type:{}},
+    ...["client_secret_basic", null, false, 0, ""].map(value => ({token_endpoint_auth_method:value}))]) {
+    const result = await f.handler(f.req("/oauth/register", {method:"POST",body:{client_name:"Invalid",redirect_uris:[redirect],...extra}}));
+    assert.equal(result.status,400);
+  }
 });
 test("revoking a token for the wrong client does not revoke the original connection", async () => {
   const f = await fixture(),

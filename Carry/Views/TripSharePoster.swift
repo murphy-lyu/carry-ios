@@ -21,6 +21,7 @@ struct TripSharePoster: View {
     let days: [ItineraryDay]
     /// 底部路线地图带（异步预渲染好的 MapKit 快照 + 图钉/连线）。nil 则不显示该带。
     var routeMapImage: UIImage? = nil
+    var coverImage: UIImage? = nil
 
     /// 海报渲染宽度（pt）。高度随内容自适应。
     static let width: CGFloat = 390
@@ -83,8 +84,7 @@ struct TripSharePoster: View {
 
     @ViewBuilder
     private var coverBackground: some View {
-        if let name = trip.primaryBackground?.localFileName,
-           let image = BackgroundImageStore.image(named: name) {
+        if let image = coverImage {
             // 海报头与首页卡片宽高比不同：卡片裁剪按卡片比例调，直接套到更高的海报头会过度
             // 放大、构图变怪。改用「焦点对齐 + 整图最小 cover 铺满」——只取裁剪焦点位置、不放大
             // 到裁剪区域大小，主体保持在用户框的位置，构图更自然（不同于卡片的 PositionedImage）。
@@ -257,9 +257,9 @@ enum TripShare {
     /// 把行程渲染成海报图。@MainActor + ImageRenderer（iOS 16+）。
     /// `routeMapImage`：异步预渲染的底部路线地图带（可空，空则海报无地图带）。
     @MainActor
-    static func renderPoster(for trip: TripBundle, routeMapImage: UIImage? = nil) -> UIImage? {
+    static func renderPoster(for trip: TripBundle, routeMapImage: UIImage? = nil, coverImage: UIImage? = nil) -> UIImage? {
         let days = trip.safeItineraryDays
-        let poster = TripSharePoster(trip: trip, days: days, routeMapImage: routeMapImage)
+        let poster = TripSharePoster(trip: trip, days: days, routeMapImage: routeMapImage, coverImage: coverImage)
             .environment(\.colorScheme, .light)   // 固定浅色，分享物不随设备深浅
         let renderer = ImageRenderer(content: poster)
         renderer.scale = 3   // 社交分享清晰度

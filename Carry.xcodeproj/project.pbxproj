@@ -10,7 +10,7 @@
 		CACC00010000000000000001 /* Auth in Frameworks */ = {isa = PBXBuildFile; productRef = CACC00020000000000000002 /* Auth */; };
 		0DFA34E42FC9C12100D55AA8 /* WidgetKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 0DFA34E32FC9C12100D55AA8 /* WidgetKit.framework */; };
 		0DFA34E62FC9C12100D55AA8 /* SwiftUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 0DFA34E52FC9C12100D55AA8 /* SwiftUI.framework */; };
-		0DFA34F72FC9C12200D55AA8 /* CarryWidgetExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 0DFA34E12FC9C12100D55AA8 /* CarryWidgetExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		0DFA34F72FC9C12200D55AA8 /* CarryWidgetExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 0DFA34E12FC9C12100D55AA8 /* CarryWidgetExtension.appex */; platformFilter = ios; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		1183E3AD2FBD8D980039DC34 /* Carry.storekit in Resources */ = {isa = PBXBuildFile; fileRef = 1183E3AC2FBD8D980039DC34 /* Carry.storekit */; };
 		ABCD000300000000ABCD0003 /* PackingActivityAttributes.swift in Sources */ = {isa = PBXBuildFile; fileRef = ABCD000100000000ABCD0001 /* PackingActivityAttributes.swift */; };
 		ABCD000400000000ABCD0004 /* PackingActivityAttributes.swift in Sources */ = {isa = PBXBuildFile; fileRef = ABCD000100000000ABCD0001 /* PackingActivityAttributes.swift */; };
@@ -319,6 +319,7 @@
 		CAAA00090000000000000009 = {isa = PBXTargetDependency; target = 115B30522FB56F4E006FD636; targetProxy = CAAA00010000000000000001; };
 		0DFA34F62FC9C12200D55AA8 /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
+			platformFilter = ios;
 			target = 0DFA34E02FC9C12100D55AA8 /* CarryWidgetExtension */;
 			targetProxy = 0DFA34F52FC9C12200D55AA8 /* PBXContainerItemProxy */;
 		};

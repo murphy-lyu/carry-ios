@@ -162,7 +162,21 @@ final class CarryAccountWorkspace: ObservableObject {
                     try hooks.didAcceptPublication(request, replica.context)
                     try replica.didReleaseAbandonedPublication(request)
                 }
-                let complete = try await engine.synchronize()
+                let complete: Bool
+                do { complete = try await engine.synchronize() }
+                catch let failure as CarryGraphTransportFailure {
+                    switch failure {
+                    case .conflict, .rejected("deleted_entity"), .rejected("invalid_parent"):
+                        // The engine durably blocked the rejected flight. Run
+                        // its read phase now, without resending any mutation,
+                        // so remote deletions and current values are available
+                        // for review on this first response, not after Retry.
+                        try checkLease(generation)
+                        complete = try await engine.synchronize()
+                    case .sessionExpired, .unavailable, .invalidResponse, .rejected:
+                        throw failure
+                    }
+                }
                 try checkLease(generation)
                 guard try replica.pendingFailure == nil else { state = .conflict; return false }
                 guard complete else { continue }
