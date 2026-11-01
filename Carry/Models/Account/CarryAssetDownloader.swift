@@ -14,6 +14,7 @@ actor CarryAssetDownloader {
     private let accountID: UUID
     private let endpoint: URL
     private let directory: URL
+    private let sandboxRoot: URL
     private let publishableKey: String
     private let accessToken: @Sendable () async throws -> String
     private let session: URLSession
@@ -27,14 +28,18 @@ actor CarryAssetDownloader {
         #if DEBUG
         secure = secure || (projectURL.scheme == "http" && projectURL.host == "127.0.0.1")
         #endif
+        let sandboxRoot = URL(fileURLWithPath: NSHomeDirectory(), isDirectory: true).resolvingSymlinksInPath().standardizedFileURL
+        let resolvedDirectory = directory.resolvingSymlinksInPath().standardizedFileURL
         guard secure, projectURL.host != nil, projectURL.user == nil, projectURL.password == nil,
               projectURL.query == nil, projectURL.fragment == nil, ["", "/"].contains(projectURL.path),
-              directory.isFileURL, publishableKey.hasPrefix("sb_publishable_") else {
+              directory.isFileURL, resolvedDirectory.path.hasPrefix(sandboxRoot.path + "/"),
+              publishableKey.hasPrefix("sb_publishable_") else {
             throw CarryAssetTransferFailure.invalidConfiguration
         }
         self.accountID = accountID
         endpoint = projectURL.appendingPathComponent("functions/v1/carry-assets/download")
-        self.directory = directory.resolvingSymlinksInPath().appendingPathComponent("downloads", isDirectory: true)
+        self.sandboxRoot = sandboxRoot
+        self.directory = resolvedDirectory.appendingPathComponent("downloads", isDirectory: true)
             .appendingPathComponent(accountID.uuidString.lowercased(), isDirectory: true)
         self.publishableKey = publishableKey
         self.accessToken = accessToken
@@ -95,14 +100,17 @@ actor CarryAssetDownloader {
     }
 
     private func requireDirectory(_ url: URL) throws {
-        // Validate every ancestor as well: a symlinked parent would escape the
-        // account namespace even when the final directory itself is regular.
+        // The OS owns ancestors above our sandbox (including iOS's /var
+        // alias). Inspect every ancestor INSIDE the trusted app container,
+        // without treating a system-owned alias as an account-cache escape.
         var part = url.standardizedFileURL
-        while part.path != "/" {
+        guard part.path.hasPrefix(sandboxRoot.path + "/") else { throw CarryAssetTransferFailure.invalidSource }
+        while true {
             let values = try part.resourceValues(forKeys: [.isDirectoryKey, .isSymbolicLinkKey])
             guard values.isDirectory == true, values.isSymbolicLink != true else {
                 throw CarryAssetTransferFailure.invalidSource
             }
+            if part.path == sandboxRoot.path { return }
             part.deleteLastPathComponent()
         }
     }

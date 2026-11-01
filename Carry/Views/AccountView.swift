@@ -182,7 +182,7 @@ struct AccountView: View {
             }
             Section {
                 if let workspace = workspaceController.workspace, workspace.accountID == profile.id {
-                    CarryAccountSyncStatusView(workspace: workspace)
+                    CarryAccountSyncStatusView(workspace: workspace, retry: workspaceController.requestSynchronization)
                 } else {
                     Text("account.sync.not_enabled").foregroundStyle(.secondary)
                     Button("account.sync.enable") {
@@ -196,7 +196,9 @@ struct AccountView: View {
                     }
                     .disabled(!account.hasVerifiedSession || account.isBusy)
                 }
-                if workspaceController.failure != nil || syncEnableFailed {
+                if syncEnableFailed || (workspaceController.failure != nil &&
+                    workspaceController.workspace?.state != .failed &&
+                    workspaceController.workspace?.state != .synchronizing) {
                     Text("account.error.service").foregroundStyle(.secondary)
                     Button("account.retry") { workspaceController.requestSynchronization() }
                 }

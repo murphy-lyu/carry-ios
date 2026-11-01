@@ -9,6 +9,7 @@ final class AccountWorkspaceControllerTests: XCTestCase {
         var pulls = 0
         var keepsHistory = false
         var history: [CarryGraphChange] = []
+        var pullFails = false
         var onPull: () -> Void = {}
         func apply(_ command: CarryGraphCommand) async throws -> CarryGraphReceipt {
             applications.append(command)
@@ -24,6 +25,7 @@ final class AccountWorkspaceControllerTests: XCTestCase {
         func pull(cursor: Int) async throws -> CarryGraphPage {
             pulls += 1
             onPull()
+            if pullFails { throw CarryAccountWorkspaceControllerFailure.unavailable }
             return CarryGraphPage(changes: keepsHistory ? history.filter { $0.sequence > cursor } : [], cursor: keepsHistory ? history.count : cursor, hasMore: false)
         }
     }
@@ -95,6 +97,30 @@ final class AccountWorkspaceControllerTests: XCTestCase {
         catch CarryAccountWorkspaceControllerFailure.unavailable { }
         XCTAssertNil(library.account); XCTAssertNil(controller.accountID)
         XCTAssertEqual(local.trips.count, 1)
+    }
+
+    func testControllerRetryClearsPriorFailureBeforeNetworkAndAfterSuccess() async throws {
+        let (directory, _, library) = try fixture(), transport = Transport()
+        transport.pullFails = true
+        let controller = CarryAccountWorkspaceController(library: library,
+            rootDirectory: directory.appendingPathComponent("accounts"), access: CarryAccountFileAccess(),
+            factory: { _, _ in self.dependencies(transport) })
+        try await controller.enable(accountID: UUID())
+        for _ in 0..<1000 where controller.failure == nil { await Task.yield() }
+        XCTAssertNotNil(controller.failure)
+        XCTAssertEqual(controller.workspace?.state, .failed)
+        transport.pullFails = false
+        var retried = false
+        transport.onPull = {
+            retried = true
+            XCTAssertNil(controller.failure, "A retry must clear the previous controller error before awaiting HTTP")
+        }
+        controller.requestSynchronization()
+        for _ in 0..<1000 where controller.workspace?.state != .synchronized { await Task.yield() }
+        XCTAssertTrue(retried)
+        XCTAssertEqual(controller.workspace?.state, .synchronized)
+        XCTAssertNil(controller.failure)
+        try await controller.close()
     }
 
     func testCloseAwaitsAndCancelsInFlightEnableBeforeAttachingAccount() async throws {

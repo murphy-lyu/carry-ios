@@ -64,6 +64,15 @@ final class DownloaderTests: XCTestCase {
         catch let error as CarryAssetTransferFailure { XCTAssertEqual(error, .sessionExpired) }
     }
 
+    func testDownloadRootOutsideAppSandboxIsRejectedBeforeAnyNetwork() throws {
+        let outside = URL(fileURLWithPath: NSHomeDirectory(), isDirectory: true).deletingLastPathComponent()
+        XCTAssertThrowsError(try CarryAssetDownloader(accountID: UUID(), projectURL: XCTUnwrap(project),
+            directory: outside, publishableKey: "sb_publishable_synthetic_only",
+            accessToken: { XCTFail("Outside roots must fail before authorization"); return "unused" })) { error in
+            XCTAssertEqual(error as? CarryAssetTransferFailure, .invalidConfiguration)
+        }
+    }
+
     func testCloseCancelsWriterBeforeRemovingOnlyOwnCache() async throws {
         let (directory, asset, downloader) = try await fixture(mode: "slow")
         let other = directory.appendingPathComponent(UUID().uuidString.lowercased())

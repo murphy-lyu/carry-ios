@@ -1,6 +1,6 @@
 # Carry 云同步与对话操作
 
-Status: 产品方向已确认。本地完整账户/业务图/迁移/AI已完成两轮验收。2026-11-01已推进carry-dev数据库、原生接口、账户网站及新AI服务部署，并安装实体机Debug验收包；手机Apple授权待本人完成，真实身份归并、双设备/文件及Codex全链路尚未验收。正式Release入口保持关闭。当前证据见 `../docs/carry-account-hosted-acceptance-2026-11-01.md`；本地证据见 `../docs/carry-migration-ai-local-qa-2026-10-31.md`。
+Status: 产品方向已确认。本地完整账户/业务图/迁移/AI已完成两轮验收。2026-11-01原生与网页真实Apple登录及同账户核验已通过；实体机合成行程与附件已真实上传并读回摘要。双设备、完整文件下载/迁移及Codex全链路继续验收，正式Release与新AI入口保持关闭。当前真机证据见 `../docs/carry-account-device-sync-qa-2026-11-01.md`，部署证据见 `../docs/carry-account-hosted-acceptance-2026-11-01.md`；本地证据见 `../docs/carry-migration-ai-local-qa-2026-10-31.md`。
 
 用户已明确：「手机不打开也能通过 Codex 完成操作」是非常确定的长期目标，并要求最好的产品设计。本 spec 取代 `codex-mcp-integration.md` 中配对手机作为写入执行器的最终产品方案。原方案的代码、测试和故障记录保留作复用与回归依据，不能直接合并成最终功能发布。
 

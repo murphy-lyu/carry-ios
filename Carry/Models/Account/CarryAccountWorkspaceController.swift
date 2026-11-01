@@ -212,6 +212,7 @@ final class CarryAccountWorkspaceController: ObservableObject {
         guard syncTask == nil else { return }
         syncTask = Task { @MainActor [weak self] in
             guard let self else { return }
+            self.failure = nil
             defer { self.syncTask = nil }
             do {
                 while !Task.isCancelled {

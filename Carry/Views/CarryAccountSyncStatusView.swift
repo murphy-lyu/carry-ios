@@ -2,6 +2,7 @@ import SwiftUI
 
 struct CarryAccountSyncStatusView: View {
     @ObservedObject var workspace: CarryAccountWorkspace
+    let retry: () -> Void
     @State private var conflicts: [CarryGraphDeletionConflict] = []
     @State private var review: CarryGraphDeletionConflict?
     @State private var failed = false
@@ -19,11 +20,13 @@ struct CarryAccountSyncStatusView: View {
     }
     var body: some View {
         Text(LocalizedStringKey(statusKey)).foregroundStyle(.secondary)
-        Button("account.sync.retry") {
-            Task {
-                do { _ = try await workspace.synchronize(); try loadConflicts() }
-                catch { failed = true }
+            .task { do { try loadConflicts() } catch { failed = true } }
+            .onChange(of: workspace.state) { _, _ in do { try loadConflicts() } catch { failed = true } }
+            .sheet(isPresented: Binding(get: { review != nil }, set: { if !$0 { review = nil } })) {
+                if let review { reviewSheet(review) }
             }
+        Button("account.sync.retry") {
+            retry()
         }
         .disabled(workspace.state == .synchronizing || workspace.state == .paused)
         if workspace.state == .conflict {
@@ -39,12 +42,6 @@ struct CarryAccountSyncStatusView: View {
             }
         }
         if failed { Text("account.error.storage").foregroundStyle(.secondary) }
-        Color.clear.frame(height: 0)
-            .task { do { try loadConflicts() } catch { failed = true } }
-            .onChange(of: workspace.state) { _, _ in do { try loadConflicts() } catch { failed = true } }
-            .sheet(isPresented: Binding(get: { review != nil }, set: { if !$0 { review = nil } })) {
-                if let review { reviewSheet(review) }
-            }
     }
     private func loadConflicts() throws { conflicts = try workspace.replica.deletionConflicts(); failed = false }
     private func title(_ entity: CarryGraphEntity) -> String {
