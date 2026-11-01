@@ -120,6 +120,16 @@ struct AccountView: View {
             .padding(.horizontal, 24).padding(.bottom, 32)
             .frame(maxWidth: .infinity, alignment: .leading)
         }
+        .task {
+            // The server continues after the user's session is revoked. Keep
+            // checking its durable receipt while this progress page is visible.
+            while !Task.isCancelled, account.isDeleting {
+                await account.refresh()
+                guard account.isDeleting else { return }
+                do { try await Task.sleep(for: .seconds(10)) }
+                catch { return }
+            }
+        }
     }
 
     private var signInPage: some View {

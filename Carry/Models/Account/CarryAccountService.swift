@@ -303,9 +303,24 @@ final class CarryAccountService: CarryAccountAuthenticating {
     private func saveProfile(_ user: User, name: String? = nil) throws -> CarryAccountProfile {
         let profile = CarryAccountProfile(id: user.id,
             displayName: name ?? user.userMetadata["full_name"]?.stringValue
-                ?? (cachedProfile?.id == user.id ? cachedProfile?.displayName : nil), email: user.email)
+                ?? (cachedProfile?.id == user.id ? cachedProfile?.displayName : nil), email: profileEmail(user))
         try storage.store(key: "profile", value: JSONEncoder().encode(profile))
         return profile
+    }
+
+    private func profileEmail(_ user: User) -> String? {
+        // Auth's account email can retain the original relay address after the
+        // user explicitly shares a different email with Apple. Display only
+        // verified provider identity data; editable user metadata is not proof.
+        let emails = Set((user.identities ?? []).compactMap { identity -> String? in
+            guard identity.provider == "apple", identity.userId == user.id,
+                  let data = identity.identityData,
+                  data["email_verified"]?.boolValue == true || data["email_verified"]?.stringValue == "true",
+                  let email = data["email"]?.stringValue,
+                  !email.isEmpty else { return nil }
+            return email
+        })
+        return emails.count == 1 ? emails.first : user.email
     }
 
     private func persistSession(_ session: Session) throws {

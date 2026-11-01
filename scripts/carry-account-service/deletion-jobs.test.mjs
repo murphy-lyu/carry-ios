@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { randomUUID,createHash } from 'node:crypto';
 import { PGlite } from '@electric-sql/pglite';
 import { applyPortableMigrations } from './migration-fixture.mjs';
-import { runDeletionStep } from './deletion-jobs.mjs';
+import { runDeletionStep, runDeletionWork } from './deletion-jobs.mjs';
 const account=randomUUID(),session=randomUUID(),ticket='a'.repeat(64);
 async function fixture() {
   const db=new PGlite();
@@ -39,6 +39,39 @@ test('deletion request persists a private receipt, blocks writes, and is idempot
     await assert.rejects(f.rpc('carry_graph_pull',[account,session,0,1]),/account_unavailable/);
     const row=(await f.db.query('select ticket_hash from carry_private.account_deletions')).rows[0];
     assert.equal(row.ticket_hash,createHash('sha256').update(ticket).digest('hex'));assert.notEqual(row.ticket_hash,ticket);
+  }finally{await f.db.close();}
+});
+
+test('one bounded worker completes native and web revocation before files and Auth removal',async()=>{
+  const f=await fixture();try {
+    await f.rpc('carry_account_enroll',[account,'synthetic-web-subject','app.nevestudio.carry.web','encrypted-web']);
+    await f.request();
+    assert.equal(await runDeletionWork(f.adapter,account),true);
+    assert.deepEqual(f.calls,['revoke','revoke','files','auth']);
+    assert.deepEqual(await f.rpc('carry_account_deletion_status',[ticket]),{status:'deleted'});
+    assert.equal(await runDeletionWork(f.adapter,account),false);
+  }finally{await f.db.close();}
+});
+
+test('bounded deletion preserves retry state and never advances after a provider failure',async()=>{
+  const f=await fixture();try {
+    await f.request();f.fault.revoke=true;
+    await assert.rejects(runDeletionWork(f.adapter,account),/apple_unavailable/);
+    assert.deepEqual(f.calls,['revoke']);
+    assert.equal(await runDeletionWork(f.adapter,account),false);
+    assert.deepEqual(await f.rpc('carry_account_deletion_status',[ticket]),{status:'deleting'});
+  }finally{await f.db.close();}
+});
+
+test('deletion work yields at its time budget and resumes from persisted stage',async()=>{
+  const f=await fixture();try {
+    await f.request();let time=0;
+    assert.equal(await runDeletionWork(f.adapter,account,{now:()=>{time+=50000;return time;}}),true);
+    assert.deepEqual(f.calls,['revoke']);
+    assert.deepEqual(await f.rpc('carry_account_deletion_status',[ticket]),{status:'deleting'});
+    assert.equal(await runDeletionWork(f.adapter,account),true);
+    assert.deepEqual(f.calls,['revoke','files','auth']);
+    assert.deepEqual(await f.rpc('carry_account_deletion_status',[ticket]),{status:'deleted'});
   }finally{await f.db.close();}
 });
 

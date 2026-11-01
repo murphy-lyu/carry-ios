@@ -34,3 +34,17 @@ export async function runDeletionStep(adapter,accountID) {
     throw error;
   }
 }
+
+// Drain ready stages within the same worker lease instead of waiting another
+// cron interval between every credential and cleanup stage. Every step still
+// claims its own account operation, checks prerequisites and persists progress.
+export async function runDeletionWork(adapter,accountID,{now=Date.now}={}) {
+  const deadline=now()+45000;
+  let processed=false;
+  for(let step=0;step<6;step++) {
+    if(step>0&&now()>=deadline)break;
+    if(!await runDeletionStep(adapter,accountID))break;
+    processed=true;
+  }
+  return processed;
+}

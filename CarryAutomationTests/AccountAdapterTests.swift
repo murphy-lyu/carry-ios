@@ -34,6 +34,69 @@ final class AccountAdapterTests: XCTestCase {
               fullName: "Test Traveler", state: "synthetic-state")
     }
 
+    private func emailService(canonical: String, identities: [[String: Any]], metadata: [String: Any] = [:]) throws -> CarryAccountService {
+        var user = userJSON()
+        user["email"] = canonical
+        user["identities"] = identities
+        user["user_metadata"] = metadata
+        var session = sessionJSON()
+        session["user"] = user
+        let userData = try JSONSerialization.data(withJSONObject: user)
+        let sessionData = try JSONSerialization.data(withJSONObject: session)
+        return CarryAccountService(configuration: configuration, storage: storage, send: { request in
+            let url = try XCTUnwrap(request.url)
+            let data: Data
+            switch url.path {
+            case "/auth/v1/token": data = sessionData
+            case "/auth/v1/user": data = userData
+            case "/functions/v1/carry-account": data = Data("{\"status\":\"enrolled\"}".utf8)
+            default: XCTFail("Unexpected email profile request"); throw CarryAccountFailure.service
+            }
+            return (data, try XCTUnwrap(HTTPURLResponse(url: url, statusCode: 200, httpVersion: nil, headerFields: nil)))
+        })
+    }
+
+    private func appleIdentity(email: String, verified: Any = true, provider: String = "apple", owner: UUID? = nil) -> [String: Any] {
+        ["id": "synthetic-subject", "identity_id": UUID().uuidString,
+         "user_id": (owner ?? userID).uuidString, "provider": provider,
+         "identity_data": ["sub": "synthetic-subject", "email": email, "email_verified": verified]]
+    }
+
+    func testSharedAppleEmailReplacesStaleRelayDisplayOnSignInAndRestore() async throws {
+        let service = try emailService(canonical: "old@privaterelay.appleid.com",
+            identities: [appleIdentity(email: "shared@example.invalid")],
+            metadata: ["email": "untrusted@example.invalid", "email_verified": true])
+        let profile = try await service.signIn(credential, nonce: "synthetic-nonce")
+        XCTAssertEqual(profile.id, userID)
+        XCTAssertEqual(profile.email, "shared@example.invalid")
+        XCTAssertEqual(service.cachedProfile?.email, profile.email)
+        let restored = try await service.restore()
+        XCTAssertEqual(restored?.email, profile.email)
+    }
+
+    func testChoosingHiddenAppleEmailRemainsPrivateEvenWhenAccountEmailWasShared() async throws {
+        let service = try emailService(canonical: "previously-shared@example.invalid",
+            identities: [appleIdentity(email: "current@privaterelay.appleid.com", verified: "true")])
+        let profile = try await service.signIn(credential, nonce: "synthetic-nonce")
+        XCTAssertEqual(profile.email, "current@privaterelay.appleid.com")
+    }
+
+    func testUnverifiedForeignAmbiguousOrMissingIdentityCannotOverrideAccountEmail() async throws {
+        let wrongOwner = UUID()
+        let cases: [[[String: Any]]] = [
+            [appleIdentity(email: "unverified@example.invalid", verified: false)],
+            [appleIdentity(email: "other-provider@example.invalid", provider: "google")],
+            [appleIdentity(email: "other-owner@example.invalid", owner: wrongOwner)],
+            [appleIdentity(email: "one@example.invalid"), appleIdentity(email: "two@example.invalid")], []
+        ]
+        for identities in cases {
+            let service = try emailService(canonical: "original@privaterelay.appleid.com", identities: identities,
+                metadata: ["email": "spoofed@example.invalid", "email_verified": true])
+            let profile = try await service.signIn(credential, nonce: "synthetic-nonce")
+            XCTAssertEqual(profile.email, "original@privaterelay.appleid.com")
+        }
+    }
+
     func testDeletionReceiptIsDurableAndCanConfirmCompletionWithoutAnyUserSession() async throws {
         let token = String(repeating: "a", count: 64)
         try storage.store(key: "deletion-receipt", value: JSONSerialization.data(withJSONObject: [
