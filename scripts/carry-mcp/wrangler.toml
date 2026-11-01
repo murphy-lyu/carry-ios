@@ -5,6 +5,10 @@ workers_dev = false
 
 routes = [{ pattern = "connect.nevestudio.app", custom_domain = true }]
 
+# Keep closed until hosted identity/storage and complete OAuth acceptance pass.
+[vars]
+ACCOUNT_AI_GATEWAY_ENABLED = "false"
+
 [durable_objects]
 bindings = [{ name = "RELAY", class_name = "CarryRelay" }]
 

@@ -1,4 +1,5 @@
 // No model/API key is needed: this server exposes Carry operations to an MCP client.
+import { usesAccountGateway, forwardAccountRequest } from "./account-gateway.mjs";
 const MINUTE = 60_000;
 const DAY = 86_400_000;
 const SCOPES = ["trips:read", "trips:write", "library:read", "library:write"];
@@ -210,6 +211,7 @@ export function validate(value, schema) {
 export default {
   async fetch(request, env) {
     if (new URL(request.url).protocol !== "https:" && !env.LOCAL_TEST) return json({ error: "https_required" }, 400);
+    if (usesAccountGateway(request, env)) return forwardAccountRequest(request);
     // Consume bounded bodies before entering the globally serialized relay. A slow
     // internet client must not hold the Durable Object's concurrency gate open.
     if (request.body) {
