@@ -256,7 +256,10 @@ test('nine-language pages and errors have complete matching strings with no raw 
       'Accept-Language': locale, Accept: 'text/html',
     } }), env);
     assert.equal(error.status, 404);
-    assert.ok((await error.text()).includes(text.unavailable));
+    assert.equal(error.headers.get('X-Carry-Error-Code'), 'not_found');
+    const errorHTML = await error.text();
+    assert.ok(errorHTML.includes(text.unavailable));
+    assert.ok(errorHTML.includes('<code>not_found</code>'));
   }
   assert.equal(language('en;q=0,zh-TW;q=0.9,de;q=0.4'), 'zh-Hant');
   assert.equal(language('xx,pt-PT;q=0.8'), 'pt-BR');

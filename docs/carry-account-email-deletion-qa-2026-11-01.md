@@ -42,3 +42,9 @@ Apple Developer 原生 App ID（`app.nevestudio.carry`）的 Description 原为 
 页面策略改为 `same-origin`，保留同站来源，跨站 Apple/第三方不发送 Referer；不接受 null Origin、不放宽 CSRF 或 Cookie。原生、注销和 AI 表单共用的响应头一并修复。两轮网站各23/23，workerd四项检查通过，并增加策略断言及 null Origin 拒绝回归。
 
 已发布账户网站版本 `cf93274f-c40c-43f1-bd18-20c0d12843bf`，AI 入口仍关闭。线上新取表单与 Cookie 后，null Origin 返回403 `origin_mismatch`；正确同站 Origin 返回303且目标为 `appleid.apple.com`。这只证明发起步骤，用户真实 Apple 网页回调仍需验收。本机直连探针最初超时，改用 Node24 的系统代理环境后完成检查，未改网络设置或 TLS 验证。
+
+### 回调仍失败：诊断未完成
+
+用户随后截图已到 `/auth/apple/callback`，仍显示通用错误，不能宣称网页登录完成。既有页面未展示错误码、Worker未记录失败阶段，无法从截图区分flow cookie、Supabase身份或生命周期登记。新增固定错误码响应头/页面标识，以及仅包含固定阶段、静态错误码和HTTP状态的结构化日志；绝不记录请求、URL、Cookie、令牌、Apple code、邮箱、账户ID或原始异常。
+
+23项回归通过，诊断版本 `c43e16e0-245b-4511-8347-5279f49014df` 已部署。该版本只是增加可诊断性，尚未修复未知的回调问题；等待一次新的本人Apple授权获取失败码。不刷新或重放已有callback，不擅自删除账号、重建密钥或更改Apple配置。

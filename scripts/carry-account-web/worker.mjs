@@ -42,8 +42,9 @@ function htmlPage(text, title, content, headers, status = 200) {
   return new Response(`<!doctype html><html lang="${text.lang}"><head><meta charset="utf-8"><meta name="color-scheme" content="light dark"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${htmlEscape(title)}</title><link rel="stylesheet" href="/account.css"></head><body><main><p>Carry</p><h1>${htmlEscape(title)}</h1>${content}<p><a href="https://legal.nevestudio.app/carry/privacy/">${htmlEscape(text.privacy)}</a></p></main></body></html>`, { status, headers });
 }
 function message(code, headers, status, text, wantsHTML) {
+  headers.set('X-Carry-Error-Code', code);
   if (wantsHTML) return htmlPage(text, text.signIn,
-    `<p role="alert">${htmlEscape(text.unavailable)}</p><a href="/login">${htmlEscape(text.retry)}</a>`, headers, status);
+    `<p role="alert">${htmlEscape(text.unavailable)}</p><p><code>${htmlEscape(code)}</code></p><a href="/login">${htmlEscape(text.retry)}</a>`, headers, status);
   headers.set('Content-Type', 'application/json');
   return new Response(JSON.stringify({ error: code }), { status, headers });
 }
@@ -88,6 +89,7 @@ export function createWebHandler({ makeClient = createServerClient, fetcher = fe
       return response;
     };
     let client;
+    let phase = 'configuration';
     try {
       const config = settings(env), url = new URL(request.url);
       if (url.origin !== config.origin) throw new WebFailure(400, 'host_mismatch');
@@ -164,6 +166,7 @@ export function createWebHandler({ makeClient = createServerClient, fetcher = fe
         return finish(redirect(authorize.href, headers));
       }
       if (request.method === 'POST' && url.pathname === '/auth/apple/callback') {
+        phase = 'apple_callback_form';
         // Apple's cross-site form_post cannot carry a SameSite=Lax flow cookie.
         // This short-lived encrypted cookie alone uses SameSite=None. Sessions
         // retain Lax; an exact, unpredictable state binds the cross-site POST.
@@ -183,6 +186,7 @@ export function createWebHandler({ makeClient = createServerClient, fetcher = fe
         const previousCookies = new Map(authCookies);
         let signedInSession;
         try {
+          phase = 'apple_identity';
           const { data, error } = await client.auth.signInWithIdToken({ provider: 'apple', token, nonce: flow.nonce });
           signedInSession = data?.session;
           if (error || !data?.user || !data?.session || !uuid(data.user.id) || data.session.user.id !== data.user.id) {
@@ -198,6 +202,7 @@ export function createWebHandler({ makeClient = createServerClient, fetcher = fe
           // Save Apple's once-only name after verified identity, before the
           // one-use code exchange. This is display metadata, never authority.
           if (form.has('user')) {
+            phase = 'apple_profile';
             let profile;
             try { profile = JSON.parse(form.get('user')); } catch { throw new WebFailure(400, 'invalid_apple_response'); }
             const name = [profile?.name?.firstName, profile?.name?.lastName]
@@ -207,6 +212,7 @@ export function createWebHandler({ makeClient = createServerClient, fetcher = fe
               if (update.error) throw new WebFailure(503, 'profile_unavailable');
             }
           }
+          phase = 'account_enrollment';
           await lifecycle(data.session, { action: 'enroll', idToken: token,
             authorizationCode: code, nonce: flow.nonce });
         } catch (failure) {
@@ -248,6 +254,11 @@ export function createWebHandler({ makeClient = createServerClient, fetcher = fe
       }
       throw new WebFailure(404, 'not_found');
     } catch (failure) {
+      // No request URL/body, cookies, identity, provider message or exception
+      // object: only our fixed stage/code/status are safe for hosted diagnosis.
+      console.warn(JSON.stringify({ event: 'carry_web_failure', phase,
+        code: failure instanceof WebFailure ? failure.code : 'service_unavailable',
+        status: failure instanceof WebFailure ? failure.status : 503 }));
       return finish(message(failure instanceof WebFailure ? failure.code : 'service_unavailable', headers,
         failure instanceof WebFailure ? failure.status : 503, text,
         request.headers.get('Accept')?.includes('text/html')));
