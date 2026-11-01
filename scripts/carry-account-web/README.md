@@ -1,6 +1,6 @@
 # Carry 网页账户入口
 
-已确认的可选账户/AI 连接方案的浏览器适配；**尚未部署，默认关闭入口，无路由**。完整生命周期、范围授权和真实原生/网页登录仍是发布门禁。这里不保存或读取旅行数据，不复制 Apple P8/数据库 service key。
+已确认的可选账户/AI 连接方案的浏览器适配；**已部署carry-dev开发验收环境；默认配置仍关闭入口、无路由**。完整生命周期、范围授权和真实原生/网页登录仍是发布门禁。这里不保存或读取旅行数据，不复制 Apple P8/数据库 service key。
 
 ## 身份与安全
 - 使用官方 `@supabase/ssr` / `supabase-js` 维护会话与刷新；每请求一个独立 server client。会话只在 host-only Secure/HttpOnly/SameSite=Lax Cookie，不交给前端脚本/localStorage。
@@ -12,9 +12,9 @@
 
 ## 外部配置（不能据此开放产品）
 - 已保存 Apple Services ID `app.nevestudio.carry.web`，关联 Carry；唯一域名 `account.nevestudio.app`，回调 `https://account.nevestudio.app/auth/apple/callback`。
-- 待配置：Supabase Apple provider Client IDs 添加已关联的 web ID；carry-account 服务端同样添加 web audience 和 `CARRY_APPLE_WEB_REDIRECT_URI`，部署完整生命周期适配器。现有开发 secrets 的 client IDs 仍只有原生，未擅自视为已生效。
+- 2026-11-01已核对保存：Supabase Apple provider及carry-account服务端Client IDs包含原生与web ID，`CARRY_APPLE_WEB_REDIRECT_URI`为上述精确回调，生命周期适配器已部署；真实同身份登录尚待验收。
 - Worker 需要 `ACCOUNT_ORIGIN`、`SUPABASE_URL`、公开 `SUPABASE_PUBLISHABLE_KEY`、`APPLE_WEB_CLIENT_ID`、独立的 32-byte Base64URL `WEB_FLOW_ENCRYPTION_KEY`。flow key 与长期提供者凭据的 AES key 分开；不混用、不覆盖旧 key。
-- `ACCOUNT_WEB_ENABLED` 仅在完整链路验收后设置为 true；当前 false。没有建立新付费服务、DNS 路由或替换现有 MCP Worker。
+- 默认环境 `ACCOUNT_WEB_ENABLED=false`；显式开发验收环境 `wrangler deploy --env acceptance` 使用既有carry-dev与 `account.nevestudio.app`，web入口为true、AI网页入口仍为false。未创建付费服务或替换旧MCP Worker。首次部署秘密通过 `wrangler secret bulk <本机受限JSON> --env acceptance` 安装，flow key必须是32字节的无padding Base64URL；不覆盖长期Apple凭据AES key。
 
 ## 验证
 Node 24+；所有依赖精确固定并有 lockfile。`npm ci --ignore-scripts`，`node --test *.test.mjs`。包含实际 Supabase SSR Cookie 持久化/读回（网络为合成），不等于真实 Apple 登录。
@@ -31,3 +31,5 @@ Node 24+；所有依赖精确固定并有 lockfile。`npm ci --ignore-scripts`�
 - [Apple REST 授权](https://developer.apple.com/documentation/signinwithapplerestapi/request-an-authorization-to-the-sign-in-with-apple-server.)
 - [Apple 令牌交换](https://developer.apple.com/documentation/signinwithapplerestapi/generate-and-validate-tokens)
 - [Supabase OAuth 的 scope 与数据权限边界](https://supabase.com/docs/guides/auth/oauth-server/token-security)
+
+最新部署、真实HTTP证据和剩余验收见 `../../docs/carry-account-hosted-acceptance-2026-11-01.md`。

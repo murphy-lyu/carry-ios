@@ -10,3 +10,18 @@ ACCOUNT_WEB_ENABLED = "false"
 ACCOUNT_ORIGIN = "https://account.nevestudio.app"
 APPLE_WEB_CLIENT_ID = "app.nevestudio.carry.web"
 SUPABASE_URL = "https://lbxsvguuoqqpctkinpwy.supabase.co"
+
+# Explicit development acceptance deployment. Default deployments stay closed.
+# This is the existing carry-dev backend, not a production release environment.
+[env.acceptance]
+name = "carry-account-web-dev"
+workers_dev = false
+routes = [{ pattern = "account.nevestudio.app", custom_domain = true }]
+
+[env.acceptance.vars]
+ACCOUNT_WEB_ENABLED = "true"
+ACCOUNT_AI_ENABLED = "false"
+ACCOUNT_ORIGIN = "https://account.nevestudio.app"
+CARRY_AI_ORIGIN = "https://connect.nevestudio.app"
+APPLE_WEB_CLIENT_ID = "app.nevestudio.carry.web"
+SUPABASE_URL = "https://lbxsvguuoqqpctkinpwy.supabase.co"

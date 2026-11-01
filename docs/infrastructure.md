@@ -12,6 +12,7 @@
 | `flight.nevestudio.app` | 航班号查询代理 | Worker `carry-flight` |
 | `config.nevestudio.app` | App 远程配置（roadmap.json 代发） | Worker `carry-config` |
 | `places.nevestudio.app` | 海外地点检索代理 | Worker `carry-places` |
+| `account.nevestudio.app` | Carry账户网站（carry-dev开发验收，网页登录开启、AI网页入口关闭） | Worker `carry-account-web-dev`，显式`acceptance`环境 |
 | `connect.nevestudio.app` | 可选 Codex/MCP 配对、请求及快照 | Worker `carry-mcp` + SQLite Durable Object；2026-10-25 生产合成链路两轮通过，真机与 CloudKit 门禁另验 |
 | `legal.nevestudio.app` | 法务站（每 app 一文件夹，URL `/<app>/<doc>/[zh]`） | Cloudflare Pages 项目（接 `neve-web` 仓库、**Root directory = `legal/`**；原 `carry-legal`） |
 | `nevestudio.app`（规划中） | 工作室官网/落地页 | 同 `neve-web` 仓库另开 Pages 项目、Root directory = `site/` |
@@ -49,11 +50,11 @@
 
 > 不用 Google/DeepL/中国源的原因：DeepL 绑卡受限、Google 在华敏感、用户倾向非中国源。provider 都藏在 Worker 后，**换它只改 Worker、App 不动**。
 
-### Carry 账户开发环境（2026-10-27）
+### Carry 账户开发环境（2026-11-01）
 
-Supabase `carry-dev` / `lbxsvguuoqqpctkinpwy`，Neve Studio Free 组织、新加坡，仅开发。六份迁移和 `carry-data` v1 已部署，`carry-account` 未部署；完整状态见 `carry-account-graph-qa.md`，不能据此开启生产账户入口。
+Supabase `carry-dev` / `lbxsvguuoqqpctkinpwy`，Neve Studio Free 组织、新加坡，仅开发。现共24份迁移，`carry-data` v5、`carry-assets`/`carry-cleanup` v3、账户/状态/维护 v2、新 `carry-ai` v2已部署。账户网站开发验收环境已绑定正式子域名，新AI的公共connect域名尚未切换。完整状态见 `carry-account-hosted-acceptance-2026-11-01.md`，正式Release门禁仍关闭。
 
-Apple 登录发行团队为 Bing Xue / `25RAM7275Z`，原生 Bundle ID `app.nevestudio.carry`。专用 Key `Carry Account Sign In` / `8LRP72FMZY` 只启用 Sign in with Apple 并关联 Carry 主 App。P8 与本地服务端配置位于 `~/Library/Application Support/Carry Development Secrets/`，目录 0700、文件 0600；2026-10-28 经用户逐项确认安装到 carry-dev 服务端 Secrets，五项摘要逐项匹配本机原件；不得进 App/Git/日志或覆盖已存在的 AES 配置。网页 Services ID `app.nevestudio.carry.web` 已保存并关联原生 Carry；仅登记 `account.nevestudio.app` 与 `https://account.nevestudio.app/auth/apple/callback`。网站/回调部署、原生网页同账户和真实身份联调仍未完成，服务端 Client IDs 暂仅含原生 ID。
+Apple 登录发行团队为 Bing Xue / `25RAM7275Z`，原生 Bundle ID `app.nevestudio.carry`。专用 Key `Carry Account Sign In` / `8LRP72FMZY` 只启用 Sign in with Apple 并关联 Carry 主 App。P8 与本地服务端配置位于 `~/Library/Application Support/Carry Development Secrets/`，目录 0700、文件 0600；2026-10-28 经用户逐项确认安装到 carry-dev 服务端 Secrets，五项摘要逐项匹配本机原件；不得进 App/Git/日志或覆盖已存在的 AES 配置。网页 Services ID `app.nevestudio.carry.web` 已保存并关联原生 Carry；仅登记 `account.nevestudio.app` 与 `https://account.nevestudio.app/auth/apple/callback`。2026-11-01经确认，Supabase provider与生命周期服务端Client IDs均已保留原生并加入web ID，回调及桥接key已保存且核对摘要；网站登录页实际200。原生网页同账户、真实授权回调及双设备验收仍未完成；私钥/AES key未轮换。
 
 ## 4. App 内密钥（`Carry/Resources/Secrets.plist`，**gitignored**）
 

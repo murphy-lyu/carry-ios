@@ -36,7 +36,7 @@ function redirect(path, headers, status = 303) {
 }
 function htmlPage(text, title, content, headers, status = 200) {
   headers.set('Content-Type', 'text/html; charset=utf-8');
-  return new Response(`<!doctype html><html lang="${text.lang}"><head><meta charset="utf-8"><meta name="color-scheme" content="light dark"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${htmlEscape(title)}</title><link rel="stylesheet" href="/account.css"></head><body><main><p>Carry</p><h1>${htmlEscape(title)}</h1>${content}<p><a href="https://legal.nevestudio.app/privacy/">${htmlEscape(text.privacy)}</a></p></main></body></html>`, { status, headers });
+  return new Response(`<!doctype html><html lang="${text.lang}"><head><meta charset="utf-8"><meta name="color-scheme" content="light dark"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${htmlEscape(title)}</title><link rel="stylesheet" href="/account.css"></head><body><main><p>Carry</p><h1>${htmlEscape(title)}</h1>${content}<p><a href="https://legal.nevestudio.app/carry/privacy/">${htmlEscape(text.privacy)}</a></p></main></body></html>`, { status, headers });
 }
 function message(code, headers, status, text, wantsHTML) {
   if (wantsHTML) return htmlPage(text, text.signIn,

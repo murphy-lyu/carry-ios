@@ -1,6 +1,6 @@
 # Carry 账户 AI 服务组件
 
-该目录实现新账户协议和领域编译器，取代“配对手机前台执行”作为最终架构。已有 `edge-entry.ts` 与 PostgreSQL 运行时，尚未部署，也不会连接旧 relay。生产实现使用持久化 SQL store；查询、私有文件及完整备份/分享导出适配已接入并完成本地验证。托管部署、真实身份及设备验收仍是独立门禁。详细原子边界见 `store-contract.md`。
+该目录实现新账户协议和领域编译器，取代“配对手机前台执行”作为最终架构。2026-11-01已部署到既有carry-dev并完成实际元数据/合成注册与数据库事务检查；公共connect域名仍为旧relay，不代表Codex已接通。查询、私有文件及完整备份/分享导出已完成本地验证；真实身份、文件、双设备与完整授权链路仍需验收。最新状态见 `../../docs/carry-account-hosted-acceptance-2026-11-01.md`。
 
 ## 已实现
 
@@ -19,13 +19,13 @@
 
 ## 本地发布入口
 
-现有 Supabase service 项目已准备 `scripts/carry-account-service/supabase/functions/carry-ai/index.ts`，导入本目录的 `edge-entry.ts`；函数自己的 `deno.json` 显式将 `tz-lookup` 映射到固定版本 `npm:tz-lookup@6.1.25`。`supabase/config.toml` 已指定该 entrypoint/import_map，并设置 `verify_jwt=false`，由新协议自行验证 OAuth bearer 和第一方 owner proof，而非使用原生 JWT 网关。功能仍以 `ACCOUNT_AI_ENABLED` 默认关闭；配置准备不会自动部署或开启服务。
+现有 Supabase service 项目已准备 `scripts/carry-account-service/supabase/functions/carry-ai/index.ts`，导入本目录的 `edge-entry.ts`；函数自己的 `deno.json` 显式将 `tz-lookup` 映射到固定版本 `npm:tz-lookup@6.1.25`。`supabase/config.toml` 已指定该 entrypoint/import_map，并设置 `verify_jwt=false`，由新协议自行验证 OAuth bearer 和第一方 owner proof，而非使用原生 JWT 网关。功能仍以 `ACCOUNT_AI_ENABLED` 默认关闭；默认配置不会自动开启服务；carry-dev本次已明确开启用于托管验收。内部 `/carry-ai/*` 与外部 `/functions/v1/carry-ai/*` 由同一精确路由适配。
 
 从实际 service 项目根、使用该函数 import map 的 Deno check 已通过。此证据覆盖本地模块解析，不能代替托管打包上传、真实凭据、生产网络或设备验收。
 
 ## 外部门禁
 
-1. 托管部署 SQL 共享核心及私有导出记录迁移（`20261031013432_account_ai_shared_graph_core.sql`、`20261031145924_account_ai_private_exports.sql`），配置真实连接池、owner bridge secret、服务端查询凭据、域名和运行时；当前均未由本组件自动部署。`postgres-schema.sql` 是结构参考，运行时 Graph/回执使用同一事务连接，不创建原生 auth.sessions。
+1. 托管部署 SQL 共享核心及私有导出记录迁移（`20261101041529_account_ai_shared_graph_core.sql`、`20261101041536_account_ai_private_exports.sql`），配置真实连接池、owner bridge secret、服务端查询凭据、域名和运行时；SQL已部署到carry-dev；开发入口可使用专用 `CARRY_AI_DATABASE_URL`，缺省读取平台服务端 `SUPABASE_DB_URL`，TLS校验保持开启。其余域名和真实身份验收仍未完成。`postgres-schema.sql` 是结构参考，运行时 Graph/回执使用同一事务连接，不创建原生 auth.sessions。
 2. 用真实 Apple 身份核验原生与网页同账户、连接授权/撤销，以及托管私有 Storage 的 Range、不可变 version、较大文件时延和取消行为。本地 provider 合成测试不能代替这些验收。
 3. 完成原生旧行程迁移、手机关闭、两设备同步、失败恢复/撤销的整体验收。原生 `carry://packing/{id}` 可明确打开打包；通用 `carry://trip/{id}` 保持上次显示页面，返回 `deviceState:not_observed` 不代表已验证手机界面。
 4. 配置托管过期记录维护任务；当前实现已包含导出记录清理，但未在托管环境调度。clone继续默认排除私有文件/照片/背景及预订凭据。
