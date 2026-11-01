@@ -13,6 +13,7 @@
 
 - 两轮原生各340/340（0失败），含新增双门禁、配置缺失及固定URL检查。证据 `/tmp/CarryAccountAIEntryQA-20261101/round-{1,2}.xcresult`。
 - 所有构建使用SWIFT_EMIT_LOC_STRINGS=NO。Swift编译无新增warning/error；模拟器没有iCloud账户的系统日志不代表CloudKit通过。本轮不声称Release构建、真机视觉或真实AI连接验收。
+- 后续补充：同一提交的iOS Release编译通过，Swift warning/error为0；证据 `/tmp/carry-ai-entry-release-20261101.log`。该次CODE_SIGNING_ALLOWED=NO，仅证明正式配置可编译，不证明签名、安装或发布。构建后catalog无改动，九语言复审仍0/0。
 - 七项文案完整九语言，审计0 error/0 warning。Catalog按当前文件的实际格式先做零变更round-trip确认；该仓当前采用冒号后空格与末尾换行，与旧文档示例不同。最终只新增420行，无全文件重排。
 - Review核对：独立开关不会随原生登录入口提前开放；新旧页面没有递归导航；旧凭据仍可撤销；公开URL无身份参数；地址换行/文本选择、动态文字、深浅色和44pt按钮均使用原生机制。复制反馈使用显式本地化键，避免条件String误走非本地化重载。导航标签使用原功能名称，不伪称旧连接仍处于有效状态。
 

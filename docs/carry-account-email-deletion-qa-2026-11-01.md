@@ -63,3 +63,9 @@ Apple Developer 原生 App ID（`app.nevestudio.carry`）的 Description 原为 
 - 对旧bundle执行相同回归，实际Auth请求次数0、期望1，明确复现旧缺陷。新bundle两轮均通过，加上原4项页面/CSRF检查。Node两轮各24/24。
 - 最终网站版本 `7ad0cefb-5d24-41bd-8e50-7beb892049d1` 已部署。中间修复版本的线上纯合成回调不再出现transport，进入provider对假token的正常拒绝；一次网络探针超时已单列，未算通过。
 - 用户真实网页授权仍需最终验证；本轮不声称已登录同账户、不启用AI、不上传真实行程或发布App。
+
+### 本人真实网页登录通过
+
+用户随后回复“已完成”，并提供 `account.nevestudio.app/` 的账户首页截图；原生Chrome AX也读取到“Your Carry account”与退出按钮。真实Apple授权、Supabase身份、Carry生命周期登记及登录后首页读回这条链路通过，不再把网页回调记为未完成。
+
+原生与网页同账户仍需独立核对。已在carry-dev SQL编辑器准备只返回用户数、active账户数、同账户是否同时有原生/web audience、业务实体和文件计数的SELECT；不查询邮箱、subject、账户UUID或凭据。界面工具多次出现ScreenCaptureKit错误/不可用窗口，Run结果未可靠返回，尚未把该查询视为通过；已请求用户仅协助点击Run并提供计数结果。未修改表、授权或真实行程。
