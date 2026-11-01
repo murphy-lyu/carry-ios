@@ -69,3 +69,9 @@ Apple Developer 原生 App ID（`app.nevestudio.carry`）的 Description 原为 
 用户随后回复“已完成”，并提供 `account.nevestudio.app/` 的账户首页截图；原生Chrome AX也读取到“Your Carry account”与退出按钮。真实Apple授权、Supabase身份、Carry生命周期登记及登录后首页读回这条链路通过，不再把网页回调记为未完成。
 
 原生与网页同账户仍需独立核对。已在carry-dev SQL编辑器准备只返回用户数、active账户数、同账户是否同时有原生/web audience、业务实体和文件计数的SELECT；不查询邮箱、subject、账户UUID或凭据。界面工具多次出现ScreenCaptureKit错误/不可用窗口，Run结果未可靠返回，尚未把该查询视为通过；已请求用户仅协助点击Run并提供计数结果。未修改表、授权或真实行程。
+
+### 同账户读回通过
+
+用户运行查询后报告42601：编辑器第6行混入另一段SELECT。此前对Monaco的AX setValue未可靠替换完整模型，叠加了查询；不能归因于默认100行限制或账号异常。改为创建全新空白SQL片段，一次粘贴完整只读CTE，不再设置Monaco的局部AX文本，并用编辑器原生运行快捷键执行。
+
+结果实际读回一行：`users=1`、`active_accounts=1`、`same_native_web_account=true`、`entity_count=0`、`file_count=0`。该账户同时拥有active的原生与web audience，真实原生/网页同账户门禁通过。未重复开户或上传旧行程/文件，用户无需再操作SQL。
