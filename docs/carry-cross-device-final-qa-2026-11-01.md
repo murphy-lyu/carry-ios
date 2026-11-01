@@ -9,18 +9,21 @@
 - Mac 验收包仅将构建产物 `CarryAccountReleaseReady` 设 true；账户 AI 门禁及仓库发布门禁仍关闭。用户完成 Apple 登录，设置实际显示 Signed in；启用同步后显示 Changes saved to your account。
 - Mac 拉回 iPhone 已发布的合成行程、上海博物馆地点、CNY 42 与合成文件名，证明实际物理客户端账户读回链路可用。原 iCloud 行程在 Mac 仍按旧路径显示，未迁入账户。
 - 打开地点详情连续两次崩溃，已保存 17:02:06 / 17:02:24 的系统 ips。栈为 `EnvironmentObject.error → StopDetailView.store.getter → stopScheduleSubtitle`。统一行程 sheet 根显式注入当前 owner store/router，覆盖地点、交通、住宿和编辑。修正版正确团队构建通过，实际再次打开同一地点，详情费用和文件均正常显示，编辑页也可保存。
-- Mac 将合成地点名称修改为 `Carry QA Museum — Mac verified` 并保存；iPhone 接收这一修改、反向修改及冲突仍待继续观察，不把已保存界面冒充云端收敛。
+- Mac 将合成地点名称修改为 `Carry QA Museum — Mac verified` 并保存。Mac replica 的已接受远端版本为3、pending=false；新 iPhone 包启动后，只读复制账户数据库到受限诊断目录，完整性 ok，匹配到同一测试名称/remote version 3/pending=false，Mac→账户→iPhone 的实际数据收敛通过。未读取 Keychain 或迁移真实旧行程。反向修改及冲突仍待继续观察，不把数据库读回冒充最终界面验证。
 - 合并后原生全量两轮各 351 通过、1 项手动物理检查跳过，0 失败、0 runtime warnings。结果 `/tmp/CarryIntegratedFinalQA-20261101/round-{1,2}.xcresult`。这两轮先于上述 sheet 注入修正；修正后 Simulator、Mac 和 iPhone Debug 构建另行通过。
-- 最新 iPhone Debug 同 Bundle ID 安装成功、strict/deep codesign 通过，冷启动保留账户和行程，多个已有照片封面正常显示。Release、最新两端界面及更多冷图操作另行记录，不能把 iPhone 17 Pro 的显示结果称为 iPhone 12 性能实测。
+- 上述 sheet 修正及所有 Review 修复后的最终全量又两轮各351通过、1手动物理检查跳过、0失败、0 runtime warnings：`/tmp/CarryIntegratedPostReviewQA-20261101/round-{1,2}.xcresult`。
+- 最新 iPhone Debug 同 Bundle ID 安装成功、strict/deep codesign 通过，冷启动保留账户和行程，多个已有照片封面正常显示。最终 iOS Release 编译通过；九语言审计0错误/0警告。更多冷图操作另行记录，不能把 iPhone 17 Pro 的显示结果称为 iPhone 12 性能实测。
 
 ## Codex 真实连接
 
 - 官方 CLI 已登记 `carry-account`，连接 `https://connect.nevestudio.app/mcp`；原配置先保存受限备份，没有改动既有服务。
 - 实际 Codex DCR HTTP 400；使用 loopback 合成元数据服务捕获公开注册字段，确认 CLI 发送 `application_type: native`。旧服务错误地拒绝未知 DCR 元数据。
 - 按 RFC 7591 仅在注册端点投影支持字段，忽略未知字段，验证/回显 native 或 web，仍保持服务器生成 client ID、精确 redirect、PKCE、resource 与本人 consent。独立 Review 没有发现授权边界扩大；顺带修复 auth_method 的 truthy 校验，显式 null/false/0/空字符串均拒绝。
-- AI 全量两轮各 104/104；最后 auth_method 收紧的 Worker 定向 37/37。实际 Codex 尚未取得授权，不宣称已连接成功。
+- AI 全量两轮各 104/104；最后 auth_method 收紧的 Worker 定向 37/37，随后最新完整源码又两轮各104/104。实际 Codex 尚未取得授权，不宣称已连接成功。
 - Supabase 网页部署失败已取得明确错误：既有跨目录 `index.ts` 导入在网页打包时解析成不存在的 `/carry-account-ai/edge-entry.ts`。失败没有更新线上服务；本地修复仍需用完整打包入口部署。已用现有 esbuild 生成独立 ESM、保留锁定 npm 导入，Deno check、无网络 enabled runtime 初始化和 disabled 503 检查通过。没有导出浏览器凭据或私钥。
 - `curl`/Node 经当前代理 TLS 停滞，Foundation URLSession 与真正 Codex 可达；没有更改代理配置。网络探针不是实际 OAuth 成功证明。
+
+独立部署产物：`/tmp/carry-ai-index-20261101.mjs`（同内容 `.txt` 供原生编辑器复制）。SHA-256 `e8cb08a3b599b8232ab399dd6ac44a7ba64ebbf1a9f95d9518805d0dbd495aee`。由现有 web 模块 esbuild 对 `scripts/carry-account-ai/edge-entry.ts` 使用 `--bundle --format=esm --platform=node --external:npm:*` 生成，静态资源包含在产物中，没有环境秘密。Deno cached-only + 禁止网络的初始化检查分别验证启用/关闭两个分支。网页控件与截图随后不同步，坐标操作返回 `noWindowsAvailable`；暂停依赖该界面的部署/手机点击，请用户将 Chrome 标签页放到当前桌面前台。没有持续盲点部署按钮。
 
 ## 继续验收 / 待办
 
