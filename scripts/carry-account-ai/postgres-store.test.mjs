@@ -24,6 +24,7 @@ async function fixture(path) {
   await db.exec(
     await readFile(new URL("./postgres-schema.sql", import.meta.url), "utf8"),
   );
+  await db.exec(await readFile(new URL("./maintenance.sql", import.meta.url), "utf8"));
   await db.exec(
     "create table qa_graph(id uuid primary key, value jsonb); create table qa_account(id uuid primary key, active boolean);",
   );
