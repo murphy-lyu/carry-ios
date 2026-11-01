@@ -22,5 +22,8 @@
 ## 云端状态
 
 - 只读预检查实际返回：pg_cron 已安装、名为 carry-ai-retention 的作业 0、AI grant 0；迁移历史表字段已核对。
-- 部署事务已准备在本机 `/tmp/carry-ai-retention-deploy-20261101.sql`，包含两份迁移及其真实历史记录，尚未执行。
-- 已按浏览器规则请求用户当次确认启用不可恢复的过期记录清理；确认前不运行删除或安装自动排程。启用后仍需读回两份迁移、唯一 active job、执行结果及权限。当前不能声称托管排程完成。
+- 用户在本次确认回复中要求按建议直接操作，随后完成部署。两份迁移历史及唯一 active job 已实际读回为 `2 / 1`，排程为 `*/15 * * * *`，每类处理上限 500；没有新增 HTTP 清理凭据。
+- 实际函数体 MD5 与审核源码一致、SECURITY INVOKER 为 true；迁移历史中两份 SQL 的 SHA-256 均与仓库文件匹配。anon/authenticated 执行权限 false，service_role true。
+- 首次手动执行同一定时命令成功：records=0、compactedReceipts=0、rateBuckets=0，当前没有到期项。行程实体/文件仍为 `4 / 1`。核验片段：`https://supabase.com/dashboard/project/lbxsvguuoqqpctkinpwy/sql/ee200b71-012d-4cef-a1a5-d82809e63c18`。
+- 真实托管 PostgreSQL 上再执行合成事务：到期 preview 清除、30 天前 receipt 正文去除但身份保留、有效且已使用 refresh 证据保留、旧限流桶清除、每类上限生效。事务全部 rollback，读回 `hosted_retention_rollback_passed / 0 / 4 / 1`，没有遗留合成记录。核验片段：`https://supabase.com/dashboard/project/lbxsvguuoqqpctkinpwy/sql/98507974-7c54-4d29-82d2-043aca5b94bd`。
+- 定时任务已启用，手动实际执行和合成回滚验收通过；首个自然调度的 cron 运行日志尚未观察，不把手动执行称为自动调度已运行。
