@@ -41,7 +41,7 @@ struct CarryAppleCredential: Sendable {
     let state: String?
 }
 
-enum CarryAccountDeletionProgress: Equatable { case none, pending, completed }
+enum CarryAccountDeletionProgress: Equatable { case none, pending, completed, cancelled }
 
 struct CarrySignInChallenge: Equatable, Sendable {
     let nonce: String
@@ -69,6 +69,7 @@ protocol CarryAccountAuthenticating: AnyObject {
     var cachedProfile: CarryAccountProfile? { get }
     func restore() async throws -> CarryAccountProfile?
     func signIn(_ credential: CarryAppleCredential, nonce: String) async throws -> CarryAccountProfile
+    func recoverDeletion(_ credential: CarryAppleCredential, nonce: String) async throws -> CarryAccountProfile
     func signOut() async throws
     func deleteAccount(_ credential: CarryAppleCredential, nonce: String) async throws
     var pendingDeletion: Bool { get throws }
@@ -76,6 +77,7 @@ protocol CarryAccountAuthenticating: AnyObject {
 }
 
 extension CarryAccountAuthenticating {
+    func recoverDeletion(_ credential: CarryAppleCredential, nonce: String) async throws -> CarryAccountProfile { throw CarryAccountFailure.unavailable }
     var pendingDeletion: Bool { get throws { false } }
     func refreshDeletion() async throws -> CarryAccountDeletionProgress { .none }
 }
@@ -111,7 +113,7 @@ final class CarryAccountStore: ObservableObject {
     // transfers and navigation to stop before revoking/clearing auth credentials.
     var prepareForIdentityRemoval: () async throws -> Void = {}
 
-    enum AppleAction { case signIn, deleteAccount }
+    enum AppleAction { case signIn, deleteAccount, recoverDeletion }
 
     var isAvailable: Bool { service.isConfigured }
     var profile: CarryAccountProfile? { state.profile }
@@ -144,6 +146,7 @@ final class CarryAccountStore: ObservableObject {
             switch try await service.refreshDeletion() {
             case .pending: state = .deleting(profile); error = nil; return
             case .completed: state = .signedOut; error = nil; return
+            case .cancelled: state = profile.map(State.checking) ?? .signedOut
             case .none: break
             }
             if let restored = try await service.restore() {
@@ -164,7 +167,8 @@ final class CarryAccountStore: ObservableObject {
 
     /// Holds the operation lock across Apple's native prompt and the token exchange.
     func beginAppleAction(_ action: AppleAction = .signIn) throws -> CarrySignInChallenge {
-        guard isAvailable, !isBusy, !isDeleting else { throw CarryAccountFailure.unavailable }
+        guard isAvailable, !isBusy, (!isDeleting || action == .recoverDeletion) else { throw CarryAccountFailure.unavailable }
+        if action == .recoverDeletion, !isDeleting { throw CarryAccountFailure.unavailable }
         if action == .deleteAccount, profile == nil { throw CarryAccountFailure.sessionExpired }
         let generated = try CarrySignInChallenge.generate()
         challenge = generated
@@ -172,6 +176,7 @@ final class CarryAccountStore: ObservableObject {
         isBusy = true
         error = nil
         if action == .signIn { CarryLogger.shared.log(.accountSignInStarted) }
+        if action == .recoverDeletion { CarryLogger.shared.log(.accountSignInStarted, context: "deletion_recovery") }
         return generated
     }
 
@@ -207,6 +212,11 @@ final class CarryAccountStore: ObservableObject {
                 }
                 state = .signedIn(signedIn)
                 CarryLogger.shared.log(.accountSignInSucceeded)
+            case .recoverDeletion:
+                let recovered = try await service.recoverDeletion(credential, nonce: challenge.nonce)
+                guard profile == nil || profile?.id == recovered.id else { throw CarryAccountFailure.accountMismatch }
+                state = .signedIn(recovered)
+                CarryLogger.shared.log(.accountSignInSucceeded, context: "deletion_recovery")
             case .deleteAccount:
                 try await prepareForIdentityRemoval()
                 try await service.deleteAccount(credential, nonce: challenge.nonce)

@@ -194,3 +194,39 @@ test('Auth deletion accepts only confirmed success or the provider user-not-foun
     await assert.rejects(adapter.deleteAuthIdentity(accountID),/auth_deletion_unconfirmed/);
   }
 });
+
+test('held recovery hashes complete provider bytes, revokes other sessions with fresh bearer and commits encrypted credentials only',async()=>{
+  const bearer=await sessionToken(),id=crypto.randomUUID(),version=crypto.randomUUID();
+  const bytes=new TextEncoder().encode('synthetic recovery file');
+  const sha256=Buffer.from(await crypto.subtle.digest('SHA-256',bytes)).toString('hex');
+  const manifest={accountID,id,sha256,byteCount:bytes.length,storageVersion:version};
+  const calls=[];
+  const adapter=setup(async(url,options)=>{
+    calls.push(url.pathname+url.search);
+    if(url.pathname==='/auth/v1/user')return Response.json({id:accountID,identities:[{provider:'apple',identity_data:{sub:'synthetic-subject'}}]});
+    if(url.pathname.endsWith('/carry_account_require_session'))return Response.json(null);
+    if(url.pathname.endsWith('/carry_account_recovery_prepare')){
+      const body=JSON.parse(options.body);assert.equal(body.p_account,accountID);assert.equal(body.p_session,sessionID);
+      return Response.json({status:'verify',operationID:body.p_operation,fingerprints:{graph:'a'.repeat(64),assets:'b'.repeat(64)},assets:[manifest]});
+    }
+    if(url.pathname.startsWith('/storage/v1/object/authenticated/')){
+      assert.equal(options.method,'GET');assert.equal(options.headers.Authorization,'Bearer synthetic-service-role');
+      assert.equal(url.pathname,`/storage/v1/object/authenticated/carry-account-assets/${accountID}/${id}/${sha256}`);
+      return new Response(bytes);
+    }
+    if(url.pathname==='/auth/v1/logout'){
+      assert.equal(url.search,'?scope=others');assert.equal(options.headers.Authorization,'Bearer '+bearer);
+      return new Response(null,{status:204});
+    }
+    if(url.pathname.endsWith('/carry_account_recovery_commit')){
+      const body=JSON.parse(options.body);assert.deepEqual(body.p_assets,[manifest]);
+      assert.notEqual(body.p_encrypted_token,'fresh-private-refresh');assert.ok(!body.p_encrypted_token.includes('fresh-private-refresh'));
+      assert.ok(calls.indexOf('/auth/v1/logout?scope=others')<calls.length-1);
+      return Response.json({status:'cancelled'});
+    }
+    throw Error('unexpected recovery path');
+  });
+  const owner=await adapter.authenticate(bearer);
+  assert.equal(Object.hasOwn(owner,'accessToken'),false);
+  assert.deepEqual(await adapter.recoverDeletion(owner,{subject:'synthetic-subject',audience:'app.nevestudio.carry'},'fresh-private-refresh','a'.repeat(64)),{status:'cancelled'});
+});

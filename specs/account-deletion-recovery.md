@@ -1,0 +1,12 @@
+# Operator-assisted cancellation of an interrupted account deletion
+Status: Implementation authorized by parent task on 2026-11-03. No real cloud mutation or fresh Apple authorization in this worktree.
+
+## Scope and invariants
+Only an operator-held purging job whose graph and Auth identity still exist can be recovered. The old Apple credentials have already been revoked and are never revived. Recovery is not a general undelete and does not recreate missing records or files.
+
+An explicit recovery hold fences both deletion and all independent asset cleanup paths. Old external Storage work must drain for at least its 110-second client deadline; file presence alone is insufficient. An operator must separately record a digest of verifiable provider-side evidence that the old external deletion terminated/failed; local timeout, elapsed time, or a successful GET do not satisfy this gate. Without that evidence recovery fails closed. Recovery verifies exact immutable Storage version, complete SHA-256/byte length, graph and asset/attempt fingerprints. Any missing or changed object refuses recovery and retains the hold. The server rechecks under the canonical account advisory lock before activation.
+
+Fresh native Apple ID token, nonce and one-use code must match the current Auth UUID and an existing subject/audience. Revoke other native Auth sessions with the fresh JWT via the official logout?scope=others endpoint; record every still-present old native session ID in the deletion job and reject it in the central native session guard; revoke prior AI grants in the final transaction. Auth logout success alone is not proof that a signed JWT expired. Persist only fresh encrypted Apple credentials. The deletion receipt becomes a coarse cancelled marker; native clears pending receipt only after authenticated recovery succeeds, preserving local trips and cached drafts.
+
+## Validation
+Cover supported stage, no hold, insufficient drain, wrong ticket/account/subject/session, altered graph/files/Storage version, missing bytes, stale cleanup/deletion completions, concurrent preparations, expired operation, repeated commit, cancelled receipt, subsequent fresh deletion, and all privileged function grants. External inspection/auth failures cannot activate the account. Two complete relevant local suites and self-review; actual cloud/native recovery remains a separate gate.

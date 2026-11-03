@@ -172,6 +172,30 @@ final class CarryAccountService: CarryAccountAuthenticating {
         } catch { throw classify(error) }
     }
 
+    /// Operator-held recovery requires fresh Apple proof and the original receipt.
+    /// It never clears a workspace or treats an Auth sign-in as restored data.
+    func recoverDeletion(_ credential: CarryAppleCredential, nonce: String) async throws -> CarryAccountProfile {
+        guard let client, let saved = try receipt() else { throw CarryAccountFailure.unavailable }
+        guard credential.appleUserID == saved.appleUserID,
+              cachedProfile == nil || cachedProfile?.id == saved.accountID else { throw CarryAccountFailure.accountMismatch }
+        let previousSession = try storage.retrieve(key: "session")
+        do {
+            let session = try await client.signInWithIdToken(credentials: .init(provider: .apple,
+                idToken: credential.idToken, nonce: nonce))
+            guard session.user.id == saved.accountID else {
+                try? await client.signOut(scope: .local)
+                if let previousSession { try storage.store(key: "session", value: previousSession) }
+                throw CarryAccountFailure.accountMismatch
+            }
+            try persistSession(session)
+            try await lifecycle(action: "recover", credential: credential, nonce: nonce,
+                                accessToken: session.accessToken, expectedStatus: "cancelled", deletionReceipt: saved.token)
+            let profile = try saveProfile(session.user, name: cachedProfile?.displayName)
+            try storage.remove(key: "deletion-receipt") // last: only authenticated, verified recovery can complete
+            return profile
+        } catch { throw classify(error) }
+    }
+
     func signOut() async throws {
         guard let client, let configuration else { throw CarryAccountFailure.unavailable }
         // A timed-out deletion request may still commit remotely. Do not lose
@@ -261,6 +285,12 @@ final class CarryAccountService: CarryAccountAuthenticating {
                     try storage.store(key: "deletion-receipt", value: JSONEncoder().encode(saved))
                 }
                 return .pending
+            }
+            if status == "cancelled" {
+                // Coarse receipt status never means deletion completed. Keep the
+                // original local account/data and revalidate Auth before reuse.
+                try storage.remove(key: "deletion-receipt")
+                return .cancelled
             }
             guard status == "deleted" else { throw CarryAccountFailure.service }
             if let client { try await client.signOut(scope: .local) }

@@ -290,4 +290,68 @@ final class AccountAdapterTests: XCTestCase {
         catch { XCTAssertEqual(error as? CarryAccountFailure, .accountMismatch) }
     }
 
+    func testHeldDeletionRecoveryUsesFreshAppleAndClearsReceiptOnlyAfterConfirmedRecovery() async throws {
+        let secure = try XCTUnwrap(storage)
+        try secure.store(key: "profile", value: JSONEncoder().encode(CarryAccountProfile(id: userID, displayName: "Retained", email: nil)))
+        let receipt: [String: Any] = ["accountID": userID.uuidString, "appleUserID": "synthetic-subject", "token": String(repeating: "a", count: 64), "accepted": true]
+        try secure.store(key: "deletion-receipt", value: JSONSerialization.data(withJSONObject: receipt))
+        let session = try JSONSerialization.data(withJSONObject: sessionJSON())
+        let service = CarryAccountService(configuration: configuration, storage: secure, send: { request in
+            let url = try XCTUnwrap(request.url)
+            let data: Data
+            if url.path == "/auth/v1/token" { data = session }
+            else {
+                XCTAssertEqual(url.path, "/functions/v1/carry-account")
+                XCTAssertNotNil(try secure.retrieve(key: "deletion-receipt"))
+                let body = try XCTUnwrap(JSONSerialization.jsonObject(with: XCTUnwrap(request.httpBody)) as? [String: Any])
+                XCTAssertEqual(body["action"] as? String, "recover")
+                XCTAssertEqual(body["deletionReceipt"] as? String, String(repeating: "a", count: 64))
+                data = Data("{\"status\":\"cancelled\"}".utf8)
+            }
+            return (data, try XCTUnwrap(HTTPURLResponse(url: url, statusCode: 200, httpVersion: nil, headerFields: nil)))
+        })
+        let profile = try await service.recoverDeletion(credential, nonce: "synthetic-nonce")
+        XCTAssertEqual(profile.id, userID)
+        XCTAssertFalse(try service.pendingDeletion)
+        XCTAssertNotNil(try secure.retrieve(key: "profile"))
+        XCTAssertNotNil(try secure.retrieve(key: "session"))
+    }
+
+    func testFailedRecoveryKeepsPendingReceiptAndOriginalProfile() async throws {
+        let secure = try XCTUnwrap(storage)
+        try secure.store(key: "profile", value: JSONEncoder().encode(CarryAccountProfile(id: userID, displayName: "Retained", email: nil)))
+        try secure.store(key: "deletion-receipt", value: JSONSerialization.data(withJSONObject: ["accountID": userID.uuidString,
+            "appleUserID": "synthetic-subject", "token": String(repeating: "a", count: 64), "accepted": true]))
+        let session = try JSONSerialization.data(withJSONObject: sessionJSON())
+        let service = CarryAccountService(configuration: configuration, storage: secure, send: { request in
+            let url = try XCTUnwrap(request.url)
+            return (url.path == "/auth/v1/token" ? session : Data("{}".utf8),
+                    try XCTUnwrap(HTTPURLResponse(url: url, statusCode: url.path == "/auth/v1/token" ? 200 : 503, httpVersion: nil, headerFields: nil)))
+        })
+        do { _ = try await service.recoverDeletion(credential, nonce: "synthetic-nonce"); XCTFail("Unverified recovery must fail") }
+        catch { XCTAssertEqual(error as? CarryAccountFailure, .service) }
+        XCTAssertTrue(try service.pendingDeletion)
+        XCTAssertEqual(service.cachedProfile?.id, userID)
+        do { _ = try await service.signIn(credential, nonce: "synthetic-nonce"); XCTFail("Ordinary sign-in cannot bypass deletion") }
+        catch { XCTAssertEqual(error as? CarryAccountFailure, .unavailable) }
+    }
+
+    func testCancelledReceiptNeverClearsProfileOrPretendsDeletionCompleted() async throws {
+        let profile = CarryAccountProfile(id: userID, displayName: "Retained", email: nil)
+        try storage.store(key: "profile", value: JSONEncoder().encode(profile))
+        try storage.store(key: "session", value: Data("retained-session".utf8))
+        try storage.store(key: "deletion-receipt", value: JSONSerialization.data(withJSONObject: ["accountID": userID.uuidString,
+            "appleUserID": "synthetic-subject", "token": String(repeating: "a", count: 64), "accepted": true]))
+        let service = CarryAccountService(configuration: configuration, storage: storage, send: { request in
+            let url = try XCTUnwrap(request.url)
+            XCTAssertEqual(url.path, "/functions/v1/carry-account-status")
+            return (Data("{\"status\":\"cancelled\"}".utf8), try XCTUnwrap(HTTPURLResponse(url: url, statusCode: 200, httpVersion: nil, headerFields: nil)))
+        })
+        let result = try await service.refreshDeletion()
+        XCTAssertEqual(result, .cancelled)
+        XCTAssertEqual(service.cachedProfile, profile)
+        XCTAssertNotNil(try storage.retrieve(key: "session"))
+        XCTAssertFalse(try service.pendingDeletion)
+    }
+
 }

@@ -1,3 +1,5 @@
+import { recoverHeldDeletion } from './deletion-recovery.mjs';
+import { inspectStoredAsset } from './asset-storage.mjs';
 import { AccountRequestError } from './lifecycle.mjs';
 import { readBoundedBytes } from './graph-http.mjs';
 
@@ -24,6 +26,7 @@ export function createSupabaseAdapter({ configuration, jose, fetcher = fetch }) 
   const jwks = jose.createRemoteJWKSet(new URL('https://appleid.apple.com/auth/keys'));
   const encryption = crypto.subtle.importKey('raw', unbase64(encryptionKey), 'AES-GCM', false, ['encrypt', 'decrypt']);
   let signingKey;
+  const sessionBearers = new WeakMap();
 
   async function send(url, options = {}) {
     return fetcher(url, { ...options, signal: AbortSignal.timeout(15000), redirect: 'error' });
@@ -102,8 +105,10 @@ export function createSupabaseAdapter({ configuration, jose, fetcher = fetch }) 
         throw new AccountRequestError(401, 'unauthorized');
       }
       await rpc('carry_account_require_session', { p_account: user.id, p_session: claims.session_id });
-      return { id: user.id, sessionID:claims.session_id, appleSubjects: (user.identities ?? []).filter(value => value.provider === 'apple')
+      const account = { id: user.id, sessionID:claims.session_id, appleSubjects: (user.identities ?? []).filter(value => value.provider === 'apple')
         .map(value => value.identity_data?.sub).filter(value => typeof value === 'string') };
+      sessionBearers.set(account, bearer);
+      return account;
     },
     rateLimit: id => rpc('carry_account_rate_limit', { p_account_id: id }),
     verifyApple: async (token, nonce) => {
@@ -139,6 +144,21 @@ export function createSupabaseAdapter({ configuration, jose, fetcher = fetch }) 
       p_account:account.id,p_session:account.sessionID,p_subject:identity.subject,p_audience:identity.audience,
       p_encrypted_token:await seal(account.id,identity,token),p_ticket:ticket,
     }),
+    recoverDeletion:async(account,identity,token,ticket)=>recoverHeldDeletion({
+      prepareRecovery:(owner,proof,receipt,operation)=>rpc('carry_account_recovery_prepare',{
+        p_account:owner.id,p_session:owner.sessionID,p_ticket:receipt,p_subject:proof.subject,p_audience:proof.audience,p_operation:operation,
+      }),
+      inspectRecoveryAsset:(manifest,signal)=>inspectStoredAsset({projectURL,serviceKey,manifest,fetcher,signal:AbortSignal.any([signal,AbortSignal.timeout(15000)])}),
+      revokeOtherSessions:owner=>{
+        const bearer=sessionBearers.get(owner);
+        if(!bearer)throw new AccountRequestError(401,'unauthorized');
+        return api('/auth/v1/logout?scope=others',{method:'POST'},bearer);
+      },
+      commitRecovery:async(owner,proof,freshToken,receipt,operation,fingerprints,assets)=>rpc('carry_account_recovery_commit',{
+        p_account:owner.id,p_session:owner.sessionID,p_ticket:receipt,p_subject:proof.subject,p_audience:proof.audience,
+        p_encrypted_token:await seal(owner.id,proof,freshToken),p_operation:operation,p_fingerprints:fingerprints,p_assets:assets,
+      }),
+    },{account,identity,token,ticket}),
     deletionStatus:ticket=>rpc('carry_account_deletion_status',{p_ticket:ticket}),
     deletionAccounts:token=>rpc('carry_account_deletion_accounts',{p_token:token}),
     claimDeletion:(id,operation)=>rpc('carry_account_deletion_claim',{p_account:id,p_operation:operation}),

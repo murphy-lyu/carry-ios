@@ -250,7 +250,7 @@ test('native account lifecycle requires an active non-OAuth session before enrol
       await assert.rejects(db.query('select carry_private.account_require_native_session($1,$2)',[other,otherSession]),/permission denied/);
     }
     await db.exec('reset role');
-    assert.deepEqual((await db.query("select p.proname from pg_proc p join pg_namespace n on n.oid=p.pronamespace where n.nspname='carry_private' and p.prosecdef order by p.proname")).rows.map(row=>row.proname),["account_require_native_session","deletion_identity_exists"]);
+    assert.deepEqual((await db.query("select p.proname from pg_proc p join pg_namespace n on n.oid=p.pronamespace where n.nspname='carry_private' and p.prosecdef order by p.proname")).rows.map(row=>row.proname),["account_require_native_session","deletion_identity_exists","recovery_fence_other_sessions"]);
   }finally{await db.close();}
 });
 

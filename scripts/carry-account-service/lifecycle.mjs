@@ -5,7 +5,7 @@ export class AccountRequestError extends Error {
 }
 
 export function createAccountHandler(dependencies) {
-  const { authenticate, verifyApple, exchangeCode, enroll, status, requestDeletion, rateLimit } = dependencies;
+  const { authenticate, verifyApple, exchangeCode, enroll, status, requestDeletion, recoverDeletion, rateLimit } = dependencies;
   return async request => {
     const reply = (body, code = 200) => new Response(JSON.stringify(body), {
       status: code, headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' },
@@ -22,9 +22,9 @@ export function createAccountHandler(dependencies) {
       if (request.method === 'GET') return reply({ status: await status(account.id) ? 'enrolled' : 'not_enrolled' });
       if (!request.headers.get('content-type')?.startsWith('application/json')) throw new AccountRequestError(415, 'json_required');
       const body=await boundedJSON(request,24000);
-      if (!body || Array.isArray(body) || !['enroll', 'delete'].includes(body.action) ||
+      if (!body || Array.isArray(body) || !['enroll', 'delete', 'recover'].includes(body.action) ||
           Object.keys(body).some(key => !['action', 'idToken', 'authorizationCode', 'nonce','deletionReceipt'].includes(key)) ||
-          (body.action==='delete'&&(typeof body.deletionReceipt!=='string'||!/^[0-9a-f]{64}$/.test(body.deletionReceipt))) ||
+          (['delete','recover'].includes(body.action)&&(typeof body.deletionReceipt!=='string'||!/^[0-9a-f]{64}$/.test(body.deletionReceipt))) ||
           (body.action==='enroll'&&body.deletionReceipt!==undefined) ||
           typeof body.idToken !== 'string' || body.idToken.length < 16 || body.idToken.length > 16000 ||
           typeof body.authorizationCode !== 'string' || body.authorizationCode.length < 8 || body.authorizationCode.length > 4096 ||
@@ -45,6 +45,12 @@ export function createAccountHandler(dependencies) {
       if (body.action === 'enroll') {
         await enroll(account.id, identity, tokens.refreshToken);
         return reply({ status: 'enrolled' });
+      }
+      if (body.action === 'recover') {
+        if (typeof recoverDeletion !== 'function') throw new AccountRequestError(503,'recovery_unavailable');
+        const result=await recoverDeletion(account,identity,tokens.refreshToken,body.deletionReceipt);
+        if(result?.status!=='cancelled')throw new Error('invalid_recovery_result');
+        return reply({status:'cancelled'});
       }
       const result=await requestDeletion(account, identity, tokens.refreshToken,body.deletionReceipt);
       if(!result||!['deleting','deleted'].includes(result.status))throw new Error('invalid_deletion_result');

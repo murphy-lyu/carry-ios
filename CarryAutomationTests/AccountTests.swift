@@ -32,6 +32,11 @@ private final class AccountServiceDouble: CarryAccountAuthenticating {
         if let failure { throw failure }
         return signedIn
     }
+    func recoverDeletion(_ credential: CarryAppleCredential, nonce: String) async throws -> CarryAccountProfile {
+        if let failure { throw failure }
+        deletionProgress = .none
+        return signedIn
+    }
     func signOut() async throws {
         signOutCalls += 1
         if let failure { throw failure }
@@ -306,4 +311,31 @@ final class AccountTests: XCTestCase {
         XCTAssertTrue(store.hasVerifiedSession)
         XCTAssertFalse(store.isBusy)
     }
+    func testRecoveryIsTheOnlyAppleActionAllowedWhileDeletionIsPending() async throws {
+        let service = AccountServiceDouble()
+        service.cachedProfile = service.signedIn
+        service.deletionProgress = .pending
+        let store = CarryAccountStore(service: service)
+        XCTAssertTrue(store.isDeleting)
+        XCTAssertThrowsError(try store.beginAppleAction(.signIn))
+        let challenge = try store.beginAppleAction(.recoverDeletion)
+        await store.completeAppleAction(.init(idToken: "synthetic-id-token", authorizationCode: "synthetic-code",
+            appleUserID: "synthetic-subject", fullName: nil, state: challenge.state))
+        XCTAssertTrue(store.hasVerifiedSession)
+        XCTAssertEqual(store.profile?.id, service.signedIn.id)
+    }
+
+    func testCancelledRemoteDeletionLeavesDeletingStateAndRequiresAuthRevalidation() async throws {
+        let service = AccountServiceDouble()
+        service.cachedProfile = service.signedIn
+        service.deletionProgress = .pending
+        let store = CarryAccountStore(service: service)
+        service.deletionProgress = .cancelled
+        service.failure = .sessionExpired
+        await store.refresh()
+        XCTAssertFalse(store.isDeleting)
+        XCTAssertFalse(store.hasVerifiedSession)
+        XCTAssertEqual(store.state, .needsReauthentication(service.signedIn))
+    }
+
 }
