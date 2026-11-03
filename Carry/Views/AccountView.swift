@@ -91,38 +91,44 @@ struct AccountView: View {
         .navigationTitle(account.profile == nil && !account.isDeleting ? Text("account.sign_in") : Text("account.title"))
         .navigationBarTitleDisplayMode(.inline)
         .background(Color.carryCanvas)
-        .confirmationDialog("account.sign_out.confirm", isPresented: $showSignOut, titleVisibility: .visible) {
+        .alert("account.sign_out.confirm", isPresented: $showSignOut) {
             Button("account.sign_out", role: .destructive) { Task { await account.signOut() } }
+            Button("Cancel", role: .cancel) {}
         } message: { Text("account.sign_out.detail") }
-        .confirmationDialog("account.delete.confirm", isPresented: $showDelete, titleVisibility: .visible) {
+        .alert("account.delete.confirm", isPresented: $showDelete) {
             Button("account.delete.continue", role: .destructive) { reauthorizingDeletion = true }
+            Button("Cancel", role: .cancel) {}
         } message: { Text("account.delete.detail") }
+        .sheet(isPresented: $reauthorizingDeletion) { deletionVerification }
         .onChange(of: account.state) { _, state in
-            if state == .signedOut { reauthorizingDeletion = false }
+            if state == .signedOut || account.isDeleting { reauthorizingDeletion = false }
         }
     }
 
     private var deletionProgress: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 20) {
-                CarryAccountAvatar(profile: account.profile, size: 64)
-                    .padding(.top, 32)
-                Text("account.delete.pending.title")
-                    .font(.system(.title, design: .rounded).weight(.bold))
-                    .accessibilityAddTraits(.isHeader)
+        Form {
+            Section {
+                Label("account.delete.pending.title", systemImage: "person.crop.circle.badge.minus")
+                    .font(.headline)
                 Text("account.delete.pending.detail")
-                    .font(.body).foregroundStyle(.secondary)
-                Button("account.delete.pending.refresh") { Task { await account.refresh() } }
-                    .buttonStyle(.bordered).controlSize(.large).frame(minHeight: 44).disabled(account.isBusy)
-                if account.isBusy { ProgressView() }
+                    .font(.subheadline).foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            Section {
+                Button { Task { await account.refresh() } } label: {
+                    HStack {
+                        Text("account.delete.pending.refresh")
+                        Spacer()
+                        if account.isBusy { ProgressView() }
+                    }
+                }
+                .disabled(account.isBusy)
                 errorMessage
             }
-            .padding(.horizontal, 24).padding(.bottom, 32)
-            .frame(maxWidth: .infinity, alignment: .leading)
         }
+        .scrollContentBackground(.hidden)
         .task {
-            // The server continues after the user's session is revoked. Keep
-            // checking its durable receipt while this progress page is visible.
+            // Keep the original durable-receipt polling; presentation cannot cancel a deletion.
             while !Task.isCancelled, account.isDeleting {
                 await account.refresh()
                 guard account.isDeleting else { return }
@@ -132,25 +138,51 @@ struct AccountView: View {
         }
     }
 
+    private var deletionVerification: some View {
+        NavigationStack {
+            Form {
+                Section {
+                    Text("account.delete.reauthorize")
+                        .font(.subheadline).foregroundStyle(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                    appleButton(.deleteAccount)
+                } footer: { Text("account.delete.detail") }
+                if account.error != nil { Section { errorMessage } }
+            }
+            .navigationTitle("account.delete")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Cancel", role: .cancel) { reauthorizingDeletion = false }
+                        .disabled(account.isBusy)
+                }
+            }
+            .scrollContentBackground(.hidden)
+            .background(Color.carryCanvas)
+            .interactiveDismissDisabled(account.isBusy)
+        }
+        .tint(CarryAccent.color)
+    }
+
     private var signInPage: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 24) {
-                CarryAccountAvatar(profile: nil, size: 64)
-                    .padding(.top, 32)
-                VStack(alignment: .leading, spacing: 12) {
-                    Text("account.sign_in")
-                        .font(.system(.largeTitle, design: .rounded).weight(.bold))
-                    Text("account.login.detail").font(.body).foregroundStyle(.secondary)
+                VStack(alignment: .leading, spacing: 16) {
+                    CarryAccountAvatar(profile: nil, size: 56)
+                    Text("account.login.detail")
+                        .font(.title3.weight(.semibold))
+                        .fixedSize(horizontal: false, vertical: true)
                 }
+                .padding(.top, 16)
                 appleButton(.signIn)
                 if !account.isAvailable {
                     Text("account.error.unavailable").font(.footnote).foregroundStyle(.secondary)
                 }
                 errorMessage
                 Text("account.local_usage").font(.footnote).foregroundStyle(.secondary)
-                HStack(spacing: 20) {
-                    NavigationLink { PrivacyView() } label: { Text("settings.legal.privacy") }
-                    NavigationLink { TermsView() } label: { Text("settings.legal.terms") }
+                ViewThatFits(in: .horizontal) {
+                    HStack(spacing: 20) { legalLinks }.fixedSize(horizontal: true, vertical: false)
+                    VStack(alignment: .leading, spacing: 12) { legalLinks }
                 }
                 .font(.footnote)
             }
@@ -160,18 +192,30 @@ struct AccountView: View {
         }
     }
 
+    @ViewBuilder private var legalLinks: some View {
+        NavigationLink { PrivacyView() } label: { Text("settings.legal.privacy") }
+            .frame(minHeight: 44, alignment: .leading)
+        NavigationLink { TermsView() } label: { Text("settings.legal.terms") }
+            .frame(minHeight: 44, alignment: .leading)
+    }
+
     private func accountDetails(_ profile: CarryAccountProfile) -> some View {
         Form {
             Section {
                 HStack(spacing: 14) {
-                    CarryAccountAvatar(profile: profile, size: 48)
+                    CarryAccountAvatar(profile: profile, size: 44)
                     VStack(alignment: .leading, spacing: 4) {
                         if let name = profile.displayName, !name.isEmpty { Text(verbatim: name).font(.headline) }
                         else { Text("account.title").font(.headline) }
-                        if let email = profile.email { Text(verbatim: email).font(.subheadline).foregroundStyle(.secondary).textSelection(.enabled) }
+                        if let email = profile.email {
+                            Text(verbatim: email).font(.footnote).foregroundStyle(.secondary)
+                                .textSelection(.enabled).fixedSize(horizontal: false, vertical: true)
+                        }
+                        if !account.hasVerifiedSession {
+                            Text(LocalizedStringKey(account.statusKey)).font(.footnote).foregroundStyle(.secondary)
+                        }
                     }
                 }
-                Text(LocalizedStringKey(account.statusKey)).foregroundStyle(.secondary)
             }
             if !account.hasVerifiedSession {
                 Section {
@@ -204,15 +248,13 @@ struct AccountView: View {
                 }
             } header: { Text("account.sync.title") }
               footer: { Text("account.sync.consent") }
-            if workspaceController.workspace?.accountID == profile.id {
+            if workspaceController.workspace?.accountID == profile.id || CarryAccountAIConfiguration.bundled != nil {
                 Section {
-                    NavigationLink { CarryAccountMigrationView() } label: { Text("account.migration.title") }
-                }
-            }
-            if let configuration = CarryAccountAIConfiguration.bundled {
-                Section {
-                    NavigationLink { CarryAccountAIConnectionView(configuration: configuration) } label: {
-                        Text("account.ai.title")
+                    if workspaceController.workspace?.accountID == profile.id {
+                        NavigationLink { CarryAccountMigrationView() } label: { Text("account.migration.title") }
+                    }
+                    if let configuration = CarryAccountAIConfiguration.bundled {
+                        NavigationLink { CarryAccountAIConnectionView(configuration: configuration) } label: { Text("account.ai.title") }
                     }
                 }
             }
@@ -221,12 +263,6 @@ struct AccountView: View {
                     .disabled(account.isBusy)
                 Button("account.delete", role: .destructive) { showDelete = true }
                     .disabled(account.isBusy)
-                if reauthorizingDeletion {
-                    Text("account.delete.reauthorize").font(.footnote).foregroundStyle(.secondary)
-                    appleButton(.deleteAccount)
-                    Button("Cancel", role: .cancel) { reauthorizingDeletion = false }
-                        .disabled(account.isBusy)
-                }
             }
             if account.error != nil { Section { errorMessage } }
         }

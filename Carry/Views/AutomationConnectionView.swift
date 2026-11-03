@@ -8,10 +8,9 @@ struct CarryAccountAIConnectionView: View {
     var body: some View {
         Form {
             Section {
-                Text("account.ai.detail").foregroundStyle(.secondary)
+                Text("account.ai.detail").font(.subheadline).foregroundStyle(.secondary)
                 Link(destination: configuration.connectionsURL) {
                     Label("account.ai.manage", systemImage: "arrow.up.right.square")
-                        .frame(minHeight: 44)
                 }
             } footer: {
                 Text("account.ai.web_account")
@@ -29,7 +28,6 @@ struct CarryAccountAIConnectionView: View {
                     } icon: {
                         Image(systemName: copied ? "checkmark" : "doc.on.doc")
                     }
-                    .frame(minHeight: 44)
                 }
             } header: { Text("account.ai.address") }
             if connection.credentials != nil {

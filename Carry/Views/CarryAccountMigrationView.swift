@@ -7,6 +7,7 @@ struct CarryAccountMigrationView: View {
     @EnvironmentObject private var sourceStore: TripStore
     @State private var selection: Set<UUID> = []
     @State private var includeLibrary = false
+    @State private var showDetails = false
     @State private var showConfirmation = false
     @State private var batches: [CarryAccountMigrationBatch] = []
     @State private var forks: [CarryMigrationSourceDifference] = []
@@ -19,8 +20,11 @@ struct CarryAccountMigrationView: View {
     var body: some View {
         List {
             Section {
-                Text("account.migration.explanation").foregroundStyle(.secondary)
-                Text("account.migration.limit").font(.footnote).foregroundStyle(.secondary)
+                Text("account.migration.explanation").font(.subheadline).foregroundStyle(.secondary)
+                DisclosureGroup("account.migration.details", isExpanded: $showDetails) {
+                    Text("account.migration.backup_detail").font(.footnote).foregroundStyle(.secondary)
+                    Text("account.migration.limit").font(.footnote).foregroundStyle(.secondary)
+                }
             }
             if !controller.localAccountCollisions.isEmpty {
                 Section("account.adoption.title") {
@@ -38,10 +42,12 @@ struct CarryAccountMigrationView: View {
                     Button { if selection.contains(trip.id) { selection.remove(trip.id) } else { selection.insert(trip.id) } } label: {
                         HStack {
                             VStack(alignment: .leading, spacing: 4) {
-                                Text(verbatim: trip.name).foregroundStyle(.primary)
+                                Text(verbatim: trip.name).foregroundStyle(.primary).lineLimit(2)
                                 if sourceStore.migrationWriteGuard.isProtected(trip.id) {
                                     Text("account.migration.source_readonly").font(.caption).foregroundStyle(.secondary)
-                                } else { Text(verbatim: trip.destinationCity).font(.caption).foregroundStyle(.secondary) }
+                                } else if !trip.destinationCity.isEmpty && trip.destinationCity != trip.name {
+                                    Text(verbatim: trip.destinationCity).font(.caption).foregroundStyle(.secondary).lineLimit(1)
+                                }
                             }
                             Spacer()
                             Image(systemName: selection.contains(trip.id) ? "checkmark.circle.fill" : "circle")
@@ -51,6 +57,7 @@ struct CarryAccountMigrationView: View {
                     }
                     .buttonStyle(.plain)
                     .disabled(controller.migrationBusy || sourceStore.migrationWriteGuard.isProtected(trip.id))
+                    .accessibilityLabel(Text(verbatim: trip.name))
                     .accessibilityAddTraits(selection.contains(trip.id) ? .isSelected : [])
                 }
                 if controller.migrationCandidates.isEmpty { Text("account.migration.empty").foregroundStyle(.secondary) }
@@ -58,15 +65,15 @@ struct CarryAccountMigrationView: View {
                     Toggle("account.migration.include_library", isOn: $includeLibrary).disabled(controller.migrationBusy)
                 }
             }
-            Section {
-                Button("account.migration.start") { showConfirmation = true }
-                    .disabled(controller.migrationBusy || (selection.isEmpty && !includeLibrary))
+            if controller.migrationBusy || controller.migrationFinished || controller.migrationFailureKey != nil || failed {
+              Section {
                 if controller.migrationBusy {
                     HStack { ProgressView(); Text("account.migration.running") }
                 }
                 if controller.migrationFinished { Text("account.migration.complete").foregroundStyle(.secondary) }
                 if let key = controller.migrationFailureKey { Text(LocalizedStringKey(key)).foregroundStyle(.secondary) }
                 if failed { Text("account.migration.error.retry").foregroundStyle(.secondary) }
+              }
             }
             if !batches.isEmpty {
                 Section("account.migration.previous") {
@@ -100,10 +107,28 @@ struct CarryAccountMigrationView: View {
         .navigationTitle("account.migration.title")
         .navigationBarTitleDisplayMode(.inline)
         .tint(CarryAccent.color)
+        .safeAreaInset(edge: .bottom) {
+            Button { showConfirmation = true } label: {
+                HStack {
+                    Text("account.migration.start").fontWeight(.semibold)
+                    if !selection.isEmpty {
+                        Spacer(minLength: 12)
+                        Text(selection.count, format: .number).monospacedDigit()
+                    }
+                }
+                .frame(maxWidth: .infinity, minHeight: 32)
+            }
+            .buttonStyle(.borderedProminent).controlSize(.large)
+            .disabled(controller.migrationBusy || (selection.isEmpty && !includeLibrary))
+            .padding(.horizontal, 20).padding(.bottom, 12)
+            .frame(maxWidth: 560).frame(maxWidth: .infinity)
+            .bottomBarScrim(Color.carryCanvas)
+        }
         .task { reload() }
         .onChange(of: controller.migrationBusy) { _, busy in if !busy { reload() } }
-        .confirmationDialog("account.migration.confirm", isPresented: $showConfirmation, titleVisibility: .visible) {
+        .alert("account.migration.confirm", isPresented: $showConfirmation) {
             Button("account.migration.start") { run { try await controller.migrate(tripIDs: selection, includeLibrary: includeLibrary) } }
+            Button("Cancel", role: .cancel) {}
         } message: { Text("account.migration.confirm_detail") }
         .sheet(isPresented: $showForks) { forkReviewContent }
         .sheet(item: $adoptionReview) { review in
