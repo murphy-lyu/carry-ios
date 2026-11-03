@@ -9,9 +9,9 @@
 - “刷新已提交但响应丢失”会使客户端仍持有旧令牌，再重试触发重放保护。实际PostgreSQL故障注入已证明此路径，不自动把它认作攻击，也不放开旧令牌重复使用。先核对聚合故障/重放趋势，再让受影响连接按原范围重新授权；不同进程不得共享同一个可写refresh凭据文件。
 
 ## 注册生命周期
-容量保持1024条/16MiB元数据，首次usedAt预留40字节；原有记录与legacy记录仍计费。达到容量时在同一注册锁下最多回收32条已经满足条件的记录，重新核算；仍不足明确拒绝新注册，已授权读取/刷新不受注册门禁影响。
+容量保持1024条/16MiB元数据，首次usedAt/lastUsedAt预留96字节，已有usedAt但缺lastUsedAt的预留48字节；原有记录与legacy记录仍计费。达到容量时在同一注册锁下最多回收32条已经满足条件的记录，重新核算；仍不足明确拒绝新注册，已授权读取/刷新不受注册门禁影响。
 - 从未使用：v1标记、注册至少24小时，且无authorization/code/grant引用。
-- 曾经使用：v1标记、createdAt/usedAt以及最后grant结束或撤销至少90天，且无authorization/code引用、有效未撤销grant、未过期access或refresh。spent refresh同样保护。未知grant/token到期时间保守保留；无版本legacy不自动回收。
+- 曾经使用：v1标记、可证实的lastUsedAt至少90天（额外保留1小时节流余量）、createdAt/usedAt以及最后grant结束或撤销至少90天，且无authorization/code引用、有效未撤销grant、未过期access或refresh。spent refresh同样保护。未知grant/token到期时间保守保留；无版本legacy、缺可靠lastUsedAt的旧已用记录不自动回收。成功授权总是更新lastUsedAt，成功授权操作/refresh/资源读取最多每小时更新一次该时钟；它不随账户grant清除而丢失。
 - 回收只删除client元数据，旧grant、业务图、文件、receipt/request身份不删。回收和注册、待确认创建、后台维护使用同一registry advisory锁。
 - 不按应用名称/redirect内容自动把新的DCR请求复用成旧client；这些公开字段不足以标识同一次安装。后续正式静态客户端注册可另行评估，不能把新连接隐式继承为旧授权。
 - 15分钟自然清理仍是唯一job。部署的新函数由原job调用，不增设公开维护接口或携带新清理密钥的HTTP任务。

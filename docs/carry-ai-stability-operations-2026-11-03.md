@@ -4,7 +4,7 @@
 ## 根因与修复
 1. 已复现OAuth错误契约缺陷：过期/撤销grant、disabled client或不可用account在令牌端点抛401 invalid_token。新增失败回归先真实失败（`/tmp/carry-oauth-error-before-20261103.log`），修正授权码兑换/refresh为400 invalid_grant，资源接口继续401。四种状态及HTTP无Bearer challenge回归通过。不是旧CLI具体失效根因的追认。
 2. 连接池没有建连上限/空闲error监听，网络异常可能长时间等待或以未处理事件结束实例。增加5秒建连、20秒client query、30秒idle、5分钟lifetime、TCP keepalive；仍max2且严格TLS。实际TCP黑洞模拟在约5秒转503，未伪称invalid_grant。SQL statement15秒/lock5秒仍保留。
-3. 用过的DCR元数据原永久积累。新私有回收：v1、至少90天未活动/授权结束、无authorization/code引用、无有效未撤销grant、无任何未过期access/refresh（包括spent）；未知expiry保留。旧无version保留。未用24小时规则延续。容量不足时最多回收32条已经符合条件者再核算，仍满则503+Retry-After，不扩大额度、不动有效连接/业务图/文件/请求身份。注册/维护/待确认创建共享同一registry锁。
+3. 用过的DCR元数据原永久积累。新私有回收：v1、独立lastUsedAt及授权结束均至少90天（活动时钟额外保守1小时）、无authorization/code引用、无有效未撤销grant、无任何未过期access/refresh（包括spent）；未知expiry、缺lastUsedAt或旧无version保留。新活动时钟不依赖账户grant记录，避免最近使用的client因账户记录清除而被当作闲置。未用24小时规则延续。容量不足时最多回收32条已经符合条件者再核算，仍满则503+Retry-After，不扩大额度、不动有效连接/业务图/文件/请求身份。注册/维护/待确认创建共享同一registry锁。
 4. 私有聚合事件仅day/event/count，固定类别、14天有界清理；metrics写失败不改变OAuth结果。只读snapshot、health SQL和CLI区分容量、自然cron、拒绝/重放/服务错误。没有外部告警收件渠道，不冒称全天值守已上线。
 
 ## 实测证据
@@ -27,4 +27,10 @@ Supabase CLI未认证；既有Chrome登录可用，独立新SQL页执行只读�
 - 正式外部告警渠道/账单套餐、真实生产SLA、iPhone12硬件trace仍未完成。本轮未购买任何服务。
 - 手册：`docs/carry-ai-operations-runbook.md`。研究Tripsy、吸顶UI、误触删除止损在用户要求的独立任务；账户UI优化在独立工作树，未混入后端变更。
 
-部署产物：`/tmp/carry-ai-operations-20261103.mjs` SHA256 e333cfc133993be624835104c69a73ed19d06dee5b8fc2ad82658469c21fc933；事务安装脚本 `/tmp/carry-ai-operations-install-20261103.sql` SHA256 f654a52694eeebfb9995c4104100032d290d8a221d64ea4703442d3cb62c8672。原始TypeScript入口Deno check通过；安装脚本的BEGIN/COMMIT与迁移登记同事务，失败不留半安装。
+部署产物：`/tmp/carry-ai-operations-20261103.mjs` SHA256 64214c8072f017b9b171ea832cc9669ef73c5b556bf27a78140b33933bddc43d；事务安装脚本 `/tmp/carry-ai-operations-install-20261103.sql` SHA256 7c04d8206b7cdb79e0eaf6143f770a307687a5b4df2ea4477a0a0c0753538a7e。原始TypeScript入口Deno check通过；安装脚本的BEGIN/COMMIT与迁移登记同事务，失败不留半安装。
+
+## 最终Review补充：最后活动时间
+已用记录旧usedAt只代表首次授权，不能证明长期闲置。新增反例在旧回收条件下真实失败（本应保留的2条记录均会被回收，`/tmp/carry-activity-retirement-before-20261103.log`）。现已持久化独立lastUsedAt；授权时更新、后续有效操作按小时节流，退役额外保留1小时余量；未知历史保守保留。回归还实际执行有效资源读取后擦除grant记录，确认近期client仍保留。容量核算同步预留96/48字节，不以首次授权标记替代最后活动。
+最终功能源码两轮AI各131/131（0失败/0跳过，含真PG）；账户服务两轮各128/128；网页24/24两轮不受此SQL/Store修复影响。对应`/tmp/carry-activity-final-r{1,2}-20261103.log`、`/tmp/carry-activity-service-r{1,2}-20261103.log`。此前129项是前一轮状态，当前以131项为准。迁移尚未部署，可继续在同一未应用migration收紧规则；不修改任何已安装历史migration。
+
+最终产物启用/关闭两种模式都在Deno无网络权限下完成初始化；关闭模式实测返回503 account_ai_disabled，不将初始化测试冒充真实云端部署。

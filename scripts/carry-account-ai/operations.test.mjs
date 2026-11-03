@@ -17,7 +17,7 @@ const day = 86400000,
 const client = (db, id, value = {}) =>
   db.query(
     "insert into carry_ai.records(bucket,id,value) values('client',$1,$2)",
-    [id, { registryVersion: 1, createdAt: 0, usedAt: 1, ...value }],
+    [id, { registryVersion: 1, createdAt: 0, usedAt: 1, lastUsedAt: value.usedAt === null ? null : 1, ...value }],
   );
 const grant = async (db, clientID, value = {}) => {
   const id = crypto.randomUUID();
@@ -223,4 +223,14 @@ test('health evaluation flags capacity, stale cleanup, replay and elevated token
  const events=[{day:200,event:'refresh_replay',count:1},{day:200,event:'token_rejected',count:5},{day:200,event:'token_ok',count:15}];
  const result=evaluateOperationsHealth({...snapshot,events},cron,{now});assert.deepEqual(result.warnings,['refresh_replay_observed','token_rejection_rate']);
  assert.throws(()=>evaluateOperationsHealth({clients:-1,clientBytes:0,events:[]},cron,{now}));
+});
+
+test('recent client activity survives grant erasure and unknown historical activity never implies inactivity',async()=>{
+ const db=await fixture();try{
+  await client(db,'recent-use-erased-grant',{lastUsedAt:now-day});
+  await client(db,'unknown-last-activity',{lastUsedAt:null});
+  const result=(await db.query('select carry_ai.retire_clients($1,100) result',[now])).rows[0].result;
+  assert.equal(result.retiredClients,0);
+  assert.equal((await db.query("select count(*) from carry_ai.records where bucket='client'")).rows[0].count,2);
+ }finally{await db.close();}
 });

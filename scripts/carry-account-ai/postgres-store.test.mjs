@@ -477,3 +477,18 @@ test('token exchange reports revoked, expired, disabled-client and inactive-acco
   }
  }finally{await f.db.close();}
 });
+
+
+test('client activity clock survives account grant erasure and prevents premature retirement',async()=>{
+ const f=await fixture();try{
+  const {g}=await f.grant(),later=100*86400000;
+  await f.db.query("update carry_ai.records set value=value||$1 where bucket='client'",[{createdAt:0}]);
+  await f.db.query("update carry_ai.records set value=value||$1 where bucket='grant'",[{expiresAt:later+10000}]);
+  await f.store.readGraph({accountID,grantID:g.id,now:later});
+  await f.store.readGraph({accountID,grantID:g.id,now:later+1000});
+  assert.equal((await f.store.getClient({id:clientID})).lastUsedAt,later);
+  await f.db.query("delete from carry_ai.records where bucket<>'client'");
+  const result=(await f.db.query('select carry_ai.retire_clients($1,100) result',[later+86400000])).rows[0].result;
+  assert.equal(result.retiredClients,0);assert.ok(await f.store.getClient({id:clientID}));
+ }finally{await f.db.close();}
+});

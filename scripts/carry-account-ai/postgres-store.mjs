@@ -94,6 +94,14 @@ export function postgresStore({
     await accountLock(tx, p.accountID);
     await core.assertOwner(tx, p);
   };
+  async function touchClient(tx, id, client, now) {
+    // A retained client outlives account deletion. Keep its own activity clock
+    // so erasing account grants cannot make a recently used client look idle.
+    if (!Number.isSafeInteger(client.lastUsedAt) || now - client.lastUsedAt >= 3600000) {
+      client.lastUsedAt = now;
+      await put(tx, "client", id, client);
+    }
+  }
   async function grant(tx, id, now) {
     // Lookup alone is not authorization. Re-fetch after account lock to serialize
     // grant revocation, graph changes, receipt creation and first-party deletion.
@@ -109,6 +117,7 @@ export function postgresStore({
       c = g && (await get(tx, "client", g.clientID));
     if (!g || !c || c.disabledAt || g.revokedAt || g.expiresAt <= now)
       fail("invalid_token", 401);
+    await touchClient(tx, g.clientID, c, now);
     return g;
   }
   const tokenGrant = async (tx, id, now) => {
@@ -248,8 +257,8 @@ export function postgresStore({
         const usage = (
           await tx.query(
             `select count(*)::integer as clients,
-          coalesce(sum(octet_length(value::text) + case when value->>'usedAt' is null then 40 else 0 end),0)::bigint as bytes,
-          octet_length($1::jsonb::text) + 40 as incoming from carry_ai.records where bucket='client'`,
+          coalesce(sum(octet_length(value::text) + case when value->>'usedAt' is null then 96 when value->>'lastUsedAt' is null then 48 else 0 end),0)::bigint as bytes,
+          octet_length($1::jsonb::text) + 96 as incoming from carry_ai.records where bucket='client'`,
             [registered],
           )
         ).rows[0];
@@ -263,7 +272,7 @@ export function postgresStore({
             ]);
           const fresh = (
             await tx.query(`select count(*)::integer as clients,
-            coalesce(sum(octet_length(value::text) + case when value->>'usedAt' is null then 40 else 0 end),0)::bigint as bytes
+            coalesce(sum(octet_length(value::text) + case when value->>'usedAt' is null then 96 when value->>'lastUsedAt' is null then 48 else 0 end),0)::bigint as bytes
             from carry_ai.records where bucket='client'`)
           ).rows[0];
           if (
@@ -318,10 +327,9 @@ export function postgresStore({
         if (!(await core.ownsTrips(tx, p))) fail("trip_not_authorized", 403);
         // A used client must survive retention even after account deletion has
         // removed its grants. No token or refresh binding is changed.
-        if (!c.usedAt) {
-          c.usedAt = p.now;
-          await put(tx, "client", r.clientID, c);
-        }
+        if (!c.usedAt) c.usedAt = p.now;
+        c.lastUsedAt = p.now;
+        await put(tx, "client", r.clientID, c);
         const g = {
           id: p.grantID,
           accountID: p.accountID,

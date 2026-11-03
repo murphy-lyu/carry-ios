@@ -32,8 +32,9 @@ begin
       and not exists(select 1 from carry_ai.records r where r.bucket='authorization' and r.value->>'clientID'=c.id)
       and not exists(select 1 from carry_ai.records r where r.bucket='code' and r.value->>'clientID'=c.id)
       and (
-        (c.value->>'usedAt' is null and not exists(select 1 from carry_ai.records r where r.bucket='grant' and r.value->>'clientID'=c.id))
-        or (c.value->>'usedAt' is not null
+        (c.value->>'usedAt' is null and c.value->>'lastUsedAt' is null and not exists(select 1 from carry_ai.records r where r.bucket='grant' and r.value->>'clientID'=c.id))
+        or (c.value->>'usedAt' is not null and c.value->>'lastUsedAt' is not null
+          and (c.value->>'lastUsedAt')::bigint+3600000<p_now-7776000000
           and greatest((c.value->>'createdAt')::bigint,(c.value->>'usedAt')::bigint,
             coalesce((select max(case when g.value->>'revokedAt' is not null then (g.value->>'revokedAt')::bigint else (g.value->>'expiresAt')::bigint end)
               from carry_ai.records g where g.bucket='grant' and g.value->>'clientID'=c.id),0))<p_now-7776000000
@@ -59,9 +60,10 @@ declare result jsonb;
 begin
   if p_now is null or p_now not between 0 and 9007199254740991 then raise exception 'invalid_snapshot_time'; end if;
   select jsonb_build_object(
-    'clients',count(*),'clientBytes',coalesce(sum(octet_length(value::text)+case when value->>'usedAt' is null then 40 else 0 end),0),
+    'clients',count(*),'clientBytes',coalesce(sum(octet_length(value::text)+case when value->>'usedAt' is null then 96 when value->>'lastUsedAt' is null then 48 else 0 end),0),
     'usedClients',count(*) filter(where value->>'usedAt' is not null),
     'legacyClients',count(*) filter(where coalesce(value->>'registryVersion','')<>'1'),
+    'untrackedUsedClients',count(*) filter(where value->>'usedAt' is not null and value->>'lastUsedAt' is null),
     'authorizedWithinMinute',count(*) filter(where (value->>'usedAt')::bigint-(value->>'createdAt')::bigint between 0 and 60000),
     'authorizedWithinHour',count(*) filter(where (value->>'usedAt')::bigint-(value->>'createdAt')::bigint between 60001 and 3600000),
     'authorizedAfterHour',count(*) filter(where (value->>'usedAt')::bigint-(value->>'createdAt')::bigint>3600000)
