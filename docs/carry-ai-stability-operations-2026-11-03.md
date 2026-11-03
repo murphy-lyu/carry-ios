@@ -13,7 +13,7 @@
 - 在真实COMMIT成功后注入客户端响应丢失：新token已落盘；旧refresh重试按安全设计撤销family。不能用本项证明历史CLI曾发生此路径，亦不放宽重放保护。
 - 首次完整回归的强制DROP DATABASE清理触发仍在关闭的idle连接FATAL/未处理error；已改普通DROP并等待pool退出、夹具接收idle错误。无数据库deadlock证据。随后最终完整两轮：AI各129/129（含真实PG四项，0跳过）；账户服务各128/128；网页登录各24/24。权限/生命周期追加定向9/9，anon/authenticated执行新private函数被拒绝。
 - 最终两轮日志：`/tmp/carry-operations-delivery-r{1,2}-20261103.log`、`/tmp/carry-service-operations-final-r{1,2}-20261103.log`、`/tmp/carry-web-operations-final-r{1,2}-20261103.log`。早期容量fixture缺createdAt导致store_unavailable已调整为缺可信时间时不尝试回收，保留正常容量拒绝。
-- 已添加最小权限CI：固定commit的官方checkout/setup-node，Node24、隔离PostgreSQL17、三套锁定依赖/测试，无生产Secrets、无部署权限。首次GitHub运行另行记录；本机解析通过不等于CI已跑。
+- 已添加最小权限CI：固定commit的官方checkout/setup-node，Node24、隔离PostgreSQL17、三套锁定依赖/测试，无生产Secrets、无部署权限。GitHub Actions run 41662435951 已在提交1972faa上实际success：隔离PostgreSQL17、Node24、三套合约全部通过，未使用生产Secrets或部署权限。链接：https://github.com/murphy-lyu/carry-ios/actions/runs/41662435951。
 
 ## 云端只读基线与待部署
 Supabase CLI未认证；既有Chrome登录可用，独立新SQL页执行只读聚合，不复用紧急删除暂停页。
@@ -26,3 +26,5 @@ Supabase CLI未认证；既有Chrome登录可用，独立新SQL页执行只读�
 - 1024/16MiB、24小时/90天和75%/90%告警是起始策略；需要真实使用量校准。读回开发9条记录不足以证明大规模生产容量。
 - 正式外部告警渠道/账单套餐、真实生产SLA、iPhone12硬件trace仍未完成。本轮未购买任何服务。
 - 手册：`docs/carry-ai-operations-runbook.md`。研究Tripsy、吸顶UI、误触删除止损在用户要求的独立任务；账户UI优化在独立工作树，未混入后端变更。
+
+部署产物：`/tmp/carry-ai-operations-20261103.mjs` SHA256 e333cfc133993be624835104c69a73ed19d06dee5b8fc2ad82658469c21fc933；事务安装脚本 `/tmp/carry-ai-operations-install-20261103.sql` SHA256 f654a52694eeebfb9995c4104100032d290d8a221d64ea4703442d3cb62c8672。原始TypeScript入口Deno check通过；安装脚本的BEGIN/COMMIT与迁移登记同事务，失败不留半安装。
