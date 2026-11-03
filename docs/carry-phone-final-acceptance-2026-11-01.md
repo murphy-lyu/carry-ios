@@ -30,3 +30,11 @@
 - 改用独立copyItem，彻底分离预览与不可变cache；回归验证原始内容、另一同名租约和删除清理均保持正确。最终 `/tmp/CarryPreviewIsolationFinalQA-20261101` 两轮各384总项/383通过/1手工跳过/0失败/0运行时警告；上述隔离用例两轮均实际通过。
 - 最终Release、Mac Debug、iPhone Debug构建均0编译警告成功，九语言0/0、diff检查通过；只读Review未发现新增actionable问题。最终Mac已签名重开，最终iPhone包已签名准备好，未在用户带走手机后覆盖安装。
 - 手机当前安装包已包含原名预览及恢复后自动同步；最后新增的独立副本隔离补丁待下次连接安装。最终手机Quick Look标题复核、物理断网重开、iPhone12硬件trace及第二台iOS仍按证据边界保留，不冒称电脑/模拟器代替真机。
+
+## 2026-11-03：手机重新连接补验
+- 基线5fff33f，实体机仍为iPhone 17 Pro。安装前复制当前Carry容器至本机受限备份，55文件、34,956,942 bytes，6个SQLite integrity_check全部ok，目录0700/文件0600；此为容器复制，不宣称停机原子快照，不含Keychain导出。
+- 验证最终包strict/deep签名后，以原bundle ID覆盖安装成功并启动。最终独立副本隔离修复已到手机，此安装待办完成。日志：`/tmp/carry-preview-final-install-20261103.log`、`/tmp/carry-preview-final-launch-20261103.log`。
+- 镜像真实显示账户头像、16条行程及既有合成同步/冲突/恢复行程；原本地行程仍在。未新增私人行程迁移或AI授权。
+- 当前Codex连接实际list_trips成功，无需重新授权；只返回原授权的两条合成行程，恢复行程仍root v6、subtree v50且无删除标记。此证据说明该连接跨两天后可用，不代表旧CLI失效根因或多进程长期兼容已经解决。
+- 镜像截图和键盘输入可用，但坐标点击两次返回noWindowsAvailable；窗口Raise后键盘可开Carry，点击仍失败。已请用户将镜像窗口切至当前桌面前台，最终预览标题和物理离线场景暂未记通过。
+- Time Profiler按设备+实际PID附加返回Cannot find process；devicectl再次确认同PID仍运行，按进程名尝试后返回Waiting for device to boot及exit13。未获得有效trace，不能据此推断产品卡顿或性能通过；不使用iPhone17结果替代iPhone12硬件验收。
