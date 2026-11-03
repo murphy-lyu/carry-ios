@@ -43,3 +43,7 @@
 - 用户明确确认镜像已在当前桌面前台。重新绑定后可通过Spotlight和Return启动原Carry，实际显示合成行程；点击仍noWindowsAvailable。重置CUA会话、重新getApp、Raise后再次点击仍同错，停止继续猜测/重复要求用户切前台。此为验收工具阻塞，无证据支持修改Carry业务代码。
 - 已改为请求用户直接在手机核对合成附件原名/正文，以及关闭Wi-Fi+蜂窝后的杀进程重开、改名保存、再重开和恢复联网；目前等待实际结果，不预记通过。Mac网络、手机网络设置均未由代理修改。
 - 离线检查前只读基线：合成trip25fb0d37-8e9d-504e-acd9-9e452900047b root v6/subtree v50，名称Carry QA Auto Recovery verified 20261101、原day v5且无删除标记。联网后以Carry QA Offline verified 20261103及原ID/日期/day核对。
+
+### 2026-11-03：实体机附件预览通过
+- 用户直接在手机打开第一项附件后，代理通过镜像实时截图确认：Quick Look顶部为Carry-QA-attachment-20261101，UUID标题已消失；系统预览标题省略.txt扩展名。正文实际显示Carry synthetic attachment acceptance fixture. No personal travel data.，可正常阅读。
+- 最终手机原文件名标题与正文验收完成。镜像点击工具仍未恢复，不把用户实际操作写为代理点击成功；真实离线改名/重开/联网读回仍等待第二项检查。
