@@ -1,3 +1,4 @@
+import { createOperationsRecorder, oauthResponseEvent } from "./operations.mjs";
 import { createAccountAIHandler } from "./worker.mjs";
 import { createAccountQueries } from "./queries.mjs";
 import { createAccountAssets } from "./assets.mjs";
@@ -24,10 +25,12 @@ export function createAccountAIRuntime({
     configuration;
   if (!ownerBridgeSecret) throw new Error("missing_owner_bridge_secret");
   const driver = postgresDriver(pool, { role: "service_role" }),
+    recordEvent = createOperationsRecorder(driver),
     core = postgresGraphCore(),
     store = postgresStore({
       driver,
       core,
+      onAuthEvent: recordEvent,
       assets: createAccountAssets({ projectURL, serviceKey, fetcher }),
     });
   const identity = createGraphAdapter({
@@ -64,6 +67,8 @@ export function createAccountAIRuntime({
   };
   return createAccountAIHandler({
     store,
+    onResponse: ({ path, status, now }) =>
+      recordEvent({ name: oauthResponseEvent(path, status), now }),
     firstParty,
     origin,
     accountOrigin,

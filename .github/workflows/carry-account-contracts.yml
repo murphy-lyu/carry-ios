@@ -1,0 +1,44 @@
+name: Carry account contracts
+on:
+  pull_request:
+    paths:
+      - 'scripts/carry-account-ai/**'
+      - 'scripts/carry-account-service/**'
+      - 'scripts/carry-account-web/**'
+      - '.github/workflows/carry-account-contracts.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  contracts:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_HOST_AUTH_METHOD: trust
+        ports:
+          - '127.0.0.1:5432:5432'
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      CARRY_QA_POSTGRES_URL: postgresql://postgres@127.0.0.1:5432/postgres
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: '24'
+      - name: Install locked test dependencies
+        run: |
+          npm ci --ignore-scripts --prefix scripts/carry-account-ai
+          npm ci --ignore-scripts --prefix scripts/carry-account-service
+          npm ci --ignore-scripts --prefix scripts/carry-account-web
+      - name: Run durable OAuth and account contracts
+        run: |
+          node --test scripts/carry-account-ai/*.test.mjs
+          node --test scripts/carry-account-service/*.test.mjs
+          node --test scripts/carry-account-web/*.test.mjs

@@ -120,6 +120,7 @@ export function createAccountAIHandler({
   queries = {},
   now = Date.now,
   synthetic = false,
+  onResponse = async () => {},
   trustedAddress = () => null,
 }) {
   exactURL(origin + "/");
@@ -529,7 +530,7 @@ export function createAccountAIHandler({
       signal,
     });
   }
-  return async (request) => {
+  const handle = async (request) => {
     let rpcID = null;
     try {
       const url = new URL(request.url);
@@ -1070,6 +1071,7 @@ export function createAccountAIHandler({
               "WWW-Authenticate": `Bearer resource_metadata="${origin}/.well-known/oauth-protected-resource", error="invalid_token"`,
             }
           : {};
+      if (status === 429 || code === "client_registration_capacity_exhausted") headers["Retry-After"] = "60";
       return rpcID !== null
         ? json(
             {
@@ -1082,6 +1084,19 @@ export function createAccountAIHandler({
           )
         : json({ error: code }, status, headers);
     }
+  };
+  return async (request) => {
+    const response = await handle(request);
+    const path = new URL(request.url).pathname;
+    if (
+      request.method === "POST" &&
+      ["/oauth/register", "/oauth/token"].includes(path)
+    ) {
+      try {
+        await onResponse({ path, status: response.status, now: now() });
+      } catch {}
+    }
+    return response;
   };
 }
 function bytesBase64(bytes) {

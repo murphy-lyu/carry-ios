@@ -24,6 +24,7 @@ async function fixture(path) {
   await db.exec(
     await readFile(new URL("./postgres-schema.sql", import.meta.url), "utf8"),
   );
+  await db.exec(await readFile(new URL("./operations.sql", import.meta.url), "utf8"));
   await db.exec(await readFile(new URL("./maintenance.sql", import.meta.url), "utf8"));
   await db.exec(
     "create table qa_graph(id uuid primary key, value jsonb); create table qa_account(id uuid primary key, active boolean);",
@@ -458,4 +459,21 @@ test('refresh scope must equal the owner grant and invalid scope does not consum
     await rejects(reopened.resolveAccess({tokenHash:base.tokens.accessHash,resource,now}),'invalid_token');
     assert.ok((await f.db.query("select value from carry_ai.records where bucket='grant' and id=$1",[g.id])).rows[0].value.revokedAt);
   } finally { await f.db.close(); }
+});
+
+
+
+test('token exchange reports revoked, expired, disabled-client and inactive-account grants as OAuth invalid_grant', async()=>{
+ const f=await fixture();try {
+  const {g,t,input}=await f.grant();
+  for(const condition of ['revoked','expired','disabled','inactive']) {
+   await f.db.query("update carry_ai.records set value=$1 where bucket='grant' and id=$2",[{...g,...(condition==='revoked'?{revokedAt:now}:condition==='expired'?{expiresAt:now}:{})},g.id]);
+   await f.db.query("update carry_ai.records set value=(value-'disabledAt')||$1 where bucket='client'",[condition==='disabled'?{disabledAt:now}:{}]);
+   await f.db.query('update qa_account set active=$1',[condition!=='inactive']);
+   await f.db.query("update carry_ai.records set value=value||$1 where bucket='code'",[{consumedAt:null}]);
+   await assert.rejects(f.store.rotateRefresh({refreshHash:t.refreshHash,clientID,resource,now,tokens:await tokens(condition)}),e=>e.code==='invalid_grant'&&e.status===400);
+   await assert.rejects(f.store.exchangeCode(input),e=>e.code==='invalid_grant'&&e.status===400);
+   await rejects(f.store.resolveAccess({tokenHash:t.accessHash,resource,now}),'invalid_token');
+  }
+ }finally{await f.db.close();}
 });

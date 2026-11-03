@@ -1538,3 +1538,22 @@ test("background object maps and original photos retain independent file scope a
   });
   assert.equal(invalid.response.status, 400);
 });
+
+test('OAuth retry hints and diagnostics do not expose request bodies or change errors',async()=>{
+ const events=[];const f=await fixture({onResponse:async event=>{events.push(event);throw Error('diagnostic sink unavailable');}});
+ assert.deepEqual(Object.keys(events[0]).sort(),['now','path','status']);assert.equal(events[0].status,201);
+ f.store.rateLimit=async()=>false;
+ const limited=await f.handler(f.req('/oauth/register',{method:'POST',body:{}}));
+ assert.equal(limited.status,429);assert.equal(limited.headers.get('Retry-After'),'60');
+ f.store.rateLimit=async()=>true;f.store.registerClient=async()=>{throw new AIFailure(503,'client_registration_capacity_exhausted');};
+ const full=await f.handler(f.req('/oauth/register',{method:'POST',body:{client_name:'Synthetic',redirect_uris:[redirect]}}));
+ assert.equal(full.status,503);assert.equal(full.headers.get('Retry-After'),'60');
+ assert.deepEqual(await full.json(),{error:'client_registration_capacity_exhausted'});
+});
+
+test('revoked OAuth grants produce invalid_grant at the token endpoint without a resource bearer challenge',async()=>{
+ const f=await fixture(),connected=await f.connect();
+ for(const g of f.store.db.grants.values())g.revokedAt=now;
+ const response=await f.handler(new Request(origin+'/oauth/token',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:new URLSearchParams({grant_type:'refresh_token',client_id:f.client,refresh_token:connected.refresh_token})}));
+ assert.equal(response.status,400);assert.deepEqual(await response.json(),{error:'invalid_grant'});assert.equal(response.headers.get('WWW-Authenticate'),null);
+});

@@ -3,10 +3,12 @@ import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import { PGlite } from '@electric-sql/pglite';
 const routine = await readFile(new URL('./maintenance.sql', import.meta.url), 'utf8');
-const migration = await readFile(new URL('../carry-account-service/supabase/migrations/20261101101210_bounded_ai_client_registry.sql', import.meta.url), 'utf8');
+const operations = await readFile(new URL('./operations.sql', import.meta.url), 'utf8');
+const migration = await readFile(new URL('../carry-account-service/supabase/migrations/20261103144256_ai_connection_operations.sql', import.meta.url), 'utf8');
 
 test('hosted retention installs the exact tested routine and keeps client roles denied', async () => {
-  assert.ok(migration.startsWith(routine));
+  assert.ok(migration.startsWith(operations));
+  assert.ok(migration.includes(routine));
   const db = new PGlite();
   try {
     await db.exec("create role anon; create role authenticated; create role service_role;");
@@ -18,6 +20,9 @@ test('hosted retention installs the exact tested routine and keeps client roles 
     for (const role of ['anon','authenticated']) {
       await db.exec(`set role ${role}`);
       await assert.rejects(db.query('select carry_ai.maintain_records(1000000,1)'), /permission denied/);
+      for(const statement of ["select carry_ai.record_auth_event('refresh_ok',1000000)","select carry_ai.retire_clients(1000000,1)","select carry_ai.operations_snapshot(1000000)"]) {
+        await assert.rejects(db.query(statement),/permission denied/);
+      }
       await db.exec('reset role');
     }
   } finally { await db.close(); }
@@ -27,6 +32,7 @@ test('retention is bounded, preserves receipt identities and live replay evidenc
   const db = new PGlite(), now=40*86400000;
   try {
     await db.exec(await readFile(new URL('./postgres-schema.sql', import.meta.url), 'utf8'));
+    await db.exec(operations);
     await db.exec(routine);
     for (const id of ['a','b','c']) await db.query("insert into carry_ai.records(bucket,id,value) values('access',$1,$2)",[id,{expiresAt:now-1}]);
     await db.query("insert into carry_ai.records(bucket,id,value) values('receipt','stable-request',$1),('refresh','live-spent',$2)",[
@@ -34,7 +40,7 @@ test('retention is bounded, preserves receipt identities and live replay evidenc
       {expiresAt:now+1,usedAt:now-1}]);
     for (const key of ['a','b','c']) await db.query('insert into carry_ai.rate_limits values($1,null,0,1)',[key]);
     const result=(await db.query('select carry_ai.maintain_records($1,1) as result',[now])).rows[0].result;
-    assert.deepEqual(result,{records:1,compactedReceipts:1,rateBuckets:1,unusedClients:0});
+    assert.deepEqual(result,{records:1,compactedReceipts:1,rateBuckets:1,unusedClients:0,retiredClients:0,eventBuckets:0});
     assert.equal((await db.query("select count(*) from carry_ai.records where bucket='access'")).rows[0].count,2);
     assert.deepEqual((await db.query("select value from carry_ai.records where id='stable-request'")).rows[0].value,{createdAt:0,contentHash:'preserved',undoExpired:true});
     assert.equal((await db.query("select count(*) from carry_ai.records where id='live-spent'")).rows[0].count,1);
@@ -49,6 +55,7 @@ test('client cleanup is bounded and preserves pending, used, historical and lega
   const db=new PGlite(), now=3*86400000;
   try {
     await db.exec(await readFile(new URL('./postgres-schema.sql',import.meta.url),'utf8'));
+    await db.exec(operations);
     await db.exec(routine);
     for (const id of ['unused-a','unused-b','pending','used','historical','legacy','recent','no-date']) {
       const value={createdAt:0,registryVersion:1};

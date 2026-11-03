@@ -45,6 +45,14 @@ export function syntheticStore({ accountID, sessionID, entities = [], time }) {
   };
   const getReceipt = (grantID, requestID) =>
     db.receipts.get(grantID + ":" + requestID);
+  const checkTokenGrant = (id, now) => {
+    try {
+      return checkGrant(id, now);
+    } catch (error) {
+      if (error.code === "invalid_token") fail("invalid_grant");
+      throw error;
+    }
+  };
   const bindTokens = (g, tokens) => {
     db.access.set(tokens.accessHash, {
       grantID: g.id,
@@ -131,7 +139,7 @@ export function syntheticStore({ accountID, sessionID, entities = [], time }) {
         c.challenge !== p.challenge
       )
         fail("invalid_grant");
-      const g = checkGrant(c.grantID, p.now);
+      const g = checkTokenGrant(c.grantID, p.now);
       c.consumedAt = p.now;
       bindTokens(g, p.tokens);
       return structuredClone(g);
@@ -139,7 +147,7 @@ export function syntheticStore({ accountID, sessionID, entities = [], time }) {
     rotateRefresh: async (p) => {
       const t = db.refresh.get(p.refreshHash);
       if (!t) fail("invalid_grant");
-      const g = checkGrant(t.grantID, p.now);
+      const g = checkTokenGrant(t.grantID, p.now);
       if (
         g.clientID !== p.clientID ||
         g.resource !== p.resource ||
@@ -152,11 +160,13 @@ export function syntheticStore({ accountID, sessionID, entities = [], time }) {
       }
       // Refresh never changes the owner's grant. Check only after spent-token
       // replay detection, so invalid scope cannot suppress family revocation.
-      if (p.requestedScopes !== undefined && (
-        !Array.isArray(p.requestedScopes) ||
-        new Set(p.requestedScopes).size !== new Set(g.scopes).size ||
-        g.scopes.some(scope => !p.requestedScopes.includes(scope))
-      )) fail("invalid_scope");
+      if (
+        p.requestedScopes !== undefined &&
+        (!Array.isArray(p.requestedScopes) ||
+          new Set(p.requestedScopes).size !== new Set(g.scopes).size ||
+          g.scopes.some((scope) => !p.requestedScopes.includes(scope)))
+      )
+        fail("invalid_scope");
       t.spent = true;
       bindTokens(g, p.tokens);
       return structuredClone(g);

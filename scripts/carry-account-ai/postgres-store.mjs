@@ -13,12 +13,23 @@ import {
  * fn resolves. A callback failure rolls back. core methods use THAT connection:
  * no HTTP call, second pool connection, native-session forgery or async job. */
 export const clientRegistryCapacity = Object.freeze({ maximumClients: 1024, maximumBytes: 16 * 1024 * 1024 });
-export function postgresStore({ driver, core, assets, clientRegistryLimits = clientRegistryCapacity }) {
+export function postgresStore({
+  driver,
+  core,
+  assets,
+  clientRegistryLimits = clientRegistryCapacity,
+  onAuthEvent = async () => {},
+}) {
   const limits = { ...clientRegistryCapacity, ...clientRegistryLimits };
   for (const key of Object.keys(clientRegistryCapacity)) {
     if (!Number.isSafeInteger(limits[key]) || limits[key] < 1 || limits[key] > clientRegistryCapacity[key])
       throw new Error("invalid_client_registry_capacity");
   }
+  const report = async (name, now) => {
+    try {
+      await onAuthEvent({ name, now });
+    } catch {}
+  };
   // Shared with retention and pending creation: count + insert is atomic across
   // all Edge isolates. Operator limits may be lowered, never made unbounded.
   const registryLock = tx => tx.query("select pg_advisory_xact_lock(hashtextextended('carry-ai-client-registry',0))");
@@ -100,6 +111,18 @@ export function postgresStore({ driver, core, assets, clientRegistryLimits = cli
       fail("invalid_token", 401);
     return g;
   }
+  const tokenGrant = async (tx, id, now) => {
+    try {
+      return await grant(tx, id, now);
+    } catch (error) {
+      if (
+        error instanceof AIFailure &&
+        ["invalid_token", "account_unavailable"].includes(error.code)
+      )
+        fail("invalid_grant");
+      throw error;
+    }
+  };
   const bindTokens = async (tx, g, tokens) => {
     const base = { accountID: g.accountID, grantID: g.id };
     await put(tx, "access", tokens.accessHash, {
@@ -217,18 +240,43 @@ export function postgresStore({ driver, core, assets, clientRegistryLimits = cli
         );
         return r.rows[0].count <= limit;
       }),
-    registerClient: (p) =>
-      transaction(async (tx) => {
+    registerClient: async (p) => {
+      const result = await transaction(async (tx) => {
         await registryLock(tx);
         if (await get(tx, "client", p.id)) fail("request_id_reused", 409);
         const registered = { ...p, registryVersion: 1 };
-        const usage = (await tx.query(`select count(*)::integer as clients,
+        const usage = (
+          await tx.query(
+            `select count(*)::integer as clients,
           coalesce(sum(octet_length(value::text) + case when value->>'usedAt' is null then 40 else 0 end),0)::bigint as bytes,
-          octet_length($1::jsonb::text) + 40 as incoming from carry_ai.records where bucket='client'`, [registered])).rows[0];
-        if (usage.clients >= limits.maximumClients || Number(usage.bytes) + usage.incoming > limits.maximumBytes)
-          fail("client_registration_capacity_exhausted", 503);
+          octet_length($1::jsonb::text) + 40 as incoming from carry_ai.records where bucket='client'`,
+            [registered],
+          )
+        ).rows[0];
+        if (
+          usage.clients >= limits.maximumClients ||
+          Number(usage.bytes) + usage.incoming > limits.maximumBytes
+        ) {
+          if (Number.isSafeInteger(p.createdAt) && p.createdAt >= 0)
+            await tx.query("select carry_ai.retire_clients($1::bigint,32)", [
+              p.createdAt,
+            ]);
+          const fresh = (
+            await tx.query(`select count(*)::integer as clients,
+            coalesce(sum(octet_length(value::text) + case when value->>'usedAt' is null then 40 else 0 end),0)::bigint as bytes
+            from carry_ai.records where bucket='client'`)
+          ).rows[0];
+          if (
+            fresh.clients >= limits.maximumClients ||
+            Number(fresh.bytes) + usage.incoming > limits.maximumBytes
+          )
+            return { capacity: true };
+        }
         await put(tx, "client", p.id, registered);
-      }),
+        return { capacity: false };
+      });
+      if (result.capacity) fail("client_registration_capacity_exhausted", 503);
+    },
     getClient: (p) => transaction((tx) => get(tx, "client", p.id)),
     createAuthorization: (p) =>
       transaction(async (tx) => {
@@ -312,7 +360,7 @@ export function postgresStore({ driver, core, assets, clientRegistryLimits = cli
           )
         ).rows[0]?.value;
         if (!hint) fail("invalid_grant");
-        const g = await grant(tx, hint.grantID, p.now),
+        const g = await tokenGrant(tx, hint.grantID, p.now),
           c = await get(tx, "code", p.codeHash);
         if (
           !c ||
@@ -330,43 +378,64 @@ export function postgresStore({ driver, core, assets, clientRegistryLimits = cli
         return g;
       }),
     rotateRefresh: async (p) => {
-      const result = await transaction(async (tx) => {
-        const hint = (
-          await tx.query(
-            "select value from carry_ai.records where bucket='refresh' and id=$1",
-            [p.refreshHash],
+      let outcome = "refresh_unavailable";
+      try {
+        const result = await transaction(async (tx) => {
+          const hint = (
+            await tx.query(
+              "select value from carry_ai.records where bucket='refresh' and id=$1",
+              [p.refreshHash],
+            )
+          ).rows[0]?.value;
+          if (!hint) {
+            outcome = "refresh_missing";
+            fail("invalid_grant");
+          }
+          outcome = "refresh_invalid";
+          const g = await tokenGrant(tx, hint.grantID, p.now),
+            t = await get(tx, "refresh", p.refreshHash);
+          if (
+            !t ||
+            g.clientID !== p.clientID ||
+            g.resource !== p.resource ||
+            t.expiresAt <= p.now
           )
-        ).rows[0]?.value;
-        if (!hint) fail("invalid_grant");
-        const g = await grant(tx, hint.grantID, p.now),
-          t = await get(tx, "refresh", p.refreshHash);
-        if (
-          !t ||
-          g.clientID !== p.clientID ||
-          g.resource !== p.resource ||
-          t.expiresAt <= p.now
-        )
-          fail("invalid_grant");
-        if (t.spent) {
-          g.revokedAt = p.now;
-          await put(tx, "grant", g.id, g);
-          return { reuse: true };
-        }
-        // Refresh never changes the owner's grant. Check only after spent-token
-        // replay detection, so invalid scope cannot suppress family revocation.
-        if (p.requestedScopes !== undefined && (
-          !Array.isArray(p.requestedScopes) ||
-          new Set(p.requestedScopes).size !== new Set(g.scopes).size ||
-          g.scopes.some(scope => !p.requestedScopes.includes(scope))
-        )) fail("invalid_scope");
-        t.spent = true;
-        await put(tx, "refresh", p.refreshHash, t);
-        await bindTokens(tx, g, p.tokens);
-        return { grant: g };
-      });
-      // Reuse must COMMIT family revocation before returning invalid_grant.
-      if (result.reuse) fail("invalid_grant");
-      return result.grant;
+            fail("invalid_grant");
+          if (t.spent) {
+            g.revokedAt = p.now;
+            await put(tx, "grant", g.id, g);
+            outcome = "refresh_replay";
+            return { reuse: true };
+          }
+          // Refresh never changes the owner's grant. Check only after spent-token
+          // replay detection, so invalid scope cannot suppress family revocation.
+          if (
+            p.requestedScopes !== undefined &&
+            (!Array.isArray(p.requestedScopes) ||
+              new Set(p.requestedScopes).size !== new Set(g.scopes).size ||
+              g.scopes.some((scope) => !p.requestedScopes.includes(scope)))
+          ) {
+            outcome = "refresh_scope";
+            fail("invalid_scope");
+          }
+          t.spent = true;
+          await put(tx, "refresh", p.refreshHash, t);
+          await bindTokens(tx, g, p.tokens);
+          return { grant: g };
+        });
+        // Reuse must COMMIT family revocation before returning invalid_grant.
+        if (result.reuse) fail("invalid_grant");
+        await report("refresh_ok", p.now);
+        return result.grant;
+      } catch (error) {
+        await report(
+          error instanceof AIFailure && error.code === "store_unavailable"
+            ? "refresh_unavailable"
+            : outcome,
+          p.now,
+        );
+        throw error;
+      }
     },
     revokeToken: async (p) => {
       try {
