@@ -76,12 +76,21 @@ private struct ExchangeRateScope<Content: View>: View {
 // MARK: - HomeView
 
 struct HomeView: View {
+    @EnvironmentObject private var account: CarryAccountStore
 
     @Environment(\.colorScheme) private var colorScheme
     @EnvironmentObject var store: TripStore
     @EnvironmentObject var router: NavigationRouter
 
-    @State private var tripToDelete: TripBundle?
+    private struct PendingTripDeletion {
+        let tripID: UUID
+        let name: String
+        let owner: TripStore
+        let groupID: UUID
+        let lease: CarryNativeEditorLease?
+    }
+    @StateObject private var deletionErrors = CarryNativeEditorPresentations()
+    @State private var tripToDelete: PendingTripDeletion?
     @State private var showDeleteConfirmation = false
     @State private var showSettings = false
     @State private var settingsPath = NavigationPath()
@@ -111,7 +120,7 @@ struct HomeView: View {
     private let listRevealThreshold: Double = 0.58
     private let pastRevealThreshold: Double = 0.78
 
-    // Cached sorted trip lists — recomputed only when store.trips changes,
+    // Cached sorted trip lists — recomputed only when store.visibleTrips changes,
     // not on every body re-evaluation (e.g. initialRevealProgress animation ticks).
     @State private var cachedUpcoming: [TripBundle] = []
     @State private var cachedPlanning: [TripBundle] = []
@@ -120,7 +129,7 @@ struct HomeView: View {
     /// True when the list should appear empty — either no real trips exist,
     /// or the developer mock is active.
     private var isEffectivelyEmpty: Bool {
-        store.trips.isEmpty || store.isHomeEmptyStateMockEnabled
+        store.visibleTrips.isEmpty || store.isHomeEmptyStateMockEnabled
     }
 
     private func returnDate(for trip: TripBundle) -> Date {
@@ -128,7 +137,8 @@ struct HomeView: View {
     }
 
     /// Recomputes both sorted lists in one pass. Called from onAppear and
-    /// onChange(of: store.trips) so sorting never runs during animation frames.
+    /// Observe model instances too: a committed automation transaction publishes
+    /// a fresh context whose models retain the same persistent IDs.
     private func rebuildTripLists() {
         let calendar = Calendar.current
         // Compute today's boundary once and share across all trip evaluations.
@@ -144,7 +154,7 @@ struct HomeView: View {
             cachedUpcoming = []
         } else {
             struct Decorated { let trip: TripBundle; let isComplete: Bool }
-            let decorated = store.trips
+            let decorated = store.visibleTrips
                 .filter { !$0.isDateless && !isPast($0) }
                 .map { Decorated(trip: $0, isComplete: $0.totalCount > 0 && $0.packedCount == $0.totalCount) }
             cachedUpcoming = decorated
@@ -161,7 +171,7 @@ struct HomeView: View {
         if store.isHomeEmptyStateMockEnabled {
             cachedPlanning = []
         } else {
-            cachedPlanning = store.trips
+            cachedPlanning = store.visibleTrips
                 .filter { $0.isDateless }
                 .sorted(by: TripBundle.planningSortDescending)
         }
@@ -170,7 +180,7 @@ struct HomeView: View {
         if store.isHomeEmptyStateMockEnabled {
             cachedPastByYear = []
         } else {
-            let grouped = Dictionary(grouping: store.trips.filter { !$0.isDateless && isPast($0) }) {
+            let grouped = Dictionary(grouping: store.visibleTrips.filter { !$0.isDateless && isPast($0) }) {
                 calendar.component(.year, from: returnDate(for: $0))
             }
             cachedPastByYear = grouped.keys.sorted(by: >).map { year in
@@ -189,7 +199,7 @@ struct HomeView: View {
     private var upcomingTrips: [TripBundle] { cachedUpcoming }
     private var planningTrips: [TripBundle] { cachedPlanning }
     private var pastTripsByYear: [(year: Int, trips: [TripBundle])] { cachedPastByYear }
-    private var searchableTrips: [TripBundle] { store.trips }
+    private var searchableTrips: [TripBundle] { store.visibleTrips }
     private var filteredSearchTrips: [TripBundle] {
         let query = searchText.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !query.isEmpty else { return searchableTrips }
@@ -307,7 +317,7 @@ struct HomeView: View {
     /// stored for multi-city trips.
     private var visitedCountriesCount: Int {
         var codes = Set<String>()
-        for trip in store.trips where trip.countsAsVisited {
+        for trip in store.visibleTrips where trip.countsAsVisited {
             if !trip.countryCode.isEmpty { codes.insert(normalizedCountryCode(trip.countryCode)) }
             for dest in trip.additionalDestinations where !dest.countryCode.isEmpty {
                 codes.insert(normalizedCountryCode(dest.countryCode))
@@ -319,7 +329,7 @@ struct HomeView: View {
     /// 已发生（已出发 + 进行中）的行程数。与行程册口径一致（同 `countsAsVisited`），
     /// 使首页 Trip Book 胶囊副标题与行程册内的「旅行」数对齐，不再「胶囊 16 / 册内 13」打架。
     private var visitedTripsCount: Int {
-        store.trips.filter { $0.countsAsVisited }.count
+        store.visibleTrips.filter { $0.countsAsVisited }.count
     }
 
     /// Deduplicated city dots for departed trips with valid coordinates.
@@ -352,7 +362,7 @@ struct HomeView: View {
             }
         }
 
-        for trip in store.trips where trip.countsAsVisited {
+        for trip in store.visibleTrips where trip.countsAsVisited {
             // Split using the same separators as geocoding so token[n] aligns with destination[n]
             var raw = [trip.destinationCity]
             for sep in [" and ", " And ", " AND ", " 和 "] {
@@ -395,7 +405,7 @@ struct HomeView: View {
             }
         }
 
-        for trip in store.trips where trip.countsAsVisited {
+        for trip in store.visibleTrips where trip.countsAsVisited {
             consider(code: trip.countryCode, lat: trip.latitude, lon: trip.longitude, date: trip.departureDate)
             for dest in trip.additionalDestinations {
                 consider(code: dest.countryCode, lat: dest.latitude, lon: dest.longitude, date: trip.departureDate)
@@ -465,7 +475,7 @@ struct HomeView: View {
             // sheet 已完全收起，此刻压栈不会与关闭动画相互打断。
             if let id = pendingSearchTrip {
                 pendingSearchTrip = nil
-                if let trip = store.bundle(for: id) { openTrip(trip) }
+                if let trip = store.visibleBundle(for: id) { openTrip(trip) }
             }
         }) {
             NavigationStack {
@@ -537,18 +547,20 @@ struct HomeView: View {
                 rebuildTripLists()
             }
         }
-        .onChange(of: store.trips) { _, _ in rebuildTripLists() }
+        .onChange(of: store.visibleTrips.map { ObjectIdentifier($0) }) { _, _ in rebuildTripLists() }
         .alert(
             String(format: NSLocalizedString("Delete %@?", comment: ""), tripToDelete?.name ?? ""),
             isPresented: $showDeleteConfirmation
         ) {
             Button("Delete", role: .destructive) {
-                if let trip = tripToDelete { store.removeTrip(withId: trip.id) }
+                confirmTripDeletion()
             }
             Button("Cancel", role: .cancel) { }
         } message: {
             Text("This will permanently delete your packing list and all progress.")
         }
+        .onChange(of: showDeleteConfirmation) { _, showing in if !showing { clearTripDeletion() } }
+        .nativeEditorErrors(deletionErrors)
     }
     #endif
 
@@ -654,13 +666,13 @@ struct HomeView: View {
                     if !hasShownFirstTripShimmer,
                        firstTripCreatedAtInterval > 0,
                        Date().timeIntervalSince1970 - firstTripCreatedAtInterval <= Self.shimmerWindowSeconds,
-                       let first = store.trips.first {
+                       let first = store.visibleTrips.first {
                         hasShownFirstTripShimmer = true
                         shimmerTripId = first.id
                     }
                 }
             }
-            .onChange(of: store.trips) { oldTrips, newTrips in
+            .onChange(of: store.visibleTrips.map { ObjectIdentifier($0) }) { oldTrips, newTrips in
                 rebuildTripLists()
                 if !hasShownFirstTripShimmer && oldTrips.isEmpty && newTrips.count == 1 {
                     firstTripCreatedAtInterval = Date().timeIntervalSince1970
@@ -695,12 +707,14 @@ struct HomeView: View {
                 isPresented: $showDeleteConfirmation
             ) {
                 Button("Delete", role: .destructive) {
-                    if let trip = tripToDelete { store.removeTrip(withId: trip.id) }
+                    confirmTripDeletion()
                 }
                 Button("Cancel", role: .cancel) { }
             } message: {
                 Text("This will permanently delete your packing list and all progress.")
             }
+            .onChange(of: showDeleteConfirmation) { _, showing in if !showing { clearTripDeletion() } }
+            .nativeEditorErrors(deletionErrors)
         }
         .frame(maxWidth: .infinity)
         // 空态 + 深色：背景留透明，让卡片表面由 FX 的磨砂玻璃层提供（地球从卡后透/糊上来，有真实景深）。
@@ -850,20 +864,22 @@ struct HomeView: View {
 
             Spacer(minLength: 12)
 
-            // Settings entry — a circular gear (secondary), per design-system.md §124.
-            // 未登录态就是这枚齿轮；登录功能落地后，在此按登录态切换为用户头像
-            // （已登录 → Image(avatar)，未登录 → 本齿轮）。现在不写空壳分支以免留死代码。
+            // A cached account keeps its identity while offline; status belongs in Settings.
             Button {
                 openSettings()
             } label: {
-                Image(systemName: "gearshape.fill")
-                    .font(.system(size: 18, weight: .semibold))
-                    .foregroundStyle(.secondary)
-                    .frame(width: 40, height: 40)
-                    // Soft neutral fill (adaptive light/dark) so it reads clearly as a
-                    // tappable button on the near-white sheet — like Apple's circular
-                    // toolbar buttons. No border/shadow: the fill alone defines the chip.
-                    .background(Circle().fill(Color(UIColor.tertiarySystemFill)))
+                Group {
+                    if account.isAvailable, let profile = account.profile {
+                        CarryAccountAvatar(profile: profile)
+                    } else {
+                        Image(systemName: "gearshape.fill")
+                            .font(.system(size: 18, weight: .semibold))
+                            .foregroundStyle(.secondary)
+                            .frame(width: 40, height: 40)
+                            .background(Circle().fill(Color(UIColor.tertiarySystemFill)))
+                    }
+                }
+                .frame(width: 44, height: 44)
             }
             .buttonStyle(PressableScaleButtonStyle(scale: 0.94, pressedBrightness: -0.02, pressedOpacity: 0.95))
             .accessibilityLabel(Text("Settings"))
@@ -993,7 +1009,7 @@ struct HomeView: View {
 
 
     private var tripBookSheet: some View {
-        let stats = TripBookStats.from(trips: store.trips)
+        let stats = TripBookStats.from(trips: store.visibleTrips)
         return NavigationStack {
             ScrollView {
                 VStack(spacing: 14) {
@@ -1021,7 +1037,7 @@ struct HomeView: View {
                     // 汇率异步到达时仅此 scope 内重算刷新，根首页/底栏不受牵连。
                     ExchangeRateScope { rate in
                         let spend = TripSpendStats.compute(
-                            trips: store.trips,
+                            trips: store.visibleTrips,
                             homeCode: rate.baseCurrencyCode,
                             convert: { rate.convertToHome($0, from: $1) }
                         )
@@ -2041,6 +2057,41 @@ struct HomeView: View {
         // Sheet drag in empty-state area handled by SheetViewController.sheetPan
     }
 
+    private func requestTripDeletion(_ trip: TripBundle) {
+        let id = trip.id
+        guard let owner = store.owningStore(for: id), owner.nativeEditing?.isInvalidated != true else {
+            deletionErrors.fail(busy: false)
+            return
+        }
+        let group = UUID()
+        let lease = owner.beginNativeEditing(groupID: group)
+        guard owner.nativeEditing == nil || lease != nil else {
+            deletionErrors.fail(busy: true)
+            return
+        }
+        clearTripDeletion()
+        tripToDelete = PendingTripDeletion(tripID: id, name: trip.name, owner: owner, groupID: group, lease: lease)
+        showDeleteConfirmation = true
+    }
+
+    private func confirmTripDeletion() {
+        guard let draft = tripToDelete else { return }
+        defer { clearTripDeletion() }
+        guard store.owningStore(for: draft.tripID) === draft.owner else {
+            deletionErrors.fail(busy: false)
+            return
+        }
+        let saved = draft.owner.performEditorSave(groupID: draft.groupID) {
+            draft.owner.removeTrip(withId: draft.tripID)
+        }
+        if !saved { deletionErrors.fail(busy: draft.owner.lastEditorSaveWasBusy) }
+    }
+
+    private func clearTripDeletion() {
+        tripToDelete?.lease?.close()
+        tripToDelete = nil
+    }
+
     @ViewBuilder
     private func tripRow(bundle: TripBundle, isPast: Bool) -> some View {
         Button {
@@ -2054,8 +2105,7 @@ struct HomeView: View {
         // SwiftUI 无法平滑收起该行而出现空白闪烁（详见复制流程：在行程内复制后回首页 + 扫光高亮副本）。
         .swipeActions(edge: .trailing, allowsFullSwipe: false) {
             Button(role: .none) {
-                tripToDelete = bundle
-                showDeleteConfirmation = true
+                requestTripDeletion(bundle)
             } label: {
                 Label("Delete", systemImage: "trash")
             }
@@ -2077,6 +2127,9 @@ struct TripCard: View {
     let bundle: TripBundle
     var isPast: Bool = false
     var shimmer: Bool = false
+    @State private var preparedPhoto: UIImage?
+    @State private var preparedName: String?
+    @State private var failedPhotoName: String?
 
     /// The trip's background entry (photo + chosen crop), if the user set one.
     private var featuredEntry: TripBackgroundEntry? {
@@ -2087,12 +2140,15 @@ struct TripCard: View {
 
     /// The full (uncropped) photo — framing is applied at display by PositionedImage.
     private var featuredPhoto: UIImage? {
-        guard let name = featuredEntry?.localFileName else { return nil }
-        return BackgroundImageStore.image(named: name)
+        guard let name = featuredEntry?.localFileName, BackgroundImageStore.canReadImage(named: name) else { return nil }
+        return preparedName == name ? preparedPhoto : BackgroundImageStore.cachedImage(named: name)
     }
 
     /// True when the card is rendered over a filled photo → text/chips switch to light.
-    private var onPhoto: Bool { featuredPhoto != nil }
+    private var onPhoto: Bool {
+        guard let name = featuredEntry?.localFileName else { return false }
+        return failedPhotoName != name && BackgroundImageStore.canReadImage(named: name)
+    }
 
     @State private var shimmerProgress: CGFloat = 0
     @State private var didPlayShimmer = false
@@ -2200,12 +2256,18 @@ struct TripCard: View {
     /// card, else the normal style surface. Photo gets a dark scrim so the text stays legible.
     @ViewBuilder
     private var cardBackground: some View {
-        if let photo = featuredPhoto {
+        if onPhoto {
             RoundedRectangle(cornerRadius: 18, style: .continuous)
                 .fill(Color(UIColor.secondarySystemBackground))
-                .overlay(
-                    PositionedImage(image: photo, crop: featuredEntry?.crop)
-                )
+                .overlay {
+                    if let photo = featuredPhoto {
+                        PositionedImage(image: photo, crop: featuredEntry?.crop)
+                    } else {
+                        // Preserve the final card geometry and white-label
+                        // contrast while cold bytes are prepared off the UI actor.
+                        Color.black.opacity(0.72)
+                    }
+                }
                 .overlay(
                     LinearGradient(
                         colors: [.black.opacity(0.14), .black.opacity(0.28), .black.opacity(0.66)],
@@ -2295,6 +2357,24 @@ struct TripCard: View {
     /// upcoming/planning trips with a coordinate). Past trips stay compact thumbnail rows.
     var body: some View {
         compactCard
+            .task(id: featuredEntry?.localFileName) {
+                guard let name = featuredEntry?.localFileName else {
+                    preparedPhoto = nil; preparedName = nil; failedPhotoName = nil
+                    return
+                }
+                if preparedName != name {
+                    preparedPhoto = nil; preparedName = nil; failedPhotoName = nil
+                }
+                let image = await BackgroundImageStore.preparedImage(named: name)
+                guard !Task.isCancelled else { return }
+                preparedName = name
+                preparedPhoto = image
+                failedPhotoName = image == nil ? name : nil
+            }
+            .onDisappear {
+                preparedPhoto = nil
+                preparedName = nil
+            }
     }
 
     private var cardInner: some View {
@@ -2550,4 +2630,5 @@ struct PresenterRecedeEffect: UIViewControllerRepresentable {
     HomeView()
         .environmentObject(TripStore())
         .environmentObject(NavigationRouter())
+        .environmentObject(CarryAccountStore(service: CarryAccountService()))
 }

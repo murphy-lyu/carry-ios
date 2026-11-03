@@ -18,7 +18,7 @@ enum AttachmentOwner {
 
 enum AttachmentStore {
     /// 单文件大小上限（25MB）：超限不入库，防备份包膨胀。spec 已定。
-    static let maxBytes = 25 * 1024 * 1024
+    nonisolated static let maxBytes = 25 * 1024 * 1024
 
     private static var directory: URL {
         let base = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
@@ -30,20 +30,39 @@ enum AttachmentStore {
     }
 
     static func fileURL(named name: String) -> URL {
-        directory.appendingPathComponent(name)
+        if CarryAccountFileAccess.isAccountReference(name) {
+            return CarryAccountFileAccess.shared.url(named: name) ?? directory.appendingPathComponent(".account-file-unavailable")
+        }
+        return directory.appendingPathComponent(name)
     }
 
     /// 写入字节，返回沙盒文件名（`<uuid>.<ext>`）。失败返回 nil。
     static func save(_ data: Data, ext: String) -> String? {
-        let safeExt = ext.isEmpty ? "dat" : ext
-        let name = UUID().uuidString + "." + safeExt
         do {
-            try data.write(to: fileURL(named: name), options: .atomic)
-            return name
+            return try writeImportedFile(data, ext: ext).lastPathComponent
         } catch {
             CarryLogger.shared.log(.attachmentSaveFailed, context: "write")
             return nil
         }
+    }
+
+    /// The import worker uses the same UUID namespace and atomic write without
+    /// crossing onto the UI actor. Errors are reported by its caller.
+    nonisolated static func writeImportedFile(_ data: Data, ext: String, directory: URL? = nil) throws -> URL {
+        let target: URL
+        if let directory { target = directory }
+        else {
+            target = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
+                .appendingPathComponent("Attachments", isDirectory: true)
+        }
+        try FileManager.default.createDirectory(at: target, withIntermediateDirectories: true)
+        let safeExt = ext.isEmpty ? "dat" : ext
+        guard !safeExt.contains("/"), !safeExt.contains("\\"), !safeExt.contains("\0") else {
+            throw CocoaError(.fileWriteInvalidFileName)
+        }
+        let url = target.appendingPathComponent(UUID().uuidString + "." + safeExt)
+        try data.write(to: url, options: .atomic)
+        return url
     }
 
     static func data(named name: String) -> Data? {
@@ -54,6 +73,8 @@ enum AttachmentStore {
     /// 还原备份时按原文件名写回字节。
     @discardableResult
     static func write(data: Data, named name: String) -> Bool {
+        guard !CarryMigrationSourceFileRetention.contains(named: name) else { return false }
+        guard !CarryAccountFileAccess.isAccountReference(name) else { return false }
         do {
             try data.write(to: fileURL(named: name), options: .atomic)
             return true
@@ -64,7 +85,8 @@ enum AttachmentStore {
     }
 
     static func delete(named name: String) {
-        guard !name.isEmpty else { return }
+        guard !CarryMigrationSourceFileRetention.contains(named: name) else { return }
+        guard !name.isEmpty, !CarryAccountFileAccess.isAccountReference(name) else { return }
         do {
             try FileManager.default.removeItem(at: fileURL(named: name))
         } catch {

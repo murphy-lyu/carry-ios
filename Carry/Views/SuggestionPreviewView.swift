@@ -15,6 +15,9 @@ struct SuggestionPreviewView: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(\.colorScheme) private var colorScheme
 
+    @Environment(\.nativeEditorOwner) private var inheritedNativeEditorOwner
+    @Environment(\.nativeEditorGroup) private var inheritedNativeEditorGroup
+    @StateObject private var nativeEditors = CarryNativeEditorPresentations()
     @State private var selectedNames: Set<String> = []
     @State private var sections: [(title: String, items: [String])] = []
     @State private var surpriseItems: [SurpriseItem] = []
@@ -63,6 +66,7 @@ struct SuggestionPreviewView: View {
                 confirmFooter
             }
         }
+        .nativeEditorErrors(nativeEditors)
         .onAppear { load() }
     }
 
@@ -319,7 +323,7 @@ struct SuggestionPreviewView: View {
             bundle.safeSections.flatMap { $0.items ?? [] }.map { $0.name.lowercased() }
         )
         let myItemLower = Set(
-            store.myItems.map { canonicalItemName($0.name).lowercased() }
+            store.visibleMyItems.map { canonicalItemName($0.name).lowercased() }
         )
         let excludedLower = existingLower.union(myItemLower)
 
@@ -371,28 +375,33 @@ struct SuggestionPreviewView: View {
     }
 
     private func confirm() {
-        guard let tripBundle = store.bundle(for: tripId) else { return }
-        var sectionIndex = 0
-        var newSections: [PackingSection] = []
-        for section in sections {
-            let chosen = section.items.filter { selectedNames.contains($0) }
-            guard !chosen.isEmpty else { continue }
-            let items = chosen.enumerated().map { idx, name in
-                PackingItem(name: name, quantity: defaultQuantity(for: name, tripDays: tripBundle.days), isAlert: false, sortOrder: idx)
-            }
-            newSections.append(PackingSection(title: section.title, items: items, sortOrder: sectionIndex))
-            sectionIndex += 1
+        guard let tripBundle = store.bundle(for: tripId) else {
+            nativeEditors.saveFailed = true
+            return
         }
-        store.addScenesAndMerge(tripId: tripId, keys: sceneKeys, sections: newSections)
-
-        for item in surpriseItemPool {
-            if selectedSurpriseNames.contains(item.name) {
-                store.addSurpriseItem(tripId: tripId, item: item)
-            } else if shownSurpriseNames.contains(item.name) {
-                store.dismissSurpriseItem(tripId: tripId, itemName: item.name)
+        guard nativeEditors.save(store: store, {
+            var sectionIndex = 0
+            var newSections: [PackingSection] = []
+            for section in sections {
+                let chosen = section.items.filter { selectedNames.contains($0) }
+                guard !chosen.isEmpty else { continue }
+                let items = chosen.enumerated().map { idx, name in
+                    PackingItem(name: name, quantity: defaultQuantity(for: name, tripDays: tripBundle.days), isAlert: false, sortOrder: idx)
+                }
+                newSections.append(PackingSection(title: section.title, items: items, sortOrder: sectionIndex))
+                sectionIndex += 1
             }
-        }
+            store.addScenesAndMerge(tripId: tripId, keys: sceneKeys, sections: newSections)
 
+            for item in surpriseItemPool {
+                if selectedSurpriseNames.contains(item.name) {
+                    store.addSurpriseItem(tripId: tripId, item: item)
+                } else if shownSurpriseNames.contains(item.name) {
+                    store.dismissSurpriseItem(tripId: tripId, itemName: item.name)
+                }
+            }
+
+        }) else { return }
         UINotificationFeedbackGenerator().notificationOccurred(.success)
         didFinish = true
         dismiss()

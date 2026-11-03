@@ -16,6 +16,7 @@ struct PhotoTripImportView: View {
     let tripId: UUID
     @EnvironmentObject var store: TripStore
     @Environment(\.dismiss) private var dismiss
+    @StateObject private var nativeEditors = CarryNativeEditorPresentations()
 
     private enum Phase: Equatable { case intro, processing, review, empty }
     @State private var phase: Phase = .intro
@@ -58,6 +59,7 @@ struct PhotoTripImportView: View {
                 process(items: items)
             }
             .onDisappear { processingTask?.cancel() }   // 下滑关闭也停掉后台解析
+            .nativeEditorErrors(nativeEditors)
         }
     }
 
@@ -143,16 +145,11 @@ struct PhotoTripImportView: View {
     }
 
     private func procThumb(_ data: Data?) -> some View {
-        Group {
-            if let data, let image = UIImage(data: data) {
-                Image(uiImage: image).resizable().scaledToFill()
-            } else {
-                Image(systemName: "photo").font(.system(size: 14)).foregroundStyle(.tertiary)
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
-                    .background(Color(.tertiarySystemFill))
-            }
+        PreparedThumbnail(data: data, size: 44) {
+            Image(systemName: "photo").font(.system(size: 14)).foregroundStyle(.tertiary)
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .background(Color(.tertiarySystemFill))
         }
-        .frame(width: 44, height: 44)
         .clipShape(RoundedRectangle(cornerRadius: 7, style: .continuous))
     }
 
@@ -193,24 +190,41 @@ struct PhotoTripImportView: View {
     }
 
     private func process(items: [PhotosPickerItem]) {
+        guard nativeEditors.save(store: store, {}) else { return }
         guard let bundle else { return }
         guard !items.isEmpty else { return }
         let depart = bundle.departureDate
         let ret = Calendar.current.date(byAdding: .day, value: bundle.days, to: bundle.departureDate) ?? bundle.departureDate
         let china = isChinaStorefront
+        let importingStore = store
         processedCount = 0
         totalCount = items.count
         processedThumbnails = []
         phase = .processing
         CarryLogger.shared.log(.photoImportStarted, context: "selected=\(items.count)")
         processingTask = Task {
-            let photos = await PhotoTripReconstructor.extract(items: items, isChinaStorefront: china) { done, thumb in
-                await MainActor.run {
-                    processedCount = done
-                    withAnimation(.spring(duration: 0.3, bounce: 0.2)) {
-                        processedThumbnails.append(thumb)
+            let importer = importingStore.assetImporter
+            let prepareOriginal: (@Sendable (UUID, Data) async throws -> PreparedAttachmentImport)?
+            if let importer {
+                prepareOriginal = { @Sendable id, data in try await importer.originalPhoto(data: data, entityID: id) }
+            } else { prepareOriginal = nil }
+            let photos: [PhotoDraft]
+            do {
+                photos = try await PhotoTripReconstructor.extract(items: items, isChinaStorefront: china, prepareOriginal: prepareOriginal) { done, thumb in
+                    await MainActor.run {
+                        processedCount = done
+                        withAnimation(.spring(duration: 0.3, bounce: 0.2)) {
+                            processedThumbnails.append(thumb)
+                        }
                     }
                 }
+            } catch is CancellationError { return }
+            catch {
+                guard !Task.isCancelled else { return }
+                phase = .intro
+                nativeEditors.fail(busy: false)
+                CarryLogger.shared.log(.photoImportFailed, context: "account_original_prepare")
+                return
             }
             if Task.isCancelled { return }   // 用户中途退出 → 不再落状态
             // 完成节拍：让「N/N 全部读取」这一帧真正显示出来再进预览。并发读图后，最后一张处理完会
@@ -260,8 +274,12 @@ struct PhotoTripImportView: View {
     }
 
     private func save() {
-        store.importItineraryFromPhotos(tripId: tripId, draft: draft)
-        dismiss()
+        var imported = false
+        let saved = nativeEditors.save(store: store) {
+            imported = store.importItineraryFromPhotos(tripId: tripId, draft: draft)
+        }
+        if saved, imported { dismiss() }
+        else if saved { nativeEditors.fail(busy: false) }
     }
 
     private func cancel() {

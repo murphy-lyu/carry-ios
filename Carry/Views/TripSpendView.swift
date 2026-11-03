@@ -56,6 +56,9 @@ struct TripSpendView: View {
 
     enum Dimension: String, CaseIterable, Identifiable { case category, time, currency; var id: String { rawValue } }
     @State private var dimension: Dimension = .category
+    @Environment(\.nativeEditorOwner) private var inheritedNativeEditorOwner
+    @Environment(\.nativeEditorGroup) private var inheritedNativeEditorGroup
+    @StateObject private var nativeEditors = CarryNativeEditorPresentations()
     @State private var editTarget: EditTarget?
 
     private struct EditTarget: Identifiable { let id: String; let entityId: UUID; let kind: SpendEntityKind }
@@ -93,7 +96,7 @@ struct TripSpendView: View {
                     Button("common.done") { dismiss() }
                 }
             }
-            .sheet(item: $editTarget) { target in
+            .nativeEditorSheet(item: $editTarget, presentations: nativeEditors, onDismiss: nativeEditors.dismissal(key: "editTarget")) { target in
                 switch target.kind {
                 case .stop:
                     if let stop = stop(for: target.entityId) { StopEditView(tripId: tripId, stop: stop) }
@@ -327,6 +330,7 @@ struct TripSpendView: View {
 
     private func itemRow(_ item: SpendItem, homeCode: String) -> some View {
         Button {
+            guard nativeEditors.begin(key: "editTarget", store: store, owner: inheritedNativeEditorOwner, group: inheritedNativeEditorGroup) else { return }
             editTarget = EditTarget(id: "\(item.kind)-\(item.id)", entityId: item.id, kind: item.kind)
         } label: {
             HStack(spacing: 12) {

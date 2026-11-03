@@ -5,10 +5,13 @@
 
 import Foundation
 import SwiftData
+import os
+import Darwin
+import CryptoKit
 
 // MARK: - Codable Mirror Types
 
-struct BackupPackingItem: Codable, Sendable {
+nonisolated struct BackupPackingItem: Codable, Equatable, Sendable {
     var id: UUID
     var name: String
     var quantity: Int
@@ -17,7 +20,7 @@ struct BackupPackingItem: Codable, Sendable {
     var sortOrder: Int
 }
 
-struct BackupPackingSection: Codable, Sendable {
+nonisolated struct BackupPackingSection: Codable, Equatable, Sendable {
     var id: UUID
     var title: String
     var sortOrder: Int
@@ -26,8 +29,9 @@ struct BackupPackingSection: Codable, Sendable {
 
 /// 照片回溯生成的停靠点照片（spec: photo-trip-reconstruction.md）。
 /// 缩略图字节随备份走（CLAUDE.md 备份约定：沙盒外/不在关系图直存的字节必须显式带上）；
-/// assetLocalIdentifier 也带上，换机后原图可能取不到、UI 退化为「仅缩略图」，可接受。
-struct BackupStopPhoto: Codable, Sendable {
+/// 旧备份只有设备 Photos 标识；新账户完整备份通过 photoOriginals 保留原图。
+/// 缺少原图的迁移必须停下来采集，不能把只有缩略图称为完整迁移。
+nonisolated struct BackupStopPhoto: Codable, Equatable, Sendable {
     var id: UUID
     var assetLocalIdentifier: String
     var thumbnailData: Data
@@ -39,7 +43,7 @@ struct BackupStopPhoto: Codable, Sendable {
 
 /// 附件镜像（spec: itinerary-attachments.md）。缩略图字节随记录走（小）；原文件字节存
 /// CarryBackup.attachmentFiles（按 fileName 索引，仅 export 内嵌）。分享/导出渲染器不读附件 → 天然不外泄。
-struct BackupAttachment: Codable, Sendable {
+nonisolated struct BackupAttachment: Codable, Equatable, Sendable {
     var id: UUID
     var kindRaw: String
     var displayName: String
@@ -51,7 +55,7 @@ struct BackupAttachment: Codable, Sendable {
     var addedAt: Date
 }
 
-struct BackupItineraryStop: Codable, Sendable {
+nonisolated struct BackupItineraryStop: Codable, Equatable, Sendable {
     var id: UUID
     var name: String
     var latitude: Double
@@ -77,7 +81,7 @@ struct BackupItineraryStop: Codable, Sendable {
     var attachments: [BackupAttachment]? = nil
 }
 
-struct BackupTransportSegment: Codable, Sendable {
+nonisolated struct BackupTransportSegment: Codable, Equatable, Sendable {
     var id: UUID
     var modeRaw: String
     var carrier: String
@@ -130,7 +134,7 @@ struct BackupTransportSegment: Codable, Sendable {
     var attachments: [BackupAttachment]? = nil
 }
 
-struct BackupLodgingStay: Codable, Sendable {
+nonisolated struct BackupLodgingStay: Codable, Equatable, Sendable {
     var id: UUID
     var name: String
     var address: String
@@ -156,7 +160,7 @@ struct BackupLodgingStay: Codable, Sendable {
     var attachments: [BackupAttachment]? = nil
 }
 
-struct BackupItineraryDay: Codable, Sendable {
+nonisolated struct BackupItineraryDay: Codable, Equatable, Sendable {
     var id: UUID
     var sortOrder: Int
     var title: String
@@ -166,7 +170,7 @@ struct BackupItineraryDay: Codable, Sendable {
     var segments: [BackupTransportSegment]?
 }
 
-struct BackupTrip: Codable, Sendable {
+nonisolated struct BackupTrip: Codable, Equatable, Sendable {
     var id: UUID
     var name: String
     var destinationCity: String
@@ -198,7 +202,7 @@ struct BackupTrip: Codable, Sendable {
     var lodgingStays: [BackupLodgingStay]?
 }
 
-struct BackupMyItem: Codable, Sendable {
+nonisolated struct BackupMyItem: Codable, Equatable, Sendable {
     var id: UUID
     var name: String
     var collectionName: String
@@ -211,7 +215,15 @@ struct BackupMyItem: Codable, Sendable {
     var updatedAt: Date
 }
 
-struct CarryBackup: Codable, Sendable {
+nonisolated struct CarryBackupAssetManifest: Codable, Equatable, Sendable {
+    var entityID: UUID
+    var assetID: UUID
+    var slot: String
+    var sha256: String
+    var byteCount: Int
+}
+
+nonisolated struct CarryBackup: Codable, Equatable, Sendable {
     var version: Int
     var createdAt: Date
     var trips: [BackupTrip]
@@ -224,30 +236,167 @@ struct CarryBackup: Codable, Sendable {
     /// 行程附件原文件字节，按 sandbox 文件名索引（仅 export 内嵌）。还原时写回沙盒。
     /// 可选：旧备份无此字段。spec: itinerary-attachments.md。
     var attachmentFiles: [String: Data]?
+    /// Optional full originals keyed by canonical photo UUID, not device Photos IDs.
+    var photoOriginals: [String: Data]? = nil
+    var assetManifest: [CarryBackupAssetManifest]? = nil
 }
 
 // MARK: - DataBackupManager
 
+nonisolated struct CarryBackupInfo: Sendable {
+    let date: Date
+    let tripCount: Int
+}
+
+/// One serial worker owns automatic-backup encoding and disk writes. New work
+/// replaces queued snapshots; an older detached write cannot win the race.
+nonisolated final class CarryBackupWriter: Sendable {
+    private struct Job: Sendable { let snapshot: CarryBackup; let url: URL; let generation: UUID }
+    private struct MetadataTrip: Decodable { let id: UUID }
+    private struct MetadataHeader: Decodable { let createdAt: Date; let trips: [MetadataTrip] }
+    private struct State: Sendable {
+        var pending: Job?
+        var running = false
+        var generation = UUID()
+    }
+    private let state = OSAllocatedUnfairLock(initialState: State())
+    private let queue = DispatchQueue(label: "app.nevestudio.carry.backup", qos: .utility)
+    private let encode: @Sendable (CarryBackup) throws -> Data
+    private let report: @Sendable (Error) -> Void
+    private static let stagingPrefix = ".carry-backup-stage-"
+
+    private func pruneStaging(in directory: URL) throws {
+        for url in try FileManager.default.contentsOfDirectory(at: directory, includingPropertiesForKeys: nil)
+        where url.lastPathComponent.hasPrefix(Self.stagingPrefix) {
+            try FileManager.default.removeItem(at: url)
+        }
+    }
+
+    init(encode: @escaping @Sendable (CarryBackup) throws -> Data = { snapshot in
+        let encoder = CarryBackupDates.encoder()
+        encoder.outputFormatting = .prettyPrinted
+        return try encoder.encode(snapshot)
+    }, report: @escaping @Sendable (Error) -> Void = { error in
+        let message = error.localizedDescription
+        Task { @MainActor in
+            CarryLogger.shared.log(.backupWriteFailed, context: "reason=write_failed error=\(message)")
+        }
+    }) { self.encode = encode; self.report = report }
+
+    func submit(_ snapshot: CarryBackup, to url: URL) {
+        let start = state.withLock { value in
+            value.pending = Job(snapshot: snapshot, url: url, generation: value.generation)
+            if value.running { return false }
+            value.running = true
+            return true
+        }
+        if start { queue.async { self.drain() } }
+    }
+
+    private func drain() {
+        while let job = state.withLock({ value -> Job? in
+            let job = value.pending
+            value.pending = nil
+            if job == nil { value.running = false }
+            return job
+        }) {
+            let directory = job.url.deletingLastPathComponent()
+            let stagingDirectory = directory.appendingPathComponent(Self.stagingPrefix + UUID().uuidString,
+                                                                     isDirectory: true)
+            let staging = stagingDirectory.appendingPathComponent("snapshot.json")
+            defer {
+                do {
+                    if FileManager.default.fileExists(atPath: stagingDirectory.path) {
+                        try FileManager.default.removeItem(at: stagingDirectory)
+                    }
+                } catch { report(error) }
+            }
+            do {
+                let active = try state.withLock { value in
+                    guard value.generation == job.generation else { return false }
+                    try pruneStaging(in: directory)
+                    try FileManager.default.createDirectory(at: stagingDirectory, withIntermediateDirectories: false)
+                    return true
+                }
+                if !active { continue }
+                // Encoding and large file IO never hold the gate that clear()
+                // uses. Only the final, same-directory atomic rename is gated.
+                try encode(job.snapshot).write(to: staging, options: .atomic)
+                try state.withLock { value in
+                    guard value.generation == job.generation else { return }
+                    try staging.withUnsafeFileSystemRepresentation { source in
+                        try job.url.withUnsafeFileSystemRepresentation { destination in
+                            guard let source, let destination else { throw CocoaError(.fileWriteInvalidFileName) }
+                            if Darwin.rename(source, destination) != 0 {
+                                throw POSIXError(POSIXErrorCode(rawValue: errno) ?? .EIO)
+                            }
+                        }
+                    }
+                }
+            }
+            catch {
+                // A cleared generation deliberately removes its staging parent;
+                // a late file write then fails without recreating private bytes.
+                if state.withLock({ $0.generation == job.generation }) { report(error) }
+            }
+        }
+    }
+
+    func flush() async {
+        await withCheckedContinuation { continuation in queue.async { continuation.resume() } }
+    }
+
+    func info(at url: URL) async throws -> CarryBackupInfo? {
+        try await withCheckedThrowingContinuation { continuation in
+            queue.async {
+                do {
+                    guard FileManager.default.fileExists(atPath: url.path) else {
+                        continuation.resume(returning: nil)
+                        return
+                    }
+                    let decoder = CarryBackupDates.decoder()
+                    let data = try Data(contentsOf: url, options: .mappedIfSafe)
+                    let header = try decoder.decode(MetadataHeader.self, from: data)
+                    continuation.resume(returning: CarryBackupInfo(date: header.createdAt, tripCount: header.trips.count))
+                } catch { continuation.resume(throwing: error) }
+            }
+        }
+    }
+
+    /// Invalidate pending/in-flight work before deleting. The short commit gate
+    /// prevents late rename after erasure without waiting for encoding or IO.
+    func clear(_ url: URL) throws {
+        try state.withLock { value in
+            value.generation = UUID()
+            value.pending = nil
+            if FileManager.default.fileExists(atPath: url.path) {
+                try FileManager.default.removeItem(at: url)
+            }
+            try pruneStaging(in: url.deletingLastPathComponent())
+        }
+    }
+}
+
 final class DataBackupManager {
     static let shared = DataBackupManager()
-    private init() {}
+    private init() { explicitBackupURL = nil }
+    init(backupURL: URL) { explicitBackupURL = backupURL }
+
+    private let explicitBackupURL: URL?
+    private let writer = CarryBackupWriter()
+    private var pendingBackup: Task<Void, Never>?
+    private var pendingSource: (@MainActor () -> (trips: [TripBundle], myItems: [MyItem])?)?
+    private var backupDeadline: ContinuousClock.Instant?
 
     private let fileName = "carry_backup.json"
 
-    private let encoder: JSONEncoder = {
-        let e = JSONEncoder()
-        e.dateEncodingStrategy = .iso8601
-        e.outputFormatting = .prettyPrinted
-        return e
-    }()
-
     private let decoder: JSONDecoder = {
-        let d = JSONDecoder()
-        d.dateDecodingStrategy = .iso8601
+        let d = CarryBackupDates.decoder()
         return d
     }()
 
     private var backupURL: URL? {
+        if let explicitBackupURL { return explicitBackupURL }
         guard let dir = FileManager.default.urls(
             for: .applicationSupportDirectory,
             in: .userDomainMask
@@ -324,7 +473,13 @@ final class DataBackupManager {
         }
     }
 
-    private func makeBackup(trips: [TripBundle], myItems: [MyItem], embedImages: Bool) -> CarryBackup {
+    /// Value capture only. File collection and encoding belong to the migration
+    /// worker so large backups never perform disk I/O on the UI actor.
+    func migrationSnapshot(trips: [TripBundle], myItems: [MyItem]) -> CarryBackup {
+        makeBackup(trips: trips, myItems: myItems)
+    }
+
+    private func makeBackup(trips: [TripBundle], myItems: [MyItem]) -> CarryBackup {
         let backupTrips: [BackupTrip] = trips.map { trip in
             let sections: [BackupPackingSection] = (trip.sections ?? []).map { section in
                 let items: [BackupPackingItem] = (section.items ?? []).map {
@@ -430,76 +585,136 @@ final class DataBackupManager {
             )
         }
 
-        var backgroundImages: [String: Data]? = nil
-        var attachmentFiles: [String: Data]? = nil
-        if embedImages {
-            var dict: [String: Data] = [:]
-            for name in Set(trips.flatMap { $0.backgrounds.compactMap(\.localFileName) }) {
-                if let bytes = BackgroundImageStore.data(named: name) { dict[name] = bytes }
-            }
-            backgroundImages = dict.isEmpty ? nil : dict
-
-            // 附件原文件字节（仅 export 内嵌；auto-backup 不带，沙盒文件仍在）。
-            var attDict: [String: Data] = [:]
-            let attNames = trips.flatMap { trip -> [String] in
-                var names: [String] = []
-                for day in trip.safeItineraryDays {
-                    for stop in day.sortedStops { names += (stop.attachments ?? []).map(\.fileName) }
-                    for seg in day.sortedSegments { names += (seg.attachments ?? []).map(\.fileName) }
-                }
-                for stay in trip.safeLodgingStays { names += (stay.attachments ?? []).map(\.fileName) }
-                return names
-            }
-            for name in Set(attNames) where !name.isEmpty {
-                if let bytes = AttachmentStore.data(named: name) { attDict[name] = bytes }
-            }
-            attachmentFiles = attDict.isEmpty ? nil : attDict
-        }
 
         return CarryBackup(
             version: Self.currentBackupVersion,
             createdAt: Date(),
             trips: backupTrips,
             myItems: backupMyItems,
-            defaultReminderOffsets: ReminderPreferences.enabledOffsets.sorted(),
-            backgroundImages: backgroundImages,
-            attachmentFiles: attachmentFiles
+            defaultReminderOffsets: ReminderPreferences.enabledOffsets.sorted()
         )
     }
 
-    /// Auto-backup after every save. Hot path → stays cheap: builds a TEXT-ONLY snapshot (no
-    /// embedded image bytes — the images live on as sandbox files and are reconciled separately),
-    /// then encodes + writes it off the main thread. The portable, self-contained file with image
-    /// bytes is produced on demand by `makeExportFile` only when the user actually exports.
-    func backup(trips: [TripBundle], myItems: [MyItem]) {
-        guard let url = backupURL else { return }
-        // Text-only snapshot → encoding is sub-millisecond, so it stays on the main actor; only
-        // the disk write (IO) is offloaded. (Image bytes are no longer embedded here, which is
-        // exactly what used to make per-save encoding expensive.)
-        let snapshot = makeBackup(trips: trips, myItems: myItems, embedImages: false)
-        guard let data = Self.encode(snapshot) else {
-            CarryLogger.shared.log(.backupWriteFailed, context: "reason=encode_failed")
-            return
+    /// Local-only optimistic concurrency fingerprint. Includes private metadata so a delete
+    /// based on an old public snapshot cannot miss a newly attached document. Only the digest
+    /// leaves the device; never expose this mirror as an MCP query projection.
+    func automationRevision(for trip: TripBundle) throws -> String {
+        guard var mirror = makeBackup(trips: [trip], myItems: []).trips.first else {
+            throw AutomationError.notFound
         }
-        Task.detached(priority: .utility) {
-            do {
-                try data.write(to: url, options: .atomic)
-            } catch {
-                let errorDesc = error.localizedDescription
-                await MainActor.run {
-                    CarryLogger.shared.log(.backupWriteFailed,
-                        context: "reason=write_failed error=\(errorDesc)")
-                }
-            }
+        func attachments(_ values: [BackupAttachment]?) -> [BackupAttachment]? {
+            values?.map { value in
+                var result = value; result.thumbnailData = Data(); return result
+            }.sorted { $0.id.uuidString < $1.id.uuidString }
+        }
+        mirror.sections = mirror.sections.map { section in
+            var result = section
+            result.items.sort { $0.sortOrder != $1.sortOrder ? $0.sortOrder < $1.sortOrder : $0.id.uuidString < $1.id.uuidString }
+            return result
+        }.sorted { $0.sortOrder != $1.sortOrder ? $0.sortOrder < $1.sortOrder : $0.id.uuidString < $1.id.uuidString }
+        mirror.itineraryDays = mirror.itineraryDays?.map { day in
+            var result = day
+            result.stops = day.stops.map { stop in
+                var item = stop
+                item.photos = stop.photos?.map { photo in
+                    var value = photo; value.thumbnailData = Data(); return value
+                }.sorted { $0.id.uuidString < $1.id.uuidString }
+                item.attachments = attachments(stop.attachments)
+                return item
+            }.sorted { $0.sortOrder != $1.sortOrder ? $0.sortOrder < $1.sortOrder : $0.id.uuidString < $1.id.uuidString }
+            result.segments = day.segments?.map { segment in
+                var item = segment; item.attachments = attachments(segment.attachments); return item
+            }.sorted { $0.id.uuidString < $1.id.uuidString }
+            return result
+        }.sorted { $0.sortOrder < $1.sortOrder }
+        mirror.lodgingStays = mirror.lodgingStays?.map { stay in
+            var item = stay; item.attachments = attachments(stay.attachments); return item
+        }.sorted { $0.id.uuidString < $1.id.uuidString }
+        return try AutomationCodec.privateDigest(mirror)
+    }
+
+    /// SwiftData saves stay immediate. Coalesce automatic-backup work for 250 ms
+    /// (at most one second during continuous edits), then read the current graph
+    /// on its actor. Thumbnail bytes remain in the backup; JSON/base64 and disk
+    /// work run on the serial utility worker, never in the tap handler.
+    func scheduleBackup(source: @escaping @MainActor () -> (trips: [TripBundle], myItems: [MyItem])?) {
+        pendingSource = source
+        pendingBackup?.cancel()
+        let clock = ContinuousClock()
+        let deadline = backupDeadline ?? clock.now.advanced(by: .seconds(1))
+        backupDeadline = deadline
+        let due = min(deadline, clock.now.advanced(by: .milliseconds(250)))
+        pendingBackup = Task { @MainActor [weak self] in
+            do { try await Task.sleep(until: due, clock: .continuous) }
+            catch { return }
+            guard !Task.isCancelled else { return }
+            self?.performPendingBackup()
         }
     }
 
-    /// Builds a self-contained export file (WITH embedded image bytes) to a temp URL for sharing.
-    /// User-initiated and infrequent, so the one-time image read + encode runs inline. Returns the
-    /// temp file URL, or nil on failure.
+    private func performPendingBackup() {
+        let source = pendingSource
+        pendingSource = nil
+        pendingBackup = nil
+        backupDeadline = nil
+        guard let models = source?(), let url = backupURL else { return }
+        writer.submit(makeBackup(trips: models.trips, myItems: models.myItems), to: url)
+    }
+
+    func flushPendingBackup() async {
+        pendingBackup?.cancel()
+        performPendingBackup()
+        await writer.flush()
+    }
+
+    /// Export is bounded and complete. Unavailable account files fail explicitly
+    /// rather than producing a nominal backup that cannot restore its contents.
+    private func exportSnapshot(trips: [TripBundle], myItems: [MyItem]) throws -> CarryBackup {
+        var snapshot = makeBackup(trips: trips, myItems: myItems)
+        var remaining = CarryMigrationBackupPreparation.maximumEmbeddedBytes
+        func read(_ url: URL) throws -> Data {
+            let info = try url.resourceValues(forKeys: [.isRegularFileKey, .isSymbolicLinkKey, .fileSizeKey])
+            guard info.isRegularFile == true, info.isSymbolicLink != true, let count = info.fileSize,
+                  count > 0, count <= CarryAccountAssetCache.maximumBytes, count <= remaining else { throw BackupError.missingAsset }
+            let bytes = try Data(contentsOf: url, options: .mappedIfSafe)
+            guard bytes.count == count else { throw BackupError.missingAsset }
+            remaining -= count
+            return bytes
+        }
+        var backgrounds: [String: Data] = [:], attachments: [String: Data] = [:], originals: [String: Data] = [:]
+        for trip in trips {
+            for name in trip.backgrounds.compactMap(\.localFileName) where backgrounds[name] == nil {
+                backgrounds[name] = try read(BackgroundImageStore.fileURL(named: name))
+            }
+            var references = trip.safeLodgingStays.flatMap { $0.attachments ?? [] }
+            for day in trip.safeItineraryDays {
+                references += day.sortedStops.flatMap { $0.attachments ?? [] }
+                references += day.sortedSegments.flatMap { $0.attachments ?? [] }
+                for photo in day.sortedStops.flatMap(\.sortedPhotos)
+                    where photo.assetLocalIdentifier.hasPrefix("carryphoto1_") || CarryAccountFileAccess.isAccountReference(photo.assetLocalIdentifier) {
+                    originals[photo.id.uuidString.lowercased()] = try read(AttachmentStore.fileURL(named: photo.assetLocalIdentifier))
+                }
+            }
+            for attachment in references where !attachment.fileName.isEmpty && attachments[attachment.fileName] == nil {
+                attachments[attachment.fileName] = try read(AttachmentStore.fileURL(named: attachment.fileName))
+            }
+        }
+        snapshot.backgroundImages = backgrounds.isEmpty ? nil : backgrounds
+        snapshot.attachmentFiles = attachments.isEmpty ? nil : attachments
+        snapshot.photoOriginals = originals.isEmpty ? nil : originals
+        _ = try CarryBackupFileStage.validateEmbeddedBudget(snapshot)
+        return snapshot
+    }
+
+    /// Builds a complete, bounded self-contained file for explicit sharing.
     func makeExportFile(trips: [TripBundle], myItems: [MyItem]) -> URL? {
-        let snapshot = makeBackup(trips: trips, myItems: myItems, embedImages: true)
-        guard let data = Self.encode(snapshot) else {
+        let snapshot: CarryBackup
+        do { snapshot = try exportSnapshot(trips: trips, myItems: myItems) }
+        catch {
+            CarryLogger.shared.log(.backupWriteFailed, context: "reason=missing_or_oversized_asset export=true")
+            return nil
+        }
+        guard let data = Self.encode(snapshot), data.count <= 256 * 1024 * 1024 else {
             CarryLogger.shared.log(.backupWriteFailed, context: "reason=encode_failed export=true")
             return nil
         }
@@ -522,8 +737,7 @@ final class DataBackupManager {
     }
 
     private static func encode(_ backup: CarryBackup) -> Data? {
-        let e = JSONEncoder()
-        e.dateEncodingStrategy = .iso8601
+        let e = CarryBackupDates.encoder()
         e.outputFormatting = .prettyPrinted
         return try? e.encode(backup)
     }
@@ -535,23 +749,26 @@ final class DataBackupManager {
 
     /// 删除本地自动备份文件（用于「抹掉所有数据」——否则抹除后 restore 又把数据带回来，
     /// 与「被遗忘」矛盾。spec: erase-all-data.md）。文件不存在视为成功。
-    func clearBackup() {
-        guard let url = backupURL, FileManager.default.fileExists(atPath: url.path) else { return }
-        try? FileManager.default.removeItem(at: url)
+    func clearBackup() throws {
+        pendingBackup?.cancel()
+        pendingBackup = nil
+        pendingSource = nil
+        backupDeadline = nil
+        guard let url = backupURL else { return }
+        do { try writer.clear(url) }
+        catch {
+            CarryLogger.shared.log(.backupWriteFailed, context: "reason=erase_failed")
+            throw error
+        }
     }
 
-    func latestBackupDate() -> Date? {
-        guard let url = backupURL,
-              let data = try? Data(contentsOf: url),
-              let backup = try? decoder.decode(CarryBackup.self, from: data) else { return nil }
-        return backup.createdAt
-    }
-
-    func latestBackupTripCount() -> Int? {
-        guard let url = backupURL,
-              let data = try? Data(contentsOf: url),
-              let backup = try? decoder.decode(CarryBackup.self, from: data) else { return nil }
-        return backup.trips.count
+    func latestBackupInfo() async -> CarryBackupInfo? {
+        guard let url = backupURL else { return nil }
+        do { return try await writer.info(at: url) }
+        catch {
+            CarryLogger.shared.log(.loadFailed, context: "reason=backup_metadata")
+            return nil
+        }
     }
 
     // MARK: - Restore
@@ -564,11 +781,14 @@ final class DataBackupManager {
     /// 不递增版本号。版本号的唯一作用是发布后拦截"用更新格式的备份在旧 App 还原";
     /// 发布后再因破坏性格式变更才升到 v2、v3…。当前 v1 字段即 BackupTrip/CarryBackup
     /// 的全部字段（含可选的 additionalDestinations / 通知偏好 / 背景图条目+裁剪 / 图片字节）。
-    static let currentBackupVersion = 1
+    nonisolated static let currentBackupVersion = 1
 
-    enum BackupError: LocalizedError {
+    nonisolated enum BackupError: LocalizedError {
         case fileNotFound
         case decodingFailed
+        case missingAsset
+        case tooLarge
+        case targetChanged
         case unsupportedVersion(Int)
 
         var errorDescription: String? {
@@ -577,6 +797,12 @@ final class DataBackupManager {
                 return NSLocalizedString("settings.data.restore.error.not_found", comment: "")
             case .decodingFailed:
                 return NSLocalizedString("settings.data.restore.error.corrupt", comment: "")
+            case .tooLarge:
+                return NSLocalizedString("settings.data.backup.too_large", comment: "")
+            case .targetChanged:
+                return NSLocalizedString("settings.data.backup.changed", comment: "")
+            case .missingAsset:
+                return NSLocalizedString("settings.data.restore.error.asset", comment: "")
             case .unsupportedVersion(let v):
                 return String(format: NSLocalizedString("settings.data.restore.error.version", comment: ""), v)
             }
@@ -587,13 +813,13 @@ final class DataBackupManager {
 
     /// Restore from the automatic local backup written after every save.
     @discardableResult
-    func restore(into context: ModelContext) throws -> (trips: Int, myItems: Int) {
+    func restore(into context: ModelContext, save: CarryPersistence.Save = { try $0.save() }) throws -> (trips: Int, myItems: Int) {
         guard let url = backupURL,
               FileManager.default.fileExists(atPath: url.path) else {
             throw BackupError.fileNotFound
         }
         let data = try Data(contentsOf: url)
-        return try restoreFromData(data, into: context)
+        return try restoreFromData(data, into: context, allowLocalFileReferences: true, save: save)
     }
 
     // MARK: - Restore (imported file)
@@ -601,7 +827,7 @@ final class DataBackupManager {
     /// Restore from raw JSON data — used when the caller has already read the
     /// file within a security scope (e.g., from the file importer picker).
     @discardableResult
-    func restoreFromData(_ data: Data, into context: ModelContext) throws -> (trips: Int, myItems: Int) {
+    func restoreFromData(_ data: Data, into context: ModelContext, allowLocalFileReferences: Bool = false, save: CarryPersistence.Save = { try $0.save() }) throws -> (trips: Int, myItems: Int) {
         // 关键顺序：必须先用最小 stub 只读 version，再做完整 decode。
         // 否则新版备份含旧版未识别的非可选字段时，完整 decode 会先抛 decodingFailed
         //（"文件损坏"），用户永远看不到 unsupportedVersion 的"请更新 App"提示。
@@ -615,7 +841,7 @@ final class DataBackupManager {
             CarryLogger.shared.log(.backupCorrupted, context: "reason=decode_failed bytes=\(data.count)")
             throw BackupError.decodingFailed
         }
-        let result = try performRestore(from: backup, into: context)
+        let result = try performRestore(from: backup, into: context, allowLocalFileReferences: allowLocalFileReferences, save: save)
         CarryLogger.shared.log(.backupRestored, context: "trips=\(result.trips) items=\(result.myItems)")
         return result
     }
@@ -625,7 +851,7 @@ final class DataBackupManager {
     /// 合并导入：将备份中在本地不存在的行程 / 物品模板插入数据库，
     /// 已存在的（UUID 匹配）跳过，不覆盖本地版本。
     @discardableResult
-    func mergeFromData(_ data: Data, into context: ModelContext) throws -> (trips: Int, myItems: Int) {
+    func mergeFromData(_ data: Data, into context: ModelContext, save: CarryPersistence.Save = { try $0.save() }) throws -> (trips: Int, myItems: Int) {
         struct VersionStub: Decodable { let version: Int }
         if let stub = try? decoder.decode(VersionStub.self, from: data),
            stub.version > Self.currentBackupVersion {
@@ -636,7 +862,7 @@ final class DataBackupManager {
             CarryLogger.shared.log(.backupCorrupted, context: "reason=decode_failed merge bytes=\(data.count)")
             throw BackupError.decodingFailed
         }
-        let result = try performMerge(from: backup, into: context)
+        let result = try performMerge(from: backup, into: context, save: save)
         CarryLogger.shared.log(.backupMerged, context: "trips=\(result.trips) items=\(result.myItems)")
         return result
     }
@@ -645,27 +871,8 @@ final class DataBackupManager {
     /// 与 `mergeFromData` 同一段 `performMerge` 逻辑，但**跳过 JSON 编/解码往返**——避免把
     /// 附件图片字节 base64 编一遍又解一遍的浪费（值已是合法内存对象，无需版本校验）。
     @discardableResult
-    func merge(_ backup: CarryBackup, into context: ModelContext) throws -> (trips: Int, myItems: Int) {
-        try performMerge(from: backup, into: context)
-    }
-
-    /// Rewrite the backed-up background image bytes to the sandbox (filenames are UUIDs, so
-    /// overwriting is safe/idempotent). Trip `backgroundsData` then references them.
-    private func restoreBackgroundImages(from backup: CarryBackup) {
-        for (name, data) in backup.backgroundImages ?? [:] {
-            if !BackgroundImageStore.write(data: data, named: name) {
-                CarryLogger.shared.log(.backupRestoreFailed, context: "reason=bg_image_write_failed name=\(name)")
-            }
-        }
-    }
-
-    /// 写回附件原文件字节（仅 export 备份带；auto-backup 无 attachmentFiles，沙盒文件仍在）。
-    private func restoreAttachmentFiles(from backup: CarryBackup) {
-        for (name, data) in backup.attachmentFiles ?? [:] {
-            if !AttachmentStore.write(data: data, named: name) {
-                CarryLogger.shared.log(.backupRestoreFailed, context: "reason=attachment_write_failed name=\(name)")
-            }
-        }
+    func merge(_ backup: CarryBackup, into context: ModelContext, save: CarryPersistence.Save = { try $0.save() }) throws -> (trips: Int, myItems: Int) {
+        try performMerge(from: backup, into: context, save: save)
     }
 
     /// 重建附件 model（owner 关系由调用方按实体设置）。
@@ -790,13 +997,18 @@ final class DataBackupManager {
         }
     }
 
-    private func performMerge(from backup: CarryBackup, into context: ModelContext) throws -> (trips: Int, myItems: Int) {
-        restoreBackgroundImages(from: backup)
-        restoreAttachmentFiles(from: backup)
-
+    private func performMerge(from source: CarryBackup, into context: ModelContext, preparedStage: CarryBackupFileStage? = nil, save: CarryPersistence.Save) throws -> (trips: Int, myItems: Int) {
         // 取出现有 UUID 集合，用于去重判断
         let existingTripIDs = Set(try context.fetch(FetchDescriptor<TripBundle>()).map(\.id))
         let existingMyItemIDs = Set(try context.fetch(FetchDescriptor<MyItem>()).map(\.id))
+        var selected = source
+        selected.trips = source.trips.filter { !existingTripIDs.contains($0.id) }
+        selected.assetManifest = CarryBackupFileStage.selectedManifests(selected)
+        let fileStage: CarryBackupFileStage
+        if let preparedStage { fileStage = preparedStage } else { fileStage = try CarryBackupFileStage(selected) }
+        defer { if preparedStage == nil { fileStage.discard() } }
+        try fileStage.publish()
+        let backup = fileStage.backup
 
         var newTripCount = 0
 
@@ -867,7 +1079,8 @@ final class DataBackupManager {
             context.insert(item)
         }
 
-        try context.save()
+        try CarryPersistence.commit(context, using: save)
+        fileStage.commit()
         return (newTripCount, backup.myItems.filter { !existingMyItemIDs.contains($0.id) }.count)
     }
 
@@ -957,16 +1170,17 @@ final class DataBackupManager {
     /// 导入共享行程：不存在 → 新建；已存在（同 UUID）→ **替换其行程规划**（天/地点 + 行程元信息），
     /// **不动收件方该行程已有的打包清单 / 背景图**。返回行程 id（供导入后跳转）。
     @discardableResult
-    func importSharedTrip(from data: Data, into context: ModelContext) throws -> UUID {
+    func importSharedTrip(from data: Data, into context: ModelContext, save: CarryPersistence.Save = { try $0.save() }) throws -> UUID {
         struct VersionStub: Decodable { let version: Int }
         if let stub = try? decoder.decode(VersionStub.self, from: data),
            stub.version > Self.currentBackupVersion {
             throw BackupError.unsupportedVersion(stub.version)
         }
         guard let backup = try? decoder.decode(CarryBackup.self, from: data),
-              let bt = backup.trips.first else {
+              let incoming = backup.trips.first else {
             throw BackupError.decodingFailed
         }
+        let bt = CarryBackupFileStage.itineraryOnly(incoming)
         let allTrips = try context.fetch(FetchDescriptor<TripBundle>())
 
         if let existing = allTrips.first(where: { $0.id == bt.id }) {
@@ -1009,18 +1223,23 @@ final class DataBackupManager {
             restoreItineraryDays(bt.itineraryDays, for: trip, into: context)
             restoreLodgingStays(bt.lodgingStays, for: trip, into: context)
         }
-        try context.save()
+        try CarryPersistence.commit(context, using: save)
         return bt.id
     }
 
     // MARK: - Core restore
 
-    private func performRestore(from backup: CarryBackup, into context: ModelContext) throws -> (trips: Int, myItems: Int) {
+    private func performRestore(from source: CarryBackup, into context: ModelContext, allowLocalFileReferences: Bool, preparedStage: CarryBackupFileStage? = nil, save: CarryPersistence.Save) throws -> (trips: Int, myItems: Int) {
+        let fileStage: CarryBackupFileStage
+        if let preparedStage { fileStage = preparedStage } else { fileStage = try CarryBackupFileStage(source, allowLocalFileReferences: allowLocalFileReferences) }
+        defer { if preparedStage == nil { fileStage.discard() } }
+        try fileStage.publish()
+        let backup = fileStage.backup
         // 原子化保护：在执行破坏性 delete 前先把当前 backup.json 复制成
         // .pre-restore-{epoch}.json，任一步失败时用户/作者可手动恢复。
         // ⚠️ 用 epoch 时间戳后缀而非固定名 — 用户连续 restore 失败多次时，
         // 每次保留独立安全副本，避免被下一次覆盖丢失原始数据。
-        if let backupURL = backupURL,
+        if preparedStage == nil, let backupURL = backupURL,
            FileManager.default.fileExists(atPath: backupURL.path) {
             let epoch = Int(Date().timeIntervalSince1970)
             let safety = backupURL
@@ -1037,15 +1256,6 @@ final class DataBackupManager {
         // 新建的对象一起，在最终唯一一次 `context.save()` 里同生共死——失败即整体不落盘，旧数据完好无损。
         for t in try context.fetch(FetchDescriptor<TripBundle>()) { context.delete(t) }
         for m in try context.fetch(FetchDescriptor<MyItem>()) { context.delete(m) }
-
-        // Rewrite background image files to the sandbox before relinking trips.
-        restoreBackgroundImages(from: backup)
-        restoreAttachmentFiles(from: backup)
-
-        // 还原默认提醒偏好（旧备份无此字段则保持现状）
-        if let offsets = backup.defaultReminderOffsets {
-            ReminderPreferences.enabledOffsets = Set(offsets)
-        }
 
         // Restore trips
         for bt in backup.trips {
@@ -1118,10 +1328,15 @@ final class DataBackupManager {
             context.insert(item)
         }
 
-        try context.save()
+        try CarryPersistence.commit(context, using: save)
+        fileStage.commit()
+        // Apply global preferences only after the business transaction succeeds.
+        if let offsets = backup.defaultReminderOffsets {
+            ReminderPreferences.enabledOffsets = Set(offsets)
+        }
         // 还原成功：安全副本已完成使命，只留最近几份防线（+ 每次还原都会新建一份，
         // 不清理会无限堆积孤儿文件）。失败路径（本函数抛出）刻意不清——那正是需要它的时候。
-        pruneOldSafetyCopies(keepLatest: 3)
+        if preparedStage == nil { pruneOldSafetyCopies(keepLatest: 3) }
         return (backup.trips.count, backup.myItems.count)
     }
 
@@ -1137,3 +1352,245 @@ final class DataBackupManager {
         for url in stale { try? FileManager.default.removeItem(at: url) }
     }
 }
+
+
+// MARK: - User initiated backup work
+extension DataBackupManager {
+    /// Only the value snapshot and resolved immutable URLs leave the UI actor.
+    /// No SwiftData model, context or file-access registry crosses this boundary.
+    func makeExportFileAsync(trips: [TripBundle], myItems: [MyItem]) async throws -> URL {
+        let snapshot = makeBackup(trips: trips, myItems: myItems)
+        var inputs: [CarryBackupExportFile] = [], accountURLs: [String: URL] = [:]
+        func resolve(_ name: String, background: Bool) throws -> URL {
+            guard !name.isEmpty, !name.contains("/"), !name.contains("\\"), !name.contains("\0"), name != ".", name != ".." else { throw BackupError.missingAsset }
+            if CarryAccountFileAccess.isAccountReference(name) {
+                guard let url = CarryAccountFileAccess.shared.url(named: name) else { throw BackupError.missingAsset }
+                accountURLs[name] = url; return url
+            }
+            return background ? BackgroundImageStore.fileURL(named: name) : AttachmentStore.fileURL(named: name)
+        }
+        var backgroundNames = Set<String>(), attachmentNames = Set<String>()
+        for trip in trips {
+            for name in trip.backgrounds.compactMap(\.localFileName) where backgroundNames.insert(name).inserted {
+                inputs.append(.init(key: name, sourceName: name, url: try resolve(name, background: true), destination: .background))
+            }
+            var attachments = trip.safeLodgingStays.flatMap { $0.attachments ?? [] }
+            for day in trip.safeItineraryDays {
+                attachments += day.sortedStops.flatMap { $0.attachments ?? [] }
+                attachments += day.sortedSegments.flatMap { $0.attachments ?? [] }
+                for photo in day.sortedStops.flatMap(\.sortedPhotos) where photo.assetLocalIdentifier.hasPrefix("carryphoto1_") || CarryAccountFileAccess.isAccountReference(photo.assetLocalIdentifier) {
+                    inputs.append(.init(key: photo.id.uuidString.lowercased(), sourceName: photo.assetLocalIdentifier,
+                        url: try resolve(photo.assetLocalIdentifier, background: false), destination: .original))
+                }
+            }
+            for attachment in attachments where !attachment.fileName.isEmpty && attachmentNames.insert(attachment.fileName).inserted {
+                inputs.append(.init(key: attachment.fileName, sourceName: attachment.fileName,
+                    url: try resolve(attachment.fileName, background: false), destination: .attachment))
+            }
+        }
+        let result = try await Self.writeExportAsync(snapshot, files: inputs)
+        do {
+            try Task.checkCancellation()
+            guard accountURLs.allSatisfy({ CarryAccountFileAccess.shared.url(named: $0.key) == $0.value }) else { throw BackupError.missingAsset }
+            return result
+        } catch { await Self.discardExportFileAsync(result); throw error }
+    }
+
+    func restoreFromBackupAsync(into context: ModelContext, preCommit: () throws -> Void = {}, save: CarryPersistence.Save = { try $0.save() }) async throws -> (trips: Int, myItems: Int) {
+        let baseline = try targetSnapshot(in: context)
+        guard let url = backupURL else { throw BackupError.fileNotFound }
+        let data = try await Self.readImportData(at: url, securityScoped: false)
+        return try await restoreFromDataAsync(data, into: context, allowLocalFileReferences: true, expectedTarget: baseline, preCommit: preCommit, save: save)
+    }
+    func restoreFromDataAsync(_ data: Data, into context: ModelContext, allowLocalFileReferences: Bool = false, expectedTarget: CarryBackup? = nil, preCommit: () throws -> Void = {},
+                              save: CarryPersistence.Save = { try $0.save() }) async throws -> (trips: Int, myItems: Int) {
+        let baseline = try expectedTarget ?? targetSnapshot(in: context)
+        let source = try await Self.decodeImportAsync(data)
+        let stage = try await CarryBackupFileStage.prepareAsync(source, allowLocalFileReferences: allowLocalFileReferences)
+        var safety: CarryBackupSafetyFile?
+        do {
+            safety = try await writeFullSafetyBackupAsync(from: context)
+            try Task.checkCancellation()
+            try stage.validateLease(); try preCommit()
+            guard !context.hasChanges, try targetSnapshot(in: context) == baseline else { throw BackupError.targetChanged }
+            let result = try performRestore(from: stage.backup, into: context, allowLocalFileReferences: allowLocalFileReferences, preparedStage: stage, save: save)
+            if let safety, let completed = await Self.finishSafetyBackupAsync(safety) { await Self.pruneSafetyBackupsAsync(current: completed, prefix: safety.prefix) }
+            return result
+        } catch {
+            await stage.discardAsync()
+            if let safety { _ = await Self.finishSafetyBackupAsync(safety) }
+            throw error
+        }
+    }
+    func mergeFromDataAsync(_ data: Data, into context: ModelContext, preCommit: () throws -> Void = {},
+                            save: CarryPersistence.Save = { try $0.save() }) async throws -> (trips: Int, myItems: Int) {
+        let baseline = try targetSnapshot(in: context)
+        var source = try await Self.decodeImportAsync(data)
+        let existing = Set(try context.fetch(FetchDescriptor<TripBundle>()).map(\.id))
+        source.trips.removeAll { existing.contains($0.id) }
+        source.assetManifest = CarryBackupFileStage.selectedManifests(source)
+        let stage = try await CarryBackupFileStage.prepareAsync(source)
+        do {
+            try Task.checkCancellation()
+            let current = Set(try context.fetch(FetchDescriptor<TripBundle>()).map(\.id))
+            guard stage.backup.trips.allSatisfy({ !current.contains($0.id) }) else { throw BackupError.targetChanged }
+            try stage.validateLease(); try preCommit()
+            guard !context.hasChanges, try targetSnapshot(in: context) == baseline else { throw BackupError.targetChanged }
+            return try performMerge(from: stage.backup, into: context, preparedStage: stage, save: save)
+        } catch { await stage.discardAsync(); throw error }
+    }
+
+    private func targetSnapshot(in context: ModelContext) throws -> CarryBackup {
+        guard !context.hasChanges else { throw BackupError.targetChanged }
+        let fresh = ModelContext(context.container); fresh.autosaveEnabled = false
+        var snapshot = makeBackup(trips: try fresh.fetch(FetchDescriptor<TripBundle>()).sorted { $0.id.uuidString < $1.id.uuidString },
+            myItems: try fresh.fetch(FetchDescriptor<MyItem>()).sorted { $0.id.uuidString < $1.id.uuidString })
+        snapshot.createdAt = Date(timeIntervalSince1970: 0)
+        snapshot.trips = snapshot.trips.map { value in
+            var trip = value
+            trip.sections = trip.sections.map { value in var section = value; section.items.sort { $0.id.uuidString < $1.id.uuidString }; return section }.sorted { $0.id.uuidString < $1.id.uuidString }
+            trip.itineraryDays = trip.itineraryDays?.map { value in
+                var day = value
+                day.stops = day.stops.map { value in
+                    var stop = value; stop.photos?.sort { $0.id.uuidString < $1.id.uuidString }; stop.attachments?.sort { $0.id.uuidString < $1.id.uuidString }; return stop
+                }.sorted { $0.id.uuidString < $1.id.uuidString }
+                day.segments = day.segments?.map { value in var segment = value; segment.attachments?.sort { $0.id.uuidString < $1.id.uuidString }; return segment }.sorted { $0.id.uuidString < $1.id.uuidString }
+                return day
+            }.sorted { $0.id.uuidString < $1.id.uuidString }
+            trip.lodgingStays = trip.lodgingStays?.map { value in var stay = value; stay.attachments?.sort { $0.id.uuidString < $1.id.uuidString }; return stay }.sorted { $0.id.uuidString < $1.id.uuidString }
+            return trip
+        }
+        return snapshot
+    }
+    @concurrent nonisolated static func readImportData(at url: URL, securityScoped: Bool = true) async throws -> Data {
+        let accessing = securityScoped && url.startAccessingSecurityScopedResource()
+        defer { if accessing { url.stopAccessingSecurityScopedResource() } }
+        try Task.checkCancellation()
+        let info = try url.resourceValues(forKeys: [.isRegularFileKey, .isSymbolicLinkKey, .fileSizeKey])
+        guard info.isRegularFile == true, info.isSymbolicLink != true, let size = info.fileSize, size > 0, size <= 256 * 1024 * 1024 else { throw BackupError.tooLarge }
+        let data = try Data(contentsOf: url)
+        try Task.checkCancellation()
+        guard data.count == size else { throw BackupError.decodingFailed }
+        return data
+    }
+    @concurrent nonisolated private static func decodeImportAsync(_ data: Data) async throws -> CarryBackup {
+        guard data.count <= 256 * 1024 * 1024 else { throw BackupError.tooLarge }
+        try Task.checkCancellation()
+        struct VersionStub: Decodable { let version: Int }
+        let decoder = CarryBackupDates.decoder()
+        if let version = try? decoder.decode(VersionStub.self, from: data).version, version > currentBackupVersion { throw BackupError.unsupportedVersion(version) }
+        let result: CarryBackup
+        do { result = try decoder.decode(CarryBackup.self, from: data) } catch { throw BackupError.decodingFailed }
+        try Task.checkCancellation()
+        _ = try CarryBackupFileStage.validateEmbeddedBudget(result)
+        try CarryBackupFileStage.validateManifests(result)
+        return result
+    }
+    private func writeFullSafetyBackupAsync(from context: ModelContext) async throws -> CarryBackupSafetyFile {
+        // Separate namespaces prevent a local restore from pruning another
+        // Carry account's recovery files. Pending operations are never pruned.
+        let fresh = ModelContext(context.container); fresh.autosaveEnabled = false
+        let namespace: String
+        if context.container.schema.entities.contains(where: { $0.name == String(describing: CarryReplicaCheckpoint.self) }) {
+            let owners = try fresh.fetch(FetchDescriptor<CarryReplicaCheckpoint>())
+            guard owners.count == 1, let owner = owners.first else { throw BackupError.targetChanged }
+            namespace = owner.accountID.uuidString.lowercased()
+        } else { namespace = "local" }
+        let exported = try await makeExportFileAsync(trips: fresh.fetch(FetchDescriptor<TripBundle>()), myItems: fresh.fetch(FetchDescriptor<MyItem>()))
+        guard let base = backupURL else { await Self.discardExportFileAsync(exported); throw BackupError.fileNotFound }
+        let prefix = base.deletingPathExtension().lastPathComponent + ".pre-restore-"
+        let folder = base.deletingLastPathComponent().appendingPathComponent("Safety-" + namespace, isDirectory: true)
+        let pending = folder.appendingPathComponent(".pending-" + prefix + UUID().uuidString.lowercased() + ".json")
+        do {
+            try await Self.retainSafetyExportAsync(exported, at: pending)
+            return CarryBackupSafetyFile(pending: pending, prefix: prefix)
+        } catch { await Self.discardExportFileAsync(exported); throw error }
+    }
+    @concurrent nonisolated private static func retainSafetyExportAsync(_ exported: URL, at destination: URL) async throws {
+        try Task.checkCancellation()
+        try FileManager.default.createDirectory(at: destination.deletingLastPathComponent(), withIntermediateDirectories: true, attributes: [.posixPermissions: 0o700])
+        try FileManager.default.setAttributes([.posixPermissions: 0o600], ofItemAtPath: exported.path)
+        try FileManager.default.moveItem(at: exported, to: destination)
+    }
+    @concurrent nonisolated private static func finishSafetyBackupAsync(_ file: CarryBackupSafetyFile) async -> URL? {
+        let name = file.prefix + String(Int(Date().timeIntervalSince1970 * 1000)) + "-" + UUID().uuidString.lowercased() + ".json"
+        let completed = file.pending.deletingLastPathComponent().appendingPathComponent(name)
+        do { try FileManager.default.moveItem(at: file.pending, to: completed); return completed }
+        catch { Task { @MainActor in CarryLogger.shared.log(.persistFailed, context: "safety_backup_finalize") }; return nil }
+    }
+    @concurrent nonisolated private static func pruneSafetyBackupsAsync(current: URL, prefix: String) async {
+        let folder = current.deletingLastPathComponent()
+        func timestamp(_ name: String) -> Int? {
+            guard name.hasPrefix(prefix), name.hasSuffix(".json") else { return nil }
+            let suffix = name.dropFirst(prefix.count).dropLast(5)
+            guard let separator = suffix.firstIndex(of: "-"), let stamp = Int(suffix[..<separator]), stamp > 0,
+                  UUID(uuidString: String(suffix[suffix.index(after: separator)...])) != nil else { return nil }
+            return stamp
+        }
+        guard let cutoff = timestamp(current.lastPathComponent) else { return }
+        do {
+            let folderInfo = try folder.resourceValues(forKeys: [.isDirectoryKey, .isSymbolicLinkKey])
+            guard folderInfo.isDirectory == true, folderInfo.isSymbolicLink != true else { return }
+            let urls = try FileManager.default.contentsOfDirectory(at: folder, includingPropertiesForKeys: [.isRegularFileKey, .isSymbolicLinkKey])
+            var old: [(URL, Int)] = []
+            for url in urls {
+                guard url != current, url.deletingLastPathComponent() == folder,
+                      let stamp = timestamp(url.lastPathComponent), stamp < cutoff else { continue }
+                let info = try url.resourceValues(forKeys: [.isRegularFileKey, .isSymbolicLinkKey])
+                if info.isRegularFile == true && info.isSymbolicLink != true { old.append((url, stamp)) }
+            }
+            old.sort { $0.1 == $1.1 ? $0.0.lastPathComponent > $1.0.lastPathComponent : $0.1 > $1.1 }
+            for (url, _) in old.dropFirst(2) {
+                let info = try url.resourceValues(forKeys: [.isRegularFileKey, .isSymbolicLinkKey])
+                if info.isRegularFile == true && info.isSymbolicLink != true { try FileManager.default.removeItem(at: url) }
+            }
+        } catch { Task { @MainActor in CarryLogger.shared.log(.persistFailed, context: "safety_backup_prune") } }
+    }
+    @concurrent nonisolated static func discardExportFileAsync(_ url: URL) async {
+        guard url.isFileURL, url.lastPathComponent.hasPrefix("carry_backup_"),
+              url.deletingLastPathComponent().standardizedFileURL == FileManager.default.temporaryDirectory.standardizedFileURL else { return }
+        guard FileManager.default.fileExists(atPath: url.path) else { return }
+        do { try FileManager.default.removeItem(at: url) }
+        catch { Task { @MainActor in CarryLogger.shared.log(.backupWriteFailed, context: "export_cleanup") } }
+    }
+    @concurrent nonisolated private static func writeExportAsync(_ source: CarryBackup, files: [CarryBackupExportFile]) async throws -> URL {
+        var backup = source
+        var remaining = CarryMigrationBackupPreparation.maximumEmbeddedBytes - (try CarryBackupFileStage.validateEmbeddedBudget(source))
+        var backgrounds: [String: Data] = [:], attachments: [String: Data] = [:], originals: [String: Data] = [:]
+        for file in files {
+            try Task.checkCancellation()
+            let info = try file.url.resourceValues(forKeys: [.isRegularFileKey, .isSymbolicLinkKey, .fileSizeKey])
+            guard info.isRegularFile == true, info.isSymbolicLink != true, let size = info.fileSize,
+                  size > 0 else { throw BackupError.missingAsset }
+            guard size <= (file.destination == .attachment ? AttachmentStore.maxBytes : CarryAccountAssetCache.maximumBytes), size <= remaining else { throw BackupError.tooLarge }
+            let bytes = try Data(contentsOf: file.url)
+            guard bytes.count == size else { throw BackupError.missingAsset }
+            if CarryAccountFileAccess.isAccountReference(file.sourceName) {
+                let token = try CarryAccountAssetToken(rawValue: file.sourceName)
+                guard SHA256.hash(data: bytes).map({ String(format: "%02x", $0) }).joined() == token.sha256 else { throw BackupError.missingAsset }
+            }
+            remaining -= size
+            switch file.destination { case .background: backgrounds[file.key] = bytes; case .attachment: attachments[file.key] = bytes; case .original: originals[file.key] = bytes }
+        }
+        backup.backgroundImages = backgrounds.isEmpty ? nil : backgrounds
+        backup.attachmentFiles = attachments.isEmpty ? nil : attachments
+        backup.photoOriginals = originals.isEmpty ? nil : originals
+        try Task.checkCancellation()
+        let encoder = CarryBackupDates.encoder(); encoder.outputFormatting = .prettyPrinted
+        let data = try encoder.encode(backup)
+        guard data.count <= 256 * 1024 * 1024 else { throw BackupError.tooLarge }
+        try Task.checkCancellation()
+        let url = FileManager.default.temporaryDirectory.appendingPathComponent("carry_backup_" + UUID().uuidString + ".json")
+        do { try data.write(to: url, options: .atomic); try Task.checkCancellation(); return url }
+        catch { try? FileManager.default.removeItem(at: url); throw error }
+    }
+}
+private nonisolated struct CarryBackupExportFile: Sendable {
+    enum Destination: Equatable, Sendable { case background, attachment, original }
+    let key: String
+    let sourceName: String
+    let url: URL
+    let destination: Destination
+}
+
+private nonisolated struct CarryBackupSafetyFile: Sendable { let pending: URL; let prefix: String }

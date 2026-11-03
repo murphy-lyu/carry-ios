@@ -24,13 +24,48 @@ enum TransportDetailFocus {
 
 struct TransportDetailView: View {
     let tripId: UUID
+    private let segmentID: UUID
+    let focus: TransportDetailFocus
+    let navApps: [MapNavigationApp]
+    let dayColor: Color
+    @EnvironmentObject private var store: TripStore
+    @Environment(\.dismiss) private var dismiss
+
+    init(tripId: UUID, segment: TransportSegment, focus: TransportDetailFocus = .full, navApps: [MapNavigationApp] = [], dayColor: Color) {
+        self.tripId = tripId; self.segmentID = segment.id
+        self.focus = focus; self.navApps = navApps; self.dayColor = dayColor
+    }
+
+    var body: some View {
+        Group {
+            if let model = store.bundle(for: tripId)?.safeItineraryDays.flatMap({ $0.sortedSegments }).first(where: { $0.id == segmentID }) {
+                TransportDetailViewContent(tripId: tripId, segment: model, focus: focus, navApps: navApps, dayColor: dayColor)
+            } else {
+                Color.clear.task { dismiss() }
+            }
+        }
+    }
+}
+
+private struct TransportDetailViewContent: View {
+    let tripId: UUID
     let segment: TransportSegment
+    private let segmentID: UUID
     var focus: TransportDetailFocus = .full
     var navApps: [MapNavigationApp] = []
     let dayColor: Color
 
+    init(tripId: UUID, segment: TransportSegment, focus: TransportDetailFocus = .full, navApps: [MapNavigationApp] = [], dayColor: Color) {
+        self.tripId = tripId; self.segment = segment; self.segmentID = segment.id
+        self.focus = focus; self.navApps = navApps; self.dayColor = dayColor
+    }
+
     @EnvironmentObject var store: TripStore
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.nativeEditorOwner) private var inheritedNativeEditorOwner
+    @Environment(\.nativeEditorGroup) private var inheritedNativeEditorGroup
+    @StateObject private var nativeEditors = CarryNativeEditorPresentations()
+    private var currentSegment: TransportSegment? { store.bundle(for: tripId)?.safeItineraryDays.flatMap({ $0.sortedSegments }).first(where: { $0.id == segmentID }) }
     @State private var editing = false
     @State private var showQuickNote = false
     @State private var showQuickCost = false
@@ -193,28 +228,34 @@ struct TransportDetailView: View {
             }
         } footer: {
             DetailActionFooter(
-                onEdit: { editing = true },
+                onEdit: { guard nativeEditors.begin(key: "editing", store: store, owner: inheritedNativeEditorOwner, group: inheritedNativeEditorGroup) else { return }; guard currentSegment != nil else { nativeEditors.end(key: "editing"); nativeEditors.saveFailed = true; return }; editing = true },
                 onDelete: deleteSegment,
-                onNote: { showQuickNote = true },
-                onCost: { showQuickCost = true },
+                onNote: { guard nativeEditors.begin(key: "showQuickNote", store: store, owner: inheritedNativeEditorOwner, group: inheritedNativeEditorGroup) else { return }; guard currentSegment != nil else { nativeEditors.end(key: "showQuickNote"); nativeEditors.saveFailed = true; return }; showQuickNote = true },
+                onCost: { guard nativeEditors.begin(key: "showQuickCost", store: store, owner: inheritedNativeEditorOwner, group: inheritedNativeEditorGroup) else { return }; guard currentSegment != nil else { nativeEditors.end(key: "showQuickCost"); nativeEditors.saveFailed = true; return }; showQuickCost = true },
                 hasNote: !segment.note.isEmpty,
                 hasCost: segment.hasCost
             )
         }
-        .sheet(isPresented: $editing) {
-            TransportEditView(tripId: tripId, segmentId: segment.id)
-        }
-        .sheet(isPresented: $showQuickNote) {
-            QuickNoteSheet(existingNote: segment.note) { newNote in
-                store.updateTransportSegment(tripId: tripId, segmentId: segment.id, note: newNote)
+        .nativeEditorSheet(isPresented: $editing, presentations: nativeEditors, onDismiss: nativeEditors.dismissal(key: "editing")) {
+            if let currentSegment {
+                TransportEditView(tripId: tripId, segmentId: currentSegment.id)
             }
         }
-        .sheet(isPresented: $showQuickCost) {
-            QuickCostSheet(
-                existingAmount: segment.costAmount,
-                existingCurrencyCode: segment.costCurrencyCode
-            ) { amount, code in
-                store.setTransportCost(tripId: tripId, segmentId: segment.id, amount: amount, currencyCode: code)
+        .nativeEditorSheet(isPresented: $showQuickNote, presentations: nativeEditors, onDismiss: nativeEditors.dismissal(key: "showQuickNote")) {
+            if let currentSegment {
+                QuickNoteSheet(existingNote: currentSegment.note) { newNote in
+                    nativeEditors.save(store: store) { store.updateTransportSegment(tripId: tripId, segmentId: currentSegment.id, note: newNote) }
+                }
+            }
+        }
+        .nativeEditorSheet(isPresented: $showQuickCost, presentations: nativeEditors, onDismiss: nativeEditors.dismissal(key: "showQuickCost")) {
+            if let currentSegment {
+                QuickCostSheet(
+                    existingAmount: currentSegment.costAmount,
+                    existingCurrencyCode: currentSegment.costCurrencyCode
+                ) { amount, code in
+                    nativeEditors.save(store: store) { store.setTransportCost(tripId: tripId, segmentId: currentSegment.id, amount: amount, currencyCode: code) }
+                }
             }
         }
         .task(id: segment.id) {
@@ -248,7 +289,7 @@ struct TransportDetailView: View {
 
     private func deleteSegment() {
         if let dayId = segment.day?.id {
-            store.removeTransportSegment(tripId: tripId, dayId: dayId, segmentId: segment.id)
+            guard nativeEditors.save(store: store, { store.removeTransportSegment(tripId: tripId, dayId: dayId, segmentId: segment.id) }) else { return }
         }
         dismiss()
     }

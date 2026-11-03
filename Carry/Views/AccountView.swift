@@ -1,0 +1,316 @@
+import SwiftUI
+import AuthenticationServices
+
+struct CarryAccountAvatar: View {
+    let profile: CarryAccountProfile?
+    var size: CGFloat = 40
+
+    var body: some View {
+        ZStack {
+            Circle().fill(profile == nil ? Color(UIColor.tertiarySystemFill) : CarryAccent.color.opacity(0.15))
+            if let initials = profile?.initials {
+                Text(verbatim: initials)
+                    .font(.system(size: size * 0.36, weight: .semibold, design: .rounded))
+                    .foregroundStyle(CarryAccent.color)
+                    .lineLimit(1).minimumScaleFactor(0.7)
+            } else {
+                Image(systemName: "person.fill")
+                    .font(.system(size: size * 0.42, weight: .medium))
+                    .foregroundStyle(.secondary)
+            }
+        }
+        .frame(width: size, height: size)
+        .accessibilityHidden(true)
+    }
+}
+
+struct CarryAccountEntry: View {
+    @EnvironmentObject private var account: CarryAccountStore
+
+    var body: some View {
+        HStack(spacing: 14) {
+            CarryAccountAvatar(profile: account.profile, size: 48)
+            VStack(alignment: .leading, spacing: 4) {
+                if let name = account.profile?.displayName, !name.isEmpty {
+                    Text(verbatim: name).font(.headline)
+                } else {
+                    Text(LocalizedStringKey(account.profile == nil ? "account.sign_in" : "account.title")).font(.headline)
+                }
+                Text(LocalizedStringKey(account.profile == nil ? "account.entry.detail" : account.statusKey))
+                    .font(.subheadline).foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            Spacer(minLength: 8)
+            Image(systemName: "chevron.right").font(.footnote.weight(.semibold)).foregroundStyle(.tertiary)
+        }
+        .padding(16)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .contentShape(Rectangle())
+        .accessibilityElement(children: .combine)
+    }
+}
+
+extension CarryAccountStore {
+    var statusKey: String {
+        switch state {
+        case .signedOut: return "account.entry.detail"
+        case .checking: return "account.status.checking"
+        case .signedIn: return "account.status.signed_in"
+        case .offline: return "account.status.offline"
+        case .temporarilyUnavailable: return "account.status.unavailable"
+        case .needsReauthentication: return "account.status.expired"
+        case .deleting: return "account.delete.pending.title"
+        }
+    }
+
+    /// Development inspection is session-only; it cannot create an authenticated identity.
+    var showsEntry: Bool {
+        #if DEBUG
+        return isAvailable || ProcessInfo.processInfo.arguments.contains("--carry-account-design")
+        #else
+        return isAvailable
+        #endif
+    }
+}
+
+struct AccountView: View {
+    @EnvironmentObject private var account: CarryAccountStore
+    @EnvironmentObject private var workspaceController: CarryAccountWorkspaceController
+    @Environment(\.colorScheme) private var colorScheme
+    @State private var showSignOut = false
+    @State private var syncEnableFailed = false
+    @State private var showDelete = false
+    @State private var reauthorizingDeletion = false
+
+    var body: some View {
+        Group {
+            if account.isDeleting { deletionProgress }
+            else if let profile = account.profile { accountDetails(profile) }
+            else { signInPage }
+        }
+        .navigationTitle(account.profile == nil && !account.isDeleting ? Text("account.sign_in") : Text("account.title"))
+        .navigationBarTitleDisplayMode(.inline)
+        .background(Color.carryCanvas)
+        .alert("account.sign_out.confirm", isPresented: $showSignOut) {
+            Button("account.sign_out", role: .destructive) { Task { await account.signOut() } }
+            Button("Cancel", role: .cancel) {}
+        } message: { Text("account.sign_out.detail") }
+        .alert("account.delete.confirm", isPresented: $showDelete) {
+            Button("account.delete.continue", role: .destructive) { reauthorizingDeletion = true }
+            Button("Cancel", role: .cancel) {}
+        } message: { Text("account.delete.detail") }
+        .sheet(isPresented: $reauthorizingDeletion) { deletionVerification }
+        .onChange(of: account.state) { _, state in
+            if state == .signedOut || account.isDeleting { reauthorizingDeletion = false }
+        }
+    }
+
+    private var deletionProgress: some View {
+        Form {
+            Section {
+                Label("account.delete.pending.title", systemImage: "person.crop.circle.badge.minus")
+                    .font(.headline)
+                Text("account.delete.pending.detail")
+                    .font(.subheadline).foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            Section {
+                Button { Task { await account.refresh() } } label: {
+                    HStack {
+                        Text("account.delete.pending.refresh")
+                        Spacer()
+                        if account.isBusy { ProgressView() }
+                    }
+                }
+                .disabled(account.isBusy)
+                errorMessage
+            }
+        }
+        .scrollContentBackground(.hidden)
+        .task {
+            // Keep the original durable-receipt polling; presentation cannot cancel a deletion.
+            while !Task.isCancelled, account.isDeleting {
+                await account.refresh()
+                guard account.isDeleting else { return }
+                do { try await Task.sleep(for: .seconds(10)) }
+                catch { return }
+            }
+        }
+    }
+
+    private var deletionVerification: some View {
+        NavigationStack {
+            Form {
+                Section {
+                    Text("account.delete.reauthorize")
+                        .font(.subheadline).foregroundStyle(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                    appleButton(.deleteAccount)
+                } footer: { Text("account.delete.detail") }
+                if account.error != nil { Section { errorMessage } }
+            }
+            .navigationTitle("account.delete")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Cancel", role: .cancel) { reauthorizingDeletion = false }
+                        .disabled(account.isBusy)
+                }
+            }
+            .scrollContentBackground(.hidden)
+            .background(Color.carryCanvas)
+            .interactiveDismissDisabled(account.isBusy)
+        }
+        .tint(CarryAccent.color)
+    }
+
+    private var signInPage: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 24) {
+                VStack(alignment: .leading, spacing: 16) {
+                    CarryAccountAvatar(profile: nil, size: 56)
+                    Text("account.login.detail")
+                        .font(.title3.weight(.semibold))
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+                .padding(.top, 16)
+                appleButton(.signIn)
+                if !account.isAvailable {
+                    Text("account.error.unavailable").font(.footnote).foregroundStyle(.secondary)
+                }
+                errorMessage
+                Text("account.local_usage").font(.footnote).foregroundStyle(.secondary)
+                ViewThatFits(in: .horizontal) {
+                    HStack(spacing: 20) { legalLinks }.fixedSize(horizontal: true, vertical: false)
+                    VStack(alignment: .leading, spacing: 12) { legalLinks }
+                }
+                .font(.footnote)
+            }
+            .padding(24)
+            .frame(maxWidth: 520, alignment: .leading)
+            .frame(maxWidth: .infinity)
+        }
+    }
+
+    @ViewBuilder private var legalLinks: some View {
+        NavigationLink { PrivacyView() } label: { Text("settings.legal.privacy") }
+            .frame(minHeight: 44, alignment: .leading)
+        NavigationLink { TermsView() } label: { Text("settings.legal.terms") }
+            .frame(minHeight: 44, alignment: .leading)
+    }
+
+    private func accountDetails(_ profile: CarryAccountProfile) -> some View {
+        Form {
+            Section {
+                HStack(spacing: 14) {
+                    CarryAccountAvatar(profile: profile, size: 44)
+                    VStack(alignment: .leading, spacing: 4) {
+                        if let name = profile.displayName, !name.isEmpty { Text(verbatim: name).font(.headline) }
+                        else { Text("account.title").font(.headline) }
+                        if let email = profile.email {
+                            Text(verbatim: email).font(.footnote).foregroundStyle(.secondary)
+                                .textSelection(.enabled).fixedSize(horizontal: false, vertical: true)
+                        }
+                        if !account.hasVerifiedSession {
+                            Text(LocalizedStringKey(account.statusKey)).font(.footnote).foregroundStyle(.secondary)
+                        }
+                    }
+                }
+            }
+            if !account.hasVerifiedSession {
+                Section {
+                    appleButton(.signIn)
+                    Button("account.retry") { Task { await account.refresh() } }
+                        .disabled(account.isBusy)
+                }
+            }
+            Section {
+                if let workspace = workspaceController.workspace, workspace.accountID == profile.id {
+                    CarryAccountSyncStatusView(workspace: workspace, retry: workspaceController.requestSynchronization)
+                } else {
+                    Text("account.sync.not_enabled").foregroundStyle(.secondary)
+                    Button("account.sync.enable") {
+                        Task {
+                            syncEnableFailed = false
+                            do {
+                                try await workspaceController.enable(accountID: profile.id)
+                                UserDefaults.standard.set(true, forKey: "carry_account_sync_" + profile.id.uuidString.lowercased())
+                            } catch { syncEnableFailed = true }
+                        }
+                    }
+                    .disabled(!account.hasVerifiedSession || account.isBusy)
+                }
+                if syncEnableFailed || (workspaceController.failure != nil &&
+                    workspaceController.workspace?.state != .failed &&
+                    workspaceController.workspace?.state != .synchronizing) {
+                    Text("account.error.service").foregroundStyle(.secondary)
+                    Button("account.retry") { workspaceController.requestSynchronization() }
+                }
+            } header: { Text("account.sync.title") }
+              footer: { Text("account.sync.consent") }
+            if workspaceController.workspace?.accountID == profile.id || CarryAccountAIConfiguration.bundled != nil {
+                Section {
+                    if workspaceController.workspace?.accountID == profile.id {
+                        NavigationLink { CarryAccountMigrationView() } label: { Text("account.migration.title") }
+                    }
+                    if let configuration = CarryAccountAIConfiguration.bundled {
+                        NavigationLink { CarryAccountAIConnectionView(configuration: configuration) } label: { Text("account.ai.title") }
+                    }
+                }
+            }
+            Section {
+                Button("account.sign_out", role: .destructive) { showSignOut = true }
+                    .disabled(account.isBusy)
+                Button("account.delete", role: .destructive) { showDelete = true }
+                    .disabled(account.isBusy)
+            }
+            if account.error != nil { Section { errorMessage } }
+        }
+        .scrollContentBackground(.hidden)
+    }
+
+    private func appleButton(_ action: CarryAccountStore.AppleAction) -> some View {
+        SignInWithAppleButton(.continue) { request in
+            do {
+                let challenge = try account.beginAppleAction(action)
+                request.requestedScopes = [.fullName, .email]
+                request.nonce = challenge.hashedNonce
+                request.state = challenge.state
+            } catch {
+                // The button is disabled while unavailable/busy. No dummy nonce or fake session.
+                account.failAppleAction(cancelled: false)
+            }
+        } onCompletion: { result in
+            switch result {
+            case .success(let authorization):
+                guard let credential = authorization.credential as? ASAuthorizationAppleIDCredential,
+                      let token = credential.identityToken.flatMap({ String(data: $0, encoding: .utf8) }),
+                      let code = credential.authorizationCode.flatMap({ String(data: $0, encoding: .utf8) }) else {
+                    account.failAppleAction(cancelled: false)
+                    return
+                }
+                let name = credential.fullName.map { PersonNameComponentsFormatter().string(from: $0) }
+                let value = CarryAppleCredential(idToken: token, authorizationCode: code,
+                    appleUserID: credential.user, fullName: name, state: credential.state)
+                Task { await account.completeAppleAction(value) }
+            case .failure(let error):
+                let cancelled = (error as? ASAuthorizationError)?.code == .canceled
+                account.failAppleAction(cancelled: cancelled)
+            }
+        }
+        .signInWithAppleButtonStyle(colorScheme == .dark ? .white : .black)
+        .frame(minHeight: 50, maxHeight: 50)
+        .disabled(!account.isAvailable || account.isBusy)
+        .accessibilityHint(Text("account.local_usage"))
+        .overlay(alignment: .trailing) {
+            if account.isBusy { ProgressView().padding(.trailing, 16).allowsHitTesting(false) }
+        }
+    }
+
+    @ViewBuilder private var errorMessage: some View {
+        if let error = account.error {
+            Text(LocalizedStringKey(error.messageKey)).font(.footnote).foregroundStyle(.secondary)
+                .accessibilityAddTraits(.updatesFrequently)
+        }
+    }
+}

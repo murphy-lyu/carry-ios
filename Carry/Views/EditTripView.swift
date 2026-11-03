@@ -13,6 +13,9 @@ struct EditTripView: View {
     @EnvironmentObject var store: TripStore
     @Environment(\.dismiss) private var dismiss
 
+    @Environment(\.nativeEditorOwner) private var inheritedNativeEditorOwner
+    @Environment(\.nativeEditorGroup) private var inheritedNativeEditorGroup
+    @StateObject private var nativeEditors = CarryNativeEditorPresentations()
     @State private var info: TripInfo
     /// 多目的地：从既有行程回填的有序 chip（首=主，其余=additionalDestinations）。
     @State private var destinations: [ResolvedDestination] = []
@@ -172,14 +175,15 @@ struct EditTripView: View {
                 destinations = store.resolvedDestinations(forTripId: tripId)
                 didBackfill = true
             }
-            .sheet(isPresented: $showDatePicker) {
+            .nativeEditorErrors(nativeEditors)
+            .nativeEditorSheet(isPresented: $showDatePicker, presentations: nativeEditors) {
                 TripDateRangePickerSheet(
                     departure: info.departureDate,
                     return: info.returnDate,
                     onSkipDates: { info.isDateless = true }   // 选择器内「暂不设置日期」→ 退回规划中
                 ) { start, end in
                     info.departureDate = start
-                    info.returnDate = max(end, Calendar.current.date(byAdding: .day, value: 1, to: start) ?? start)
+                    info.returnDate = max(end, start)
                     info.isDateless = false   // 选定日期即转正为普通行程
                 }
             }
@@ -197,7 +201,9 @@ struct EditTripView: View {
                         var out = info
                         out.destinationCity = composedDestinationCity
                         out.resolvedDestinations = allChips
-                        store.updateTripInfo(tripId: tripId, info: out)
+                        guard nativeEditors.save(store: store, {
+                            store.updateTripInfo(tripId: tripId, info: out)
+                        }) else { return }
                         CarryLogger.shared.log(.tripEditSaved)
                         UINotificationFeedbackGenerator().notificationOccurred(.success)
                         withAnimation(.easeInOut(duration: 0.2)) { isSaved = true }

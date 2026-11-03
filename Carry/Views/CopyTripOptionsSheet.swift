@@ -12,13 +12,15 @@
 import SwiftUI
 
 struct CopyTripOptionsSheet: View {
-    let trip: TripBundle
+    private let sourceTripID: UUID
     /// 复制成功后回调（新行程 id），由调用方负责关闭本 sheet + 后续导航/高亮。
     var onCompleted: (UUID) -> Void
 
     @EnvironmentObject var store: TripStore
     @Environment(\.dismiss) private var dismiss
     @Environment(\.colorScheme) private var colorScheme
+    @StateObject private var nativeEditors = CarryNativeEditorPresentations()
+    @State private var createdCopyID: UUID?
 
     /// 预填原行程名称，不自动加"（副本）"后缀——改不改由用户自己决定（用户反馈）。
     @State private var name: String
@@ -34,7 +36,7 @@ struct CopyTripOptionsSheet: View {
     @State private var nameFieldFocused: Bool = false
 
     init(trip: TripBundle, onCompleted: @escaping (UUID) -> Void) {
-        self.trip = trip
+        self.sourceTripID = trip.id
         self.onCompleted = onCompleted
         let ret = Calendar.current.date(byAdding: .day, value: trip.days, to: trip.departureDate) ?? trip.departureDate
         _name = State(initialValue: trip.name)
@@ -80,6 +82,7 @@ struct CopyTripOptionsSheet: View {
                             footer: "trip.copy.include_transport_lodging.footer",
                             isOn: $includeTransportAndLodging
                         )
+                        .disabled(createdCopyID != nil)
                         .padding(.horizontal, 16)
 
                         toggleCard(
@@ -87,6 +90,7 @@ struct CopyTripOptionsSheet: View {
                             footer: "trip.copy.include_packing_list.footer",
                             isOn: $includePackingList
                         )
+                        .disabled(createdCopyID != nil)
                         .padding(.horizontal, 16)
                     }
                     .padding(.top, 8)
@@ -94,6 +98,7 @@ struct CopyTripOptionsSheet: View {
                 }
             }
             .scrollDismissesKeyboard(.interactively)
+            .nativeEditorErrors(nativeEditors)
             .simultaneousGesture(
                 TapGesture().onEnded {
                     hideKeyboard()
@@ -119,7 +124,7 @@ struct CopyTripOptionsSheet: View {
                     onSkipDates: { isDateless = true }
                 ) { start, end in
                     departureDate = start
-                    returnDate = max(end, Calendar.current.date(byAdding: .day, value: 1, to: start) ?? start)
+                    returnDate = max(end, start)
                     isDateless = false
                 }
             }
@@ -275,15 +280,16 @@ struct CopyTripOptionsSheet: View {
 
     private func confirm() {
         hideKeyboard()
-        guard let newId = store.duplicateTrip(
-            withId: trip.id,
-            includeTransportAndLodging: includeTransportAndLodging,
-            includePackingList: includePackingList
-        ) else {
-            dismiss()
-            return
-        }
-        if let newBundle = store.bundle(for: newId) {
+        var updated = false
+        let saved = nativeEditors.save(store: store) {
+            // A later metadata save may fail after the copy itself persisted.
+            // Retry that same copy instead of creating a second trip.
+            if createdCopyID == nil {
+                createdCopyID = store.duplicateTrip(withId: sourceTripID,
+                    includeTransportAndLodging: includeTransportAndLodging,
+                    includePackingList: includePackingList)
+            }
+            guard let newId = createdCopyID, let newBundle = store.bundle(for: newId) else { return }
             let info = TripInfo(
                 name: name.trimmingCharacters(in: .whitespaces),
                 destinationCity: newBundle.destinationCity,
@@ -292,6 +298,11 @@ struct CopyTripOptionsSheet: View {
                 isDateless: isDateless
             )
             store.updateTripInfo(tripId: newId, info: info)
+            updated = true
+        }
+        guard saved, updated, let newId = createdCopyID else {
+            if saved { nativeEditors.fail(busy: false) }
+            return
         }
         onCompleted(newId)
     }

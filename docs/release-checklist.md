@@ -14,7 +14,7 @@
 - [x] SwiftData 已启用 CloudKit `.automatic`，容器为 `iCloud.app.nevestudio.carry`；本地初始化失败时仍保留 in-memory fallback。
 - [x] 真机冷启动成功，设备内事件日志无 `db_init_failed`，确认未进入 in-memory fallback。
 - [ ] 两台登录同一 iCloud 账号的设备验证新增、修改、删除双向同步；再做删除 App 后重装恢复。
-- [ ] CloudKit Development schema 确认无误后部署到 Production；此步必须在正式上架前完成。
+- [ ] CloudKit Development schema 确认无误后部署到 Production；存在 schema 变更的新 TestFlight 构建也必须先完成此步，不能只等正式上架。
 - [x] App Store Connect 应用记录已创建：Apple ID `6816165107`，状态 `Prepare for Submission`。
 - [x] TestFlight build `1.0 (1)` 已于 2026-09-26 上传并处理完成；首次出口合规已手工确认。
 - [x] TestFlight build `1.0 (2)` 已上传并处理完成，安装包内含出口合规键与 HealthKit 双用途说明，无需再次回答加密问题。
@@ -30,6 +30,30 @@
 ---
 
 ## 1. 工程层面
+
+### Codex 连接发布门禁（2026-10-22）
+
+**2026-10-25 产品方向变更**：用户已确认长期需要手机关闭时的对话操作，并同意适合时使用 Apple 登录；新方案选择可选账户与 Apple 首选身份。以下记录原设备执行实现的历史验证；新方案见 `specs/carry-cloud-and-ai.md`，工程选型与风险原型验证见 ADR。不得仅补齐下列旧门禁就发布前台设备执行版本；新架构必须另过真实账户、安全同步、迁移与完整验收矩阵。
+
+- [x] 默认授权范围的 40 项工具实现；两轮本地自动验收与自行代码审查，证据见 `docs/codex-integration-qa.md`。
+- [x] 新增回执模型本地旧库迁移、旧 JSON 备份兼容、真实 Keychain、事务保存与重复请求验证。
+- [x] 主 App + Widget Release 真机目标构建；9 语言审计 0 errors / 0 warnings。
+- [x] 中英隐私政策修改、push 和原 Pages 项目部署；英文线上新条款已读回。
+- [x] 中文线上新条款完整读回（2026-10-25）；解码 Cloudflare 邮箱保护并移除对应注入脚本后，完整 HTML 与已提交源码一致。
+- [x] 功能分支已推送 GitHub；最终 Worker 源码已部署，版本 `14cc66af-d01a-4a71-a9c3-c60c9842d822`（2026-10-25）。
+- [x] 生产完整合成配对/命令/回执/撤销链路两轮各 12/12 通过（2026-10-25）；原始 Node fetch 脚本使用普通域名和证书验证，测试连接已撤销。此前 curl/代理传输超时仍记录为历史网络波动，不等于所有网络环境可用。
+- [ ] 原生 URLSession 连接生产服务的完整 SwiftData 往返验收：补充测试已确认创建命令、本地落盘和首个回执，随后重复回执请求 `-1001` 超时，未完成快照读回（2026-10-25）；不能用 Node 协议验收替代。
+- [x] 账户持有人已登录 CloudKit，核对为 `Bing Xue / 25RAM7275Z` 和 `iCloud.app.nevestudio.carry`（2026-10-25）。
+- [x] 完整 CloudKit Development schema 原生初始化：用户既有 iPhone 上 dry-run 和实际初始化通过，控制台读回 11 个业务类型及系统 Users，结构快照已导出（2026-10-25）。
+- [x] CloudKit Production schema 部署与读回：用户当次确认后完成部署，11 个业务类型读回，生产导出与开发导出逐字节一致（2026-10-25）。
+- [x] 原 Carry 真机安装前完整备份，原 App 安装和重启后均显示既有 13 个行程；初始化工具已卸载。Debug/Release 的实际签名分别核对为 Development/Production。
+- [x] 配对恢复缺口修复：批准前持久化待完成凭据、幂等恢复、迟到批准取消、原子授权保存、OAuth 撤销；两轮原生各 39/39、最终协议各 20/20、HTTP 各 15/15。最终 Worker `5369784f-332e-414c-8c5b-84afba2331b6` 已部署。
+- [x] 前两条真机测试授权均撤销并分别验证旧令牌为 401，本机临时令牌文件已删除；无现有行程或物品库上传。
+- [ ] 修复后真机完整配对/业务落盘/快照读回：重新发起注册仍传输超时，未获得新配对码；详细失败证据见 QA。
+- [ ] 新功能真机界面、配对、离线恢复、前后台竞争、iCloud 账号切换与真实双设备同步验收。
+- [ ] 按新数据用途核对 App Store Connect 隐私声明后，才上传包含连接功能的新 TestFlight 构建。当前旧 build 3 不包含本功能，未上传后续构建。
+
+### 工程基线
 
 - [x] **Release build 配置**：`SWIFT_COMPILATION_MODE = wholemodule`，`SWIFT_OPTIMIZATION_LEVEL` 沿用 Xcode 默认 `-O`，配置正确 ✅（2026-05-27 确认）
 - [x] **Strip debug symbols**：`STRIP_SWIFT_SYMBOLS` 沿用 Xcode 默认 YES，Archive 时自动 strip ✅（2026-05-27 确认）

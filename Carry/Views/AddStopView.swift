@@ -246,6 +246,9 @@ struct AddStopView: View {
     @EnvironmentObject var store: TripStore
     @Environment(\.dismiss) private var dismiss
 
+    @Environment(\.nativeEditorOwner) private var inheritedNativeEditorOwner
+    @Environment(\.nativeEditorGroup) private var inheritedNativeEditorGroup
+    @StateObject private var nativeEditors = CarryNativeEditorPresentations()
     @StateObject private var completer = StopSearchCompleter()
     @State private var category: StopCategory
     @State private var isResolving = false
@@ -323,6 +326,7 @@ struct AddStopView: View {
                 // AttributeGraph「setting value during update」硬崩溃；且延后设置程序化聚焦更可靠。
                 DispatchQueue.main.async { searchFocused = true }
             }
+            .nativeEditorErrors(nativeEditors)
             .onDisappear { completer.tearDown() }   // 取消在途海外请求 + 停 MapKit 补全
         }
     }
@@ -382,21 +386,23 @@ struct AddStopView: View {
                 addFallbackStop(named: suggestion.title)
                 return
             }
-            if let relocateStopId {
-                // relocate：地点整体换了 → 名称/坐标/地址/电话/时区一并更新（类别保持不变）。
-                store.updateItineraryStop(
-                    tripId: tripId, stopId: relocateStopId,
-                    name: r.name, latitude: r.latitude, longitude: r.longitude,
-                    address: r.address, phone: r.phone, timeZoneId: r.timeZoneId
-                )
-                onRelocated?(r.name)
-            } else {
-                store.addItineraryStop(
-                    tripId: tripId, dayId: dayId,
-                    name: r.name, latitude: r.latitude, longitude: r.longitude,
-                    address: r.address, category: category, phone: r.phone, timeZoneId: r.timeZoneId
-                )
-            }
+            guard nativeEditors.save(store: store, {
+                if let relocateStopId {
+                    // relocate：地点整体换了 → 名称/坐标/地址/电话/时区一并更新（类别保持不变）。
+                    store.updateItineraryStop(
+                        tripId: tripId, stopId: relocateStopId,
+                        name: r.name, latitude: r.latitude, longitude: r.longitude,
+                        address: r.address, phone: r.phone, timeZoneId: r.timeZoneId
+                    )
+                } else {
+                    store.addItineraryStop(
+                        tripId: tripId, dayId: dayId,
+                        name: r.name, latitude: r.latitude, longitude: r.longitude,
+                        address: r.address, category: category, phone: r.phone, timeZoneId: r.timeZoneId
+                    )
+                }
+            }) else { return }
+            if relocateStopId != nil { onRelocated?(r.name) }
             dismiss()
         }
     }
@@ -405,29 +411,33 @@ struct AddStopView: View {
     private func addFallbackStop(named rawName: String) {
         let name = rawName.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !name.isEmpty else { dismiss(); return }
-        if let relocateStopId {
-            store.updateItineraryStop(tripId: tripId, stopId: relocateStopId,
-                                      name: name, latitude: 0, longitude: 0, address: "", phone: "")
-            onRelocated?(name)
-        } else {
-            store.addItineraryStop(tripId: tripId, dayId: dayId, name: name, category: category)
-        }
+        guard nativeEditors.save(store: store, {
+            if let relocateStopId {
+                store.updateItineraryStop(tripId: tripId, stopId: relocateStopId,
+                                          name: name, latitude: 0, longitude: 0, address: "", phone: "")
+            } else {
+                store.addItineraryStop(tripId: tripId, dayId: dayId, name: name, category: category)
+            }
+        }) else { return }
+        if relocateStopId != nil { onRelocated?(name) }
         dismiss()
     }
 
     private func addManualStop() {
         let name = completer.query.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !name.isEmpty else { return }
-        if let relocateStopId {
-            // relocate 到无坐标地点：改名并清空坐标/地址/电话（变回「无定位停靠点」）。
-            store.updateItineraryStop(
-                tripId: tripId, stopId: relocateStopId,
-                name: name, latitude: 0, longitude: 0, address: "", phone: ""
-            )
-            onRelocated?(name)
-        } else {
-            store.addItineraryStop(tripId: tripId, dayId: dayId, name: name, category: category)
-        }
+        guard nativeEditors.save(store: store, {
+            if let relocateStopId {
+                // relocate 到无坐标地点：改名并清空坐标/地址/电话（变回「无定位停靠点」）。
+                store.updateItineraryStop(
+                    tripId: tripId, stopId: relocateStopId,
+                    name: name, latitude: 0, longitude: 0, address: "", phone: ""
+                )
+            } else {
+                store.addItineraryStop(tripId: tripId, dayId: dayId, name: name, category: category)
+            }
+        }) else { return }
+        if relocateStopId != nil { onRelocated?(name) }
         dismiss()
     }
 }

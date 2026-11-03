@@ -77,17 +77,22 @@ struct BackgroundRepositionView: View {
     static let displayAspect: CGFloat = 4.0
 
     /// Called with the FINAL image + crop. Save is disabled until an image has loaded.
-    let onSave: (UIImage, BackgroundCrop) -> Void
+    let onSave: (UIImage, BackgroundCrop) async -> Bool
     private let initialProvider: NSItemProvider
 
     @Environment(\.dismiss) private var dismiss
+    @EnvironmentObject private var store: TripStore
+    @Environment(\.nativeEditorOwner) private var inheritedNativeEditorOwner
+    @Environment(\.nativeEditorGroup) private var inheritedNativeEditorGroup
+    @StateObject private var nativeEditors = CarryNativeEditorPresentations()
+    @State private var isSaving = false
     @State private var image: UIImage?
     @State private var crop: BackgroundCrop = .full
     @State private var showPicker = false
     @State private var isLoading = false
     @State private var didStartInitialLoad = false
 
-    init(provider: NSItemProvider, onSave: @escaping (UIImage, BackgroundCrop) -> Void) {
+    init(provider: NSItemProvider, onSave: @escaping (UIImage, BackgroundCrop) async -> Bool) {
         self.initialProvider = provider
         self.onSave = onSave
     }
@@ -141,10 +146,16 @@ struct BackgroundRepositionView: View {
                 }
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Save") {
-                        if let image { onSave(image, crop); dismiss() }
+                        guard let image, !isSaving else { return }
+                        isSaving = true
+                        Task { @MainActor in
+                            defer { isSaving = false }
+                            if await onSave(image, crop) { dismiss() }
+                            else { nativeEditors.fail(busy: store.lastEditorSaveWasBusy) }
+                        }
                     }
                     .fontWeight(.semibold)
-                    .disabled(image == nil)
+                    .disabled(image == nil || isSaving)
                 }
             }
             .overlay {
@@ -162,7 +173,9 @@ struct BackgroundRepositionView: View {
                 )
                 .ignoresSafeArea()
             }
-            .onAppear {
+            .nativeEditorErrors(nativeEditors)
+        .interactiveDismissDisabled(isSaving)
+        .onAppear {
                 guard !didStartInitialLoad else { return }
                 didStartInitialLoad = true
                 load(initialProvider, isInitial: true)

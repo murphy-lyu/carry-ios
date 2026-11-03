@@ -10,12 +10,46 @@ import SwiftUI
 
 struct LodgingDetailView: View {
     let tripId: UUID
+    private let stayID: UUID
+    let navApps: [MapNavigationApp]
+    let dayColor: Color
+    @EnvironmentObject private var store: TripStore
+    @Environment(\.dismiss) private var dismiss
+
+    init(tripId: UUID, stay: LodgingStay, navApps: [MapNavigationApp], dayColor: Color) {
+        self.tripId = tripId; self.stayID = stay.id
+        self.navApps = navApps; self.dayColor = dayColor
+    }
+
+    var body: some View {
+        Group {
+            if let model = store.bundle(for: tripId)?.lodgingStays?.first(where: { $0.id == stayID }) {
+                LodgingDetailViewContent(tripId: tripId, stay: model, navApps: navApps, dayColor: dayColor)
+            } else {
+                Color.clear.task { dismiss() }
+            }
+        }
+    }
+}
+
+private struct LodgingDetailViewContent: View {
+    let tripId: UUID
     let stay: LodgingStay
+    private let stayID: UUID
     let navApps: [MapNavigationApp]
     let dayColor: Color
 
+    init(tripId: UUID, stay: LodgingStay, navApps: [MapNavigationApp], dayColor: Color) {
+        self.tripId = tripId; self.stay = stay; self.stayID = stay.id
+        self.navApps = navApps; self.dayColor = dayColor
+    }
+
     @EnvironmentObject var store: TripStore
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.nativeEditorOwner) private var inheritedNativeEditorOwner
+    @Environment(\.nativeEditorGroup) private var inheritedNativeEditorGroup
+    @StateObject private var nativeEditors = CarryNativeEditorPresentations()
+    private var currentStay: LodgingStay? { store.bundle(for: tripId)?.lodgingStays?.first(where: { $0.id == stayID }) }
     @State private var editing = false
     @State private var showQuickNote = false
     @State private var showQuickCost = false
@@ -59,28 +93,34 @@ struct LodgingDetailView: View {
             }
         } footer: {
             DetailActionFooter(
-                onEdit: { editing = true },
+                onEdit: { guard nativeEditors.begin(key: "editing", store: store, owner: inheritedNativeEditorOwner, group: inheritedNativeEditorGroup) else { return }; guard currentStay != nil else { nativeEditors.end(key: "editing"); nativeEditors.saveFailed = true; return }; editing = true },
                 onDelete: deleteStay,
-                onNote: { showQuickNote = true },
-                onCost: { showQuickCost = true },
+                onNote: { guard nativeEditors.begin(key: "showQuickNote", store: store, owner: inheritedNativeEditorOwner, group: inheritedNativeEditorGroup) else { return }; guard currentStay != nil else { nativeEditors.end(key: "showQuickNote"); nativeEditors.saveFailed = true; return }; showQuickNote = true },
+                onCost: { guard nativeEditors.begin(key: "showQuickCost", store: store, owner: inheritedNativeEditorOwner, group: inheritedNativeEditorGroup) else { return }; guard currentStay != nil else { nativeEditors.end(key: "showQuickCost"); nativeEditors.saveFailed = true; return }; showQuickCost = true },
                 hasNote: !stay.note.isEmpty,
                 hasCost: stay.hasCost
             )
         }
-        .sheet(isPresented: $editing) {
-            LodgingEditView(tripId: tripId, stayId: stay.id)
-        }
-        .sheet(isPresented: $showQuickNote) {
-            QuickNoteSheet(existingNote: stay.note) { newNote in
-                store.updateLodgingStay(tripId: tripId, stayId: stay.id, note: newNote)
+        .nativeEditorSheet(isPresented: $editing, presentations: nativeEditors, onDismiss: nativeEditors.dismissal(key: "editing")) {
+            if let currentStay {
+                LodgingEditView(tripId: tripId, stayId: currentStay.id)
             }
         }
-        .sheet(isPresented: $showQuickCost) {
-            QuickCostSheet(
-                existingAmount: stay.costAmount,
-                existingCurrencyCode: stay.costCurrencyCode
-            ) { amount, code in
-                store.setLodgingCost(tripId: tripId, stayId: stay.id, amount: amount, currencyCode: code)
+        .nativeEditorSheet(isPresented: $showQuickNote, presentations: nativeEditors, onDismiss: nativeEditors.dismissal(key: "showQuickNote")) {
+            if let currentStay {
+                QuickNoteSheet(existingNote: currentStay.note) { newNote in
+                    nativeEditors.save(store: store) { store.updateLodgingStay(tripId: tripId, stayId: currentStay.id, note: newNote) }
+                }
+            }
+        }
+        .nativeEditorSheet(isPresented: $showQuickCost, presentations: nativeEditors, onDismiss: nativeEditors.dismissal(key: "showQuickCost")) {
+            if let currentStay {
+                QuickCostSheet(
+                    existingAmount: currentStay.costAmount,
+                    existingCurrencyCode: currentStay.costCurrencyCode
+                ) { amount, code in
+                    nativeEditors.save(store: store) { store.setLodgingCost(tripId: tripId, stayId: currentStay.id, amount: amount, currencyCode: code) }
+                }
             }
         }
     }
@@ -98,7 +138,7 @@ struct LodgingDetailView: View {
     }
 
     private func deleteStay() {
-        store.removeLodgingStay(tripId: tripId, stayId: stay.id)
+        guard nativeEditors.save(store: store, { store.removeLodgingStay(tripId: tripId, stayId: stay.id) }) else { return }
         dismiss()
     }
 

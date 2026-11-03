@@ -14,6 +14,11 @@ final class CarryLogger {
     private let retentionDays = 30
 
     enum Event: String {
+        case accountSignInStarted = "account_sign_in_started"
+        case accountSignInSucceeded = "account_sign_in_succeeded"
+        case accountSignedOut = "account_signed_out"
+        case accountDeleted = "account_deleted"
+        case accountOperationFailed = "account_operation_failed"
         // 行程
         case tripCreated            = "trip_created"
         case tripDeleted            = "trip_deleted"
@@ -199,6 +204,7 @@ final class CarryLogger {
     }
 
     private static let errorEvents: Set<Event> = [
+        .accountOperationFailed,
         .persistFailed, .loadFailed, .dbInitFailed, .dataCorrupted,
         .duplicateFailed, .reorderSaveFailed, .autoPackNavigationFailed,
         .tripDataEmpty, .tripSaveFailed, .tripEditSaveFailed,

@@ -9,9 +9,12 @@ import SwiftUI
 
 struct QuickNoteSheet: View {
     let existingNote: String
-    let onSave: (String) -> Void
+    let onSave: (String) -> Bool
 
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.nativeEditorOwner) private var inheritedNativeEditorOwner
+    @Environment(\.nativeEditorGroup) private var inheritedNativeEditorGroup
+    @StateObject private var nativeEditors = CarryNativeEditorPresentations()
     @State private var text: String = ""
     @FocusState private var focused: Bool
 
@@ -50,6 +53,7 @@ struct QuickNoteSheet: View {
                 }
             }
         }
+        .nativeEditorErrors(nativeEditors)
         .presentationDetents([.medium, .large])
         .presentationDragIndicator(.visible)
         .onAppear {
@@ -60,7 +64,7 @@ struct QuickNoteSheet: View {
 
     private func save() {
         focused = false
-        onSave(text)
+        guard onSave(text) else { nativeEditors.saveFailed = true; return }
         dismiss()
     }
 }

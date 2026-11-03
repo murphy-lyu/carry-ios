@@ -32,6 +32,9 @@ struct ScenePickerView: View {
     @EnvironmentObject var router: NavigationRouter
     @Environment(\.dismiss) private var dismiss
     @Environment(\.colorScheme) private var colorScheme
+    @Environment(\.nativeEditorOwner) private var inheritedNativeEditorOwner
+    @Environment(\.nativeEditorGroup) private var inheritedNativeEditorGroup
+    @StateObject private var nativeEditors = CarryNativeEditorPresentations()
     @State private var selectedItems: Set<String> = []
     @State private var didLoadInitialSelection = false
     @State private var confirmedSuggestKeys: [String]? = nil
@@ -146,12 +149,13 @@ struct ScenePickerView: View {
         }
         .navigationTitle("")
         .navigationBarTitleDisplayMode(.inline)
+        .nativeEditorErrors(nativeEditors)
         .onAppear { loadInitialSelectionIfNeeded() }
         .task { await runCyclePredictionIfNeeded() }
-        .sheet(isPresented: Binding(
+        .nativeEditorSheet(isPresented: Binding(
             get: { confirmedSuggestKeys != nil },
             set: { if !$0 { confirmedSuggestKeys = nil } }
-        )) {
+        ), presentations: nativeEditors, onDismiss: nativeEditors.dismissal(key: "suggestionPreview")) {
             if case .suggest(let tripId) = mode, let keys = confirmedSuggestKeys {
                 SuggestionPreviewView(tripId: tripId, sceneKeys: keys, didFinish: $didFinishSuggest)
             }
@@ -347,11 +351,14 @@ struct ScenePickerView: View {
             UIImpactFeedbackGenerator(style: .medium).impactOccurred()
             guard !keys.isEmpty else {
                 if case .suggest(let tripId) = mode {
-                    store.setSelectedSceneKeys(tripId: tripId, keys: [])
+                    guard nativeEditors.save(store: store, {
+                        store.setSelectedSceneKeys(tripId: tripId, keys: [])
+                    }) else { return }
                 }
                 dismiss()
                 return
             }
+            guard nativeEditors.begin(key: "suggestionPreview", store: store, owner: inheritedNativeEditorOwner, group: inheritedNativeEditorGroup) else { return }
             confirmedSuggestKeys = keys
         }
     }

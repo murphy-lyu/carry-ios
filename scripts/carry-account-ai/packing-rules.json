@@ -1,0 +1,3414 @@
+{
+  "version": 1,
+  "sourceSHA256": "0caf1ba1d74cdfb3be446d7544f67999f3bd9034ca652fc29975612bef9cb1a9",
+  "surprise": {
+    "scenes": {
+      "road_trip": [
+        {
+          "name": "Car phone mount",
+          "note": "Hands-free navigation is the law in most places — and your co-pilot won't always be awake",
+          "category": "Travel Accessories"
+        },
+        {
+          "name": "Window sunshade",
+          "note": "Parked in the sun, your steering wheel becomes untouchable — costs almost nothing to prevent",
+          "category": "Travel Accessories"
+        },
+        {
+          "name": "Flat shoes",
+          "note": "Driving in heels reduces pedal feel and reaction time — a pair of flats to swap into before getting behind the wheel makes a real difference on long stretches",
+          "category": "Clothing"
+        },
+        {
+          "name": "Car travel blanket",
+          "note": "Passenger-seat naps are so much better with a real blanket — one that lives in the boot ready to go",
+          "category": "Travel Accessories"
+        },
+        {
+          "name": "Disposable camera",
+          "note": "Your phone will capture everything perfectly. Which is exactly why a disposable feels different — the grain, the not-knowing, the waiting",
+          "category": "Electronics"
+        }
+      ],
+      "long_haul_flight": [
+        {
+          "name": "Steam eye mask",
+          "note": "Ten minutes of warm darkness mid-flight feels like a reset — most people who try one become converts",
+          "category": "Personal Care"
+        },
+        {
+          "name": "Blister patches",
+          "note": "Fast airport transfers and long terminal walks can shred your heels — applying one early can save your first day",
+          "category": "Health"
+        },
+        {
+          "name": "Saline nasal spray",
+          "note": "Cabin air is drier than most deserts — your nose bears the brunt silently. A few sprays keep things comfortable and meaningfully reduce that heavy-headed feeling after landing",
+          "category": "Health"
+        },
+        {
+          "name": "Hand cream",
+          "note": "Cabin air is brutally dry — hands suffer first, and most people only notice once they're already cracked",
+          "category": "Personal Care"
+        },
+        {
+          "name": "Disposable slippers",
+          "note": "Shoes off, slippers on — a small ritual that makes a long flight feel far more civilised",
+          "category": "Travel Accessories"
+        },
+        {
+          "name": "Book",
+          "note": "A physical book for long-haul — no battery anxiety, no glare, and you will actually finish it away from notifications",
+          "category": "Travel Accessories"
+        },
+        {
+          "name": "Essential oil roller",
+          "note": "A small roller of lavender or peppermint does two things: eases tension headaches mid-flight, and marks the moment you apply it at the gate as the real start of the trip",
+          "category": "Personal Care"
+        }
+      ],
+      "honeymoon": [
+        {
+          "name": "Scented candle",
+          "note": "A small candle transforms a hotel room — that smell will mean 'the honeymoon' for years afterwards",
+          "category": "Personal Care"
+        },
+        {
+          "name": "Massage oil",
+          "note": "For evenings with nowhere to be — the right scent shifts the whole mood of a room in a way that nothing else quite does",
+          "category": "Personal Care"
+        },
+        {
+          "name": "Bath salts",
+          "note": "One evening, run a bath — it is a small decision that can make a whole trip feel like it was properly lived",
+          "category": "Personal Care"
+        },
+        {
+          "name": "Instax / instant camera",
+          "note": "A photo you hold in your hands sixty seconds after taking it is a different kind of memory",
+          "category": "Electronics"
+        },
+        {
+          "name": "Journey journal",
+          "note": "Somewhere to write down the small details before they blur together into just 'the honeymoon'",
+          "category": "Travel Accessories"
+        }
+      ],
+      "backpacking": [
+        {
+          "name": "Ziplock bags",
+          "note": "Waterproofing documents, organising small items, separating wet clothes — endlessly useful",
+          "category": "Travel Accessories"
+        },
+        {
+          "name": "Mini clips",
+          "note": "Tiny but surprisingly versatile: clip wet socks to dry, seal snack bags, or secure loose small items",
+          "category": "Travel Accessories"
+        },
+        {
+          "name": "Earplugs",
+          "note": "Dorm rooms are never as quiet as the listing suggests — a pair of earplugs is the difference between sleeping through and lying awake until 7am listening to someone else's alarm",
+          "category": "Travel Accessories"
+        },
+        {
+          "name": "Instant coffee",
+          "note": "For early mornings before the café opens — one sachet weighs nothing and can save a slow start anywhere in the world",
+          "category": "Essentials"
+        }
+      ],
+      "city_break": [
+        {
+          "name": "Comfort insoles",
+          "note": "City days can hit 20k+ steps — insoles can save your feet by day two",
+          "category": "Clothing"
+        },
+        {
+          "name": "Collapsible tote bag",
+          "note": "You will buy something at a market or deli — saves scrambling for a bag at the checkout",
+          "category": "Travel Accessories"
+        },
+        {
+          "name": "Stain remover pen",
+          "note": "When coffee or sauce lands on light clothes, a quick swipe can save you from a whole day of awkward stains",
+          "category": "Personal Care"
+        }
+      ],
+      "tropical": [
+        {
+          "name": "Snorkel mask",
+          "note": "A full-face snorkel mask changes the experience entirely — clear vision, easy breathing, no learning curve",
+          "category": "Travel Accessories"
+        },
+        {
+          "name": "Reef-safe sunscreen",
+          "note": "Regular sunscreen damages coral reefs — worth switching in tropical waters",
+          "category": "Health"
+        },
+        {
+          "name": "Sarong / pareo",
+          "note": "One lightweight cloth that works as a beach cover-up, a towel, a picnic blanket, a makeshift shade, or a bag — it never takes up meaningful space and gets used every single day",
+          "category": "Clothing"
+        },
+        {
+          "name": "Waterproof phone pouch",
+          "note": "Clip it on and take your phone into the water — suddenly every boat trip, beach swim, or waterfall is fully documented",
+          "category": "Travel Accessories"
+        }
+      ],
+      "winter": [
+        {
+          "name": "Portable electric kettle",
+          "note": "Hot water on demand in your hotel room — instant noodles at midnight, morning tea without waiting for room service",
+          "category": "Electronics"
+        },
+        {
+          "name": "Rechargeable hand warmer",
+          "note": "Warm hands change everything in the cold — and unlike disposable ones, this one charges your phone in a pinch too",
+          "category": "Travel Accessories"
+        },
+        {
+          "name": "Hot chocolate sachets",
+          "note": "A cup of hot chocolate in a cold room after a day in the snow is one of those small things that makes a trip feel complete",
+          "category": "Essentials"
+        }
+      ],
+      "hiking": [
+        {
+          "name": "Energy gel / dark chocolate",
+          "note": "Real hunger hits on a long ascent — something dense and rewarding at the summit makes the whole climb feel worth it",
+          "category": "Essentials"
+        },
+        {
+          "name": "Foldable hiking stool",
+          "note": "Somewhere to sit at the viewpoint — standing and looking is fine, sitting and looking is something else",
+          "category": "Travel Accessories"
+        },
+        {
+          "name": "Duct tape (small roll)",
+          "note": "Fixes a broken boot sole, a torn strap, or a blister spot — worth the 30g",
+          "category": "Travel Accessories"
+        }
+      ],
+      "cruise": [
+        {
+          "name": "Power strip",
+          "note": "Most cruise cabins have one or two outlets for an entire room. A compact power strip solves this immediately and quietly — most people only realise they need one after the first night",
+          "category": "Electronics"
+        },
+        {
+          "name": "Magnetic hooks",
+          "note": "Cruise cabin walls are magnetic, and most people don't know until they've already unpacked — a few hooks can completely change how the room works",
+          "category": "Travel Accessories"
+        },
+        {
+          "name": "Formal accessories",
+          "note": "A tie clip or silk scarf — the details that make a formal dinner outfit feel considered rather than thrown together",
+          "category": "Clothing"
+        },
+        {
+          "name": "Portable fan",
+          "note": "Cabins can get warm, especially in tropical ports — a small USB fan is a real sleep improvement",
+          "category": "Electronics"
+        },
+        {
+          "name": "Acupressure wristbands",
+          "note": "Worn on the pressure point above the wrist — more stylish than patches and surprisingly effective for mild seasickness",
+          "category": "Health"
+        }
+      ],
+      "business": [
+        {
+          "name": "Wrinkle-release spray",
+          "note": "Meeting clothes out of a suitcase always need a refresh — no iron required",
+          "category": "Personal Care"
+        },
+        {
+          "name": "Travel steamer",
+          "note": "De-creases a shirt in two minutes — more effective than an iron on most fabrics, and takes up almost no space",
+          "category": "Travel Accessories"
+        },
+        {
+          "name": "Shoe care kit",
+          "note": "Scuffed shoes undermine an otherwise sharp outfit — a quick buff before a client meeting takes thirty seconds",
+          "category": "Personal Care"
+        },
+        {
+          "name": "Foldable hangers",
+          "note": "Hotel rooms never have enough — three extra hangers solve the whole wardrobe problem",
+          "category": "Travel Accessories"
+        }
+      ],
+      "kids": [
+        {
+          "name": "Portable white noise machine",
+          "note": "New rooms sound different at night — unfamiliar air conditioning, thinner walls, street noise. A loop of familiar white noise gives a child something constant to fall asleep to, wherever the room is",
+          "category": "Electronics"
+        },
+        {
+          "name": "Magnetic drawing board",
+          "note": "Mess-free drawing that resets instantly — endlessly reusable on long journeys",
+          "category": "Travel Accessories"
+        },
+        {
+          "name": "Kids headphones",
+          "note": "Volume-limited and properly sized — lets them watch their shows without disturbing everyone around them",
+          "category": "Electronics"
+        },
+        {
+          "name": "Night light",
+          "note": "New rooms are dark in unfamiliar ways — a simple plug-in night light prevents middle-of-the-night panic",
+          "category": "Electronics"
+        },
+        {
+          "name": "Familiar snacks from home",
+          "note": "Picky eaters + unfamiliar food = avoidable stress — come prepared",
+          "category": "Essentials"
+        },
+        {
+          "name": "Sticker book or activity pad",
+          "note": "For the unavoidable waiting — restaurants, airports, long car journeys",
+          "category": "Travel Accessories"
+        }
+      ],
+      "high_altitude": [
+        {
+          "name": "Thermos",
+          "note": "At altitude, water boils below 90°C and cools in minutes. A thermos keeps hot drinks hot for the whole day out — and at high elevation, drinking something warm regularly genuinely helps",
+          "category": "Travel Accessories"
+        },
+        {
+          "name": "Portable oxygen can",
+          "note": "Compact enough to slip in a day bag — a quick few breaths at altitude does genuinely help, and the peace of mind is worth it",
+          "category": "Health"
+        }
+      ],
+      "rainy_city": [
+        {
+          "name": "Disposable rain poncho",
+          "note": "Packs to the size of a biscuit, costs almost nothing — for when the umbrella is in the bag and the rain starts now",
+          "category": "Clothing"
+        },
+        {
+          "name": "Waterproof shoe covers",
+          "note": "Pull on over any shoes in seconds — keeps feet dry without having to plan your footwear around the forecast",
+          "category": "Clothing"
+        },
+        {
+          "name": "Waterproof zip pouch",
+          "note": "In heavy rain, putting your phone, cards, and tickets inside removes a lot of avoidable stress",
+          "category": "Travel Accessories"
+        }
+      ],
+      "remote_work": [
+        {
+          "name": "Blue light glasses",
+          "note": "Eight hours at a screen in a new place. A small defence against the slow headache that builds through the afternoon",
+          "category": "Travel Accessories"
+        },
+        {
+          "name": "Pocket notebook",
+          "note": "For thinking that doesn't belong in a doc. Keep it on the desk, not buried in the bag",
+          "category": "Travel Accessories"
+        },
+        {
+          "name": "Portable desk pad",
+          "note": "Any surface becomes a workspace with a desk pad under your hands — a simple trick that makes rented rooms feel like yours",
+          "category": "Travel Accessories"
+        }
+      ]
+    },
+    "universal": {
+      "Blue light glasses": 0.78,
+      "Pocket notebook": 0.72,
+      "Hand cream": 0.9,
+      "Ziplock bags": 0.9,
+      "Pill organiser": 0.88,
+      "Travel steamer": 0.74,
+      "Collapsible tote bag": 0.82,
+      "Disposable rain poncho": 0.86,
+      "Waterproof shoe covers": 0.7,
+      "Book": 0.72,
+      "Instant coffee": 0.68,
+      "Saline nasal spray": 0.72,
+      "Earplugs": 0.74
+    },
+    "delight": {
+      "Scented candle": 0.96,
+      "Journey journal": 0.86,
+      "Instax / instant camera": 0.94,
+      "Portable electric kettle": 0.78,
+      "Car travel blanket": 0.76,
+      "Brown sugar ginger tea": 0.84,
+      "Sarong / pareo": 0.8
+    },
+    "scene": {
+      "Disposable camera": 0.88,
+      "Blue light glasses": 0.92,
+      "Pocket notebook": 0.82,
+      "Portable desk pad": 0.86,
+      "Magnetic hooks": 0.98,
+      "Power strip": 0.96,
+      "Acupressure wristbands": 0.92,
+      "Portable oxygen can": 0.98,
+      "Thermos": 0.94,
+      "Disposable rain poncho": 0.94,
+      "Waterproof shoe covers": 0.94,
+      "Reef-safe sunscreen": 0.92,
+      "Snorkel mask": 0.9,
+      "Sarong / pareo": 0.92,
+      "Saline nasal spray": 0.88,
+      "Earplugs": 0.94,
+      "Portable white noise machine": 0.9,
+      "Kids headphones": 0.92,
+      "Night light": 0.9
+    },
+    "niche": {
+      "Snorkel mask": 0.65,
+      "Portable oxygen can": 0.6,
+      "Foldable hiking stool": 0.58,
+      "Magnetic hooks": 0.52,
+      "Portable electric kettle": 0.5,
+      "Portable white noise machine": 0.6,
+      "Thermos": 0.45
+    },
+    "overlap": {
+      "Car phone mount": [
+        "phone mount",
+        "car mount"
+      ],
+      "Window sunshade": [
+        "sunshade"
+      ],
+      "Steam eye mask": [
+        "eye mask"
+      ],
+      "Hand cream": [
+        "cream",
+        "lotion"
+      ],
+      "Disposable slippers": [
+        "slippers"
+      ],
+      "Scented candle": [
+        "candle"
+      ],
+      "Massage oil": [
+        "massage oil",
+        "facial oil"
+      ],
+      "Instax / instant camera": [
+        "camera"
+      ],
+      "Journey journal": [
+        "journal",
+        "notebook"
+      ],
+      "Snorkel mask": [
+        "snorkel",
+        "swimming goggles"
+      ],
+      "Reef-safe sunscreen": [
+        "sunscreen"
+      ],
+      "Sarong / pareo": [
+        "sarong",
+        "pareo",
+        "beach towel"
+      ],
+      "Magnetic hooks": [
+        "hooks"
+      ],
+      "Power strip": [
+        "power strip",
+        "extension cord"
+      ],
+      "Formal accessories": [
+        "formal wear",
+        "tie",
+        "scarf"
+      ],
+      "Portable fan": [
+        "fan"
+      ],
+      "Wrinkle-release spray": [
+        "wrinkle-release spray"
+      ],
+      "Travel steamer": [
+        "steamer"
+      ],
+      "Shoe care kit": [
+        "shoe care",
+        "shoe polish"
+      ],
+      "Foldable hangers": [
+        "hangers"
+      ],
+      "Kids headphones": [
+        "headphones"
+      ],
+      "Night light": [
+        "night light"
+      ],
+      "Portable white noise machine": [
+        "white noise",
+        "noise machine"
+      ],
+      "Disposable rain poncho": [
+        "rain poncho",
+        "rain jacket"
+      ],
+      "Waterproof shoe covers": [
+        "waterproof shoes",
+        "shoe covers"
+      ],
+      "Portable hot water bottle": [
+        "hot water bottle"
+      ],
+      "Brown sugar ginger tea": [
+        "ginger tea",
+        "tea"
+      ],
+      "Instant coffee": [
+        "instant coffee",
+        "coffee"
+      ],
+      "Book": [
+        "book",
+        "e-reader"
+      ],
+      "Waterproof phone pouch": [
+        "waterproof bag",
+        "phone case"
+      ],
+      "Bath salts": [
+        "bath salts"
+      ],
+      "Saline nasal spray": [
+        "nasal spray",
+        "saline"
+      ],
+      "Essential oil roller": [
+        "essential oil"
+      ],
+      "Rechargeable hand warmer": [
+        "hand warmer"
+      ],
+      "Hot chocolate sachets": [
+        "hot chocolate"
+      ],
+      "Thermos": [
+        "thermos",
+        "flask"
+      ],
+      "Disposable camera": [
+        "camera",
+        "disposable camera"
+      ],
+      "Earplugs": [
+        "earplugs",
+        "ear plugs"
+      ],
+      "Blue light glasses": [
+        "blue light",
+        "glasses",
+        "spectacles"
+      ],
+      "Pocket notebook": [
+        "notebook",
+        "journal"
+      ],
+      "Portable desk pad": [
+        "desk pad",
+        "desk mat"
+      ]
+    },
+    "categoryOrder": [
+      "Personal Care",
+      "Electronics",
+      "Clothing",
+      "Essentials",
+      "Health",
+      "Travel Documents"
+    ]
+  },
+  "climate": {
+    "tropicalCountries": [
+      "TH",
+      "ID",
+      "PH",
+      "MY",
+      "SG",
+      "VN",
+      "KH",
+      "LA",
+      "BN",
+      "MV",
+      "LK",
+      "MG",
+      "MU",
+      "SC",
+      "CV",
+      "RE",
+      "AE",
+      "OM",
+      "FJ",
+      "WS",
+      "TO",
+      "VU",
+      "PF",
+      "SB",
+      "PW",
+      "FM",
+      "MH",
+      "KI",
+      "NC",
+      "GU",
+      "MP",
+      "CU",
+      "DO",
+      "JM",
+      "BS",
+      "BB",
+      "TT",
+      "LC",
+      "VC",
+      "GD",
+      "KN",
+      "AG",
+      "AW",
+      "CW",
+      "MQ",
+      "GP",
+      "TC",
+      "PR",
+      "KY",
+      "VG",
+      "VI",
+      "CR",
+      "PA",
+      "GT",
+      "BZ",
+      "HN",
+      "NI",
+      "SV"
+    ],
+    "alwaysColdCountries": [
+      "IS",
+      "GL"
+    ],
+    "seasonallyColdNorthernCountries": [
+      "JP",
+      "KR",
+      "MN",
+      "NO",
+      "SE",
+      "FI",
+      "DK",
+      "EE",
+      "LV",
+      "LT",
+      "PL",
+      "CZ",
+      "SK",
+      "HU",
+      "AT",
+      "CH",
+      "DE",
+      "SI",
+      "FR",
+      "GB",
+      "NL",
+      "BE",
+      "IT",
+      "RO",
+      "BG",
+      "RU",
+      "UA",
+      "BY",
+      "KZ",
+      "CA"
+    ],
+    "highAltitudeCountries": [
+      "NP",
+      "BT",
+      "PE",
+      "BO",
+      "EC",
+      "CO",
+      "ET",
+      "KG",
+      "TJ"
+    ]
+  },
+  "base": [
+    {
+      "name": "Passport",
+      "category": "Travel Documents",
+      "isAlert": true,
+      "internationalOnly": true
+    },
+    {
+      "name": "Wallet",
+      "category": "Travel Accessories",
+      "isAlert": false,
+      "internationalOnly": false
+    },
+    {
+      "name": "Cash",
+      "category": "Travel Accessories",
+      "isAlert": false,
+      "internationalOnly": false
+    },
+    {
+      "name": "Phone charger",
+      "category": "Electronics",
+      "isAlert": false,
+      "internationalOnly": false
+    },
+    {
+      "name": "Underwear",
+      "category": "Clothing",
+      "isAlert": false,
+      "internationalOnly": false
+    },
+    {
+      "name": "Socks",
+      "category": "Clothing",
+      "isAlert": false,
+      "internationalOnly": false
+    },
+    {
+      "name": "Toothbrush",
+      "category": "Personal Care",
+      "isAlert": false,
+      "internationalOnly": false
+    },
+    {
+      "name": "Toothpaste",
+      "category": "Personal Care",
+      "isAlert": false,
+      "internationalOnly": false
+    },
+    {
+      "name": "Deodorant",
+      "category": "Personal Care",
+      "isAlert": false,
+      "internationalOnly": false
+    }
+  ],
+  "scenes": {
+    "road_trip": [
+      {
+        "name": "Driver's license",
+        "category": "Travel Documents",
+        "isAlert": true,
+        "internationalOnly": false
+      },
+      {
+        "name": "Car insurance docs",
+        "category": "Essentials",
+        "isAlert": true,
+        "internationalOnly": false
+      },
+      {
+        "name": "Car charger",
+        "category": "Electronics",
+        "isAlert": true,
+        "internationalOnly": false
+      },
+      {
+        "name": "First aid kit",
+        "category": "Health & Wellness",
+        "isAlert": true,
+        "internationalOnly": false
+      },
+      {
+        "name": "Sunglasses",
+        "category": "Travel Accessories",
+        "isAlert": true,
+        "internationalOnly": false
+      },
+      {
+        "name": "Water bottle",
+        "category": "Travel Accessories",
+        "isAlert": false,
+        "internationalOnly": false
+      },
+      {
+        "name": "Snacks",
+        "category": "Essentials",
+        "isAlert": false,
+        "internationalOnly": false
+      }
+    ],
+    "long_haul_flight": [
+      {
+        "name": "Passport",
+        "category": "Travel Documents",
+        "isAlert": true,
+        "internationalOnly": true
+      },
+      {
+        "name": "Neck pillow",
+        "category": "Travel Accessories",
+        "isAlert": true,
+        "internationalOnly": false
+      },
+      {
+        "name": "Noise-cancelling headphones",
+        "category": "Electronics",
+        "isAlert": true,
+        "internationalOnly": false
+      },
+      {
+        "name": "Portable WiFi device",
+        "category": "Electronics",
+        "isAlert": false,
+        "internationalOnly": true
+      },
+      {
+        "name": "Eye mask",
+        "category": "Travel Accessories",
+        "isAlert": false,
+        "internationalOnly": false
+      },
+      {
+        "name": "Water bottle",
+        "category": "Travel Accessories",
+        "isAlert": false,
+        "internationalOnly": false
+      }
+    ],
+    "cruise": [
+      {
+        "name": "Passport",
+        "category": "Travel Documents",
+        "isAlert": true,
+        "internationalOnly": true
+      },
+      {
+        "name": "Motion sickness tablets",
+        "category": "Health & Wellness",
+        "isAlert": true,
+        "internationalOnly": false
+      },
+      {
+        "name": "Formal dinner outfit",
+        "category": "Essentials",
+        "isAlert": true,
+        "internationalOnly": false
+      },
+      {
+        "name": "Travel adapter",
+        "category": "Electronics",
+        "isAlert": true,
+        "internationalOnly": true
+      },
+      {
+        "name": "Swimsuit",
+        "category": "Clothing",
+        "isAlert": false,
+        "internationalOnly": false
+      },
+      {
+        "name": "Sunscreen",
+        "category": "Personal Care",
+        "isAlert": true,
+        "internationalOnly": false
+      }
+    ],
+    "tropical": [
+      {
+        "name": "Sunscreen",
+        "category": "Personal Care",
+        "isAlert": true,
+        "internationalOnly": false
+      },
+      {
+        "name": "Sunglasses",
+        "category": "Travel Accessories",
+        "isAlert": true,
+        "internationalOnly": false
+      },
+      {
+        "name": "Sun hat",
+        "category": "Clothing",
+        "isAlert": true,
+        "internationalOnly": false
+      },
+      {
+        "name": "Insect repellent",
+        "category": "Health & Wellness",
+        "isAlert": true,
+        "internationalOnly": false
+      },
+      {
+        "name": "Swimsuit",
+        "category": "Clothing",
+        "isAlert": false,
+        "internationalOnly": false
+      },
+      {
+        "name": "Flip flops",
+        "category": "Clothing",
+        "isAlert": false,
+        "internationalOnly": false
+      },
+      {
+        "name": "After-sun lotion",
+        "category": "Health & Wellness",
+        "isAlert": false,
+        "internationalOnly": false
+      },
+      {
+        "name": "Waterproof bag",
+        "category": "Essentials",
+        "isAlert": false,
+        "internationalOnly": false
+      }
+    ],
+    "rainy_city": [
+      {
+        "name": "Umbrella",
+        "category": "Travel Accessories",
+        "isAlert": true,
+        "internationalOnly": false
+      },
+      {
+        "name": "Waterproof jacket",
+        "category": "Clothing",
+        "isAlert": true,
+        "internationalOnly": false
+      },
+      {
+        "name": "Waterproof shoes",
+        "category": "Clothing",
+        "isAlert": true,
+        "internationalOnly": false
+      }
+    ],
+    "high_altitude": [
+      {
+        "name": "Altitude sickness pills",
+        "category": "Essentials",
+        "isAlert": true,
+        "internationalOnly": false
+      },
+      {
+        "name": "Thermal underwear",
+        "category": "Clothing",
+        "isAlert": true,
+        "internationalOnly": false
+      },
+      {
+        "name": "Down jacket",
+        "category": "Clothing",
+        "isAlert": true,
+        "internationalOnly": false
+      },
+      {
+        "name": "Sunscreen",
+        "category": "Personal Care",
+        "isAlert": true,
+        "internationalOnly": false
+      },
+      {
+        "name": "Sunglasses",
+        "category": "Travel Accessories",
+        "isAlert": true,
+        "internationalOnly": false
+      },
+      {
+        "name": "Water bottle",
+        "category": "Travel Accessories",
+        "isAlert": false,
+        "internationalOnly": false
+      },
+      {
+        "name": "Electrolyte tablets",
+        "category": "Health & Wellness",
+        "isAlert": false,
+        "internationalOnly": false
+      },
+      {
+        "name": "Thermal socks",
+        "category": "Clothing",
+        "isAlert": false,
+        "internationalOnly": false
+      },
+      {
+        "name": "Windproof jacket",
+        "category": "Clothing",
+        "isAlert": false,
+        "internationalOnly": false
+      }
+    ],
+    "winter": [
+      {
+        "name": "Thermal underwear",
+        "category": "Clothing",
+        "isAlert": true,
+        "internationalOnly": false
+      },
+      {
+        "name": "Down jacket",
+        "category": "Clothing",
+        "isAlert": true,
+        "internationalOnly": false
+      },
+      {
+        "name": "Heavy winter coat",
+        "category": "Clothing",
+        "isAlert": true,
+        "internationalOnly": false
+      },
+      {
+        "name": "Gloves",
+        "category": "Clothing",
+        "isAlert": true,
+        "internationalOnly": false
+      },
+      {
+        "name": "Beanie",
+        "category": "Clothing",
+        "isAlert": true,
+        "internationalOnly": false
+      },
+      {
+        "name": "Scarf",
+        "category": "Clothing",
+        "isAlert": false,
+        "internationalOnly": false
+      },
+      {
+        "name": "Hand warmers",
+        "category": "Essentials",
+        "isAlert": false,
+        "internationalOnly": false
+      },
+      {
+        "name": "Thermal socks",
+        "category": "Clothing",
+        "isAlert": false,
+        "internationalOnly": false
+      },
+      {
+        "name": "Snow boots",
+        "category": "Clothing",
+        "isAlert": false,
+        "internationalOnly": false
+      }
+    ],
+    "business": [
+      {
+        "name": "Business cards",
+        "category": "Essentials",
+        "isAlert": false,
+        "internationalOnly": false
+      },
+      {
+        "name": "Laptop",
+        "category": "Electronics",
+        "isAlert": true,
+        "internationalOnly": false
+      },
+      {
+        "name": "Laptop charger",
+        "category": "Electronics",
+        "isAlert": true,
+        "internationalOnly": false
+      },
+      {
+        "name": "Formal shirt / blouse",
+        "category": "Clothing",
+        "isAlert": true,
+        "internationalOnly": false
+      },
+      {
+        "name": "Formal wear",
+        "category": "Clothing",
+        "isAlert": true,
+        "internationalOnly": false
+      },
+      {
+        "name": "Dress shoes",
+        "category": "Essentials",
+        "isAlert": true,
+        "internationalOnly": false
+      },
+      {
+        "name": "Portable WiFi device",
+        "category": "Electronics",
+        "isAlert": false,
+        "internationalOnly": true
+      }
+    ],
+    "remote_work": [
+      {
+        "name": "Laptop",
+        "category": "Electronics",
+        "isAlert": true,
+        "internationalOnly": false
+      },
+      {
+        "name": "Portable WiFi device",
+        "category": "Electronics",
+        "isAlert": true,
+        "internationalOnly": false
+      },
+      {
+        "name": "Travel adapter",
+        "category": "Electronics",
+        "isAlert": true,
+        "internationalOnly": true
+      },
+      {
+        "name": "Laptop charger",
+        "category": "Electronics",
+        "isAlert": true,
+        "internationalOnly": false
+      },
+      {
+        "name": "Noise-cancelling headphones",
+        "category": "Electronics",
+        "isAlert": true,
+        "internationalOnly": false
+      },
+      {
+        "name": "Portable charger",
+        "category": "Electronics",
+        "isAlert": false,
+        "internationalOnly": false
+      }
+    ],
+    "kids": [
+      {
+        "name": "Children's passport / ID",
+        "category": "Travel Documents",
+        "isAlert": true,
+        "internationalOnly": false
+      },
+      {
+        "name": "Children's medication",
+        "category": "Essentials",
+        "isAlert": true,
+        "internationalOnly": false
+      },
+      {
+        "name": "Wet wipes",
+        "category": "Health & Wellness",
+        "isAlert": true,
+        "internationalOnly": false
+      },
+      {
+        "name": "Snacks for kids",
+        "category": "Essentials",
+        "isAlert": true,
+        "internationalOnly": false
+      },
+      {
+        "name": "Favourite toy / comfort item",
+        "category": "Essentials",
+        "isAlert": true,
+        "internationalOnly": false
+      },
+      {
+        "name": "Change of clothes (extra)",
+        "category": "Essentials",
+        "isAlert": false,
+        "internationalOnly": false
+      },
+      {
+        "name": "Sunscreen for kids",
+        "category": "Essentials",
+        "isAlert": false,
+        "internationalOnly": false
+      }
+    ],
+    "hiking": [
+      {
+        "name": "Hiking boots",
+        "category": "Clothing",
+        "isAlert": true,
+        "internationalOnly": false
+      },
+      {
+        "name": "First aid kit",
+        "category": "Health & Wellness",
+        "isAlert": true,
+        "internationalOnly": false
+      },
+      {
+        "name": "Headlamp + batteries",
+        "category": "Essentials",
+        "isAlert": true,
+        "internationalOnly": false
+      },
+      {
+        "name": "Sunscreen",
+        "category": "Personal Care",
+        "isAlert": true,
+        "internationalOnly": false
+      },
+      {
+        "name": "Water bottle",
+        "category": "Travel Accessories",
+        "isAlert": true,
+        "internationalOnly": false
+      },
+      {
+        "name": "Trail snacks / energy bars",
+        "category": "Essentials",
+        "isAlert": false,
+        "internationalOnly": false
+      }
+    ],
+    "honeymoon": [
+      {
+        "name": "Passport",
+        "category": "Travel Documents",
+        "isAlert": true,
+        "internationalOnly": true
+      },
+      {
+        "name": "Formal wear",
+        "category": "Clothing",
+        "isAlert": true,
+        "internationalOnly": false
+      },
+      {
+        "name": "Dress shoes",
+        "category": "Essentials",
+        "isAlert": true,
+        "internationalOnly": false
+      },
+      {
+        "name": "Travel adapter",
+        "category": "Electronics",
+        "isAlert": true,
+        "internationalOnly": true
+      },
+      {
+        "name": "Swimsuit",
+        "category": "Clothing",
+        "isAlert": false,
+        "internationalOnly": false
+      },
+      {
+        "name": "Camera / extra memory card",
+        "category": "Essentials",
+        "isAlert": false,
+        "internationalOnly": false
+      },
+      {
+        "name": "Perfume",
+        "category": "Personal Care",
+        "isAlert": false,
+        "internationalOnly": false
+      }
+    ],
+    "backpacking": [
+      {
+        "name": "Backpack rain cover",
+        "category": "Essentials",
+        "isAlert": true,
+        "internationalOnly": false
+      },
+      {
+        "name": "Microfibre towel",
+        "category": "Essentials",
+        "isAlert": true,
+        "internationalOnly": false
+      },
+      {
+        "name": "Quick-dry clothing",
+        "category": "Clothing",
+        "isAlert": true,
+        "internationalOnly": false
+      },
+      {
+        "name": "First aid kit",
+        "category": "Health & Wellness",
+        "isAlert": true,
+        "internationalOnly": false
+      },
+      {
+        "name": "Travel adapter",
+        "category": "Electronics",
+        "isAlert": true,
+        "internationalOnly": true
+      },
+      {
+        "name": "Water bottle",
+        "category": "Travel Accessories",
+        "isAlert": false,
+        "internationalOnly": false
+      },
+      {
+        "name": "Portable charger",
+        "category": "Electronics",
+        "isAlert": false,
+        "internationalOnly": false
+      },
+      {
+        "name": "Laundry bag",
+        "category": "Travel Accessories",
+        "isAlert": false,
+        "internationalOnly": false
+      }
+    ],
+    "city_break": [
+      {
+        "name": "Comfortable walking shoes",
+        "category": "Clothing",
+        "isAlert": true,
+        "internationalOnly": false
+      },
+      {
+        "name": "Crossbody bag",
+        "category": "Travel Accessories",
+        "isAlert": true,
+        "internationalOnly": false
+      },
+      {
+        "name": "Portable charger",
+        "category": "Electronics",
+        "isAlert": true,
+        "internationalOnly": false
+      },
+      {
+        "name": "Transit card / app",
+        "category": "Travel Accessories",
+        "isAlert": false,
+        "internationalOnly": false
+      },
+      {
+        "name": "Sunscreen",
+        "category": "Personal Care",
+        "isAlert": false,
+        "internationalOnly": false
+      },
+      {
+        "name": "Umbrella",
+        "category": "Travel Accessories",
+        "isAlert": false,
+        "internationalOnly": false
+      }
+    ]
+  },
+  "dailyNames": [
+    "underwear",
+    "socks",
+    "disposable underwear",
+    "disposable face masks",
+    "heat patches",
+    "instant coffee",
+    "tea bags",
+    "cotton pads",
+    "face mask",
+    "dental floss",
+    "probiotics",
+    "daily medication",
+    "children's medication"
+  ],
+  "categoryOrder": [
+    "Travel Documents",
+    "Clothing",
+    "Electronics",
+    "Travel Accessories",
+    "Personal Care",
+    "Essentials",
+    "Health",
+    "Health & Wellness"
+  ],
+  "extra": [
+    {
+      "name": "HK & Macao permit",
+      "category": "Travel Documents",
+      "isAlert": true,
+      "internationalOnly": false
+    },
+    {
+      "name": "Taiwan permit",
+      "category": "Travel Documents",
+      "isAlert": true,
+      "internationalOnly": false
+    },
+    {
+      "name": "ID card",
+      "category": "Travel Documents",
+      "isAlert": true,
+      "internationalOnly": false
+    }
+  ],
+  "labels": {
+    "Passport": {
+      "en": "Passport",
+      "de": "Reisepass",
+      "es": "Pasaporte",
+      "fr": "Passeport",
+      "ja": "パスポート",
+      "ko": "여권",
+      "pt-BR": "Passaporte",
+      "zh-Hans": "护照",
+      "zh-Hant": "護照"
+    },
+    "Wallet": {
+      "en": "Wallet",
+      "de": "Geldbörse",
+      "es": "Cartera",
+      "fr": "Portefeuille",
+      "ja": "財布",
+      "ko": "지갑",
+      "pt-BR": "Carteira",
+      "zh-Hans": "钱包",
+      "zh-Hant": "錢包"
+    },
+    "Cash": {
+      "en": "Cash",
+      "de": "Bargeld",
+      "es": "Efectivo",
+      "fr": "Espèces",
+      "ja": "現金",
+      "ko": "현금",
+      "pt-BR": "Dinheiro",
+      "zh-Hans": "现金",
+      "zh-Hant": "現金"
+    },
+    "Phone charger": {
+      "en": "Phone charger",
+      "de": "Handyladegerät",
+      "es": "Cargador de móvil",
+      "fr": "Chargeur de téléphone",
+      "ja": "スマホ充電器",
+      "ko": "휴대폰 충전기",
+      "pt-BR": "Carregador de celular",
+      "zh-Hans": "手机充电器",
+      "zh-Hant": "手機充電器"
+    },
+    "Underwear": {
+      "en": "Underwear",
+      "de": "Unterwäsche",
+      "es": "Ropa interior",
+      "fr": "Sous-vêtements",
+      "ja": "下着",
+      "ko": "속옷",
+      "pt-BR": "Roupa íntima",
+      "zh-Hans": "内衣裤",
+      "zh-Hant": "內衣褲"
+    },
+    "Socks": {
+      "en": "Socks",
+      "de": "Socken",
+      "es": "Calcetines",
+      "fr": "Chaussettes",
+      "ja": "靴下",
+      "ko": "양말",
+      "pt-BR": "Meias",
+      "zh-Hans": "袜子",
+      "zh-Hant": "襪子"
+    },
+    "Toothbrush": {
+      "en": "Toothbrush",
+      "de": "Zahnbürste",
+      "es": "Cepillo de dientes",
+      "fr": "Brosse à dents",
+      "ja": "歯ブラシ",
+      "ko": "칫솔",
+      "pt-BR": "Escova de dentes",
+      "zh-Hans": "牙刷",
+      "zh-Hant": "牙刷"
+    },
+    "Toothpaste": {
+      "en": "Toothpaste",
+      "de": "Zahnpasta",
+      "es": "Pasta de dientes",
+      "fr": "Dentifrice",
+      "ja": "歯磨き粉",
+      "ko": "치약",
+      "pt-BR": "Pasta de dente",
+      "zh-Hans": "牙膏",
+      "zh-Hant": "牙膏"
+    },
+    "Deodorant": {
+      "en": "Deodorant",
+      "de": "Deodorant",
+      "es": "Desodorante",
+      "fr": "Déodorant",
+      "ja": "デオドラント",
+      "ko": "데오드란트",
+      "pt-BR": "Desodorante",
+      "zh-Hans": "止汗剂",
+      "zh-Hant": "止汗劑"
+    },
+    "Driver's license": {
+      "en": "Driver's license",
+      "de": "Führerschein",
+      "es": "Permiso de conducir",
+      "fr": "Permis de conduire",
+      "ja": "運転免許証",
+      "ko": "운전면허증",
+      "pt-BR": "Carteira de motorista",
+      "zh-Hans": "驾照",
+      "zh-Hant": "駕照"
+    },
+    "Car insurance docs": {
+      "en": "Car insurance docs",
+      "de": "Kfz-Versicherungsunterlagen",
+      "es": "Documentos del seguro del coche",
+      "fr": "Documents d'assurance automobile",
+      "ja": "自動車保険の書類",
+      "ko": "자동차 보험 서류",
+      "pt-BR": "Documentos do seguro do carro",
+      "zh-Hans": "车险文件",
+      "zh-Hant": "車險文件"
+    },
+    "Car charger": {
+      "en": "Car charger",
+      "de": "Autoladegerät",
+      "es": "Cargador de coche",
+      "fr": "Chargeur de voiture",
+      "ja": "車載充電器",
+      "ko": "차량용 충전기",
+      "pt-BR": "Carregador veicular",
+      "zh-Hans": "车载充电器",
+      "zh-Hant": "車用充電器"
+    },
+    "First aid kit": {
+      "en": "First aid kit",
+      "de": "Erste-Hilfe-Set",
+      "es": "Botiquín de primeros auxilios",
+      "fr": "Trousse de premiers secours",
+      "ja": "救急セット",
+      "ko": "구급상자",
+      "pt-BR": "Kit de primeiros socorros",
+      "zh-Hans": "急救包",
+      "zh-Hant": "急救包"
+    },
+    "Sunglasses": {
+      "en": "Sunglasses",
+      "de": "Sonnenbrille",
+      "es": "Gafas de sol",
+      "fr": "Lunettes de soleil",
+      "ja": "サングラス",
+      "ko": "선글라스",
+      "pt-BR": "Óculos de sol",
+      "zh-Hans": "太阳镜",
+      "zh-Hant": "太陽眼鏡"
+    },
+    "Water bottle": {
+      "en": "Water bottle",
+      "de": "Trinkflasche",
+      "es": "Botella de agua",
+      "fr": "Bouteille d'eau",
+      "ja": "水筒",
+      "ko": "물병",
+      "pt-BR": "Garrafa de água",
+      "zh-Hans": "水杯",
+      "zh-Hant": "水杯"
+    },
+    "Snacks": {
+      "en": "Snacks",
+      "de": "Snacks",
+      "es": "Aperitivos",
+      "fr": "En-cas",
+      "ja": "おやつ",
+      "ko": "간식",
+      "pt-BR": "Lanches",
+      "zh-Hans": "零食",
+      "zh-Hant": "零食"
+    },
+    "Neck pillow": {
+      "en": "Neck pillow",
+      "de": "Nackenkissen",
+      "es": "Almohada de viaje",
+      "fr": "Oreiller de voyage",
+      "ja": "ネックピロー",
+      "ko": "목베개",
+      "pt-BR": "Travesseiro de pescoço",
+      "zh-Hans": "颈枕",
+      "zh-Hant": "頸枕"
+    },
+    "Noise-cancelling headphones": {
+      "en": "Noise-cancelling headphones",
+      "de": "Kopfhörer mit Geräuschunterdrückung",
+      "es": "Auriculares con cancelación de ruido",
+      "fr": "Casque à réduction de bruit",
+      "ja": "ノイズキャンセリングヘッドホン",
+      "ko": "노이즈 캔슬링 헤드폰",
+      "pt-BR": "Fones com cancelamento de ruído",
+      "zh-Hans": "降噪耳机",
+      "zh-Hant": "降噪耳機"
+    },
+    "Portable WiFi device": {
+      "en": "Portable WiFi device",
+      "de": "Tragbares WLAN-Gerät",
+      "es": "Dispositivo WiFi portátil",
+      "fr": "Routeur WiFi portable",
+      "ja": "モバイルWi-Fiルーター",
+      "ko": "포켓 와이파이 기기",
+      "pt-BR": "Roteador WiFi portátil",
+      "zh-Hans": "随身WiFi",
+      "zh-Hant": "隨身WiFi"
+    },
+    "Eye mask": {
+      "en": "Eye mask",
+      "de": "Schlafmaske",
+      "es": "Antifaz para dormir",
+      "fr": "Masque de sommeil",
+      "ja": "アイマスク",
+      "ko": "수면 안대",
+      "pt-BR": "Máscara de dormir",
+      "zh-Hans": "眼罩",
+      "zh-Hant": "眼罩"
+    },
+    "Motion sickness tablets": {
+      "en": "Motion sickness tablets",
+      "de": "Tabletten gegen Reisekrankheit",
+      "es": "Comprimidos para el mareo",
+      "fr": "Comprimés contre le mal des transports",
+      "ja": "酔い止めの錠剤",
+      "ko": "멀미약(정제)",
+      "pt-BR": "Comprimidos para enjoo",
+      "zh-Hans": "晕车药",
+      "zh-Hant": "暈車藥"
+    },
+    "Formal dinner outfit": {
+      "en": "Formal dinner outfit",
+      "de": "Outfit für ein festliches Dinner",
+      "es": "Atuendo para cena formal",
+      "fr": "Tenue de dîner habillée",
+      "ja": "フォーマルディナー用の服装",
+      "ko": "정찬용 복장",
+      "pt-BR": "Roupa para jantar formal",
+      "zh-Hans": "正装晚宴服",
+      "zh-Hant": "正裝晚宴服"
+    },
+    "Travel adapter": {
+      "en": "Travel adapter",
+      "de": "Reiseadapter",
+      "es": "Adaptador de viaje",
+      "fr": "Adaptateur de voyage",
+      "ja": "海外用変換プラグ",
+      "ko": "여행용 어댑터",
+      "pt-BR": "Adaptador de viagem",
+      "zh-Hans": "旅行转换插头",
+      "zh-Hant": "旅行轉換插頭"
+    },
+    "Swimsuit": {
+      "en": "Swimsuit",
+      "de": "Badeanzug",
+      "es": "Traje de baño",
+      "fr": "Maillot de bain",
+      "ja": "水着",
+      "ko": "수영복",
+      "pt-BR": "Maiô",
+      "zh-Hans": "泳装",
+      "zh-Hant": "泳裝"
+    },
+    "Sunscreen": {
+      "en": "Sunscreen",
+      "de": "Sonnencreme",
+      "es": "Protector solar",
+      "fr": "Crème solaire",
+      "ja": "日焼け止め",
+      "ko": "자외선 차단제",
+      "pt-BR": "Protetor solar",
+      "zh-Hans": "防晒霜",
+      "zh-Hant": "防曬乳"
+    },
+    "Sun hat": {
+      "en": "Sun hat",
+      "de": "Sonnenhut",
+      "es": "Sombrero de sol",
+      "fr": "Chapeau de soleil",
+      "ja": "日よけ帽子",
+      "ko": "챙 모자",
+      "pt-BR": "Chapéu de sol",
+      "zh-Hans": "遮阳帽",
+      "zh-Hant": "遮陽帽"
+    },
+    "Insect repellent": {
+      "en": "Insect repellent",
+      "de": "Insektenschutzmittel",
+      "es": "Repelente de insectos",
+      "fr": "Anti-moustiques",
+      "ja": "虫よけスプレー",
+      "ko": "벌레 기피제",
+      "pt-BR": "Repelente de insetos",
+      "zh-Hans": "驱虫剂",
+      "zh-Hant": "驅蟲劑"
+    },
+    "Flip flops": {
+      "en": "Flip flops",
+      "de": "Flip-Flops",
+      "es": "Chanclas",
+      "fr": "Tongs",
+      "ja": "ビーチサンダル",
+      "ko": "쪼리",
+      "pt-BR": "Chinelos",
+      "zh-Hans": "人字拖",
+      "zh-Hant": "人字拖"
+    },
+    "After-sun lotion": {
+      "en": "After-sun lotion",
+      "de": "After-Sun-Lotion",
+      "es": "Loción after sun",
+      "fr": "Lotion après-soleil",
+      "ja": "アフターサンローション",
+      "ko": "선번 후 로션",
+      "pt-BR": "Loção pós-sol",
+      "zh-Hans": "晒后修复乳",
+      "zh-Hant": "曬後修復乳"
+    },
+    "Waterproof bag": {
+      "en": "Waterproof bag",
+      "de": "Wasserdichte Tasche",
+      "es": "Bolsa impermeable",
+      "fr": "Sac imperméable",
+      "ja": "防水バッグ",
+      "ko": "방수 가방",
+      "pt-BR": "Bolsa impermeável",
+      "zh-Hans": "防水袋",
+      "zh-Hant": "防水袋"
+    },
+    "Umbrella": {
+      "en": "Umbrella",
+      "de": "Regenschirm",
+      "es": "Paraguas",
+      "fr": "Parapluie",
+      "ja": "傘",
+      "ko": "우산",
+      "pt-BR": "Guarda-chuva",
+      "zh-Hans": "雨伞",
+      "zh-Hant": "雨傘"
+    },
+    "Waterproof jacket": {
+      "en": "Waterproof jacket",
+      "de": "Regenjacke",
+      "es": "Chaqueta impermeable",
+      "fr": "Veste imperméable",
+      "ja": "防水ジャケット",
+      "ko": "방수 재킷",
+      "pt-BR": "Jaqueta impermeável",
+      "zh-Hans": "冲锋衣",
+      "zh-Hant": "衝鋒衣"
+    },
+    "Waterproof shoes": {
+      "en": "Waterproof shoes",
+      "de": "Wasserdichte Schuhe",
+      "es": "Zapatos impermeables",
+      "fr": "Chaussures imperméables",
+      "ja": "防水シューズ",
+      "ko": "방수 신발",
+      "pt-BR": "Calçado impermeável",
+      "zh-Hans": "防水鞋",
+      "zh-Hant": "防水鞋"
+    },
+    "Altitude sickness pills": {
+      "en": "Altitude sickness pills",
+      "de": "Tabletten gegen Höhenkrankheit",
+      "es": "Pastillas para el mal de altura",
+      "fr": "Comprimés contre le mal de l'altitude",
+      "ja": "高山病の薬",
+      "ko": "고산병 약",
+      "pt-BR": "Comprimidos para mal de altitude",
+      "zh-Hans": "高原反应药",
+      "zh-Hant": "高山症藥物"
+    },
+    "Thermal underwear": {
+      "en": "Thermal underwear",
+      "de": "Thermounterwäsche",
+      "es": "Ropa interior térmica",
+      "fr": "Sous-vêtements thermiques",
+      "ja": "保温インナー",
+      "ko": "발열 내의",
+      "pt-BR": "Roupa íntima térmica",
+      "zh-Hans": "保暖内衣",
+      "zh-Hant": "保暖內衣"
+    },
+    "Down jacket": {
+      "en": "Down jacket",
+      "de": "Daunenjacke",
+      "es": "Plumífero",
+      "fr": "Doudoune",
+      "ja": "ダウンジャケット",
+      "ko": "패딩 점퍼",
+      "pt-BR": "Jaqueta de pluma",
+      "zh-Hans": "羽绒服",
+      "zh-Hant": "羽絨衣"
+    },
+    "Electrolyte tablets": {
+      "en": "Electrolyte tablets",
+      "de": "Elektrolyttabletten",
+      "es": "Tabletas de electrolitos",
+      "fr": "Comprimés d'électrolytes",
+      "ja": "電解質タブレット",
+      "ko": "전해질 정제",
+      "pt-BR": "Comprimidos de eletrólitos",
+      "zh-Hans": "电解质片",
+      "zh-Hant": "電解質片"
+    },
+    "Thermal socks": {
+      "en": "Thermal socks",
+      "de": "Thermosocken",
+      "es": "Calcetines térmicos",
+      "fr": "Chaussettes thermiques",
+      "ja": "保温ソックス",
+      "ko": "기모 양말",
+      "pt-BR": "Meias térmicas",
+      "zh-Hans": "保暖袜",
+      "zh-Hant": "保暖襪"
+    },
+    "Windproof jacket": {
+      "en": "Windproof jacket",
+      "de": "Windjacke",
+      "es": "Cortavientos",
+      "fr": "Coupe-vent",
+      "ja": "ウィンドブレーカー",
+      "ko": "바람막이",
+      "pt-BR": "Corta-vento",
+      "zh-Hans": "防风外套",
+      "zh-Hant": "防風外套"
+    },
+    "Heavy winter coat": {
+      "en": "Heavy winter coat",
+      "de": "Wintermantel",
+      "es": "Abrigo de invierno",
+      "fr": "Manteau d'hiver",
+      "ja": "厚手のコート",
+      "ko": "두꺼운 겨울 코트",
+      "pt-BR": "Casaco de inverno",
+      "zh-Hans": "厚外套",
+      "zh-Hant": "厚外套"
+    },
+    "Gloves": {
+      "en": "Gloves",
+      "de": "Handschuhe",
+      "es": "Guantes",
+      "fr": "Gants",
+      "ja": "手袋",
+      "ko": "장갑",
+      "pt-BR": "Luvas",
+      "zh-Hans": "手套",
+      "zh-Hant": "手套"
+    },
+    "Beanie": {
+      "en": "Beanie",
+      "de": "Wollmütze",
+      "es": "Gorro de lana",
+      "fr": "Bonnet",
+      "ja": "ニット帽",
+      "ko": "비니",
+      "pt-BR": "Touca de lã",
+      "zh-Hans": "毛线帽",
+      "zh-Hant": "毛線帽"
+    },
+    "Scarf": {
+      "en": "Scarf",
+      "de": "Schal",
+      "es": "Bufanda",
+      "fr": "Écharpe",
+      "ja": "スカーフ",
+      "ko": "스카프",
+      "pt-BR": "Cachecol",
+      "zh-Hans": "围巾",
+      "zh-Hant": "圍巾"
+    },
+    "Hand warmers": {
+      "en": "Hand warmers",
+      "de": "Handwärmer",
+      "es": "Calientamanos",
+      "fr": "Chaufferettes pour les mains",
+      "ja": "カイロ",
+      "ko": "손난로",
+      "pt-BR": "Aquecedores de mãos",
+      "zh-Hans": "暖手宝",
+      "zh-Hant": "暖手包"
+    },
+    "Snow boots": {
+      "en": "Snow boots",
+      "de": "Schneestiefel",
+      "es": "Botas de nieve",
+      "fr": "Bottes de neige",
+      "ja": "スノーブーツ",
+      "ko": "스노우 부츠",
+      "pt-BR": "Botas de neve",
+      "zh-Hans": "雪地靴",
+      "zh-Hant": "雪地靴"
+    },
+    "Business cards": {
+      "en": "Business cards",
+      "de": "Visitenkarten",
+      "es": "Tarjetas de visita",
+      "fr": "Cartes de visite",
+      "ja": "名刺",
+      "ko": "명함",
+      "pt-BR": "Cartões de visita",
+      "zh-Hans": "名片",
+      "zh-Hant": "名片"
+    },
+    "Laptop": {
+      "en": "Laptop",
+      "de": "Laptop",
+      "es": "Portátil",
+      "fr": "Ordinateur portable",
+      "ja": "ノートパソコン",
+      "ko": "노트북",
+      "pt-BR": "Notebook",
+      "zh-Hans": "笔记本电脑",
+      "zh-Hant": "筆記型電腦"
+    },
+    "Laptop charger": {
+      "en": "Laptop charger",
+      "de": "Laptop-Ladegerät",
+      "es": "Cargador del portátil",
+      "fr": "Chargeur d'ordinateur portable",
+      "ja": "ノートパソコンの充電器",
+      "ko": "노트북 충전기",
+      "pt-BR": "Carregador do notebook",
+      "zh-Hans": "笔记本充电器",
+      "zh-Hant": "筆電充電器"
+    },
+    "Formal shirt / blouse": {
+      "en": "Formal shirt / blouse",
+      "de": "Formelles Hemd / Bluse",
+      "es": "Camisa formal / Blusa",
+      "fr": "Chemise formelle / Blouse",
+      "ja": "フォーマルシャツ / ブラウス",
+      "ko": "정장 셔츠 / 블라우스",
+      "pt-BR": "Camisa social / Blusa",
+      "zh-Hans": "正装衬衫",
+      "zh-Hant": "正裝襯衫"
+    },
+    "Formal wear": {
+      "en": "Formal wear",
+      "de": "Festliche Kleidung",
+      "es": "Ropa formal",
+      "fr": "Tenue de soirée",
+      "ja": "フォーマルウェア",
+      "ko": "정장",
+      "pt-BR": "Traje formal",
+      "zh-Hans": "正装",
+      "zh-Hant": "正裝"
+    },
+    "Dress shoes": {
+      "en": "Dress shoes",
+      "de": "Anzugschuhe",
+      "es": "Zapatos de vestir",
+      "fr": "Chaussures habillées",
+      "ja": "革靴",
+      "ko": "구두",
+      "pt-BR": "Sapatos sociais",
+      "zh-Hans": "皮鞋",
+      "zh-Hant": "皮鞋"
+    },
+    "Portable charger": {
+      "en": "Portable charger",
+      "de": "Powerbank",
+      "es": "Batería externa",
+      "fr": "Batterie externe",
+      "ja": "モバイルバッテリー",
+      "ko": "보조 배터리",
+      "pt-BR": "Carregador portátil",
+      "zh-Hans": "便携充电宝",
+      "zh-Hant": "行動電源"
+    },
+    "Children's passport / ID": {
+      "en": "Children's passport / ID",
+      "de": "Reisepass / Ausweis des Kindes",
+      "es": "Pasaporte / documento de identidad del niño",
+      "fr": "Passeport / pièce d'identité de l'enfant",
+      "ja": "子どものパスポート／身分証",
+      "ko": "어린이 여권 / 신분증",
+      "pt-BR": "Passaporte / documento da criança",
+      "zh-Hans": "儿童护照 / 证件",
+      "zh-Hant": "兒童護照 / 證件"
+    },
+    "Children's medication": {
+      "en": "Children's medication",
+      "de": "Kindermedikamente",
+      "es": "Medicamentos para niños",
+      "fr": "Médicaments pour enfants",
+      "ja": "子ども用の薬",
+      "ko": "어린이 약",
+      "pt-BR": "Medicamentos infantis",
+      "zh-Hans": "儿童药品",
+      "zh-Hant": "兒童藥品"
+    },
+    "Wet wipes": {
+      "en": "Wet wipes",
+      "de": "Feuchttücher",
+      "es": "Toallitas húmedas",
+      "fr": "Lingettes humides",
+      "ja": "ウェットティッシュ",
+      "ko": "물티슈",
+      "pt-BR": "Lenços umedecidos",
+      "zh-Hans": "湿巾",
+      "zh-Hant": "濕紙巾"
+    },
+    "Snacks for kids": {
+      "en": "Snacks for kids",
+      "de": "Snacks für Kinder",
+      "es": "Aperitivos para niños",
+      "fr": "En-cas pour les enfants",
+      "ja": "子ども用のおやつ",
+      "ko": "아이 간식",
+      "pt-BR": "Lanches para crianças",
+      "zh-Hans": "儿童零食",
+      "zh-Hant": "兒童零食"
+    },
+    "Favourite toy / comfort item": {
+      "en": "Favourite toy / comfort item",
+      "de": "Lieblingsspielzeug / Schmusetier",
+      "es": "Juguete favorito / objeto de apego",
+      "fr": "Jouet préféré / doudou",
+      "ja": "お気に入りのおもちゃ／安心グッズ",
+      "ko": "좋아하는 장난감 / 애착 인형",
+      "pt-BR": "Brinquedo favorito / objeto de apego",
+      "zh-Hans": "最爱玩具 / 安抚物品",
+      "zh-Hant": "最愛玩具 / 安撫物品"
+    },
+    "Change of clothes (extra)": {
+      "en": "Change of clothes (extra)",
+      "de": "Wechselkleidung (zusätzlich)",
+      "es": "Muda de ropa (extra)",
+      "fr": "Vêtements de rechange (supplémentaires)",
+      "ja": "着替え（予備）",
+      "ko": "여벌 옷(여분)",
+      "pt-BR": "Muda de roupa (extra)",
+      "zh-Hans": "备用衣物",
+      "zh-Hant": "備用衣物"
+    },
+    "Sunscreen for kids": {
+      "en": "Sunscreen for kids",
+      "de": "Sonnencreme für Kinder",
+      "es": "Protector solar para niños",
+      "fr": "Crème solaire pour enfants",
+      "ja": "子ども用の日焼け止め",
+      "ko": "아이용 자외선 차단제",
+      "pt-BR": "Protetor solar para crianças",
+      "zh-Hans": "儿童防晒霜",
+      "zh-Hant": "兒童防曬乳"
+    },
+    "Hiking boots": {
+      "en": "Hiking boots",
+      "de": "Wanderschuhe",
+      "es": "Botas de senderismo",
+      "fr": "Chaussures de randonnée",
+      "ja": "トレッキングシューズ",
+      "ko": "등산화",
+      "pt-BR": "Botas de trilha",
+      "zh-Hans": "徒步鞋",
+      "zh-Hant": "登山靴"
+    },
+    "Headlamp + batteries": {
+      "en": "Headlamp + batteries",
+      "de": "Stirnlampe + Batterien",
+      "es": "Linterna frontal + pilas",
+      "fr": "Lampe frontale + piles",
+      "ja": "ヘッドランプ＋電池",
+      "ko": "헤드램프 + 건전지",
+      "pt-BR": "Lanterna de cabeça + pilhas",
+      "zh-Hans": "头灯+电池",
+      "zh-Hant": "頭燈 + 電池"
+    },
+    "Trail snacks / energy bars": {
+      "en": "Trail snacks / energy bars",
+      "de": "Wandersnacks / Energieriegel",
+      "es": "Aperitivos de senderismo / barritas energéticas",
+      "fr": "En-cas de rando / barres énergétiques",
+      "ja": "行動食 / エナジーバー",
+      "ko": "트레킹 간식 / 에너지바",
+      "pt-BR": "Lanches de trilha / barras energéticas",
+      "zh-Hans": "行进零食 / 能量棒",
+      "zh-Hant": "行進零食 / 能量棒"
+    },
+    "Camera / extra memory card": {
+      "en": "Camera / extra memory card",
+      "de": "Kamera / zusätzliche Speicherkarte",
+      "es": "Cámara / tarjeta de memoria adicional",
+      "fr": "Appareil photo / carte mémoire supplémentaire",
+      "ja": "カメラ／予備のメモリーカード",
+      "ko": "카메라 / 여분 메모리 카드",
+      "pt-BR": "Câmera / cartão de memória extra",
+      "zh-Hans": "相机 / 备用存储卡",
+      "zh-Hant": "相機 / 備用記憶卡"
+    },
+    "Perfume": {
+      "en": "Perfume",
+      "de": "Parfüm",
+      "es": "Perfume",
+      "fr": "Parfum",
+      "ja": "香水",
+      "ko": "향수",
+      "pt-BR": "Perfume",
+      "zh-Hans": "香水",
+      "zh-Hant": "香水"
+    },
+    "Backpack rain cover": {
+      "en": "Backpack rain cover",
+      "de": "Rucksack-Regenabdeckung",
+      "es": "Funda impermeable para mochila",
+      "fr": "Housse imperméable pour sac à dos",
+      "ja": "バックパック レインカバー",
+      "ko": "배낭 방수 커버",
+      "pt-BR": "Capa de chuva para mochila",
+      "zh-Hans": "背包防雨罩",
+      "zh-Hant": "背包防雨罩"
+    },
+    "Microfibre towel": {
+      "en": "Microfibre towel",
+      "de": "Mikrofaserhandtuch",
+      "es": "Toalla de microfibra",
+      "fr": "Serviette en microfibre",
+      "ja": "マイクロファイバータオル",
+      "ko": "극세사 타월",
+      "pt-BR": "Toalha de microfibra",
+      "zh-Hans": "超细纤维毛巾",
+      "zh-Hant": "超細纖維毛巾"
+    },
+    "Quick-dry clothing": {
+      "en": "Quick-dry clothing",
+      "de": "Schnelltrocknende Kleidung",
+      "es": "Ropa de secado rápido",
+      "fr": "Vêtements séchage rapide",
+      "ja": "速乾ウェア",
+      "ko": "속건성 의류",
+      "pt-BR": "Roupa de secagem rápida",
+      "zh-Hans": "速干衣物",
+      "zh-Hant": "速乾衣物"
+    },
+    "Laundry bag": {
+      "en": "Laundry bag",
+      "de": "Wäschebeutel",
+      "es": "Bolsa para ropa sucia",
+      "fr": "Sac à linge",
+      "ja": "ランドリーバッグ",
+      "ko": "세탁물 주머니",
+      "pt-BR": "Saco de roupa suja",
+      "zh-Hans": "洗衣袋",
+      "zh-Hant": "洗衣袋"
+    },
+    "Comfortable walking shoes": {
+      "en": "Comfortable walking shoes",
+      "de": "Bequeme Laufschuhe",
+      "es": "Zapatos cómodos para caminar",
+      "fr": "Chaussures de marche confortables",
+      "ja": "歩きやすい靴",
+      "ko": "편한 워킹화",
+      "pt-BR": "Calçado confortável para caminhar",
+      "zh-Hans": "舒适步行鞋",
+      "zh-Hant": "舒適步行鞋"
+    },
+    "Crossbody bag": {
+      "en": "Crossbody bag",
+      "de": "Umhängetasche",
+      "es": "Bolso bandolera",
+      "fr": "Sac en bandoulière",
+      "ja": "ショルダーバッグ",
+      "ko": "크로스백",
+      "pt-BR": "Bolsa transversal",
+      "zh-Hans": "斜挎包",
+      "zh-Hant": "斜背包"
+    },
+    "Transit card / app": {
+      "en": "Transit card / app",
+      "de": "Fahrkarte / App",
+      "es": "Tarjeta de transporte / app",
+      "fr": "Carte de transport / appli",
+      "ja": "交通カード / アプリ",
+      "ko": "교통 카드 / 앱",
+      "pt-BR": "Cartão de transporte / app",
+      "zh-Hans": "交通卡 / 交通 App",
+      "zh-Hant": "交通卡 / 交通 App"
+    },
+    "HK & Macao permit": {
+      "en": "HK & Macao permit",
+      "de": "HK- & Macao-Genehmigung",
+      "es": "Permiso para HK y Macao",
+      "fr": "Permis HK et Macao",
+      "ja": "香港・マカオ通行証",
+      "ko": "홍콩·마카오 통행증",
+      "pt-BR": "Autorização para HK e Macau",
+      "zh-Hans": "港澳通行证",
+      "zh-Hant": "港澳通行證"
+    },
+    "Taiwan permit": {
+      "en": "Taiwan permit",
+      "de": "Taiwan-Genehmigung",
+      "es": "Permiso para Taiwán",
+      "fr": "Autorisation Taïwan",
+      "ja": "台湾通行証",
+      "ko": "대만 통행증",
+      "pt-BR": "Autorização para Taiwan",
+      "zh-Hans": "台湾通行证",
+      "zh-Hant": "台灣通行證"
+    },
+    "ID card": {
+      "en": "ID card",
+      "de": "Personalausweis",
+      "es": "Documento de identidad",
+      "fr": "Carte d'identité",
+      "ja": "身分証明書",
+      "ko": "신분증",
+      "pt-BR": "Documento de identidade",
+      "zh-Hans": "身份证",
+      "zh-Hant": "身分證"
+    },
+    "Car phone mount": {
+      "en": "Car phone mount",
+      "de": "Auto-Handyhalterung",
+      "es": "Soporte de móvil para coche",
+      "fr": "Support téléphone voiture",
+      "ja": "スマホ車載ホルダー",
+      "ko": "차량용 폰 거치대",
+      "pt-BR": "Suporte de celular para carro",
+      "zh-Hans": "车载手机支架",
+      "zh-Hant": "車載手機支架"
+    },
+    "Hands-free navigation is the law in most places — and your co-pilot won't always be awake": {
+      "en": "Hands-free navigation is the law in most places — and your co-pilot won't always be awake",
+      "de": "Freihändige Navigation ist an den meisten Orten gesetzlich vorgeschrieben — und dein Beifahrer wird nicht immer wach sein",
+      "es": "La navegación manos libres es ley en la mayoría de los lugares — y tu copiloto no siempre estará despierto",
+      "fr": "La navigation mains libres est obligatoire dans la plupart des endroits — et votre co-pilote ne sera pas toujours éveillé",
+      "ja": "ハンズフリーナビはほとんどの場所で法律 — そして助手席の人が常に起きているとは限らない",
+      "ko": "핸즈프리 내비게이션은 대부분의 곳에서 법으로 정해져 있습니다 — 그리고 조수석의 사람이 항상 깨어 있지는 않아요",
+      "pt-BR": "Navegação viva-voz é lei na maioria dos lugares — e seu co-piloto nem sempre vai estar acordado",
+      "zh-Hans": "很多地方都要求免手持导航，装上支架会更安全也更省心",
+      "zh-Hant": "大多數地方法律要求免提導航——而你的副駕駛也不會總是清醒的"
+    },
+    "Window sunshade": {
+      "en": "Window sunshade",
+      "de": "Fenster-Sonnenschutz",
+      "es": "Parasol de ventana",
+      "fr": "Pare-soleil de fenêtre",
+      "ja": "サンシェード",
+      "ko": "차량 햇빛 가리개",
+      "pt-BR": "Protetor solar de janela",
+      "zh-Hans": "车窗遮阳挡",
+      "zh-Hant": "車窗遮陽板"
+    },
+    "Parked in the sun, your steering wheel becomes untouchable — costs almost nothing to prevent": {
+      "en": "Parked in the sun, your steering wheel becomes untouchable — costs almost nothing to prevent",
+      "de": "In der Sonne geparkt wird dein Lenkrad unberührbar — kostet fast nichts, um es zu verhindern",
+      "es": "Aparcado al sol, tu volante se vuelve intocable — cuesta casi nada prevenirlo",
+      "fr": "Garé au soleil, votre volant devient intouchable — coûte presque rien à prévenir",
+      "ja": "炎天下に駐車すると、ハンドルが触れないほど熱くなる — 防ぐのにほぼコストはかからない",
+      "ko": "햇볕에 주차하면 핸들을 잡을 수 없게 됩니다 — 예방하는 데 거의 비용이 들지 않아요",
+      "pt-BR": "Estacionado no sol, o volante fica intocável — custa quase nada prevenir",
+      "zh-Hans": "暴晒后方向盘会很烫，加个遮阳挡成本低但体感提升明显",
+      "zh-Hant": "在陽光下停車，方向盤會燙得無法觸碰——預防幾乎不花錢"
+    },
+    "Flat shoes": {
+      "en": "Flat shoes",
+      "de": "Flache Schuhe",
+      "es": "Zapatos planos",
+      "fr": "Chaussures plates",
+      "ja": "フラットシューズ",
+      "ko": "플랫 슈즈",
+      "pt-BR": "Sapatilhas",
+      "zh-Hans": "平底鞋",
+      "zh-Hant": "平底鞋"
+    },
+    "Driving in heels reduces pedal feel and reaction time — a pair of flats to swap into before getting behind the wheel makes a real difference on long stretches": {
+      "en": "Driving in heels reduces pedal feel and reaction time — a pair of flats to swap into before getting behind the wheel makes a real difference on long stretches",
+      "de": "Fahren in High Heels vermindert das Pedalgefühl und die Reaktionszeit — ein Paar flache Schuhe zum Wechseln vor dem Steuer macht auf langen Strecken wirklich einen Unterschied",
+      "es": "Conducir con tacones reduce la sensación del pedal y el tiempo de reacción — un par de zapatos planos para ponerse antes de ponerse al volante marca una diferencia real en trayectos largos",
+      "fr": "Conduire en talons réduit le ressenti de la pédale et le temps de réaction — une paire de chaussures plates à enfiler avant de prendre le volant fait vraiment la différence sur de longs trajets",
+      "ja": "ヒールで運転するとペダルの感覚と反応時間が落ちる — 運転前にフラットシューズに履き替えると、長距離では大きな差が出る",
+      "ko": "힐을 신고 운전하면 페달 감각과 반응 속도가 떨어집니다 — 운전 전에 갈아 신을 플랫 슈즈 한 켤레가 장거리에서 큰 차이를 만들어요",
+      "pt-BR": "Dirigir de salto reduz a sensação no pedal e o tempo de reação — um par de sapatilhas para calçar antes de pegar a direção faz diferença real em longos percursos",
+      "zh-Hans": "穿高跟鞋开车会影响脚感和反应，准备一双平底鞋，长途驾驶会轻松很多",
+      "zh-Hant": "穿高跟鞋開車會影響腳感和反應，準備一雙平底鞋，長途駕駛會輕鬆很多"
+    },
+    "Car travel blanket": {
+      "en": "Car travel blanket",
+      "de": "Auto-Reisedecke",
+      "es": "Manta de viaje para coche",
+      "fr": "Couverture de voyage en voiture",
+      "ja": "車用トラベルブランケット",
+      "ko": "차량용 여행 담요",
+      "pt-BR": "Manta de viagem para carro",
+      "zh-Hans": "车用小毯子",
+      "zh-Hant": "車用小毯子"
+    },
+    "Passenger-seat naps are so much better with a real blanket — one that lives in the boot ready to go": {
+      "en": "Passenger-seat naps are so much better with a real blanket — one that lives in the boot ready to go",
+      "de": "Nickerchen auf dem Beifahrersitz sind mit einer echten Decke so viel besser — eine, die im Kofferraum bereitliegt",
+      "es": "Las siestas en el asiento del copiloto son mucho mejores con una manta de verdad — una que viva en el maletero lista para usar",
+      "fr": "Les siestes en siège passager sont tellement meilleures avec une vraie couverture — une qui vit dans le coffre, prête à l'emploi",
+      "ja": "助手席でのうたた寝は本物のブランケットがあればずっと快適 — トランクに入れっぱなしにしておけばいつでも使える",
+      "ko": "조수석 낮잠은 진짜 담요가 있으면 훨씬 좋습니다 — 트렁크에 항상 준비해두는 담요",
+      "pt-BR": "Cochilos no banco do passageiro são muito melhores com um cobertor de verdade — um que fica no porta-malas pronto para usar",
+      "zh-Hans": "副驾小睡时有一条顺手的小毯子，舒适度会明显提升",
+      "zh-Hant": "副駕小睡時有一條順手的小毯子，舒適度會明顯提升"
+    },
+    "Disposable camera": {
+      "en": "Disposable camera",
+      "de": "Einwegkamera",
+      "es": "Cámara desechable",
+      "fr": "Appareil jetable",
+      "ja": "使い捨てカメラ",
+      "ko": "일회용 카메라",
+      "pt-BR": "Câmera descartável",
+      "zh-Hans": "一次性相机",
+      "zh-Hant": "一次性相機"
+    },
+    "Your phone will capture everything perfectly. Which is exactly why a disposable feels different — the grain, the not-knowing, the waiting": {
+      "en": "Your phone will capture everything perfectly. Which is exactly why a disposable feels different — the grain, the not-knowing, the waiting",
+      "de": "Dein Handy würde alles perfekt festhalten. Genau deshalb fühlt sich eine Einwegkamera anders an — das Korn, das Nichtwissen, das Warten",
+      "es": "Tu teléfono capturará todo perfectamente. Por eso una desechable se siente diferente — el grano, la incertidumbre, la espera",
+      "fr": "Ton téléphone saisira tout parfaitement. C'est exactement pourquoi un jetable est différent — le grain, l'incertitude, l'attente",
+      "ja": "スマホなら完璧に撮れる。だからこそ使い捨てカメラは違う感覚がある——フィルムの粒子感、どんな風に撮れたかわからないこと、現像を待つ時間",
+      "ko": "스마트폰은 모든 걸 완벽하게 담아낼 것이다. 바로 그래서 일회용 카메라는 다르게 느껴진다 — 필름 입자, 모르는 채로 기다림, 그 기다림 자체",
+      "pt-BR": "Seu celular vai capturar tudo perfeitamente. É exatamente por isso que uma câmera descartável parece diferente — o grão, o não saber, a espera",
+      "zh-Hans": "你的手机能把一切都拍得完美。正因如此，一次性相机才感觉不同——那些颗粒感，那种不知道拍成什么样，那段等待",
+      "zh-Hant": "你的手機能把一切都拍得完美。正因如此，一次性相機才感覺不同——那些顆粒感，那種不知道拍成什麼樣，那段等待"
+    },
+    "Steam eye mask": {
+      "en": "Steam eye mask",
+      "de": "Dampf-Augenmaske",
+      "es": "Mascarilla ocular de vapor",
+      "fr": "Masque oculaire vapeur",
+      "ja": "蒸気アイマスク",
+      "ko": "스팀 안대",
+      "pt-BR": "Máscara ocular de vapor",
+      "zh-Hans": "蒸汽眼罩",
+      "zh-Hant": "蒸汽眼罩"
+    },
+    "Ten minutes of warm darkness mid-flight feels like a reset — most people who try one become converts": {
+      "en": "Ten minutes of warm darkness mid-flight feels like a reset — most people who try one become converts",
+      "de": "Zehn Minuten warme Dunkelheit auf halbem Flug fühlen sich wie ein Reset an — die meisten Menschen, die es ausprobieren, werden zu Überzeugten",
+      "es": "Diez minutos de oscuridad cálida a mitad del vuelo se sienten como un reinicio — la mayoría de quienes lo prueban se convierten en fans",
+      "fr": "Dix minutes d'obscurité chaude en milieu de vol, c'est comme une réinitialisation — la plupart des gens qui essaient en deviennent adeptes",
+      "ja": "フライトの中盤に10分間の温かな暗闇を過ごすとリセットした感覚になる — 一度試した人のほとんどが虜になる",
+      "ko": "비행 중간의 따뜻한 어둠 속 10분이 리셋처럼 느껴집니다 — 한번 써본 대부분의 사람이 신봉자가 돼요",
+      "pt-BR": "Dez minutos de escuridão quente no meio do voo parecem um reset — a maioria das pessoas que experimenta se converte",
+      "zh-Hans": "飞行中来一段温热放松，往往能明显缓解疲惫",
+      "zh-Hant": "飛行中來一段溫熱放鬆，往往能明顯緩解疲憊"
+    },
+    "Blister patches": {
+      "en": "Blister patches",
+      "de": "Blasenpflaster",
+      "es": "Parches para ampollas",
+      "fr": "Pansements anti-ampoules",
+      "ja": "マメ保護パッド",
+      "ko": "물집 패치",
+      "pt-BR": "Curativos para bolhas",
+      "zh-Hans": "防磨脚贴",
+      "zh-Hant": "防磨腳貼"
+    },
+    "Fast airport transfers and long terminal walks can shred your heels — applying one early can save your first day": {
+      "en": "Fast airport transfers and long terminal walks can shred your heels — applying one early can save your first day",
+      "de": "Schnelle Umsteigetransfers und lange Terminalwege können die Fersen aufscheuern — frühzeitig aufgetragen kann das den ersten Tag retten",
+      "es": "Los traslados rápidos en el aeropuerto y los largos paseos por la terminal pueden destrozarte los talones — aplicarlos pronto puede salvarte el primer día",
+      "fr": "Les transferts rapides et les longues marches en aéroport peuvent meurtrir vos talons — en appliquer un tôt peut sauver votre premier jour",
+      "ja": "急いだ乗り換えや長いターミナルの歩行でかかとが擦り切れることがある——早めに貼れば初日を救える",
+      "ko": "빠른 환승과 긴 터미널 이동은 발뒤꿈치를 망가뜨릴 수 있어요 — 미리 붙이면 첫날을 구할 수 있어요",
+      "pt-BR": "Transferências rápidas e longas caminhadas no terminal podem rasgar seus calcanhares — aplicar um cedo pode salvar seu primeiro dia",
+      "zh-Hans": "快速转机和长途步行会磨破脚跟——提早贴上，可以救你的第一天",
+      "zh-Hant": "快速轉機和長途步行會磨破腳跟——提早貼上，可以救你的第一天"
+    },
+    "Saline nasal spray": {
+      "en": "Saline nasal spray",
+      "de": "Nasenspüllösung",
+      "es": "Spray nasal salino",
+      "fr": "Spray nasal salin",
+      "ja": "生理食塩水点鼻スプレー",
+      "ko": "식염수 코 스프레이",
+      "pt-BR": "Spray nasal salino",
+      "zh-Hans": "生理盐水鼻腔喷雾",
+      "zh-Hant": "生理食鹽水鼻腔噴霧"
+    },
+    "Cabin air is drier than most deserts — your nose bears the brunt silently. A few sprays keep things comfortable and meaningfully reduce that heavy-headed feeling after landing": {
+      "en": "Cabin air is drier than most deserts — your nose bears the brunt silently. A few sprays keep things comfortable and meaningfully reduce that heavy-headed feeling after landing",
+      "de": "Die Kabinenluft ist trockener als die meisten Wüsten — die Nase leidet still darunter. Ein paar Sprühstöße halten alles angenehm feucht und können das dumpfe Gefühl nach der Landung spürbar mindern",
+      "es": "El aire de cabina es más seco que la mayoría de los desiertos — la nariz lo sufre en silencio. Unos pocos sprays mantienen la comodidad y reducen notablemente esa sensación de pesadez al llegar",
+      "fr": "L'air de cabine est plus sec que la plupart des déserts — votre nez en pâtit sans que vous vous en rendiez compte. Quelques sprays suffisent à rester à l'aise et à réduire sensiblement la lourdeur ressentie à l'atterrissage",
+      "ja": "機内の空気はほとんどの砂漠より乾燥しています――鼻が静かに影響を受けています。数回スプレーするだけで快適さが保たれ、着陸後の頭の重さが明らかに和らぎます",
+      "ko": "기내 공기는 대부분의 사막보다 건조합니다 — 코가 조용히 그 영향을 받습니다. 몇 번 뿌리는 것만으로도 편안함을 유지하고 착륙 후 머리가 무거운 느낌을 크게 줄일 수 있습니다",
+      "pt-BR": "O ar da cabine é mais seco que a maioria dos desertos — seu nariz sente os efeitos em silêncio. Alguns sprays mantêm tudo confortável e reduzem notavelmente aquela sensação de peso após o desembarque",
+      "zh-Hans": "机舱空气比大多数沙漠还干燥——鼻腔是最先感受到的地方，只是通常悄无声息。几次喷雾能让整个飞行舒适很多，也能明显减轻落地后那种沉重感",
+      "zh-Hant": "機艙空氣比大多數沙漠還乾燥——鼻腔是最先感受到的地方，只是通常悄無聲息。幾次噴霧能讓整趟飛行舒適很多，也能明顯減輕落地後那種沉重感"
+    },
+    "Hand cream": {
+      "en": "Hand cream",
+      "de": "Handcreme",
+      "es": "Crema de manos",
+      "fr": "Crème pour les mains",
+      "ja": "ハンドクリーム",
+      "ko": "핸드크림",
+      "pt-BR": "Creme para as mãos",
+      "zh-Hans": "护手霜",
+      "zh-Hant": "護手霜"
+    },
+    "Cabin air is brutally dry — hands suffer first, and most people only notice once they're already cracked": {
+      "en": "Cabin air is brutally dry — hands suffer first, and most people only notice once they're already cracked",
+      "de": "Die Kabinenluft ist brutal trocken — die Hände leiden zuerst, und die meisten merken es erst, wenn sie bereits rissig sind",
+      "es": "El aire de la cabina es brutalmente seco — las manos son las primeras en sufrirlo, y la mayoría solo lo nota cuando ya se han agrietado",
+      "fr": "L'air de la cabine est terriblement sec — les mains en souffrent en premier, et la plupart des gens ne s'en aperçoivent qu'une fois qu'elles sont déjà gercées",
+      "ja": "機内の空気は容赦なく乾燥している — 手が最初にダメージを受け、ほとんどの人は荒れてからようやく気づく",
+      "ko": "기내 공기는 매우 건조합니다 — 손이 가장 먼저 고생하고, 대부분의 사람들은 이미 갈라진 후에야 알아채요",
+      "pt-BR": "O ar da cabine é brutalmente seco — as mãos sofrem primeiro, e a maioria das pessoas só percebe quando já estão rachadas",
+      "zh-Hans": "机舱空气偏干，手最容易先不舒服，提前护理会好很多",
+      "zh-Hant": "機艙空氣偏乾，手最容易先不舒服，提前護理會好很多"
+    },
+    "Disposable slippers": {
+      "en": "Disposable slippers",
+      "de": "Einwegpantoffeln",
+      "es": "Zapatillas desechables",
+      "fr": "Chaussons jetables",
+      "ja": "使い捨てスリッパ",
+      "ko": "일회용 슬리퍼",
+      "pt-BR": "Chinelos descartáveis",
+      "zh-Hans": "一次性拖鞋",
+      "zh-Hant": "一次性拖鞋"
+    },
+    "Shoes off, slippers on — a small ritual that makes a long flight feel far more civilised": {
+      "en": "Shoes off, slippers on — a small ritual that makes a long flight feel far more civilised",
+      "de": "Schuhe aus, Hausschuhe an — ein kleines Ritual, das einen langen Flug weit zivilisierter erscheinen lässt",
+      "es": "Zapatos fuera, zapatillas puestas — un pequeño ritual que hace que un vuelo largo se sienta mucho más civilizado",
+      "fr": "Chaussures enlevées, chaussons enfilés — un petit rituel qui rend un long vol beaucoup plus civilisé",
+      "ja": "靴を脱いでスリッパに履き替える — 長いフライトをずっと快適にする小さな儀式",
+      "ko": "신발 벗고, 슬리퍼 신고 — 긴 비행을 훨씬 편안하게 만들어 주는 작은 의식",
+      "pt-BR": "Sapatos fora, chinelos calçados — um pequeno ritual que torna um voo longo muito mais civilizado",
+      "zh-Hans": "长途飞行换上拖鞋，体感会更放松",
+      "zh-Hant": "長途飛行換上拖鞋，體感會更放鬆"
+    },
+    "Book": {
+      "en": "Book",
+      "de": "Buch",
+      "es": "Libro",
+      "fr": "Livre",
+      "ja": "本",
+      "ko": "책",
+      "pt-BR": "Livro",
+      "zh-Hans": "书",
+      "zh-Hant": "書"
+    },
+    "A physical book for long-haul — no battery anxiety, no glare, and you will actually finish it away from notifications": {
+      "en": "A physical book for long-haul — no battery anxiety, no glare, and you will actually finish it away from notifications",
+      "de": "Ein gedrucktes Buch für Langstrecken — kein Akku, keine Reflexionen, und ohne Benachrichtigungen liest man es wirklich zu Ende",
+      "es": "Un libro físico para vuelos largos — sin batería, sin reflejos, y sin notificaciones realmente lo terminas",
+      "fr": "Un livre physique pour les long-courriers — sans batterie, sans reflets, et loin des notifications on le finit vraiment",
+      "ja": "長距離フライトには紙の本を——バッテリー不要、反射なし、通知から離れてしっかり読み終えられる",
+      "ko": "장거리 비행엔 종이책이 딱해요 — 배터리 걱정 없고, 눈부심도 없고, 알림 없이 끝까지 읽을 수 있어요",
+      "pt-BR": "Um livro físico para voos longos — sem bateria, sem reflexo, e sem notificações você vai realmente terminar de ler",
+      "zh-Hans": "长途飞行，拿本实体书——不用担心没电，没有屏幕反光，远离消息才真能读完",
+      "zh-Hant": "長途飛行，拿本實體書——不用擔心沒電，沒有螢幕反光，遠離消息才真能讀完"
+    },
+    "Essential oil roller": {
+      "en": "Essential oil roller",
+      "de": "Ätherisches Öl Roller",
+      "es": "Roll-on de aceite esencial",
+      "fr": "Roll-on d'huile essentielle",
+      "ja": "アロマロールオン",
+      "ko": "에센셜 오일 롤러",
+      "pt-BR": "Roll-on de óleo essencial",
+      "zh-Hans": "精油滚珠",
+      "zh-Hant": "精油滾珠"
+    },
+    "A small roller of lavender or peppermint does two things: eases tension headaches mid-flight, and marks the moment you apply it at the gate as the real start of the trip": {
+      "en": "A small roller of lavender or peppermint does two things: eases tension headaches mid-flight, and marks the moment you apply it at the gate as the real start of the trip",
+      "de": "Ein kleiner Roller mit Lavendel oder Pfefferminze hilft doppelt: lindert Spannungskopfschmerzen im Flug und markiert den Moment am Gate als echten Reisebeginn",
+      "es": "Un pequeño roller de lavanda o menta hace dos cosas: alivia los dolores de cabeza a mitad del vuelo y convierte el momento en que te lo aplicas en la puerta en el verdadero inicio del viaje",
+      "fr": "Un petit roller de lavande ou de menthe poivrée a deux vertus : il soulage les maux de tête en vol et fait du moment où on l'applique à la porte d'embarquement le vrai début du voyage",
+      "ja": "ラベンダーかペパーミントの小さなロールオンが二つのことをしてくれます。フライト中の緊張性頭痛を和らげ、搭乗口で塗る瞬間を旅の本当の始まりにしてくれます",
+      "ko": "라벤더나 페퍼민트 롤러는 두 가지 역할을 합니다. 비행 중 긴장성 두통을 완화하고, 탑승구에서 바르는 순간을 진짜 여행의 시작으로 만들어줍니다",
+      "pt-BR": "Um pequeno roller de lavanda ou hortelã-pimenta faz duas coisas: alivia dores de cabeça tensionais durante o voo e marca o momento em que você aplica no portão como o verdadeiro início da viagem",
+      "zh-Hans": "薰衣草或薄荷精油各有妙用：缓解飞机上的头痛，也会让你在登机口涂抹的那一刻，感觉旅程真正开始了",
+      "zh-Hant": "薰衣草或薄荷精油各有妙用：緩解飛機上的頭痛，也會讓你在登機口塗抹的那一刻，感覺旅程真正開始了"
+    },
+    "Scented candle": {
+      "en": "Scented candle",
+      "de": "Duftkerze",
+      "es": "Vela aromática",
+      "fr": "Bougie parfumée",
+      "ja": "アロマキャンドル",
+      "ko": "향초",
+      "pt-BR": "Vela aromática",
+      "zh-Hans": "香薰蜡烛",
+      "zh-Hant": "香薰蠟燭"
+    },
+    "A small candle transforms a hotel room — that smell will mean 'the honeymoon' for years afterwards": {
+      "en": "A small candle transforms a hotel room — that smell will mean 'the honeymoon' for years afterwards",
+      "de": "Eine kleine Kerze verwandelt ein Hotelzimmer — dieser Geruch wird für Jahre danach für die Flitterwochen stehen",
+      "es": "Una pequeña vela transforma una habitación de hotel — ese olor significará la luna de miel durante años",
+      "fr": "Une petite bougie transforme une chambre d'hôtel — cette odeur évoquera la lune de miel pendant des années",
+      "ja": "小さなキャンドル一本でホテルの部屋が変わる — その香りは何年たっても「ハネムーン」を思い起こさせる",
+      "ko": "작은 양초 하나가 호텔 방을 완전히 바꿔줍니다 — 그 향기는 몇 년 후에도 신혼여행을 떠오르게 할 거예요",
+      "pt-BR": "Uma vela pequena transforma um quarto de hotel — aquele cheiro vai significar a lua de mel por anos",
+      "zh-Hans": "一点熟悉的香气，能让酒店房间更有旅行记忆感",
+      "zh-Hant": "一點熟悉的香氣，能讓酒店房間更有旅行記憶感"
+    },
+    "Massage oil": {
+      "en": "Massage oil",
+      "de": "Massageöl",
+      "es": "Aceite de masaje",
+      "fr": "Huile de massage",
+      "ja": "マッサージオイル",
+      "ko": "마사지 오일",
+      "pt-BR": "Óleo de massagem",
+      "zh-Hans": "按摩油",
+      "zh-Hant": "按摩油"
+    },
+    "For evenings with nowhere to be — the right scent shifts the whole mood of a room in a way that nothing else quite does": {
+      "en": "For evenings with nowhere to be — the right scent shifts the whole mood of a room in a way that nothing else quite does",
+      "de": "Für Abende ohne Verpflichtungen — der richtige Duft verändert die ganze Stimmung eines Zimmers auf eine Weise, wie es sonst nichts tut",
+      "es": "Para las noches sin planes — el aroma adecuado cambia todo el ambiente de una habitación de una manera que nada más consigue",
+      "fr": "Pour les soirées sans obligation — le bon parfum change toute l'atmosphère d'une pièce d'une manière qu'aucune autre chose ne peut faire",
+      "ja": "どこにも行く必要のない夜に——適切な香りは、他の何にも真似できない方法で、部屋全体の雰囲気を変える",
+      "ko": "아무 데도 갈 필요 없는 저녁을 위해 — 적절한 향이 다른 어떤 것도 할 수 없는 방식으로 방 전체의 분위기를 바꿔줘요",
+      "pt-BR": "Para as noites sem compromisso — o aroma certo muda todo o clima de um quarto de uma forma que nada mais consegue",
+      "zh-Hans": "无需出门的夜晚——合适的香气能以别的东西难以匹敌的方式，改变整个房间的氛围",
+      "zh-Hant": "無需出門的夜晚——合適的香氣能以別的東西難以匹敵的方式，改變整個房間的氛圍"
+    },
+    "Bath salts": {
+      "en": "Bath salts",
+      "de": "Badesalz",
+      "es": "Sales de baño",
+      "fr": "Sels de bain",
+      "ja": "バスソルト",
+      "ko": "목욕 소금",
+      "pt-BR": "Sais de banho",
+      "zh-Hans": "浴盐",
+      "zh-Hant": "浴鹽"
+    },
+    "One evening, run a bath — it is a small decision that can make a whole trip feel like it was properly lived": {
+      "en": "One evening, run a bath — it is a small decision that can make a whole trip feel like it was properly lived",
+      "de": "Einen Abend lang ein Bad einlaufen lassen — eine kleine Entscheidung, die die ganze Reise wie richtig gelebt erscheinen lässt",
+      "es": "Una noche, date un baño — es una pequeña decisión que puede hacer que todo el viaje se sienta realmente vivido",
+      "fr": "Un soir, faites couler un bain — c'est une petite décision qui peut donner à tout un voyage le sentiment d'avoir été vécu pleinement",
+      "ja": "ある晩、お風呂をゆっくり楽しんで。その小さな選択が、旅全体を本当に大切にされた時間に変えてくれます",
+      "ko": "어느 저녁, 욕조에 물을 채워 보세요. 그 작은 결정이 여행 전체를 제대로 살아낸 느낌으로 만들어줄 수 있습니다",
+      "pt-BR": "Uma noite, encha a banheira — é uma pequena decisão que pode fazer toda a viagem parecer verdadeiramente vivida",
+      "zh-Hans": "某个晚上，好好泡个澡——就这一个决定，能让整段旅程都多一点被好好对待的感觉",
+      "zh-Hant": "某個晚上，好好泡個澡——就這一個決定，能讓整段旅程都多一點被好好對待的感覺"
+    },
+    "Instax / instant camera": {
+      "en": "Instax / instant camera",
+      "de": "Instax / Sofortbildkamera",
+      "es": "Instax / cámara instantánea",
+      "fr": "Instax / appareil photo instantané",
+      "ja": "チェキ / インスタントカメラ",
+      "ko": "인스탁스 / 즉석 카메라",
+      "pt-BR": "Instax / câmera instantânea",
+      "zh-Hans": "拍立得/即时相机",
+      "zh-Hant": "拍立得／即時相機"
+    },
+    "A photo you hold in your hands sixty seconds after taking it is a different kind of memory": {
+      "en": "A photo you hold in your hands sixty seconds after taking it is a different kind of memory",
+      "de": "Ein Foto, das du sechzig Sekunden nach der Aufnahme in Händen hältst, ist eine andere Art von Erinnerung",
+      "es": "Una foto que sostienes en tus manos sesenta segundos después de tomarla es un tipo de recuerdo diferente",
+      "fr": "Une photo que vous tenez entre les mains soixante secondes après l'avoir prise, c'est un autre genre de souvenir",
+      "ja": "撮影してから60秒後に手で持てる写真は、違う種類の思い出になる",
+      "ko": "찍고 60초 후에 손에 쥘 수 있는 사진은 다른 종류의 추억입니다",
+      "pt-BR": "Uma foto que você segura nas mãos sessenta segundos após tirar é um tipo diferente de memória",
+      "zh-Hans": "即时成像的照片，会让当下记忆更有温度",
+      "zh-Hant": "即時成像的照片，會讓當下記憶更有溫度"
+    },
+    "Journey journal": {
+      "en": "Journey journal",
+      "de": "Reisetagebuch",
+      "es": "Diario de viaje",
+      "fr": "Journal de voyage",
+      "ja": "旅のジャーナル",
+      "ko": "여행 일기장",
+      "pt-BR": "Diário de viagem",
+      "zh-Hans": "旅行手账本",
+      "zh-Hant": "旅行日記本"
+    },
+    "Somewhere to write down the small details before they blur together into just 'the honeymoon'": {
+      "en": "Somewhere to write down the small details before they blur together into just 'the honeymoon'",
+      "de": "Irgendwo, um die kleinen Details aufzuschreiben, bevor sie zu bloß der Hochzeitsreise verschwimmen",
+      "es": "Un lugar donde anotar los pequeños detalles antes de que se fundan en simplemente la luna de miel",
+      "fr": "Quelque part pour noter les petits détails avant qu'ils ne se fondent en simplement la lune de miel",
+      "ja": "小さな詳細が「ハネムーン」という一言に溶け込む前に書き留める場所",
+      "ko": "작은 세부 사항들이 그냥 신혼여행으로 뭉뚱그려지기 전에 적어둘 곳",
+      "pt-BR": "Um lugar para anotar os pequenos detalhes antes que se misturem e virem apenas a lua de mel",
+      "zh-Hans": "把旅途中细小但珍贵的瞬间记下来，回看时会很有价值",
+      "zh-Hant": "在細節模糊成蜜月之前，把它們記錄下來的地方"
+    },
+    "Ziplock bags": {
+      "en": "Ziplock bags",
+      "de": "Zip-Beutel",
+      "es": "Bolsas con cierre zip",
+      "fr": "Sacs zip",
+      "ja": "ジップロック",
+      "ko": "지퍼백",
+      "pt-BR": "Sacos zip",
+      "zh-Hans": "密封袋",
+      "zh-Hant": "密封袋"
+    },
+    "Waterproofing documents, organising small items, separating wet clothes — endlessly useful": {
+      "en": "Waterproofing documents, organising small items, separating wet clothes — endlessly useful",
+      "de": "Dokumente wasserdicht machen, kleine Gegenstände ordnen, nasse Kleidung trennen — endlos nützlich",
+      "es": "Impermeabilizar documentos, organizar artículos pequeños, separar ropa mojada — infinitamente útil",
+      "fr": "Protéger les documents de l'eau, organiser les petits objets, séparer les vêtements mouillés — infiniment utile",
+      "ja": "書類の防水、小物の整理、濡れた衣類の分離 — 使い道は無限",
+      "ko": "서류 방수 처리, 소지품 정리, 젖은 옷 분리 — 끝없이 유용합니다",
+      "pt-BR": "Impermeabilizar documentos, organizar itens pequenos, separar roupas molhadas — infinitamente útil",
+      "zh-Hans": "防水收纳证件、分类小物、隔离湿衣服都很实用",
+      "zh-Hant": "防水證件、整理小物件、分隔濕衣服——用途無限"
+    },
+    "Mini clips": {
+      "en": "Mini clips",
+      "de": "Mini-Klammern",
+      "es": "Miniclips",
+      "fr": "Mini-pinces",
+      "ja": "ミニクリップ",
+      "ko": "미니 클립",
+      "pt-BR": "Clipes pequenos",
+      "zh-Hans": "迷你夹子",
+      "zh-Hant": "迷你夾子"
+    },
+    "Tiny but surprisingly versatile: clip wet socks to dry, seal snack bags, or secure loose small items": {
+      "en": "Tiny but surprisingly versatile: clip wet socks to dry, seal snack bags, or secure loose small items",
+      "de": "Klein, aber erstaunlich vielseitig: nasse Socken trocknen, Snack-Beutel verschließen, kleine Teile sichern",
+      "es": "Pequeños pero sorprendentemente versátiles: cuelga calcetines húmedos, sella bolsas de snacks o sujeta pequeños objetos",
+      "fr": "Petits mais étonnamment polyvalents : faire sécher des chaussettes mouillées, fermer des sachets de snacks ou fixer de petits objets",
+      "ja": "小さいのに驚くほど多用途：濡れた靴下を干す、お菓子袋を閉じる、小物を固定する",
+      "ko": "작지만 놀랍도록 활용도가 높아요: 젖은 양말 말리기, 과자 봉지 봉하기, 작은 물건 고정하기",
+      "pt-BR": "Pequenos mas surpreendentemente versáteis: pendure meias molhadas para secar, feche sacos de lanche ou prenda pequenos objetos soltos",
+      "zh-Hans": "小但出奇好用：晾湿袜子、封零食袋、固定小东西",
+      "zh-Hant": "小但出奇好用：晾濕襪子、封零食袋、固定小東西"
+    },
+    "Earplugs": {
+      "en": "Earplugs",
+      "de": "Ohrstöpsel",
+      "es": "Tapones para los oídos",
+      "fr": "Bouchons d'oreilles",
+      "ja": "耳栓",
+      "ko": "귀마개",
+      "pt-BR": "Tampões de ouvido",
+      "zh-Hans": "耳塞",
+      "zh-Hant": "耳塞"
+    },
+    "Dorm rooms are never as quiet as the listing suggests — a pair of earplugs is the difference between sleeping through and lying awake until 7am listening to someone else's alarm": {
+      "en": "Dorm rooms are never as quiet as the listing suggests — a pair of earplugs is the difference between sleeping through and lying awake until 7am listening to someone else's alarm",
+      "de": "Schlafsäle sind nie so ruhig wie in der Beschreibung versprochen — ein Paar Ohrstöpsel entscheidet darüber, ob man durchschläft oder bis 7 Uhr morgens wach liegt und den Wecker eines Fremden hört",
+      "es": "Los dormitorios compartidos nunca son tan silenciosos como indica el anuncio — unos tapones para los oídos marcan la diferencia entre dormir toda la noche y quedarse despierto hasta las 7 de la mañana escuchando la alarma de otro",
+      "fr": "Les dortoirs ne sont jamais aussi calmes que la description le laisse entendre — une paire de bouchons d'oreilles fait toute la différence entre dormir d'une traite et rester éveillé jusqu'à 7h du matin en écoutant le réveil de quelqu'un d'autre",
+      "ja": "ドミトリーは説明文ほど静かではありません——耳栓一つで、朝まで眠れるか、他人のアラームを聞きながら7時まで横になっているかが決まります",
+      "ko": "도미토리는 설명에 나와 있는 것만큼 조용하지 않습니다 — 귀마개 한 쌍이 숙면과 오전 7시까지 다른 사람의 알람 소리를 들으며 누워 있는 것의 차이를 만들어냅니다",
+      "pt-BR": "Os quartos compartilhados nunca são tão silenciosos quanto o anúncio sugere — um par de protetores auriculares é a diferença entre dormir a noite toda e ficar acordado até as 7h ouvindo o alarme de outra pessoa",
+      "zh-Hans": "宿舍间从来不像简介里描述的那么安静——一副耳塞，就是睡到自然醒和躺到早上七点听别人闹钟的区别",
+      "zh-Hant": "宿舍間從來不像介紹裡描述的那樣安靜——一副耳塞，就是睡到自然醒和躺到早上七點聽別人鬧鐘的差別"
+    },
+    "Instant coffee": {
+      "en": "Instant coffee",
+      "de": "Instantkaffee",
+      "es": "Café instantáneo",
+      "fr": "Café soluble",
+      "ja": "インスタントコーヒー",
+      "ko": "인스턴트 커피",
+      "pt-BR": "Café instantâneo",
+      "zh-Hans": "速溶咖啡",
+      "zh-Hant": "即溶咖啡"
+    },
+    "For early mornings before the café opens — one sachet weighs nothing and can save a slow start anywhere in the world": {
+      "en": "For early mornings before the café opens — one sachet weighs nothing and can save a slow start anywhere in the world",
+      "de": "Für frühe Morgen, bevor das Café öffnet — ein Päckchen wiegt fast nichts und rettet einen trägen Start überall auf der Welt",
+      "es": "Para las mañanas tempranas antes de que abra la cafetería — un sobre no pesa nada y puede salvarte de un inicio lento en cualquier lugar del mundo",
+      "fr": "Pour les matins avant l'ouverture du café — un sachet ne pèse rien et peut sauver un départ lent n'importe où dans le monde",
+      "ja": "カフェが開く前の早朝に——一袋はほぼ無重量で、世界中どこでも遅い朝の始まりを救ってくれる",
+      "ko": "카페가 열기 전 이른 아침을 위해 — 한 봉지는 무게가 거의 없고 세계 어디서든 늦은 시작을 구해줄 수 있어요",
+      "pt-BR": "Para as manhãs cedo antes de o café abrir — um sachê não pesa quase nada e pode salvar um começo lento em qualquer lugar do mundo",
+      "zh-Hans": "咖啡馆还没开的清晨——一小包几乎没分量，却能在世界任何地方救你于迟缓的开始",
+      "zh-Hant": "咖啡館還沒開的清晨——一小包幾乎沒分量，卻能在世界任何地方救你於遲緩的開始"
+    },
+    "Comfort insoles": {
+      "en": "Comfort insoles",
+      "de": "Komfort-Einlegesohlen",
+      "es": "Plantillas de confort",
+      "fr": "Semelles de confort",
+      "ja": "クッションインソール",
+      "ko": "쿠션 깔창",
+      "pt-BR": "Palmilhas de conforto",
+      "zh-Hans": "舒适鞋垫",
+      "zh-Hant": "舒適鞋墊"
+    },
+    "City days can hit 20k+ steps — insoles can save your feet by day two": {
+      "en": "City days can hit 20k+ steps — insoles can save your feet by day two",
+      "de": "Städtetage können 20.000+ Schritte erreichen — Einlegesohlen können deine Füße bis zum zweiten Tag retten",
+      "es": "Los días de ciudad pueden superar los 20.000 pasos — las plantillas pueden salvar tus pies ya en el segundo día",
+      "fr": "Les journées en ville peuvent atteindre 20 000+ pas — des semelles peuvent sauver vos pieds dès le deuxième jour",
+      "ja": "都市観光では2万歩を超えることも — インソールがあれば2日目も足を守れる",
+      "ko": "도시 여행에서는 2만 보 이상 걷기도 합니다 — 깔창이 이틀째 발을 구해줄 수 있어요",
+      "pt-BR": "Dias na cidade podem chegar a 20 mil+ passos — palmilhas podem salvar seus pés até o segundo dia",
+      "zh-Hans": "城市暴走很费脚，鞋垫能明显减轻第二天疲劳",
+      "zh-Hant": "城市遊一天可能走兩萬步以上——鞋墊能在第二天前救你的腳"
+    },
+    "Collapsible tote bag": {
+      "en": "Collapsible tote bag",
+      "de": "Faltbare Tragetasche",
+      "es": "Bolsa de tela plegable",
+      "fr": "Tote bag pliable",
+      "ja": "折りたたみトートバッグ",
+      "ko": "접이식 에코백",
+      "pt-BR": "Sacola dobrável",
+      "zh-Hans": "折叠托特袋",
+      "zh-Hant": "可折疊購物袋"
+    },
+    "You will buy something at a market or deli — saves scrambling for a bag at the checkout": {
+      "en": "You will buy something at a market or deli — saves scrambling for a bag at the checkout",
+      "de": "Du wirst etwas auf einem Markt oder in einem Feinkostladen kaufen — erspart das Suchen nach einer Tüte an der Kasse",
+      "es": "Comprarás algo en un mercado o en una tienda delicatessen — evita buscar una bolsa a toda prisa en la caja",
+      "fr": "Vous achèterez quelque chose dans un marché ou une épicerie — évite de chercher un sac en catastrophe à la caisse",
+      "ja": "市場やデリで何か買うことになる — レジで袋を慌てて探さずに済む",
+      "ko": "시장이나 델리에서 뭔가를 사게 됩니다 — 계산대에서 허둥지둥 봉투를 찾을 필요가 없어요",
+      "pt-BR": "Você vai comprar algo num mercado ou delicatessen — evita correr atrás de uma sacola no caixa",
+      "zh-Hans": "逛市集和便利店时很常用，临时买东西不用再找袋子",
+      "zh-Hant": "你一定會在市場或熟食店買東西——免得在結帳時四處找袋子"
+    },
+    "Stain remover pen": {
+      "en": "Stain remover pen",
+      "de": "Fleckenentferner-Stift",
+      "es": "Bolígrafo quitamanchas",
+      "fr": "Stylo détachant",
+      "ja": "シミ取りペン",
+      "ko": "얼룩 제거 펜",
+      "pt-BR": "Caneta removedora de manchas",
+      "zh-Hans": "便携去渍笔",
+      "zh-Hant": "便攜去漬筆"
+    },
+    "When coffee or sauce lands on light clothes, a quick swipe can save you from a whole day of awkward stains": {
+      "en": "When coffee or sauce lands on light clothes, a quick swipe can save you from a whole day of awkward stains",
+      "de": "Wenn Kaffee oder Sauce auf helle Kleidung fällt, kann ein schneller Wisch einen ganzen Tag peinlicher Flecken ersparen",
+      "es": "Cuando el café o la salsa cae sobre ropa clara, un rápido pase puede ahorrarte un día entero de manchas incómodas",
+      "fr": "Quand le café ou la sauce tombe sur des vêtements clairs, un coup rapide peut vous éviter une journée entière de taches gênantes",
+      "ja": "淡い服にコーヒーやソースが垂れたとき、さっとひと拭きで一日中恥ずかしいシミを防げる",
+      "ko": "커피나 소스가 밝은 색 옷에 묻었을 때, 빠르게 한 번 닦으면 하루 종일 어색한 얼룩에서 벗어날 수 있어요",
+      "pt-BR": "Quando café ou molho cai em roupas claras, uma rápida passada pode te salvar de um dia inteiro com manchas constrangedoras",
+      "zh-Hans": "咖啡或酱料滴到浅色衣服时，快速擦一下，能避免一整天的尴尬",
+      "zh-Hant": "咖啡或醬料滴到淺色衣服時，快速擦一下，能避免一整天的尷尬"
+    },
+    "Snorkel mask": {
+      "en": "Snorkel mask",
+      "de": "Schnorchelmaske",
+      "es": "Máscara de snorkel",
+      "fr": "Masque de snorkeling",
+      "ja": "シュノーケルマスク",
+      "ko": "스노클 마스크",
+      "pt-BR": "Máscara de snorkel",
+      "zh-Hans": "浮潜面罩",
+      "zh-Hant": "浮潛面罩"
+    },
+    "A full-face snorkel mask changes the experience entirely — clear vision, easy breathing, no learning curve": {
+      "en": "A full-face snorkel mask changes the experience entirely — clear vision, easy breathing, no learning curve",
+      "de": "Eine Vollgesichts-Schnorchelmaske verändert das Erlebnis vollkommen — klare Sicht, leichtes Atmen, keine Eingewöhnung",
+      "es": "Una máscara de snorkel de cara completa cambia la experiencia por completo — visión clara, respiración fácil, sin aprendizaje",
+      "fr": "Un masque de plongée intégral change totalement l'expérience — vision nette, respiration facile, aucune courbe d'apprentissage",
+      "ja": "フルフェイスのシュノーケルマスクは体験を一変させる — クリアな視界、楽な呼吸、慣れる必要なし",
+      "ko": "풀페이스 스노클 마스크는 경험을 완전히 바꿔줍니다 — 선명한 시야, 편한 호흡, 배울 것도 없어요",
+      "pt-BR": "Uma máscara de snorkel full-face muda totalmente a experiência — visão clara, respiração fácil, sem curva de aprendizado",
+      "zh-Hans": "浮潜时视野更清晰、呼吸更轻松，上手也更快",
+      "zh-Hant": "浮潛時視野更清晰、呼吸更輕鬆，上手也更快"
+    },
+    "Reef-safe sunscreen": {
+      "en": "Reef-safe sunscreen",
+      "de": "Riffschonende Sonnencreme",
+      "es": "Protector solar respetuoso con los arrecifes",
+      "fr": "Crème solaire respectueuse des récifs",
+      "ja": "サンゴに優しい日焼け止め",
+      "ko": "산호초에 안전한 자외선 차단제",
+      "pt-BR": "Protetor solar seguro para corais",
+      "zh-Hans": "海洋友好防晒",
+      "zh-Hant": "友善珊瑚防曬乳"
+    },
+    "Regular sunscreen damages coral reefs — worth switching in tropical waters": {
+      "en": "Regular sunscreen damages coral reefs — worth switching in tropical waters",
+      "de": "Herkömmliche Sonnencreme schädigt Korallenriffe – in tropischen Gewässern lohnt sich der Wechsel",
+      "es": "El protector solar normal daña los arrecifes de coral: vale la pena cambiarlo en aguas tropicales",
+      "fr": "La crème solaire classique abîme les récifs coralliens — mieux vaut en changer dans les eaux tropicales",
+      "ja": "通常の日焼け止めはサンゴ礁を傷めます。熱帯の海では切り替える価値あり",
+      "ko": "일반 자외선 차단제는 산호초를 손상시켜요. 열대 바다에서는 바꿀 만한 가치가 있어요",
+      "pt-BR": "O protetor solar comum danifica os corais — vale a pena trocar em águas tropicais",
+      "zh-Hans": "去海边或浮潜时，选更友好的防晒对环境更好",
+      "zh-Hant": "一般防曬乳會破壞珊瑚礁——在熱帶海域值得換一款"
+    },
+    "Sarong / pareo": {
+      "en": "Sarong / pareo",
+      "de": "Sarong / Pareo",
+      "es": "Pareo / sarong",
+      "fr": "Sarong / paréo",
+      "ja": "サロン / パレオ",
+      "ko": "사롱 / 파레오",
+      "pt-BR": "Sarong / pareo",
+      "zh-Hans": "纱笼 / 沙滩巾",
+      "zh-Hant": "沙龍 / 海灘巾"
+    },
+    "One lightweight cloth that works as a beach cover-up, a towel, a picnic blanket, a makeshift shade, or a bag — it never takes up meaningful space and gets used every single day": {
+      "en": "One lightweight cloth that works as a beach cover-up, a towel, a picnic blanket, a makeshift shade, or a bag — it never takes up meaningful space and gets used every single day",
+      "de": "Ein leichtes Tuch, das als Strandkleid, Handtuch, Picknickdecke, improvisierten Sonnenschutz oder Tasche dient — nimmt kaum Platz ein und wird täglich benutzt",
+      "es": "Una tela ligera que funciona como cubreplaya, toalla, manta de picnic, improvisada sombra o bolsa — no ocupa casi nada y se usa todos los días",
+      "fr": "Un simple tissu léger qui sert de paréo, serviette, nappe de pique-nique, pare-soleil ou sac — il ne prend presque pas de place et s'utilise chaque jour",
+      "ja": "ビーチカバーアップ、タオル、ピクニックシート、日よけ、バッグとして使える一枚の軽い布——ほとんどスペースを取らず、毎日使えます",
+      "ko": "비치 커버업, 수건, 피크닉 담요, 임시 그늘막, 가방으로 쓸 수 있는 가벼운 천 한 장 — 공간을 거의 차지하지 않으면서 매일 활용됩니다",
+      "pt-BR": "Um tecido leve que serve como cobertura de praia, toalha, manta de piquenique, sombra improvisada ou sacola — quase não ocupa espaço e é usado todos os dias",
+      "zh-Hans": "一块轻薄的布，可以当沙滩裙、毛巾、野餐垫、临时遮阳布，也可以当袋子——几乎不占空间，却几乎每天都会用到",
+      "zh-Hant": "一塊輕薄的布，可以當沙灘裙、毛巾、野餐墊、臨時遮陽布，也可以當袋子——幾乎不占空間，卻幾乎每天都會用到"
+    },
+    "Waterproof phone pouch": {
+      "en": "Waterproof phone pouch",
+      "de": "Wasserdichte Handytasche",
+      "es": "Funda impermeable para teléfono",
+      "fr": "Pochette imperméable pour téléphone",
+      "ja": "防水スマホポーチ",
+      "ko": "방수 폰 파우치",
+      "pt-BR": "Bolsa impermeável para celular",
+      "zh-Hans": "手机防水袋",
+      "zh-Hant": "手機防水袋"
+    },
+    "Clip it on and take your phone into the water — suddenly every boat trip, beach swim, or waterfall is fully documented": {
+      "en": "Clip it on and take your phone into the water — suddenly every boat trip, beach swim, or waterfall is fully documented",
+      "de": "Einfach befestigen und das Handy ins Wasser mitnehmen — plötzlich kann jede Bootsfahrt, jeder Strandschwimm oder Wasserfall vollständig dokumentiert werden",
+      "es": "Ponlo y lleva tu teléfono al agua — de repente cada paseo en bote, nado en la playa o cascada queda completamente documentado",
+      "fr": "Attachez-le et emmenez votre téléphone dans l'eau — soudain, chaque sortie en bateau, baignade ou cascade est entièrement documentée",
+      "ja": "つけてスマホを水に持ち込もう。ボートトリップ、海水浴、滝など、すべての瞬間が記録できるようになります",
+      "ko": "클립으로 고정하고 폰을 물에 가져가세요. 보트 여행, 해수욕, 폭포 등 모든 순간이 완전히 기록됩니다",
+      "pt-BR": "Coloque e leve seu celular para a água — de repente, cada passeio de barco, mergulho na praia ou cachoeira fica completamente documentado",
+      "zh-Hans": "套上它，把手机带进水里——从此每一次船游、泳池、瀑布，都有了完整的记录",
+      "zh-Hant": "套上它，把手機帶進水裡——從此每一次船遊、游泳、瀑布，都有了完整的記錄"
+    },
+    "Portable electric kettle": {
+      "en": "Portable electric kettle",
+      "de": "Tragbarer Wasserkocher",
+      "es": "Hervidor eléctrico portátil",
+      "fr": "Bouilloire électrique portable",
+      "ja": "携帯用電気ケトル",
+      "ko": "휴대용 전기 주전자",
+      "pt-BR": "Chaleira elétrica portátil",
+      "zh-Hans": "便携电热水壶",
+      "zh-Hant": "便攜電熱水壺"
+    },
+    "Hot water on demand in your hotel room — instant noodles at midnight, morning tea without waiting for room service": {
+      "en": "Hot water on demand in your hotel room — instant noodles at midnight, morning tea without waiting for room service",
+      "de": "Heißes Wasser auf Abruf im Hotelzimmer — Instant-Nudeln um Mitternacht, Morgentee ohne auf den Zimmerservice zu warten",
+      "es": "Agua caliente disponible en tu habitación de hotel — fideos instantáneos a medianoche, té matutino sin esperar al servicio de habitaciones",
+      "fr": "De l'eau chaude à la demande dans votre chambre d'hôtel — des nouilles instantanées à minuit, du thé du matin sans attendre le service en chambre",
+      "ja": "ホテルの部屋でいつでもお湯が使える — 真夜中のインスタントラーメン、ルームサービスを待たずに朝のお茶",
+      "ko": "호텔 방에서 원할 때 바로 뜨거운 물을 — 자정의 라면, 룸서비스 기다릴 필요 없는 아침 차",
+      "pt-BR": "Água quente na hora no seu quarto de hotel — macarrão instantâneo à meia-noite, chá de manhã sem esperar o serviço de quarto",
+      "zh-Hans": "酒店房间里随时有热水，夜宵和早茶都会方便很多",
+      "zh-Hant": "酒店房間裡隨時有熱水，宵夜和早茶都會方便很多"
+    },
+    "Rechargeable hand warmer": {
+      "en": "Rechargeable hand warmer",
+      "de": "Wiederaufladbarer Handwärmer",
+      "es": "Calentador de manos recargable",
+      "fr": "Chauffe-mains rechargeable",
+      "ja": "充電式カイロ",
+      "ko": "충전식 손난로",
+      "pt-BR": "Aquecedor de mãos recarregável",
+      "zh-Hans": "充电暖手宝",
+      "zh-Hant": "充電暖手寶"
+    },
+    "Warm hands change everything in the cold — and unlike disposable ones, this one charges your phone in a pinch too": {
+      "en": "Warm hands change everything in the cold — and unlike disposable ones, this one charges your phone in a pinch too",
+      "de": "Warme Hände verändern alles in der Kälte — und im Gegensatz zu Einwegwärmern lädt dieser im Notfall auch dein Handy auf",
+      "es": "Las manos cálidas lo cambian todo en el frío — y a diferencia de los desechables, este también carga tu teléfono en un apuro",
+      "fr": "Des mains chaudes changent tout dans le froid — et contrairement aux modèles jetables, celui-ci peut aussi recharger votre téléphone en cas de besoin",
+      "ja": "冷たい中で温かい手はすべてを変えます。使い捨てと違い、緊急時にはスマホの充電もできます",
+      "ko": "추운 날씨에 따뜻한 손은 모든 것을 바꿉니다. 일회용과 달리 급할 때 폰도 충전할 수 있습니다",
+      "pt-BR": "Mãos quentes mudam tudo no frio — e ao contrário dos descartáveis, este também carrega seu celular em uma emergência",
+      "zh-Hans": "暖手在寒冷中改变一切——而且它不只是暖手宝，紧急时还能给手机充电",
+      "zh-Hant": "暖手在寒冷中改變一切——而且它不只是暖手寶，緊急時還能給手機充電"
+    },
+    "Hot chocolate sachets": {
+      "en": "Hot chocolate sachets",
+      "de": "Heiße-Schokolade-Beutel",
+      "es": "Sobres de chocolate caliente",
+      "fr": "Sachets de chocolat chaud",
+      "ja": "ホットチョコレートの素",
+      "ko": "핫초코 스틱",
+      "pt-BR": "Sachês de chocolate quente",
+      "zh-Hans": "热可可冲剂",
+      "zh-Hant": "熱可可沖劑"
+    },
+    "A cup of hot chocolate in a cold room after a day in the snow is one of those small things that makes a trip feel complete": {
+      "en": "A cup of hot chocolate in a cold room after a day in the snow is one of those small things that makes a trip feel complete",
+      "de": "Eine Tasse heißer Schokolade in einem kalten Zimmer nach einem Tag im Schnee gehört zu den kleinen Dingen, die eine Reise vollständig machen",
+      "es": "Una taza de chocolate caliente en una habitación fría después de un día en la nieve es una de esas pequeñas cosas que hacen que un viaje se sienta completo",
+      "fr": "Une tasse de chocolat chaud dans une chambre froide après une journée dans la neige est une de ces petites choses qui donnent le sentiment que le voyage est complet",
+      "ja": "雪の中で一日過ごした後、寒い部屋でホットチョコレートを飲む。旅を完結させる小さなことのひとつです",
+      "ko": "눈 속에서 하루를 보낸 후 차가운 방에서 마시는 핫초코 한 잔은 여행을 완성시키는 작은 것들 중 하나입니다",
+      "pt-BR": "Uma xícara de chocolate quente em um quarto frio após um dia na neve é uma dessas pequenas coisas que fazem uma viagem parecer completa",
+      "zh-Hans": "雪地里玩了一整天，回到房间喝一杯热可可——就是这样一件小事，让一段旅程感觉圆满了",
+      "zh-Hant": "雪地裡玩了一整天，回到房間喝一杯熱可可——就是這樣一件小事，讓一段旅程感覺圓滿了"
+    },
+    "Energy gel / dark chocolate": {
+      "en": "Energy gel / dark chocolate",
+      "de": "Energiegel / Zartbitterschokolade",
+      "es": "Gel energético / chocolate negro",
+      "fr": "Gel énergétique / chocolat noir",
+      "ja": "エナジージェル / ダークチョコレート",
+      "ko": "에너지 젤 / 다크 초콜릿",
+      "pt-BR": "Gel de energia / chocolate amargo",
+      "zh-Hans": "能量胶 / 黑巧克力",
+      "zh-Hant": "能量膠 / 黑巧克力"
+    },
+    "Real hunger hits on a long ascent — something dense and rewarding at the summit makes the whole climb feel worth it": {
+      "en": "Real hunger hits on a long ascent — something dense and rewarding at the summit makes the whole climb feel worth it",
+      "de": "Echter Hunger trifft beim langen Aufstieg — etwas Nahrhaftes und Belohnendes am Gipfel lässt den gesamten Aufstieg lohnenswert erscheinen",
+      "es": "El hambre de verdad golpea en un largo ascenso — algo denso y reconfortante en la cima hace que toda la subida valga la pena",
+      "fr": "La vraie faim frappe lors d'une longue montée — quelque chose de consistant et de satisfaisant au sommet donne l'impression que toute la montée en valait la peine",
+      "ja": "長い登りで本物の空腹感が押し寄せる — 山頂での満足感のある食べ物が、登り全体を報われる体験にする",
+      "ko": "긴 오르막에서 진짜 배고픔이 찾아옵니다 — 정상에서 묵직하고 보람 있는 것을 먹으면 전체 등반이 가치 있게 느껴져요",
+      "pt-BR": "A fome de verdade bate numa longa subida — algo denso e recompensador no cume faz toda a escalada valer a pena",
+      "zh-Hans": "长上坡时很容易突然饿，一点高能量补给会很关键",
+      "zh-Hant": "長上坡時很容易突然餓，一點高能量補給會很關鍵"
+    },
+    "Foldable hiking stool": {
+      "en": "Foldable hiking stool",
+      "de": "Faltbarer Wanderhocker",
+      "es": "Taburete plegable para senderismo",
+      "fr": "Tabouret de randonnée pliable",
+      "ja": "折りたたみ登山スツール",
+      "ko": "접이식 등산 의자",
+      "pt-BR": "Banqueta dobrável para trilha",
+      "zh-Hans": "折叠登山凳",
+      "zh-Hant": "折疊登山凳"
+    },
+    "Somewhere to sit at the viewpoint — standing and looking is fine, sitting and looking is something else": {
+      "en": "Somewhere to sit at the viewpoint — standing and looking is fine, sitting and looking is something else",
+      "de": "Irgendwo am Aussichtspunkt sitzen — Stehen und Schauen ist gut, Sitzen und Schauen ist etwas ganz anderes",
+      "es": "Un lugar donde sentarse en el mirador — estar de pie y mirar está bien, sentarse y mirar es otra cosa",
+      "fr": "Quelque chose sur quoi s'asseoir au belvédère — rester debout et regarder c'est bien, s'asseoir et regarder c'est autre chose",
+      "ja": "展望スポットで座れる場所 — 立って眺めるのもいいが、座って眺めるのは別次元の体験",
+      "ko": "전망대에 앉을 곳 — 서서 보는 것도 좋지만, 앉아서 보는 건 전혀 다른 경험이에요",
+      "pt-BR": "Um lugar para sentar no mirante — ficar de pé e olhar é bom, sentar e olhar é outra coisa",
+      "zh-Hans": "观景点能坐下来休息，体验会从“赶路”变成“享受”",
+      "zh-Hant": "觀景點能坐下來休息，體驗會從「趕路」變成「享受」"
+    },
+    "Duct tape (small roll)": {
+      "en": "Duct tape (small roll)",
+      "de": "Klebeband (kleine Rolle)",
+      "es": "Cinta americana (rollo pequeño)",
+      "fr": "Ruban adhésif (petit rouleau)",
+      "ja": "ガムテープ（小巻き）",
+      "ko": "덕트 테이프 (소형)",
+      "pt-BR": "Fita adesiva resistente (rolo pequeno)",
+      "zh-Hans": "小卷强力胶带",
+      "zh-Hant": "膠布（小卷）"
+    },
+    "Fixes a broken boot sole, a torn strap, or a blister spot — worth the 30g": {
+      "en": "Fixes a broken boot sole, a torn strap, or a blister spot — worth the 30g",
+      "de": "Repariert eine gebrochene Schuhsohle, einen gerissenen Riemen oder eine Blasenstelle — die 30g sind es wert",
+      "es": "Repara una suela rota, una correa desgarrada o un punto de ampolla — vale los 30g",
+      "fr": "Répare une semelle de chaussure cassée, une sangle déchirée ou un point d'ampoule — ça vaut les 30g",
+      "ja": "靴底のひび、千切れたストラップ、靴擦れ箇所を修理できる — 30gの価値あり",
+      "ko": "부서진 신발 밑창, 찢어진 스트랩, 물집 부위를 고쳐줍니다 — 30g의 가치가 충분해요",
+      "pt-BR": "Conserta solado quebrado, alça rasgada ou bolha — vale os 30g",
+      "zh-Hans": "鞋底开胶、背带开裂或防磨都能应急，重量却很轻",
+      "zh-Hant": "修復斷裂的靴底、撕裂的背帶或水泡部位——30克值了"
+    },
+    "Power strip": {
+      "en": "Power strip",
+      "de": "Steckdosenleiste",
+      "es": "Regleta",
+      "fr": "Multiprise",
+      "ja": "電源タップ",
+      "ko": "멀티탭",
+      "pt-BR": "Filtro de linha",
+      "zh-Hans": "插线板",
+      "zh-Hant": "延長線"
+    },
+    "Most cruise cabins have one or two outlets for an entire room. A compact power strip solves this immediately and quietly — most people only realise they need one after the first night": {
+      "en": "Most cruise cabins have one or two outlets for an entire room. A compact power strip solves this immediately and quietly — most people only realise they need one after the first night",
+      "de": "Die meisten Kreuzfahrtkabinen haben für das ganze Zimmer nur eine oder zwei Steckdosen. Eine kompakte Steckdosenleiste löst das sofort und geräuschlos — die meisten merken erst nach der ersten Nacht, dass sie eine brauchen",
+      "es": "La mayoría de los camarotes de crucero tienen una o dos tomas de corriente para toda la habitación. Una regleta compacta lo resuelve de inmediato — la mayoría solo se da cuenta de que la necesita después de la primera noche",
+      "fr": "La plupart des cabines de croisière n'ont qu'une ou deux prises pour toute la pièce. Une multiprise compacte règle ça immédiatement — la plupart des gens s'en rendent compte seulement après la première nuit",
+      "ja": "クルーズ船のキャビンは、部屋全体でコンセントが1〜2個しかないことがほとんどです。コンパクトな電源タップがすぐに解決してくれます——ほとんどの人は最初の夜が過ぎてから必要性に気づきます",
+      "ko": "대부분의 크루즈 선실에는 방 전체에 콘센트가 한두 개뿐입니다. 소형 멀티탭이 즉시 이 문제를 해결합니다 — 대부분의 사람들은 첫날 밤이 지나서야 필요하다는 것을 깨닫습니다",
+      "pt-BR": "A maioria dos camarotes de cruzeiro tem uma ou duas tomadas para o quarto inteiro. Uma régua de tomadas compacta resolve isso imediatamente — a maioria só percebe que precisa depois da primeira noite",
+      "zh-Hans": "大多数邮轮客舱整个房间只有一两个插座。一个小型排插立刻解决这个问题，而且悄无声息——大多数人只有在第一晚之后才意识到自己需要它",
+      "zh-Hant": "大多數郵輪客艙整個房間只有一兩個插座。一個小型排插立刻解決這個問題，而且悄無聲息——大多數人只有在第一晚之後才意識到自己需要它"
+    },
+    "Magnetic hooks": {
+      "en": "Magnetic hooks",
+      "de": "Magnethaken",
+      "es": "Ganchos magnéticos",
+      "fr": "Crochets magnétiques",
+      "ja": "マグネットフック",
+      "ko": "자석 고리",
+      "pt-BR": "Ganchos magnéticos",
+      "zh-Hans": "磁吸挂钩",
+      "zh-Hant": "磁力掛鉤"
+    },
+    "Cruise cabin walls are magnetic, and most people don't know until they've already unpacked — a few hooks can completely change how the room works": {
+      "en": "Cruise cabin walls are magnetic, and most people don't know until they've already unpacked — a few hooks can completely change how the room works",
+      "de": "Kreuzfahrtkabinenwände sind magnetisch, aber die meisten wissen das erst nach dem Auspacken — ein paar Haken können die ganze Raumnutzung verändern",
+      "es": "Las paredes de las cabinas de crucero son magnéticas, y la mayoría no lo sabe hasta que ya ha deshecho el equipaje — unos ganchos pueden cambiar completamente cómo funciona la habitación",
+      "fr": "Les murs des cabines de croisière sont magnétiques, et la plupart des gens ne le savent qu'après avoir défait leurs valises — quelques crochets peuvent complètement changer l'organisation de la pièce",
+      "ja": "クルーズ船のキャビンの壁は磁石になっていて、多くの人は荷物を解いてから気づく——いくつかのフックが部屋の使い勝手を完全に変えてくれる",
+      "ko": "크루즈 선실 벽은 자석이에요, 대부분의 사람들은 짐을 풀고 나서야 알게 되죠 — 후크 몇 개가 방 전체 사용 방식을 완전히 바꿔줄 수 있어요",
+      "pt-BR": "As paredes das cabines de cruzeiro são magnéticas, e a maioria das pessoas não sabe até já ter desfeito as malas — alguns ganchos podem mudar completamente como o quarto funciona",
+      "zh-Hans": "邮轮船舱墙壁是磁性的，很多人入住后才发现——几个磁钩能彻底改变房间的整洁程度",
+      "zh-Hant": "郵輪船艙牆壁是磁性的，很多人入住後才發現——幾個磁鉤能徹底改變房間的整潔程度"
+    },
+    "Formal accessories": {
+      "en": "Formal accessories",
+      "de": "Formelle Accessoires",
+      "es": "Accesorios formales",
+      "fr": "Accessoires formels",
+      "ja": "フォーマルアクセサリー",
+      "ko": "포멀 액세서리",
+      "pt-BR": "Acessórios formais",
+      "zh-Hans": "正式配饰",
+      "zh-Hant": "正式配飾"
+    },
+    "A tie clip or silk scarf — the details that make a formal dinner outfit feel considered rather than thrown together": {
+      "en": "A tie clip or silk scarf — the details that make a formal dinner outfit feel considered rather than thrown together",
+      "de": "Eine Krawattennadel oder ein Seidenschal — die Details, die ein formelles Abendoutfit durchdacht statt zusammengewürfelt wirken lassen",
+      "es": "Un alfiler de corbata o un pañuelo de seda — los detalles que hacen que un atuendo formal parezca cuidado y no improvisado",
+      "fr": "Une pince à cravate ou un foulard en soie — les détails qui font qu'une tenue de dîner formel semble réfléchie plutôt que mise à la va-vite",
+      "ja": "タイクリップやシルクのスカーフ — フォーマルなディナーの装いを、場当たりではなく考え抜いたものに見せるディテール",
+      "ko": "타이 클립이나 실크 스카프 — 격식 있는 저녁 자리 복장을 즉흥적이 아닌 세심하게 갖춰 입은 것처럼 만들어 주는 디테일",
+      "pt-BR": "Um prendedor de gravata ou lenço de seda — os detalhes que fazem um traje de jantar formal parecer pensado, não improvisado",
+      "zh-Hans": "领带夹或丝巾这类细节，会让正式场合穿搭更完整",
+      "zh-Hant": "領帶夾或絲巾這類細節，會讓正式場合穿搭更完整"
+    },
+    "Portable fan": {
+      "en": "Portable fan",
+      "de": "Tragbarer Ventilator",
+      "es": "Abanico portátil",
+      "fr": "Ventilateur portable",
+      "ja": "携帯扇風機",
+      "ko": "휴대용 선풍기",
+      "pt-BR": "Ventilador portátil",
+      "zh-Hans": "便携小风扇",
+      "zh-Hant": "便攜風扇"
+    },
+    "Cabins can get warm, especially in tropical ports — a small USB fan is a real sleep improvement": {
+      "en": "Cabins can get warm, especially in tropical ports — a small USB fan is a real sleep improvement",
+      "de": "Kabinen können warm werden, besonders in tropischen Häfen — ein kleiner USB-Ventilator verbessert den Schlaf wirklich",
+      "es": "Los camarotes pueden calentarse, especialmente en puertos tropicales — un pequeño ventilador USB mejora considerablemente el sueño",
+      "fr": "Les cabines peuvent devenir chaudes, surtout dans les ports tropicaux — un petit ventilateur USB améliore vraiment le sommeil",
+      "ja": "特にトロピカルな港では客室が暑くなりがち — 小さなUSBファンがあるだけで睡眠の質が格段に上がる",
+      "ko": "특히 열대 항구에서는 선실이 더워질 수 있습니다 — 작은 USB 선풍기 하나가 수면의 질을 크게 높여줘요",
+      "pt-BR": "As cabines podem esquentar, especialmente em portos tropicais — um pequeno ventilador USB melhora muito o sono",
+      "zh-Hans": "热带航线舱内偏闷，小风扇常能提升睡眠质量",
+      "zh-Hant": "船艙可能很熱，尤其在熱帶港口停靠時——一個小USB風扇真的能改善睡眠"
+    },
+    "Acupressure wristbands": {
+      "en": "Acupressure wristbands",
+      "de": "Akupressur-Armbänder",
+      "es": "Pulseras de acupresión",
+      "fr": "Bracelets d'acupression",
+      "ja": "酔い止めリストバンド",
+      "ko": "지압 손목밴드",
+      "pt-BR": "Pulseiras de acupressão",
+      "zh-Hans": "穴位防晕手环",
+      "zh-Hant": "指壓手環"
+    },
+    "Worn on the pressure point above the wrist — more stylish than patches and surprisingly effective for mild seasickness": {
+      "en": "Worn on the pressure point above the wrist — more stylish than patches and surprisingly effective for mild seasickness",
+      "de": "Am Druckpunkt über dem Handgelenk getragen — stilvoller als Pflaster und überraschend wirksam gegen leichte Seekrankheit",
+      "es": "Llevado en el punto de presión sobre la muñeca — más elegante que los parches y sorprendentemente efectivo para el mareo leve",
+      "fr": "Porté sur le point de pression au-dessus du poignet — plus élégant que les patchs et étonnamment efficace contre le mal de mer léger",
+      "ja": "手首の上の圧点に装着 — パッチよりスタイリッシュで、軽い船酔いに驚くほど効果的",
+      "ko": "손목 위 압점에 착용 — 패치보다 세련되고 가벼운 멀미에 놀랍도록 효과적입니다",
+      "pt-BR": "Usado no ponto de pressão acima do pulso — mais elegante que patches e surpreendentemente eficaz para enjoo leve",
+      "zh-Hans": "戴在手腕穴位上，外观低调，对轻度晕船人群友好",
+      "zh-Hant": "戴在手腕穴位上，外觀低調，對輕度暈船人群友好"
+    },
+    "Wrinkle-release spray": {
+      "en": "Wrinkle-release spray",
+      "de": "Anti-Falten-Spray",
+      "es": "Spray antiarrugas",
+      "fr": "Spray anti-froissements",
+      "ja": "シワ取りスプレー",
+      "ko": "주름 제거 스프레이",
+      "pt-BR": "Spray anti-amassados",
+      "zh-Hans": "衣物去皱喷雾",
+      "zh-Hant": "除皺噴霧"
+    },
+    "Meeting clothes out of a suitcase always need a refresh — no iron required": {
+      "en": "Meeting clothes out of a suitcase always need a refresh — no iron required",
+      "de": "Kleidung für Meetings aus einem Koffer braucht immer eine Auffrischung — kein Bügeleisen nötig",
+      "es": "La ropa de reuniones sacada de una maleta siempre necesita un retoque — sin plancha necesaria",
+      "fr": "Les vêtements de réunion sortis d'une valise ont toujours besoin d'être rafraîchis — sans fer à repasser",
+      "ja": "スーツケースから取り出した会議用の服はいつもリフレッシュが必要 — アイロン不要",
+      "ko": "여행 가방에서 꺼낸 미팅 복장은 항상 정리가 필요합니다 — 다리미 없이도 OK",
+      "pt-BR": "Roupas de reunião que saem de uma mala sempre precisam de um toque — sem ferro necessário",
+      "zh-Hans": "行李箱取出的衬衫常有褶皱，喷一喷就能快速救场",
+      "zh-Hant": "從行李箱裡拿出的會議服裝總需要整理——無需熨斗"
+    },
+    "Travel steamer": {
+      "en": "Travel steamer",
+      "de": "Reisedampfbügeleisen",
+      "es": "Vaporizador de viaje",
+      "fr": "Défroisseur de voyage",
+      "ja": "トラベルスチーマー",
+      "ko": "여행용 스티머",
+      "pt-BR": "Vaporizador de viagem",
+      "zh-Hans": "便携挂烫机",
+      "zh-Hant": "便攜掛燙機"
+    },
+    "De-creases a shirt in two minutes — more effective than an iron on most fabrics, and takes up almost no space": {
+      "en": "De-creases a shirt in two minutes — more effective than an iron on most fabrics, and takes up almost no space",
+      "de": "Glättet ein Hemd in zwei Minuten — effektiver als ein Bügeleisen bei den meisten Stoffen und nimmt kaum Platz weg",
+      "es": "Desagruga una camisa en dos minutos — más eficaz que una plancha en la mayoría de las telas y ocupa casi nada",
+      "fr": "Défroise une chemise en deux minutes — plus efficace qu'un fer à repasser sur la plupart des tissus, et prend presque pas de place",
+      "ja": "シャツのシワを2分で取る — ほとんどの素材でアイロンより効果的、しかもほとんど場所を取らない",
+      "ko": "셔츠 주름을 2분 만에 펴줍니다 — 대부분의 소재에서 다리미보다 효과적이고, 공간도 거의 차지하지 않아요",
+      "pt-BR": "Tira amassados de uma camisa em dois minutos — mais eficaz que um ferro na maioria dos tecidos, e ocupa quase nenhum espaço",
+      "zh-Hans": "两分钟快速整理褶皱，省时又不占空间",
+      "zh-Hant": "兩分鐘快速整理褶皺，省時又不佔空間"
+    },
+    "Shoe care kit": {
+      "en": "Shoe care kit",
+      "de": "Schuhpflegeset",
+      "es": "Kit de limpieza de calzado",
+      "fr": "Kit d'entretien chaussures",
+      "ja": "シューケアセット",
+      "ko": "구두 관리 키트",
+      "pt-BR": "Kit de cuidados com calçado",
+      "zh-Hans": "鞋履护理套装",
+      "zh-Hant": "鞋履護理套裝"
+    },
+    "Scuffed shoes undermine an otherwise sharp outfit — a quick buff before a client meeting takes thirty seconds": {
+      "en": "Scuffed shoes undermine an otherwise sharp outfit — a quick buff before a client meeting takes thirty seconds",
+      "de": "Zerkratzte Schuhe untergraben ein sonst schickes Outfit — ein kurzes Aufpolieren vor einem Kundengespräch dauert dreißig Sekunden",
+      "es": "Los zapatos rayados arruinan un atuendo que de otro modo sería impecable — un rápido pulido antes de una reunión con un cliente lleva treinta segundos",
+      "fr": "Des chaussures éraflées gâchent une tenue par ailleurs impeccable — un rapide coup de chiffon avant une réunion client prend trente secondes",
+      "ja": "傷のついた靴は、それ以外は完璧なコーデを台無しにする — クライアントとの面会前に30秒サッと磨くだけでいい",
+      "ko": "긁힌 구두는 나머지가 완벽한 옷차림을 망칩니다 — 고객 미팅 전 30초 빠르게 닦아주는 것만으로 충분해요",
+      "pt-BR": "Sapatos riscados comprometem um visual que seria impecável — uma lustrada rápida antes de uma reunião com cliente leva trinta segundos",
+      "zh-Hans": "鞋面有划痕会影响整体状态，见面前快速处理很加分",
+      "zh-Hant": "鞋面有劃痕會影響整體狀態，見面前快速處理很加分"
+    },
+    "Foldable hangers": {
+      "en": "Foldable hangers",
+      "de": "Faltbare Kleiderbügel",
+      "es": "Perchas plegables",
+      "fr": "Cintres pliables",
+      "ja": "折りたたみハンガー",
+      "ko": "접이식 옷걸이",
+      "pt-BR": "Cabides dobráveis",
+      "zh-Hans": "折叠衣架",
+      "zh-Hant": "折疊衣架"
+    },
+    "Hotel rooms never have enough — three extra hangers solve the whole wardrobe problem": {
+      "en": "Hotel rooms never have enough — three extra hangers solve the whole wardrobe problem",
+      "de": "Hotelzimmer haben nie genug — drei zusätzliche Kleiderbügel lösen das gesamte Kleidungsproblem",
+      "es": "Las habitaciones de hotel nunca tienen suficientes — tres perchas extra resuelven todo el problema del armario",
+      "fr": "Les chambres d'hôtel n'en ont jamais assez — trois cintres supplémentaires règlent tout le problème de garde-robe",
+      "ja": "ホテルの部屋には絶対に足りない — ハンガーを3本余分に持ってくれば収納問題がすべて解決する",
+      "ko": "호텔 방에는 항상 부족합니다 — 여분 옷걸이 세 개가 옷장 문제를 전부 해결해줘요",
+      "pt-BR": "Quartos de hotel nunca têm cabides suficientes — três cabides extras resolvem todo o problema do guarda-roupa",
+      "zh-Hans": "酒店衣架常常不够，带几个折叠衣架会省很多麻烦",
+      "zh-Hant": "酒店衣架常常不夠，帶幾個折疊衣架會省很多麻煩"
+    },
+    "Portable white noise machine": {
+      "en": "Portable white noise machine",
+      "de": "Tragbares Weißrauschgerät",
+      "es": "Máquina de ruido blanco portátil",
+      "fr": "Machine à bruit blanc portable",
+      "ja": "ポータブルホワイトノイズマシン",
+      "ko": "휴대용 화이트 노이즈 머신",
+      "pt-BR": "Máquina de ruído branco portátil",
+      "zh-Hans": "便携式白噪音机",
+      "zh-Hant": "攜帶式白噪音機"
+    },
+    "New rooms sound different at night — unfamiliar air conditioning, thinner walls, street noise. A loop of familiar white noise gives a child something constant to fall asleep to, wherever the room is": {
+      "en": "New rooms sound different at night — unfamiliar air conditioning, thinner walls, street noise. A loop of familiar white noise gives a child something constant to fall asleep to, wherever the room is",
+      "de": "Neue Zimmer klingen nachts anders — unbekannte Klimaanlage, dünnere Wände, Straßenlärm. Eine vertraute Schleife weißen Rauschens gibt einem Kind etwas Konstantes, das es überall einschlafen lässt",
+      "es": "Las habitaciones nuevas suenan diferente por la noche — aire acondicionado desconocido, paredes más delgadas, ruido de la calle. Un bucle de ruido blanco familiar da al niño algo constante para quedarse dormido, sea donde sea",
+      "fr": "Les chambres inconnues sonnent différemment la nuit — climatisation étrange, murs plus fins, bruit de la rue. Une boucle de bruit blanc familier donne à l'enfant quelque chose de constant pour s'endormir, où qu'il soit",
+      "ja": "新しい部屋は夜に違って聞こえます——慣れないエアコンの音、薄い壁、外の街の騒音。聞き慣れたホワイトノイズのループが、どこにいても子どもが眠りにつくための安定したよりどころになります",
+      "ko": "새로운 방은 밤에 다르게 들립니다 — 낯선 에어컨 소리, 더 얇은 벽, 거리의 소음. 익숙한 화이트 노이즈 루프는 아이가 어디에 있든 잠들 수 있는 일정한 소리를 제공합니다",
+      "pt-BR": "Quartos novos soam diferente à noite — ar-condicionado desconhecido, paredes mais finas, barulho da rua. Um loop de ruído branco familiar dá à criança algo constante para adormecer, em qualquer lugar",
+      "zh-Hans": "陌生的房间在夜里听起来就是不一样——不熟悉的空调声、更薄的墙壁、窗外的街道噪音。一段熟悉的白噪音循环，给孩子一个不管在哪里都能依赖的入睡信号",
+      "zh-Hant": "陌生的房間在夜裡聽起來就是不一樣——不熟悉的冷氣聲、更薄的牆壁、窗外的街道噪音。一段熟悉的白噪音循環，給孩子一個不管在哪裡都能依賴的入睡信號"
+    },
+    "Magnetic drawing board": {
+      "en": "Magnetic drawing board",
+      "de": "Magnetisches Zeichenbrett",
+      "es": "Pizarra mágica magnética",
+      "fr": "Ardoise magique magnétique",
+      "ja": "マグネット式お絵かきボード",
+      "ko": "자석 그림판",
+      "pt-BR": "Lousa mágica magnética",
+      "zh-Hans": "磁性画板",
+      "zh-Hant": "磁性畫板"
+    },
+    "Mess-free drawing that resets instantly — endlessly reusable on long journeys": {
+      "en": "Mess-free drawing that resets instantly — endlessly reusable on long journeys",
+      "de": "Ordentliches Zeichnen, das sich sofort zurücksetzt — endlos wiederverwendbar auf langen Reisen",
+      "es": "Dibujo sin desorden que se reinicia al instante — infinitamente reutilizable en viajes largos",
+      "fr": "Dessin sans salissures qui se réinitialise instantanément — infiniment réutilisable lors des longs voyages",
+      "ja": "汚れないお絵かきが瞬時にリセット — 長旅で何度でも使える",
+      "ko": "지저분하지 않고 순식간에 초기화되는 그림 — 긴 여행에서 무한히 재사용 가능해요",
+      "pt-BR": "Desenho sem bagunça que reinicia na hora — reutilizável infinitamente em viagens longas",
+      "zh-Hans": "不脏手、可反复用，长途路上很能安抚孩子",
+      "zh-Hant": "不髒手、可反覆用，長途路上很能安撫孩子"
+    },
+    "Kids headphones": {
+      "en": "Kids headphones",
+      "de": "Kinderkopfhörer",
+      "es": "Auriculares para niños",
+      "fr": "Casque pour enfants",
+      "ja": "キッズヘッドフォン",
+      "ko": "아이용 헤드폰",
+      "pt-BR": "Fone de ouvido infantil",
+      "zh-Hans": "儿童耳机",
+      "zh-Hant": "兒童耳機"
+    },
+    "Volume-limited and properly sized — lets them watch their shows without disturbing everyone around them": {
+      "en": "Volume-limited and properly sized — lets them watch their shows without disturbing everyone around them",
+      "de": "Lautstärkebegrenzt und richtig dimensioniert — lässt sie ihre Sendungen schauen, ohne alle um sie herum zu stören",
+      "es": "Con volumen limitado y tamaño adecuado — les permite ver sus programas sin molestar a todos los que les rodean",
+      "fr": "Volume limité et taille adaptée — leur permet de regarder leurs émissions sans déranger tout le monde autour",
+      "ja": "音量制限付きで適切なサイズ — 周りの人を邪魔せずに番組を楽しめる",
+      "ko": "볼륨 제한이 있고 적절한 크기 — 주변 사람들을 방해하지 않고 자신의 프로그램을 볼 수 있게 해줍니다",
+      "pt-BR": "Com volume limitado e tamanho adequado — deixa eles assistirem seus programas sem incomodar ninguém ao redor",
+      "zh-Hans": "音量限制更安心，也能让孩子安静看内容不打扰别人",
+      "zh-Hant": "音量限制更安心，也能讓孩子安靜看內容不打擾別人"
+    },
+    "Night light": {
+      "en": "Night light",
+      "de": "Nachtlicht",
+      "es": "Luz nocturna",
+      "fr": "Veilleuse",
+      "ja": "ナイトライト",
+      "ko": "야간 조명",
+      "pt-BR": "Luz noturna",
+      "zh-Hans": "小夜灯",
+      "zh-Hant": "夜燈"
+    },
+    "New rooms are dark in unfamiliar ways — a simple plug-in night light prevents middle-of-the-night panic": {
+      "en": "New rooms are dark in unfamiliar ways — a simple plug-in night light prevents middle-of-the-night panic",
+      "de": "Neue Zimmer sind auf unbekannte Weise dunkel — ein einfaches Nachtlicht zum Einstecken verhindert Panik in der Nacht",
+      "es": "Las habitaciones nuevas son oscuras de maneras desconocidas — una simple luz nocturna enchufable evita el pánico en mitad de la noche",
+      "fr": "Les nouvelles chambres sont sombres de manière inconnue — une simple veilleuse à brancher évite la panique au milieu de la nuit",
+      "ja": "慣れない部屋は独特の暗さがある — シンプルな差し込み式ナイトライトが夜中のパニックを防ぐ",
+      "ko": "낯선 방은 익숙하지 않은 방식으로 어둡습니다 — 간단한 플러그 야간 조명 하나가 한밤중의 공황을 막아줘요",
+      "pt-BR": "Quartos novos têm uma escuridão estranha — uma simples luz noturna de tomada evita o pânico no meio da noite",
+      "zh-Hans": "陌生环境夜里起身更容易慌张，小夜灯能提升安全感",
+      "zh-Hant": "陌生的房間有著陌生的黑暗——一個簡單的插電夜燈能防止半夜驚慌"
+    },
+    "Familiar snacks from home": {
+      "en": "Familiar snacks from home",
+      "de": "Vertraute Snacks von zu Hause",
+      "es": "Aperitivos conocidos de casa",
+      "fr": "En-cas habituels de chez soi",
+      "ja": "食べ慣れたおやつ",
+      "ko": "집에서 먹던 익숙한 간식",
+      "pt-BR": "Lanches conhecidos de casa",
+      "zh-Hans": "熟悉的家乡零食",
+      "zh-Hant": "從家帶的熟悉零食"
+    },
+    "Picky eaters + unfamiliar food = avoidable stress — come prepared": {
+      "en": "Picky eaters + unfamiliar food = avoidable stress — come prepared",
+      "de": "Wählerische Esser + ungewohntes Essen = vermeidbarer Stress – sei vorbereitet",
+      "es": "Niños quisquillosos + comida desconocida = estrés evitable: ven preparado",
+      "fr": "Mangeurs difficiles + nourriture inconnue = stress évitable — prévoyez le coup",
+      "ja": "好き嫌い＋慣れない食事＝避けられるストレス。備えておこう",
+      "ko": "편식하는 아이 + 낯선 음식 = 피할 수 있는 스트레스. 미리 준비하세요",
+      "pt-BR": "Crianças exigentes + comida desconhecida = estresse evitável — venha preparado",
+      "zh-Hans": "孩子挑食遇到陌生饮食容易崩溃，备点熟悉零食更从容",
+      "zh-Hant": "挑食的孩子加上陌生的食物=不必要的崩潰——有備無患"
+    },
+    "Sticker book or activity pad": {
+      "en": "Sticker book or activity pad",
+      "de": "Stickerbuch oder Aktivitätsheft",
+      "es": "Libro de pegatinas o cuaderno de actividades",
+      "fr": "Livre de stickers ou cahier d'activités",
+      "ja": "シールブック・アクティビティパッド",
+      "ko": "스티커북 또는 활동 패드",
+      "pt-BR": "Livro de adesivos ou bloco de atividades",
+      "zh-Hans": "贴纸书/活动本",
+      "zh-Hant": "貼紙書 / 活動本"
+    },
+    "For the unavoidable waiting — restaurants, airports, long car journeys": {
+      "en": "For the unavoidable waiting — restaurants, airports, long car journeys",
+      "de": "Für das unvermeidliche Warten — Restaurants, Flughäfen, lange Autofahrten",
+      "es": "Para las inevitables esperas — restaurantes, aeropuertos, largos viajes en coche",
+      "fr": "Pour les attentes inévitables — restaurants, aéroports, longs trajets en voiture",
+      "ja": "避けられない待ち時間のために — レストラン、空港、長い車の旅",
+      "ko": "피할 수 없는 기다림을 위해 — 식당, 공항, 긴 자동차 여행",
+      "pt-BR": "Para as esperas inevitáveis — restaurantes, aeroportos, longas viagens de carro",
+      "zh-Hans": "排队和等待时很好用，能有效分散注意力",
+      "zh-Hant": "應對不可避免的等待——餐廳、機場、長途汽車"
+    },
+    "Thermos": {
+      "en": "Thermos",
+      "de": "Thermoskanne",
+      "es": "Termo",
+      "fr": "Thermos",
+      "ja": "魔法瓶",
+      "ko": "보온병",
+      "pt-BR": "Garrafa térmica",
+      "zh-Hans": "保温壶",
+      "zh-Hant": "保溫壺"
+    },
+    "At altitude, water boils below 90°C and cools in minutes. A thermos keeps hot drinks hot for the whole day out — and at high elevation, drinking something warm regularly genuinely helps": {
+      "en": "At altitude, water boils below 90°C and cools in minutes. A thermos keeps hot drinks hot for the whole day out — and at high elevation, drinking something warm regularly genuinely helps",
+      "de": "In der Höhe kocht Wasser unter 90°C und kühlt in Minuten ab. Eine Thermoskanne hält heiße Getränke den ganzen Tag warm — und in großer Höhe hilft regelmäßiges Trinken von etwas Warmem wirklich",
+      "es": "En altitud, el agua hierve por debajo de 90°C y se enfría en minutos. Un termo mantiene las bebidas calientes todo el día — y a gran altitud, beber algo caliente con regularidad realmente ayuda",
+      "fr": "En altitude, l'eau bout en dessous de 90°C et refroidit en quelques minutes. Un thermos garde les boissons chaudes toute la journée — et en haute altitude, boire quelque chose de chaud régulièrement aide vraiment",
+      "ja": "高地では水が90°C以下で沸騰し、数分で冷めてしまいます。魔法瓶があれば温かい飲み物を一日中保温できます——高標高では定期的に温かいものを飲むことが本当に助けになります",
+      "ko": "고도에서는 물이 90°C 이하에서 끓고 몇 분 만에 식습니다. 보온병은 하루 종일 따뜻한 음료를 유지해줍니다 — 고도가 높은 곳에서는 따뜻한 것을 규칙적으로 마시는 것이 실질적으로 도움이 됩니다",
+      "pt-BR": "Na altitude, a água ferve abaixo de 90°C e esfria em minutos. Uma garrafa térmica mantém as bebidas quentes durante o dia todo — e em grandes altitudes, beber algo quente regularmente realmente ajuda",
+      "zh-Hans": "在高海拔地区，水在不到90°C时就开了，而且几分钟就凉透。保温壶能让热饮在整个出行过程中保持温度——在高原上，定时喝点热的确实有实际的帮助",
+      "zh-Hant": "在高海拔地區，水不到90°C就沸騰了，而且幾分鐘就涼透。保溫壺能讓熱飲在整個出行過程中保持溫度——在高原上，定時喝點熱的確實有實際的幫助"
+    },
+    "Portable oxygen can": {
+      "en": "Portable oxygen can",
+      "de": "Tragbare Sauerstoffflasche",
+      "es": "Bote de oxígeno portátil",
+      "fr": "Bombe d'oxygène portable",
+      "ja": "携帯酸素缶",
+      "ko": "휴대용 산소캔",
+      "pt-BR": "Lata de oxigênio portátil",
+      "zh-Hans": "便携氧气罐",
+      "zh-Hant": "便攜氧氣罐"
+    },
+    "Compact enough to slip in a day bag — a quick few breaths at altitude does genuinely help, and the peace of mind is worth it": {
+      "en": "Compact enough to slip in a day bag — a quick few breaths at altitude does genuinely help, and the peace of mind is worth it",
+      "de": "Klein genug für eine Tagestasche — ein paar Atemzüge auf großer Höhe helfen wirklich, und die Sicherheit ist es wert",
+      "es": "Lo suficientemente compacto para meterlo en una bolsa de día — unos rápidos sorbos de oxígeno en altura ayudan de verdad, y la tranquilidad vale la pena",
+      "fr": "Assez compact pour glisser dans un sac de jour — quelques respirations rapides en altitude aident vraiment, et la tranquillité d'esprit vaut le coup",
+      "ja": "デイバッグに入るほどコンパクト — 高地でさっと数回吸うだけで確かに効果があり、安心感も格別",
+      "ko": "데이백에 쏙 들어갈 만큼 컴팩트합니다 — 고지대에서 몇 번 들이마시면 진짜 도움이 되고, 안심감도 충분히 값어치 있어요",
+      "pt-BR": "Compacto o suficiente para caber numa bolsa de dia — algumas respiradas em altitude realmente ajudam, e a tranquilidade vale a pena",
+      "zh-Hans": "体积小，放随身包里，高海拔时会更安心",
+      "zh-Hant": "體積小，放隨身包裡，高海拔時會更安心"
+    },
+    "Disposable rain poncho": {
+      "en": "Disposable rain poncho",
+      "de": "Einweg-Regenponcho",
+      "es": "Chubasquero desechable",
+      "fr": "Poncho de pluie jetable",
+      "ja": "使い捨てレインポンチョ",
+      "ko": "일회용 우비",
+      "pt-BR": "Capa de chuva descartável",
+      "zh-Hans": "一次性雨披",
+      "zh-Hant": "一次性雨披"
+    },
+    "Packs to the size of a biscuit, costs almost nothing — for when the umbrella is in the bag and the rain starts now": {
+      "en": "Packs to the size of a biscuit, costs almost nothing — for when the umbrella is in the bag and the rain starts now",
+      "de": "Packt sich auf Keksgröße zusammen, kostet fast nichts — für wenn der Regenschirm in der Tasche ist und der Regen jetzt anfängt",
+      "es": "Se dobla hasta el tamaño de una galleta, cuesta casi nada — para cuando el paraguas está en la bolsa y la lluvia empieza ahora",
+      "fr": "Se plie à la taille d'un biscuit, coûte presque rien — pour quand le parapluie est dans le sac et que la pluie commence maintenant",
+      "ja": "クッキーサイズに畳めて、ほぼタダ — 傘をバッグに入れたまま雨が降り出したときのために",
+      "ko": "비스킷 크기로 접히고, 거의 공짜 — 우산이 가방 안에 있고 지금 비가 내리기 시작할 때를 위해",
+      "pt-BR": "Cabe no bolso como um biscoito, custa quase nada — para quando o guarda-chuva está na bolsa e a chuva começa agora",
+      "zh-Hans": "体积小、价格低，临时下雨时很实用",
+      "zh-Hant": "體積小、價格低，臨時下雨時很實用"
+    },
+    "Waterproof shoe covers": {
+      "en": "Waterproof shoe covers",
+      "de": "Wasserdichte Schuhüberzieher",
+      "es": "Cubrezapatos impermeables",
+      "fr": "Couvre-chaussures imperméables",
+      "ja": "防水シューズカバー",
+      "ko": "방수 신발 커버",
+      "pt-BR": "Cobre-calçados impermeáveis",
+      "zh-Hans": "防水鞋套",
+      "zh-Hant": "防水鞋套"
+    },
+    "Pull on over any shoes in seconds — keeps feet dry without having to plan your footwear around the forecast": {
+      "en": "Pull on over any shoes in seconds — keeps feet dry without having to plan your footwear around the forecast",
+      "de": "In Sekunden über jedes Schuhwerk ziehen — Füße trocken halten, ohne das Schuhwerk nach der Wettervorhersage planen zu müssen",
+      "es": "Ponlos sobre cualquier zapato en segundos — mantiene los pies secos sin tener que planificar el calzado según la previsión meteorológica",
+      "fr": "À enfiler par-dessus n'importe quelle chaussure en secondes — garde les pieds secs sans avoir à planifier sa chaussure selon la météo",
+      "ja": "どんな靴の上にも数秒で装着 — 天気予報に合わせて靴を選ばなくても足を乾いた状態に保てる",
+      "ko": "어떤 신발 위에도 몇 초 만에 착용 — 날씨 예보에 맞춰 신발을 계획하지 않아도 발을 건조하게 유지해줘요",
+      "pt-BR": "Coloque por cima de qualquer sapato em segundos — mantém os pés secos sem precisar planejar o calçado conforme a previsão",
+      "zh-Hans": "套上就能防雨，不用为天气专门换鞋",
+      "zh-Hant": "套上就能防雨，不用為天氣專門換鞋"
+    },
+    "Waterproof zip pouch": {
+      "en": "Waterproof zip pouch",
+      "de": "Wasserdichter Reißverschlussbeutel",
+      "es": "Bolsa impermeable con cremallera",
+      "fr": "Pochette imperméable zippée",
+      "ja": "防水ジップポーチ",
+      "ko": "방수 지퍼 파우치",
+      "pt-BR": "Bolsa impermeável com zíper",
+      "zh-Hans": "防水拉链袋",
+      "zh-Hant": "防水拉鏈袋"
+    },
+    "In heavy rain, putting your phone, cards, and tickets inside removes a lot of avoidable stress": {
+      "en": "In heavy rain, putting your phone, cards, and tickets inside removes a lot of avoidable stress",
+      "de": "Bei starkem Regen nimmt das Verstauen von Handy, Karten und Tickets darin viel vermeidbaren Stress",
+      "es": "En lluvia intensa, meter el teléfono, las tarjetas y los billetes dentro elimina mucho estrés evitable",
+      "fr": "Par forte pluie, y glisser son téléphone, ses cartes et ses billets supprime beaucoup de stress évitable",
+      "ja": "大雨のとき、スマートフォン、カード、チケットを中に入れると、避けられたはずのストレスがかなり減る",
+      "ko": "폭우 속에서 핸드폰, 카드, 티켓을 안에 넣으면 피할 수 있었던 스트레스를 많이 줄일 수 있어요",
+      "pt-BR": "Na chuva forte, colocar celular, cartões e ingressos dentro elimina muito estresse evitável",
+      "zh-Hans": "大雨时，把手机、银行卡和票据放进去，能减少很多本可避免的焦虑",
+      "zh-Hant": "大雨時，把手機、銀行卡和票據放進去，能減少很多本可避免的焦慮"
+    },
+    "Blue light glasses": {
+      "en": "Blue light glasses",
+      "de": "Blaulichtbrille",
+      "es": "Gafas de luz azul",
+      "fr": "Lunettes anti-lumière bleue",
+      "ja": "ブルーライトカットメガネ",
+      "ko": "블루라이트 차단 안경",
+      "pt-BR": "Óculos de luz azul",
+      "zh-Hans": "防蓝光眼镜",
+      "zh-Hant": "防藍光眼鏡"
+    },
+    "Eight hours at a screen in a new place. A small defence against the slow headache that builds through the afternoon": {
+      "en": "Eight hours at a screen in a new place. A small defence against the slow headache that builds through the afternoon",
+      "de": "Acht Stunden am Bildschirm an einem neuen Ort. Ein kleiner Schutz gegen den Kopfschmerz, der sich nachmittags aufbaut",
+      "es": "Ocho horas frente a una pantalla en un lugar nuevo. Una pequeña defensa contra el dolor de cabeza que se acumula por la tarde",
+      "fr": "Huit heures devant un écran dans un nouvel endroit. Une petite protection contre le mal de tête qui s'installe dans l'après-midi",
+      "ja": "新しい場所でスクリーンの前に8時間。午後になるにつれてじわじわと積み重なる頭痛への、小さな防御",
+      "ko": "낯선 곳에서 화면 앞에서 8시간. 오후가 될수록 서서히 쌓이는 두통에 대한 작은 방어",
+      "pt-BR": "Oito horas em uma tela num lugar novo. Uma pequena defesa contra a dor de cabeça que se acumula ao longo da tarde",
+      "zh-Hans": "在陌生的地方盯着屏幕八个小时。这个小小的防护，能让你少一点下午慢慢积累的头疼",
+      "zh-Hant": "在陌生的地方盯著螢幕八個小時。這個小小的防護，能讓你少一點下午慢慢積累的頭疼"
+    },
+    "Pocket notebook": {
+      "en": "Pocket notebook",
+      "de": "Kleines Notizbuch",
+      "es": "Libreta de bolsillo",
+      "fr": "Carnet de poche",
+      "ja": "ポケットノート",
+      "ko": "포켓 노트북",
+      "pt-BR": "Caderninho de bolso",
+      "zh-Hans": "便携笔记本",
+      "zh-Hant": "便攜筆記本"
+    },
+    "For thinking that doesn't belong in a doc. Keep it on the desk, not buried in the bag": {
+      "en": "For thinking that doesn't belong in a doc. Keep it on the desk, not buried in the bag",
+      "de": "Für Gedanken, die nicht in ein Dokument gehören. Lass es auf dem Tisch liegen, nicht in der Tasche",
+      "es": "Para ideas que no caben en un documento. Mantenlo sobre la mesa, no enterrado en la mochila",
+      "fr": "Pour les pensées qui n'ont pas leur place dans un document. Garde-le sur le bureau, pas enfoui dans le sac",
+      "ja": "ドキュメントに収まらない思考のために。バッグの奥じゃなく、デスクの上に置いておいて",
+      "ko": "문서에 담기지 않는 생각을 위해. 가방 속에 묻지 말고 책상 위에 두어라",
+      "pt-BR": "Para pensamentos que não cabem em um documento. Mantenha-o na mesa, não enterrado na bolsa",
+      "zh-Hans": "有些想法，放不进文档里。把它放在桌上，不要藏进包里",
+      "zh-Hant": "有些想法，放不進文件裡。把它放在桌上，不要藏進包裡"
+    },
+    "Portable desk pad": {
+      "en": "Portable desk pad",
+      "de": "Tragbare Schreibtischunterlage",
+      "es": "Alfombrilla de escritorio portátil",
+      "fr": "Sous-main portable",
+      "ja": "ポータブルデスクマット",
+      "ko": "휴대용 데스크 패드",
+      "pt-BR": "Tapete de mesa portátil",
+      "zh-Hans": "便携桌垫",
+      "zh-Hant": "便攜桌墊"
+    },
+    "Any surface becomes a workspace with a desk pad under your hands — a simple trick that makes rented rooms feel like yours": {
+      "en": "Any surface becomes a workspace with a desk pad under your hands — a simple trick that makes rented rooms feel like yours",
+      "de": "Jede Oberfläche wird mit einer Schreibtischunterlage zum Arbeitsplatz — ein einfacher Trick, der Mieträume wie deinen eigenen wirken lässt",
+      "es": "Cualquier superficie se convierte en espacio de trabajo con una alfombrilla — un truco simple que hace que las habitaciones de alquiler se sientan tuyas",
+      "fr": "N'importe quelle surface devient un espace de travail avec un sous-main — une astuce simple qui fait se sentir chez soi dans une chambre louée",
+      "ja": "デスクマットを敷けば、どんな表面もワークスペースに変わる——借りた部屋を自分のものにする小さなコツ",
+      "ko": "데스크 패드 하나로 어떤 표면이든 작업 공간이 된다 — 임시 공간을 내 공간처럼 느끼게 해주는 간단한 방법",
+      "pt-BR": "Qualquer superfície se torna um espaço de trabalho com um tapete de mesa — um truque simples que faz quartos alugados parecerem seus",
+      "zh-Hans": "桌垫铺上去，任何桌面都能变成工位——一个让租来的房间感觉是自己的小技巧",
+      "zh-Hant": "桌墊鋪上去，任何桌面都能變成工位——一個讓租來的房間感覺是自己的小技巧"
+    }
+  }
+}

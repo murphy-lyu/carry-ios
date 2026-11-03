@@ -17,6 +17,7 @@ struct SharePreviewSheet: View {
     @State private var posterImage: UIImage?    // 当前预览的海报（随开关变化）
     @State private var posterURL: URL?          // 当前海报的临时文件（ShareLink 用，带文件名）
     @State private var includeMap = true
+    @State private var coverImage: UIImage?
 
     var body: some View {
         NavigationStack {
@@ -33,7 +34,7 @@ struct SharePreviewSheet: View {
                 }
             }
         }
-        .task { await render() }
+        .task(id: trip.primaryBackground?.localFileName) { await render() }
         .onChange(of: includeMap) { _, _ in rerenderPoster() }
     }
 
@@ -97,14 +98,23 @@ struct SharePreviewSheet: View {
 
     @MainActor
     private func render() async {
+        coverImage = nil
+        mapImage = nil
+        posterImage = nil
+        posterURL = nil
+        if let name = trip.primaryBackground?.localFileName {
+            coverImage = await BackgroundImageStore.preparedImage(named: name)
+        }
+        guard !Task.isCancelled else { return }
         rerenderPoster()                                   // ① 先出无地图版，立刻可见
         mapImage = await TripShare.renderRouteMap(for: trip)
+        guard !Task.isCancelled else { return }
         if includeMap { rerenderPoster() }                 // ② 地图好了再合入
     }
 
     @MainActor
     private func rerenderPoster() {
-        guard let img = TripShare.renderPoster(for: trip, routeMapImage: includeMap ? mapImage : nil) else { return }
+        guard let img = TripShare.renderPoster(for: trip, routeMapImage: includeMap ? mapImage : nil, coverImage: coverImage) else { return }
         posterImage = img
         posterURL = TripShare.writeTempPoster(img, for: trip)
     }

@@ -20,8 +20,37 @@ import SafariServices
 // MARK: - 缩略图
 
 enum AttachmentThumbnail {
+    /// Prepare bounded display pixels off the UI actor, rather than handing a
+    /// lazily compressed UIImage to the first visible draw.
+    nonisolated static func displayImage(from imageData: Data, maxPixel: Int, fillingSquare: Bool = false) -> UIImage? {
+        guard (1...4096).contains(maxPixel),
+              let source = CGImageSourceCreateWithData(imageData as CFData,
+                  [kCGImageSourceShouldCache: false] as CFDictionary) else { return nil }
+        var longestEdge = maxPixel
+        if fillingSquare {
+            guard let properties = CGImageSourceCopyPropertiesAtIndex(source, 0, nil) as? [CFString: Any],
+                  let width = (properties[kCGImagePropertyPixelWidth] as? NSNumber)?.doubleValue,
+                  let height = (properties[kCGImagePropertyPixelHeight] as? NSNumber)?.doubleValue,
+                  width.isFinite, height.isFinite, width > 0, height > 0 else { return nil }
+            let longest = max(width, height), aspect = longest / min(width, height)
+            // A square fill needs enough pixels on the SHORT edge; using only
+            // the box's width as longest edge blurs landscape/portrait crops.
+            // Cap pathological aspect ratios to a 1-Mpixel display allocation.
+            longestEdge = Int(ceil(min(longest, Double(maxPixel) * aspect,
+                                       sqrt(1_048_576 * aspect), 8192)))
+        }
+        let options: [CFString: Any] = [
+            kCGImageSourceCreateThumbnailFromImageAlways: true,
+            kCGImageSourceCreateThumbnailWithTransform: true,
+            kCGImageSourceShouldCacheImmediately: true,
+            kCGImageSourceThumbnailMaxPixelSize: longestEdge
+        ]
+        guard let image = CGImageSourceCreateThumbnailAtIndex(source, 0, options as CFDictionary) else { return nil }
+        return UIImage(cgImage: image)
+    }
+
     /// 由图片字节生成约 640px JPEG 缩略图（列表/详情快渲；原图存沙盒）。
-    static func make(from imageData: Data, maxPixel: CGFloat = 640) -> Data? {
+    nonisolated static func make(from imageData: Data, maxPixel: CGFloat = 640) -> Data? {
         guard let src = CGImageSourceCreateWithData(imageData as CFData, nil) else { return nil }
         let opts: [CFString: Any] = [
             kCGImageSourceCreateThumbnailFromImageAlways: true,
@@ -30,6 +59,57 @@ enum AttachmentThumbnail {
         ]
         guard let cg = CGImageSourceCreateThumbnailAtIndex(src, 0, opts as CFDictionary) else { return nil }
         return UIImage(cgImage: cg).jpegData(compressionQuality: 0.8)
+    }
+}
+
+/// Visible square thumbnails share bounded, cancellable background decoding.
+/// Keep placeholder styling with the caller so attachment glyphs and photo cards
+/// retain their existing visual roles.
+struct PreparedThumbnail<Placeholder: View>: View {
+    private nonisolated struct Request: Equatable {
+        let data: Data
+        let pixels: Int
+    }
+    let data: Data?
+    let size: CGFloat
+    @ViewBuilder var placeholder: () -> Placeholder
+    @Environment(\.displayScale) private var displayScale
+    @State private var image: UIImage?
+    @State private var decodedRequest: Request?
+
+    private var request: Request {
+        Request(data: data ?? Data(), pixels: Int(ceil(size * displayScale)))
+    }
+
+    var body: some View {
+        Group {
+            if let image {
+                Image(uiImage: image).resizable().scaledToFill()
+            } else {
+                placeholder()
+            }
+        }
+        .frame(width: size, height: size)
+        .clipped()
+        .task(id: request) {
+            let current = request
+            guard decodedRequest != current else { return }
+            image = nil
+            guard !current.data.isEmpty else {
+                decodedRequest = current
+                return
+            }
+            let decoding = Task.detached(priority: .utility) {
+                guard !Task.isCancelled else { return nil as UIImage? }
+                return AttachmentThumbnail.displayImage(from: current.data,
+                    maxPixel: current.pixels, fillingSquare: true)
+            }
+            let decoded = await withTaskCancellationHandler(operation: { await decoding.value },
+                                                           onCancel: { decoding.cancel() })
+            guard !Task.isCancelled else { return }
+            image = decoded
+            decodedRequest = current
+        }
     }
 }
 
@@ -67,17 +147,19 @@ enum AttachmentAddRequest: Identifiable {
 
 /// 新附件数据（沙盒/缩略图已就绪，待入库或缓冲）。
 struct NewAttachmentData {
+    var id: UUID = UUID()
     var kind: AttachmentKind
     var displayName: String = ""
     var fileName: String = ""
     var utiOrExt: String = ""
     var urlString: String = ""
     var thumbnailData: Data = Data()
+    var preparedImport: PreparedAttachmentImport? = nil
 }
 
 /// 新建实体时的缓冲附件（保存后再入库）。
 struct PendingAttachment: Identifiable {
-    let id = UUID()
+    var id: UUID { data.id }
     var data: NewAttachmentData
 }
 
@@ -102,6 +184,7 @@ struct AttachmentEditSection: View {
     @Binding var request: AttachmentAddRequest?
 
     @EnvironmentObject var store: TripStore
+    @StateObject private var nativeEditors = CarryNativeEditorPresentations()
 
     private var rows: [AttachmentRowItem] {
         if owner != nil {
@@ -149,15 +232,18 @@ struct AttachmentEditSection: View {
         }
         // 不带 Section 标题——与 Total cost / Note 一致（单一功能卡，回形针图标即说明，无需分组标题）。
         // 「Pick-up / Drop-off / More」那类多字段分组才要标题。
+        .nativeEditorErrors(nativeEditors)
     }
 
     private func delete(_ id: UUID) {
-        if owner != nil {
-            store.removeAttachment(tripId: tripId, attachmentId: id)
-        } else if let idx = pending.firstIndex(where: { $0.id == id }) {
-            let fileName = pending[idx].data.fileName
-            if !fileName.isEmpty { AttachmentStore.delete(named: fileName) }
-            pending.remove(at: idx)
+        nativeEditors.save(store: store) {
+            if owner != nil {
+                store.removeAttachment(tripId: tripId, attachmentId: id)
+            } else if let idx = pending.firstIndex(where: { $0.id == id }) {
+                let fileName = pending[idx].data.fileName
+                if !fileName.isEmpty, pending[idx].data.preparedImport == nil { AttachmentStore.delete(named: fileName) }
+                pending.remove(at: idx)
+            }
         }
     }
 }
@@ -180,10 +266,13 @@ private struct AttachmentAddFlow: ViewModifier {
     @Binding var request: AttachmentAddRequest?
 
     @EnvironmentObject var store: TripStore
+    @StateObject private var nativeEditors = CarryNativeEditorPresentations()
     @State private var photoItem: PhotosPickerItem?
     @State private var linkURL = ""
     @State private var linkName = ""
     @State private var showTooLarge = false
+    @State private var importTask: Task<Void, Never>?
+    @State private var importID: UUID?
 
     private func bind(_ r: AttachmentAddRequest) -> Binding<Bool> {
         Binding(get: { request == r }, set: { if !$0, request == r { request = nil } })
@@ -194,67 +283,131 @@ private struct AttachmentAddFlow: ViewModifier {
             .photosPicker(isPresented: bind(.photo), selection: $photoItem, matching: .images)
             .onChange(of: photoItem) { _, newItem in
                 guard let newItem else { return }
-                Task { await addPhotoItem(newItem); await MainActor.run { photoItem = nil } }
+                let id = beginImport()
+                importTask = Task {
+                    await completeImport(id: id) {
+                        guard let transfer = try await newItem.loadTransferable(type: AttachmentPhotoTransfer.self) else {
+                            throw CocoaError(.fileReadUnknown)
+                        }
+                        try Task.checkCancellation()
+                        return transfer.prepared
+                    }
+                    if importID == id { photoItem = nil }
+                }
             }
             .fileImporter(isPresented: bind(.file), allowedContentTypes: [.item], allowsMultipleSelection: false) { result in
                 handleFileImport(result)
             }
             .fullScreenCover(isPresented: bind(.camera)) {
-                CameraPicker { data in addImageData(data, ext: "jpg") }
+                CameraPicker { data in
+                    let id = beginImport()
+                    importTask = Task {
+                        let directory = store.assetImporter == nil ? nil : FileManager.default.temporaryDirectory.appendingPathComponent("CarryAttachmentImports", isDirectory: true)
+                        await completeImport(id: id) { try await AttachmentImportWorker.prepare(data: data, ext: "jpg", directory: directory) }
+                    }
+                }
                     .ignoresSafeArea()
             }
             .onChange(of: request) { _, new in
                 if new == .link { linkURL = ""; linkName = "" }
             }
-            .sheet(isPresented: bind(.link)) {
-                LinkInputSheet(url: $linkURL, name: $linkName) { addLink() }
+            .nativeEditorSheet(isPresented: bind(.link), presentations: nativeEditors) {
+                LinkInputSheet(url: $linkURL, name: $linkName) { editor in addLink(using: editor) }
             }
+            .nativeEditorErrors(nativeEditors)
             .alert("itinerary.attachment.too_large", isPresented: $showTooLarge) {
                 Button("common.ok", role: .cancel) {}
             }
+            .onDisappear {
+                importTask?.cancel()
+                importTask = nil
+                importID = nil
+            }
     }
 
-    /// owner 有 → 入库；无 → 缓冲。
-    private func commit(_ data: NewAttachmentData) {
-        if let owner {
-            _ = store.addAttachment(tripId: tripId, owner: owner, kind: data.kind,
-                                    displayName: data.displayName, fileName: data.fileName,
-                                    utiOrExt: data.utiOrExt, urlString: data.urlString, thumbnailData: data.thumbnailData)
-        } else {
-            pending.append(PendingAttachment(data: data))
+    /// owner 有 → 入库；无 → 缓冲。Only an accepted model/pending entry takes
+    /// ownership of a prepared file; rejected saves keep the cleanup lease.
+    @discardableResult
+    private func commit(_ data: NewAttachmentData, using editor: CarryNativeEditorPresentations? = nil) -> Bool {
+        let editor = editor ?? nativeEditors
+        var accepted = false
+        let saved = editor.save(store: store) {
+            if let owner {
+                accepted = store.addAttachment(tripId: tripId, owner: owner, kind: data.kind, id: data.id,
+                    displayName: data.displayName, fileName: data.fileName,
+                    utiOrExt: data.utiOrExt, urlString: data.urlString, thumbnailData: data.thumbnailData) != nil
+            } else {
+                pending.append(PendingAttachment(data: data))
+                accepted = true
+            }
         }
+        guard saved, accepted else {
+            if saved { editor.fail(busy: false) }
+            return false
+        }
+        if owner != nil { data.preparedImport?.adopt() }
+        return true
     }
 
-    private func addPhotoItem(_ item: PhotosPickerItem) async {
-        guard let data = try? await item.loadTransferable(type: Data.self) else { return }
-        await MainActor.run { addImageData(data, ext: "jpg") }
+    private func beginImport() -> UUID {
+        importTask?.cancel()
+        let id = UUID()
+        importID = id
+        return id
     }
 
-    /// 拍照 / 选照片共用：校验大小 → 存沙盒 + 缩略图 → 提交。
-    private func addImageData(_ data: Data, ext: String) {
-        guard data.count <= AttachmentStore.maxBytes else { showTooLarge = true; return }
-        let thumb = AttachmentThumbnail.make(from: data) ?? Data()
-        guard let fileName = AttachmentStore.save(data, ext: ext) else { return }
-        commit(NewAttachmentData(kind: .photo, fileName: fileName, utiOrExt: ext, thumbnailData: thumb))
+    private func completeImport(id: UUID, operation: () async throws -> PreparedAttachmentImport) async {
+        let importingStore = store
+        guard nativeEditors.save(store: importingStore, {}) else { return }
+        do {
+            let temporary = try await operation()
+            let prepared: PreparedAttachmentImport
+            if let importer = importingStore.assetImporter {
+                prepared = try await importer.attachment(from: temporary)
+            } else {
+                // Photos imports arrive as a temporary lease too. Guest files
+                // are copied into their original namespace only at this point.
+                if temporary.fileURL.path.hasPrefix(FileManager.default.temporaryDirectory.path) {
+                    prepared = try await AttachmentImportWorker.prepare(fileURL: temporary.fileURL, isPhoto: temporary.isPhoto)
+                    try await temporary.discard()
+                } else { prepared = temporary }
+            }
+            guard !Task.isCancelled, importID == id else {
+                try await prepared.discard()
+                return
+            }
+            guard store.nativeEditorIdentity == importingStore.nativeEditorIdentity else {
+                try await prepared.discard()
+                nativeEditors.fail(busy: false)
+                return
+            }
+            let data = NewAttachmentData(id: prepared.entityID ?? UUID(), kind: prepared.isPhoto ? .photo : .file,
+                displayName: prepared.displayName, fileName: prepared.fileURL.lastPathComponent,
+                utiOrExt: prepared.ext, thumbnailData: prepared.thumbnailData, preparedImport: prepared)
+            if !commit(data) { try await prepared.discard() }
+        } catch is CancellationError {
+            // An interrupted import never commits metadata or displays an error.
+        } catch AttachmentImportFailure.tooLarge {
+            if !Task.isCancelled, importID == id { showTooLarge = true }
+        } catch {
+            CarryLogger.shared.log(.attachmentSaveFailed, context: "import")
+        }
     }
 
     private func handleFileImport(_ result: Result<[URL], Error>) {
         guard case .success(let urls) = result, let url = urls.first else { return }
-        let scoped = url.startAccessingSecurityScopedResource()
-        defer { if scoped { url.stopAccessingSecurityScopedResource() } }
-        guard let data = try? Data(contentsOf: url) else { return }
-        guard data.count <= AttachmentStore.maxBytes else { showTooLarge = true; return }
-        let ext = url.pathExtension.isEmpty ? "dat" : url.pathExtension
-        guard let fileName = AttachmentStore.save(data, ext: ext) else { return }
-        let thumb = AttachmentThumbnail.make(from: data) ?? Data()
-        commit(NewAttachmentData(kind: .file, displayName: url.lastPathComponent, fileName: fileName, utiOrExt: ext, thumbnailData: thumb))
+        let id = beginImport()
+        importTask = Task {
+            let directory = store.assetImporter == nil ? nil : FileManager.default.temporaryDirectory.appendingPathComponent("CarryAttachmentImports", isDirectory: true)
+            await completeImport(id: id) { try await AttachmentImportWorker.prepare(fileURL: url, directory: directory) }
+        }
     }
 
-    private func addLink() {
+    private func addLink(using editor: CarryNativeEditorPresentations) -> Bool {
         var raw = linkURL.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !raw.isEmpty else { return }
+        guard !raw.isEmpty else { return false }
         if !raw.contains("://") { raw = "https://" + raw }
-        commit(NewAttachmentData(kind: .link, displayName: linkName.trimmingCharacters(in: .whitespaces), urlString: raw))
+        return commit(NewAttachmentData(kind: .link, displayName: linkName.trimmingCharacters(in: .whitespaces), urlString: raw), using: editor)
     }
 }
 
@@ -294,7 +447,8 @@ private struct CameraPicker: UIViewControllerRepresentable {
 private struct LinkInputSheet: View {
     @Binding var url: String
     @Binding var name: String
-    let onAdd: () -> Void
+    let onAdd: (CarryNativeEditorPresentations) -> Bool
+    @StateObject private var nativeEditors = CarryNativeEditorPresentations()
     @Environment(\.dismiss) private var dismiss
 
     var body: some View {
@@ -308,12 +462,13 @@ private struct LinkInputSheet: View {
             }
             .navigationTitle("itinerary.attachment.add_link")
             .navigationBarTitleDisplayMode(.inline)
+            .nativeEditorErrors(nativeEditors)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("common.cancel") { dismiss() }
                 }
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("common.add") { onAdd(); dismiss() }
+                    Button("common.add") { if onAdd(nativeEditors) { dismiss() } }
                         .disabled(url.trimmingCharacters(in: .whitespaces).isEmpty)
                 }
             }
@@ -329,6 +484,9 @@ struct AttachmentDetailCard: View {
     let attachments: [ItineraryAttachment]
 
     @State private var previewURL: URL?
+    @State private var previewLease: PreparedAttachmentImport?
+    @State private var previewTask: Task<Void, Never>?
+    @State private var previewRequest: UUID?
     @State private var webLink: WebLink?
 
     private struct WebLink: Identifiable { let id = UUID(); let url: URL }
@@ -365,6 +523,8 @@ struct AttachmentDetailCard: View {
                 )
             })
             .quickLookPreview($previewURL)
+            .onChange(of: previewURL) { _, value in if value == nil { previewLease = nil } }
+            .onDisappear { previewTask?.cancel(); previewTask = nil; previewRequest = nil; previewURL = nil; previewLease = nil }
             .sheet(item: $webLink) { link in
                 SafariView(url: link.url).ignoresSafeArea()
             }
@@ -382,7 +542,19 @@ struct AttachmentDetailCard: View {
             }
         case .file, .photo:
             guard !att.fileName.isEmpty else { return }
-            previewURL = AttachmentStore.fileURL(named: att.fileName)
+            let source = AttachmentStore.fileURL(named: att.fileName)
+            if CarryAccountFileAccess.isAccountReference(att.fileName) {
+                previewTask?.cancel()
+                let request = UUID(), ext = att.utiOrExt, displayName = att.resolvedName
+                previewRequest = request
+                previewTask = Task {
+                    do {
+                        let alias = try await CarryAccountAttachmentPreview.prepare(url: source, ext: ext, displayName: displayName)
+                        guard !Task.isCancelled, previewRequest == request else { try await alias.discard(); return }
+                        previewLease = alias; previewURL = alias.fileURL
+                    } catch is CancellationError {} catch { CarryLogger.shared.log(.attachmentSaveFailed, context: "account_preview") }
+                }
+            } else { previewURL = source }
         }
         CarryLogger.shared.log(.attachmentOpened, context: att.kindRaw)
     }
@@ -399,16 +571,12 @@ struct SafariView: UIViewControllerRepresentable {
 
 // MARK: - 共用：缩略图或图标
 
-@ViewBuilder
 private func attachmentGlyph(symbol: String, thumbnailData: Data, size: CGFloat) -> some View {
-    if !thumbnailData.isEmpty, let img = UIImage(data: thumbnailData) {
-        Image(uiImage: img).resizable().scaledToFill()
-            .frame(width: size, height: size)
-            .clipShape(RoundedRectangle(cornerRadius: 5, style: .continuous))
-    } else {
+    PreparedThumbnail(data: thumbnailData, size: size) {
         Image(systemName: symbol)
             .font(.system(size: size * 0.62))
             .foregroundStyle(.secondary)
             .frame(width: size, height: size)
     }
+    .clipShape(RoundedRectangle(cornerRadius: 5, style: .continuous))
 }

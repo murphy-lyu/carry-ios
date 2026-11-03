@@ -34,32 +34,32 @@ func timeLabel(dayMinutes minutes: Int) -> String {
 /// 故用一个枚举驱动唯一的 sheet。
 private enum ItinerarySheet: Identifiable {
     case addStop(dayId: UUID, category: StopCategory = .sightseeing)
-    case stopDetail(ItineraryStop)
-    case editStop(ItineraryStop)
+    case stopDetail(UUID)
+    case editStop(UUID)
     case optimize(dayId: UUID)
     case searchFlight(dayId: UUID)
     case addTransport(dayId: UUID, mode: TransportMode)
-    case transportDetail(TransportSegment, focus: TransportDetailFocus)
+    case transportDetail(UUID, focus: TransportDetailFocus)
     case editTransport(UUID)
     case addLodging(checkInDayOrder: Int)
     /// `dayOrder` = the day whose row was tapped (check-in / overnight / checkout) — drives the
     /// detail's accent so it matches the colour the user touched, not always the check-in day.
-    case lodgingDetail(LodgingStay, dayOrder: Int)
+    case lodgingDetail(UUID, dayOrder: Int)
     case editLodging(UUID)
     case calendarEvent(CalendarOverlayEvent)
 
     var id: String {
         switch self {
         case .addStop(let dayId, _): return "add-\(dayId)"
-        case .stopDetail(let stop): return "detail-\(stop.id)"
-        case .editStop(let stop): return "edit-\(stop.id)"
+        case .stopDetail(let stop): return "detail-\(stop)"
+        case .editStop(let stop): return "edit-\(stop)"
         case .optimize(let dayId): return "opt-\(dayId)"
         case .searchFlight(let dayId): return "searchfl-\(dayId)"
         case .addTransport(let dayId, let mode): return "addtr-\(dayId)-\(mode.rawValue)"
-        case .transportDetail(let seg, let focus): return "trdetail-\(seg.id)-\(focus.idToken)"
+        case .transportDetail(let seg, let focus): return "trdetail-\(seg)-\(focus.idToken)"
         case .editTransport(let id): return "edittr-\(id)"
         case .addLodging(let order): return "addlg-\(order)"
-        case .lodgingDetail(let stay, let dayOrder): return "lgdetail-\(stay.id)-\(dayOrder)"
+        case .lodgingDetail(let stay, let dayOrder): return "lgdetail-\(stay)-\(dayOrder)"
         case .editLodging(let id): return "editlg-\(id)"
         case .calendarEvent(let ev): return "calev-\(ev.id)"
         }
@@ -102,6 +102,10 @@ struct ItineraryView: View {
     @AppStorage("distance_unit") private var distanceUnitRaw = DistanceUnit.automatic.rawValue
     private var distanceUnit: DistanceUnit { DistanceUnit(rawValue: distanceUnitRaw) ?? .automatic }
 
+    @Environment(\.nativeEditorOwner) private var inheritedNativeEditorOwner
+    @Environment(\.nativeEditorGroup) private var inheritedNativeEditorGroup
+    @StateObject private var nativeEditors = CarryNativeEditorPresentations()
+    @State private var pendingDayArrangement: [(dayID: UUID, stopIDs: [UUID])]?
     @State private var activeSheet: ItinerarySheet?
     @State private var focusedDayId: UUID?
     /// 已安装的导航 App，onAppear 时探测一次（避免每行重复 canOpenURL）。
@@ -161,6 +165,96 @@ struct ItineraryView: View {
         }
     }
 
+    private var editorRetry: (() -> Void)? {
+        guard pendingDayArrangement != nil else { return nil }
+        return { savePendingDayArrangement() }
+    }
+
+    private func currentStop(id: UUID) -> ItineraryStop? {
+        bundle?.safeItineraryDays.flatMap({ $0.sortedStops }).first(where: { $0.id == id })
+    }
+    private func currentSegment(id: UUID) -> TransportSegment? {
+        bundle?.safeItineraryDays.flatMap({ $0.sortedSegments }).first(where: { $0.id == id })
+    }
+    private func currentStay(id: UUID) -> LodgingStay? {
+        bundle?.lodgingStays?.first(where: { $0.id == id })
+    }
+
+    private func presentOwnedSheet(_ sheet: ItinerarySheet) {
+        switch sheet {
+        case .calendarEvent:
+            activeSheet = sheet
+            return
+        case .stopDetail, .transportDetail, .lodgingDetail:
+            guard nativeEditors.begin(key: "activeSheet", store: store, readOnly: true, owner: inheritedNativeEditorOwner, group: inheritedNativeEditorGroup) else { return }
+        default:
+            guard nativeEditors.begin(key: "activeSheet", store: store, owner: inheritedNativeEditorOwner, group: inheritedNativeEditorGroup) else { return }
+        }
+        activeSheet = sheet
+    }
+
+    @ViewBuilder
+    private func sheetContent(for sheet: ItinerarySheet) -> some View {
+            Group {
+                switch sheet {
+                case .addStop(let dayId, let category):
+                    AddStopView(
+                        tripId: tripId,
+                        dayId: dayId,
+                        initialCategory: category,
+                        biasLatitude: bundle?.latitude ?? 0,
+                        biasLongitude: bundle?.longitude ?? 0
+                    )
+                case .stopDetail(let stopID):
+                    if let stop = currentStop(id: stopID) {
+                    StopDetailView(
+                        tripId: tripId,
+                        stop: stop,
+                        distanceToNext: distanceToNextStop(stop),
+                        navApps: navApps,
+                        dayColor: dayColor(forStop: stop)
+                    )
+                    }
+                case .editStop(let stopID):
+                    if let stop = currentStop(id: stopID) { StopEditView(tripId: tripId, stop: stop) }
+                case .optimize(let dayId):
+                    OptimizeRouteView(tripId: tripId, dayId: dayId)
+                case .searchFlight(let dayId):
+                    FlightSearchSheet(tripId: tripId, dayId: dayId)
+                case .addTransport(let dayId, let mode):
+                    TransportEditView(tripId: tripId, dayId: dayId, initialMode: mode)
+                case .transportDetail(let segmentID, let focus):
+                    if let seg = currentSegment(id: segmentID) {
+                    TransportDetailView(
+                        tripId: tripId,
+                        segment: seg,
+                        focus: focus,
+                        navApps: navApps,
+                        dayColor: ItineraryDayPalette.color(forDayIndex: focus == .dropoff ? seg.arriveDayOrder : seg.departDayOrder)
+                    )
+                    }
+                case .editTransport(let id):
+                    TransportEditView(tripId: tripId, segmentId: id)
+                case .addLodging(let order):
+                    // 「+」住宿走搜索优先（与添加地点/航班一致）：搜到选中即直接加，底部「手动添加」push 进表单。
+                    LodgingSearchSheet(tripId: tripId, initialCheckInDayOrder: order)
+                case .lodgingDetail(let stayID, let dayOrder):
+                    if let stay = currentStay(id: stayID) {
+                    LodgingDetailView(
+                        tripId: tripId,
+                        stay: stay,
+                        navApps: navApps,
+                        dayColor: ItineraryDayPalette.color(forDayIndex: dayOrder)
+                    )
+                    }
+                case .editLodging(let id):
+                    LodgingEditView(tripId: tripId, stayId: id)
+                case .calendarEvent(let event):
+                    CalendarEventDetailView(event: event)
+                }
+            }
+    }
+
     var body: some View {
         ZStack {
             Color(UIColor.systemBackground)
@@ -169,64 +263,21 @@ struct ItineraryView: View {
             // 「整趟还没加地点」即表现为每天下方的「+ 添加地点」（决策 A）。
             dayList
         }
-        .sheet(item: $activeSheet) { sheet in
-            switch sheet {
-            case .addStop(let dayId, let category):
-                AddStopView(
-                    tripId: tripId,
-                    dayId: dayId,
-                    initialCategory: category,
-                    biasLatitude: bundle?.latitude ?? 0,
-                    biasLongitude: bundle?.longitude ?? 0
-                )
-            case .stopDetail(let stop):
-                StopDetailView(
-                    tripId: tripId,
-                    stop: stop,
-                    distanceToNext: distanceToNextStop(stop),
-                    navApps: navApps,
-                    dayColor: dayColor(forStop: stop)
-                )
-            case .editStop(let stop):
-                StopEditView(tripId: tripId, stop: stop)
-            case .optimize(let dayId):
-                OptimizeRouteView(tripId: tripId, dayId: dayId)
-            case .searchFlight(let dayId):
-                FlightSearchSheet(tripId: tripId, dayId: dayId)
-            case .addTransport(let dayId, let mode):
-                TransportEditView(tripId: tripId, dayId: dayId, initialMode: mode)
-            case .transportDetail(let seg, let focus):
-                TransportDetailView(
-                    tripId: tripId,
-                    segment: seg,
-                    focus: focus,
-                    navApps: navApps,
-                    dayColor: ItineraryDayPalette.color(forDayIndex: focus == .dropoff ? seg.arriveDayOrder : seg.departDayOrder)
-                )
-            case .editTransport(let id):
-                TransportEditView(tripId: tripId, segmentId: id)
-            case .addLodging(let order):
-                // 「+」住宿走搜索优先（与添加地点/航班一致）：搜到选中即直接加，底部「手动添加」push 进表单。
-                LodgingSearchSheet(tripId: tripId, initialCheckInDayOrder: order)
-            case .lodgingDetail(let stay, let dayOrder):
-                LodgingDetailView(
-                    tripId: tripId,
-                    stay: stay,
-                    navApps: navApps,
-                    dayColor: ItineraryDayPalette.color(forDayIndex: dayOrder)
-                )
-            case .editLodging(let id):
-                LodgingEditView(tripId: tripId, stayId: id)
-            case .calendarEvent(let event):
-                CalendarEventDetailView(event: event)
-            }
+        .nativeEditorErrors(nativeEditors, retry: editorRetry)
+        .nativeEditorSheet(item: $activeSheet, presentations: nativeEditors, onDismiss: nativeEditors.dismissal(key: "activeSheet")) { sheet in
+            sheetContent(for: sheet)
+            // Catalyst presents this content in a separate hosting boundary.
+            // Preserve the exact trip owner, including account-scoped stores.
+            .environmentObject(store)
+            .environmentObject(router)
         }
         // 照片回溯生成的入口已收进行程详情页共享「…」菜单（PackingListView），不在此另起工具栏图标。
         .toolbarBackground(Color(UIColor.systemBackground), for: .navigationBar)
         .toolbarBackground(.visible, for: .navigationBar)
         .toolbarBackground(.visible, for: .tabBar)
         .onAppear {
-            store.syncItineraryDays(tripId: tripId)   // 兜底：天对齐到行程天数（存量行程/新建首开）
+            nativeEditors.bind(owner: inheritedNativeEditorOwner ?? store.nativeEditorIdentity, group: inheritedNativeEditorGroup)
+            _ = nativeEditors.save(store: store) { store.syncItineraryDays(tripId: tripId) }   // 兜底：天对齐到行程天数（存量行程/新建首开）
             syncFocusedDaySelectionIfNeeded()
             consumePendingItineraryAnchor()           // 深链锚点优先于默认聚焦首日
             navApps = MapNavigationService.availableApps()
@@ -274,7 +325,7 @@ struct ItineraryView: View {
                 .lineSpacing(2)
                 .padding(.horizontal, 8)
             Button {
-                if let firstDay = days.first { activeSheet = .addStop(dayId: firstDay.id) }
+                if let firstDay = days.first { presentOwnedSheet(.addStop(dayId: firstDay.id)) }
             } label: {
                 HStack(spacing: 8) {
                     Image(systemName: "plus").font(.system(size: 14, weight: .semibold))
@@ -321,8 +372,12 @@ struct ItineraryView: View {
                 onDelete: { deleteStop($0) },
                 onDeleteTransport: { deleteTransport($0) },
                 onDeleteLodging: { deleteLodging($0) },
-                onArrange: { store.applyItineraryArrangement(tripId: tripId, dayOrders: $0) },
-                onReorderBegan: { },
+                onArrange: { orders in
+                    pendingDayArrangement = orders
+                    savePendingDayArrangement()
+                },
+                onReorderBegan: { nativeEditors.begin(key: "itineraryDrag", store: store, owner: inheritedNativeEditorOwner, group: inheritedNativeEditorGroup) },
+                onReorderEnded: { if pendingDayArrangement == nil { nativeEditors.end(key: "itineraryDrag") } },
                 onFocusDay: { focusedDayId = $0 },
                 onScrollHideChange: { scrollHideRelay?.setHidden($0) }
             )
@@ -340,6 +395,15 @@ struct ItineraryView: View {
     }
 
     /// 影响 Day header 标签的行程级日期态。变化即强制 collection 重建（罕见操作，代价可忽略）。
+    private func savePendingDayArrangement() {
+        guard let pendingDayArrangement else { return }
+        guard nativeEditors.save(store: store, {
+            store.applyItineraryArrangement(tripId: tripId, dayOrders: pendingDayArrangement)
+        }) else { return }
+        self.pendingDayArrangement = nil
+        nativeEditors.end(key: "itineraryDrag")
+    }
+
     private var itineraryDateStateKey: String {
         guard let bundle else { return "none" }
         return "\(bundle.isDateless)_\(bundle.departureDate.timeIntervalSince1970)"
@@ -561,7 +625,7 @@ struct ItineraryView: View {
     /// 是 daySections 的时间轴部分，也供首/末端点判定（连续脊的两端清线）。spec: itinerary-car-rental.md。
     private func timelineRowIDs(for day: ItineraryDay, timedCalendar: [(id: String, minutes: Int)] = [],
                                 carRentals: [TransportSegment]? = nil, stays: [LodgingStay]? = nil) -> [ItineraryRowID] {
-        let carRentals = carRentals ?? days.flatMap { $0.sortedSegments }.filter { $0.mode == .carRental }
+        let carRentals = carRentals ?? days.flatMap({ $0.sortedSegments }).filter { $0.mode == .carRental }
         var timed: [(row: ItineraryRowID, minutes: Int)] = []
         var carry = -1
         for item in day.timeline {
@@ -663,7 +727,7 @@ struct ItineraryView: View {
             // 点击整行 → 打开停靠点【只读详情】（StopDetailView），看完即走；编辑在详情右上角入口。
             // 默认只读避免误改敏感字段（时间/位置）、也契合「这屏多数是来看信息」的高频意图。
             // 长按仍拖拽重排、左滑仍删除，tap 与之手势类型不同、不冲突。
-            .onTapGesture { activeSheet = .stopDetail(stop) }
+            .onTapGesture { presentOwnedSheet(.stopDetail(stop.id)) }
             }
         }
     }
@@ -787,7 +851,7 @@ struct ItineraryView: View {
             )
                 .padding(.horizontal, 16)
                 .contentShape(Rectangle())
-                .onTapGesture { activeSheet = .transportDetail(seg, focus: .full) }
+                .onTapGesture { presentOwnedSheet(.transportDetail(seg.id, focus: .full)) }
         }
     }
 
@@ -806,7 +870,7 @@ struct ItineraryView: View {
                 .padding(.horizontal, 16)
                 .contentShape(Rectangle())
                 // 取车 / 还车点开各自聚焦那一端（地址 + 导航），不再两端都铺。
-                .onTapGesture { activeSheet = .transportDetail(seg, focus: pickup ? .pickup : .dropoff) }
+                .onTapGesture { presentOwnedSheet(.transportDetail(seg.id, focus: pickup ? .pickup : .dropoff)) }
         }
     }
 
@@ -823,7 +887,7 @@ struct ItineraryView: View {
                              showBottomLine: showsBottomLine(rowID, in: day))
                 .padding(.horizontal, 16)
                 .contentShape(Rectangle())
-                .onTapGesture { activeSheet = .lodgingDetail(stay, dayOrder: dayOrder) }
+                .onTapGesture { presentOwnedSheet(.lodgingDetail(stay.id, dayOrder: dayOrder)) }
         }
     }
 
@@ -835,7 +899,7 @@ struct ItineraryView: View {
             CalendarEventRow(event: event)
                 .padding(.horizontal, 16)
                 .contentShape(Rectangle())
-                .onTapGesture { activeSheet = .calendarEvent(event) }
+                .onTapGesture { presentOwnedSheet(.calendarEvent(event)) }
         }
     }
 
@@ -881,13 +945,13 @@ struct ItineraryView: View {
         return Menu {
             Section("itinerary.add.section.place") {
                 ForEach(Self.commonPlaces, id: \.self) { cat in
-                    Button { activeSheet = .addStop(dayId: dayID, category: cat) } label: {
+                    Button { presentOwnedSheet(.addStop(dayId: dayID, category: cat)) } label: {
                         Label(cat.titleKey, systemImage: cat.symbolName)
                     }
                 }
                 Menu {
                     ForEach(Self.morePlaces, id: \.self) { cat in
-                        Button { activeSheet = .addStop(dayId: dayID, category: cat) } label: {
+                        Button { presentOwnedSheet(.addStop(dayId: dayID, category: cat)) } label: {
                             Label(cat.titleKey, systemImage: cat.symbolName)
                         }
                     }
@@ -912,7 +976,7 @@ struct ItineraryView: View {
                     Label("itinerary.add.more_transport", systemImage: "ellipsis")
                 }
             }
-            Button { activeSheet = .addLodging(checkInDayOrder: order) } label: {
+            Button { presentOwnedSheet(.addLodging(checkInDayOrder: order)) } label: {
                 Label("itinerary.category.lodging", systemImage: "bed.double")
             }
         } label: {
@@ -930,9 +994,9 @@ struct ItineraryView: View {
     /// spec: itinerary-flight-search-first.md。
     private func addTransport(_ mode: TransportMode, _ dayID: UUID) {
         if mode == .flight {
-            activeSheet = .searchFlight(dayId: dayID)
+            presentOwnedSheet(.searchFlight(dayId: dayID))
         } else {
-            activeSheet = .addTransport(dayId: dayID, mode: mode)
+            presentOwnedSheet(.addTransport(dayId: dayID, mode: mode))
         }
     }
 
@@ -944,7 +1008,7 @@ struct ItineraryView: View {
     /// day header 尾部的「优化顺序」入口：作用于整天的工具操作，落在「这天的标题栏」层级
     /// （对齐 Apple section-header accessory）；中性色 = 工具非主 CTA；header 吸顶 → 地点再多也一伸手可及。
     private func optimizeHeaderButton(_ day: ItineraryDay) -> some View {
-        Button { activeSheet = .optimize(dayId: day.id) } label: {
+        Button { presentOwnedSheet(.optimize(dayId: day.id)) } label: {
             HStack(spacing: 5) {
                 Image(systemName: "wand.and.stars")
                     .font(.system(size: 13, weight: .medium))
@@ -1114,18 +1178,18 @@ struct ItineraryView: View {
     /// 滑动删除（collection 的 swipe action）。
     private func deleteStop(_ stopID: UUID) {
         guard let day = days.first(where: { ($0.stops ?? []).contains { $0.id == stopID } }) else { return }
-        store.removeItineraryStop(tripId: tripId, dayId: day.id, stopId: stopID)
+        _ = nativeEditors.save(store: store) { store.removeItineraryStop(tripId: tripId, dayId: day.id, stopId: stopID) }
     }
 
     /// 左滑删除交通段（航班/火车/巴士/渡轮/租车）：按 segmentID 找其所属天后删整段。
     private func deleteTransport(_ segmentID: UUID) {
         guard let day = days.first(where: { ($0.segments ?? []).contains { $0.id == segmentID } }) else { return }
-        store.removeTransportSegment(tripId: tripId, dayId: day.id, segmentId: segmentID)
+        _ = nativeEditors.save(store: store) { store.removeTransportSegment(tripId: tripId, dayId: day.id, segmentId: segmentID) }
     }
 
     /// 左滑删除住宿：按 stayID 删整段（住宿归 TripBundle、不绑单天）。
     private func deleteLodging(_ stayID: UUID) {
-        store.removeLodgingStay(tripId: tripId, stayId: stayID)
+        _ = nativeEditors.save(store: store) { store.removeLodgingStay(tripId: tripId, stayId: stayID) }
     }
 }
 
@@ -1619,13 +1683,48 @@ private struct TimelineStopRow: View {
 /// 契合「这屏多数是来看信息」的高频意图（spec: itinerary-stop-detail.md）。
 struct StopDetailView: View {
     let tripId: UUID
+    private let stopID: UUID
+    let distanceToNext: String?
+    let navApps: [MapNavigationApp]
+    let dayColor: Color
+    @EnvironmentObject private var store: TripStore
+    @Environment(\.dismiss) private var dismiss
+
+    init(tripId: UUID, stop: ItineraryStop, distanceToNext: String?, navApps: [MapNavigationApp], dayColor: Color) {
+        self.tripId = tripId; self.stopID = stop.id
+        self.distanceToNext = distanceToNext; self.navApps = navApps; self.dayColor = dayColor
+    }
+
+    var body: some View {
+        Group {
+            if let model = store.bundle(for: tripId)?.safeItineraryDays.flatMap({ $0.sortedStops }).first(where: { $0.id == stopID }) {
+                StopDetailViewContent(tripId: tripId, stop: model, distanceToNext: distanceToNext, navApps: navApps, dayColor: dayColor)
+            } else {
+                Color.clear.task { dismiss() }
+            }
+        }
+    }
+}
+
+private struct StopDetailViewContent: View {
+    let tripId: UUID
     let stop: ItineraryStop
+    private let stopID: UUID
     let distanceToNext: String?
     let navApps: [MapNavigationApp]
     let dayColor: Color
 
+    init(tripId: UUID, stop: ItineraryStop, distanceToNext: String?, navApps: [MapNavigationApp], dayColor: Color) {
+        self.tripId = tripId; self.stop = stop; self.stopID = stop.id
+        self.distanceToNext = distanceToNext; self.navApps = navApps; self.dayColor = dayColor
+    }
+
     @EnvironmentObject var store: TripStore
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.nativeEditorOwner) private var inheritedNativeEditorOwner
+    @Environment(\.nativeEditorGroup) private var inheritedNativeEditorGroup
+    @StateObject private var nativeEditors = CarryNativeEditorPresentations()
+    private var currentStop: ItineraryStop? { store.bundle(for: tripId)?.safeItineraryDays.flatMap({ $0.sortedStops }).first(where: { $0.id == stopID }) }
     @State private var editing = false
     @State private var showQuickNote = false
     @State private var showQuickCost = false
@@ -1650,13 +1749,15 @@ struct StopDetailView: View {
             }
         } footer: {
             DetailActionFooter(
-                onEdit: { editing = true },
+                onEdit: { guard nativeEditors.begin(key: "editing", store: store, owner: inheritedNativeEditorOwner, group: inheritedNativeEditorGroup) else { return }; guard currentStop != nil else { nativeEditors.end(key: "editing"); nativeEditors.saveFailed = true; return }; editing = true },
                 onDelete: deleteStop,
-                onNote: { showQuickNote = true },
-                onCost: { showQuickCost = true },
+                onNote: { guard nativeEditors.begin(key: "showQuickNote", store: store, owner: inheritedNativeEditorOwner, group: inheritedNativeEditorGroup) else { return }; guard currentStop != nil else { nativeEditors.end(key: "showQuickNote"); nativeEditors.saveFailed = true; return }; showQuickNote = true },
+                onCost: { guard nativeEditors.begin(key: "showQuickCost", store: store, owner: inheritedNativeEditorOwner, group: inheritedNativeEditorGroup) else { return }; guard currentStop != nil else { nativeEditors.end(key: "showQuickCost"); nativeEditors.saveFailed = true; return }; showQuickCost = true },
                 onTime: {
-                    quickTimeHasTime = stop.plannedStartMinutes >= 0
-                    quickTimeDate = dateFromDayMinutes(stop.plannedStartMinutes >= 0 ? stop.plannedStartMinutes : 9 * 60)
+                    guard nativeEditors.begin(key: "showQuickTime", store: store, owner: inheritedNativeEditorOwner, group: inheritedNativeEditorGroup) else { return }
+                    guard let currentStop else { nativeEditors.end(key: "showQuickTime"); return }
+                    quickTimeHasTime = currentStop.plannedStartMinutes >= 0
+                    quickTimeDate = dateFromDayMinutes(currentStop.plannedStartMinutes >= 0 ? currentStop.plannedStartMinutes : 9 * 60)
                     showQuickTime = true
                 },
                 hasNote: !stop.note.isEmpty,
@@ -1665,90 +1766,81 @@ struct StopDetailView: View {
             )
         }
         // 编辑钻入到详情之上：保存后回到详情（@Model 可观察、详情自动反映新值），再下滑关。
-        .sheet(isPresented: $editing) {
-            StopEditView(tripId: tripId, stop: stop)
-        }
-        .sheet(isPresented: $showQuickNote) {
-            QuickNoteSheet(existingNote: stop.note) { newNote in
-                store.updateItineraryStop(tripId: tripId, stopId: stop.id, note: newNote)
+        .nativeEditorSheet(isPresented: $editing, presentations: nativeEditors, onDismiss: nativeEditors.dismissal(key: "editing")) {
+            if let currentStop {
+                StopEditView(tripId: tripId, stop: currentStop)
             }
         }
-        .sheet(isPresented: $showQuickCost) {
-            QuickCostSheet(
-                existingAmount: stop.costAmount,
-                existingCurrencyCode: stop.costCurrencyCode
-            ) { amount, code in
-                store.setStopCost(tripId: tripId, stopId: stop.id, amount: amount, currencyCode: code)
+        .nativeEditorSheet(isPresented: $showQuickNote, presentations: nativeEditors, onDismiss: nativeEditors.dismissal(key: "showQuickNote")) {
+            if let currentStop {
+                QuickNoteSheet(existingNote: currentStop.note) { newNote in
+                    nativeEditors.save(store: store) { store.updateItineraryStop(tripId: tripId, stopId: currentStop.id, note: newNote) }
+                }
+            }
+        }
+        .nativeEditorSheet(isPresented: $showQuickCost, presentations: nativeEditors, onDismiss: nativeEditors.dismissal(key: "showQuickCost")) {
+            if let currentStop {
+                QuickCostSheet(
+                    existingAmount: currentStop.costAmount,
+                    existingCurrencyCode: currentStop.costCurrencyCode
+                ) { amount, code in
+                    nativeEditors.save(store: store) { store.setStopCost(tripId: tripId, stopId: currentStop.id, amount: amount, currencyCode: code) }
+                }
             }
         }
         // 「设定时间」快捷入口：复用编辑态同款弹层（ItineraryTimePickerSheet，Binding 驱动、无取消回调）。
         // 弹层完成/清除时才会改写 quickTimeHasTime/quickTimeDate；取消或下滑关闭不碰这两个值，
         // 故此处以「新值是否与当前 stop 不同」为准才提交，避免每次「打开看一眼就关掉」都触发一次
         // 无意义的 save() + rescheduleDailySummary()（与 QuickNoteSheet/QuickCostSheet 的取消不写语义对齐）。
-        .sheet(isPresented: $showQuickTime) {
+        .nativeEditorSheet(isPresented: $showQuickTime, presentations: nativeEditors) {
             ItineraryTimePickerSheet(hasTime: $quickTimeHasTime, time: $quickTimeDate)
         }
+        .nativeEditorErrors(nativeEditors)
         .onChange(of: showQuickTime) { wasShowing, isShowing in
             guard wasShowing, !isShowing else { return }
             let newMinutes = quickTimeHasTime ? dayMinutes(from: quickTimeDate) : -1
-            guard newMinutes != stop.plannedStartMinutes else { return }
-            store.updateItineraryStop(tripId: tripId, stopId: stop.id, plannedStartMinutes: newMinutes)
-        }
-        // 点缩略图放大看（存的是约 640px 缩略图；零授权不取系统原图）。
-        .fullScreenCover(item: $zoomedPhoto) { z in
-            ZStack {
-                Color.black.ignoresSafeArea()
-                if let image = UIImage(data: z.data) {
-                    Image(uiImage: image).resizable().scaledToFit()
-                }
+            guard let currentStop else { nativeEditors.saveFailed = true; return }
+            guard newMinutes != currentStop.plannedStartMinutes else {
+                nativeEditors.end(key: "showQuickTime")
+                return
             }
-            .contentShape(Rectangle())
-            .onTapGesture { zoomedPhoto = nil }
+            if !nativeEditors.save(store: store, {
+                store.updateItineraryStop(tripId: tripId, stopId: stop.id, plannedStartMinutes: newMinutes)
+            }) {
+                showQuickTime = true
+            } else {
+                nativeEditors.end(key: "showQuickTime")
+            }
+        }
+        .fullScreenCover(item: $zoomedPhoto) { photo in
+            CarryAccountPhotoPreview(thumbnail: photo.data, originalToken: photo.originalToken) { zoomedPhoto = nil }
         }
     }
 
-    private struct ZoomedPhoto: Identifiable { let id = UUID(); let data: Data }
-
-    /// 缩略图异步解码：在后台 `UIImage(data:)` 解出后再上屏，避免主线程同步解码——打开详情时一条图条
-    /// 多张缩略图同步解码会丢帧（缩略图虽 ≤640px 仍累加）。每实例 `.task` 解一次、存 @State，重渲不重复解。
-    private struct AsyncThumbnail: View {
+    private struct ZoomedPhoto: Identifiable {
+        let id = UUID()
         let data: Data
-        var size: CGFloat = 76
-        var cornerRadius: CGFloat = 10
-        @State private var image: UIImage?
-
-        var body: some View {
-            Group {
-                if let image {
-                    Image(uiImage: image).resizable().scaledToFill()
-                } else {
-                    Image(systemName: "photo").foregroundStyle(.tertiary)
-                        .frame(maxWidth: .infinity, maxHeight: .infinity)
-                        .background(Color(.tertiarySystemFill))
-                }
-            }
-            .frame(width: size, height: size)
-            .clipShape(RoundedRectangle(cornerRadius: cornerRadius, style: .continuous))
-            .task {
-                guard image == nil else { return }
-                let bytes = data
-                image = await Task.detached(priority: .userInitiated) { UIImage(data: bytes) }.value
-            }
-        }
+        let originalToken: String
     }
 
     /// 该停靠点导入的照片（横向缩略图条，点击放大）。照片回溯生成的地点才有。
     private var photoStrip: some View {
         ScrollView(.horizontal, showsIndicators: false) {
-            HStack(spacing: 8) {
+            LazyHStack(spacing: 8) {
                 ForEach(stop.sortedPhotos, id: \.id) { photo in
-                    Button { zoomedPhoto = ZoomedPhoto(data: photo.thumbnailData) } label: {
-                        AsyncThumbnail(data: photo.thumbnailData, size: 76, cornerRadius: 10)
+                    Button { zoomedPhoto = ZoomedPhoto(data: photo.thumbnailData, originalToken: photo.assetLocalIdentifier) } label: {
+                        PreparedThumbnail(data: photo.thumbnailData, size: 76) {
+                            Image(systemName: "photo").foregroundStyle(.tertiary)
+                                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                                .background(Color(.tertiarySystemFill))
+                        }
+                        .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
                     }
                     .buttonStyle(.plain)
                 }
             }
         }
+        .frame(height: 76)
     }
 
     // 底部动作（编辑 + 移除）已统一收到 `DetailActionFooter`（详见 ItineraryDetailRows）。
@@ -1781,7 +1873,7 @@ struct StopDetailView: View {
 
     private func deleteStop() {
         if let dayId = stop.day?.id {
-            store.removeItineraryStop(tripId: tripId, dayId: dayId, stopId: stop.id)
+            guard nativeEditors.save(store: store, { store.removeItineraryStop(tripId: tripId, dayId: dayId, stopId: stop.id) }) else { return }
         }
         dismiss()
     }
@@ -1911,6 +2003,9 @@ struct StopEditView: View {
     @EnvironmentObject var store: TripStore
     @Environment(\.dismiss) private var dismiss
 
+    @Environment(\.nativeEditorOwner) private var inheritedNativeEditorOwner
+    @Environment(\.nativeEditorGroup) private var inheritedNativeEditorGroup
+    @StateObject private var nativeEditors = CarryNativeEditorPresentations()
     @State private var name: String
     @State private var category: StopCategory
     @State private var note: String
@@ -1980,7 +2075,7 @@ struct StopEditView: View {
                         }
                     }
                     Button {
-                        showRelocate = true
+                        guard nativeEditors.begin(key: "relocate", store: store, owner: inheritedNativeEditorOwner, group: inheritedNativeEditorGroup) else { return }; showRelocate = true
                     } label: {
                         Label(stop.hasCoordinate ? "itinerary.stop.edit.relocate" : "itinerary.stop.edit.set_location",
                               systemImage: "mappin.circle")
@@ -2086,28 +2181,31 @@ struct StopEditView: View {
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Save") {
                         let startMin = dayMinutes(from: startTime)
-                        store.updateItineraryStop(
-                            tripId: tripId,
-                            stopId: stop.id,
-                            name: name.trimmingCharacters(in: .whitespacesAndNewlines),
-                            category: category,
-                            plannedStartMinutes: hasTime ? startMin : -1,
-                            stayMinutes: 0,   // 地点只记开始时间；结束时间留待将来有需求再加（stayMinutes 模型字段保留）
-                            note: note,
-                            phone: phone
-                        )
-                        store.setStopCost(tripId: tripId, stopId: stop.id,
-                                          amount: costAmountValue, currencyCode: costCurrencyToSave)
-                        // 改了日期 → 把停靠点移到目标天（时刻按当天分钟存、自然保留）。
-                        if dayOrder != (stop.day?.sortOrder ?? 0) {
-                            store.moveItineraryStop(tripId: tripId, stopId: stop.id, toDayOrder: dayOrder)
-                        }
+                        guard nativeEditors.save(store: store, {
+                            store.updateItineraryStop(
+                                tripId: tripId,
+                                stopId: stop.id,
+                                name: name.trimmingCharacters(in: .whitespacesAndNewlines),
+                                category: category,
+                                plannedStartMinutes: hasTime ? startMin : -1,
+                                stayMinutes: 0,   // 地点只记开始时间；结束时间留待将来有需求再加（stayMinutes 模型字段保留）
+                                note: note,
+                                phone: phone
+                            )
+                            store.setStopCost(tripId: tripId, stopId: stop.id,
+                                              amount: costAmountValue, currencyCode: costCurrencyToSave)
+                            // 改了日期 → 把停靠点移到目标天（时刻按当天分钟存、自然保留）。
+                            if dayOrder != (stop.day?.sortOrder ?? 0) {
+                                store.moveItineraryStop(tripId: tripId, stopId: stop.id, toDayOrder: dayOrder)
+                            }
+                        }) else { return }
                         dismiss()
                     }
                 }
             }
             // 更换地点：复用 AddStopView 的搜索（relocate 模式更新本停靠点的坐标/地址/名称）。
-            .sheet(isPresented: $showRelocate) {
+            .nativeEditorErrors(nativeEditors)
+            .nativeEditorSheet(isPresented: $showRelocate, presentations: nativeEditors, onDismiss: nativeEditors.dismissal(key: "relocate")) {
                 AddStopView(
                     tripId: tripId,
                     dayId: stop.day?.id ?? UUID(),
@@ -2119,7 +2217,7 @@ struct StopEditView: View {
                 )
             }
             // 时间弹层（chip+弹出，统一交通范式）；挂在 Form 稳定祖先上。
-            .sheet(isPresented: $showTimeSheet) {
+            .nativeEditorSheet(isPresented: $showTimeSheet, presentations: nativeEditors) {
                 ItineraryTimePickerSheet(hasTime: $hasTime, time: $startTime)
             }
         }

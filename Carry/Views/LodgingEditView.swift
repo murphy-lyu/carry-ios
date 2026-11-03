@@ -29,6 +29,9 @@ struct LodgingEditView: View {
     @EnvironmentObject var store: TripStore
     @Environment(\.dismiss) private var dismiss
 
+    @Environment(\.nativeEditorOwner) private var inheritedNativeEditorOwner
+    @Environment(\.nativeEditorGroup) private var inheritedNativeEditorGroup
+    @StateObject private var nativeEditors = CarryNativeEditorPresentations()
     @State private var name = ""
     @State private var address = ""
     @State private var latitude: Double = 0
@@ -189,7 +192,7 @@ struct LodgingEditView: View {
                         .disabled(name.trimmingCharacters(in: .whitespaces).isEmpty)
                 }
             }
-            .sheet(isPresented: $searching) {
+            .nativeEditorSheet(isPresented: $searching, presentations: nativeEditors) {
                 ItineraryPlaceSearchSheet(
                     titleKey: "itinerary.lodging.field.name",
                     placeholderKey: "itinerary.lodging.search.placeholder",
@@ -205,7 +208,7 @@ struct LodgingEditView: View {
                 }
             }
             // 入住/退房时间弹层（chip+弹出，统一交通范式）；挂在 Form 稳定祖先上。
-            .sheet(item: $timeSheet) { field in
+            .nativeEditorSheet(item: $timeSheet, presentations: nativeEditors) { field in
                 // 入住/退房共用酒店所在地时区；多时区行程或自动推导失败时点亮兜底「时区」行。
                 let showZone = (bundle?.isMultiTimeZone ?? false) || timeZoneId.isEmpty
                 switch field {
@@ -217,6 +220,7 @@ struct LodgingEditView: View {
                                              timeZoneId: $timeZoneId, showZone: showZone)
                 }
             }
+            .nativeEditorErrors(nativeEditors)
             .onAppear(perform: loadIfNeeded)
     }
 
@@ -325,39 +329,42 @@ struct LodgingEditView: View {
     private func saveAndDismiss() {
         let inMinutes = hasCheckInTime ? minutes(from: checkInTime) : -1
         let outMinutes = hasCheckOutTime ? minutes(from: checkOutTime) : -1
-        if let stayId {
-            store.updateLodgingStay(
-                tripId: tripId, stayId: stayId,
-                name: name, address: address,
-                latitude: latitude, longitude: longitude,
-                checkInDayOrder: checkInDayOrder, nights: nights,
-                checkInMinutes: inMinutes, checkOutMinutes: outMinutes,
-                confirmationCode: confirmationCode, note: note, phone: phone,
-                timeZoneId: timeZoneId
-            )
-            store.setLodgingCost(tripId: tripId, stayId: stayId,
-                                 amount: costAmountValue, currencyCode: costCurrencyToSave)
-        } else {
-            if let newId = store.addLodgingStay(
-                tripId: tripId,
-                name: name, address: address,
-                latitude: latitude, longitude: longitude,
-                checkInDayOrder: checkInDayOrder, nights: nights,
-                checkInMinutes: inMinutes, checkOutMinutes: outMinutes,
-                confirmationCode: confirmationCode, note: note, phone: phone,
-                timeZoneId: timeZoneId
-            ) {
-                store.setLodgingCost(tripId: tripId, stayId: newId,
+        guard nativeEditors.save(store: store, {
+            if let stayId {
+                store.updateLodgingStay(
+                    tripId: tripId, stayId: stayId,
+                    name: name, address: address,
+                    latitude: latitude, longitude: longitude,
+                    checkInDayOrder: checkInDayOrder, nights: nights,
+                    checkInMinutes: inMinutes, checkOutMinutes: outMinutes,
+                    confirmationCode: confirmationCode, note: note, phone: phone,
+                    timeZoneId: timeZoneId
+                )
+                store.setLodgingCost(tripId: tripId, stayId: stayId,
                                      amount: costAmountValue, currencyCode: costCurrencyToSave)
-                // 新建住宿：把缓冲的附件落到刚建好的住宿。
-                for p in pendingAttachments {
-                    _ = store.addAttachment(tripId: tripId, owner: .lodging(newId), kind: p.data.kind,
-                                            displayName: p.data.displayName, fileName: p.data.fileName,
-                                            utiOrExt: p.data.utiOrExt, urlString: p.data.urlString,
-                                            thumbnailData: p.data.thumbnailData)
+            } else {
+                if let newId = store.addLodgingStay(
+                    tripId: tripId,
+                    name: name, address: address,
+                    latitude: latitude, longitude: longitude,
+                    checkInDayOrder: checkInDayOrder, nights: nights,
+                    checkInMinutes: inMinutes, checkOutMinutes: outMinutes,
+                    confirmationCode: confirmationCode, note: note, phone: phone,
+                    timeZoneId: timeZoneId
+                ) {
+                    store.setLodgingCost(tripId: tripId, stayId: newId,
+                                         amount: costAmountValue, currencyCode: costCurrencyToSave)
+                    // 新建住宿：把缓冲的附件落到刚建好的住宿。
+                    for p in pendingAttachments {
+                        let saved = store.addAttachment(tripId: tripId, owner: .lodging(newId), kind: p.data.kind, id: p.data.id,
+                                                displayName: p.data.displayName, fileName: p.data.fileName,
+                                                utiOrExt: p.data.utiOrExt, urlString: p.data.urlString,
+                                                thumbnailData: p.data.thumbnailData)
+                        if saved != nil { p.data.preparedImport?.adopt() }
+                    }
                 }
             }
-        }
+        }) else { return }
         finish()
     }
 

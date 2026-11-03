@@ -1,0 +1,11 @@
+{
+  "name": "carry-mcp",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "node --test test/*.test.js",
+    "dev": "wrangler dev --env local",
+    "deploy": "wrangler deploy --env \"\""
+  },
+  "devDependencies": { "wrangler": "^4.0.0" }
+}

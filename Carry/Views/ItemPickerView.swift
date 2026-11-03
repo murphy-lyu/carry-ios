@@ -108,6 +108,10 @@ struct ItemPickerView: View {
     // merge 模式（快速添加物品）以 sheet 呈现，用 dismiss 收起；create/autoPack 仍走导航栈。
     @Environment(\.dismiss) private var dismiss
 
+    @Environment(\.nativeEditorOwner) private var inheritedNativeEditorOwner
+    @Environment(\.nativeEditorGroup) private var inheritedNativeEditorGroup
+    @StateObject private var nativeEditors = CarryNativeEditorPresentations()
+    @State private var isEditorReady = false
     @State private var searchText = ""
     @State private var isSearchFocused: Bool = false   // 普通 Bool：CarrySearchField 内部走 UITextField，焦点不能用 @FocusState（见 IMESafeTextField）
     @State private var sourceMode: SourceMode = .preset
@@ -164,14 +168,14 @@ struct ItemPickerView: View {
         cachedSceneRecommendedNames.isEmpty ? appliedSceneRecommendedNames : cachedSceneRecommendedNames
     }
 
-    private var myItemsCount: Int { store.myItems.count }
+    private var myItemsCount: Int { store.visibleMyItems.count }
 
     private var savedMyItemNames: Set<String> {
-        Set(store.myItems.map { normalizedItemName($0.name) })
+        Set(store.visibleMyItems.map { normalizedItemName($0.name) })
     }
 
     private func savedMyItemID(for name: String) -> UUID? {
-        store.myItems.first {
+        store.visibleMyItems.first {
             normalizedItemName($0.name) == normalizedItemName(name)
         }?.id
     }
@@ -482,7 +486,7 @@ struct ItemPickerView: View {
                                             .listRowSeparator(.hidden)
                                             .swipeActions(edge: .trailing, allowsFullSwipe: false) {
                                                 Button {
-                                                    store.removeMyItem(id: item.id)
+                                                    _ = nativeEditors.save(store: store) { store.removeMyItem(id: item.id) }
                                                 } label: {
                                                     Image(systemName: "trash")
                                                         .foregroundStyle(.white)
@@ -553,21 +557,30 @@ struct ItemPickerView: View {
                         .scrollDismissesKeyboard(.interactively)
                     }
                 }
-                .sheet(isPresented: $showMyItemAddSheet) {
+                .nativeEditorSheet(isPresented: $showMyItemAddSheet, presentations: nativeEditors, onDismiss: nativeEditors.dismissal(key: "myItemAdd")) {
                     NavigationStack {
                         ItemPickerMyItemEditorView(
                             titleKey: "myitems.add.title",
                             collection: selectedMyItemCollection
                         ) { name, category in
                             let normalizedCategory = category.trimmingCharacters(in: CharacterSet.whitespacesAndNewlines).isEmpty ? "Custom" : category
-                            let item = store.addMyItem(name: name, category: normalizedCategory, collectionName: selectedMyItemCollection)
+                            var created: MyItem?
+                            guard nativeEditors.save(store: store, {
+                                created = store.addMyItem(name: name, category: normalizedCategory, collectionName: selectedMyItemCollection)
+                            }), let item = created else { return false }
                             selectedMyItemIDs.insert(item.id)
                             showToast(NSLocalizedString("myitems.toast.saved", comment: ""))
+                            return true
                         }
                         .environmentObject(store)
                     }
                 }
             }
+        }
+        .disabled(!isEditorReady)
+        .nativeEditorErrors(nativeEditors)
+        .onChange(of: nativeEditors.saveFailed) { _, showing in
+            if !showing && !isEditorReady { dismiss() }
         }
         .contentShape(Rectangle())
         .background(Color.clear.contentShape(Rectangle()))
@@ -594,7 +607,10 @@ struct ItemPickerView: View {
             // create/autoPack 走导航栈，自带返回，不需要。
             if case .merge = mode {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button(LocalizedStringKey("common.cancel")) { dismiss() }
+                    Button(LocalizedStringKey("common.cancel")) {
+                        nativeEditors.closeAll()
+                        dismiss()
+                    }
                 }
             }
             ToolbarItem(placement: .topBarTrailing) {
@@ -611,6 +627,8 @@ struct ItemPickerView: View {
             }
         }
         .onAppear {
+            guard nativeEditors.begin(key: "pickerLibrary", store: store, owner: inheritedNativeEditorOwner, group: inheritedNativeEditorGroup) else { return }
+            isEditorReady = true
             // Warm up the search index so the first keystroke is instant.
             _ = ItemPickerView.localizedSearchTermsByItem
             guard !didApplyInitialSource else { return }
@@ -1277,6 +1295,7 @@ struct ItemPickerView: View {
             }
             Spacer(minLength: 12)
             Button {
+                guard nativeEditors.begin(key: "myItemAdd", store: store, owner: inheritedNativeEditorOwner, group: inheritedNativeEditorGroup) else { return }
                 showMyItemAddSheet = true
             } label: {
                 HStack(spacing: 6) {
@@ -1579,10 +1598,12 @@ struct ItemPickerView: View {
             Button {
                 if isSaved {
                     if let id = savedMyItemID(for: canonicalName) {
-                        store.removeMyItem(id: id)
+                        _ = nativeEditors.save(store: store) { store.removeMyItem(id: id) }
                     }
                 } else {
-                    store.addMyItem(name: canonicalName, category: category, defaultQuantity: 1, collectionName: selectedMyItemCollection)
+                    guard nativeEditors.save(store: store, {
+                        _ = store.addMyItem(name: canonicalName, category: category, defaultQuantity: 1, collectionName: selectedMyItemCollection)
+                    }) else { return }
                     showToast(NSLocalizedString("itempicker.preset.saved_to_myitems", comment: ""))
                 }
             } label: {
@@ -1658,6 +1679,7 @@ struct ItemPickerView: View {
             // 通知改为全局驱动（Settings 唯一真相源，spec: notification-center.md）——
             // 不再快照档位进行程；新行程的通知由 NotificationManager 读全局设置排。
             store.setDraftTrip(bundle)
+            nativeEditors.end(key: "pickerLibrary")
             if sections.isEmpty {
                 finalizeEmptyTrip(bundle: bundle, city: info.destinationCity)
             } else {
@@ -1668,7 +1690,10 @@ struct ItemPickerView: View {
             // 记录本次应用的场景 key 到行程，闭环 selectedSceneKeys——下次二次添加时
             // 这些场景就会被 alreadyAppliedSceneKeys 识别，不再重复推荐。
             let mergedSceneKeys = selectedSmartSceneLabels.compactMap { sceneLabelToKey[$0] }
-            store.addScenesAndMerge(tripId: tripId, keys: mergedSceneKeys, sections: sections)
+            guard nativeEditors.save(store: store, {
+                store.addScenesAndMerge(tripId: tripId, keys: mergedSceneKeys, sections: sections)
+            }) else { return }
+            nativeEditors.end(key: "pickerLibrary")
             guard !isConfirmingSelection else { return }
             isConfirmingSelection = true
             if totalAdded > 0 {
@@ -1685,7 +1710,7 @@ struct ItemPickerView: View {
     /// 空清单创建：跳过新建预览（那一步无内容可看、且会形成 Add item ↔ Add items 的空跳转循环），
     /// 直接提交行程并进入正式清单页（isNewTrip:false，带 ⋯ 菜单），与预览页 "Save list" 行为一致。
     private func finalizeEmptyTrip(bundle: TripBundle, city: String) {
-        store.commitDraftTrip()
+        guard store.commitDraftTrip() else { return }
         if !city.isEmpty {
             store.updateCountryCode(for: bundle.id, city: city)
         }
@@ -1694,7 +1719,7 @@ struct ItemPickerView: View {
     }
 
     private func buildMyItemSections() -> [PackingSection] {
-        let selected = store.myItems.filter { selectedMyItemIDs.contains($0.id) }
+        let selected = store.visibleMyItems.filter { selectedMyItemIDs.contains($0.id) }
         var sectionsByTitle: [String: [MyItem]] = [:]
         for item in selected {
             let title = item.category.isEmpty ? "Essentials" : item.category
@@ -1772,10 +1797,13 @@ private struct ItemPickerMyItemEditorView: View {
     var initialName: String = ""
     var initialCategory: String = ""
     var collection: String = "Default"
-    var onSave: (String, String) -> Void
+    var onSave: (String, String) -> Bool
 
     @EnvironmentObject private var store: TripStore
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.nativeEditorOwner) private var inheritedNativeEditorOwner
+    @Environment(\.nativeEditorGroup) private var inheritedNativeEditorGroup
+    @StateObject private var nativeEditors = CarryNativeEditorPresentations()
     @State private var name: String
     @State private var selectedCategoryKey: String
     @State private var customCategoryText: String
@@ -1816,7 +1844,7 @@ private struct ItemPickerMyItemEditorView: View {
         initialName: String = "",
         initialCategory: String = "",
         collection: String = "Default",
-        onSave: @escaping (String, String) -> Void
+        onSave: @escaping (String, String) -> Bool
     ) {
         self.titleKey = titleKey
         self.initialName = initialName
@@ -1851,6 +1879,7 @@ private struct ItemPickerMyItemEditorView: View {
                 }
             }
         }
+        .nativeEditorErrors(nativeEditors)
         .navigationTitle(titleKey)
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
@@ -1859,7 +1888,10 @@ private struct ItemPickerMyItemEditorView: View {
             }
             ToolbarItem(placement: .confirmationAction) {
                 Button(LocalizedStringKey("common.done")) {
-                    onSave(name, effectiveCategory)
+                    guard onSave(name, effectiveCategory) else {
+                        nativeEditors.saveFailed = true
+                        return
+                    }
                     dismiss()
                 }
                 .disabled(!canSave)
@@ -1882,6 +1914,9 @@ private struct MyItemCategoryPickerView: View {
     private static let catalogKeys = itemPickerCatalog.map { $0.name }
     private static let customSentinel = "__custom__"
 
+    @Environment(\.nativeEditorOwner) private var inheritedNativeEditorOwner
+    @Environment(\.nativeEditorGroup) private var inheritedNativeEditorGroup
+    @StateObject private var nativeEditors = CarryNativeEditorPresentations()
     @State private var renamingCategory: String?
     @State private var renameText = ""
     @FocusState private var renameFocused: Bool
@@ -1913,12 +1948,15 @@ private struct MyItemCategoryPickerView: View {
                             selectableRow(key: name, title: Text(name))
                                 .swipeActions(edge: .trailing, allowsFullSwipe: false) {
                                     Button(role: .destructive) {
-                                        store.deleteMyItemCategory(name, in: collection)
+                                        guard nativeEditors.save(store: store, {
+                                            store.deleteMyItemCategory(name, in: collection)
+                                        }) else { return }
                                         if selectedKey == name { selectedKey = "" }
                                     } label: {
                                         Label(LocalizedStringKey("Delete"), systemImage: "trash")
                                     }
                                     Button {
+                                        guard nativeEditors.begin(key: "categoryRename", store: store, owner: inheritedNativeEditorOwner, group: inheritedNativeEditorGroup) else { return }
                                         renameText = name
                                         renamingCategory = name
                                     } label: {
@@ -1938,6 +1976,7 @@ private struct MyItemCategoryPickerView: View {
                 }
             }
         }
+        .nativeEditorErrors(nativeEditors)
         .navigationTitle(LocalizedStringKey("myitems.category"))
         .navigationBarTitleDisplayMode(.inline)
         .onChange(of: renameFocused) { _, focused in
@@ -1948,7 +1987,10 @@ private struct MyItemCategoryPickerView: View {
 
     private func commitRename(old: String) {
         let new = renameText.trimmingCharacters(in: .whitespacesAndNewlines)
-        store.renameMyItemCategory(from: old, to: new, in: collection)
+        guard nativeEditors.save(store: store, {
+            store.renameMyItemCategory(from: old, to: new, in: collection)
+        }) else { return }
+        nativeEditors.end(key: "categoryRename")
         if selectedKey == old, !new.isEmpty, new != old { selectedKey = new }
         renamingCategory = nil
     }

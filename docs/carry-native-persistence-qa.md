@@ -1,0 +1,27 @@
+# 原生保存与本地文件事务检查
+日期：2026-10-29。范围：账户接入前的原生保存边界；整体账户同步尚未交付。
+
+## 已落实
+- TripStore 的普通保存、直接保存、自动回填、草稿、新建/复制、原有设备执行器与 DataBackupManager 的还原/合并/分享导入均可注入同一个显式 writer；业务 Context 关闭 autosave。writer 必须在同一 Context 捕获意图，并把唯一 save 放在最后，不做网络。
+- 写入被拒绝时不继续成功提示、创建跳转、通知更新或文件清理。普通保存方法返回结果；新建、物品库添加返回可选对象；对应实际 UI 调用方处理失败。恢复默认提醒偏好延后到数据库提交成功之后。
+- SwiftData 失败 Context 被弱引用隔离、禁止再次提交。保存失败后 TripStore 使用同一容器的新 Context 重载已保存图；草稿从保存前的独立对象图恢复，保留所有 UUID、数量、打包状态和文件名，不复制私有字节。
+- 删除背景/附件、删除行程和抹除的不可逆文件/系统副作用放在数据库接受之后。清空业务记录使用逐实例删除，便于捕获账户意图。
+- 备份文件通过 CarryBackupFileStage 写入新名字，绝不覆盖现有文件。数据库失败只丢弃本次新文件；成功才发布新引用。只准备实际合并的新行程，已有行程不会因同名文件字典被改写。
+- 文件引用校验拒绝目录穿越/空文件名/超限数据。外部备份必须带自己的私有字节，不能借用收件设备上的已有文件；自动本地备份可以引用本机仍存在的文件。分享行程导入过滤私有附件和背景引用。
+
+## 两次实际崩溃与修正依据
+用户看到的两个 macOS Carry 异常弹窗对应模拟器测试进程，均已保留报告：
+- `Carry-2026-10-29-222249.ips`：22:22，级联删除故障注入期间 `ModelContext.rollback` 为未加载子对象创建快照，触发 `_FullFutureBackingData<PackingItem>` fatal。
+- `Carry-2026-10-29-222642.ips`：22:26，仅禁用 autosave/丢弃 Context 仍留下待处理的旧模型，后续 run-loop 访问已失效 backing data 再次 fatal。
+报告均在 `~/Library/Logs/DiagnosticReports`，procPath 为 CoreSimulator/Carry.app。没有安装/覆盖 iPhone。
+
+最终处理在失败路径先物化并保留待删除的级联对象，再 rollback 清除待处理的 SwiftData 变化；旧 Context 仍隔离，新 Context 负责后续业务。正常打包保存不遍历这些子树。定向的拒绝删除、完整替换还原、草稿恢复及后续重试均已通过。没有用捕获 fatal、关闭告警或吞错规避。
+
+XCTest 原型还发现删除仍被 SwiftData 持有的 SQLite 文件会产生 vnode/API violation 日志。新增持久夹具保留在模拟器临时目录，交给进程退出/系统清理，不在 XCTest teardown 强行 unlink 活跃数据库。
+
+## 验证边界
+新增十二项检查覆盖业务/待同步标记同次提交、四条备份入口、拒绝后数据与偏好保留、原文件保护、路径校验、外部引用隔离及草稿/还原重试。完整日志以最终 round 为准；早期失败日志保留，不计入通过。
+
+尚未实现 NativeChangeJournal、实际字段捕获与协议桥接、完整投影、资产队列/归属迁移及账户子库路由；当前 writer 注入本身不能代表云同步已经接通。账户文件仍需待同步与在途操作期间的保留策略，账户门禁继续关闭。用户级保存错误展示、子库副作用聚合、真实账户/双设备/界面/流畅性也要进入整体验收。
+
+最终两轮原生各 132/132：`/tmp/carry-native-save-files-final-r1.log`、`/tmp/carry-native-save-files-final-r2.log`，结果 `/tmp/CarryNativeSaveFilesFinalR1.xcresult`、`/tmp/CarryNativeSaveFilesFinalR2.xcresult`。Release `/tmp/carry-native-save-files-release.log` 与 strict codesign 通过；缺资产文案在构建完成后手动补齐九语言并直接提交，后续最终安装构建需包含该资源。没有新增真实账户/设备验收结论。
