@@ -38,3 +38,8 @@
 - 当前Codex连接实际list_trips成功，无需重新授权；只返回原授权的两条合成行程，恢复行程仍root v6、subtree v50且无删除标记。此证据说明该连接跨两天后可用，不代表旧CLI失效根因或多进程长期兼容已经解决。
 - 镜像截图和键盘输入可用，但坐标点击两次返回noWindowsAvailable；窗口Raise后键盘可开Carry，点击仍失败。已请用户将镜像窗口切至当前桌面前台，最终预览标题和物理离线场景暂未记通过。
 - Time Profiler按设备+实际PID附加返回Cannot find process；devicectl再次确认同PID仍运行，按进程名尝试后返回Waiting for device to boot及exit13。未获得有效trace，不能据此推断产品卡顿或性能通过；不使用iPhone17结果替代iPhone12硬件验收。
+
+### 用户确认前台后的工具复核
+- 用户明确确认镜像已在当前桌面前台。重新绑定后可通过Spotlight和Return启动原Carry，实际显示合成行程；点击仍noWindowsAvailable。重置CUA会话、重新getApp、Raise后再次点击仍同错，停止继续猜测/重复要求用户切前台。此为验收工具阻塞，无证据支持修改Carry业务代码。
+- 已改为请求用户直接在手机核对合成附件原名/正文，以及关闭Wi-Fi+蜂窝后的杀进程重开、改名保存、再重开和恢复联网；目前等待实际结果，不预记通过。Mac网络、手机网络设置均未由代理修改。
+- 离线检查前只读基线：合成trip25fb0d37-8e9d-504e-acd9-9e452900047b root v6/subtree v50，名称Carry QA Auto Recovery verified 20261101、原day v5且无删除标记。联网后以Carry QA Offline verified 20261103及原ID/日期/day核对。
