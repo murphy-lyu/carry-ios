@@ -120,6 +120,33 @@ struct ItineraryReorderCollection: UIViewRepresentable {
 
     private static let headerKind = "Carry.ItineraryDayHeader"
 
+    /// 自绘日期头采用不透明吸顶，不使用系统对较高表头给出的整体淡出属性。
+    /// 在布局输出处约束该语义；保留 UIKit 的测量、位置、推顶及其他元素动画。
+    private final class Layout: UICollectionViewCompositionalLayout {
+        override func layoutAttributesForElements(in rect: CGRect) -> [UICollectionViewLayoutAttributes]? {
+            super.layoutAttributesForElements(in: rect)?.map(opaquePinnedHeader)
+        }
+
+        override func layoutAttributesForSupplementaryView(ofKind elementKind: String, at indexPath: IndexPath) -> UICollectionViewLayoutAttributes? {
+            super.layoutAttributesForSupplementaryView(ofKind: elementKind, at: indexPath).map(opaquePinnedHeader)
+        }
+
+        private func opaquePinnedHeader(_ attributes: UICollectionViewLayoutAttributes) -> UICollectionViewLayoutAttributes {
+            guard attributes.representedElementCategory == .supplementaryView,
+                  attributes.representedElementKind == ItineraryReorderCollection.headerKind,
+                  !attributes.isHidden,
+                  let collectionView else { return attributes }
+            let top = collectionView.bounds.minY + collectionView.adjustedContentInset.top
+            let pixel = 1 / max(collectionView.traitCollection.displayScale, 1)
+            guard attributes.frame.minY <= top + pixel, attributes.frame.maxY > top,
+                  attributes.alpha != 1 else { return attributes }
+            // 两种查询路径都返回副本，避免修改 compositional layout 的缓存或动画起终态。
+            let opaque = attributes.copy() as! UICollectionViewLayoutAttributes
+            opaque.alpha = 1
+            return opaque
+        }
+    }
+
     // MARK: UIViewRepresentable
 
     func makeCoordinator() -> Coordinator { Coordinator(self) }
@@ -130,7 +157,7 @@ struct ItineraryReorderCollection: UIViewRepresentable {
         let layoutConfig = UICollectionViewCompositionalLayoutConfiguration()
         layoutConfig.interSectionSpacing = 0
 
-        let layout = UICollectionViewCompositionalLayout(
+        let layout = Layout(
             sectionProvider: { [weak coordinator] _, env in
                 // 复刻打包 ReorderableItemCollection 的 .list 配置——透明 cell + 吸顶 header +
                 // 原生左划（编辑/删除）。custom group 压缩布局不自带 swipe；42a72b6 改成 group 时误删了

@@ -1,4 +1,5 @@
 # 行程日期吸顶修复与验收
+> 后续真机反例：双行日期仍透叠，上一轮通过结果未覆盖完整条件。根因证据、进一步修复及最终装机待办见 [后续复查](qa-itinerary-pinned-header-followup-2026-11-05.md)。
 ## 范围
 独立工作树 `Carry-header-occlusion`，分支 `codex/itinerary-header-occlusion`，基于手机原功能基线 `5fff33f`；已核对后续账户分支的日期头源码相同。未修改账户/AI、行程数据、日期与时区计算，未合并 main、安装手机或发布。
 ## 定位与实现

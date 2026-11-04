@@ -1005,28 +1005,6 @@ struct ItineraryView: View {
         day.sortedStops.filter(\.hasCoordinate).count >= 4
     }
 
-    /// day header 尾部的「优化顺序」入口：作用于整天的工具操作，落在「这天的标题栏」层级
-    /// （对齐 Apple section-header accessory）；中性色 = 工具非主 CTA；header 吸顶 → 地点再多也一伸手可及。
-    private func optimizeHeaderButton(_ day: ItineraryDay) -> some View {
-        Button { presentOwnedSheet(.optimize(dayId: day.id)) } label: {
-            HStack(spacing: 5) {
-                Image(systemName: "wand.and.stars")
-                    .font(.system(size: 13, weight: .medium))
-                    .accessibilityHidden(true)
-                Text("itinerary.optimize.button")
-                    .font(.system(.subheadline, design: .rounded))
-            }
-            .foregroundStyle(.secondary)
-            // 垂直内边距压到最小：header 高度几乎只由标题决定，有/无优化的天近似等高（§5 节奏）；
-            // 点击区主要靠横向铺开补回（对齐 Apple header 里「See All」式矮而宽的附属按钮）。
-            .padding(.vertical, 4)
-            .padding(.leading, 16)
-            .contentShape(Rectangle())
-        }
-        .buttonStyle(.plain)
-        .accessibilityLabel(Text("itinerary.optimize.button"))
-    }
-
     /// 内联动作行（添加地点）：图标落在 rail 圆点列、文字落在停靠点内容列，
     /// 与 `TimelineStopRow` 结构对齐（rail 宽 30 + spacing 12），整天「停靠点 + 动作」读成一列左对齐。
     private func inlineActionLabel(titleKey: LocalizedStringKey, icon: String) -> some View {
@@ -1050,52 +1028,14 @@ struct ItineraryView: View {
     }
 
     private func dayHeader(_ day: ItineraryDay) -> some View {
-        // 日期头收进与 TimelineStopRow / 内联动作行同一套两列网格：圆点居中落在 rail 标记列
-        // （26 宽，与类别图标圆 / +·✨ 同一条 spine），标题左缘对齐停靠点名称列（rail 26 + spacing 12）。
-        // 分节层级靠字号/字重 + 上方留白建立，不靠更浅的缩进（north-star §2/§5）。
-        HStack(spacing: 12) {                                     // = TimelineStopRow.railSpacing
-            Circle()
-                .fill(ItineraryDayPalette.color(forDayIndex: day.sortOrder))
-                .frame(width: 10, height: 10)                    // 与 20pt 加粗日期头光学配重（仍是「点」非「盘」）
-                .frame(width: 30)                                // = railWidth，圆点居中落在标记列、压在 spine 上
-            VStack(alignment: .leading, spacing: 2) {
-                HStack(alignment: .firstTextBaseline, spacing: 6) {
-                    Text(dayDateLabel(day) ?? dayDisplayTitle(day))
-                        // 比行标题（.body semibold 17）明显大一档、更重 → 日期头成为分节父级，
-                        // 不靠线/缩进。纯字号字重建立层级（north-star §2/§3）。
-                        .font(.system(.title3, design: .rounded).weight(.bold))
-                        .accessibilityAddTraits(.isHeader)
-                    // 多时区行程：当天所在时区小标（如 GMT+1）；单时区不显（spec: itinerary-timezone.md D1/D2）。
-                    if let zone = dayZoneLabel(day) {
-                        Text(zone)
-                            .font(.system(.caption2, design: .rounded).weight(.medium))
-                            .foregroundStyle(.secondary)
-                            .padding(.horizontal, 6)
-                            .padding(.vertical, 2)
-                            .background(Capsule().fill(Color(.tertiarySystemFill)))
-                    }
-                }
-                if let title = customDayTitle(day) {
-                    Text(title)
-                        .font(.system(.caption2, design: .rounded))
-                        .foregroundStyle(.secondary)
-                }
-            }
-            // 「优化顺序」入口收进 header 尾部：作用于整天的操作落在标题栏层级；排序模式下隐藏
-            // （此时在手动拖拽，不应再露自动优化）。仅 ≥4 个坐标点（中间 ≥2 可重排）才出现。
-            if !isReordering.wrappedValue && showsOptimize(day) {
-                Spacer(minLength: 8)
-                optimizeHeaderButton(day)
-            }
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(.horizontal, 16)
-        .padding(.top, 22)                                       // 每天上方多一截留白 → 节奏上把「新的一天」断开
-        // 首点上方原由「首点 cell 顶部占位」给的呼吸，已随连接段拆为独立 leg 而消失；
-        // 在此用 header 底部留白补回（放 header 层、不动 stop cell，故不破坏左滑居中）。
-        .padding(.bottom, 12)
-        // 吸顶、遮挡背景与跨 cell 层级由 ItineraryReorderCollection 的 supplementary
-        // layout / hosting configuration 统一负责；此处只提供日期内容和自然高度。
+        ItineraryDayHeaderContent(
+            title: dayDateLabel(day) ?? dayDisplayTitle(day),
+            timeZoneLabel: dayZoneLabel(day),
+            subtitle: customDayTitle(day),
+            dayColor: ItineraryDayPalette.color(forDayIndex: day.sortOrder),
+            optimizeAction: !isReordering.wrappedValue && showsOptimize(day)
+                ? { presentOwnedSheet(.optimize(dayId: day.id)) } : nil
+        )
     }
 
     private func customDayTitle(_ day: ItineraryDay) -> String? {
