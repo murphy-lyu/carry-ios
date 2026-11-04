@@ -8,7 +8,10 @@ async function realFixture(){
  if(target.hostname!=='127.0.0.1'||target.pathname!=='/postgres')throw Error('local_synthetic_postgres_only');
  const admin=new pg.Pool({connectionString:target.href,max:1});
  const name='carry_qa_recovery_'+crypto.randomUUID().replaceAll('-','');await admin.query('create database '+name);target.pathname='/'+name;
- const pool=new pg.Pool({connectionString:target.href,max:6});const bootstrap=await pool.connect();
+ const pool=new pg.Pool({connectionString:target.href,max:6}),ended=[];
+ pool.on('connect',client=>ended.push(new Promise(resolve=>client.once('end',resolve))));
+ const closePool=async()=>{await pool.end();await Promise.all(ended);};
+ const bootstrap=await pool.connect();
  try{
   const f=await fixture({files:true,database:{query:(...x)=>bootstrap.query(...x),exec:x=>bootstrap.query(x)}});
   await bootstrap.query('reset role');bootstrap.release();
@@ -18,8 +21,8 @@ async function realFixture(){
    }catch(e){await c.query('rollback');throw e;}finally{c.release();}};
   return{pool,f,rpc,prepare:op=>rpc('carry_account_recovery_prepare',[account,session,ticket,subject,audience,op]),
    commit:p=>rpc('carry_account_recovery_commit',[account,session,ticket,subject,audience,'fresh-encrypted-token',p.operationID,p.fingerprints,p.assets]),
-   async close(){await pool.end();await admin.query('drop database '+name+' with (force)');await admin.end();}};
- }catch(e){bootstrap.release();await pool.end();await admin.query('drop database '+name+' with (force)');await admin.end();throw e;}
+   async close(){await closePool();await admin.query('drop database '+name);await admin.end();}};
+ }catch(e){bootstrap.release();await closePool();await admin.query('drop database '+name);await admin.end();throw e;}
 }
 
 test('real PostgreSQL independent recovery preparations admit only one fenced operation',{skip:!url},async()=>{

@@ -13,7 +13,7 @@ export function createDeletionStatusHandler(adapter) {
       if(!receipt)return reply({error:'unauthorized'},401);
       await readBoundedBytes(request,0);
       const result=await adapter.deletionStatus(receipt);
-      if(!result||!['deleting','deleted','cancelled'].includes(result.status))throw new Error('invalid_deletion_status');
+      if(!result||!['deleting','deleted','cancelled','recovery_available'].includes(result.status))throw new Error('invalid_deletion_status');
       return reply({status:result.status});
     }catch(error) {
       if(error instanceof AccountRequestError&&error.status===401)return reply({error:'unauthorized'},401);

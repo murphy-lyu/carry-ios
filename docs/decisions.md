@@ -1465,3 +1465,6 @@ if departIsToday, seg.departLocalMinutes >= 0, seg.departLocalMinutes < sinceMin
 ## 2026-10-30：原生编辑保留显示版本与持久日志
 
 业务保存按变化实体写 NativeChangeJournal，与业务同次提交；网络合并前先排空日志。字段冲突基线取用户实际显示版本，仅本机已接受值可以推进相应已知版本，后台尚未显示的外部更新不能推进编辑基线。副本准备资产绑定、写入意图和消费日志同次提交。完整投影与产品路由仍待接通，不能以组件测试代替整体交付。附件使用后台有界导入和新文件 lease，持久化/表单接收成功才转交文件所有权。验证与边界见 `carry-native-journal-parallel-qa.md`。
+
+## 2026-11-04：暂停删除的受控恢复
+用户授权恢复本人误触发的删除。保留原 Auth UUID 和本机删除回执，要求旧 provider 删除操作的终态证据、完整图与文件核验，以及本人新的原生 Apple 授权。恢复在同账户事务复核后提交，不复用已撤销凭据。回执只暴露粗粒度恢复可用状态；旧原生会话和 AI grants 不自动复活。实际部署/验收边界见 `account-deletion-recovery-2026-11-04.md`。

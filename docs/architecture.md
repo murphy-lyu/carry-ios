@@ -169,3 +169,6 @@ ZStack（全窗口）
 - `CarryAccountReplica` 的结构移动保留独立原版本；`resolveParent` 按被拒请求/服务端版本/本地 parent 处理人工选择。pull 不暗中重新授权旧移动，过期冲突不能覆盖已经拉取的新状态。
 - 本地创建在 ACK 前收到的远端更新保存在 `unconfirmedRemote`；只有自己的创建 ACK 绑定 UUID 后再合并，不因推进 cursor 丢弃后续变化。多实体 edit 与 native projection 共用一次事务。
 - 网页 `scripts/carry-account-web` 由官方 SSR SDK 管 Cookie，会话与十分钟 Apple flow 分开；原生和网页共用生命周期服务，web code exchange 只接受服务端固定回调。范围授权与数据读写仍待实现；入口关闭，不能视为已接通 AI。
+
+## 暂停删除的受控恢复（2026-11-04）
+`deletion-recovery.mjs` 与私有恢复 SQL 将 provider 终态证据、清理隔离、文件字节核验及账户事务复核串联。公开入口仍为既有账户生命周期服务；只有有效原生会话、原删除回执及新 Apple 证明能请求恢复。`recovery_available` 仅控制原生任务页的 Apple 按钮；cancelled 不跳过身份重验。旧会话禁用列表跨后续删除任务保留，客户端清回执前先持久化恢复身份；不接触原本地/iCloud数据。

@@ -16,7 +16,7 @@ private final class AccountServiceDouble: CarryAccountAuthenticating {
     var pauseSignIn: (() async -> Void)?
     var deletionProgress: CarryAccountDeletionProgress = .none
     var deleteCreatesPending = false
-    var pendingDeletion: Bool { deletionProgress == .pending }
+    var pendingDeletion: Bool { deletionProgress == .pending || deletionProgress == .recoveryAvailable }
     func refreshDeletion() async throws -> CarryAccountDeletionProgress {
         if deletionProgress == .pending, let failure { throw failure }
         return deletionProgress
@@ -318,6 +318,10 @@ final class AccountTests: XCTestCase {
         let store = CarryAccountStore(service: service)
         XCTAssertTrue(store.isDeleting)
         XCTAssertThrowsError(try store.beginAppleAction(.signIn))
+        XCTAssertThrowsError(try store.beginAppleAction(.recoverDeletion))
+        service.deletionProgress = .recoveryAvailable
+        await store.refresh()
+        XCTAssertTrue(store.canRecoverDeletion)
         let challenge = try store.beginAppleAction(.recoverDeletion)
         await store.completeAppleAction(.init(idToken: "synthetic-id-token", authorizationCode: "synthetic-code",
             appleUserID: "synthetic-subject", fullName: nil, state: challenge.state))

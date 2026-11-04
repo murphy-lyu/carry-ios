@@ -339,19 +339,44 @@ final class AccountAdapterTests: XCTestCase {
     func testCancelledReceiptNeverClearsProfileOrPretendsDeletionCompleted() async throws {
         let profile = CarryAccountProfile(id: userID, displayName: "Retained", email: nil)
         try storage.store(key: "profile", value: JSONEncoder().encode(profile))
-        try storage.store(key: "session", value: Data("retained-session".utf8))
+        try storage.store(key: "session", value: JSONSerialization.data(withJSONObject: sessionJSON()))
         try storage.store(key: "deletion-receipt", value: JSONSerialization.data(withJSONObject: ["accountID": userID.uuidString,
             "appleUserID": "synthetic-subject", "token": String(repeating: "a", count: 64), "accepted": true]))
+        let sessionData = try JSONSerialization.data(withJSONObject: sessionJSON())
+        let userData = try JSONSerialization.data(withJSONObject: userJSON())
         let service = CarryAccountService(configuration: configuration, storage: storage, send: { request in
             let url = try XCTUnwrap(request.url)
-            XCTAssertEqual(url.path, "/functions/v1/carry-account-status")
-            return (Data("{\"status\":\"cancelled\"}".utf8), try XCTUnwrap(HTTPURLResponse(url: url, statusCode: 200, httpVersion: nil, headerFields: nil)))
+            let data: Data
+            switch url.path {
+            case "/functions/v1/carry-account-status": data = Data("{\"status\":\"cancelled\"}".utf8)
+            case "/auth/v1/user": data = userData
+            case "/auth/v1/token": data = sessionData
+            case "/functions/v1/carry-account": data = Data("{\"status\":\"enrolled\"}".utf8)
+            default: XCTFail("Unexpected recovery revalidation request"); throw CarryAccountFailure.service
+            }
+            return (data, try XCTUnwrap(HTTPURLResponse(url: url, statusCode: 200, httpVersion: nil, headerFields: nil)))
         })
         let result = try await service.refreshDeletion()
         XCTAssertEqual(result, .cancelled)
         XCTAssertEqual(service.cachedProfile, profile)
         XCTAssertNotNil(try storage.retrieve(key: "session"))
         XCTAssertFalse(try service.pendingDeletion)
+    }
+
+    func testCancelledReceiptRetainsRecoveryCapabilityUntilAuthRevalidationSucceeds() async throws {
+        let profile = CarryAccountProfile(id: userID, displayName: "Retained", email: nil)
+        try storage.store(key: "profile", value: JSONEncoder().encode(profile))
+        try storage.store(key: "session", value: JSONSerialization.data(withJSONObject: sessionJSON()))
+        try storage.store(key: "deletion-receipt", value: JSONSerialization.data(withJSONObject: ["accountID": userID.uuidString,
+            "appleUserID": "synthetic-subject", "token": String(repeating: "a", count: 64), "accepted": true]))
+        let service = CarryAccountService(configuration: configuration, storage: storage, send: { request in
+            let url = try XCTUnwrap(request.url)
+            let status = url.path == "/functions/v1/carry-account-status" ? 200 : 503
+            return (Data("{\"status\":\"cancelled\"}".utf8), try XCTUnwrap(HTTPURLResponse(url: url, statusCode: status, httpVersion: nil, headerFields: nil)))
+        })
+        do { _ = try await service.refreshDeletion(); XCTFail("A coarse receipt cannot prove authenticated recovery") }
+        catch { XCTAssertTrue(try service.pendingDeletion) }
+        XCTAssertEqual(service.cachedProfile, profile)
     }
 
 }

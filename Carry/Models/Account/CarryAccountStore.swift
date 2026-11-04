@@ -41,7 +41,7 @@ struct CarryAppleCredential: Sendable {
     let state: String?
 }
 
-enum CarryAccountDeletionProgress: Equatable { case none, pending, completed, cancelled }
+enum CarryAccountDeletionProgress: Equatable { case none, pending, recoveryAvailable, completed, cancelled }
 
 struct CarrySignInChallenge: Equatable, Sendable {
     let nonce: String
@@ -105,6 +105,7 @@ final class CarryAccountStore: ObservableObject {
     @Published private(set) var state: State
     @Published private(set) var isBusy = false
     @Published private(set) var error: CarryAccountFailure?
+    @Published private(set) var canRecoverDeletion = false
     private let service: any CarryAccountAuthenticating
     private var challenge: CarrySignInChallenge?
     private var action: AppleAction?
@@ -144,9 +145,10 @@ final class CarryAccountStore: ObservableObject {
         defer { isBusy = false; hasRestored = true }
         do {
             switch try await service.refreshDeletion() {
-            case .pending: state = .deleting(profile); error = nil; return
-            case .completed: state = .signedOut; error = nil; return
-            case .cancelled: state = profile.map(State.checking) ?? .signedOut
+            case .pending: canRecoverDeletion = false; state = .deleting(profile); error = nil; return
+            case .recoveryAvailable: canRecoverDeletion = true; state = .deleting(profile); error = nil; return
+            case .completed: canRecoverDeletion = false; state = .signedOut; error = nil; return
+            case .cancelled: canRecoverDeletion = false; state = profile.map(State.checking) ?? .signedOut
             case .none: break
             }
             if let restored = try await service.restore() {
@@ -168,7 +170,7 @@ final class CarryAccountStore: ObservableObject {
     /// Holds the operation lock across Apple's native prompt and the token exchange.
     func beginAppleAction(_ action: AppleAction = .signIn) throws -> CarrySignInChallenge {
         guard isAvailable, !isBusy, (!isDeleting || action == .recoverDeletion) else { throw CarryAccountFailure.unavailable }
-        if action == .recoverDeletion, !isDeleting { throw CarryAccountFailure.unavailable }
+        if action == .recoverDeletion, !isDeleting || !canRecoverDeletion { throw CarryAccountFailure.unavailable }
         if action == .deleteAccount, profile == nil { throw CarryAccountFailure.sessionExpired }
         let generated = try CarrySignInChallenge.generate()
         challenge = generated
@@ -216,10 +218,12 @@ final class CarryAccountStore: ObservableObject {
                 let recovered = try await service.recoverDeletion(credential, nonce: challenge.nonce)
                 guard profile == nil || profile?.id == recovered.id else { throw CarryAccountFailure.accountMismatch }
                 state = .signedIn(recovered)
+                canRecoverDeletion = false
                 CarryLogger.shared.log(.accountSignInSucceeded, context: "deletion_recovery")
             case .deleteAccount:
                 try await prepareForIdentityRemoval()
                 try await service.deleteAccount(credential, nonce: challenge.nonce)
+                canRecoverDeletion = false
                 if try service.pendingDeletion {
                     state = .deleting(profile)
                 } else {

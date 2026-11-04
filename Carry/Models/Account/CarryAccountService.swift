@@ -279,16 +279,23 @@ final class CarryAccountService: CarryAccountAuthenticating {
             guard http.statusCode == 200,
                   let body = try JSONSerialization.jsonObject(with: data) as? [String: Any],
                   let status = body["status"] as? String else { throw CarryAccountFailure.service }
-            if status == "deleting" {
+            if status == "deleting" || status == "recovery_available" {
                 if !saved.accepted {
                     saved.accepted = true
                     try storage.store(key: "deletion-receipt", value: JSONEncoder().encode(saved))
                 }
-                return .pending
+                return status == "recovery_available" ? .recoveryAvailable : .pending
             }
             if status == "cancelled" {
                 // Coarse receipt status never means deletion completed. Keep the
                 // original local account/data and revalidate Auth before reuse.
+                guard let client else { throw CarryAccountFailure.unavailable }
+                let session = try await client.session
+                let user = try await client.user(jwt: session.accessToken)
+                guard user.id == saved.accountID else { throw CarryAccountFailure.accountMismatch }
+                try await verifyLifecycle(accessToken: session.accessToken)
+                try persistSession(session)
+                _ = try saveProfile(user, name: cachedProfile?.displayName)
                 try storage.remove(key: "deletion-receipt")
                 return .cancelled
             }

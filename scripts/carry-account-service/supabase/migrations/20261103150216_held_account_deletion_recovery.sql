@@ -34,9 +34,8 @@ alter table carry_private.account_deletions add column recovery_operation uuid;
 alter table carry_private.account_deletions add column recovery_lease_until timestamptz;
 alter table carry_private.account_deletions add column recovery_graph_hash text;
 alter table carry_private.account_deletions add column recovery_asset_hash text;
--- A prior manual hold does not prove old HTTP has drained. Start a fresh drain window.
-update carry_private.account_deletions set recovery_hold_at=statement_timestamp()
- where stage='purging' and retry_at='infinity'::timestamptz and (operation_id is null or lease_until<=statement_timestamp());
+-- Schema installation never changes a user's deletion. The operator sets a
+-- fresh recovery_hold_at only for the explicitly authorized account after review.
 alter table carry_private.account_deletion_receipts add column result text not null default 'deleted' check(result in ('deleted','cancelled'));
 
 create function carry_private.recovery_held(p_account uuid) returns boolean
@@ -220,7 +219,14 @@ begin
  if p_ticket is null or p_ticket!~'^[0-9a-f]{64}$' then raise exception using errcode='28000',message='invalid_deletion_receipt';end if;
  select r.result into result from carry_private.account_deletion_receipts r where ticket_hash=encode(sha256(convert_to(p_ticket,'UTF8')),'hex');
  if found then return jsonb_build_object('status',result);end if;
- select case when stage='deleted' then 'deleted' when stage='cancelled' then 'cancelled' else 'deleting' end into result
+ select case when stage='deleted' then 'deleted' when stage='cancelled' then 'cancelled'
+  when stage='purging' and retry_at='infinity'::timestamptz and recovery_hold_at is not null
+   and recovery_hold_at<=statement_timestamp()-interval '110 seconds'
+   and recovery_provider_cleared_at>=recovery_hold_at+interval '110 seconds'
+   and recovery_provider_cleared_at<=statement_timestamp() and recovery_provider_evidence_digest is not null
+   and (operation_id is null or lease_until<=statement_timestamp())
+   and (recovery_operation is null or recovery_lease_until<=statement_timestamp())
+   then 'recovery_available' else 'deleting' end into result
   from carry_private.account_deletions where ticket_hash=encode(sha256(convert_to(p_ticket,'UTF8')),'hex');
  if not found then raise exception using errcode='28000',message='invalid_deletion_receipt';end if;
  return jsonb_build_object('status',result);
@@ -244,7 +250,8 @@ begin
     return jsonb_build_object('status',case when job.stage='deleted' then 'deleted' else 'deleting' end);
   end if;
   perform public.carry_account_begin_delete(p_account,p_subject,p_audience,p_encrypted_token);
-  insert into carry_private.account_deletions(account_id,ticket_hash,stage) values(p_account,ticket_digest,'revoking');
+  insert into carry_private.account_deletions(account_id,ticket_hash,stage,recovery_revoked_session_ids)
+    values(p_account,ticket_digest,'revoking',coalesce(job.recovery_revoked_session_ids,'{}'::uuid[]));
   return jsonb_build_object('status','deleting');
 end;
 $$;

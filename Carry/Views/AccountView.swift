@@ -108,11 +108,13 @@ struct AccountView: View {
     private var deletionProgress: some View {
         Form {
             Section {
-                Label("account.delete.pending.title", systemImage: "person.crop.circle.badge.minus")
+                Label(LocalizedStringKey(account.canRecoverDeletion ? "account.recovery.title" : "account.delete.pending.title"),
+                      systemImage: account.canRecoverDeletion ? "person.crop.circle.badge.checkmark" : "person.crop.circle.badge.minus")
                     .font(.headline)
-                Text("account.delete.pending.detail")
+                Text(LocalizedStringKey(account.canRecoverDeletion ? "account.recovery.detail" : "account.delete.pending.detail"))
                     .font(.subheadline).foregroundStyle(.secondary)
                     .fixedSize(horizontal: false, vertical: true)
+                if account.canRecoverDeletion { appleButton(.recoverDeletion) }
             }
             Section {
                 Button { Task { await account.refresh() } } label: {

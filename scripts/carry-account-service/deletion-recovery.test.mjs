@@ -111,5 +111,19 @@ test('old native JWT session IDs stay rejected after recovery even if Auth retai
   await f.rpc('carry_account_require_session',[account,session]);
   await f.db.exec('reset role');await f.db.query('insert into auth.sessions(id,user_id) values($1,$2)',[fresh,account]);await f.db.exec('set role service_role');
   await f.rpc('carry_account_require_session',[account,fresh]);
+  await f.rpc('carry_account_request_deletion',[account,session,subject,audience,'later-fresh-token','b'.repeat(64)]);
+  await assert.rejects(f.rpc('carry_account_require_session',[account,old]),/session_expired/);
+ }finally{await f.db.close();}
+});
+
+test('recovery availability is coarse, operator-gated, and withdrawn while inspection holds a lease',async()=>{
+ const f=await fixture({files:true,evidence:false});try{
+  assert.deepEqual(await f.rpc('carry_account_deletion_status',[ticket]),{status:'deleting'});
+  await f.db.query("update carry_private.account_deletions set recovery_provider_cleared_at=now(),recovery_provider_evidence_digest=$1 where account_id=$2",['e'.repeat(64),account]);
+  assert.deepEqual(await f.rpc('carry_account_deletion_status',[ticket]),{status:'recovery_available'});
+  const p=await f.prepare();
+  assert.deepEqual(await f.rpc('carry_account_deletion_status',[ticket]),{status:'deleting'});
+  await f.commit(p);
+  assert.deepEqual(await f.rpc('carry_account_deletion_status',[ticket]),{status:'cancelled'});
  }finally{await f.db.close();}
 });

@@ -33609,6 +33609,124 @@
         }
       }
     },
+    "account.recovery.detail" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Die Löschung ist pausiert. Fahre mit demselben Apple Account fort, um deine gespeicherten Daten zu prüfen und den Zugriff wiederherzustellen."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Deletion is paused. Continue with the same Apple Account to verify your saved data and restore access."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "La eliminación está en pausa. Continúa con la misma cuenta de Apple para verificar tus datos guardados y recuperar el acceso."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "La suppression est suspendue. Continuez avec le même compte Apple pour vérifier vos données enregistrées et rétablir l’accès."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "削除は一時停止中です。同じApple Accountで認証を続けると、保存済みデータを確認してアクセスを復元します。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "삭제가 일시 중지되었어요. 기존 Apple 계정으로 인증을 계속하면 저장된 데이터를 확인하고 접근 권한을 복구해요."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "A exclusão está pausada. Continue com a mesma Conta Apple para verificar seus dados salvos e restaurar o acesso."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "删除已暂停。请使用原 Apple 账户继续验证，核验已保存的数据后恢复使用。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "刪除已暫停。請使用原本的 Apple 帳號繼續驗證，確認已儲存的資料後恢復使用。"
+          }
+        }
+      }
+    },
+    "account.recovery.title" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Account wiederherstellen"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Restore account"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Restaurar cuenta"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Restaurer le compte"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "アカウントを復元"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "계정 복구"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Restaurar conta"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "恢复账户"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "恢復帳號"
+          }
+        }
+      }
+    },
     "account.retry" : {
       "comment" : "Carry account interface",
       "extractionState" : "manual",
