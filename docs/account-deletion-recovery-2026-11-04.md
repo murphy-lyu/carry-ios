@@ -1,7 +1,7 @@
 # 暂停删除账户的安全恢复
 ## 当前边界
 用户授权继续恢复本人账户。工作在独立 `codex/account-deletion-recovery` / `Carry-account-recovery`，复用 `375b8aa` 后补齐原生入口与安全审查。没有修改父工作树、提取 Keychain 凭据、重建身份或上传私人备份。
-恢复迁移和两个 Edge 服务已安装，原账户仍处于 purging + 显式恢复隔离。恢复事务尚未执行，等待手机受信连接、容器备份、安装及本人新的 Apple 授权。准备完成不等于恢复成功。
+恢复迁移和两个 Edge 服务已安装。用户连接手机并完成新的原生 Apple 授权后，2026-11-04 23:17:56（北京时间）恢复事务成功提交；独立只读核验确认原账户恢复，原删除回执为 cancelled。
 ## 核验事实
 - 原 Auth 身份保留，两条旧 Apple 凭据均已撤销。
 - 12 条业务记录的全部字段通过现行 schema 验证；父子类型、归属及无悬空检查通过，全记录摘要与本轮首次只读结果一致。
@@ -25,6 +25,10 @@
 - `carry-account-status` index SHA-256：`2a10ee677ea25091f76e86bd601c1ad8a6eecd64b08617b8033462c976e5c7e2`。
 - 父任务运维迁移 `20261103144256` 不在本轮部署范围；后续工具须保留真实缺口，不能仅凭最大版本号认定已安装。
 - Provider 证据保存在本机任务产物；Git 不记录账户 UUID、subject、邮箱、回执、token、行程字段或文件正文。
-## 尚需本人步骤
-手机已配对，但 devicectl 返回 CoreDevice 4016，无法建立受信开发者连接。已请求数据线连接并解锁；未重复镜像点按。可安装包为 `/tmp/CarryRecoveryPhone20261104/Build/Products/Debug-iphoneos/Carry.app`，bundle ID `app.nevestudio.carry`。
-连接后先停止原进程并复制现存容器至本机受限目录，核验 SQLite 与文件，再同 bundle ID 覆盖安装一次。本人完成 Apple 授权后，独立读回 cancelled、新有效凭据、旧会话禁用及原图/文件摘要，才记录恢复完成。
+## 真实手机恢复验收
+- CoreDevice 4016 在用户数据线连接并解锁后解除，未重复镜像点按；检查时没有原 Carry 运行进程。原 bundle ID `app.nevestudio.carry` 覆盖安装一次，启动成功。
+- 安装前本机受限容器备份 55 文件、35,937,910 字节，6 个 SQLite integrity_check 均 ok；原账户 replica/物化各 12 条，pending replica/native changes/native transactions 均 0，备份中两份原文件副本的完整摘要匹配云端。未导出 Keychain。
+- 用户明确确认已在手机完成 Apple 授权。后台回执于北京时间 23:17:56 写为 cancelled，原 Auth UUID 保留，当前一个新的有效原生会话、一个新的有效原生 Apple 凭据；旧原生会话剩余 0、旧未撤销 AI grants 为 0。
+- 原业务图仍为 12 条，全记录摘要完全未变；原不可变文件/版本仍在，131,072 字节，verified assets=1、complete attempts=1、待清理 attempts=0，恢复隔离已按事务解除。
+- 这里只恢复了原账户与其现存数据，没有重建账号或重导入备份。旧 AI 连接须由本人重新授权，不自动复活旧 grants。
+- 本机完整备份路径 `/Users/murphy/Documents/Carry-Recovery-Backups/20261104-before-recovery`；脱敏恢复证据在本聊天任务产物，具体私人内容不进 Git。

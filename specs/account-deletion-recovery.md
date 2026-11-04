@@ -1,5 +1,5 @@
 # Operator-assisted cancellation of an interrupted account deletion
-Status: The user authorized real recovery on 2026-11-04. The recovery schema and services are installed; the native entry is built. The original account remains held until fresh native authorization and verified commit. See `../docs/account-deletion-recovery-2026-11-04.md` for current evidence and device access.
+Status: Completed for the authorized original account on 2026-11-04 after fresh native Apple authorization. The deletion receipt is cancelled, original graph and file fingerprints are unchanged, and stale sessions/grants are retired. See `../docs/account-deletion-recovery-2026-11-04.md` for independent readback and validation.
 
 ## Scope and invariants
 Only an operator-held purging job whose graph and Auth identity still exist can be recovered. The old Apple credentials have already been revoked and are never revived. Recovery is not a general undelete and does not recreate missing records or files.
