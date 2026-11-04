@@ -118,7 +118,7 @@ struct ItineraryReorderCollection: UIViewRepresentable {
     /// 始终可达（上滑即回），不剥夺打包入口。spec: 出发后专注行程列表（3+2）。
     var onScrollHideChange: (Bool) -> Void = { _ in }
 
-    private static let headerKind = UICollectionView.elementKindSectionHeader
+    private static let headerKind = "Carry.ItineraryDayHeader"
 
     // MARK: UIViewRepresentable
 
@@ -135,19 +135,29 @@ struct ItineraryReorderCollection: UIViewRepresentable {
                 // 复刻打包 ReorderableItemCollection 的 .list 配置——透明 cell + 吸顶 header +
                 // 原生左划（编辑/删除）。custom group 压缩布局不自带 swipe；42a72b6 改成 group 时误删了
                 // swipe provider 接线，致行程左划失效。改回 .list 修复，并与打包两套收敛。
-                // cell/header 自身已设 backgroundConfiguration=.clear()，故 .list 下照旧透明；
+                // 行使用透明背景；日期头单独拥有实心背景，不参与 plain list 的自动表头样式。
                 // 行高由 UIHostingConfiguration 自适应（与原 .estimated(56) 实际尺寸一致）。
                 var config = UICollectionLayoutListConfiguration(appearance: .plain)
                 config.showsSeparators = false
                 config.backgroundColor = .clear
-                config.headerMode = .supplementary            // 每天一个吸顶 header
-                config.headerTopPadding = 0                   // 清掉 plain list 表头上方系统间距
+                config.headerMode = .none
                 config.trailingSwipeActionsConfigurationProvider = { [weak coordinator] indexPath in
                     coordinator?.trailingSwipe(at: indexPath)
                 }
                 let section = NSCollectionLayoutSection.list(using: config, layoutEnvironment: env)
                 section.contentInsets = .zero
-                section.boundarySupplementaryItems.forEach { $0.pinToVisibleBounds = true }
+                // 保留 list 的原生左滑/重排，只将日期头声明为自定义 supplementary。
+                // 标准 plain-list header 会参与系统表头背景/滚动边缘样式；自绘日期头应独立拥有
+                // 自己的遮挡层。吸顶与层级仍由 compositional layout 处理，不手算滚动位置。
+                let header = NSCollectionLayoutBoundarySupplementaryItem(
+                    layoutSize: NSCollectionLayoutSize(widthDimension: .fractionalWidth(1),
+                                                       heightDimension: .estimated(58)),
+                    elementKind: Self.headerKind,
+                    alignment: .top
+                )
+                header.pinToVisibleBounds = true
+                header.zIndex = 2
+                section.boundarySupplementaryItems = [header]
                 return section
             },
             configuration: layoutConfig
@@ -188,12 +198,13 @@ struct ItineraryReorderCollection: UIViewRepresentable {
         private var parent: ItineraryReorderCollection
         private weak var collectionView: UICollectionView?
         private var dataSource: UICollectionViewDiffableDataSource<UUID, ItineraryRowID>!
-        private var headerKind: String = UICollectionView.elementKindSectionHeader
+        private var headerKind: String = ItineraryReorderCollection.headerKind
         /// 当前已同步的天（正反向共用的单一真相）：正向据此判断是否需滚，反向滚动时回写它，
         /// 从而切断「程序滚动 → didScroll → 回写选中 → update → 再次程序滚动」的回授环。
         private var lastScrolledDayId: UUID?
         /// 正向程序滚动进行中：期间屏蔽反向回写，避免动画途中穿过的中间天误触选中。
         private var isProgrammaticScroll = false
+        private var pendingScrollDayId: UUID?
 
         private var isDragging = false
         private var reorderGeneration: UUID?
@@ -272,15 +283,8 @@ struct ItineraryReorderCollection: UIViewRepresentable {
             ) { [weak self] header, _, indexPath in
                 guard let self,
                       let sectionID = self.dataSource.sectionIdentifier(for: indexPath.section) else { return }
-                // 吸顶 header 必须不透明：cv 背景为透明（为底部淡出），不能再靠它兜底，故在 cell 级
-                // 给实心 systemBackground，pinned 时保证不透出滚动内容（与页面同色、无缝）。
-                // UIBackgroundConfiguration 在 pin 时会被 UIKit 重置（不重调 handler），改用
-                // UIView.backgroundColor 直接设在 cell 层，pin 提升不影响这个属性。
-                header.backgroundColor = .systemBackground
-                header.contentView.backgroundColor = .clear
                 guard let model = self.parent.sections.first(where: { $0.id == sectionID }) else { return }
-                header.contentConfiguration = UIHostingConfiguration { self.parent.headerContent(model) }
-                    .margins(.all, 0)
+                self.configureHeader(header, for: model)
             }
 
             let ds = UICollectionViewDiffableDataSource<UUID, ItineraryRowID>(collectionView: collectionView) {
@@ -354,45 +358,55 @@ struct ItineraryReorderCollection: UIViewRepresentable {
         private func scrollToSelectedDayIfNeeded() {
             guard let target = parent.scrollTargetDayId, target != lastScrolledDayId else { return }
             lastScrolledDayId = target
-            // applySnapshot 后让一帧落定（estimated 高度解析），再按落定布局求吸顶偏移。
+            // 等待 snapshot 提交后，交给原生 item 定位处理屏幕外自适应行。
             DispatchQueue.main.async { [weak self] in
-                self?.scrollDayToTop(target, animated: true)
+                guard let self, self.parent.scrollTargetDayId == target else { return }
+                self.scrollDayToTop(target, animated: true)
             }
         }
 
-        /// 把 dayID 对应 section 的 header 顶到列表顶部。header 已 pinToVisibleBounds，落位即吸顶。
-        /// `previousY`/`attemptsLeft`：真机上 UIHostingConfiguration 的自适应行高可能不止一帧就收敛
-        /// （长行程、目标天靠后时前面待测的 cell 更多），过早读到的 minY 是还没定型的估算值——
-        /// 连续两帧算出同一个 Y 才提交滚动，否则再等一帧重算，最多重试几次兜底（模拟器机器快、单帧
-        /// 内就已收敛，故此前未必现；真机复现为「吸顶落在当天中间某个地点，且与具体位置无固定规律」）。
-        private func scrollDayToTop(_ dayID: UUID, animated: Bool, previousY: CGFloat? = nil, attemptsLeft: Int = 4) {
-            guard let collectionView, let dataSource else { return }
+        /// 先让 UIKit 按 item 身份滚到目标天，再用实测行位置对齐日期头。
+        /// 屏幕外的 header 坐标包含估算行高，等待若干帧也不能保证它已被测量。
+        private func scrollDayToTop(_ dayID: UUID, animated: Bool) {
+            guard let collectionView, let dataSource,
+                  let section = dataSource.snapshot().indexOfSection(dayID),
+                  collectionView.numberOfItems(inSection: section) > 0 else { return }
             collectionView.layoutIfNeeded()
-            let snapshot = dataSource.snapshot()
-            guard let sectionIndex = snapshot.indexOfSection(dayID) else { return }
-            // 目标 section 不在顶部 → 其 header 处于「自然」位置（非 pinned），minY 即该天起始 Y。
-            let headerPath = IndexPath(item: 0, section: sectionIndex)
-            guard let attrs = collectionView.layoutAttributesForSupplementaryElement(
-                ofKind: headerKind, at: headerPath
-            ) else { return }
-            let topInset = collectionView.adjustedContentInset.top
-            let maxY = max(
-                -topInset,
-                collectionView.contentSize.height - collectionView.bounds.height
-                    + collectionView.adjustedContentInset.bottom
-            )
-            let targetY = min(max(attrs.frame.minY - topInset, -topInset), maxY)
-            if let previousY, abs(previousY - targetY) > 0.5, attemptsLeft > 0 {
-                DispatchQueue.main.async { [weak self] in
-                    self?.scrollDayToTop(dayID, animated: animated, previousY: targetY, attemptsLeft: attemptsLeft - 1)
-                }
-                return
-            }
-            // 已在目标位置：不滚也不置标志（animated 滚动若无位移不会回调 didEndScrollingAnimation，
-            // 否则 isProgrammaticScroll 会卡在 true 而永久屏蔽反向联动）。
-            guard abs(targetY - collectionView.contentOffset.y) > 0.5 else { return }
+            let path = IndexPath(item: 0, section: section)
+            let itemY = collectionView.layoutAttributesForItem(at: path)?.frame.minY
+            let inset = collectionView.adjustedContentInset.top
+            let maxY = max(-inset, collectionView.contentSize.height - collectionView.bounds.height
+                           + collectionView.adjustedContentInset.bottom)
+            let alreadyAtItem = itemY.map {
+                abs(min(max($0 - inset, -inset), maxY) - collectionView.contentOffset.y) <= 0.5
+            } ?? false
+            pendingScrollDayId = dayID
             isProgrammaticScroll = true
-            collectionView.setContentOffset(CGPoint(x: 0, y: targetY), animated: animated)
+            collectionView.scrollToItem(at: path, at: .top, animated: animated && !alreadyAtItem)
+            // 无位移或非动画滚动不会收到动画结束回调。
+            if !animated || alreadyAtItem { finishDayScroll() }
+        }
+
+        private func finishDayScroll() {
+            defer {
+                pendingScrollDayId = nil
+                isProgrammaticScroll = false
+            }
+            guard let dayID = pendingScrollDayId, parent.scrollTargetDayId == dayID,
+                  let collectionView, let dataSource,
+                  let section = dataSource.snapshot().indexOfSection(dayID) else { return }
+            collectionView.layoutIfNeeded()
+            let path = IndexPath(item: 0, section: section)
+            guard let item = collectionView.layoutAttributesForItem(at: path),
+                  let header = collectionView.layoutAttributesForSupplementaryElement(ofKind: headerKind, at: path)
+            else { return }
+            updateBottomInsetForLastSectionPinning()
+            // header 此时可能已经吸顶；用首行减去实测 header 高度还原自然起点。
+            let inset = collectionView.adjustedContentInset.top
+            let maxY = max(-inset, collectionView.contentSize.height - collectionView.bounds.height
+                           + collectionView.adjustedContentInset.bottom)
+            let targetY = min(max(item.frame.minY - header.frame.height - inset, -inset), maxY)
+            collectionView.setContentOffset(CGPoint(x: collectionView.contentOffset.x, y: targetY), animated: false)
         }
 
         private func applySnapshot(animated: Bool) {
@@ -482,6 +496,13 @@ struct ItineraryReorderCollection: UIViewRepresentable {
             return abs(snapshot.numberOfItems - current.numberOfItems) <= 12      // 超阈值＝批量 → 不播
         }
 
+        /// 背景随 hosting configuration 一起配置，覆盖首次显示、重配与复用。
+        private func configureHeader(_ header: UICollectionViewCell, for model: ItineraryDaySection) {
+            header.contentConfiguration = UIHostingConfiguration { self.parent.headerContent(model) }
+                .background(Color(uiColor: .systemBackground))
+                .margins(.all, 0)
+        }
+
         /// 重配可见 section 头部的内容——section id=天 UUID，加交通/地点等不改天身份，diffable 不会重配头部，
         /// 导致依赖行程级状态的头部内容（如多时区的 GMT 小标）刷不出来。apply 后主动重设一遍。
         private func refreshVisibleHeaders() {
@@ -494,8 +515,7 @@ struct ItineraryReorderCollection: UIViewRepresentable {
                 else { continue }
                 // 必须与 headerRegistration 完全一致——尤其 `.margins(.all, 0)`，否则默认内边距会把整个
                 // 头部（含彩色圆点）右移、与时间轴 rail 错位（已踩坑：漏了 margins 致圆点不再与活动图标同列）。
-                header.contentConfiguration = UIHostingConfiguration { self.parent.headerContent(model) }
-                    .margins(.all, 0)
+                configureHeader(header, for: model)
             }
         }
 
@@ -521,7 +541,7 @@ struct ItineraryReorderCollection: UIViewRepresentable {
                   let headerAttrs = cv.layoutAttributesForSupplementaryElement(ofKind: headerKind, at: path)
             else { apply(bottomBarClearance); return }
             let naturalHeaderTop = itemAttrs.frame.minY - headerAttrs.frame.height
-            let lastSectionHeight = cv.collectionViewLayout.collectionViewContentSize.height - naturalHeaderTop
+            let lastSectionHeight = cv.contentSize.height - naturalHeaderTop
             // 注：cv 用 .ignoresSafeArea(.bottom) → safeAreaInsets.bottom == 0，bounds 已含切换器下方区域，
             // 故吸顶所需直接 = bounds.height − topInset − 末段高，无需再扣安全区。
             let pinRequirement = max(0, cv.bounds.height - cv.adjustedContentInset.top - lastSectionHeight)
@@ -735,6 +755,7 @@ struct ItineraryReorderCollection: UIViewRepresentable {
 
         /// 用户中途抓住列表 → 视为手动滚动，立即解除程序滚动屏蔽，让反向联动接管。
         func scrollViewWillBeginDragging(_ scrollView: UIScrollView) {
+            pendingScrollDayId = nil
             isProgrammaticScroll = false
         }
 
@@ -752,7 +773,7 @@ struct ItineraryReorderCollection: UIViewRepresentable {
 
         /// 正向程序滚动动画结束 → 解除屏蔽。
         func scrollViewDidEndScrollingAnimation(_ scrollView: UIScrollView) {
-            isProgrammaticScroll = false
+            finishDayScroll()
         }
 
         /// 计算当前吸顶（最靠顶部）的 section 是哪天，变化了才回写上层选中态。

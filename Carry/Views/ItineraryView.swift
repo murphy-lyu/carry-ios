@@ -1064,6 +1064,7 @@ struct ItineraryView: View {
                         // 比行标题（.body semibold 17）明显大一档、更重 → 日期头成为分节父级，
                         // 不靠线/缩进。纯字号字重建立层级（north-star §2/§3）。
                         .font(.system(.title3, design: .rounded).weight(.bold))
+                        .accessibilityAddTraits(.isHeader)
                     // 多时区行程：当天所在时区小标（如 GMT+1）；单时区不显（spec: itinerary-timezone.md D1/D2）。
                     if let zone = dayZoneLabel(day) {
                         Text(zone)
@@ -1093,15 +1094,8 @@ struct ItineraryView: View {
         // 首点上方原由「首点 cell 顶部占位」给的呼吸，已随连接段拆为独立 leg 而消失；
         // 在此用 header 底部留白补回（放 header 层、不动 stop cell，故不破坏左滑居中）。
         .padding(.bottom, 12)
-        // 日期头不画分隔线（含吸顶时）：粗体圆体标题 + 当天彩色圆点 + 留白本身层级已足，吸顶时不透明
-        // systemBackground 已干净切开浮动头与滚动内容，再加线是多余 chrome（north-star §1 退后 / §2 层级
-        // 不靠线框，对标 Tripsy/Flighty/原生）。打包分区头是 ALL-CAPS 小灰字、分量轻，才保留锚定用的基线。
-        .background(
-            // header cell 已在 UIKit 层铺不透明 systemBackground；此处再铺一层，保证吸顶时无缝、不透出滚动内容。
-            Rectangle()
-                .fill(Color(UIColor.systemBackground))
-        )
-        .zIndex(3)
+        // 吸顶、遮挡背景与跨 cell 层级由 ItineraryReorderCollection 的 supplementary
+        // layout / hosting configuration 统一负责；此处只提供日期内容和自然高度。
     }
 
     private func customDayTitle(_ day: ItineraryDay) -> String? {
