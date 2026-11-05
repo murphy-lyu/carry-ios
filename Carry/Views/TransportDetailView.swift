@@ -236,19 +236,19 @@ private struct TransportDetailViewContent: View {
                 hasCost: segment.hasCost
             )
         }
-        .nativeEditorSheet(isPresented: $editing, presentations: nativeEditors, onDismiss: nativeEditors.dismissal(key: "editing")) {
+        .nativeEditorSheet(isPresented: $editing, presentations: nativeEditors, sessionKey: "editing") {
             if let currentSegment {
                 TransportEditView(tripId: tripId, segmentId: currentSegment.id)
             }
         }
-        .nativeEditorSheet(isPresented: $showQuickNote, presentations: nativeEditors, onDismiss: nativeEditors.dismissal(key: "showQuickNote")) {
+        .nativeEditorSheet(isPresented: $showQuickNote, presentations: nativeEditors, sessionKey: "showQuickNote") {
             if let currentSegment {
                 QuickNoteSheet(existingNote: currentSegment.note) { newNote in
                     nativeEditors.save(store: store) { store.updateTransportSegment(tripId: tripId, segmentId: currentSegment.id, note: newNote) }
                 }
             }
         }
-        .nativeEditorSheet(isPresented: $showQuickCost, presentations: nativeEditors, onDismiss: nativeEditors.dismissal(key: "showQuickCost")) {
+        .nativeEditorSheet(isPresented: $showQuickCost, presentations: nativeEditors, sessionKey: "showQuickCost") {
             if let currentSegment {
                 QuickCostSheet(
                     existingAmount: currentSegment.costAmount,

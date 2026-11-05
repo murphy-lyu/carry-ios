@@ -1,5 +1,7 @@
 # Native editor baseline and multi-window review — 2026-11-01
 
+> 2026-11-06 follow-up: page-construction-time dismissal callbacks could retain a nil generation and leak real sheet leases. Capture now occurs when sheet content actually appears; see [lifecycle regression](qa-native-editor-sheet-lifecycle-2026-11-06.md).
+
 ## Findings and repair
 
 An editor copied its form values into `@State` before a background pull. The pull could replace native fields and the journal materialization's observed field versions while the form still displayed its older draft. Saving that draft then used versions the user had never seen. It could overwrite a remotely changed field without producing the promised conflict.

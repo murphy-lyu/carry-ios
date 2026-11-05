@@ -429,12 +429,12 @@ struct PackingListView: View {
         }
         .nativeEditorErrors(nativeEditors, retry: editorRetry)
         .animation(.easeInOut(duration: 0.25), value: isComplete)
-        .nativeEditorSheet(isPresented: $showEditSheet, presentations: nativeEditors, onDismiss: nativeEditors.dismissal(key: "showEditSheet", after: { store.refresh() })) {
+        .nativeEditorSheet(isPresented: $showEditSheet, presentations: nativeEditors, sessionKey: "showEditSheet", onDismiss: { store.refresh() }) {
             if let bundle {
                 EditTripView(trip: bundle)
             }
         }
-        .nativeEditorSheet(isPresented: $showSuggestSheet, presentations: nativeEditors, onDismiss: nativeEditors.dismissal(key: "showSuggestSheet")) {
+        .nativeEditorSheet(isPresented: $showSuggestSheet, presentations: nativeEditors, sessionKey: "showSuggestSheet") {
             ScenePickerView(suggestForTripId: tripId)
                 .presentationDragIndicator(.visible)
         }
@@ -442,7 +442,7 @@ struct PackingListView: View {
             guard !isShowing, isNewTrip else { return }
             loadSurpriseItems()
         }
-        .nativeEditorSheet(isPresented: $showReorderSheet, presentations: nativeEditors, onDismiss: nativeEditors.dismissal(key: "showReorderSheet")) {
+        .nativeEditorSheet(isPresented: $showReorderSheet, presentations: nativeEditors, sessionKey: "showReorderSheet") {
             NavigationStack {
                 ReorderSectionsView(tripId: tripId) { newOrder in
                     store.reorderSections(tripId: tripId, newOrder: newOrder)
@@ -460,7 +460,7 @@ struct PackingListView: View {
         }
         // 快速添加物品：自包含子任务（挑完回到清单），用 sheet 而非 push——与编辑场景/分类/
         // 提醒等行程内子任务一致（spec: app-navigation-framework.md「Carry Modal Convention」）。
-        .nativeEditorSheet(isPresented: $showAddItemsSheet, presentations: nativeEditors, onDismiss: nativeEditors.dismissal(key: "showAddItemsSheet")) {
+        .nativeEditorSheet(isPresented: $showAddItemsSheet, presentations: nativeEditors, sessionKey: "showAddItemsSheet") {
             NavigationStack {
                 ItemPickerView(tripId: tripId)
             }
@@ -475,7 +475,7 @@ struct PackingListView: View {
         }
         // 复制行程：新日期 + 交通/住宿开关（spec: copy-trip-options.md）。确认后关闭本 sheet、
         // 记下副本 id 让首页扫光高亮、回首页根——与旧的「点了立即复制」收尾一致。
-        .nativeEditorSheet(isPresented: $showCopyOptions, presentations: nativeEditors, onDismiss: nativeEditors.dismissal(key: "showCopyOptions")) {
+        .nativeEditorSheet(isPresented: $showCopyOptions, presentations: nativeEditors, sessionKey: "showCopyOptions") {
             if let bundle {
                 CopyTripOptionsSheet(trip: bundle) { newId in
                     showCopyOptions = false
@@ -503,7 +503,7 @@ struct PackingListView: View {
             )
             .ignoresSafeArea()
         }
-        .nativeEditorSheet(item: $repositionProvider, presentations: nativeEditors, onDismiss: nativeEditors.dismissal(key: "reposition")) { picked in
+        .nativeEditorSheet(item: $repositionProvider, presentations: nativeEditors, sessionKey: "reposition") { picked in
             BackgroundRepositionView(provider: picked.provider) { finalImage, crop in
                 if let importer = store.assetImporter {
                     do {
@@ -528,7 +528,7 @@ struct PackingListView: View {
             }
         }
 
-        .nativeEditorSheet(isPresented: $showPhotoImport, presentations: nativeEditors, onDismiss: nativeEditors.dismissal(key: "showPhotoImport")) {
+        .nativeEditorSheet(isPresented: $showPhotoImport, presentations: nativeEditors, sessionKey: "showPhotoImport") {
             PhotoTripImportView(tripId: tripId)
                 .environmentObject(store)
         }

@@ -557,7 +557,7 @@ struct ItemPickerView: View {
                         .scrollDismissesKeyboard(.interactively)
                     }
                 }
-                .nativeEditorSheet(isPresented: $showMyItemAddSheet, presentations: nativeEditors, onDismiss: nativeEditors.dismissal(key: "myItemAdd")) {
+                .nativeEditorSheet(isPresented: $showMyItemAddSheet, presentations: nativeEditors, sessionKey: "myItemAdd") {
                     NavigationStack {
                         ItemPickerMyItemEditorView(
                             titleKey: "myitems.add.title",

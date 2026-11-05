@@ -96,7 +96,7 @@ struct TripSpendView: View {
                     Button("common.done") { dismiss() }
                 }
             }
-            .nativeEditorSheet(item: $editTarget, presentations: nativeEditors, onDismiss: nativeEditors.dismissal(key: "editTarget")) { target in
+            .nativeEditorSheet(item: $editTarget, presentations: nativeEditors, sessionKey: "editTarget") { target in
                 switch target.kind {
                 case .stop:
                     if let stop = stop(for: target.entityId) { StopEditView(tripId: tripId, stop: stop) }

@@ -80,12 +80,71 @@ extension View {
         modifier(CarryNativeEditorErrorModifier(presentations: presentations, retry: retry))
     }
     func nativeEditorSheet<Content: View>(isPresented: Binding<Bool>, presentations: CarryNativeEditorPresentations,
-                                         onDismiss: (() -> Void)? = nil, @ViewBuilder content: @escaping () -> Content) -> some View {
-        sheet(isPresented: isPresented, onDismiss: onDismiss) { content().nativeEditorScope(presentations) }
+                                         sessionKey: String? = nil, onDismiss: (() -> Void)? = nil,
+                                         @ViewBuilder content: @escaping () -> Content) -> some View {
+        modifier(CarryNativeEditorBoolSheet(isPresented: isPresented, presentations: presentations,
+            sessionKey: sessionKey, onDismiss: onDismiss, sheetContent: content))
     }
     func nativeEditorSheet<Item: Identifiable, Content: View>(item: Binding<Item?>, presentations: CarryNativeEditorPresentations,
-                                                             onDismiss: (() -> Void)? = nil, @ViewBuilder content: @escaping (Item) -> Content) -> some View {
-        sheet(item: item, onDismiss: onDismiss) { item in content(item).nativeEditorScope(presentations) }
+                                                             sessionKey: String? = nil, onDismiss: (() -> Void)? = nil,
+                                                             @ViewBuilder content: @escaping (Item) -> Content) -> some View {
+        modifier(CarryNativeEditorItemSheet(item: item, presentations: presentations,
+            sessionKey: sessionKey, onDismiss: onDismiss, sheetContent: content))
+    }
+}
+
+/// SwiftUI can retain the first onDismiss closure while several sheets share a presenter.
+/// Capture the lease only when its content actually appears, then use stable reference storage
+/// for the callback. Keep the generation guard: an old dismissal must not close a new draft.
+@MainActor
+final class CarryNativeEditorSheetLifetime: ObservableObject {
+    private var dismissal: (() -> Void)?
+
+    func appeared(presentations: CarryNativeEditorPresentations, sessionKey: String?, after: (() -> Void)?) {
+        guard dismissal == nil else { return }
+        if let sessionKey {
+            dismissal = presentations.dismissal(key: sessionKey, after: { after?() })
+        } else {
+            dismissal = { after?() }
+        }
+    }
+
+    func dismissed() {
+        let completed = dismissal
+        dismissal = nil
+        completed?()
+    }
+}
+
+private struct CarryNativeEditorBoolSheet<SheetContent: View>: ViewModifier {
+    @Binding var isPresented: Bool
+    let presentations: CarryNativeEditorPresentations
+    let sessionKey: String?
+    let onDismiss: (() -> Void)?
+    let sheetContent: () -> SheetContent
+    @StateObject private var lifetime = CarryNativeEditorSheetLifetime()
+
+    func body(content: Content) -> some View {
+        content.sheet(isPresented: $isPresented, onDismiss: { lifetime.dismissed() }) {
+            sheetContent().nativeEditorScope(presentations)
+                .onAppear { lifetime.appeared(presentations: presentations, sessionKey: sessionKey, after: onDismiss) }
+        }
+    }
+}
+
+private struct CarryNativeEditorItemSheet<Item: Identifiable, SheetContent: View>: ViewModifier {
+    @Binding var item: Item?
+    let presentations: CarryNativeEditorPresentations
+    let sessionKey: String?
+    let onDismiss: (() -> Void)?
+    let sheetContent: (Item) -> SheetContent
+    @StateObject private var lifetime = CarryNativeEditorSheetLifetime()
+
+    func body(content: Content) -> some View {
+        content.sheet(item: $item, onDismiss: { lifetime.dismissed() }) { item in
+            sheetContent(item).nativeEditorScope(presentations)
+                .onAppear { lifetime.appeared(presentations: presentations, sessionKey: sessionKey, after: onDismiss) }
+        }
     }
 }
 

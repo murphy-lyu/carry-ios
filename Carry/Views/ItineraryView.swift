@@ -264,7 +264,7 @@ struct ItineraryView: View {
             dayList
         }
         .nativeEditorErrors(nativeEditors, retry: editorRetry)
-        .nativeEditorSheet(item: $activeSheet, presentations: nativeEditors, onDismiss: nativeEditors.dismissal(key: "activeSheet")) { sheet in
+        .nativeEditorSheet(item: $activeSheet, presentations: nativeEditors, sessionKey: "activeSheet") { sheet in
             sheetContent(for: sheet)
             // Catalyst presents this content in a separate hosting boundary.
             // Preserve the exact trip owner, including account-scoped stores.
@@ -1700,19 +1700,19 @@ private struct StopDetailViewContent: View {
             )
         }
         // 编辑钻入到详情之上：保存后回到详情（@Model 可观察、详情自动反映新值），再下滑关。
-        .nativeEditorSheet(isPresented: $editing, presentations: nativeEditors, onDismiss: nativeEditors.dismissal(key: "editing")) {
+        .nativeEditorSheet(isPresented: $editing, presentations: nativeEditors, sessionKey: "editing") {
             if let currentStop {
                 StopEditView(tripId: tripId, stop: currentStop)
             }
         }
-        .nativeEditorSheet(isPresented: $showQuickNote, presentations: nativeEditors, onDismiss: nativeEditors.dismissal(key: "showQuickNote")) {
+        .nativeEditorSheet(isPresented: $showQuickNote, presentations: nativeEditors, sessionKey: "showQuickNote") {
             if let currentStop {
                 QuickNoteSheet(existingNote: currentStop.note) { newNote in
                     nativeEditors.save(store: store) { store.updateItineraryStop(tripId: tripId, stopId: currentStop.id, note: newNote) }
                 }
             }
         }
-        .nativeEditorSheet(isPresented: $showQuickCost, presentations: nativeEditors, onDismiss: nativeEditors.dismissal(key: "showQuickCost")) {
+        .nativeEditorSheet(isPresented: $showQuickCost, presentations: nativeEditors, sessionKey: "showQuickCost") {
             if let currentStop {
                 QuickCostSheet(
                     existingAmount: currentStop.costAmount,
@@ -2139,7 +2139,7 @@ struct StopEditView: View {
             }
             // 更换地点：复用 AddStopView 的搜索（relocate 模式更新本停靠点的坐标/地址/名称）。
             .nativeEditorErrors(nativeEditors)
-            .nativeEditorSheet(isPresented: $showRelocate, presentations: nativeEditors, onDismiss: nativeEditors.dismissal(key: "relocate")) {
+            .nativeEditorSheet(isPresented: $showRelocate, presentations: nativeEditors, sessionKey: "relocate") {
                 AddStopView(
                     tripId: tripId,
                     dayId: stop.day?.id ?? UUID(),

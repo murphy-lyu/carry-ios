@@ -155,7 +155,7 @@ struct ScenePickerView: View {
         .nativeEditorSheet(isPresented: Binding(
             get: { confirmedSuggestKeys != nil },
             set: { if !$0 { confirmedSuggestKeys = nil } }
-        ), presentations: nativeEditors, onDismiss: nativeEditors.dismissal(key: "suggestionPreview")) {
+        ), presentations: nativeEditors, sessionKey: "suggestionPreview") {
             if case .suggest(let tripId) = mode, let keys = confirmedSuggestKeys {
                 SuggestionPreviewView(tripId: tripId, sceneKeys: keys, didFinish: $didFinishSuggest)
             }
