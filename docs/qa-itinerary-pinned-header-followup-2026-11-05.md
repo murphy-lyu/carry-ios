@@ -1,6 +1,6 @@
 # 日期换行与吸顶透叠复查
 ## 当前状态
-用户真机反馈推翻了上一轮的完整修复判断：单行日期不透，双行日期吸顶会透叠。此次修复、Debug/Release 构建、语言审计和模拟器对照完成。2026-11-05 用户重新连接并解锁手机后，最终修复代码 `71cff48` 已按原 Bundle ID 覆盖安装；手机不再是诊断版。自动启动请求因手机已锁屏被拒绝，待本人解锁打开验证。安装前后 7 个数据库与 7 个 WAL 逐字节相同，原始透叠与日期单行效果仍待用户验收。
+用户真机反馈推翻了上一轮的完整修复判断：单行日期不透，双行日期吸顶会透叠。此次修复、Debug/Release 构建、语言审计和模拟器对照完成。2026-11-05 用户重新连接并解锁手机后，最终修复代码 `71cff48` 已按原 Bundle ID 覆盖安装；手机不再是诊断版。安装时自动启动曾因手机锁屏被拒绝。安装前后 7 个数据库与 7 个 WAL 逐字节相同。2026-11-06 用户在最终修复版上完成真机验收，明确确认“验收了，没问题了”；日期单行与吸顶透叠两项验收通过，本轮修复收尾。
 ## 根因证据
 1. 第二天开始出现“优化顺序”按钮，完整操作文字与日期、GMT 标签争用宽度。旧日期没有单行约束，也没有高于尾部工具的布局优先级。按截图还原后，正常字号的日期文本由一行约 24pt 变成两行 49pt，整个含副标题的表头高约 98.33pt。
 2. 本人 iPhone 17 Pro / iOS 27.2 取得 30 条仅含布局元数据的记录。较高表头未吸顶时布局 alpha=1；吸顶后在多个偏移持续返回 **0.7728813559**，实际 view alpha 与 presentation opacity 同为约 0.7728813，且没有未完成的动画。背景子视图、内容子视图和父视图均为 alpha=1，背景尺寸覆盖完整 98.33pt。单行日期头约 73.33pt，alpha=1。
@@ -31,5 +31,5 @@ iOS 26.5 明暗两色，真实滚动至第二天，单行日期检查、截图�
 Debug 实体设备构建与 Release arm64 构建成功，编译 warning=0；九语言审计 0 错误/0 警告，`git diff --check` 通过。最终二进制已确认不含临时表头记录器，strict/deep 签名通过，开发账户配置与原 entitlements 保持不变。
 ## 证据与装机边界
 本机证据目录：`/Users/murphy/.codex/visualizations/2026/11/03/01a1a1da-815f-7051-b210-e6ce13ebaa3f/header-occlusion/2026-11-05-followup`，含真机布局记录、六组对照 JSON/截图、手势结果、构建/审计日志及可复现工程。私人容器备份不进入 Git；记录器未采集行程文字或账户内容。
-最终签名包：`/tmp/CarryHeaderDevice20261104/Build/Products/Debug-iphoneos/Carry.app`。此前安装受 CoreDevice 4016 阻塞，本轮重新连接后已安装成功。成功日志为 `/tmp/carry-header-second-day/final-install-success.log`，启动日志为 `final-launch-success.log`。自动启动返回 CoreDevice 10002 / Locked，未确认新进程运行；安装和数据核对已确认，不以安装成功代替视觉验收。
+最终签名包：`/tmp/CarryHeaderDevice20261104/Build/Products/Debug-iphoneos/Carry.app`。此前安装受 CoreDevice 4016 阻塞，本轮重新连接后已安装成功。成功日志为 `/tmp/carry-header-second-day/final-install-success.log`，启动日志为 `final-launch-success.log`。安装当时自动启动返回 CoreDevice 10002 / Locked；该历史启动结果不作为视觉验收证据。最终视觉验收依据为用户于 2026-11-06 在手机上的明确确认。
 本轮备份共 45 个实际数据文件，7 个 SQLite 完整性检查均为 ok；受保护的 SplashBoard 系统界面快照未纳入，AppData 的 Documents、Application Support、Preferences、Caches、HTTPStorages 与完整 App Group 均已备份。备份根路径由本机 `/tmp/carry-header-second-day/final-install-backup-path.txt` 记录，私人容器内容不进入 Git。
