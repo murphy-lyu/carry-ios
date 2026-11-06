@@ -209,6 +209,22 @@ test('no open redirects; only bound authorization continuation is accepted', () 
   const next = '/oauth/consent?authorization_id=00000000-0000-0000-0000-000000000001';
   assert.equal(safeContinuation(next), next);
 });
+test('an interrupted download resumes on its review page after Apple sign-in', async () => {
+  const fixture = setup();
+  const next = '/ai/exports/' + user.id;
+  const aiEnv = { ...env, ACCOUNT_AI_ENABLED: 'true', CARRY_AI_ORIGIN: 'https://connect-qa.invalid',
+    CARRY_OWNER_BRIDGE_SECRET: Buffer.alloc(32, 3).toString('base64url') };
+  const download = await fixture.handler(request(next + '/download'), aiEnv);
+  assert.equal(download.status, 303);
+  assert.equal(new URL(download.headers.get('Location'), origin).searchParams.get('continue'), next);
+  const flow = await start(fixture, next);
+  const cancelled = await fixture.handler(callback(flow, { error: 'user_cancelled_authorize' }), env);
+  assert.equal(new URL(cancelled.headers.get('Location'), origin).searchParams.get('continue'), next);
+  const resumed = await fixture.handler(callback(flow), env);
+  assert.equal(resumed.status, 303);
+  assert.equal(resumed.headers.get('Location'), next);
+  assert.throws(() => safeContinuation(next + '/download'));
+});
 test('stream limits and duplicate form parameters cannot bypass rejection', async () => {
   const f = setup();
   const invalid = new Request(origin + '/auth/apple/callback', { method: 'POST',
@@ -267,6 +283,7 @@ test('the actual Supabase SSR SDK persists and restores browser cookies only aft
 
 test('nine-language pages and errors have complete matching strings with no raw provider detail', async () => {
   const { strings, language } = await import('./strings.mjs');
+  const { experienceStrings } = await import('../carry-account-ai/experience-strings.mjs');
   const keys = Object.keys(strings.en).sort();
   for (const [locale, text] of Object.entries(strings)) {
     assert.deepEqual(Object.keys(text).sort(), keys);
@@ -282,7 +299,9 @@ test('nine-language pages and errors have complete matching strings with no raw 
     assert.equal(error.status, 404);
     assert.equal(error.headers.get('X-Carry-Error-Code'), 'not_found');
     const errorHTML = await error.text();
-    assert.ok(errorHTML.includes(text.unavailable));
+    assert.ok(errorHTML.includes(experienceStrings[locale].errorTitle));
+    assert.ok(errorHTML.includes(experienceStrings[locale].errorDetail));
+    assert.deepEqual(Object.keys(experienceStrings[locale]), Object.keys(experienceStrings.en));
     assert.ok(errorHTML.includes('<code>not_found</code>'));
   }
   assert.equal(language('en;q=0,zh-TW;q=0.9,de;q=0.4'), 'zh-Hant');

@@ -143,7 +143,11 @@ test('owner website reviews approves and streams a private download through the 
   const before=await page(new Request(accountOrigin+'/ai/exports/'+result.id)),html=await before.text();
   assert.ok(html.includes('核对导出'));assert.ok(html.includes('不会发送给其他人或应用'));assert.ok(!html.includes('device-only-secret'));
   const approved=await page(new Request(accountOrigin+'/ai/exports/'+result.id,{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:new URLSearchParams({csrf:'synthetic-csrf',contentHash:preview.contentHash})}));
-  assert.equal(formChecks,1);assert.ok((await approved.text()).includes('/download'));
+  assert.equal(formChecks,1);
+  assert.equal(approved.status,303);
+  assert.equal(approved.headers.get('Location'),'/ai/exports/'+result.id);
+  const ready=await page(new Request(new URL(approved.headers.get('Location'),accountOrigin)));
+  assert.ok((await ready.text()).includes('/download'));
   const download=await page(new Request(accountOrigin+'/ai/exports/'+result.id+'/download'));
   assert.ok(download.headers.get('Content-Disposition').endsWith('.json"'));assert.equal(download.headers.get('Content-Type'),'application/json; charset=utf-8');
   const backup=await download.json();assert.equal(backup.photoOriginals[f.ids.photo],f.bytes.toString('base64'));

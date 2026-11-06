@@ -27510,6 +27510,126 @@
         }
       }
     },
+    "account.ai.authorize" : {
+      "comment" : "Carry account AI onboarding",
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Freigabe auswählen"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Choose what to share"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Elige qué compartir"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Choisissez quoi partager"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "共有内容を選ぶ"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "공유할 내용 선택"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Escolha o que compartilhar"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "选择要共享的内容"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "選擇要分享的內容"
+          }
+        }
+      }
+    },
+    "account.ai.authorize.detail" : {
+      "comment" : "Carry account AI onboarding",
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Melde dich mit demselben Apple Account wie in Carry an. Wähle Reisen und Berechtigungen aus."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sign in with the same Apple Account you use in Carry. Choose the trips and permissions to share."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Inicia sesión con la misma cuenta de Apple que usas en Carry. Elige los viajes y los permisos."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Utilisez le même compte Apple que dans Carry. Choisissez les voyages et les autorisations à partager."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Carryで使っているApple Accountでサインインし、共有する旅行と権限を選びます。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Carry에서 쓰는 Apple 계정으로 로그인한 뒤 공유할 여행과 권한을 선택하세요."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Entre com a mesma Conta Apple usada no Carry. Escolha as viagens e permissões."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "使用登录启程的同一个 Apple 账户，选择要共享的行程和权限。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "使用登入啟程的同一個 Apple 帳號，選擇要分享的行程和權限。"
+          }
+        }
+      }
+    },
     "account.ai.copied" : {
       "comment" : "Carry account AI connections",
       "extractionState" : "manual",
@@ -27630,6 +27750,66 @@
         }
       }
     },
+    "account.ai.copy.next" : {
+      "comment" : "Carry account AI onboarding",
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Füge die kopierte Adresse in die Verbindungseinstellungen des Assistenten ein."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Paste this address in your assistant’s connector settings to continue."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pega la dirección copiada en los ajustes de conexión del asistente."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Collez l’adresse copiée dans les paramètres de connexion de votre assistant."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "コピーしたアドレスをアシスタントの接続設定に貼り付けます。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "복사한 주소를 어시스턴트의 연결 설정에 붙여넣으세요."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Cole o endereço copiado nas configurações de conexão do assistente."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "地址已复制。请粘贴到助手的连接设置里，继续添加。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "網址已複製。請貼到助手的連線設定中繼續新增。"
+          }
+        }
+      }
+    },
     "account.ai.detail" : {
       "comment" : "Carry account AI connections",
       "extractionState" : "manual",
@@ -27686,6 +27866,126 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "選擇允許 AI 查看或編輯的行程。"
+          }
+        }
+      }
+    },
+    "account.ai.hero" : {
+      "comment" : "Carry account AI onboarding",
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Carry mit deinem KI-Assistenten nutzen"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bring Carry into your AI assistant"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Usa Carry con tu asistente de IA"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Utilisez Carry avec votre assistant IA"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "AIアシスタントでCarryを使う"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "AI 어시스턴트에서 Carry 사용하기"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Use o Carry no seu assistente de IA"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "让 AI 助手读懂你的行程"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "讓 AI 助手讀懂你的行程"
+          }
+        }
+      }
+    },
+    "account.ai.intro" : {
+      "comment" : "Carry account AI onboarding",
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Frage nach gespeicherten Reisen oder prüfe vorgeschlagene Änderungen vor dem Speichern."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ask about trips saved to your account or review suggested changes before saving them."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Consulta tus viajes guardados o revisa los cambios sugeridos antes de guardarlos."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Consultez vos voyages enregistrés ou vérifiez les modifications proposées avant de les enregistrer."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "アカウントに保存した旅行について質問したり、変更案を保存前に確認したりできます。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "계정에 저장한 여행을 물어보거나, 저장하기 전에 변경 제안을 확인할 수 있어요."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Consulte viagens salvas ou revise as alterações sugeridas antes de salvá-las."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "在对话中查阅已保存到账户的行程，或先预览建议的修改，再决定是否保存。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "在對話中查閱已儲存到帳號的行程，或先預覽建議的變更，再決定是否儲存。"
           }
         }
       }
@@ -27750,6 +28050,126 @@
         }
       }
     },
+    "account.ai.setup" : {
+      "comment" : "Carry account AI onboarding",
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Carry zum Assistenten hinzufügen"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Add Carry to your assistant"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Añade Carry a tu asistente"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ajoutez Carry à votre assistant"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "アシスタントにCarryを追加"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "어시스턴트에 Carry 추가"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Adicione o Carry ao assistente"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "在助手里添加启程"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "在助手中新增啟程"
+          }
+        }
+      }
+    },
+    "account.ai.setup.detail" : {
+      "comment" : "Carry account AI onboarding",
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Öffne die Verbindungseinstellungen eines Assistenten mit Remote-MCP und OAuth. Füge die Adresse unten als Server hinzu."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Open the connector settings in an assistant that supports remote MCP and OAuth. Add a server with the address below."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Abre los ajustes de conexión de un asistente compatible con MCP remoto y OAuth. Añade un servidor con la dirección de abajo."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ouvrez les paramètres de connexion d’un assistant compatible avec MCP distant et OAuth. Ajoutez un serveur avec l’adresse ci-dessous."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "リモートMCPとOAuthに対応するアシスタントの接続設定を開き、下のアドレスでサーバーを追加します。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "원격 MCP와 OAuth를 지원하는 어시스턴트의 연결 설정을 열고 아래 주소로 서버를 추가하세요."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Abra as configurações de conexão de um assistente com suporte a MCP remoto e OAuth. Adicione um servidor com o endereço abaixo."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "打开支持远程 MCP 和 OAuth 的助手，在连接设置里用下方地址添加服务。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "開啟支援遠端 MCP 和 OAuth 的助手，在連線設定中使用下方網址新增服務。"
+          }
+        }
+      }
+    },
     "account.ai.title" : {
       "comment" : "Carry account AI connections",
       "extractionState" : "manual",
@@ -27806,6 +28226,126 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "連接 AI"
+          }
+        }
+      }
+    },
+    "account.ai.try" : {
+      "comment" : "Carry account AI onboarding",
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Eine Frage ausprobieren"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Try a question"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Prueba una pregunta"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Essayez une question"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "質問してみる"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "질문해 보기"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Experimente uma pergunta"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "先问一个问题"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "先問一個問題"
+          }
+        }
+      }
+    },
+    "account.ai.try.detail" : {
+      "comment" : "Carry account AI onboarding",
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Frage „Was ist am ersten Tag meiner Reise geplant?“ Prüfe Änderungen und speichere sie anschließend im Gespräch."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ask “What’s on the first day of my trip?” If you request an edit, review it and return to the conversation to save."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pregunta «¿Qué hay previsto para el primer día de mi viaje?». Si pides cambios, revísalos y vuelve a la conversación para guardarlos."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Demandez « Que prévoit le premier jour de mon voyage ? » Pour une modification, vérifiez-la puis revenez à la conversation pour l’enregistrer."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "「旅行の初日はどんな予定？」と聞いてみましょう。変更を頼んだ場合は、確認後に会話へ戻って保存します。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "“여행 첫날 일정이 뭐야?”라고 물어보세요. 수정을 요청했다면 검토한 뒤 대화로 돌아가 저장하세요."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pergunte “O que está planejado para o primeiro dia da minha viagem?”. Se pedir uma alteração, revise e volte à conversa para salvar."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "试试问「我的行程第一天有什么安排？」如果请助手修改，核对后回到对话保存。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "試著問「我的行程第一天有什麼安排？」若請助手變更，請核對後回到對話儲存。"
           }
         }
       }

@@ -6,40 +6,83 @@ struct CarryAccountAIConnectionView: View {
     @State private var copied = false
 
     var body: some View {
-        Form {
-            Section {
-                Text("account.ai.detail").font(.subheadline).foregroundStyle(.secondary)
+        ScrollView {
+            VStack(alignment: .leading, spacing: 24) {
+                VStack(alignment: .leading, spacing: 10) {
+                    Image(systemName: "link")
+                        .font(.title2.weight(.semibold))
+                        .foregroundStyle(CarryAccent.color)
+                        .accessibilityHidden(true)
+                    Text("account.ai.hero")
+                        .font(.largeTitle.bold())
+                        .accessibilityAddTraits(.isHeader)
+                    Text("account.ai.intro")
+                        .foregroundStyle(.secondary)
+                }
+
+                VStack(alignment: .leading, spacing: 18) {
+                    step(1, "account.ai.setup", "account.ai.setup.detail")
+                    Text(verbatim: configuration.mcpURL.absoluteString)
+                        .font(.footnote.monospaced())
+                        .textSelection(.enabled)
+                    Button {
+                        UIPasteboard.general.string = configuration.mcpURL.absoluteString
+                        copied = true
+                        AccessibilityNotification.Announcement(String(localized: "account.ai.copy.next")).post()
+                    } label: {
+                        Label(
+                            LocalizedStringKey(copied ? "account.ai.copied" : "account.ai.copy"),
+                            systemImage: copied ? "checkmark" : "doc.on.doc"
+                        )
+                        .fontWeight(.semibold)
+                        .frame(maxWidth: .infinity, minHeight: 48)
+                        .foregroundStyle(Color(uiColor: .systemBackground))
+                        .background(Color(uiColor: .label), in: RoundedRectangle(cornerRadius: CarryRadius.card))
+                    }
+                    .buttonStyle(.plain)
+                    if copied {
+                        Text("account.ai.copy.next")
+                            .font(.footnote)
+                            .foregroundStyle(.secondary)
+                    }
+                    Divider()
+                    step(2, "account.ai.authorize", "account.ai.authorize.detail")
+                    Divider()
+                    step(3, "account.ai.try", "account.ai.try.detail")
+                }
+                .padding(18)
+                .carryCard()
+
                 Link(destination: configuration.connectionsURL) {
                     Label("account.ai.manage", systemImage: "arrow.up.right.square")
+                        .frame(minHeight: 44)
                 }
-            } footer: {
-                Text("account.ai.web_account")
-            }
-            Section {
-                Text(verbatim: configuration.mcpURL.absoluteString)
-                    .font(.footnote.monospaced()).textSelection(.enabled)
-                    .fixedSize(horizontal: false, vertical: true)
-                Button {
-                    UIPasteboard.general.string = configuration.mcpURL.absoluteString
-                    copied = true
-                } label: {
-                    Label {
-                        Text(LocalizedStringKey(copied ? "account.ai.copied" : "account.ai.copy"))
-                    } icon: {
-                        Image(systemName: copied ? "checkmark" : "doc.on.doc")
-                    }
-                }
-            } header: { Text("account.ai.address") }
-            if connection.credentials != nil {
-                Section {
+                if connection.credentials != nil {
                     NavigationLink { AutomationConnectionView() } label: { Text("automation.title") }
+                        .frame(minHeight: 44)
                 }
             }
+            .padding(20)
+            .frame(maxWidth: 560)
+            .frame(maxWidth: .infinity)
         }
         .navigationTitle("account.ai.title")
         .navigationBarTitleDisplayMode(.inline)
-        .scrollContentBackground(.hidden)
         .background(Color.carryCanvas)
+        .tint(CarryAccent.color)
+    }
+
+    private func step(_ number: Int, _ title: LocalizedStringKey, _ detail: LocalizedStringKey) -> some View {
+        HStack(alignment: .firstTextBaseline, spacing: 12) {
+            Text(number, format: .number)
+                .font(.subheadline.monospacedDigit().weight(.semibold))
+                .foregroundStyle(CarryAccent.color)
+                .accessibilityHidden(true)
+            VStack(alignment: .leading, spacing: 5) {
+                Text(title).font(.headline).accessibilityAddTraits(.isHeader)
+                Text(detail).font(.subheadline).foregroundStyle(.secondary)
+            }
+        }
     }
 }
 

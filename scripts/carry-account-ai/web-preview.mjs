@@ -856,6 +856,9 @@ function format(value, label, lang, key) {
       return value < 0
         ? "—"
         : `${String(Math.floor(value / 60)).padStart(2, "0")}:${String(value % 60).padStart(2, "0")}`;
+    if (key === "stayMinutes") return new Intl.NumberFormat(lang, {
+      style: "unit", unit: "minute", unitDisplay: "short",
+    }).format(value);
     return new Intl.NumberFormat(lang).format(value);
   }
   if (
@@ -895,6 +898,9 @@ export function previewActions(summary, lang, text) {
       const before = a.before ?? {},
         after = a.after ?? {},
         keys = [...new Set([...Object.keys(before), ...Object.keys(after)])];
+      const creating = a.action === "create";
+      const cell = (value) => `<td>${esc(value)}</td>`;
+      const previousCell = (value) => creating ? "" : cell(value);
       let rows = keys
         .filter((k) => !omitted.has(k))
         .filter(
@@ -910,7 +916,7 @@ export function previewActions(summary, lang, text) {
         )
         .map(
           (k) =>
-            `<tr><th scope="row">${esc(labels[fields[k]] ?? labels.details)}</th><td>${esc(format(before[k], labels, lang, k))}</td><td>${esc(format(after[k], labels, lang, k))}</td></tr>`,
+            `<tr><th scope="row">${esc(labels[fields[k]] ?? labels.details)}</th>${previousCell(format(before[k], labels, lang, k))}${cell(format(after[k], labels, lang, k))}</tr>`,
         )
         .join("");
       if (a.parentBefore !== a.parentAfter) {
@@ -919,9 +925,9 @@ export function previewActions(summary, lang, text) {
             ? p.name ||
               `${labels[p.kind] ?? labels.details}${p.order === null ? "" : " · " + new Intl.NumberFormat(lang).format(p.order)}`
             : "—";
-        rows += `<tr><th scope="row">${esc(labels.parent)}</th><td>${esc(parent(a.parentBeforeDisplay))}</td><td>${esc(parent(a.parentAfterDisplay))}</td></tr>`;
+        rows += `<tr><th scope="row">${esc(labels.parent)}</th>${previousCell(parent(a.parentBeforeDisplay))}${cell(parent(a.parentAfterDisplay))}</tr>`;
       }
-      return `<li><h2>${esc(before.name ?? before.title ?? after.name ?? after.title ?? labels[a.kind] ?? labels.details)}</h2><p>${esc(labels[a.action] ?? labels.details)} · ${esc(labels.impact)} ${esc(a.affectedCount)}</p>${rows ? `<div class="review-table"><table><thead><tr><th>${esc(labels.details)}</th><th>${esc(text.before)}</th><th>${esc(text.after)}</th></tr></thead><tbody>${rows}</tbody></table></div>` : ""}</li>`;
+      return `<li class="panel"><h2>${esc(before.name ?? before.title ?? after.name ?? after.title ?? labels[a.kind] ?? labels.details)}</h2><p>${esc(labels[a.action] ?? labels.details)} · ${esc(labels.impact)} ${esc(new Intl.NumberFormat(lang).format(a.affectedCount))}</p>${rows ? `<div class="review-table"><table><thead><tr><th>${esc(labels.details)}</th>${creating ? "" : `<th>${esc(text.before)}</th>`}<th>${esc(text.after)}</th></tr></thead><tbody>${rows}</tbody></table></div>` : ""}</li>`;
     })
     .join("");
 }

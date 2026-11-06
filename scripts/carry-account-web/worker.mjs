@@ -1,5 +1,7 @@
 import { createAccountWebAIBridge } from '../carry-account-ai/account-web-bridge.mjs';
 import { accountAIPage } from '../carry-account-ai/web-pages.mjs';
+import { accountStyle } from './account-style.mjs';
+import { experienceStrings } from '../carry-account-ai/experience-strings.mjs';
 import { aiWebStrings } from '../carry-account-ai/web-strings.mjs';
 import { createServerClient } from '@supabase/ssr';
 import { strings, language } from './strings.mjs';
@@ -39,12 +41,40 @@ function redirect(path, headers, status = 303) {
 }
 function htmlPage(text, title, content, headers, status = 200) {
   headers.set('Content-Type', 'text/html; charset=utf-8');
-  return new Response(`<!doctype html><html lang="${text.lang}"><head><meta charset="utf-8"><meta name="color-scheme" content="light dark"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${htmlEscape(title)}</title><link rel="stylesheet" href="/account.css"></head><body><main><p>Carry</p><h1>${htmlEscape(title)}</h1>${content}<p><a href="https://legal.nevestudio.app/carry/privacy/">${htmlEscape(text.privacy)}</a></p></main></body></html>`, { status, headers });
+  return new Response(`<!doctype html><html lang="${text.lang}"><head><meta charset="utf-8"><meta name="color-scheme" content="light dark"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${htmlEscape(title)}</title><link rel="stylesheet" href="/account.css"></head><body><main><p class="brand">Carry</p><h1>${htmlEscape(title)}</h1>${content}<footer><a href="https://legal.nevestudio.app/carry/privacy/">${htmlEscape(text.privacy)}</a></footer></main></body></html>`, { status, headers });
 }
-function message(code, headers, status, text, wantsHTML) {
+function message(code, headers, status, text, request) {
   headers.set('X-Carry-Error-Code', code);
-  if (wantsHTML) return htmlPage(text, text.signIn,
-    `<p role="alert">${htmlEscape(text.unavailable)}</p><p><code>${htmlEscape(code)}</code></p><a href="/login">${htmlEscape(text.retry)}</a>`, headers, status);
+  if (request.headers.get('Accept')?.includes('text/html')) {
+    const ux = experienceStrings[text.lang] ?? experienceStrings.en;
+    const url = new URL(request.url);
+    let next = '/';
+    try {
+      // Never replay a write. OAuth search parameters are not part of the
+      // continuation contract and downloads return to the review screen.
+      if (url.pathname === '/oauth/consent') {
+        next = safeContinuation('/oauth/consent?' + new URLSearchParams({
+          authorization_id: url.searchParams.get('authorization_id') ?? '',
+        }));
+      } else {
+        next = safeContinuation(url.pathname.replace(/\/download$/, ''));
+      }
+    } catch { /* Unknown paths return to the account home. */ }
+    const ai = next !== '/';
+    const restart = ai && ['authorization_expired', 'preview_expired', 'preview_changed',
+      'invalid_preview', 'export_not_found', 'export_changed', 'invalid_token',
+      'invalid_scope', 'insufficient_scope'].includes(code);
+    const login = code === 'session_expired' || code === 'invalid_apple_identity';
+    const title = restart ? ux.restartTitle : ux.errorTitle;
+    const detail = restart ? ux.restart : login ? text.intro : ux.errorDetail;
+    const href = restart ? '/ai/guide' : login ? '/login?continue=' + encodeURIComponent(next)
+      : ai ? next : '/login';
+    const action = restart ? ux.guide : login ? text.signIn : ux.retry;
+    return htmlPage(text, title,
+      `<p class="notice" role="alert">${htmlEscape(detail)}</p>
+      <a class="button primary" href="${htmlEscape(href)}">${htmlEscape(action)}</a>
+      <details><summary>${htmlEscape(ux.diagnostics)}</summary><code>${htmlEscape(code)}</code></details>`, headers, status);
+  }
   headers.set('Content-Type', 'application/json');
   return new Response(JSON.stringify({ error: code }), { status, headers });
 }
@@ -115,6 +145,23 @@ export function createWebHandler({ makeClient = createServerClient, fetcher = fe
       const config = settings(env), url = new URL(request.url);
       if (url.origin !== config.origin) throw new WebFailure(400, 'host_mismatch');
       if (env.ACCOUNT_WEB_ENABLED !== 'true') throw new WebFailure(503, 'account_not_available');
+      const ux = experienceStrings[text.lang] ?? experienceStrings.en;
+      const ai = aiWebStrings[text.lang] ?? aiWebStrings.en;
+      if (request.method === 'GET' && url.pathname === '/account.css') {
+        headers.set('Content-Type', 'text/css; charset=utf-8');
+        return new Response(accountStyle, { headers });
+      }
+      if (request.method === 'GET' && url.pathname === '/ai/guide' && env.ACCOUNT_AI_ENABLED === 'true') {
+        return htmlPage(text, ux.hero, `
+          <p class="lead">${htmlEscape(ux.intro)}</p>
+          <ol class="stack">
+            <li class="panel"><h2>1. ${htmlEscape(ux.setup)}</h2>
+              <p>${htmlEscape(ux['setup.detail'])}</p><code>https://connect.nevestudio.app/mcp</code></li>
+            <li class="panel"><h2>2. ${htmlEscape(ux.authorize)}</h2><p>${htmlEscape(ux['authorize.detail'])}</p></li>
+            <li class="panel"><h2>3. ${htmlEscape(ux.try)}</h2><p>${htmlEscape(ux['try.detail'])}</p></li>
+          </ol>
+          <a class="button text-button" href="/connections">${htmlEscape(ai.connections)}</a>`, headers);
+      }
       const cookies = cookieMap(request.headers.get('Cookie') ?? '');
       const cookie = name => cookies.find(value => value.name === name)?.value;
       const codec = await flowCodec(env.WEB_FLOW_ENCRYPTION_KEY, config.origin);
@@ -169,7 +216,7 @@ export function createWebHandler({ makeClient = createServerClient, fetcher = fe
         if (env.ACCOUNT_AI_ENABLED !== 'true') throw new WebFailure(503, 'ai_not_available');
         const bridge = createAccountWebAIBridge({ origin: env.CARRY_AI_ORIGIN, accountOrigin: config.origin,
           secret: env.CARRY_OWNER_BRIDGE_SECRET, fetcher, now });
-        const result = await accountAIPage({ request, checkedSession, formToken, checkForm, bridge, headers, text, htmlPage, finish });
+        const result = await accountAIPage({ request, checkedSession, formToken, checkForm, bridge, headers, text, htmlPage, finish, now });
         if (result) return result;
       }
       if (request.method === 'POST' && url.pathname === '/auth/apple/start') {
@@ -197,7 +244,12 @@ export function createWebHandler({ makeClient = createServerClient, fetcher = fe
         if (form.get('state') !== flow.state || !(flow.accountID === null || uuid(flow.accountID))) {
           throw new WebFailure(403, 'invalid_flow');
         }
-        if (form.get('error') === 'user_cancelled_authorize') return finish(redirect('/login?cancelled=1', headers));
+        if (form.get('error') === 'user_cancelled_authorize') {
+          const next = safeContinuation(flow.next);
+          const query = new URLSearchParams({ cancelled: '1' });
+          if (next !== '/') query.set('continue', next);
+          return finish(redirect('/login?' + query, headers));
+        }
         const token = form.get('id_token'), code = form.get('code');
         if (!token || token.length < 16 || token.length > 16000 || !code || code.length < 8 || code.length > 4096) {
           throw new WebFailure(400, 'invalid_apple_response');
@@ -266,16 +318,25 @@ export function createWebHandler({ makeClient = createServerClient, fetcher = fe
         const current = await checkedSession();
         const csrf = await formToken();
         const next = safeContinuation(url.searchParams.get('continue'));
-        const title = current ? text.account : text.signIn;
+        if (current && next !== '/') return finish(redirect(next, headers));
+        const detail = next.startsWith('/oauth/consent') ? ux.connectIntro
+          : next.startsWith('/ai/plans/') ? ux.planIntro
+          : next.startsWith('/ai/exports/') ? ux.exportIntro
+          : next === '/connections' ? ux.manageIntro : text.intro;
         const content = current
-          ? `<p>${htmlEscape(current.user.user_metadata?.full_name ?? current.user.email ?? 'Carry')}</p><form method="post" action="/logout"><input type="hidden" name="csrf" value="${csrf}"><button class="text-button">${htmlEscape(text.signOut)}</button></form>`
-          : `<p>${htmlEscape(text.intro)}</p>${url.searchParams.has('cancelled') ? `<p role="status">${htmlEscape(text.cancelled)}</p>` : ''}<form method="post" action="/auth/apple/start"><input type="hidden" name="csrf" value="${csrf}"><input type="hidden" name="continue" value="${htmlEscape(next)}"><button aria-label="${htmlEscape(text.appleLabel)}">${appleButton(text)}</button></form>`;
-        const aiLink = current && env.ACCOUNT_AI_ENABLED === 'true' ? `<p><a href="/connections">${htmlEscape(aiWebStrings[text.lang]?.connections ?? aiWebStrings.en.connections)}</a></p>` : '';
-        return finish(htmlPage(text, title, content + aiLink, headers));
-      }
-      if (request.method === 'GET' && url.pathname === '/account.css') {
-        headers.set('Content-Type', 'text/css; charset=utf-8');
-        return new Response('table{border-collapse:collapse;width:100%;font-size:.9rem}th,td{border-bottom:1px solid ButtonBorder;text-align:start;vertical-align:top;padding:10px;overflow-wrap:anywhere}fieldset{border:1px solid ButtonBorder;border-radius:12px;margin:20px 0;padding:16px}label{line-height:1.7}input[type=checkbox]{width:18px;height:18px;vertical-align:middle}code{overflow-wrap:anywhere}li{margin:20px 0}.review-table{overflow-x:auto}ol{padding-inline-start:20px}h2{font-size:1.1rem}html{color-scheme:light dark;font:17px -apple-system,BlinkMacSystemFont,system-ui,sans-serif}body{margin:0;background:Canvas;color:CanvasText}main{max-width:30rem;margin:12vh auto;padding:24px}h1{font-size:2rem;letter-spacing:-.04em}p{line-height:1.5;text-wrap:pretty}button{font:inherit;min-height:44px;cursor:pointer;border-radius:8px;padding:0;border:0;background:transparent}a{color:LinkText}.text-button{color:LinkText;padding:8px 12px;border:1px solid ButtonBorder}img{display:block;max-width:100%}button:focus-visible,a:focus-visible{outline:3px solid Highlight;outline-offset:4px}', { headers });
+          ? `<p class="account-id">${htmlEscape(current.user.user_metadata?.full_name ?? current.user.email ?? 'Carry')}</p>
+            <div class="actions">
+              ${env.ACCOUNT_AI_ENABLED === 'true' ? `<a class="button primary" href="/connections">${htmlEscape(ai.connections)}</a>` : ''}
+              <form method="post" action="/logout"><input type="hidden" name="csrf" value="${csrf}">
+                <button class="button text-button">${htmlEscape(text.signOut)}</button></form>
+            </div>`
+          : `<p class="lead">${htmlEscape(detail)}</p>
+            ${url.searchParams.has('cancelled') ? `<p class="notice" role="status">${htmlEscape(text.cancelled)}</p>` : ''}
+            <form method="post" action="/auth/apple/start">
+              <input type="hidden" name="csrf" value="${csrf}"><input type="hidden" name="continue" value="${htmlEscape(next)}">
+              <button aria-label="${htmlEscape(text.appleLabel)}">${appleButton(text)}</button>
+            </form>`;
+        return finish(htmlPage(text, current ? text.account : text.signIn, content, headers));
       }
       throw new WebFailure(404, 'not_found');
     } catch (failure) {
@@ -286,7 +347,7 @@ export function createWebHandler({ makeClient = createServerClient, fetcher = fe
         status: failure instanceof WebFailure ? failure.status : 503 }));
       return finish(message(failure instanceof WebFailure ? failure.code : 'service_unavailable', headers,
         failure instanceof WebFailure ? failure.status : 503, text,
-        request.headers.get('Accept')?.includes('text/html')));
+        request));
     }
   };
 }

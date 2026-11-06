@@ -94,7 +94,7 @@ export function safeContinuation(raw) {
   if (!raw || raw === '/') return '/';
   const match = /^\/oauth\/consent\?authorization_id=([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})$/i.exec(raw);
   if (!match) {
-    if (/^\/ai\/plans\/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(raw) || raw === '/connections') return raw;
+    if (/^\/ai\/(?:plans|exports)\/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(raw) || raw === '/connections') return raw;
     throw new WebFailure(400, 'invalid_continuation');
   }
   return `/oauth/consent?authorization_id=${match[1]}`;
