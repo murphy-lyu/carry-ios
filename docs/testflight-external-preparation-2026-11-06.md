@@ -20,10 +20,14 @@
 - 用户明确朋友属于外部测试者；不添加 App Store Connect 后台权限，不启用公开邀请链接，不自动给已有外部组所有人发邀请。
 - 账户文件预算当前每账户 150 MiB、最多 3 个 pending、项目预分配池 450 MiB；已分配 150 MiB，尚可接纳两个完整新账户预算。本次不改变容量或购买服务。
 - TestFlight 测试说明及审核备注已保存，说明可选 Apple 登录、显式本地迁移、账户同步和第一方 AI 预览批准流程；未提供个人 Apple 凭据。
-- 22:33（上海时间）Xcode 明确返回 Upload succeeded / Uploaded Carry，安装包已上传，Apple 开始处理构建。尚未提交外部审核，未发出邀请；后台处理结果继续读回。归档、导出、上传、处理、提交审核、审核通过、发出邀请与用户验收是不同状态。
+- 22:33（上海时间）Xcode 明确返回 Upload succeeded / Uploaded Carry；后台处理完成后，在零测试者的 Friends Beta 外部组选择构建 4 并提交。Apple 随即读回 Approved，组内为 0 Testers / 1 Build；自动通知已关闭，未发出外部邀请。等待用户提供朋友的邀请邮箱。归档、导出、上传、处理、提交审核、获准外测、发出邀请与用户验收分别记录。
 ## 证据
 本机 `/tmp/carry-testflight-20261106/` 保存 archive/export/upload 日志、分发验证 JSON、服务端测试日志、服务部署产物与 SHA、手机备份/安装/启动记录。备份目录限制本机访问，不提交真实数据。
 
 ## 部署后复核
 - Supabase security advisor 无新增 WARN/ERROR；新私有聚合表出现与既有默认拒绝表一致的 RLS 无策略 INFO。既有密码泄漏检测 WARN 不涉及本版新增内容；账户使用 Apple 登录。
-- 未认证 MCP 实际返回 401；OAuth discovery 的本机重试出现间歇 TLS 超时，初始准备阶段曾返回 200。本轮不把网络失败计作接口通过，后续仍需重新核对。
+- 未认证 MCP 实际返回 401。OAuth discovery 在本机一度间歇 TLS 超时，后续经公开网关和直接函数 URL 分别重试均返回 200，issuer 为 https://connect.nevestudio.app，包含 token_endpoint；网络失败未计作通过。
+
+## 最终可交付状态
+- App Store Connect 构建 ID `d783c53f-53dc-4739-babd-387ad49c5f3a`；朋友外测组 `54a7aa9a-49d1-4c41-b7c5-2aa9d018a5bd`。当前状态 Approved，可在收到目标邮箱后定向邀请，不启用公开链接。
+- 真机安装并启动已完成；日期吸顶与改名等交互由用户验证。
