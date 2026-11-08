@@ -293,6 +293,9 @@ test("real web→signed owner bridge→Auth validation→PostgreSQL consent and 
     assert.ok(!pHtml.includes("<script>not executable"));
     assert.ok(pHtml.includes("&lt;script&gt;not executable&lt;/script&gt;"));
     const hash = /name="contentHash" value="([^"]+)"/.exec(pHtml)[1];
+    const anotherTab = await f.page(planPath, { cookie: pCookie });
+    assert.equal(f.formToken(await anotherTab.text()), f.formToken(pHtml));
+    assert.equal(anotherTab.headers.getSetCookie().some(value => value.startsWith('__Host-carry-form=')), false);
     assert.equal(
       (
         await f.page(planPath, {

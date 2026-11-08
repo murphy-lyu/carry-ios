@@ -202,6 +202,13 @@ export function createWebHandler({ makeClient = createServerClient, fetcher = fe
         return { user, session };
       };
       const formToken = async (accountID = null) => {
+        // Opening another first-party review must not invalidate an existing
+        // tab's form. Reuse only an unexpired token for the same account.
+        try {
+          const existing = await codec.open('form', cookie(FORM), now());
+          if (existing.accountID === accountID && typeof existing.value === 'string' &&
+              /^[A-Za-z0-9_-]{43}$/.test(existing.value)) return existing.value;
+        } catch { /* An absent, expired or invalid cookie needs a new token. */ }
         const value = randomToken();
         setCookie(headers, FORM, await codec.seal('form', { value, accountID, expires: now() + ttl }),
           { sameSite: 'strict', maxAge: ttl / 1000 });

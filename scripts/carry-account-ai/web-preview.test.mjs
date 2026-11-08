@@ -68,3 +68,22 @@ test("review shows localized field comparison and move destinations without wire
   ])
     assert.ok(!html.includes(raw), raw);
 });
+
+test('new planning trips hide placeholder dates and coordinates and empty day titles use a readable fallback', () => {
+  const html = previewActions({ actions: [
+    { kind: "trip", action: "create", affectedCount: 1, before: null,
+      after: { name: "Synthetic planning", isDateless: true, departureDate: "2026-11-08T00:00:00Z", latitude: 0, longitude: 0 } },
+    { kind: "day", action: "create", affectedCount: 1, before: null,
+      after: { title: "", sortOrder: 0 } },
+  ] }, "en", aiWebStrings.en);
+  assert.match(html, /Planning trip/);
+  assert.match(html, /<h2>Day 1<\/h2>/);
+  assert.doesNotMatch(html, /Nov 8, 2026|Latitude|Longitude/);
+  const dated = previewActions({ actions: [
+    { kind: "trip", action: "patch", affectedCount: 1,
+      before: { departureDate: "2026-11-08T00:00:00Z" },
+      after: { departureDate: "2026-11-09T00:00:00Z" } },
+  ] }, "en", aiWebStrings.en);
+  assert.match(dated, /Nov 8, 2026/);
+  assert.match(dated, /Nov 9, 2026/);
+});

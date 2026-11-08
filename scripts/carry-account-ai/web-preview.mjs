@@ -833,6 +833,11 @@ const fields = {
   updatedAt: "updated",
 };
 export const previewFieldKeys = Object.keys(fields);
+const datelessLabels = {
+  en: "Planning trip", "zh-Hans": "无日期行程", "zh-Hant": "無日期行程",
+  de: "Reise ohne Datum", es: "Viaje sin fechas", fr: "Voyage sans dates",
+  ja: "日付未定の旅行", ko: "날짜 미정 여행", "pt-BR": "Viagem sem datas",
+};
 const omitted = new Set([
   "createdAt",
   "updatedAt",
@@ -899,10 +904,18 @@ export function previewActions(summary, lang, text) {
         after = a.after ?? {},
         keys = [...new Set([...Object.keys(before), ...Object.keys(after)])];
       const creating = a.action === "create";
+      const title = [before.name, before.title, after.name, after.title]
+        .find((value) => typeof value === "string" && value.trim());
+      const fallbackTitle = a.kind === "day" && Number.isInteger(after.sortOrder)
+        ? labels.day + " " + new Intl.NumberFormat(lang).format(after.sortOrder + 1)
+        : labels[a.kind] ?? labels.details;
       const cell = (value) => `<td>${esc(value)}</td>`;
       const previousCell = (value) => creating ? "" : cell(value);
       let rows = keys
         .filter((k) => !omitted.has(k))
+        .filter((k) => !(creating && k === "sortOrder"))
+        .filter((k) => !(creating && after.isDateless && ["departureDate", "dateRange"].includes(k)))
+        .filter((k) => !(creating && after.latitude === 0 && after.longitude === 0 && ["latitude", "longitude"].includes(k)))
         .filter(
           (k) =>
             JSON.stringify(before[k]) !== JSON.stringify(after[k]) &&
@@ -916,7 +929,7 @@ export function previewActions(summary, lang, text) {
         )
         .map(
           (k) =>
-            `<tr><th scope="row">${esc(labels[fields[k]] ?? labels.details)}</th>${previousCell(format(before[k], labels, lang, k))}${cell(format(after[k], labels, lang, k))}</tr>`,
+            `<tr><th scope="row">${esc(k === "isDateless" ? datelessLabels[lang] ?? datelessLabels.en : labels[fields[k]] ?? labels.details)}</th>${previousCell(format(before[k], labels, lang, k))}${cell(format(after[k], labels, lang, k))}</tr>`,
         )
         .join("");
       if (a.parentBefore !== a.parentAfter) {
@@ -927,7 +940,7 @@ export function previewActions(summary, lang, text) {
             : "—";
         rows += `<tr><th scope="row">${esc(labels.parent)}</th>${previousCell(parent(a.parentBeforeDisplay))}${cell(parent(a.parentAfterDisplay))}</tr>`;
       }
-      return `<li class="panel"><h2>${esc(before.name ?? before.title ?? after.name ?? after.title ?? labels[a.kind] ?? labels.details)}</h2><p>${esc(labels[a.action] ?? labels.details)} · ${esc(labels.impact)} ${esc(new Intl.NumberFormat(lang).format(a.affectedCount))}</p>${rows ? `<div class="review-table"><table><thead><tr><th>${esc(labels.details)}</th>${creating ? "" : `<th>${esc(text.before)}</th>`}<th>${esc(text.after)}</th></tr></thead><tbody>${rows}</tbody></table></div>` : ""}</li>`;
+      return `<li class="panel"><h2>${esc(title ?? fallbackTitle)}</h2><p>${esc(labels[a.action] ?? labels.details)} · ${esc(labels.impact)} ${esc(new Intl.NumberFormat(lang).format(a.affectedCount))}</p>${rows ? `<div class="review-table"><table><thead><tr><th>${esc(labels.details)}</th>${creating ? "" : `<th>${esc(text.before)}</th>`}<th>${esc(text.after)}</th></tr></thead><tbody>${rows}</tbody></table></div>` : ""}</li>`;
     })
     .join("");
 }

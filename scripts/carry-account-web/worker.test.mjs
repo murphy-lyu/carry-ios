@@ -389,3 +389,17 @@ test('explicit invalid or missing sessions still permit a new sign-in flow', asy
     assert.deepEqual(f.calls, []);
   }
 });
+
+test('opening another tab preserves the first unexpired same-account form', async () => {
+  const f = setup();
+  const first = await f.handler(request('/login'), env);
+  const firstToken = /name="csrf" value="([^"]+)"/.exec(await first.text())[1];
+  const second = await f.handler(request('/login', { cookie: cookies(first) }), env);
+  const secondToken = /name="csrf" value="([^"]+)"/.exec(await second.text())[1];
+  assert.equal(secondToken, firstToken);
+  assert.equal(second.headers.getSetCookie().some(value => value.startsWith('__Host-carry-form=')), false);
+  const post = await f.handler(request('/auth/apple/start', {
+    cookie: cookies(first), body: { csrf: firstToken, continue: '/' },
+  }), env);
+  assert.equal(post.status, 303);
+});
