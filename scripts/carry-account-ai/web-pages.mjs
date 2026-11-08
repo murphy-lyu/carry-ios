@@ -98,13 +98,15 @@ export async function accountAIPage({
       throw new WebFailure(e.status ?? 503, e.code ?? "ai_service_unavailable");
     }
   };
-  const page = (title, content) =>
+  const page = (title, content, layout = "standard") =>
     finish(
       htmlPage(
         text,
         title,
         `<p class="account-id">${esc(current.user.email ?? "Carry")}</p>${content}`,
         headers,
+        200,
+        layout,
       ),
     );
   if (consent) {
@@ -172,7 +174,7 @@ export async function accountAIPage({
       headers.get("Content-Security-Policy"), r.client.redirectURI));
     const redirectHost = new URL(r.client.redirectURI).host;
     return page(t.connect, `
-      <section class="panel">
+      <div class="consent-layout"><section class="panel client-panel">
         <h2>${esc(r.client.name)}</h2>
         <p class="muted">${esc(t.destination)} · ${esc(redirectHost)}</p>
         <p>${esc(t.unverified)}</p>
@@ -205,7 +207,7 @@ export async function accountAIPage({
           <button class="button primary" name="decision" value="approve">${esc(ux.connectAction)}</button>
           <button class="button text-button" name="decision" value="deny">${esc(t.deny)}</button>
         </div>
-      </form>`);
+      </form></div>`);
   }
   if (exportRoute) {
     const id = exportRoute[1];
@@ -285,7 +287,7 @@ export async function accountAIPage({
         method: "POST",
         body: { csrf: f.get("csrf"), contentHash: f.get("contentHash") },
       });
-      return page(ux.approvedTitle, `<p class="notice" role="status">${esc(t.done)}</p>`);
+      return page(ux.approvedTitle, `<p class="notice" role="status">${esc(t.done)}</p>`, "focus");
     }
     const r = (await call({ path: "/plans/" + id })).data,
       csrf = await formToken(current.user.id);

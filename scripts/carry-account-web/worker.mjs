@@ -39,9 +39,9 @@ function redirect(path, headers, status = 303) {
   headers.set('Location', path);
   return new Response(null, { status, headers });
 }
-function htmlPage(text, title, content, headers, status = 200) {
+function htmlPage(text, title, content, headers, status = 200, layout = "standard") {
   headers.set('Content-Type', 'text/html; charset=utf-8');
-  return new Response(`<!doctype html><html lang="${text.lang}"><head><meta charset="utf-8"><meta name="color-scheme" content="light dark"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${htmlEscape(title)}</title><link rel="stylesheet" href="/account.css"></head><body><main><p class="brand">Carry</p><h1>${htmlEscape(title)}</h1>${content}<footer><a href="https://legal.nevestudio.app/carry/privacy/">${htmlEscape(text.privacy)}</a></footer></main></body></html>`, { status, headers });
+  return new Response(`<!doctype html><html lang="${text.lang}"><head><meta charset="utf-8"><meta name="color-scheme" content="light dark"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${htmlEscape(title)}</title><link rel="stylesheet" href="/account.css"></head><body><header class="site-header"><div class="site-width"><a class="brand" href="/">Carry</a></div></header><main class="page--${layout === 'focus' ? 'focus' : 'standard'}"><h1>${htmlEscape(title)}</h1><div class="page-content">${content}</div></main><footer class="site-footer"><div class="site-width"><span>Carry</span><a href="https://legal.nevestudio.app/carry/privacy/">${htmlEscape(text.privacy)}</a></div></footer></body></html>`, { status, headers });
 }
 function message(code, headers, status, text, request) {
   headers.set('X-Carry-Error-Code', code);
@@ -73,14 +73,14 @@ function message(code, headers, status, text, request) {
     return htmlPage(text, title,
       `<p class="notice" role="alert">${htmlEscape(detail)}</p>
       <a class="button primary" href="${htmlEscape(href)}">${htmlEscape(action)}</a>
-      <details><summary>${htmlEscape(ux.diagnostics)}</summary><code>${htmlEscape(code)}</code></details>`, headers, status);
+      <details><summary>${htmlEscape(ux.diagnostics)}</summary><code>${htmlEscape(code)}</code></details>`, headers, status, "focus");
   }
   headers.set('Content-Type', 'application/json');
   return new Response(JSON.stringify({ error: code }), { status, headers });
 }
 function appleButton(text) {
-  const url = color => `https://appleid.cdn-apple.com/appleid/button?type=sign-in&amp;color=${color}&amp;height=44&amp;width=220&amp;border_radius=8&amp;locale=${text.apple}`;
-  return `<picture><source media="(prefers-color-scheme: dark)" srcset="${url('white')}&amp;scale=2 2x, ${url('white')}&amp;scale=3 3x"><img src="${url('black')}&amp;scale=1" srcset="${url('black')}&amp;scale=2 2x, ${url('black')}&amp;scale=3 3x" alt="${htmlEscape(text.appleLabel)}" width="220" height="44"></picture>`;
+  const url = color => `https://appleid.cdn-apple.com/appleid/button?type=sign-in&amp;color=${color}&amp;height=48&amp;width=240&amp;border_radius=8&amp;locale=${text.apple}`;
+  return `<picture><source media="(prefers-color-scheme: dark)" srcset="${url('white')}&amp;scale=2 2x, ${url('white')}&amp;scale=3 3x"><img src="${url('black')}&amp;scale=1" srcset="${url('black')}&amp;scale=2 2x, ${url('black')}&amp;scale=3 3x" alt="${htmlEscape(text.appleLabel)}" width="240" height="48"></picture>`;
 }
 function sameOrigin(request, origin) {
   if (request.headers.get('Origin') !== origin || request.headers.get('Sec-Fetch-Site') === 'cross-site') {
@@ -336,7 +336,7 @@ export function createWebHandler({ makeClient = createServerClient, fetcher = fe
               <input type="hidden" name="csrf" value="${csrf}"><input type="hidden" name="continue" value="${htmlEscape(next)}">
               <button aria-label="${htmlEscape(text.appleLabel)}">${appleButton(text)}</button>
             </form>`;
-        return finish(htmlPage(text, current ? text.account : text.signIn, content, headers));
+        return finish(htmlPage(text, current ? text.account : text.signIn, content, headers, 200, current ? "standard" : "focus"));
       }
       throw new WebFailure(404, 'not_found');
     } catch (failure) {

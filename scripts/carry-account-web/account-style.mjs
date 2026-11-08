@@ -2,7 +2,8 @@ export const accountStyle = `
 :root {
   color-scheme: light dark;
   font: 100%/1.55 -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
-  --canvas: #f6f6f5;
+  --canvas: #fff;
+  --footer: #f5f5f7;
   --surface: #fff;
   --ink: #222326;
   --muted: #555b62;
@@ -15,6 +16,7 @@ export const accountStyle = `
 @media (prefers-color-scheme: dark) {
   :root {
     --canvas: #171819;
+    --footer: #1d1d1f;
     --surface: #232527;
     --ink: #f0f0f1;
     --muted: #b8bec4;
@@ -26,16 +28,45 @@ export const accountStyle = `
   }
 }
 *, *::before, *::after { box-sizing: border-box; }
-body { margin: 0; background: var(--canvas); color: var(--ink); }
-main { max-width: 43rem; margin: 0 auto; padding: clamp(24px, 6vw, 56px) clamp(16px, 5vw, 40px); }
-.brand { font-size: .875rem; font-weight: 700; letter-spacing: .06em; color: var(--accent); margin-bottom: 24px; }
+body { margin: 0; min-height: 100svh; display: flex; flex-direction: column; background: var(--canvas); color: var(--ink); }
+.site-width { width: min(100% - 64px, 1120px); margin-inline: auto; }
+.site-header { flex: none; }
+.site-header .site-width { min-height: 88px; display: flex; align-items: center; border-bottom: 1px solid var(--line); }
+main { width: min(100% - 64px, 1040px); margin: 0 auto; padding: 64px 0 80px; flex: 1; }
+.page-content { max-width: 900px; margin-inline: auto; }
+main > h1 { text-align: center; margin-bottom: 24px; }
+.page--focus { max-width: 760px; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding-block: 88px 112px; }
+.page--focus .page-content { width: 100%; max-width: 620px; }
+.page--focus h1 { margin-bottom: 24px; }
+.page--focus .lead { font-size: 1.0625rem; line-height: 1.6; margin-bottom: 32px; }
+.page--focus form button { margin-inline: auto; }
+.page--focus details { text-align: start; max-width: 440px; margin-inline: auto; }
+.page--focus .notice { background: transparent; padding: 0; font-size: 1.125rem; }
+.consent-layout { display: grid; grid-template-columns: minmax(240px, .8fr) minmax(0, 1.4fr); gap: 32px; align-items: start; margin-top: 32px; }
+.consent-layout > .client-panel { margin: 0; }
+.consent-layout > form:not(#trip-search) > fieldset:first-of-type { margin-top: 0; }
+.consent-layout > #trip-search { display: none; }
+@media (max-width: 700px) {
+  .site-width, main { width: calc(100% - 40px); }
+  .site-header .site-width { min-height: 72px; }
+  main { padding-block: 40px 56px; }
+  .page--focus { padding-block: 64px 80px; }
+  .page--focus .lead { font-size: 1.0625rem; }
+  .consent-layout { grid-template-columns: minmax(0, 1fr); gap: 24px; }
+}
+@media (max-width: 360px) {
+  .site-width, main { width: calc(100% - 32px); }
+}
+.brand { font-size: 1.25rem; font-weight: 700; letter-spacing: -.04em; color: var(--ink); text-decoration: none; }
 h1, h2, p { margin: 0 0 12px; }
-h1 { font-size: clamp(1.85rem, 5.5vw, 2.7rem); line-height: 1.15; letter-spacing: -.04em; }
-h2 { font-size: 1.125rem; line-height: 1.35; }
+h1 { font-size: clamp(1.75rem, 3vw, 2.25rem); font-weight: 700; line-height: 1.08; letter-spacing: -.045em; }
+h2 { font-size: 1.25rem; line-height: 1.35; }
 p, a, code, dd, td, th, summary { overflow-wrap: anywhere; }
 a { color: var(--accent); text-underline-offset: .2em; }
-footer { color: var(--muted); font-size: .875rem; border-top: 1px solid var(--line); padding-top: 16px; margin-top: 40px; }
-.account-id, .muted { color: var(--muted); font-size: .9rem; }
+.site-footer { flex: none; color: var(--muted); font-size: .8125rem; background: var(--footer); padding-block: 24px; }
+.site-footer .site-width { display: flex; justify-content: space-between; gap: 24px; }
+.account-id { text-align: center; margin-bottom: 32px; }
+.muted { color: var(--muted); font-size: .9rem; }
 .lead { color: var(--muted); margin-bottom: 24px; }
 .panel, fieldset { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: clamp(14px, 4vw, 22px); margin: 16px 0; min-inline-size: 0; }
 .panel > :last-child, fieldset > :last-child { margin-bottom: 0; }
